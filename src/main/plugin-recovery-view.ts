@@ -104,6 +104,19 @@ export function describePluginFailure(
         }
   }
 
+  if (/single slot\s+["'][^"']+["']\s+already has a registration/i.test(text)) {
+    const slotName = text.match(/single slot\s+["']([^"']+)["']/i)?.[1]
+    return locale === 'zh'
+      ? {
+          title: '插件存在界面插槽冲突',
+          detail: `检测到界面插槽 ${slotName ? `"${slotName}"` : ''} 存在重复注册，多个第三方插件试图占用相同的界面组件，导致前端无法正常渲染。`
+        }
+      : {
+          title: 'A plugin has a UI slot conflict',
+          detail: `UI slot ${slotName ? `"${slotName}"` : ''} has duplicate registrations from conflicting plugins.`
+        }
+  }
+
   if (/failed to import loader entry/i.test(text)) {
     return locale === 'zh'
       ? {

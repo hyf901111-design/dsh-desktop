@@ -520,7 +520,10 @@ function showUnexpectedError(error: unknown): void {
   dialog.showErrorBox('DSH Desktop encountered an error', message)
 }
 
-async function showRuntimeFailure(snapshot: RuntimeSnapshot): Promise<void> {
+async function showPluginRecovery(options?: {
+  message?: string
+  logs?: readonly string[]
+}): Promise<void> {
   if (failureRecoveryVisible || quitting) return
   failureRecoveryVisible = true
 
@@ -530,15 +533,20 @@ async function showRuntimeFailure(snapshot: RuntimeSnapshot): Promise<void> {
   let notice: string | undefined
 
   try {
-    while (!quitting && runtime.snapshot().phase === 'failed') {
-      snapshot = runtime.snapshot()
+    while (!quitting) {
+      let snapshot = runtime.snapshot()
+      const logs = options?.logs ?? snapshot.logs
+      const message = options?.message ?? snapshot.message
       const offendingPlugins = await resolveProfileRecoveryPlugins(
         dshHome,
-        extractOffendingPlugins(snapshot.logs),
-        extractDuplicateLoaderEntryId(snapshot.logs)
+        extractOffendingPlugins(logs),
+        extractDuplicateLoaderEntryId(logs)
       )
       const action = await waitForPluginRecoveryAction({
-        snapshot,
+        snapshot: {
+          ...snapshot,
+          message: message || snapshot.message
+        },
         plugins: offendingPlugins,
         removedPlugins,
         notice
@@ -568,8 +576,12 @@ async function showRuntimeFailure(snapshot: RuntimeSnapshot): Promise<void> {
             : `These plugins could not be removed: ${failedPlugins.join(', ')}`
         }
         await launchHarness()
+        if (runtime.snapshot().phase === 'ready') return
+        continue
       } else if (action === 'restart') {
         await launchHarness()
+        if (runtime.snapshot().phase === 'ready') return
+        continue
       } else if (action === 'show-log') {
         shell.showItemInFolder(join(app.getPath('logs'), 'harness.log'))
         continue
@@ -577,15 +589,16 @@ async function showRuntimeFailure(snapshot: RuntimeSnapshot): Promise<void> {
         app.quit()
         return
       }
-
-      if (runtime.snapshot().phase !== 'failed') return
-      snapshot = runtime.snapshot()
     }
   } catch (error) {
     showUnexpectedError(error)
   } finally {
     failureRecoveryVisible = false
   }
+}
+
+async function showRuntimeFailure(snapshot: RuntimeSnapshot): Promise<void> {
+  await showPluginRecovery({ message: snapshot.message, logs: snapshot.logs })
 }
 
 function installMenu(): void {
@@ -785,6 +798,14 @@ async function bootstrap(): Promise<void> {
   ipcMain.handle('mobile:status', () => ({ connected: mobileBridge.snapshot().connected }))
   ipcMain.handle('harness:show-log', () => {
     shell.showItemInFolder(join(app.getPath('logs'), 'harness.log'))
+  })
+  ipcMain.removeHandler('harness:open-recovery')
+  ipcMain.handle('harness:open-recovery', async (event, frontendErrorMessage?: unknown) => {
+    assertTrustedMainWindowEvent(event)
+    const message = typeof frontendErrorMessage === 'string' ? frontendErrorMessage : undefined
+    const logs = message ? [`[stderr] ${message}`] : undefined
+    void showPluginRecovery({ message, logs })
+    return { ok: true }
   })
   ipcMain.removeHandler('harness:reset-plugins')
   ipcMain.handle('harness:reset-plugins', async (event, pluginName?: unknown) => {

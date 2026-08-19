@@ -52,25 +52,47 @@ function checkBootFailureInDom(): void {
   actionsDiv.id = INJECTED_ID
   actionsDiv.style.cssText = [
     'display:flex',
+    'gap:10px',
     'margin-top:20px',
     'justify-content:center',
+    'flex-wrap:wrap',
     'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
   ].join(';')
+
+  const recoveryBtn = document.createElement('button')
+  recoveryBtn.type = 'button'
+  recoveryBtn.textContent = locale === 'zh' ? '卸载冲突插件 / 启动修复' : 'Fix & Uninstall Conflict Plugins'
+  recoveryBtn.style.cssText = [
+    'appearance:none',
+    'border:none',
+    'background:#c33b38',
+    'color:#ffffff',
+    'padding:9px 18px',
+    'border-radius:8px',
+    'font-size:13px',
+    'font-weight:600',
+    'cursor:pointer',
+    'box-shadow:0 2px 8px rgba(195,59,56,0.35)'
+  ].join(';')
+  recoveryBtn.addEventListener('click', () => {
+    recoveryBtn.disabled = true
+    recoveryBtn.textContent = locale === 'zh' ? '正在打开修复…' : 'Opening Recovery…'
+    void ipcRenderer.invoke('harness:open-recovery', errorText)
+  })
 
   const restartBtn = document.createElement('button')
   restartBtn.type = 'button'
   restartBtn.textContent = locale === 'zh' ? '重启 Harness' : 'Restart Harness'
   restartBtn.style.cssText = [
     'appearance:none',
-    'border:none',
-    'background:#4d6bfe',
+    'border:1px solid #4a4a50',
+    'background:rgba(255,255,255,0.08)',
     'color:#ffffff',
-    'padding:9px 22px',
+    'padding:9px 18px',
     'border-radius:8px',
     'font-size:13px',
     'font-weight:600',
-    'cursor:pointer',
-    'box-shadow:0 2px 8px rgba(77,107,254,0.35)'
+    'cursor:pointer'
   ].join(';')
   restartBtn.addEventListener('click', () => {
     restartBtn.disabled = true
@@ -78,7 +100,7 @@ function checkBootFailureInDom(): void {
     void ipcRenderer.invoke('harness:restart')
   })
 
-  actionsDiv.appendChild(restartBtn)
+  actionsDiv.append(recoveryBtn, restartBtn)
   failedContainer.appendChild(actionsDiv)
 }
 
@@ -247,6 +269,16 @@ function renderPluginError(): void {
   body.appendChild(detail)
 
   const actions = element('div', 'actions')
+  const recoveryBtn = button(
+    locale === 'zh' ? '卸载冲突插件' : 'Uninstall Conflict',
+    'primary'
+  )
+  recoveryBtn.disabled = restartingHarness
+  recoveryBtn.addEventListener('click', () => {
+    dismissPluginError()
+    void ipcRenderer.invoke('harness:open-recovery', info.message)
+  })
+
   const restartBtn = button(
     restartingHarness
       ? locale === 'zh'
@@ -255,7 +287,7 @@ function renderPluginError(): void {
       : locale === 'zh'
         ? '重启 Harness'
         : 'Restart Harness',
-    'primary'
+    'secondary'
   )
   restartBtn.disabled = restartingHarness
   restartBtn.addEventListener('click', () => {
@@ -273,7 +305,7 @@ function renderPluginError(): void {
   ignoreBtn.disabled = restartingHarness
   ignoreBtn.addEventListener('click', dismissPluginError)
 
-  actions.append(restartBtn, ignoreBtn)
+  actions.append(recoveryBtn, restartBtn, ignoreBtn)
   body.appendChild(actions)
 
   row.appendChild(body)
