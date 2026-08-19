@@ -318,6 +318,18 @@ export function extractFailureCause(logLines: readonly string[]): string | undef
 
 const CORE_BUNDLES = new Set(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'])
 
+function isActionablePluginReference(value: string): boolean {
+  const candidate = value.trim()
+  if (!candidate || CORE_BUNDLES.has(candidate)) return false
+
+  // Loader services use identifiers such as `cordis:include`. They describe
+  // where profile composition failed, not an installed npm package, and must
+  // never be offered as an uninstall target.
+  if (candidate.includes(':')) return false
+
+  return /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i.test(candidate)
+}
+
 export function extractOffendingPlugins(logLines: readonly string[]): string[] {
   const plugins = new Set<string>()
 
@@ -326,32 +338,43 @@ export function extractOffendingPlugins(logLines: readonly string[]): string[] {
     const text = line.slice(8)
 
     const m1 = text.match(/failed to apply loader entry [^\s]+ \((@[^)]+|[^)]+)\)/i)
-    if (m1 && m1[1] && !CORE_BUNDLES.has(m1[1].trim())) {
+    if (m1 && m1[1] && isActionablePluginReference(m1[1])) {
       plugins.add(m1[1].trim())
     }
 
     const m2 = text.match(/cannot resolve profile bundle ["']([^"']+)["']/i)
-    if (m2 && m2[1] && !CORE_BUNDLES.has(m2[1].trim())) {
+    if (m2 && m2[1] && isActionablePluginReference(m2[1])) {
       plugins.add(m2[1].trim())
     }
 
     const m3 = text.match(/profile bundle ["']([^"']+)["'] declares no dsh\.bundle/i)
-    if (m3 && m3[1] && !CORE_BUNDLES.has(m3[1].trim())) {
+    if (m3 && m3[1] && isActionablePluginReference(m3[1])) {
       plugins.add(m3[1].trim())
     }
 
     const m4 = text.match(/failed to import loader entry [^\s]+ \((@[^)]+|[^)]+)\)/i)
-    if (m4 && m4[1] && !CORE_BUNDLES.has(m4[1].trim())) {
+    if (m4 && m4[1] && isActionablePluginReference(m4[1])) {
       plugins.add(m4[1].trim())
     }
 
     const m5 = text.match(/plugin\(s\) failed to load:\s*([a-zA-Z0-9@/_-]+)/i)
-    if (m5 && m5[1] && !CORE_BUNDLES.has(m5[1].trim())) {
+    if (m5 && m5[1] && isActionablePluginReference(m5[1])) {
       plugins.add(m5[1].trim())
     }
   }
 
   return [...plugins]
+}
+
+export function extractDuplicateLoaderEntryId(
+  logLines: readonly string[]
+): string | undefined {
+  for (const line of latestHarnessAttemptLogs(logLines)) {
+    if (!line.startsWith('[stderr] ')) continue
+    const match = line.slice(8).match(/duplicate loader entry id:\s*["']?([^\s"']+)["']?/i)
+    if (match?.[1]) return match[1].trim()
+  }
+  return undefined
 }
 
 export function extractOffendingPlugin(logLines: readonly string[]): string | undefined {

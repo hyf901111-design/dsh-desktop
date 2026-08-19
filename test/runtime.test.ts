@@ -3,6 +3,7 @@ import {
   buildHarnessArguments,
   buildHarnessSpawnOptions,
   buildNodeArguments,
+  extractDuplicateLoaderEntryId,
   extractFailureCause,
   extractOffendingPlugin,
   extractOffendingPlugins,
@@ -229,6 +230,14 @@ describe('offending plugin extraction', () => {
       '[stderr] [harness-node] uncaught exception: ReferenceError: x is not defined'
     ]
     expect(extractOffendingPlugin(logs)).toBeUndefined()
+  })
+
+  it('never treats an internal Cordis loader as an uninstallable plugin', () => {
+    const logs = [
+      '[stderr] [harness-node] DSH entry failed: Error: dsh: plugin tree failed to load: failed to apply loader entry include (cordis:include): duplicate loader entry id: storage'
+    ]
+    expect(extractOffendingPlugins(logs)).toEqual([])
+    expect(extractDuplicateLoaderEntryId(logs)).toBe('storage')
   })
 
   it('collects multiple unique plugins reported by the same launch', () => {

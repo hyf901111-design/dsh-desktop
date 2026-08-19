@@ -70,6 +70,17 @@ describe('plugin recovery view model', () => {
     expect(model.plugins).toEqual(['plugin-b'])
   })
 
+  it('shows a readable name for a scoped package while recovery keeps its package id', () => {
+    const model = buildPluginRecoveryViewModel({
+      snapshot: failedSnapshot(),
+      plugins: ['@deepseek-harness-tui/dsh-tui'],
+      removedPlugins: [],
+      locale: 'zh'
+    })
+    expect(model.plugins).toEqual(['dsh-tui'])
+    expect(model.canUninstall).toBe(true)
+  })
+
   it('falls back to the log when no plugin can be identified', () => {
     const model = buildPluginRecoveryViewModel({
       snapshot: failedSnapshot(),

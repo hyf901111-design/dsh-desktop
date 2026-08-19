@@ -13,11 +13,20 @@ import {
   type IpcMainInvokeEvent,
   type MessageBoxOptions
 } from 'electron'
-import { extractFailureCause, extractOffendingPlugins, HarnessRuntime } from './runtime/harness-runtime'
+import {
+  extractDuplicateLoaderEntryId,
+  extractFailureCause,
+  extractOffendingPlugins,
+  HarnessRuntime
+} from './runtime/harness-runtime'
 import { LanMobileBridge } from './mobile/lan-mobile-bridge'
 import { secureWindow } from './security'
 import { ensureLaunchRoot } from './state/launch-root'
-import { resetPluginProfile, uninstallPluginFromProfile } from './state/plugin-recovery'
+import {
+  resetPluginProfile,
+  resolveProfileRecoveryPlugins,
+  uninstallPluginFromProfile
+} from './state/plugin-recovery'
 import { isAbortedNavigationError, shouldLoadHarnessUrl } from './window-navigation'
 import {
   checkForUpdates,
@@ -523,7 +532,11 @@ async function showRuntimeFailure(snapshot: RuntimeSnapshot): Promise<void> {
   try {
     while (!quitting && runtime.snapshot().phase === 'failed') {
       snapshot = runtime.snapshot()
-      const offendingPlugins = extractOffendingPlugins(snapshot.logs)
+      const offendingPlugins = await resolveProfileRecoveryPlugins(
+        dshHome,
+        extractOffendingPlugins(snapshot.logs),
+        extractDuplicateLoaderEntryId(snapshot.logs)
+      )
       const action = await waitForPluginRecoveryAction({
         snapshot,
         plugins: offendingPlugins,

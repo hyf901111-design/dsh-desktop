@@ -32,6 +32,11 @@ interface FailureDescription {
   detail: string
 }
 
+function displayPluginName(packageName: string): string {
+  if (!packageName.startsWith('@')) return packageName
+  return packageName.slice(packageName.indexOf('/') + 1)
+}
+
 function latestAttemptText(logs: readonly string[]): string {
   let startIndex = -1
   for (let index = logs.length - 1; index >= 0; index -= 1) {
@@ -117,8 +122,9 @@ export function buildPluginRecoveryViewModel(options: {
   notice?: string
 }): PluginRecoveryViewModel {
   const { snapshot, locale, notice } = options
-  const plugins = [...new Set(options.plugins)]
-  const removedPlugins = [...new Set(options.removedPlugins)]
+  const pluginPackages = [...new Set(options.plugins)]
+  const plugins = pluginPackages.map(displayPluginName)
+  const removedPlugins = [...new Set(options.removedPlugins)].map(displayPluginName)
   const canUninstall = plugins.length > 0
   const description = describePluginFailure(snapshot.logs, locale)
   const multiple = plugins.length > 1

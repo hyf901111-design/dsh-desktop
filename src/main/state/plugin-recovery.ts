@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
 export function profilePackageJsonPath(dshHome: string): string {
   return join(dshHome, 'profiles', 'web', 'package.json')
@@ -21,6 +21,91 @@ interface ProfileManifest {
   }
 }
 
+interface BundleManifest {
+  dsh?: {
+    bundle?: {
+      patch?: string
+    }
+  }
+}
+
+const CORE_BUNDLES = new Set(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'])
+const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i
+
+function configuredProfilePlugins(manifest: ProfileManifest): string[] {
+  const dependencies = manifest.dependencies ?? {}
+  return (manifest.dsh?.profile?.bundles ?? []).filter(
+    (bundle) =>
+      !CORE_BUNDLES.has(bundle) &&
+      PACKAGE_NAME_PATTERN.test(bundle) &&
+      Object.prototype.hasOwnProperty.call(dependencies, bundle)
+  )
+}
+
+function loaderEntryPattern(entryId: string): RegExp {
+  const escaped = entryId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(
+    `^\\s*-\\s+id:\\s*(?:["']${escaped}["']|${escaped})(?:\\s*(?:#.*)?)?$`,
+    'm'
+  )
+}
+
+async function bundleDeclaresLoaderEntry(
+  profileDirectory: string,
+  bundle: string,
+  entryId: string
+): Promise<boolean> {
+  const packageDirectory = join(profileDirectory, 'node_modules', bundle)
+  const packageJsonPath = join(packageDirectory, 'package.json')
+
+  try {
+    const rawManifest = await readFile(packageJsonPath, 'utf8')
+    const bundleManifest = JSON.parse(rawManifest) as BundleManifest
+    const patch = bundleManifest.dsh?.bundle?.patch
+    if (!patch) return false
+
+    const patchPath = resolve(packageDirectory, patch)
+    const rawPatch = await readFile(patchPath, 'utf8')
+    return loaderEntryPattern(entryId).test(rawPatch)
+  } catch {
+    return false
+  }
+}
+
+export async function resolveProfileRecoveryPlugins(
+  dshHome: string,
+  detectedPlugins: readonly string[],
+  duplicateLoaderEntryId?: string
+): Promise<string[]> {
+  const manifestPath = profilePackageJsonPath(dshHome)
+
+  try {
+    const raw = await readFile(manifestPath, 'utf8')
+    const manifest = JSON.parse(raw) as ProfileManifest
+    const configuredPlugins = configuredProfilePlugins(manifest)
+    const configuredSet = new Set(configuredPlugins)
+    const verifiedDetected = [...new Set(detectedPlugins)].filter((plugin) =>
+      configuredSet.has(plugin)
+    )
+    if (verifiedDetected.length > 0) return verifiedDetected
+    if (!duplicateLoaderEntryId) return []
+
+    // Profile bundles are applied in order. When an internal `cordis:include`
+    // reports a duplicate loader id, the last configured third-party bundle
+    // declaring that id is the bundle that attempted the duplicate insert.
+    const profileDirectory = dirname(manifestPath)
+    let offendingPlugin: string | undefined
+    for (const plugin of configuredPlugins) {
+      if (await bundleDeclaresLoaderEntry(profileDirectory, plugin, duplicateLoaderEntryId)) {
+        offendingPlugin = plugin
+      }
+    }
+    return offendingPlugin ? [offendingPlugin] : []
+  } catch {
+    return []
+  }
+}
+
 export async function uninstallPluginFromProfile(
   dshHome: string,
   pluginName: string
@@ -31,32 +116,30 @@ export async function uninstallPluginFromProfile(
   try {
     const raw = await readFile(manifestPath, 'utf8')
     const manifest = JSON.parse(raw) as ProfileManifest
-    let modified = false
+    const hasDependency = Object.prototype.hasOwnProperty.call(
+      manifest.dependencies ?? {},
+      pluginName
+    )
+    const hasBundle = manifest.dsh?.profile?.bundles?.includes(pluginName) ?? false
+    if (!hasDependency || !hasBundle) return false
 
-    if (manifest.dependencies && pluginName in manifest.dependencies) {
-      delete manifest.dependencies[pluginName]
-      modified = true
-    }
+    delete manifest.dependencies?.[pluginName]
+    manifest.dsh!.profile!.bundles = manifest.dsh!.profile!.bundles!.filter(
+      (bundle) => bundle !== pluginName
+    )
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8')
 
-    if (manifest.dsh?.profile?.bundles) {
-      const originalLength = manifest.dsh.profile.bundles.length
-      manifest.dsh.profile.bundles = manifest.dsh.profile.bundles.filter(
-        (bundle) => bundle !== pluginName
-      )
-      if (manifest.dsh.profile.bundles.length !== originalLength) {
-        modified = true
-      }
-    }
-
-    if (modified) {
-      await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8')
-      return true
-    }
+    const verifiedRaw = await readFile(manifestPath, 'utf8')
+    const verified = JSON.parse(verifiedRaw) as ProfileManifest
+    const dependencyRemains = Object.prototype.hasOwnProperty.call(
+      verified.dependencies ?? {},
+      pluginName
+    )
+    const bundleRemains = verified.dsh?.profile?.bundles?.includes(pluginName) ?? false
+    return !dependencyRemains && !bundleRemains
   } catch {
     return false
   }
-
-  return false
 }
 
 export async function resetPluginProfile(

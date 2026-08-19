@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   profilePackageJsonPath,
   resetPluginProfile,
+  resolveProfileRecoveryPlugins,
   uninstallPluginFromProfile
 } from '../src/main/state/plugin-recovery'
 
@@ -80,6 +81,77 @@ describe('plugin-recovery', () => {
 
     const success = await uninstallPluginFromProfile(testDir, 'non-existent-plugin')
     expect(success).toBe(false)
+  })
+
+  it('maps an internal duplicate loader error to the profile bundle that declared it', async () => {
+    const pkgPath = profilePackageJsonPath(testDir)
+    const pluginDirectory = join(
+      testDir,
+      'profiles',
+      'web',
+      'node_modules',
+      '@deepseek-harness-tui',
+      'dsh-tui'
+    )
+    await mkdir(pluginDirectory, { recursive: true })
+    await writeFile(
+      pkgPath,
+      JSON.stringify({
+        dependencies: {
+          '@deepseek-harness-tui/dsh-tui': '^0.8.4',
+          dshmarket: '1.15.0'
+        },
+        dsh: {
+          profile: {
+            bundles: [
+              '@deepseek-ai/dsh-base',
+              '@deepseek-ai/dsh-web-app',
+              'dshmarket',
+              '@deepseek-harness-tui/dsh-tui'
+            ]
+          }
+        }
+      })
+    )
+    await writeFile(
+      join(pluginDirectory, 'package.json'),
+      JSON.stringify({
+        name: '@deepseek-harness-tui/dsh-tui',
+        dsh: { bundle: { patch: './cordis.patch.yml' } }
+      })
+    )
+    await writeFile(
+      join(pluginDirectory, 'cordis.patch.yml'),
+      '- id: storage\n  name: "@deepseek-ai/dsh-storage"\n'
+    )
+
+    await expect(
+      resolveProfileRecoveryPlugins(testDir, [], 'storage')
+    ).resolves.toEqual(['@deepseek-harness-tui/dsh-tui'])
+  })
+
+  it('does not offer a partially registered package as an uninstall target', async () => {
+    const pkgPath = profilePackageJsonPath(testDir)
+    await writeFile(
+      pkgPath,
+      JSON.stringify({
+        dependencies: {
+          'partial-plugin': '^1.0.0'
+        },
+        dsh: {
+          profile: {
+            bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app']
+          }
+        }
+      })
+    )
+
+    await expect(
+      resolveProfileRecoveryPlugins(testDir, ['partial-plugin'])
+    ).resolves.toEqual([])
+    await expect(
+      uninstallPluginFromProfile(testDir, 'partial-plugin')
+    ).resolves.toBe(false)
   })
 
   it('resets plugin profile by cleaning up specific failing plugin and related packages', async () => {
