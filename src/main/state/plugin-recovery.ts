@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 
 export function profilePackageJsonPath(dshHome: string): string {
@@ -198,6 +198,27 @@ export async function resetPluginProfile(
       if (patchContent.trim() !== '[]') {
         await writeFile(patchPath, '[]\n', 'utf8')
         modified = true
+      }
+    }
+
+    // Physically clean plugin files from node_modules to guarantee thorough uninstallation
+    const nodeModulesPath = join(dshHome, 'profiles', 'web', 'node_modules')
+    if (existsSync(nodeModulesPath)) {
+      if (failingPlugin) {
+        const pluginDir = join(nodeModulesPath, failingPlugin)
+        await rm(pluginDir, { recursive: true, force: true }).catch(() => undefined)
+        if (failingPlugin.startsWith('@')) {
+          const scope = failingPlugin.split('/')[0]
+          if (scope) {
+            const scopeDir = join(nodeModulesPath, scope)
+            try {
+              const files = await readdir(scopeDir)
+              if (files.length === 0) {
+                await rm(scopeDir, { recursive: true, force: true }).catch(() => undefined)
+              }
+            } catch {}
+          }
+        }
       }
     }
 
