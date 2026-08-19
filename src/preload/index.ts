@@ -6,26 +6,15 @@ import {
   updateMessage,
   type UpdateLocale
 } from './update-view'
-import {
-  isPluginLoadError,
-  extractPluginName,
-  pluginErrorMessage
-} from './plugin-error-view'
+import { isPluginLoadError } from './plugin-error-view'
 import { mountWindowsTitlebar } from './windows-titlebar'
 
 const ROOT_ID = 'dsh-desktop-update-root'
-const PLUGIN_ERROR_ROOT_ID = 'dsh-desktop-plugin-error-root'
 const MOBILE_BUTTON_ID = 'dsh-desktop-mobile-button'
 const locale: UpdateLocale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 
 let host: HTMLDivElement | undefined
 let content: HTMLDivElement | undefined
-let pluginErrorHost: HTMLDivElement | undefined
-let pluginErrorContent: HTMLDivElement | undefined
-let activePluginErrorName: string | undefined
-let pluginErrorVisible = false
-let restartingHarness = false
-let resettingHarness = false
 let currentStatus: UpdateStatus | undefined
 let dismissedVersion: string | null = null
 let dismissedTransientPhase: UpdateStatus['phase'] | null = null
@@ -115,7 +104,6 @@ function initializeUi(): void {
     mountWindowsTitlebar({ document, ipcRenderer, locale })
   }
   mount()
-  mountPluginErrorCard()
   mountMobileButton()
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
@@ -129,14 +117,16 @@ function initializeUi(): void {
 window.addEventListener('error', (event) => {
   const err = event.error ?? event.message
   if (isPluginLoadError(err)) {
-    showPluginErrorNotification(extractPluginName(err))
+    const errorText = typeof err === 'string' ? err : err instanceof Error ? err.message : String(err)
+    void ipcRenderer.invoke('harness:open-recovery', errorText)
   }
 })
 
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason
   if (isPluginLoadError(reason)) {
-    showPluginErrorNotification(extractPluginName(reason))
+    const errorText = typeof reason === 'string' ? reason : reason instanceof Error ? reason.message : String(reason)
+    void ipcRenderer.invoke('harness:open-recovery', errorText)
   }
 })
 
@@ -146,125 +136,6 @@ contextBridge.exposeInMainWorld(
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart')
   })
 )
-
-function mountPluginErrorCard(): void {
-  if (document.getElementById(PLUGIN_ERROR_ROOT_ID)) return
-
-  pluginErrorHost = document.createElement('div')
-  pluginErrorHost.id = PLUGIN_ERROR_ROOT_ID
-  pluginErrorHost.style.cssText = [
-    'position:fixed',
-    'right:20px',
-    'bottom:20px',
-    'z-index:2147483647',
-    'display:none',
-    'width:min(384px,calc(100vw - 40px))',
-    'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
-  ].join(';')
-
-  const shadow = pluginErrorHost.attachShadow({ mode: 'closed' })
-  const style = document.createElement('style')
-  style.textContent = styles
-  pluginErrorContent = document.createElement('div')
-  shadow.append(style, pluginErrorContent)
-  document.documentElement.appendChild(pluginErrorHost)
-  renderPluginError()
-}
-
-function showPluginErrorNotification(pluginName?: string): void {
-  activePluginErrorName = pluginName || activePluginErrorName
-  pluginErrorVisible = true
-  mountPluginErrorCard()
-  renderPluginError()
-}
-
-function dismissPluginError(): void {
-  pluginErrorVisible = false
-  if (pluginErrorHost) {
-    pluginErrorHost.style.display = 'none'
-  }
-}
-
-function renderPluginError(): void {
-  if (!pluginErrorHost || !pluginErrorContent) return
-
-  if (!pluginErrorVisible) {
-    pluginErrorHost.style.display = 'none'
-    pluginErrorContent.replaceChildren()
-    return
-  }
-
-  pluginErrorHost.style.display = 'block'
-  const info = pluginErrorMessage(locale, activePluginErrorName)
-
-  const card = element('aside', 'card')
-  card.setAttribute('aria-live', 'polite')
-  card.setAttribute('aria-label', info.title)
-
-  const row = element('div', 'row')
-  const indicator = element('span', restartingHarness || resettingHarness ? 'spinner' : 'dot warning')
-  indicator.setAttribute('aria-hidden', 'true')
-  row.appendChild(indicator)
-
-  const body = element('div', 'body')
-  const title = element('p', 'message')
-  title.textContent = info.title
-  body.appendChild(title)
-
-  const detail = element('p', 'detail')
-  detail.textContent = info.message
-  body.appendChild(detail)
-
-  const actions = element('div', 'actions')
-  const recoveryBtn = button(
-    locale === 'zh' ? '卸载冲突插件' : 'Uninstall Conflict',
-    'primary'
-  )
-  recoveryBtn.disabled = restartingHarness
-  recoveryBtn.addEventListener('click', () => {
-    dismissPluginError()
-    void ipcRenderer.invoke('harness:open-recovery', info.message)
-  })
-
-  const restartBtn = button(
-    restartingHarness
-      ? locale === 'zh'
-        ? '正在重启…'
-        : 'Restarting…'
-      : locale === 'zh'
-        ? '重启 Harness'
-        : 'Restart Harness',
-    'secondary'
-  )
-  restartBtn.disabled = restartingHarness
-  restartBtn.addEventListener('click', () => {
-    restartingHarness = true
-    renderPluginError()
-    void ipcRenderer
-      .invoke('harness:restart')
-      .finally(() => {
-        restartingHarness = false
-        dismissPluginError()
-      })
-  })
-
-  const ignoreBtn = button(locale === 'zh' ? '忽略' : 'Dismiss', 'secondary')
-  ignoreBtn.disabled = restartingHarness
-  ignoreBtn.addEventListener('click', dismissPluginError)
-
-  actions.append(recoveryBtn, restartBtn, ignoreBtn)
-  body.appendChild(actions)
-
-  row.appendChild(body)
-
-  const close = button('×', 'close')
-  close.setAttribute('aria-label', locale === 'zh' ? '关闭' : 'Close')
-  close.addEventListener('click', dismissPluginError)
-  row.appendChild(close)
-
-  card.appendChild(row)
-  pluginErrorContent.replaceChildren(card)
-}
 
 function mount(): void {
   if (document.getElementById(ROOT_ID)) return
