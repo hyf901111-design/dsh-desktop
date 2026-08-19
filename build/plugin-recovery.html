@@ -450,7 +450,11 @@
       }
 
       const navigate = (action) => {
-        location.href = `dsh-recovery://${action}`
+        if (window.dshRecovery && typeof window.dshRecovery.action === 'function') {
+          void window.dshRecovery.action(action)
+        } else {
+          location.href = `dsh-recovery://${action}`
+        }
       }
       const primary = document.getElementById('primary')
       primary.addEventListener('click', () => {

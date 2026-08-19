@@ -137,6 +137,13 @@ contextBridge.exposeInMainWorld(
   })
 )
 
+contextBridge.exposeInMainWorld(
+  'dshRecovery',
+  Object.freeze({
+    action: (action: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('recovery:action', action)
+  })
+)
+
 function mount(): void {
   if (document.getElementById(ROOT_ID)) return
 

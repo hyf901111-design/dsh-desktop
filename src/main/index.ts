@@ -807,6 +807,15 @@ async function bootstrap(): Promise<void> {
     void showPluginRecovery({ message, logs })
     return { ok: true }
   })
+  ipcMain.removeHandler('recovery:action')
+  ipcMain.handle('recovery:action', (event, action: unknown) => {
+    assertTrustedMainWindowEvent(event)
+    if (typeof action === 'string' && PLUGIN_RECOVERY_ACTIONS.has(action as PluginRecoveryAction)) {
+      resolvePluginRecoveryAction(action as PluginRecoveryAction)
+      return { ok: true }
+    }
+    return { ok: false }
+  })
   ipcMain.removeHandler('harness:reset-plugins')
   ipcMain.handle('harness:reset-plugins', async (event, pluginName?: unknown) => {
     assertTrustedMainWindowEvent(event)
