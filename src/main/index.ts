@@ -17,6 +17,7 @@ import {
   extractDuplicateLoaderEntryId,
   extractFailureCause,
   extractOffendingPlugins,
+  extractSlotConflictName,
   HarnessRuntime
 } from './runtime/harness-runtime'
 import { LanMobileBridge } from './mobile/lan-mobile-bridge'
@@ -540,7 +541,8 @@ async function showPluginRecovery(options?: {
       const offendingPlugins = await resolveProfileRecoveryPlugins(
         dshHome,
         extractOffendingPlugins(logs),
-        extractDuplicateLoaderEntryId(logs)
+        extractDuplicateLoaderEntryId(logs),
+        extractSlotConflictName(logs)
       )
       const action = await waitForPluginRecoveryAction({
         snapshot: {

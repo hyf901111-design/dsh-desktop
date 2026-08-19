@@ -377,6 +377,17 @@ export function extractDuplicateLoaderEntryId(
   return undefined
 }
 
+export function extractSlotConflictName(
+  logLines: readonly string[]
+): string | undefined {
+  for (const line of latestHarnessAttemptLogs(logLines)) {
+    if (!line.startsWith('[stderr] ')) continue
+    const match = line.slice(8).match(/single slot\s+["']([^"']+)["']\s+already has a registration/i)
+    if (match?.[1]) return match[1].trim()
+  }
+  return undefined
+}
+
 export function extractOffendingPlugin(logLines: readonly string[]): string | undefined {
   return extractOffendingPlugins(logLines)[0]
 }

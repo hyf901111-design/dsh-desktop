@@ -81,10 +81,30 @@ async function bundleDeclaresLoaderEntry(
   }
 }
 
+async function pluginMatchesSlot(
+  profileDirectory: string,
+  plugin: string,
+  slotName: string
+): Promise<boolean> {
+  const packageDir = join(profileDirectory, 'node_modules', plugin)
+  const filesToCheck = ['cordis.patch.yml', 'client.js', 'package.json', 'index.js', 'lib/index.js']
+  const shortSlot = slotName.includes('.') ? slotName.split('.').pop() : undefined
+  for (const file of filesToCheck) {
+    try {
+      const content = await readFile(join(packageDir, file), 'utf8')
+      if (content.includes(slotName) || (shortSlot && content.includes(shortSlot))) {
+        return true
+      }
+    } catch {}
+  }
+  return false
+}
+
 export async function resolveProfileRecoveryPlugins(
   dshHome: string,
   detectedPlugins: readonly string[],
-  duplicateLoaderEntryId?: string
+  duplicateLoaderEntryId?: string,
+  slotConflictName?: string
 ): Promise<string[]> {
   const manifestPath = profilePackageJsonPath(dshHome)
 
@@ -93,16 +113,30 @@ export async function resolveProfileRecoveryPlugins(
     const manifest = JSON.parse(raw) as ProfileManifest
     const configuredPlugins = configuredProfilePlugins(manifest)
     const configuredSet = new Set(configuredPlugins)
-    const verifiedDetected = [...new Set(detectedPlugins)].filter((plugin) =>
-      configuredSet.has(plugin)
-    )
-    if (verifiedDetected.length > 0) return verifiedDetected
+    const profileDirectory = dirname(manifestPath)
 
+    // 1. Direct or Scope/Sub-package matching
+    const matchedPlugins = new Set<string>()
+    for (const detected of detectedPlugins) {
+      if (configuredSet.has(detected)) {
+        matchedPlugins.add(detected)
+        continue
+      }
+      const scope = detected.startsWith('@') ? detected.split('/')[0] : undefined
+      for (const configured of configuredPlugins) {
+        if (
+          (scope && configured.startsWith(scope)) ||
+          configured.includes(detected) ||
+          detected.includes(configured)
+        ) {
+          matchedPlugins.add(configured)
+        }
+      }
+    }
+    if (matchedPlugins.size > 0) return [...matchedPlugins]
+
+    // 2. Duplicate loader entry matching
     if (duplicateLoaderEntryId) {
-      // Profile bundles are applied in order. When an internal `cordis:include`
-      // reports a duplicate loader id, the last configured third-party bundle
-      // declaring that id is the bundle that attempted the duplicate insert.
-      const profileDirectory = dirname(manifestPath)
       let offendingPlugin: string | undefined
       for (const plugin of configuredPlugins) {
         if (await bundleDeclaresLoaderEntry(profileDirectory, plugin, duplicateLoaderEntryId)) {
@@ -112,7 +146,21 @@ export async function resolveProfileRecoveryPlugins(
       if (offendingPlugin) return [offendingPlugin]
     }
 
-    // Fallback: If no specific plugin matched by name or entry, return all configured third-party plugins
+    // 3. Slot conflict matching
+    if (slotConflictName) {
+      for (const plugin of configuredPlugins) {
+        if (await pluginMatchesSlot(profileDirectory, plugin, slotConflictName)) {
+          return [plugin]
+        }
+      }
+    }
+
+    // 4. If only 1 third-party plugin is configured, it is the sole suspect
+    if (configuredPlugins.length === 1) {
+      return configuredPlugins
+    }
+
+    // Fallback: If multiple third-party plugins configured and none matched, return configured plugins for recovery
     return configuredPlugins
   } catch {
     return []

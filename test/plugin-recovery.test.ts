@@ -188,4 +188,81 @@ describe('plugin-recovery', () => {
       'dshmarket'
     ])
   })
+
+  it('resolves root package when a scoped sub-module fails', async () => {
+    const pkgPath = profilePackageJsonPath(testDir)
+    await writeFile(
+      pkgPath,
+      JSON.stringify({
+        dependencies: {
+          '@linxin666/dsh-web-ui-all': '^0.2.2',
+          '@openviking/dsh-memory-plugin': '^0.1.0',
+          dshmarket: '1.9.0'
+        },
+        dsh: {
+          profile: {
+            bundles: [
+              '@deepseek-ai/dsh-base',
+              '@deepseek-ai/dsh-web-app',
+              'dshmarket',
+              '@linxin666/dsh-web-ui-all',
+              '@openviking/dsh-memory-plugin'
+            ]
+          }
+        }
+      })
+    )
+
+    const resolved = await resolveProfileRecoveryPlugins(testDir, [
+      '@linxin666/dsh-client-ui-web-ui-settings'
+    ])
+    expect(resolved).toEqual(['@linxin666/dsh-web-ui-all'])
+  })
+
+  it('resolves the specific plugin that declared a conflicting UI slot', async () => {
+    const pkgPath = profilePackageJsonPath(testDir)
+    const remoteDir = join(testDir, 'profiles', 'web', 'node_modules', 'dsh-full-remote')
+    const memoryDir = join(testDir, 'profiles', 'web', 'node_modules', '@openviking', 'dsh-memory-plugin')
+    await mkdir(remoteDir, { recursive: true })
+    await mkdir(memoryDir, { recursive: true })
+
+    await writeFile(
+      pkgPath,
+      JSON.stringify({
+        dependencies: {
+          'dsh-full-remote': '^0.3.4',
+          '@openviking/dsh-memory-plugin': '^0.1.0',
+          dshmarket: '1.9.0'
+        },
+        dsh: {
+          profile: {
+            bundles: [
+              '@deepseek-ai/dsh-base',
+              '@deepseek-ai/dsh-web-app',
+              'dshmarket',
+              'dsh-full-remote',
+              '@openviking/dsh-memory-plugin'
+            ]
+          }
+        }
+      })
+    )
+
+    await writeFile(
+      join(remoteDir, 'client.js'),
+      'ctx.slot("conversation.hero.workspace.directoryFlow", component);'
+    )
+    await writeFile(
+      join(memoryDir, 'client.js'),
+      'ctx.slot("sidebar.panel", memoryComponent);'
+    )
+
+    const resolved = await resolveProfileRecoveryPlugins(
+      testDir,
+      ['@deepseek-ai/dsh-client-ui-directory-picker-browse'],
+      undefined,
+      'conversation.hero.workspace.directoryFlow'
+    )
+    expect(resolved).toEqual(['dsh-full-remote'])
+  })
 })
