@@ -34,7 +34,10 @@ let receivedStatusEvent = false
 let phoneConnected = false
 let mobileStatusTimer: number | undefined
 
+let bootFailureTriggered = false
+
 function checkBootFailureInDom(): void {
+  if (bootFailureTriggered) return
   const root = document.body || document.documentElement
   if (!root) return
   const divs = Array.from(root.querySelectorAll('div'))
@@ -43,65 +46,9 @@ function checkBootFailureInDom(): void {
 
   const failedContainer = failedTitle.parentElement
   const errorText = failedContainer.textContent ?? ''
-  const pluginName = extractPluginName(errorText)
 
-  const INJECTED_ID = 'dsh-desktop-boot-recovery-actions'
-  if (document.getElementById(INJECTED_ID)) return
-
-  const actionsDiv = document.createElement('div')
-  actionsDiv.id = INJECTED_ID
-  actionsDiv.style.cssText = [
-    'display:flex',
-    'gap:10px',
-    'margin-top:20px',
-    'justify-content:center',
-    'flex-wrap:wrap',
-    'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'
-  ].join(';')
-
-  const recoveryBtn = document.createElement('button')
-  recoveryBtn.type = 'button'
-  recoveryBtn.textContent = locale === 'zh' ? '卸载冲突插件 / 启动修复' : 'Fix & Uninstall Conflict Plugins'
-  recoveryBtn.style.cssText = [
-    'appearance:none',
-    'border:none',
-    'background:#c33b38',
-    'color:#ffffff',
-    'padding:9px 18px',
-    'border-radius:8px',
-    'font-size:13px',
-    'font-weight:600',
-    'cursor:pointer',
-    'box-shadow:0 2px 8px rgba(195,59,56,0.35)'
-  ].join(';')
-  recoveryBtn.addEventListener('click', () => {
-    recoveryBtn.disabled = true
-    recoveryBtn.textContent = locale === 'zh' ? '正在打开修复…' : 'Opening Recovery…'
-    void ipcRenderer.invoke('harness:open-recovery', errorText)
-  })
-
-  const restartBtn = document.createElement('button')
-  restartBtn.type = 'button'
-  restartBtn.textContent = locale === 'zh' ? '重启 Harness' : 'Restart Harness'
-  restartBtn.style.cssText = [
-    'appearance:none',
-    'border:1px solid #4a4a50',
-    'background:rgba(255,255,255,0.08)',
-    'color:#ffffff',
-    'padding:9px 18px',
-    'border-radius:8px',
-    'font-size:13px',
-    'font-weight:600',
-    'cursor:pointer'
-  ].join(';')
-  restartBtn.addEventListener('click', () => {
-    restartBtn.disabled = true
-    restartBtn.textContent = locale === 'zh' ? '正在重启…' : 'Restarting…'
-    void ipcRenderer.invoke('harness:restart')
-  })
-
-  actionsDiv.append(recoveryBtn, restartBtn)
-  failedContainer.appendChild(actionsDiv)
+  bootFailureTriggered = true
+  void ipcRenderer.invoke('harness:open-recovery', errorText)
 }
 
 const domObserver = new MutationObserver(() => {
