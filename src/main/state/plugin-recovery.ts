@@ -22,6 +22,8 @@ interface ProfileManifest {
 }
 
 interface BundleManifest {
+  dependencies?: Record<string, string>
+  optionalDependencies?: Record<string, string>
   dsh?: {
     bundle?: {
       patch?: string
@@ -32,23 +34,65 @@ interface BundleManifest {
 const CORE_BUNDLES = new Set(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dshmarket'])
 const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i
 
+function yamlPackageNamePattern(packageName: string): RegExp {
+  const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(
+    `^\\s*name:\\s*(?:["']${escaped}["']|${escaped})(?:\\s*(?:#.*)?)?$`,
+    'm'
+  )
+}
+
+export function isThirdPartyPackageName(packageName: string): boolean {
+  return (
+    PACKAGE_NAME_PATTERN.test(packageName) &&
+    !packageName.startsWith('@deepseek-ai/') &&
+    !CORE_BUNDLES.has(packageName)
+  )
+}
+
 function configuredProfilePlugins(manifest: ProfileManifest): string[] {
   const dependencies = manifest.dependencies ?? {}
   const plugins = new Set<string>()
 
   for (const bundle of manifest.dsh?.profile?.bundles ?? []) {
-    if (!CORE_BUNDLES.has(bundle) && PACKAGE_NAME_PATTERN.test(bundle)) {
+    if (isThirdPartyPackageName(bundle)) {
       plugins.add(bundle)
     }
   }
 
   for (const dep of Object.keys(dependencies)) {
-    if (!CORE_BUNDLES.has(dep) && PACKAGE_NAME_PATTERN.test(dep)) {
+    if (isThirdPartyPackageName(dep)) {
       plugins.add(dep)
     }
   }
 
   return [...plugins]
+}
+
+async function bundleOwnsPackage(
+  profileDirectory: string,
+  bundle: string,
+  packageName: string
+): Promise<boolean> {
+  const packageDirectory = join(profileDirectory, 'node_modules', bundle)
+
+  try {
+    const rawManifest = await readFile(join(packageDirectory, 'package.json'), 'utf8')
+    const manifest = JSON.parse(rawManifest) as BundleManifest
+    if (
+      packageName in (manifest.dependencies ?? {}) ||
+      packageName in (manifest.optionalDependencies ?? {})
+    ) {
+      return true
+    }
+
+    const patch = manifest.dsh?.bundle?.patch
+    if (!patch) return false
+    const rawPatch = await readFile(resolve(packageDirectory, patch), 'utf8')
+    return yamlPackageNamePattern(packageName).test(rawPatch)
+  } catch {
+    return false
+  }
 }
 
 function loaderEntryPattern(entryId: string): RegExp {
@@ -97,13 +141,10 @@ async function pluginMatchesSlot(
     'lib/index.js',
     'dist/index.js'
   ]
-  const shortSlot = slotName.includes('.') ? slotName.split('.').pop() : undefined
   for (const file of filesToCheck) {
     try {
       const content = await readFile(join(packageDir, file), 'utf8')
-      if (content.includes(slotName) || (shortSlot && content.includes(shortSlot))) {
-        return true
-      }
+      if (content.includes(slotName)) return true
     } catch {}
   }
   return false
@@ -124,25 +165,22 @@ export async function resolveProfileRecoveryPlugins(
     const configuredSet = new Set(configuredPlugins)
     const profileDirectory = dirname(manifestPath)
 
-    // 1. Direct or Scope/Sub-package matching
+    // 1. Match an installed third-party root package directly, or prove that
+    // a reported sub-package is owned by one configured third-party bundle.
     const matchedPlugins = new Set<string>()
     for (const detected of detectedPlugins) {
+      if (!PACKAGE_NAME_PATTERN.test(detected)) continue
       if (configuredSet.has(detected)) {
         matchedPlugins.add(detected)
         continue
       }
-      const scope = detected.startsWith('@') ? detected.split('/')[0] : undefined
       for (const configured of configuredPlugins) {
-        if (
-          (scope && configured.startsWith(scope)) ||
-          configured.includes(detected) ||
-          detected.includes(configured)
-        ) {
+        if (await bundleOwnsPackage(profileDirectory, configured, detected)) {
           matchedPlugins.add(configured)
         }
       }
     }
-    if (matchedPlugins.size > 0) return [...matchedPlugins]
+    if (matchedPlugins.size === 1) return [...matchedPlugins]
 
     // 2. Duplicate loader entry matching
     if (duplicateLoaderEntryId) {
@@ -163,21 +201,12 @@ export async function resolveProfileRecoveryPlugins(
           slotMatched.add(plugin)
         }
       }
-      if (slotMatched.size > 0) {
-        if (slotMatched.has('dsh-full-remote') && slotMatched.has('dsh-remote')) {
-          return ['dsh-full-remote']
-        }
-        return [...slotMatched]
-      }
+      if (slotMatched.size === 1) return [...slotMatched]
     }
 
-    // 4. If only 1 third-party plugin is configured, it is the sole suspect
-    if (configuredPlugins.length === 1) {
-      return configuredPlugins
-    }
-
-    // Fallback: If multiple third-party plugins configured and none matched, return configured plugins for recovery
-    return configuredPlugins
+    // Never guess. A recovery action is only safe when one or more packages
+    // have direct evidence tying them to the reported failure.
+    return []
   } catch {
     return []
   }
@@ -187,6 +216,7 @@ export async function uninstallPluginFromProfile(
   dshHome: string,
   pluginName: string
 ): Promise<boolean> {
+  if (!isThirdPartyPackageName(pluginName)) return false
   return resetPluginProfile(dshHome, pluginName)
 }
 
@@ -196,6 +226,7 @@ export async function resetPluginProfile(
 ): Promise<boolean> {
   const manifestPath = profilePackageJsonPath(dshHome)
   if (!existsSync(manifestPath)) return false
+  if (failingPlugin && !isThirdPartyPackageName(failingPlugin)) return false
 
   try {
     const raw = await readFile(manifestPath, 'utf8')

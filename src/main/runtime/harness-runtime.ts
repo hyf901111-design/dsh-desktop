@@ -316,21 +316,28 @@ export function extractFailureCause(logLines: readonly string[]): string | undef
   return undefined
 }
 
-const CORE_BUNDLES = new Set(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'])
+const CORE_BUNDLES = new Set(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dshmarket'])
+const PACKAGE_REFERENCE_PATTERN = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i
+
+function isPackageReference(value: string): boolean {
+  const candidate = value.trim()
+  if (!candidate || candidate.includes(':')) return false
+  return PACKAGE_REFERENCE_PATTERN.test(candidate)
+}
 
 function isActionablePluginReference(value: string): boolean {
   const candidate = value.trim()
-  if (!candidate || CORE_BUNDLES.has(candidate)) return false
-
-  // Loader services use identifiers such as `cordis:include`. They describe
-  // where profile composition failed, not an installed npm package, and must
-  // never be offered as an uninstall target.
-  if (candidate.includes(':')) return false
-
-  return /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i.test(candidate)
+  return (
+    isPackageReference(candidate) &&
+    !CORE_BUNDLES.has(candidate) &&
+    !candidate.startsWith('@deepseek-ai/')
+  )
 }
 
-export function extractOffendingPlugins(logLines: readonly string[]): string[] {
+function extractPluginReferences(
+  logLines: readonly string[],
+  accepts: (value: string) => boolean
+): string[] {
   const plugins = new Set<string>()
 
   for (const line of latestHarnessAttemptLogs(logLines)) {
@@ -338,32 +345,48 @@ export function extractOffendingPlugins(logLines: readonly string[]): string[] {
     const text = line.slice(8)
 
     const m1 = text.match(/failed to apply loader entry [^\s]+ \((@[^)]+|[^)]+)\)/i)
-    if (m1 && m1[1] && isActionablePluginReference(m1[1])) {
+    if (m1 && m1[1] && accepts(m1[1])) {
       plugins.add(m1[1].trim())
     }
 
     const m2 = text.match(/cannot resolve profile bundle ["']([^"']+)["']/i)
-    if (m2 && m2[1] && isActionablePluginReference(m2[1])) {
+    if (m2 && m2[1] && accepts(m2[1])) {
       plugins.add(m2[1].trim())
     }
 
     const m3 = text.match(/profile bundle ["']([^"']+)["'] declares no dsh\.bundle/i)
-    if (m3 && m3[1] && isActionablePluginReference(m3[1])) {
+    if (m3 && m3[1] && accepts(m3[1])) {
       plugins.add(m3[1].trim())
     }
 
     const m4 = text.match(/failed to import loader entry [^\s]+ \((@[^)]+|[^)]+)\)/i)
-    if (m4 && m4[1] && isActionablePluginReference(m4[1])) {
+    if (m4 && m4[1] && accepts(m4[1])) {
       plugins.add(m4[1].trim())
     }
 
     const m5 = text.match(/plugin\(s\) failed to load:\s*([a-zA-Z0-9@/_-]+)/i)
-    if (m5 && m5[1] && isActionablePluginReference(m5[1])) {
+    if (m5 && m5[1] && accepts(m5[1])) {
       plugins.add(m5[1].trim())
+    }
+
+    const bootFailureLines = text.split(/\r?\n/).map((value) => value.trim())
+    const bootFailureTitle = bootFailureLines.findIndex((value) => value === 'Failed to load plugins')
+    if (bootFailureTitle >= 0) {
+      for (const candidate of bootFailureLines.slice(bootFailureTitle + 1)) {
+        if (accepts(candidate)) plugins.add(candidate)
+      }
     }
   }
 
   return [...plugins]
+}
+
+export function extractPluginFailureReferences(logLines: readonly string[]): string[] {
+  return extractPluginReferences(logLines, isPackageReference)
+}
+
+export function extractOffendingPlugins(logLines: readonly string[]): string[] {
+  return extractPluginReferences(logLines, isActionablePluginReference)
 }
 
 export function extractDuplicateLoaderEntryId(

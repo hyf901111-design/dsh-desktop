@@ -16,7 +16,7 @@ import {
 import {
   extractDuplicateLoaderEntryId,
   extractFailureCause,
-  extractOffendingPlugins,
+  extractPluginFailureReferences,
   extractSlotConflictName,
   HarnessRuntime
 } from './runtime/harness-runtime'
@@ -63,6 +63,7 @@ let failureRecoveryVisible = false
 let harnessLaunchOperation: Promise<void> | undefined
 let pluginRecoveryActionResolver: ((action: PluginRecoveryAction) => void) | undefined
 let mainWindowNavigationVersion = 0
+let rendererPluginFailureLogs: string[] = []
 
 function isDevelopmentBuild(): boolean {
   if (!app.isPackaged) return true
@@ -300,6 +301,15 @@ function createWindow(): BrowserWindow {
     event.preventDefault()
     window.setTitle('')
   })
+  window.webContents.on('console-message', (details) => {
+    if (details.level !== 'error') return
+    const sourceUrl = details.sourceId || window.webContents.getURL()
+    if (!sourceUrl.startsWith('http://127.0.0.1:')) return
+    const message = details.message.trim()
+    if (!message) return
+    rendererPluginFailureLogs.push(`[stderr] ${message}`)
+    rendererPluginFailureLogs = rendererPluginFailureLogs.slice(-50)
+  })
   installPluginRecoveryNavigation(window)
   secureWindow(window)
   installContextMenu(window, harnessLocale)
@@ -315,6 +325,7 @@ async function openHarness(url: string): Promise<void> {
   const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : createWindow()
   if (shouldLoadHarnessUrl(window.webContents.getURL(), url)) {
     const navigationVersion = ++mainWindowNavigationVersion
+    rendererPluginFailureLogs = []
     window.webContents.stop()
     try {
       await window.loadURL(url)
@@ -540,7 +551,7 @@ async function showPluginRecovery(options?: {
       const message = options?.message ?? snapshot.message
       const offendingPlugins = await resolveProfileRecoveryPlugins(
         dshHome,
-        extractOffendingPlugins(logs),
+        extractPluginFailureReferences(logs),
         extractDuplicateLoaderEntryId(logs),
         extractSlotConflictName(logs)
       )
@@ -805,7 +816,10 @@ async function bootstrap(): Promise<void> {
   ipcMain.handle('harness:open-recovery', async (event, frontendErrorMessage?: unknown) => {
     assertTrustedMainWindowEvent(event)
     const message = typeof frontendErrorMessage === 'string' ? frontendErrorMessage : undefined
-    const logs = message ? [`[stderr] ${message}`] : undefined
+    const logs = [
+      ...rendererPluginFailureLogs,
+      ...(message ? [`[stderr] ${message}`] : [])
+    ]
     void showPluginRecovery({ message, logs })
     return { ok: true }
   })

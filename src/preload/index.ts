@@ -24,20 +24,37 @@ let phoneConnected = false
 let mobileStatusTimer: number | undefined
 
 let bootFailureTriggered = false
+let bootFailureTimer: number | undefined
+
+const BOOT_FAILURE_SETTLE_MS = 250
+
+function currentBootFailureText(): string | undefined {
+  const root = document.body || document.documentElement
+  if (!root) return undefined
+  const divs = Array.from(root.querySelectorAll('div'))
+  const failedTitle = divs.find((el) => el.textContent?.trim() === 'Failed to load plugins')
+  if (!failedTitle?.parentElement) return undefined
+
+  const parts = Array.from(failedTitle.parentElement.children)
+    .map((el) => el.textContent?.trim())
+    .filter((value): value is string => Boolean(value))
+  return parts.join('\n')
+}
 
 function checkBootFailureInDom(): void {
   if (bootFailureTriggered) return
-  const root = document.body || document.documentElement
-  if (!root) return
-  const divs = Array.from(root.querySelectorAll('div'))
-  const failedTitle = divs.find((el) => el.textContent?.trim() === 'Failed to load plugins')
-  if (!failedTitle || !failedTitle.parentElement) return
+  if (!currentBootFailureText()) return
 
-  const failedContainer = failedTitle.parentElement
-  const errorText = failedContainer.textContent ?? ''
+  if (bootFailureTimer !== undefined) window.clearTimeout(bootFailureTimer)
+  bootFailureTimer = window.setTimeout(() => {
+    bootFailureTimer = undefined
+    if (bootFailureTriggered) return
+    const errorText = currentBootFailureText()
+    if (!errorText) return
 
-  bootFailureTriggered = true
-  void ipcRenderer.invoke('harness:open-recovery', errorText)
+    bootFailureTriggered = true
+    void ipcRenderer.invoke('harness:open-recovery', errorText)
+  }, BOOT_FAILURE_SETTLE_MS)
 }
 
 const domObserver = new MutationObserver(() => {
