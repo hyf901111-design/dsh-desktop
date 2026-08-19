@@ -87,7 +87,16 @@ async function pluginMatchesSlot(
   slotName: string
 ): Promise<boolean> {
   const packageDir = join(profileDirectory, 'node_modules', plugin)
-  const filesToCheck = ['cordis.patch.yml', 'client.js', 'package.json', 'index.js', 'lib/index.js']
+  const filesToCheck = [
+    'cordis.patch.yml',
+    'client.js',
+    'lib/client.js',
+    'dist/client.js',
+    'package.json',
+    'index.js',
+    'lib/index.js',
+    'dist/index.js'
+  ]
   const shortSlot = slotName.includes('.') ? slotName.split('.').pop() : undefined
   for (const file of filesToCheck) {
     try {
@@ -148,10 +157,17 @@ export async function resolveProfileRecoveryPlugins(
 
     // 3. Slot conflict matching
     if (slotConflictName) {
+      const slotMatched = new Set<string>()
       for (const plugin of configuredPlugins) {
         if (await pluginMatchesSlot(profileDirectory, plugin, slotConflictName)) {
-          return [plugin]
+          slotMatched.add(plugin)
         }
+      }
+      if (slotMatched.size > 0) {
+        if (slotMatched.has('dsh-full-remote') && slotMatched.has('dsh-remote')) {
+          return ['dsh-full-remote']
+        }
+        return [...slotMatched]
       }
     }
 
