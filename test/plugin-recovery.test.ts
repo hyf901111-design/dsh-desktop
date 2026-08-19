@@ -130,7 +130,7 @@ describe('plugin-recovery', () => {
     ).resolves.toEqual(['@deepseek-harness-tui/dsh-tui'])
   })
 
-  it('does not offer a partially registered package as an uninstall target', async () => {
+  it('offers and cleans up a partially registered package', async () => {
     const pkgPath = profilePackageJsonPath(testDir)
     await writeFile(
       pkgPath,
@@ -148,10 +148,10 @@ describe('plugin-recovery', () => {
 
     await expect(
       resolveProfileRecoveryPlugins(testDir, ['partial-plugin'])
-    ).resolves.toEqual([])
+    ).resolves.toEqual(['partial-plugin'])
     await expect(
       uninstallPluginFromProfile(testDir, 'partial-plugin')
-    ).resolves.toBe(false)
+    ).resolves.toBe(true)
   })
 
   it('resets plugin profile by cleaning up specific failing plugin and related packages', async () => {
