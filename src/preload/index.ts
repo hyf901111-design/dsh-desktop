@@ -75,7 +75,7 @@ function checkBootFailureInDom(): void {
   restartBtn.addEventListener('click', () => {
     restartBtn.disabled = true
     restartBtn.textContent = locale === 'zh' ? '正在重启…' : 'Restarting…'
-    void ipcRenderer.invoke('harness:reset-plugins', pluginName)
+    void ipcRenderer.invoke('harness:restart')
   })
 
   actionsDiv.appendChild(restartBtn)
@@ -262,7 +262,7 @@ function renderPluginError(): void {
     restartingHarness = true
     renderPluginError()
     void ipcRenderer
-      .invoke('harness:reset-plugins', activePluginErrorName)
+      .invoke('harness:restart')
       .finally(() => {
         restartingHarness = false
         dismissPluginError()

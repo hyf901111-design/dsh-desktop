@@ -57,7 +57,6 @@ describe('preload wiring for plugin error toast', () => {
     expect(preload).toContain("window.addEventListener('unhandledrejection'")
     expect(preload).toContain('isPluginLoadError')
     expect(preload).toContain("harness:restart")
-    expect(preload).toContain("harness:reset-plugins")
     expect(preload).toContain('mountPluginErrorCard')
   })
 })
