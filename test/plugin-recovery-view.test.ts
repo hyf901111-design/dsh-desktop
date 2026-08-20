@@ -38,7 +38,9 @@ describe('plugin recovery view model', () => {
   it.each([
     ['cannot resolve profile bundle example', '插件没有完整安装'],
     ['package declares no dsh.bundle', '安装的包不是兼容的 DSH 插件'],
-    ['failed to import loader entry example', '插件代码加载失败']
+    ['failed to import loader entry example', '插件代码加载失败'],
+    ['duplicate loader entry id: storage', '插件注册了重复的服务组件'],
+    ['single slot "conversation.hero.workspace.directoryFlow" already has a registration at priority 0', '插件存在界面插槽冲突']
   ])('describes known startup failures: %s', (log, expectedTitle) => {
     expect(describePluginFailure([`[stderr] ${log}`], 'zh').title).toBe(expectedTitle)
   })
@@ -68,6 +70,17 @@ describe('plugin recovery view model', () => {
     })
     expect(model.progress).toContain('已处理 1 个插件')
     expect(model.plugins).toEqual(['plugin-b'])
+  })
+
+  it('shows a readable name for a scoped package while recovery keeps its package id', () => {
+    const model = buildPluginRecoveryViewModel({
+      snapshot: failedSnapshot(),
+      plugins: ['@deepseek-harness-tui/dsh-tui'],
+      removedPlugins: [],
+      locale: 'zh'
+    })
+    expect(model.plugins).toEqual(['dsh-tui'])
+    expect(model.canUninstall).toBe(true)
   })
 
   it('falls back to the log when no plugin can be identified', () => {
