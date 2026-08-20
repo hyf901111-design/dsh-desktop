@@ -1,6 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { parse, stringify } from 'yaml'
 import {
   isThirdPartyPackageName,
   profilePackageJsonPath,
@@ -11,6 +12,29 @@ import {
 
 describe('plugin-recovery', () => {
   const testDir = join(__dirname, '.temp-plugin-recovery-test')
+
+  async function simulateDshPluginRemove(pluginName: string): Promise<boolean> {
+    const profileDirectory = join(testDir, 'profiles', 'web')
+    const manifestPath = join(profileDirectory, 'package.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    delete manifest.dependencies?.[pluginName]
+    if (manifest.dsh?.profile?.bundles) {
+      manifest.dsh.profile.bundles = manifest.dsh.profile.bundles.filter(
+        (bundle: string) => bundle !== pluginName
+      )
+    }
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
+
+    const lockfilePath = join(profileDirectory, 'pnpm-lock.yaml')
+    const lockfile = parse(await readFile(lockfilePath, 'utf8'))
+    delete lockfile.importers?.['.']?.dependencies?.[pluginName]
+    await writeFile(lockfilePath, stringify(lockfile))
+    await rm(join(profileDirectory, 'node_modules', pluginName), {
+      recursive: true,
+      force: true
+    })
+    return true
+  }
 
   beforeEach(async () => {
     await mkdir(join(testDir, 'profiles', 'web'), { recursive: true })
@@ -42,8 +66,30 @@ describe('plugin-recovery', () => {
       }
     }
     await writeFile(pkgPath, JSON.stringify(originalPkg, null, 2))
+    await mkdir(join(testDir, 'profiles', 'web', 'node_modules', 'dsh-better-sidebar'), {
+      recursive: true
+    })
+    await writeFile(
+      join(testDir, 'profiles', 'web', 'pnpm-lock.yaml'),
+      stringify({
+        lockfileVersion: '9.0',
+        importers: {
+          '.': {
+            dependencies: {
+              'dsh-better-sidebar': { specifier: '^0.13.1', version: '0.13.1' },
+              '@linxin666/dsh-web-ui-all': { specifier: '^0.2.2', version: '0.2.2' },
+              dshmarket: { specifier: '1.9.0', version: '1.9.0' }
+            }
+          }
+        }
+      })
+    )
 
-    const success = await uninstallPluginFromProfile(testDir, 'dsh-better-sidebar')
+    const success = await uninstallPluginFromProfile(
+      testDir,
+      'dsh-better-sidebar',
+      simulateDshPluginRemove
+    )
     expect(success).toBe(true)
 
     const updatedPkg = JSON.parse(await readFile(pkgPath, 'utf8'))
@@ -57,6 +103,13 @@ describe('plugin-recovery', () => {
       'dshmarket',
       '@linxin666/dsh-web-ui-all'
     ])
+    const updatedLockfile = parse(
+      await readFile(join(testDir, 'profiles', 'web', 'pnpm-lock.yaml'), 'utf8')
+    )
+    expect(updatedLockfile.importers['.'].dependencies).toEqual({
+      '@linxin666/dsh-web-ui-all': { specifier: '^0.2.2', version: '0.2.2' },
+      dshmarket: { specifier: '1.9.0', version: '1.9.0' }
+    })
   })
 
   it('returns false when package.json does not exist', async () => {
@@ -81,6 +134,45 @@ describe('plugin-recovery', () => {
     )
 
     const success = await uninstallPluginFromProfile(testDir, 'non-existent-plugin')
+    expect(success).toBe(false)
+  })
+
+  it('does not report success when the lockfile still imports the removed plugin', async () => {
+    const profileDirectory = join(testDir, 'profiles', 'web')
+    const pkgPath = profilePackageJsonPath(testDir)
+    await writeFile(
+      pkgPath,
+      JSON.stringify({
+        dependencies: { 'stale-lock-plugin': '^1.0.0' },
+        dsh: { profile: { bundles: ['stale-lock-plugin'] } }
+      })
+    )
+    await writeFile(
+      join(profileDirectory, 'pnpm-lock.yaml'),
+      stringify({
+        lockfileVersion: '9.0',
+        importers: {
+          '.': {
+            dependencies: {
+              'stale-lock-plugin': { specifier: '^1.0.0', version: '1.0.0' }
+            }
+          }
+        }
+      })
+    )
+
+    const success = await uninstallPluginFromProfile(
+      testDir,
+      'stale-lock-plugin',
+      async (pluginName) => {
+        const manifest = JSON.parse(await readFile(pkgPath, 'utf8'))
+        delete manifest.dependencies[pluginName]
+        manifest.dsh.profile.bundles = []
+        await writeFile(pkgPath, JSON.stringify(manifest))
+        return true
+      }
+    )
+
     expect(success).toBe(false)
   })
 
@@ -160,7 +252,7 @@ describe('plugin-recovery', () => {
     ).resolves.toEqual(['@deepseek-harness-tui/dsh-tui'])
   })
 
-  it('offers and cleans up a partially registered package', async () => {
+  it('does not offer or remove a package that is not an active profile bundle', async () => {
     const pkgPath = profilePackageJsonPath(testDir)
     await writeFile(
       pkgPath,
@@ -178,10 +270,10 @@ describe('plugin-recovery', () => {
 
     await expect(
       resolveProfileRecoveryPlugins(testDir, ['partial-plugin'])
-    ).resolves.toEqual(['partial-plugin'])
+    ).resolves.toEqual([])
     await expect(
-      uninstallPluginFromProfile(testDir, 'partial-plugin')
-    ).resolves.toBe(true)
+      uninstallPluginFromProfile(testDir, 'partial-plugin', async () => true)
+    ).resolves.toBe(false)
   })
 
   it('resets plugin profile by cleaning up specific failing plugin and related packages', async () => {
@@ -354,6 +446,117 @@ describe('plugin-recovery', () => {
         '@deepseek-ai/dsh-client-ui-directory-picker-browse'
       ])
     ).resolves.toEqual(['dsh-full-remote'])
+  })
+
+  it('maps the directory-picker frontend failure to the remaining remote bundle', async () => {
+    const pkgPath = profilePackageJsonPath(testDir)
+    const remoteDir = join(testDir, 'profiles', 'web', 'node_modules', '@xgone', 'dsh-remote')
+    await mkdir(remoteDir, { recursive: true })
+    await writeFile(
+      join(remoteDir, 'package.json'),
+      JSON.stringify({
+        name: '@xgone/dsh-remote',
+        dsh: { bundle: { patch: './cordis.patch.yml' } }
+      })
+    )
+    await writeFile(
+      join(remoteDir, 'cordis.patch.yml'),
+      [
+        '- insert:',
+        '    - id: directory-picker-browse-ui',
+        "      name: '@deepseek-ai/dsh-client-ui-directory-picker-browse'",
+        ''
+      ].join('\n')
+    )
+    await writeFile(
+      pkgPath,
+      JSON.stringify({
+        dependencies: {
+          '@xgone/dsh-remote': '^0.2.0',
+          dshmarket: '1.9.0'
+        },
+        dsh: {
+          profile: {
+            bundles: [
+              '@deepseek-ai/dsh-base',
+              '@deepseek-ai/dsh-web-app',
+              'dshmarket',
+              '@xgone/dsh-remote'
+            ]
+          }
+        }
+      })
+    )
+
+    await expect(
+      resolveProfileRecoveryPlugins(testDir, [
+        '@deepseek-ai/dsh-client-ui-directory-picker-browse'
+      ])
+    ).resolves.toEqual(['@xgone/dsh-remote'])
+  })
+
+  it('continues a recovery session by excluding the plugin removed in the previous round', async () => {
+    const pkgPath = profilePackageJsonPath(testDir)
+    const fullRemoteDir = join(testDir, 'profiles', 'web', 'node_modules', 'dsh-full-remote')
+    const xgoneRemoteDir = join(
+      testDir,
+      'profiles',
+      'web',
+      'node_modules',
+      '@xgone',
+      'dsh-remote'
+    )
+    for (const [directory, name] of [
+      [fullRemoteDir, 'dsh-full-remote'],
+      [xgoneRemoteDir, '@xgone/dsh-remote']
+    ] as const) {
+      await mkdir(directory, { recursive: true })
+      await writeFile(
+        join(directory, 'package.json'),
+        JSON.stringify({ name, dsh: { bundle: { patch: './cordis.patch.yml' } } })
+      )
+      await writeFile(
+        join(directory, 'cordis.patch.yml'),
+        "- id: directory-picker-browse-ui\n  name: '@deepseek-ai/dsh-client-ui-directory-picker-browse'\n"
+      )
+    }
+    await writeFile(
+      pkgPath,
+      JSON.stringify({
+        dependencies: {
+          'dsh-full-remote': '^0.3.4',
+          '@xgone/dsh-remote': '^0.2.0'
+        },
+        dsh: {
+          profile: {
+            bundles: [
+              '@deepseek-ai/dsh-base',
+              '@deepseek-ai/dsh-web-app',
+              '@xgone/dsh-remote',
+              'dsh-full-remote'
+            ]
+          }
+        }
+      })
+    )
+
+    await expect(
+      resolveProfileRecoveryPlugins(
+        testDir,
+        ['@deepseek-ai/dsh-client-ui-directory-picker-browse'],
+        undefined,
+        'conversation.hero.workspace.directoryFlow'
+      )
+    ).resolves.toEqual([])
+    await expect(
+      resolveProfileRecoveryPlugins(
+        testDir,
+        ['@deepseek-ai/dsh-client-ui-directory-picker-browse'],
+        undefined,
+        'conversation.hero.workspace.directoryFlow',
+        ['dsh-full-remote']
+      )
+    ).resolves.toEqual(['@xgone/dsh-remote'])
   })
 
   it('does not offer every third-party package when the failure has no direct match', async () => {

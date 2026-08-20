@@ -25,36 +25,61 @@ let mobileStatusTimer: number | undefined
 
 let bootFailureTriggered = false
 let bootFailureTimer: number | undefined
+const pendingBootFailureMessages: string[] = []
 
-const BOOT_FAILURE_SETTLE_MS = 250
+const BOOT_FAILURE_SETTLE_MS = 400
 
 function currentBootFailureText(): string | undefined {
   const root = document.body || document.documentElement
   if (!root) return undefined
-  const divs = Array.from(root.querySelectorAll('div'))
-  const failedTitle = divs.find((el) => el.textContent?.trim() === 'Failed to load plugins')
-  if (!failedTitle?.parentElement) return undefined
 
-  const parts = Array.from(failedTitle.parentElement.children)
-    .map((el) => el.textContent?.trim())
-    .filter((value): value is string => Boolean(value))
-  return parts.join('\n')
+  // The package list and loader detail are rendered in separate sibling
+  // containers on Harness's boot-failure page. Reading only the title's
+  // parent drops exactly the evidence Desktop needs to identify the second
+  // conflicting plugin, so capture the full failure page instead.
+  const text = document.body?.innerText || root.textContent
+  if (!text?.includes('Failed to load plugins')) return undefined
+  return text
+    ?.split(/\r?\n/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join('\n')
 }
 
-function checkBootFailureInDom(): void {
+function addBootFailureMessage(message: string | undefined): void {
+  const normalized = message?.trim()
+  if (!normalized || pendingBootFailureMessages.includes(normalized)) return
+  pendingBootFailureMessages.push(normalized)
+}
+
+function queueBootFailure(message?: string): void {
   if (bootFailureTriggered) return
-  if (!currentBootFailureText()) return
+
+  addBootFailureMessage(message)
+  addBootFailureMessage(currentBootFailureText())
+  if (pendingBootFailureMessages.length === 0) return
 
   if (bootFailureTimer !== undefined) window.clearTimeout(bootFailureTimer)
   bootFailureTimer = window.setTimeout(() => {
     bootFailureTimer = undefined
     if (bootFailureTriggered) return
-    const errorText = currentBootFailureText()
+
+    // The web boot page renders the plugin name and detailed loader error after
+    // window.error/unhandledrejection fires. Read it one last time before leaving
+    // the page so recovery receives the richest available diagnostic evidence.
+    addBootFailureMessage(currentBootFailureText())
+    const errorText = pendingBootFailureMessages.join('\n')
     if (!errorText) return
 
     bootFailureTriggered = true
     void ipcRenderer.invoke('harness:open-recovery', errorText)
   }, BOOT_FAILURE_SETTLE_MS)
+}
+
+function checkBootFailureInDom(): void {
+  const errorText = currentBootFailureText()
+  if (!errorText) return
+  queueBootFailure(errorText)
 }
 
 const domObserver = new MutationObserver(() => {
@@ -135,7 +160,7 @@ window.addEventListener('error', (event) => {
   const err = event.error ?? event.message
   if (isPluginLoadError(err)) {
     const errorText = typeof err === 'string' ? err : err instanceof Error ? err.message : String(err)
-    void ipcRenderer.invoke('harness:open-recovery', errorText)
+    queueBootFailure(errorText)
   }
 })
 
@@ -143,7 +168,7 @@ window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason
   if (isPluginLoadError(reason)) {
     const errorText = typeof reason === 'string' ? reason : reason instanceof Error ? reason.message : String(reason)
-    void ipcRenderer.invoke('harness:open-recovery', errorText)
+    queueBootFailure(errorText)
   }
 })
 

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
+import { parse } from 'yaml'
 
 export function profilePackageJsonPath(dshHome: string): string {
   return join(dshHome, 'profiles', 'web', 'package.json')
@@ -31,6 +32,19 @@ interface BundleManifest {
   }
 }
 
+interface ProfileLockfile {
+  importers?: Record<
+    string,
+    {
+      dependencies?: Record<string, unknown>
+      devDependencies?: Record<string, unknown>
+      optionalDependencies?: Record<string, unknown>
+    }
+  >
+}
+
+export type ProfilePluginRemovalRunner = (pluginName: string) => Promise<boolean>
+
 const CORE_BUNDLES = new Set(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'dshmarket'])
 const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i
 
@@ -52,21 +66,16 @@ export function isThirdPartyPackageName(packageName: string): boolean {
 
 function configuredProfilePlugins(manifest: ProfileManifest): string[] {
   const dependencies = manifest.dependencies ?? {}
-  const plugins = new Set<string>()
-
-  for (const bundle of manifest.dsh?.profile?.bundles ?? []) {
-    if (isThirdPartyPackageName(bundle)) {
-      plugins.add(bundle)
-    }
-  }
+  const bundles = new Set(manifest.dsh?.profile?.bundles ?? [])
+  const plugins: string[] = []
 
   for (const dep of Object.keys(dependencies)) {
-    if (isThirdPartyPackageName(dep)) {
-      plugins.add(dep)
+    if (bundles.has(dep) && isThirdPartyPackageName(dep)) {
+      plugins.push(dep)
     }
   }
 
-  return [...plugins]
+  return plugins
 }
 
 async function bundleOwnsPackage(
@@ -154,14 +163,18 @@ export async function resolveProfileRecoveryPlugins(
   dshHome: string,
   detectedPlugins: readonly string[],
   duplicateLoaderEntryId?: string,
-  slotConflictName?: string
+  slotConflictName?: string,
+  excludedPlugins: readonly string[] = []
 ): Promise<string[]> {
   const manifestPath = profilePackageJsonPath(dshHome)
 
   try {
     const raw = await readFile(manifestPath, 'utf8')
     const manifest = JSON.parse(raw) as ProfileManifest
-    const configuredPlugins = configuredProfilePlugins(manifest)
+    const excludedSet = new Set(excludedPlugins)
+    const configuredPlugins = configuredProfilePlugins(manifest).filter(
+      (plugin) => !excludedSet.has(plugin)
+    )
     const configuredSet = new Set(configuredPlugins)
     const profileDirectory = dirname(manifestPath)
 
@@ -214,10 +227,50 @@ export async function resolveProfileRecoveryPlugins(
 
 export async function uninstallPluginFromProfile(
   dshHome: string,
-  pluginName: string
+  pluginName: string,
+  removePlugin?: ProfilePluginRemovalRunner
 ): Promise<boolean> {
-  if (!isThirdPartyPackageName(pluginName)) return false
-  return resetPluginProfile(dshHome, pluginName)
+  if (!isThirdPartyPackageName(pluginName) || !removePlugin) return false
+
+  const manifestPath = profilePackageJsonPath(dshHome)
+  const lockfilePath = join(dirname(manifestPath), 'pnpm-lock.yaml')
+  const pluginDirectory = join(dirname(manifestPath), 'node_modules', pluginName)
+
+  try {
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as ProfileManifest
+    const configured =
+      Object.hasOwn(manifest.dependencies ?? {}, pluginName) &&
+      (manifest.dsh?.profile?.bundles ?? []).includes(pluginName)
+    if (!configured) return false
+
+    const lockfileExisted = existsSync(lockfilePath)
+    if (!(await removePlugin(pluginName))) return false
+
+    const updatedManifest = JSON.parse(await readFile(manifestPath, 'utf8')) as ProfileManifest
+    if (
+      Object.hasOwn(updatedManifest.dependencies ?? {}, pluginName) ||
+      (updatedManifest.dsh?.profile?.bundles ?? []).includes(pluginName) ||
+      existsSync(pluginDirectory)
+    ) {
+      return false
+    }
+
+    if (lockfileExisted) {
+      const lockfile = parse(await readFile(lockfilePath, 'utf8')) as ProfileLockfile
+      const importer = lockfile.importers?.['.']
+      if (
+        Object.hasOwn(importer?.dependencies ?? {}, pluginName) ||
+        Object.hasOwn(importer?.devDependencies ?? {}, pluginName) ||
+        Object.hasOwn(importer?.optionalDependencies ?? {}, pluginName)
+      ) {
+        return false
+      }
+    }
+
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function resetPluginProfile(

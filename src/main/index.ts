@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
-import { existsSync, readFileSync } from "node:fs"
+import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { parse } from 'yaml'
 import {
   app,
@@ -20,6 +20,7 @@ import {
   extractSlotConflictName,
   HarnessRuntime
 } from './runtime/harness-runtime'
+import { removeProfilePluginWithDsh } from './runtime/profile-plugin-command'
 import { LanMobileBridge } from './mobile/lan-mobile-bridge'
 import { secureWindow } from './security'
 import { ensureLaunchRoot } from './state/launch-root'
@@ -64,6 +65,44 @@ let harnessLaunchOperation: Promise<void> | undefined
 let pluginRecoveryActionResolver: ((action: PluginRecoveryAction) => void) | undefined
 let mainWindowNavigationVersion = 0
 let rendererPluginFailureLogs: string[] = []
+let pluginRecoveryRemovedPlugins: string[] = []
+let pluginRecoveryResetTimer: ReturnType<typeof setTimeout> | undefined
+
+function cancelPluginRecoverySessionReset(): void {
+  if (pluginRecoveryResetTimer) clearTimeout(pluginRecoveryResetTimer)
+  pluginRecoveryResetTimer = undefined
+}
+
+function schedulePluginRecoverySessionReset(): void {
+  cancelPluginRecoverySessionReset()
+  pluginRecoveryResetTimer = setTimeout(() => {
+    pluginRecoveryResetTimer = undefined
+    pluginRecoveryRemovedPlugins = []
+  // Keep the chain alive long enough for slower Windows machines to finish
+  // rendering a frontend plugin failure after the backend reports ready.
+  }, 60_000)
+}
+
+function appendRendererPluginRecoveryLog(logs: readonly string[]): void {
+  if (logs.length === 0) return
+
+  try {
+    const evidence = logs
+      .slice(-50)
+      .join('\n')
+      .slice(-20_000)
+      .split(/\r?\n/)
+      .map((line) => `[renderer] ${line}`)
+      .join('\n')
+    appendFileSync(
+      join(app.getPath('logs'), 'harness.log'),
+      `\n[desktop] frontend plugin recovery ${new Date().toISOString()}\n${evidence}\n`,
+      'utf8'
+    )
+  } catch (error) {
+    console.warn('[desktop] failed to persist frontend plugin recovery evidence', error)
+  }
+}
 
 function isDevelopmentBuild(): boolean {
   if (!app.isPackaged) return true
@@ -173,6 +212,12 @@ function dshEntryPath(): string {
 function bundledNodePath(): string {
   const executable = process.platform === 'win32' ? 'node.exe' : 'node'
   return join(app.getAppPath(), 'node_modules', 'node', 'bin', executable)
+}
+
+function bundledPnpmEntryPath(): string {
+  const root = join(app.getAppPath(), 'node_modules', 'pnpm', 'bin')
+  const candidates = [join(root, 'pnpm.cjs'), join(root, 'pnpm.mjs')]
+  return candidates.find((candidate) => existsSync(candidate)) ?? join(root, 'pnpm.cjs')
 }
 
 function harnessNodeEntryPath(): string {
@@ -541,7 +586,8 @@ async function showPluginRecovery(options?: {
 
   const dshHome = join(app.getPath('userData'), 'harness')
   const isChinese = harnessLocale() === 'zh'
-  const removedPlugins: string[] = []
+  cancelPluginRecoverySessionReset()
+  const removedPlugins = pluginRecoveryRemovedPlugins
   let notice: string | undefined
 
   try {
@@ -553,7 +599,8 @@ async function showPluginRecovery(options?: {
         dshHome,
         extractPluginFailureReferences(logs),
         extractDuplicateLoaderEntryId(logs),
-        extractSlotConflictName(logs)
+        extractSlotConflictName(logs),
+        removedPlugins
       )
       const action = await waitForPluginRecoveryAction({
         snapshot: {
@@ -569,7 +616,24 @@ async function showPluginRecovery(options?: {
       if (action === 'uninstall' && offendingPlugins.length > 0) {
         const failedPlugins: string[] = []
         for (const plugin of offendingPlugins) {
-          const removed = await uninstallPluginFromProfile(dshHome, plugin)
+          const removed = await uninstallPluginFromProfile(dshHome, plugin, async (pluginName) => {
+            const result = await removeProfilePluginWithDsh(
+              {
+                dshHome,
+                dshEntryPath: dshEntryPath(),
+                nodeExecutablePath: bundledNodePath(),
+                pnpmEntryPath: bundledPnpmEntryPath(),
+                environment: process.env
+              },
+              pluginName
+            )
+            if (!result.ok) {
+              console.warn(
+                `[plugin-recovery] Failed to remove ${pluginName}: ${result.detail ?? 'unknown error'}`
+              )
+            }
+            return result.ok
+          })
           if (removed) {
             if (!removedPlugins.includes(plugin)) removedPlugins.push(plugin)
           } else {
@@ -589,11 +653,17 @@ async function showPluginRecovery(options?: {
             : `These plugins could not be removed: ${failedPlugins.join(', ')}`
         }
         await launchHarness()
-        if (runtime.snapshot().phase === 'ready') return
+        if (runtime.snapshot().phase === 'ready') {
+          schedulePluginRecoverySessionReset()
+          return
+        }
         continue
       } else if (action === 'restart') {
         await launchHarness()
-        if (runtime.snapshot().phase === 'ready') return
+        if (runtime.snapshot().phase === 'ready') {
+          schedulePluginRecoverySessionReset()
+          return
+        }
         continue
       } else if (action === 'show-log') {
         shell.showItemInFolder(join(app.getPath('logs'), 'harness.log'))
@@ -820,6 +890,7 @@ async function bootstrap(): Promise<void> {
       ...rendererPluginFailureLogs,
       ...(message ? [`[stderr] ${message}`] : [])
     ]
+    appendRendererPluginRecoveryLog(logs)
     void showPluginRecovery({ message, logs })
     return { ok: true }
   })
