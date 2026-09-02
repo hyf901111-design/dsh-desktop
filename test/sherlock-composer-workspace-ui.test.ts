@@ -1127,6 +1127,8 @@ async function mountResearchCanvas(options: {
       retryGeneration(nodeId: string): Record<string, unknown> | null
       removeNodes(nodeIds: string[]): void
       setGenerationCancelSink(sink?: (request: Record<string, unknown>) => unknown): void
+      undo(): boolean
+      redo(): boolean
     }
   }
   const researchWorkspaces = new Registry(storage as Storage)
@@ -4306,11 +4308,13 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('generates a Finder node id before admission and durably revokes that node on Delete', async () => {
+  it('keeps Finder authorization restorable while Delete remains undoable', async () => {
     const admissions: Array<{ file: File; identity: Record<string, string> }> = []
     const revocations: Array<Record<string, string>> = []
+    const storage = new MemoryStorage()
     const mounted = await mountResearchCanvas({
       sessionId: 'session-finder-drop',
+      storage,
       dshDesktop: {
         getPathForFile: () => '/workspace/diagram.svg',
         researchPreview: {
@@ -4385,10 +4389,24 @@ describe('Sherlock workspace and composer controls', () => {
           key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
         }))
       })
-      expect(revocations).toEqual([{
-        sessionId: 'session-finder-drop', nodeId: redropped?.id
-      }])
+      expect(revocations).toEqual([])
       expect(mounted.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(
+        'sherlock.research.canvas.preview-revocations.v1:session-finder-drop'
+      ) ?? '[]')).toEqual([redropped.id])
+
+      await act(async () => {
+        mounted.browserWindow.dispatchEvent(new mounted.browserWindow.KeyboardEvent('keydown', {
+          key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(mounted.workspace.getSnapshot().files).toMatchObject([{
+        id: redropped.id, authorizationId: 'authorization-finder'
+      }])
+      expect(JSON.parse(storage.getItem(
+        'sherlock.research.canvas.preview-revocations.v1:session-finder-drop'
+      ) ?? '[]')).toEqual([])
+      expect(revocations).toEqual([])
     } finally {
       await mounted.cleanup()
     }
@@ -5158,21 +5176,22 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('keeps an authorized node visible until durable revocation succeeds and allows retry after remount', async () => {
+  it('defers an undoable preview revocation and retries the durable outbox after remount', async () => {
     const storage = new MemoryStorage()
+    const sessionId = 'session-delete-retry'
+    const outboxKey = `sherlock.research.canvas.preview-revocations.v1:${sessionId}`
     const previewFile = {
       id: 'authorized-file', path: '/workspace/authorized.png', name: 'authorized.png',
       source: 'computer', authorizationId: 'authorization-delete', contentType: 'image/png',
       x: 100, y: 100, width: 320, height: 272
     }
-    const firstAttempt = deferred<{ ok: boolean }>()
     const firstCalls: Array<Record<string, string>> = []
     const firstMount = await mountResearchCanvas({
-      sessionId: 'session-delete-retry', files: [previewFile], storage,
+      sessionId, files: [previewFile], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
-        revokeNode(value) { firstCalls.push(value); return firstAttempt.promise }
+        async revokeNode(value) { firstCalls.push(value); return { ok: true } }
       } }
     })
     try {
@@ -5184,63 +5203,57 @@ describe('Sherlock workspace and composer controls', () => {
         firstMount.browserWindow.dispatchEvent(new firstMount.browserWindow.KeyboardEvent('keydown', {
           key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
         }))
-        firstMount.browserWindow.dispatchEvent(new firstMount.browserWindow.KeyboardEvent('keydown', {
-          key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
-        }))
         await Promise.resolve()
       })
-      expect(firstCalls).toEqual([{ sessionId: 'session-delete-retry', nodeId: 'authorized-file' }])
-      expect(firstMount.workspace.getSnapshot().files).toHaveLength(1)
-      firstAttempt.resolve({ ok: false })
-      await act(async () => { await firstAttempt.promise; await Promise.resolve() })
-      expect(firstMount.workspace.getSnapshot().files).toHaveLength(1)
+      expect(firstCalls).toEqual([])
+      expect(firstMount.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['authorized-file'])
     } finally {
       await firstMount.cleanup()
     }
 
-    const persistedFiles = JSON.parse(
-      storage.getItem('sherlock.research.canvas.files.v1:session-delete-retry') ?? '[]'
-    ) as Array<Record<string, unknown>>
-    const outcomes: Array<'reject' | 'success'> = ['reject', 'success']
     const retryCalls: Array<Record<string, string>> = []
     const secondMount = await mountResearchCanvas({
-      sessionId: 'session-delete-retry', files: persistedFiles, storage,
+      sessionId, files: [], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
         async revokeNode(value) {
           retryCalls.push(value)
-          if (outcomes.shift() === 'reject') throw new Error('temporary IPC failure')
-          return { ok: true }
+          throw new Error('temporary IPC failure')
         }
       } }
     })
     try {
-      const deleteSelected = async () => {
-        secondMount.workspace.setSelection({
-          selectedNodeIds: ['authorized-file'], orderedFileIds: ['authorized-file']
-        })
-        ;(secondMount.canvas as unknown as { focus(): void }).focus()
-        await act(async () => {
-          secondMount.browserWindow.dispatchEvent(new secondMount.browserWindow.KeyboardEvent('keydown', {
-            key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
-          }))
-          await Promise.resolve()
-          await Promise.resolve()
-        })
-      }
-      await deleteSelected()
-      expect(secondMount.workspace.getSnapshot().files).toHaveLength(1)
-      await deleteSelected()
-      expect(retryCalls).toHaveLength(2)
-      expect(secondMount.workspace.getSnapshot().files).toEqual([])
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      expect(retryCalls).toEqual([{ sessionId, nodeId: 'authorized-file' }])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['authorized-file'])
     } finally {
       await secondMount.cleanup()
     }
+
+    const finalCalls: Array<Record<string, string>> = []
+    const thirdMount = await mountResearchCanvas({
+      sessionId, files: [], storage,
+      dshDesktop: { researchPreview: {
+        async restore() { return null },
+        async release() { return { ok: true } },
+        async revokeNode(value) { finalCalls.push(value); return { ok: true } }
+      } }
+    })
+    try {
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      expect(finalCalls).toEqual([{ sessionId, nodeId: 'authorized-file' }])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual([])
+    } finally {
+      await thirdMount.cleanup()
+    }
   })
 
-  it('removes a persisted node after retrying a revoke whose first successful main mutation lost its IPC response', async () => {
+  it('clears a deferred preview outbox after retrying a revoke whose first response was lost', async () => {
     const storage = new MemoryStorage()
+    const sessionId = 'session-lost-revoke-response'
+    const outboxKey = `sherlock.research.canvas.preview-revocations.v1:${sessionId}`
     const previewFile = {
       id: 'lost-response-file', path: '/workspace/lost-response.png', name: 'lost-response.png',
       source: 'computer', authorizationId: 'authorization-lost-response', contentType: 'image/png',
@@ -5248,7 +5261,7 @@ describe('Sherlock workspace and composer controls', () => {
     }
     let durableAuthorizationPresent = true
     const firstMount = await mountResearchCanvas({
-      sessionId: 'session-lost-revoke-response', files: [previewFile], storage,
+      sessionId, files: [previewFile], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
@@ -5270,18 +5283,35 @@ describe('Sherlock workspace and composer controls', () => {
         await Promise.resolve()
         await Promise.resolve()
       })
-      expect(durableAuthorizationPresent).toBe(false)
-      expect(firstMount.workspace.getSnapshot().files).toHaveLength(1)
+      expect(durableAuthorizationPresent).toBe(true)
+      expect(firstMount.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['lost-response-file'])
     } finally {
       await firstMount.cleanup()
     }
 
-    const persistedFiles = JSON.parse(
-      storage.getItem('sherlock.research.canvas.files.v1:session-lost-revoke-response') ?? '[]'
-    ) as Array<Record<string, unknown>>
     const retryCalls: Array<Record<string, string>> = []
     const secondMount = await mountResearchCanvas({
-      sessionId: 'session-lost-revoke-response', files: persistedFiles, storage,
+      sessionId, files: [], storage,
+      dshDesktop: { researchPreview: {
+        async restore() { return null },
+        async release() { return { ok: true } },
+        async revokeNode() {
+          durableAuthorizationPresent = false
+          throw new Error('response lost after durable revoke')
+        }
+      } }
+    })
+    try {
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      expect(durableAuthorizationPresent).toBe(false)
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['lost-response-file'])
+    } finally {
+      await secondMount.cleanup()
+    }
+
+    const thirdMount = await mountResearchCanvas({
+      sessionId, files: [], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
@@ -5292,23 +5322,13 @@ describe('Sherlock workspace and composer controls', () => {
       } }
     })
     try {
-      secondMount.workspace.setSelection({
-        selectedNodeIds: ['lost-response-file'], orderedFileIds: ['lost-response-file']
-      })
-      ;(secondMount.canvas as unknown as { focus(): void }).focus()
-      await act(async () => {
-        secondMount.browserWindow.dispatchEvent(new secondMount.browserWindow.KeyboardEvent('keydown', {
-          key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
-        }))
-        await Promise.resolve()
-        await Promise.resolve()
-      })
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
       expect(retryCalls).toEqual([{
-        sessionId: 'session-lost-revoke-response', nodeId: 'lost-response-file'
+        sessionId, nodeId: 'lost-response-file'
       }])
-      expect(secondMount.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual([])
     } finally {
-      await secondMount.cleanup()
+      await thirdMount.cleanup()
     }
   })
 
@@ -9236,6 +9256,124 @@ describe('Sherlock workspace and composer controls', () => {
       })
       expect(canvas.querySelectorAll('[aria-selected="true"]')).toHaveLength(2)
       expect(host.querySelector('[data-research-artifact-card="artifact-a"]')).not.toBeNull()
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
+  it('restores a deleted canvas component with Command-Z and reapplies deletion with redo shortcuts', async () => {
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-canvas-delete-history',
+      artifacts: [{
+        id: 'artifact-history', kind: 'assistant-result', messageId: 'message-history',
+        title: '研究结论', excerpt: '可恢复内容', x: 260, y: 180
+      }]
+    })
+    try {
+      const { browserWindow, canvas, host, workspace } = mounted
+      const card = host.querySelector('[data-research-artifact-card="artifact-history"]')
+      expect(card).not.toBeNull()
+      if (card === null) return
+
+      await act(async () => {
+        card.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 1, x: 260, y: 180
+        }))
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'Delete', key: 'Delete', bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+
+      const editor = browserWindow.document.createElement('input')
+      canvas.appendChild(editor)
+      editor.focus()
+      await act(async () => {
+        editor.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyZ', key: 'z', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+
+      ;(canvas as unknown as { focus(): void }).focus()
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyZ', key: 'z', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toMatchObject([{
+        id: 'artifact-history', title: '研究结论', excerpt: '可恢复内容'
+      }])
+
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyZ', key: 'z', metaKey: true, shiftKey: true,
+          bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+
+      expect(workspace.undo()).toBe(true)
+      expect(workspace.getSnapshot().artifacts).toHaveLength(1)
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyY', key: 'y', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
+  it('undoes one complete canvas drag as a single history transaction', async () => {
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-canvas-drag-history',
+      artifacts: [{
+        id: 'artifact-drag-history', kind: 'assistant-result', messageId: 'message-drag',
+        title: '拖动结论', excerpt: '拖动内容', x: 100, y: 120
+      }]
+    })
+    try {
+      const { browserWindow, canvas, host, workspace } = mounted
+      const card = host.querySelector('[data-research-artifact-card="artifact-drag-history"]')
+      expect(card).not.toBeNull()
+      if (card === null) return
+      const capturedPointers = new Set<number>()
+      Object.defineProperties(canvas, {
+        setPointerCapture: {
+          configurable: true,
+          value: (pointerId: number) => capturedPointers.add(pointerId)
+        },
+        hasPointerCapture: {
+          configurable: true,
+          value: (pointerId: number) => capturedPointers.has(pointerId)
+        },
+        releasePointerCapture: {
+          configurable: true,
+          value: (pointerId: number) => capturedPointers.delete(pointerId)
+        }
+      })
+
+      await act(async () => {
+        card.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 7, x: 100, y: 120
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointermove', {
+          pointerId: 7, x: 130, y: 140
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointermove', {
+          pointerId: 7, x: 155, y: 170
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointerup', {
+          pointerId: 7, x: 155, y: 170
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ x: 155, y: 170 })
+
+      expect(workspace.undo()).toBe(true)
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ x: 100, y: 120 })
+      expect(workspace.undo()).toBe(false)
     } finally {
       await mounted.cleanup()
     }
