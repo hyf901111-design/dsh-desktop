@@ -18,6 +18,13 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.7.8',
+      date: '2026-09-02',
+      items: [
+        '右侧对话引用链接组件时可读取已授权网页的完整正文，与画布中的思维导图和总结提炼保持一致'
+      ]
+    },
+    {
       version: '0.7.7',
       date: '2026-09-02',
       items: [
@@ -115,6 +122,13 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.7.8',
+      date: '2026-09-02',
+      items: [
+        'Right-side conversations can now read the full authenticated webpage body when a link component is referenced, matching canvas mind maps and summaries'
+      ]
+    },
     {
       version: '0.7.7',
       date: '2026-09-02',
