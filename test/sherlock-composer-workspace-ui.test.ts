@@ -81,6 +81,7 @@ async function loadClientBundle(
     researchCanvasWheel?: {
       setRegion(value: Record<string, unknown>): boolean
       subscribe(listener: (value: Record<string, unknown>) => void): () => void
+      subscribeCommandState?(listener: (active: boolean) => void): () => void
     }
     researchLinkFrame?: {
       authorize(value: { sessionId: string; nodeId: string; url: string }): Promise<{ url: string; frameName?: string }>
@@ -939,6 +940,7 @@ async function mountResearchCanvas(options: {
     researchCanvasWheel?: {
       setRegion(value: Record<string, unknown>): boolean
       subscribe(listener: (value: Record<string, unknown>) => void): () => void
+      subscribeCommandState?(listener: (active: boolean) => void): () => void
     }
     researchLinkFrame?: {
       authorize(value: { sessionId: string; nodeId: string; url: string }): Promise<{ url: string; frameName?: string }>
@@ -1127,6 +1129,8 @@ async function mountResearchCanvas(options: {
       retryGeneration(nodeId: string): Record<string, unknown> | null
       removeNodes(nodeIds: string[]): void
       setGenerationCancelSink(sink?: (request: Record<string, unknown>) => unknown): void
+      undo(): boolean
+      redo(): boolean
     }
   }
   const researchWorkspaces = new Registry(storage as Storage)
@@ -1255,6 +1259,40 @@ describe('Sherlock workspace and composer controls', () => {
     )
     expect(inputBarCss).toContain(
       'body[data-ds-dark-theme] .uV2eYG_primary:hover:not(:disabled){background:#fff}'
+    )
+  })
+
+  it('uses matching monochrome primary buttons and a slightly taller component title bar', async () => {
+    const styles: InjectedStyle[] = []
+    await loadClientBundle('dsh-client-ui-conversation', undefined, { styles })
+    const researchCss = styles.find(({ pluginCss }) =>
+      pluginCss?.endsWith('/ResearchCanvas.module.css')
+    )?.textContent ?? ''
+
+    expect(researchCss).toContain(
+      '.rScV5Q_nodeTitle{box-sizing:border-box;height:36px;min-height:36px'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button,.rScV5Q_containerDraftFooter button{height:34px'
+    )
+    expect(researchCss).toContain('color:#fff;background:#0f1115')
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:hover:not(:disabled),.rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#23262b}'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:active:not(:disabled),.rScV5Q_containerDraftFooter button:active:not(:disabled){background:#050607;transform:translateY(1px)}'
+    )
+    expect(researchCss).toContain(
+      'body[data-ds-dark-theme] .rScV5Q_linkPopover button,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button{color:#202124;background:#f5f5f5}'
+    )
+    expect(researchCss).toContain(
+      'body[data-ds-dark-theme] .rScV5Q_linkPopover button:hover:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#fff}'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:focus-visible,.rScV5Q_containerDraftFooter button:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-label-primary) 55%,transparent);outline-offset:2px}'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{color:#8a9099;background:#d7dae0;cursor:default}'
     )
   })
 
@@ -3599,7 +3637,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(mounted.host.querySelector('[data-research-node-title]')?.textContent)
         .toContain('1 / 3')
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 320, height: 320 / 0.75 + 32, aspectRatio: 0.75, sizeMode: 'auto'
+        width: 320, height: 320 / 0.75 + 36, aspectRatio: 0.75, sizeMode: 'auto'
       })
       expect(harness.getDocumentInputs[0]).toEqual({
         url: 'sherlock-preview://capability-pdf-1/',
@@ -3665,7 +3703,7 @@ describe('Sherlock workspace and composer controls', () => {
         bodySize.height = 531
         ;(mounted.workspace as unknown as {
           updateNodeGeometry(id: string, geometry: Record<string, unknown>): void
-        }).updateNodeGeometry('pdf-1', { width: 400, height: 400 / 0.75 + 32 })
+        }).updateNodeGeometry('pdf-1', { width: 400, height: 400 / 0.75 + 36 })
         resizeObserverCallbacks.at(-1)?.()
         await Promise.resolve(); await Promise.resolve()
       })
@@ -3692,7 +3730,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(restoreSequence).toBe(2)
       expect(mounted.host.querySelectorAll('[data-research-pdf-page]')).toHaveLength(3)
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 400, height: 400 / 0.75 + 32, aspectRatio: 0.75, sizeMode: 'auto'
+        width: 400, height: 400 / 0.75 + 36, aspectRatio: 0.75, sizeMode: 'auto'
       })
       await mounted.cleanup()
       cleaned = true
@@ -3814,7 +3852,7 @@ describe('Sherlock workspace and composer controls', () => {
         .toContain('encrypted.pdf')
       expect(mounted.host.querySelector('[data-research-pdf-error]')).not.toBeNull()
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 540, height: 540 / 1.4 + 32, sizeMode: 'manual', aspectRatio: 1.4
+        width: 540, height: 540 / 1.4 + 36, sizeMode: 'manual', aspectRatio: 1.4
       })
       expect(releases).toHaveLength(1)
     } finally {
@@ -3831,7 +3869,7 @@ describe('Sherlock workspace and composer controls', () => {
       files: [{
         id: 'pdf-body-size', name: 'body-size.pdf', source: 'computer',
         authorizationId: 'authorization-body-size', contentType: 'application/pdf',
-        x: 200, y: 200, width: 320, height: 320 / 0.75 + 32,
+        x: 200, y: 200, width: 320, height: 320 / 0.75 + 36,
         sizeMode: 'auto', aspectRatio: 0.75
       }],
       pdfjs: harness.pdfjs,
@@ -3883,7 +3921,7 @@ describe('Sherlock workspace and composer controls', () => {
         ;(mounted.workspace as unknown as {
           updateNodeGeometry(id: string, geometry: Record<string, unknown>): void
         }).updateNodeGeometry('pdf-body-size', {
-          width: 400, height: 400 / 0.75 + 32, sizeMode: 'manual'
+          width: 400, height: 400 / 0.75 + 36, sizeMode: 'manual'
         })
         resizeObserverCallbacks.at(-1)?.()
         await Promise.resolve(); await Promise.resolve()
@@ -4306,11 +4344,13 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('generates a Finder node id before admission and durably revokes that node on Delete', async () => {
+  it('keeps Finder authorization restorable while Delete remains undoable', async () => {
     const admissions: Array<{ file: File; identity: Record<string, string> }> = []
     const revocations: Array<Record<string, string>> = []
+    const storage = new MemoryStorage()
     const mounted = await mountResearchCanvas({
       sessionId: 'session-finder-drop',
+      storage,
       dshDesktop: {
         getPathForFile: () => '/workspace/diagram.svg',
         researchPreview: {
@@ -4385,10 +4425,24 @@ describe('Sherlock workspace and composer controls', () => {
           key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
         }))
       })
-      expect(revocations).toEqual([{
-        sessionId: 'session-finder-drop', nodeId: redropped?.id
-      }])
+      expect(revocations).toEqual([])
       expect(mounted.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(
+        'sherlock.research.canvas.preview-revocations.v1:session-finder-drop'
+      ) ?? '[]')).toEqual([redropped.id])
+
+      await act(async () => {
+        mounted.browserWindow.dispatchEvent(new mounted.browserWindow.KeyboardEvent('keydown', {
+          key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(mounted.workspace.getSnapshot().files).toMatchObject([{
+        id: redropped.id, authorizationId: 'authorization-finder'
+      }])
+      expect(JSON.parse(storage.getItem(
+        'sherlock.research.canvas.preview-revocations.v1:session-finder-drop'
+      ) ?? '[]')).toEqual([])
+      expect(revocations).toEqual([])
     } finally {
       await mounted.cleanup()
     }
@@ -5158,21 +5212,22 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('keeps an authorized node visible until durable revocation succeeds and allows retry after remount', async () => {
+  it('defers an undoable preview revocation and retries the durable outbox after remount', async () => {
     const storage = new MemoryStorage()
+    const sessionId = 'session-delete-retry'
+    const outboxKey = `sherlock.research.canvas.preview-revocations.v1:${sessionId}`
     const previewFile = {
       id: 'authorized-file', path: '/workspace/authorized.png', name: 'authorized.png',
       source: 'computer', authorizationId: 'authorization-delete', contentType: 'image/png',
       x: 100, y: 100, width: 320, height: 272
     }
-    const firstAttempt = deferred<{ ok: boolean }>()
     const firstCalls: Array<Record<string, string>> = []
     const firstMount = await mountResearchCanvas({
-      sessionId: 'session-delete-retry', files: [previewFile], storage,
+      sessionId, files: [previewFile], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
-        revokeNode(value) { firstCalls.push(value); return firstAttempt.promise }
+        async revokeNode(value) { firstCalls.push(value); return { ok: true } }
       } }
     })
     try {
@@ -5184,63 +5239,57 @@ describe('Sherlock workspace and composer controls', () => {
         firstMount.browserWindow.dispatchEvent(new firstMount.browserWindow.KeyboardEvent('keydown', {
           key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
         }))
-        firstMount.browserWindow.dispatchEvent(new firstMount.browserWindow.KeyboardEvent('keydown', {
-          key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
-        }))
         await Promise.resolve()
       })
-      expect(firstCalls).toEqual([{ sessionId: 'session-delete-retry', nodeId: 'authorized-file' }])
-      expect(firstMount.workspace.getSnapshot().files).toHaveLength(1)
-      firstAttempt.resolve({ ok: false })
-      await act(async () => { await firstAttempt.promise; await Promise.resolve() })
-      expect(firstMount.workspace.getSnapshot().files).toHaveLength(1)
+      expect(firstCalls).toEqual([])
+      expect(firstMount.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['authorized-file'])
     } finally {
       await firstMount.cleanup()
     }
 
-    const persistedFiles = JSON.parse(
-      storage.getItem('sherlock.research.canvas.files.v1:session-delete-retry') ?? '[]'
-    ) as Array<Record<string, unknown>>
-    const outcomes: Array<'reject' | 'success'> = ['reject', 'success']
     const retryCalls: Array<Record<string, string>> = []
     const secondMount = await mountResearchCanvas({
-      sessionId: 'session-delete-retry', files: persistedFiles, storage,
+      sessionId, files: [], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
         async revokeNode(value) {
           retryCalls.push(value)
-          if (outcomes.shift() === 'reject') throw new Error('temporary IPC failure')
-          return { ok: true }
+          throw new Error('temporary IPC failure')
         }
       } }
     })
     try {
-      const deleteSelected = async () => {
-        secondMount.workspace.setSelection({
-          selectedNodeIds: ['authorized-file'], orderedFileIds: ['authorized-file']
-        })
-        ;(secondMount.canvas as unknown as { focus(): void }).focus()
-        await act(async () => {
-          secondMount.browserWindow.dispatchEvent(new secondMount.browserWindow.KeyboardEvent('keydown', {
-            key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
-          }))
-          await Promise.resolve()
-          await Promise.resolve()
-        })
-      }
-      await deleteSelected()
-      expect(secondMount.workspace.getSnapshot().files).toHaveLength(1)
-      await deleteSelected()
-      expect(retryCalls).toHaveLength(2)
-      expect(secondMount.workspace.getSnapshot().files).toEqual([])
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      expect(retryCalls).toEqual([{ sessionId, nodeId: 'authorized-file' }])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['authorized-file'])
     } finally {
       await secondMount.cleanup()
     }
+
+    const finalCalls: Array<Record<string, string>> = []
+    const thirdMount = await mountResearchCanvas({
+      sessionId, files: [], storage,
+      dshDesktop: { researchPreview: {
+        async restore() { return null },
+        async release() { return { ok: true } },
+        async revokeNode(value) { finalCalls.push(value); return { ok: true } }
+      } }
+    })
+    try {
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      expect(finalCalls).toEqual([{ sessionId, nodeId: 'authorized-file' }])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual([])
+    } finally {
+      await thirdMount.cleanup()
+    }
   })
 
-  it('removes a persisted node after retrying a revoke whose first successful main mutation lost its IPC response', async () => {
+  it('clears a deferred preview outbox after retrying a revoke whose first response was lost', async () => {
     const storage = new MemoryStorage()
+    const sessionId = 'session-lost-revoke-response'
+    const outboxKey = `sherlock.research.canvas.preview-revocations.v1:${sessionId}`
     const previewFile = {
       id: 'lost-response-file', path: '/workspace/lost-response.png', name: 'lost-response.png',
       source: 'computer', authorizationId: 'authorization-lost-response', contentType: 'image/png',
@@ -5248,7 +5297,7 @@ describe('Sherlock workspace and composer controls', () => {
     }
     let durableAuthorizationPresent = true
     const firstMount = await mountResearchCanvas({
-      sessionId: 'session-lost-revoke-response', files: [previewFile], storage,
+      sessionId, files: [previewFile], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
@@ -5270,18 +5319,35 @@ describe('Sherlock workspace and composer controls', () => {
         await Promise.resolve()
         await Promise.resolve()
       })
-      expect(durableAuthorizationPresent).toBe(false)
-      expect(firstMount.workspace.getSnapshot().files).toHaveLength(1)
+      expect(durableAuthorizationPresent).toBe(true)
+      expect(firstMount.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['lost-response-file'])
     } finally {
       await firstMount.cleanup()
     }
 
-    const persistedFiles = JSON.parse(
-      storage.getItem('sherlock.research.canvas.files.v1:session-lost-revoke-response') ?? '[]'
-    ) as Array<Record<string, unknown>>
     const retryCalls: Array<Record<string, string>> = []
     const secondMount = await mountResearchCanvas({
-      sessionId: 'session-lost-revoke-response', files: persistedFiles, storage,
+      sessionId, files: [], storage,
+      dshDesktop: { researchPreview: {
+        async restore() { return null },
+        async release() { return { ok: true } },
+        async revokeNode() {
+          durableAuthorizationPresent = false
+          throw new Error('response lost after durable revoke')
+        }
+      } }
+    })
+    try {
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      expect(durableAuthorizationPresent).toBe(false)
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual(['lost-response-file'])
+    } finally {
+      await secondMount.cleanup()
+    }
+
+    const thirdMount = await mountResearchCanvas({
+      sessionId, files: [], storage,
       dshDesktop: { researchPreview: {
         async restore() { return null },
         async release() { return { ok: true } },
@@ -5292,23 +5358,13 @@ describe('Sherlock workspace and composer controls', () => {
       } }
     })
     try {
-      secondMount.workspace.setSelection({
-        selectedNodeIds: ['lost-response-file'], orderedFileIds: ['lost-response-file']
-      })
-      ;(secondMount.canvas as unknown as { focus(): void }).focus()
-      await act(async () => {
-        secondMount.browserWindow.dispatchEvent(new secondMount.browserWindow.KeyboardEvent('keydown', {
-          key: 'Delete', code: 'Delete', bubbles: true, cancelable: true
-        }))
-        await Promise.resolve()
-        await Promise.resolve()
-      })
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
       expect(retryCalls).toEqual([{
-        sessionId: 'session-lost-revoke-response', nodeId: 'lost-response-file'
+        sessionId, nodeId: 'lost-response-file'
       }])
-      expect(secondMount.workspace.getSnapshot().files).toEqual([])
+      expect(JSON.parse(storage.getItem(outboxKey) ?? '[]')).toEqual([])
     } finally {
-      await secondMount.cleanup()
+      await thirdMount.cleanup()
     }
   })
 
@@ -8771,9 +8827,16 @@ describe('Sherlock workspace and composer controls', () => {
 
       await act(async () => { click(browserWindow, linkButton) })
       const linkInput = host.querySelector('[data-research-link-input]') as HTMLInputElement | null
+      const linkSubmit = host.querySelector('[data-research-link-submit]') as
+        (HappyDOMHTMLElement & { disabled: boolean }) | null
       expect(host.querySelector('[data-research-link-popover]')).not.toBeNull()
       expect(browserWindow.document.activeElement).toBe(linkInput)
-      if (linkInput === null) return
+      expect(linkSubmit?.disabled).toBe(true)
+      if (linkInput === null || linkSubmit === null) return
+      expect(browserWindow.getComputedStyle(linkSubmit).height).toBe('34px')
+      expect(browserWindow.getComputedStyle(linkSubmit).opacity).toBe('1')
+      expect(browserWindow.getComputedStyle(linkSubmit).backgroundColor)
+        .toBe('#d7dae0')
       Object.getOwnPropertyDescriptor(
         browserWindow.HTMLInputElement.prototype, 'value'
       )?.set?.call(linkInput, 'https://Example.com/dashboard')
@@ -8781,6 +8844,9 @@ describe('Sherlock workspace and composer controls', () => {
         linkInput.dispatchEvent(new browserWindow.Event('input', { bubbles: true }) as unknown as Event)
       })
       expect(linkInput.value).toBe('https://Example.com/dashboard')
+      expect(linkSubmit.disabled).toBe(false)
+      expect(browserWindow.getComputedStyle(linkSubmit).backgroundColor)
+        .toBe('#0f1115')
       await act(async () => {
         click(browserWindow, host.querySelector('[data-research-link-submit]'))
         await Promise.resolve()
@@ -8804,15 +8870,23 @@ describe('Sherlock workspace and composer controls', () => {
 
       await act(async () => { click(browserWindow, containerButton) })
       const prompt = host.querySelector('[data-research-container-prompt]') as HTMLTextAreaElement | null
+      const containerSubmit = host.querySelector('[data-research-container-submit]') as
+        (HappyDOMHTMLElement & { disabled: boolean }) | null
       expect(prompt).not.toBeNull()
       expect(browserWindow.document.activeElement).toBe(prompt)
-      if (prompt === null) return
+      expect(containerSubmit?.disabled).toBe(true)
+      if (prompt === null || containerSubmit === null) return
+      expect(browserWindow.getComputedStyle(containerSubmit).height).toBe('34px')
+      expect(browserWindow.getComputedStyle(containerSubmit).opacity).toBe('1')
+      expect(browserWindow.getComputedStyle(containerSubmit).backgroundColor)
+        .toBe('#d7dae0')
       Object.getOwnPropertyDescriptor(
         browserWindow.HTMLTextAreaElement.prototype, 'value'
       )?.set?.call(prompt, '制作月度收入柱状图')
       await act(async () => {
         prompt.dispatchEvent(new browserWindow.Event('input', { bubbles: true }) as unknown as Event)
       })
+      expect(containerSubmit.disabled).toBe(false)
       await act(async () => {
         prompt.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
           key: 'Enter', code: 'Enter', metaKey: true, bubbles: true, cancelable: true
@@ -9241,6 +9315,124 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('restores a deleted canvas component with Command-Z and reapplies deletion with redo shortcuts', async () => {
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-canvas-delete-history',
+      artifacts: [{
+        id: 'artifact-history', kind: 'assistant-result', messageId: 'message-history',
+        title: '研究结论', excerpt: '可恢复内容', x: 260, y: 180
+      }]
+    })
+    try {
+      const { browserWindow, canvas, host, workspace } = mounted
+      const card = host.querySelector('[data-research-artifact-card="artifact-history"]')
+      expect(card).not.toBeNull()
+      if (card === null) return
+
+      await act(async () => {
+        card.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 1, x: 260, y: 180
+        }))
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'Delete', key: 'Delete', bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+
+      const editor = browserWindow.document.createElement('input')
+      canvas.appendChild(editor)
+      editor.focus()
+      await act(async () => {
+        editor.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyZ', key: 'z', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+
+      ;(canvas as unknown as { focus(): void }).focus()
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyZ', key: 'z', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toMatchObject([{
+        id: 'artifact-history', title: '研究结论', excerpt: '可恢复内容'
+      }])
+
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyZ', key: 'z', metaKey: true, shiftKey: true,
+          bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+
+      expect(workspace.undo()).toBe(true)
+      expect(workspace.getSnapshot().artifacts).toHaveLength(1)
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
+          code: 'KeyY', key: 'y', metaKey: true, bubbles: true, cancelable: true
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts).toEqual([])
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
+  it('undoes one complete canvas drag as a single history transaction', async () => {
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-canvas-drag-history',
+      artifacts: [{
+        id: 'artifact-drag-history', kind: 'assistant-result', messageId: 'message-drag',
+        title: '拖动结论', excerpt: '拖动内容', x: 100, y: 120
+      }]
+    })
+    try {
+      const { browserWindow, canvas, host, workspace } = mounted
+      const card = host.querySelector('[data-research-artifact-card="artifact-drag-history"]')
+      expect(card).not.toBeNull()
+      if (card === null) return
+      const capturedPointers = new Set<number>()
+      Object.defineProperties(canvas, {
+        setPointerCapture: {
+          configurable: true,
+          value: (pointerId: number) => capturedPointers.add(pointerId)
+        },
+        hasPointerCapture: {
+          configurable: true,
+          value: (pointerId: number) => capturedPointers.has(pointerId)
+        },
+        releasePointerCapture: {
+          configurable: true,
+          value: (pointerId: number) => capturedPointers.delete(pointerId)
+        }
+      })
+
+      await act(async () => {
+        card.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 7, x: 100, y: 120
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointermove', {
+          pointerId: 7, x: 130, y: 140
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointermove', {
+          pointerId: 7, x: 155, y: 170
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointerup', {
+          pointerId: 7, x: 155, y: 170
+        }))
+      })
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ x: 155, y: 170 })
+
+      expect(workspace.undo()).toBe(true)
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ x: 100, y: 120 })
+      expect(workspace.undo()).toBe(false)
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('gives Space-pan priority over node selection and movement', async () => {
     const mounted = await mountResearchCanvas({
       sessionId: 'session-space-pan',
@@ -9530,6 +9722,139 @@ describe('Sherlock workspace and composer controls', () => {
         sessionId: 'session-native-wheel', nodeId: 'native-html',
         authorizationId: 'authorization-native-html', capabilityToken: 'capability-native-html'
       })
+    }
+  })
+
+  it('captures Command-wheel above an interactive web iframe while leaving ordinary wheel input inside it', async () => {
+    const commandListeners = new Set<(active: boolean) => void>()
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-command-iframe-wheel',
+      artifacts: [{
+        id: 'web-command-wheel', kind: 'web-link', messageId: 'web-command-wheel',
+        title: '网页组件', excerpt: 'https://example.com/report',
+        url: 'https://example.com/report', x: 360, y: 260,
+        width: 640, height: 420, sizeMode: 'manual'
+      }],
+      dshDesktop: {
+        researchCanvasWheel: {
+          setRegion: () => true,
+          subscribe: () => () => undefined,
+          subscribeCommandState(listener) {
+            commandListeners.add(listener)
+            return () => { commandListeners.delete(listener) }
+          }
+        },
+        researchLinkFrame: {
+          async authorize() {
+            return { url: 'https://example.com/report', frameName: 'web-command-wheel-frame' }
+          },
+          async release() { return { ok: true } },
+          async releaseSession() { return { ok: true, removed: 0 } }
+        }
+      }
+    })
+    try {
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      const { browserWindow, canvas, host, workspace } = mounted
+      const shield = host.querySelector('[data-research-preview-shield]') as HappyDOMElement | null
+      const iframe = host.querySelector('[data-research-web-frame]') as HappyDOMElement | null
+      expect(shield).not.toBeNull()
+      expect(iframe).not.toBeNull()
+      expect(commandListeners.size).toBe(1)
+      if (shield === null || iframe === null) return
+
+      const initial = workspace.getSnapshot().viewport
+      const ordinary = new browserWindow.WheelEvent('wheel', {
+        bubbles: true, cancelable: true, deltaY: -100
+      })
+      await act(async () => { iframe.dispatchEvent(ordinary) })
+      expect(workspace.getSnapshot().viewport).toEqual(initial)
+      expect(ordinary.defaultPrevented).toBe(false)
+
+      await act(async () => { commandListeners.forEach((listener) => listener(true)) })
+      expect(canvas.getAttribute('data-command-pressed')).toBe('true')
+      expect(browserWindow.getComputedStyle(shield).pointerEvents).toBe('auto')
+      const commandWheel = new browserWindow.WheelEvent('wheel', {
+        bubbles: true, cancelable: true, deltaY: -100
+      })
+      Object.defineProperties(commandWheel, {
+        metaKey: { value: true },
+        clientX: { value: 360 },
+        clientY: { value: 260 }
+      })
+      await act(async () => { shield.dispatchEvent(commandWheel) })
+      expect(commandWheel.defaultPrevented).toBe(true)
+      expect(workspace.getSnapshot().viewport.scale).toBeGreaterThan(initial.scale)
+
+      await act(async () => { commandListeners.forEach((listener) => listener(false)) })
+      expect(canvas.hasAttribute('data-command-pressed')).toBe(false)
+      const css = Array.from(browserWindow.document.styleSheets)
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .map((rule) => rule.cssText)
+        .join('\n')
+      expect(css).toContain(
+        '.rScV5Q_root[data-command-pressed=true] .rScV5Q_previewShield'
+      )
+    } finally {
+      await mounted.cleanup()
+      expect(commandListeners.size).toBe(0)
+    }
+  })
+
+  it('keeps the last clicked component above every earlier canvas component and persists that stack', async () => {
+    const sessionId = 'session-click-to-front'
+    const mounted = await mountResearchCanvas({
+      sessionId,
+      files: [{
+        id: 'file-behind', path: '/w/source.txt', name: 'source.txt',
+        source: 'computer', previewEligible: false, x: 320, y: 240
+      }],
+      artifacts: [{
+        id: 'artifact-front', kind: 'assistant-result', messageId: 'message-front',
+        title: '分析结果', excerpt: '重叠内容', x: 320, y: 240
+      }]
+    })
+    try {
+      const { browserWindow, canvas, client, host } = mounted
+      const file = host.querySelector('[data-research-file-card="file-behind"]') as HappyDOMHTMLElement | null
+      const artifact = host.querySelector('[data-research-artifact-card="artifact-front"]') as HappyDOMHTMLElement | null
+      expect(file).not.toBeNull()
+      expect(artifact).not.toBeNull()
+      if (file === null || artifact === null) return
+
+      await act(async () => {
+        file.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 71, x: 320, y: 240
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointerup', {
+          pointerId: 71, x: 320, y: 240
+        }))
+      })
+      expect(Number(file.style.zIndex)).toBeGreaterThan(Number(artifact.style.zIndex))
+
+      await act(async () => {
+        artifact.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 72, x: 320, y: 240
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointerup', {
+          pointerId: 72, x: 320, y: 240
+        }))
+      })
+      expect(Number(artifact.style.zIndex)).toBeGreaterThan(Number(file.style.zIndex))
+
+      const Registry = client.ResearchWorkspaceRegistry as new (storage: Storage) => {
+        for(id: string): {
+          getSnapshot(): {
+            files: Array<{ id: string; stackOrder?: number }>
+            artifacts: Array<{ id: string; stackOrder?: number }>
+          }
+        }
+      }
+      const restored = new Registry(browserWindow.localStorage).for(sessionId).getSnapshot()
+      expect(restored.artifacts[0]?.stackOrder)
+        .toBeGreaterThan(restored.files[0]?.stackOrder ?? 0)
+    } finally {
+      await mounted.cleanup()
     }
   })
 

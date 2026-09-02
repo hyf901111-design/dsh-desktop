@@ -1,4 +1,5 @@
 import {
+  RESEARCH_CANVAS_COMMAND_STATE_CHANNEL,
   RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL,
   RESEARCH_CANVAS_WHEEL_REGION_CHANNEL,
   type ResearchCanvasNativeWheel,
@@ -14,6 +15,7 @@ type IpcRendererLike = {
 export type ResearchCanvasWheelBridge = Readonly<{
   setRegion(value: ResearchCanvasWheelRegionUpdate): boolean
   subscribe(listener: (value: ResearchCanvasNativeWheel) => void): () => void
+  subscribeCommandState(listener: (active: boolean) => void): () => void
 }>
 
 export function createResearchCanvasWheelBridge(
@@ -34,6 +36,19 @@ export function createResearchCanvasWheelBridge(
         if (!active) return
         active = false
         ipcRenderer.removeListener(RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL, onWheel)
+      }
+    },
+    subscribeCommandState(listener: (active: boolean) => void): () => void {
+      if (typeof listener !== 'function') throw new TypeError('Research canvas Command listener required.')
+      let active = true
+      const onCommandState = (_event: unknown, value: unknown) => {
+        if (active && typeof value === 'boolean') listener(value)
+      }
+      ipcRenderer.on(RESEARCH_CANVAS_COMMAND_STATE_CHANNEL, onCommandState)
+      return () => {
+        if (!active) return
+        active = false
+        ipcRenderer.removeListener(RESEARCH_CANVAS_COMMAND_STATE_CHANNEL, onCommandState)
       }
     }
   })

@@ -1,6 +1,7 @@
 import type {
   BrowserWindow,
   Event as ElectronEvent,
+  Input,
   IpcMain,
   MouseInputEvent,
   MouseWheelInputEvent,
@@ -9,6 +10,7 @@ import type {
 } from 'electron'
 import { registerTrustedMainWindowListener } from '../ipc-trust'
 import {
+  RESEARCH_CANVAS_COMMAND_STATE_CHANNEL,
   RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL,
   RESEARCH_CANVAS_WHEEL_REGION_CHANNEL,
   type ResearchCanvasNativeWheel,
@@ -20,6 +22,7 @@ const MAX_REGION_SIZE = 32_768
 const MAX_WHEEL_DELTA = 4_096
 const MAX_RETIRED_OWNER_IDS = 64
 const COMMAND_MODIFIERS = new Set(['meta', 'command', 'cmd'])
+const COMMAND_KEYS = new Set(['meta', 'command', 'cmd', 'metaleft', 'metaright'])
 
 type ActiveRegion = Extract<ResearchCanvasWheelRegionUpdate, { active: true }>
 
@@ -86,11 +89,23 @@ function commandWheel(mouse: MouseInputEvent): mouse is MouseWheelInputEvent {
     mouse.modifiers.some((modifier) => COMMAND_MODIFIERS.has(modifier))
 }
 
+function commandKey(input: Input): boolean {
+  return [input.key, input.code]
+    .filter((value): value is string => typeof value === 'string')
+    .some((value) => COMMAND_KEYS.has(value.toLowerCase()))
+}
+
+function commandModifier(input: Input): boolean {
+  return Array.isArray(input.modifiers) &&
+    input.modifiers.some((modifier) => COMMAND_MODIFIERS.has(modifier))
+}
+
 export class ResearchCanvasWheelRouter {
   private activeRegion: ActiveRegion | null = null
   private currentOwnerId: string | null = null
   private lastGeneration = 0
   private readonly retiredOwnerIds = new Set<string>()
+  private commandActive = false
   private disposed = false
   private readonly webContents: WebContents
 
@@ -130,6 +145,22 @@ export class ResearchCanvasWheelRouter {
     event.preventDefault()
   }
 
+  private readonly onBeforeInputEvent = (
+    _event: ElectronEvent,
+    input: Input
+  ): void => {
+    if (input.type === 'keyUp' && commandKey(input)) {
+      this.setCommandActive(false)
+      return
+    }
+    if (
+      (input.type === 'keyDown' || input.type === 'rawKeyDown') &&
+      (commandKey(input) || commandModifier(input))
+    ) {
+      this.setCommandActive(true)
+    }
+  }
+
   private readonly onDidStartNavigation = (
     event: ElectronEvent<WebContentsDidStartNavigationEventParams>,
     _url?: string,
@@ -146,7 +177,19 @@ export class ResearchCanvasWheelRouter {
   }
 
   private readonly onRendererGone = (): void => this.resetForDocumentLifecycle()
+  private readonly onWindowBlur = (): void => this.setCommandActive(false)
   private readonly onWindowClosed = (): void => this.dispose()
+
+  private setCommandActive(active: boolean): void {
+    if (this.commandActive === active) return
+    this.commandActive = active
+    try {
+      this.webContents.send(RESEARCH_CANVAS_COMMAND_STATE_CHANNEL, active)
+    } catch {
+      this.commandActive = false
+      this.clear()
+    }
+  }
 
   private retireOwner(ownerId: string): void {
     this.retiredOwnerIds.delete(ownerId)
@@ -161,9 +204,11 @@ export class ResearchCanvasWheelRouter {
   constructor(private readonly window: BrowserWindow) {
     this.webContents = window.webContents
     this.webContents.on('before-mouse-event', this.onBeforeMouseEvent)
+    this.webContents.on('before-input-event', this.onBeforeInputEvent)
     this.webContents.on('did-start-navigation', this.onDidStartNavigation)
     this.webContents.on('render-process-gone', this.onRendererGone)
     this.webContents.on('destroyed', this.onRendererGone)
+    window.on('blur', this.onWindowBlur)
     window.on('closed', this.onWindowClosed)
   }
 
@@ -190,6 +235,7 @@ export class ResearchCanvasWheelRouter {
   }
 
   private resetForDocumentLifecycle(): void {
+    this.setCommandActive(false)
     this.activeRegion = null
     this.currentOwnerId = null
     this.lastGeneration = 0
@@ -201,9 +247,11 @@ export class ResearchCanvasWheelRouter {
     this.disposed = true
     this.resetForDocumentLifecycle()
     this.webContents.off('before-mouse-event', this.onBeforeMouseEvent)
+    this.webContents.off('before-input-event', this.onBeforeInputEvent)
     this.webContents.off('did-start-navigation', this.onDidStartNavigation)
     this.webContents.off('render-process-gone', this.onRendererGone)
     this.webContents.off('destroyed', this.onRendererGone)
+    this.window.off('blur', this.onWindowBlur)
     this.window.off('closed', this.onWindowClosed)
   }
 }

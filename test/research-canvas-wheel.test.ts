@@ -7,6 +7,7 @@ import {
   type ResearchCanvasWheelRouter
 } from '../src/main/state/research-canvas-wheel'
 import {
+  RESEARCH_CANVAS_COMMAND_STATE_CHANNEL,
   RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL,
   RESEARCH_CANVAS_WHEEL_REGION_CHANNEL
 } from '../src/shared/research-canvas-wheel'
@@ -102,6 +103,48 @@ describe('research canvas native wheel router', () => {
       deltaY: -120,
       deltaMode: 0
     })
+  })
+
+  it('publishes iframe Command key state once per transition and clears it on window blur', () => {
+    const { contents, window, router } = fixture()
+    expect(router.setRegion({
+      active: true, generation: 1,
+      ownerId: 'canvas-1',
+      left: 0, top: 0, width: 500, height: 400
+    })).toBe(true)
+
+    contents.emit('before-input-event', {}, {
+      type: 'keyDown', key: 'Meta', code: 'MetaLeft', modifiers: []
+    })
+    contents.emit('before-input-event', {}, {
+      type: 'keyDown', key: 'z', code: 'KeyZ', modifiers: ['meta']
+    })
+    expect(contents.send).toHaveBeenCalledTimes(1)
+    expect(contents.send).toHaveBeenLastCalledWith(
+      RESEARCH_CANVAS_COMMAND_STATE_CHANNEL,
+      true
+    )
+
+    contents.emit('before-input-event', {}, {
+      type: 'keyUp', key: 'Meta', code: 'MetaLeft', modifiers: ['meta']
+    })
+    expect(contents.send).toHaveBeenLastCalledWith(
+      RESEARCH_CANVAS_COMMAND_STATE_CHANNEL,
+      false
+    )
+
+    contents.emit('before-input-event', {}, {
+      type: 'keyDown', key: 'Meta', code: 'MetaRight', modifiers: ['command']
+    })
+    window.emit('blur')
+    expect(contents.send.mock.calls.slice(-2)).toEqual([
+      [RESEARCH_CANVAS_COMMAND_STATE_CHANNEL, true],
+      [RESEARCH_CANVAS_COMMAND_STATE_CHANNEL, false]
+    ])
+
+    router.dispose()
+    expect(contents.listenerCount('before-input-event')).toBe(0)
+    expect(window.listenerCount('blur')).toBe(0)
   })
 
   it('rejects malformed and stale regions, clears only for main-frame lifecycle changes, and fails open on send error', () => {

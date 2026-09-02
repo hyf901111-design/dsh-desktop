@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..e0536d3 100644
+index 1dd0e89..de7a254 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -2561,7 +2561,7 @@ index 1dd0e89..e0536d3 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8396,5476 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8396,5644 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -2650,7 +2650,7 @@ index 1dd0e89..e0536d3 100644
 +		const RESEARCH_CANVAS_MAX_ARTIFACTS_PER_SESSION = 256;
 +		const RESEARCH_CANVAS_MAX_REVOCATION_OUTBOX = 256;
 +		const RESEARCH_CANVAS_REVOCATION_OUTBOX_RAW_LIMIT = RESEARCH_CANVAS_MAX_REVOCATION_OUTBOX * (RESEARCH_CANVAS_TEXT_LIMIT * 6 + 4);
-+		const RESEARCH_CANVAS_TITLE_HEIGHT = 32;
++		const RESEARCH_CANVAS_TITLE_HEIGHT = 36;
 +		const RESEARCH_CANVAS_MAX_NODE_SIZE = 2400;
 +		const RESEARCH_CANVAS_NODE_POLICIES = Object.freeze({
 +			generic: Object.freeze({ width: 220, height: 64, minWidth: 220, minHeight: 64, resizable: false }),
@@ -3696,6 +3696,9 @@ index 1dd0e89..e0536d3 100644
 +				...(geometry.aspectRatio === void 0 ? {} : { aspectRatio: geometry.aspectRatio })
 +			};
 +		}
++		function researchCanvasStackOrder(value) {
++			return Number.isSafeInteger(value) && value > 0 && value <= 1e6 ? value : 0;
++		}
 +		function researchImageGeometryForNaturalSize(node, naturalWidth, naturalHeight) {
 +			if (!Number.isFinite(naturalWidth) || !Number.isFinite(naturalHeight) || naturalWidth <= 0 || naturalHeight <= 0 || researchCanvasNodeKind(node) !== "image") return null;
 +			const aspectRatio = naturalWidth / naturalHeight;
@@ -3764,6 +3767,7 @@ index 1dd0e89..e0536d3 100644
 +				source: value.source,
 +				x: value.x,
 +				y: value.y,
++				...(researchCanvasStackOrder(value.stackOrder) === 0 ? {} : { stackOrder: researchCanvasStackOrder(value.stackOrder) }),
 +				...researchCanvasPersistedGeometry(value)
 +			};
 +		}
@@ -4026,6 +4030,7 @@ index 1dd0e89..e0536d3 100644
 +				...(webLink ? { url, titleMode, ...(sourceText === null ? {} : { sourceText }) } : {}),
 +				x: value.x,
 +				y: value.y,
++				...(researchCanvasStackOrder(value.stackOrder) === 0 ? {} : { stackOrder: researchCanvasStackOrder(value.stackOrder) }),
 +				...(generated ? {
 +					generationStatus,
 +					sourceNodeIds,
@@ -4576,6 +4581,10 @@ index 1dd0e89..e0536d3 100644
 +			let assistantActionsActive = false;
 +			const assistantActionListeners = /* @__PURE__ */ new Set();
 +			let generationCancelSink;
++			const historyLimit = 50;
++			const undoHistory = [];
++			const redoHistory = [];
++			let pendingHistoryTransaction = null;
 +			const persistSnapshot = () => {
 +				const filesDurable = saveResearchCanvasFiles(storage, sessionId, snapshot.files);
 +				saveResearchCanvasArtifacts(storage, sessionId, snapshot.artifacts);
@@ -4589,18 +4598,124 @@ index 1dd0e89..e0536d3 100644
 +				return filesDurable;
 +			};
 +			const update = (patch, persist) => publish({ ...snapshot, ...patch }, persist);
-+			const removePersistedNodes = (nodeIds) => {
++			const historyState = (value = snapshot) => {
++				const state = {
++					files: value.files,
++					artifacts: value.artifacts,
++					selection: value.selection
++				};
++				return { ...state, signature: JSON.stringify(state) };
++			};
++			const reachableHistoryFileIds = () => {
++				const ids = new Set(snapshot.files.map((node) => node.id));
++				for (const entry of [...undoHistory, ...redoHistory, ...(pendingHistoryTransaction === null ? [] : [pendingHistoryTransaction])]) {
++					for (const node of entry.files) ids.add(node.id);
++				}
++				return ids;
++			};
++			const updateOrphanRevocations = (nodeIds, remove = false) => {
++				const next = remove ? orphanRevocationIds.filter((id) => !nodeIds.includes(id)) : researchSelectionIds([...orphanRevocationIds, ...nodeIds]).slice(0, RESEARCH_CANVAS_MAX_REVOCATION_OUTBOX);
++				const changed = next.length !== orphanRevocationIds.length || next.some((id, index) => id !== orphanRevocationIds[index]);
++				if (changed) {
++					orphanRevocationIds = next;
++					orphanRevocationsDurable = false;
++				}
++				if (!orphanRevocationsDurable) orphanRevocationsDurable = saveResearchCanvasRevocationOutbox(storage, sessionId, orphanRevocationIds);
++				return orphanRevocationsDurable;
++			};
++			const finalizeUnreachablePreviewNodes = () => {
++				const revokeNode = window.dshDesktop?.researchPreview?.revokeNode;
++				if (typeof revokeNode !== "function") return;
++				const reachable = reachableHistoryFileIds();
++				for (const nodeId of orphanRevocationIds) {
++					if (reachable.has(nodeId) || pendingNodeRevocations.has(nodeId)) continue;
++					pendingNodeRevocations.add(nodeId);
++					Promise.resolve().then(() => revokeNode({ sessionId, nodeId })).then((result) => {
++						if (result?.ok === true) updateOrphanRevocations([nodeId], true);
++					}).catch(() => void 0).finally(() => pendingNodeRevocations.delete(nodeId));
++				}
++			};
++			const recordHistory = (before, clearRedo = true) => {
++				const after = historyState();
++				if (before.signature === after.signature) return false;
++				undoHistory.push(before);
++				if (undoHistory.length > historyLimit) undoHistory.splice(0, undoHistory.length - historyLimit);
++				if (clearRedo) redoHistory.splice(0, redoHistory.length);
++				finalizeUnreachablePreviewNodes();
++				return true;
++			};
++			const finalizeHistoryTransaction = () => {
++				if (pendingHistoryTransaction === null) return false;
++				const before = pendingHistoryTransaction;
++				pendingHistoryTransaction = null;
++				return recordHistory(before);
++			};
++			const commitUpdate = (patch, persist = true) => {
++				finalizeHistoryTransaction();
++				const before = historyState();
++				const result = update(patch, persist);
++				recordHistory(before);
++				return result;
++			};
++			const releaseRemovedArtifacts = (currentArtifacts, nextArtifacts) => {
++				const live = new Set(nextArtifacts.map((node) => node.id));
++				for (const node of currentArtifacts) {
++					if (live.has(node.id)) continue;
++					if (node.kind === "web-link") Promise.resolve(window.dshDesktop?.researchLinkFrame?.release?.({ sessionId, nodeId: node.id })).catch(() => void 0);
++					if (RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) && typeof node.generationTaskId === "string" && generationCancelSink !== void 0) Promise.resolve(generationCancelSink({ parentSessionId: sessionId, taskId: node.generationTaskId })).catch(() => void 0);
++				}
++			};
++			const historyArtifacts = (artifacts2) => artifacts2.map((node) => {
++				if (!RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)) return node;
++				const { generationTaskId: _task, generationChildSessionId: _child, generationStartedAt: _started, generationEvents: _events, generationPartialText: _partial, ...interrupted } = node;
++				return {
++					...interrupted,
++					generationStatus: "interrupted",
++					generationError: "任务已因画布撤销或重做而中断，请重试。",
++					excerpt: "任务已因画布撤销或重做而中断，请重试。",
++					generationCompletedAt: Date.now()
++				};
++			});
++			const restoreHistory = (entry) => {
++				const artifacts2 = historyArtifacts(entry.artifacts);
++				releaseRemovedArtifacts(snapshot.artifacts, artifacts2);
++				const nextFileIds = new Set(entry.files.map((node) => node.id));
++				const removedPreviewIds = snapshot.files.filter((node) => !nextFileIds.has(node.id) && typeof node.authorizationId === "string").map((node) => node.id);
++				if (removedPreviewIds.length > 0) updateOrphanRevocations(removedPreviewIds);
++				for (const node of entry.files) if (typeof node.authorizationId === "string") updateOrphanRevocations([node.id], true);
++				publish({ ...snapshot, files: entry.files, artifacts: artifacts2, selection: entry.selection }, true);
++				finalizeUnreachablePreviewNodes();
++			};
++			const undo = () => {
++				finalizeHistoryTransaction();
++				const entry = undoHistory.pop();
++				if (entry === void 0) return false;
++				redoHistory.push(historyState());
++				restoreHistory(entry);
++				return true;
++			};
++			const redo = () => {
++				finalizeHistoryTransaction();
++				const entry = redoHistory.pop();
++				if (entry === void 0) return false;
++				undoHistory.push(historyState());
++				restoreHistory(entry);
++				return true;
++			};
++			const removePersistedNodes = (nodeIds, record = false) => {
 +				const removed = /* @__PURE__ */ new Set(researchSelectionIds(nodeIds));
 +				if (removed.size === 0) return;
 +				const next = removeResearchCanvasNodes(snapshot.files, snapshot.artifacts, [...removed]);
 +				if (next.files.length === snapshot.files.length && next.artifacts.length === snapshot.artifacts.length) return;
-+				update({
++				const patch = {
 +					...next,
 +					selection: {
 +						selectedNodeIds: snapshot.selection.selectedNodeIds.filter((id) => !removed.has(id)),
 +						orderedFileIds: snapshot.selection.orderedFileIds.filter((id) => !removed.has(id))
 +					}
-+				}, true);
++				};
++				if (record) commitUpdate(patch, true);
++				else update(patch, true);
 +			};
 +			const visibleCenter = () => researchCanvasWorldPoint(snapshot.viewport, {
 +				x: snapshot.canvasSize.width / 2,
@@ -4635,27 +4750,12 @@ index 1dd0e89..e0536d3 100644
 +				selectionSnapshot() { return { selectedNodeIds: [...snapshot.selection.selectedNodeIds], orderedFileIds: [...snapshot.selection.orderedFileIds] }; },
 +				selectedFiles() { const byId = /* @__PURE__ */ new Map(snapshot.files.map((file) => [file.id, file])); return snapshot.selection.orderedFileIds.flatMap((id) => byId.has(id) ? [byId.get(id)] : []); },
 +				pendingOrphanRevocations() { return [...orphanRevocationIds]; },
-+				queueOrphanRevocations(nodeIds) {
-+					const next = researchSelectionIds([...orphanRevocationIds, ...nodeIds]).slice(0, RESEARCH_CANVAS_MAX_REVOCATION_OUTBOX);
-+					const changed = next.length !== orphanRevocationIds.length || next.some((id, index) => id !== orphanRevocationIds[index]);
-+					if (changed) {
-+						orphanRevocationIds = next;
-+						orphanRevocationsDurable = false;
-+					}
-+					if (!orphanRevocationsDurable) orphanRevocationsDurable = saveResearchCanvasRevocationOutbox(storage, sessionId, orphanRevocationIds);
-+					return orphanRevocationsDurable;
-+				},
-+				completeOrphanRevocation(nodeId) {
-+					const next = orphanRevocationIds.filter((id) => id !== nodeId);
-+					if (next.length !== orphanRevocationIds.length) {
-+						orphanRevocationIds = next;
-+						orphanRevocationsDurable = false;
-+					}
-+					if (!orphanRevocationsDurable) orphanRevocationsDurable = saveResearchCanvasRevocationOutbox(storage, sessionId, orphanRevocationIds);
-+					return orphanRevocationsDurable;
-+				},
-+				setFiles(files2) { const nextFiles = parseResearchCanvasFileNodes(JSON.stringify(files2)); return update({ files: nextFiles, selection: parseResearchCanvasSelection(JSON.stringify(snapshot.selection), nextFiles, snapshot.artifacts) }, true); },
-+				setArtifacts(artifacts2) { const nextArtifacts = boundedResearchCanvasArtifactNodes(artifacts2); update({ artifacts: nextArtifacts, selection: parseResearchCanvasSelection(JSON.stringify(snapshot.selection), snapshot.files, nextArtifacts) }, true); },
++				queueOrphanRevocations(nodeIds) { return updateOrphanRevocations(nodeIds); },
++				completeOrphanRevocation(nodeId) { return updateOrphanRevocations([nodeId], true); },
++				setFiles(files2) { const nextFiles = parseResearchCanvasFileNodes(JSON.stringify(files2)); return commitUpdate({ files: nextFiles, selection: parseResearchCanvasSelection(JSON.stringify(snapshot.selection), nextFiles, snapshot.artifacts) }, true); },
++				setArtifacts(artifacts2) { const nextArtifacts = boundedResearchCanvasArtifactNodes(artifacts2); commitUpdate({ artifacts: nextArtifacts, selection: parseResearchCanvasSelection(JSON.stringify(snapshot.selection), snapshot.files, nextArtifacts) }, true); },
++				undo,
++				redo,
 +				createWebLink(rawUrl, placement = null) {
 +					const url = normalizeResearchWebUrl(rawUrl);
 +					if (url === null) return null;
@@ -4676,7 +4776,7 @@ index 1dd0e89..e0536d3 100644
 +					if (artifact === null) return null;
 +					const artifacts2 = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, artifact]);
 +					if (!artifacts2.some((node) => node.id === id)) return null;
-+					update({ artifacts: artifacts2, selection: { selectedNodeIds: [id], orderedFileIds: [] } }, true);
++					commitUpdate({ artifacts: artifacts2, selection: { selectedNodeIds: [id], orderedFileIds: [] } }, true);
 +					return artifact;
 +				},
 +				createContainerDraft(placement = null) {
@@ -4699,7 +4799,7 @@ index 1dd0e89..e0536d3 100644
 +					if (artifact === null) return null;
 +					const artifacts2 = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, artifact]);
 +					if (!artifacts2.some((node) => node.id === id)) return null;
-+					update({ artifacts: artifacts2, selection: { selectedNodeIds: [id], orderedFileIds: [] } }, true);
++					commitUpdate({ artifacts: artifacts2, selection: { selectedNodeIds: [id], orderedFileIds: [] } }, true);
 +					return artifact;
 +				},
 +				updateWebLink(nodeId, rawUrl) {
@@ -4709,7 +4809,7 @@ index 1dd0e89..e0536d3 100644
 +					const artifacts2 = snapshot.artifacts.slice();
 +					const { sourceText: _sourceText, ...current } = artifacts2[index];
 +					artifacts2[index] = { ...current, url, excerpt: url, title: researchWebUrlHostname(url), titleMode: "auto" };
-+					update({ artifacts: artifacts2 }, true);
++					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
 +				applyWebLinkInspection(nodeId, expectedUrl, inspection) {
@@ -4734,7 +4834,7 @@ index 1dd0e89..e0536d3 100644
 +					const { generationError: _generationError, refreshError: _refreshError, generationTaskId: _taskId, generationChildSessionId: _childId, generationStartedAt: _startedAt, generationCompletedAt: _completedAt, generationEvents: _events, generationPartialText: _partial, ...editable } = current;
 +					const artifacts2 = snapshot.artifacts.slice();
 +					artifacts2[index] = { ...editable, containerPrompt: prompt, generationStatus: "draft", generationLastSeq: 0, excerpt: prompt };
-+					update({ artifacts: artifacts2 }, true);
++					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
 +				beginContainerGeneration(nodeId, rawPrompt) {
@@ -4751,7 +4851,7 @@ index 1dd0e89..e0536d3 100644
 +						generationLastSeq: 0,
 +						excerpt: "正在准备任务…"
 +					};
-+					update({ artifacts: artifacts2, selection: { selectedNodeIds: [nodeId], orderedFileIds: [] } }, true);
++					commitUpdate({ artifacts: artifacts2, selection: { selectedNodeIds: [nodeId], orderedFileIds: [] } }, true);
 +					return { id: nodeId, kind: "container", prompt };
 +				},
 +				setContainerRefresh(nodeId, value) {
@@ -4759,7 +4859,7 @@ index 1dd0e89..e0536d3 100644
 +					if (index === -1 || !RESEARCH_CONTAINER_REFRESH_MINUTES.has(value) || snapshot.artifacts[index].refreshMinutes === value) return false;
 +					const artifacts2 = snapshot.artifacts.slice();
 +					artifacts2[index] = { ...artifacts2[index], refreshMinutes: value };
-+					update({ artifacts: artifacts2 }, true);
++					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
 +				beginGeneration(kind, sourceNodeIds, placement, requestedDetail = "standard") {
@@ -4786,7 +4886,7 @@ index 1dd0e89..e0536d3 100644
 +					if (artifact === null) return null;
 +					const artifacts2 = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, artifact]);
 +					if (!artifacts2.some((node) => node.id === id)) return null;
-+					update({
++					commitUpdate({
 +						artifacts: artifacts2,
 +						selection: { selectedNodeIds: [id], orderedFileIds: [] }
 +					}, true);
@@ -4939,7 +5039,7 @@ index 1dd0e89..e0536d3 100644
 +						generationLastSeq: 0,
 +						excerpt: '正在准备任务…'
 +					};
-+					update({ artifacts: artifacts2 }, true);
++					commitUpdate({ artifacts: artifacts2 }, true);
 +					return kind === 'container' ? { id: nodeId, kind, prompt: current.containerPrompt } : { id: nodeId, kind, sourceNodeIds: [...current.sourceNodeIds], generationSources: current.generationSources, ...(kind === 'mind-map' ? { detail: researchMindMapDetail(current.generationDetail) } : {}) };
 +				},
 +				setGenerationCancelSink(sink) {
@@ -4962,7 +5062,7 @@ index 1dd0e89..e0536d3 100644
 +							const { displayName: _drop, ...sourceFile } = file;
 +							files2[fileIndex] = sourceFile;
 +						} else files2[fileIndex] = { ...file, displayName };
-+						update({ files: files2 }, true);
++						commitUpdate({ files: files2 }, true);
 +						return true;
 +					}
 +					const artifactIndex = snapshot.artifacts.findIndex((node) => node.id === nodeId);
@@ -4975,7 +5075,7 @@ index 1dd0e89..e0536d3 100644
 +						title,
 +						...(artifacts2[artifactIndex].kind === "web-link" ? { titleMode: "custom" } : {})
 +					};
-+					update({ artifacts: artifacts2 }, true);
++					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
 +				updateArtifactContent(nodeId, rawContent) {
@@ -4986,7 +5086,7 @@ index 1dd0e89..e0536d3 100644
 +					if (excerpt === null || excerpt === snapshot.artifacts[artifactIndex].excerpt) return false;
 +					const artifacts2 = snapshot.artifacts.slice();
 +					artifacts2[artifactIndex] = { ...artifacts2[artifactIndex], excerpt };
-+					update({ artifacts: artifacts2 }, true);
++					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
 +				updateMindMapNodeLabel(nodeId, sourceLineIndex, rawLabel) {
@@ -4996,13 +5096,29 @@ index 1dd0e89..e0536d3 100644
 +					if (excerpt === null || excerpt === snapshot.artifacts[artifactIndex].excerpt) return false;
 +					const artifacts2 = snapshot.artifacts.slice();
 +					artifacts2[artifactIndex] = { ...artifacts2[artifactIndex], excerpt };
-+					update({ artifacts: artifacts2 }, true);
++					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
 +				organizeCanvas() {
 +					const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize);
 +					if (organized === null) return false;
-+					update(organized, true);
++					commitUpdate(organized, true);
++					return true;
++				},
++				bringNodeToFront(nodeId, persist = true) {
++					const allNodes = [...snapshot.files, ...snapshot.artifacts];
++					const target = allNodes.find((node) => node.id === nodeId);
++					if (target === void 0) return false;
++					const maximum = Math.max(0, ...allNodes.map((node) => researchCanvasStackOrder(node.stackOrder)));
++					const targetOrder = researchCanvasStackOrder(target.stackOrder);
++					if (targetOrder > 0 && targetOrder === maximum && allNodes.filter((node) => researchCanvasStackOrder(node.stackOrder) === maximum).length === 1) return false;
++					let stackOrders;
++					if (maximum >= 1e6) {
++						const ordered = allNodes.filter((node) => node.id !== nodeId).map((node, index) => ({ node, index })).sort((a, b) => researchCanvasStackOrder(a.node.stackOrder) - researchCanvasStackOrder(b.node.stackOrder) || a.index - b.index).map(({ node }) => node.id);
++						stackOrders = new Map([...ordered, nodeId].map((id, index) => [id, index + 1]));
++					} else stackOrders = new Map([[nodeId, maximum + 1]]);
++					const raise = (node) => stackOrders.has(node.id) ? { ...node, stackOrder: stackOrders.get(node.id) } : node;
++					update({ files: snapshot.files.map(raise), artifacts: snapshot.artifacts.map(raise) }, persist);
 +					return true;
 +				},
 +				setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, snapshot.artifacts) }, true); },
@@ -5045,18 +5161,10 @@ index 1dd0e89..e0536d3 100644
 +							if (!removed.has(node.id) || !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || typeof node.generationTaskId !== 'string' || generationCancelSink === void 0) continue;
 +							Promise.resolve(generationCancelSink({ parentSessionId: sessionId, taskId: node.generationTaskId })).catch(() => void 0);
 +						}
-+						const previewNodes = snapshot.files.filter((node) => removed.has(node.id) && typeof node.authorizationId === "string");
-+						const durableIds = /* @__PURE__ */ new Set(previewNodes.map((node) => node.id));
-+						removePersistedNodes([...removed].filter((id) => !durableIds.has(id)));
-+						const revokeNode = window.dshDesktop?.researchPreview?.revokeNode;
-+						if (typeof revokeNode !== "function") return;
-+						for (const node of previewNodes) {
-+							if (pendingNodeRevocations.has(node.id)) continue;
-+							pendingNodeRevocations.add(node.id);
-+							Promise.resolve().then(() => revokeNode({ sessionId, nodeId: node.id })).then((result) => {
-+								if (result?.ok === true) removePersistedNodes([node.id]);
-+							}).catch(() => void 0).finally(() => pendingNodeRevocations.delete(node.id));
-+						}
++						const previewNodeIds = snapshot.files.filter((node) => removed.has(node.id) && typeof node.authorizationId === "string").map((node) => node.id);
++						if (previewNodeIds.length > 0) updateOrphanRevocations(previewNodeIds);
++						removePersistedNodes([...removed], true);
++						finalizeUnreachablePreviewNodes();
 +				},
 +				commitSelection(selection) {
 +					const admitted = /* @__PURE__ */ new Set(selection.selectedNodeIds);
@@ -5071,7 +5179,15 @@ index 1dd0e89..e0536d3 100644
 +						orderedFileIds: [...selection.orderedFileIds, ...snapshot.selection.orderedFileIds.filter((id) => !selection.orderedFileIds.includes(id))]
 +					});
 +				},
-+				moveNodes(selectedIds, delta, scale, persist = true) { const moved = moveResearchCanvasNodes(snapshot.files, snapshot.artifacts, selectedIds, delta, scale); update(moved, persist); },
++				moveNodes(selectedIds, delta, scale, persist = true) {
++					const before = historyState();
++					const moved = moveResearchCanvasNodes(snapshot.files, snapshot.artifacts, selectedIds, delta, scale);
++					if (persist) commitUpdate(moved, true);
++					else {
++						if (pendingHistoryTransaction === null) pendingHistoryTransaction = before;
++						update(moved, false);
++					}
++				},
 +					resizeNode(nodeId, corner, delta, scale, persist = true) {
 +					let changed = false;
 +					const resize = (node) => {
@@ -5082,7 +5198,11 @@ index 1dd0e89..e0536d3 100644
 +					};
 +					const files2 = snapshot.files.map(resize);
 +					const artifacts2 = snapshot.artifacts.map(resize);
-+						if (changed) update({ files: files2, artifacts: artifacts2 }, persist);
++						if (changed && persist) commitUpdate({ files: files2, artifacts: artifacts2 }, true);
++						else if (changed) {
++							if (pendingHistoryTransaction === null) pendingHistoryTransaction = historyState();
++							update({ files: files2, artifacts: artifacts2 }, false);
++						}
 +					},
 +					updateNodeGeometry(nodeId, geometry, persist = true) {
 +						let changed = false;
@@ -5097,7 +5217,7 @@ index 1dd0e89..e0536d3 100644
 +						const artifacts2 = snapshot.artifacts.map(apply);
 +						if (changed) update({ files: files2, artifacts: artifacts2 }, persist);
 +					},
-+					persist() { persistSnapshot(); },
++					persist() { finalizeHistoryTransaction(); persistSnapshot(); },
 +				setViewport(viewport) { update({ viewport: { ...snapshot.viewport, ...viewport } }, false); },
 +				setCanvasSize(canvasSize) { update({ canvasSize: { ...snapshot.canvasSize, ...canvasSize } }, false); },
 +				visibleCenter,
@@ -5305,6 +5425,7 @@ index 1dd0e89..e0536d3 100644
 +					top: `${node.y}px`,
 +					width: `${geometry.width}px`,
 +					height: `${geometry.height}px`,
++					zIndex: researchCanvasStackOrder(node.stackOrder),
 +					transform: "translate(-50%, -50%)"
 +				},
 +				children: [(0, react_jsx_runtime.jsx)("div", {
@@ -6110,6 +6231,7 @@ index 1dd0e89..e0536d3 100644
 +					top: `${node.y}px`,
 +					width: `${geometry.width}px`,
 +					height: `${geometry.height}px`,
++					zIndex: researchCanvasStackOrder(node.stackOrder),
 +					transform: "translate(-50%, -50%)"
 +				},
 +				children: [(0, react_jsx_runtime.jsx)("svg", {
@@ -7028,7 +7150,7 @@ index 1dd0e89..e0536d3 100644
 +			const tag = document.createElement("style");
 +			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
 +			tag.dataset.pluginCss = tagIdResearchCanvas;
-+			tag.textContent = cssResearchCanvas + ".rScV5Q_contextMenu{z-index:30;min-width:136px;padding:4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:9px;box-shadow:var(--dsw-shadow-lv2);position:absolute}.rScV5Q_contextMenu button{box-sizing:border-box;width:100%;height:30px;padding:0 9px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-primary);text-align:left;font:inherit;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:20px}.rScV5Q_contextMenu button:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_contextMenu button:disabled{opacity:.45;cursor:default}.rScV5Q_contextMenuShortcut{margin-left:auto;color:var(--dsw-alias-label-tertiary)}.rScV5Q_richNode{box-sizing:border-box;pointer-events:auto;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:10px;position:absolute;display:flex;flex-direction:column;overflow:visible;box-shadow:var(--dsw-shadow-lv1)}.rScV5Q_richNode[data-selected=true]{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 20%,transparent),var(--dsw-shadow-lv1)}.rScV5Q_richNode[data-node-dragging=true],.rScV5Q_richNode[data-node-resizing=true]{opacity:.88}.rScV5Q_richNode:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.rScV5Q_nodeTitle{box-sizing:border-box;height:32px;min-height:32px;padding:0 12px;border-bottom:1px solid var(--dsw-alias-border-l2);display:flex;align-items:center;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;font:var(--dsw-font-xs-strong-13);cursor:grab}.rScV5Q_titleName{min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_pageIndicator{flex:none;margin-left:auto;padding-left:10px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}.rScV5Q_previewBody{min-width:0;min-height:0;position:relative;flex:1;overflow:auto;overscroll-behavior:contain;user-select:text}.rScV5Q_previewPlaceholder{box-sizing:border-box;width:100%;height:100%;padding:16px;color:var(--dsw-alias-label-tertiary);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:var(--dsw-font-xxs-12)}.rScV5Q_artifactCard{padding:0;gap:0;justify-content:stretch}.rScV5Q_artifactBody{box-sizing:border-box;min-height:100%;padding:12px;display:flex;flex-direction:column;gap:6px}.rScV5Q_artifactExcerpt{white-space:pre-wrap;overflow-wrap:anywhere}.rScV5Q_previewBody img[data-research-image-preview]{display:block;width:100%;height:100%;object-fit:contain}.rScV5Q_pdfScroll{width:100%;height:100%;overflow:auto;overscroll-behavior:contain}.rScV5Q_pdfScroll canvas{display:block;max-width:none;background:#fff}.rScV5Q_htmlPreview{box-sizing:border-box;display:block;width:100%;height:100%;border:0;background:#fff}.rScV5Q_markdownScroll,.rScV5Q_textScroll{box-sizing:border-box;width:100%;height:100%;margin:0;padding:14px;overflow:auto;overflow-y:auto;overscroll-behavior:contain}.rScV5Q_markdownScroll{color:var(--dsw-alias-label-primary)}.rScV5Q_textScroll{white-space:pre;tab-size:2;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-markdown-code-block);font:400 12px/1.6 var(--ds-font-family-code)}.rScV5Q_previewShield{z-index:4;pointer-events:none;position:absolute;inset:0}.rScV5Q_root[data-dragging=true] .rScV5Q_previewShield,.rScV5Q_root[data-space-pressed=true] .rScV5Q_previewShield{pointer-events:auto}.rScV5Q_resizeHandle{box-sizing:border-box;z-index:6;pointer-events:auto;width:14px;height:14px;padding:0;border:2px solid var(--dsw-alias-bg-layer-1);border-radius:50%;background:var(--dsw-alias-state-business-primary);position:absolute}.rScV5Q_resizeHandle[data-research-resize-handle=nw]{left:-7px;top:-7px;cursor:nwse-resize}.rScV5Q_resizeHandle[data-research-resize-handle=ne]{right:-7px;top:-7px;cursor:nesw-resize}.rScV5Q_resizeHandle[data-research-resize-handle=sw]{left:-7px;bottom:-7px;cursor:nesw-resize}.rScV5Q_resizeHandle[data-research-resize-handle=se]{right:-7px;bottom:-7px;cursor:nwse-resize}.rScV5Q_fileRichNode[data-path-unavailable=true]{border-style:dashed;opacity:.72}body[data-ds-dark-theme] .rScV5Q_richNode{background:var(--dsw-alias-bg-layer-2)}";
++			tag.textContent = cssResearchCanvas + ".rScV5Q_contextMenu{z-index:30;min-width:136px;padding:4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:9px;box-shadow:var(--dsw-shadow-lv2);position:absolute}.rScV5Q_contextMenu button{box-sizing:border-box;width:100%;height:30px;padding:0 9px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-primary);text-align:left;font:inherit;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:20px}.rScV5Q_contextMenu button:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_contextMenu button:disabled{opacity:.45;cursor:default}.rScV5Q_contextMenuShortcut{margin-left:auto;color:var(--dsw-alias-label-tertiary)}.rScV5Q_richNode{box-sizing:border-box;pointer-events:auto;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:10px;position:absolute;display:flex;flex-direction:column;overflow:visible;box-shadow:var(--dsw-shadow-lv1)}.rScV5Q_richNode[data-selected=true]{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 20%,transparent),var(--dsw-shadow-lv1)}.rScV5Q_richNode[data-node-dragging=true],.rScV5Q_richNode[data-node-resizing=true]{opacity:.88}.rScV5Q_richNode:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.rScV5Q_nodeTitle{box-sizing:border-box;height:36px;min-height:36px;padding:0 12px;border-bottom:1px solid var(--dsw-alias-border-l2);display:flex;align-items:center;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;font:var(--dsw-font-xs-strong-13);cursor:grab}.rScV5Q_titleName{min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_pageIndicator{flex:none;margin-left:auto;padding-left:10px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}.rScV5Q_previewBody{min-width:0;min-height:0;position:relative;flex:1;overflow:auto;overscroll-behavior:contain;user-select:text}.rScV5Q_previewPlaceholder{box-sizing:border-box;width:100%;height:100%;padding:16px;color:var(--dsw-alias-label-tertiary);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:var(--dsw-font-xxs-12)}.rScV5Q_artifactCard{padding:0;gap:0;justify-content:stretch}.rScV5Q_artifactBody{box-sizing:border-box;min-height:100%;padding:12px;display:flex;flex-direction:column;gap:6px}.rScV5Q_artifactExcerpt{white-space:pre-wrap;overflow-wrap:anywhere}.rScV5Q_previewBody img[data-research-image-preview]{display:block;width:100%;height:100%;object-fit:contain}.rScV5Q_pdfScroll{width:100%;height:100%;overflow:auto;overscroll-behavior:contain}.rScV5Q_pdfScroll canvas{display:block;max-width:none;background:#fff}.rScV5Q_htmlPreview{box-sizing:border-box;display:block;width:100%;height:100%;border:0;background:#fff}.rScV5Q_markdownScroll,.rScV5Q_textScroll{box-sizing:border-box;width:100%;height:100%;margin:0;padding:14px;overflow:auto;overflow-y:auto;overscroll-behavior:contain}.rScV5Q_markdownScroll{color:var(--dsw-alias-label-primary)}.rScV5Q_textScroll{white-space:pre;tab-size:2;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-markdown-code-block);font:400 12px/1.6 var(--ds-font-family-code)}.rScV5Q_previewShield{z-index:4;pointer-events:none;position:absolute;inset:0}.rScV5Q_root[data-dragging=true] .rScV5Q_previewShield,.rScV5Q_root[data-space-pressed=true] .rScV5Q_previewShield,.rScV5Q_root[data-command-pressed=true] .rScV5Q_previewShield{pointer-events:auto}.rScV5Q_resizeHandle{box-sizing:border-box;z-index:6;pointer-events:auto;width:14px;height:14px;padding:0;border:2px solid var(--dsw-alias-bg-layer-1);border-radius:50%;background:var(--dsw-alias-state-business-primary);position:absolute}.rScV5Q_resizeHandle[data-research-resize-handle=nw]{left:-7px;top:-7px;cursor:nwse-resize}.rScV5Q_resizeHandle[data-research-resize-handle=ne]{right:-7px;top:-7px;cursor:nesw-resize}.rScV5Q_resizeHandle[data-research-resize-handle=sw]{left:-7px;bottom:-7px;cursor:nesw-resize}.rScV5Q_resizeHandle[data-research-resize-handle=se]{right:-7px;bottom:-7px;cursor:nwse-resize}.rScV5Q_fileRichNode[data-path-unavailable=true]{border-style:dashed;opacity:.72}body[data-ds-dark-theme] .rScV5Q_richNode{background:var(--dsw-alias-bg-layer-2)}";
 +			tag.textContent += ".rScV5Q_fileText{flex:1}.rScV5Q_titleEditor{box-sizing:border-box;min-width:0;width:100%;height:24px;padding:0 6px;border:1px solid var(--dsw-alias-state-business-primary);border-radius:5px;outline:0;color:inherit;background:var(--dsw-alias-bg-layer-1);font:inherit;user-select:text}.rScV5Q_fileTitleEditor{height:22px;font:var(--dsw-font-xs-strong-13)}.rScV5Q_contentEditor{box-sizing:border-box;width:100%;min-height:120px;flex:1;resize:none;padding:8px 10px;border:1px solid var(--dsw-alias-state-business-primary);border-radius:7px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:400 12px/1.55 var(--ds-font-family-code);white-space:pre-wrap;overflow:auto;user-select:text}body[data-ds-dark-theme] .rScV5Q_titleEditor,body[data-ds-dark-theme] .rScV5Q_contentEditor{background:var(--dsw-alias-bg-layer-2)}";
 +			tag.textContent += ".rScV5Q_officePreview{box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;display:flex;overflow:hidden}.rScV5Q_officePreview>*{flex:1;min-width:0;min-height:0}";
 +			tag.textContent += ".rScV5Q_emptyViewport{box-sizing:border-box;z-index:20;pointer-events:auto;position:absolute;left:50%;bottom:90px;transform:translateX(-50%);min-height:44px;padding:6px 7px 6px 14px;display:flex;align-items:center;gap:12px;white-space:nowrap;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;box-shadow:var(--dsw-shadow-lv2);font:var(--dsw-font-xs-13)}.rScV5Q_emptyViewport button{height:32px;padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;cursor:pointer}.rScV5Q_emptyViewport button:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_emptyViewport button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.rScV5Q_root[data-dragging=true] .rScV5Q_emptyViewport{display:none}";
@@ -7041,6 +7163,8 @@ index 1dd0e89..e0536d3 100644
 +			tag.textContent += ".rScV5Q_generatedContainer{box-sizing:border-box;min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generatedContainer{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerControls{box-sizing:border-box;flex:none;min-height:36px;padding:4px 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_containerControls>span{margin-right:auto;padding-left:3px;color:var(--dsw-alias-label-tertiary)}.rScV5Q_containerControls button,.rScV5Q_containerControls select{height:26px;padding:0 7px;border:1px solid transparent;border-radius:6px;color:var(--dsw-alias-label-secondary);background:transparent;font:inherit;cursor:pointer}.rScV5Q_containerControls button:hover:not(:disabled),.rScV5Q_containerControls select:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerControls button:disabled,.rScV5Q_containerControls select:disabled{opacity:.45;cursor:default}.rScV5Q_containerControls select{border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerControls select{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerNotice{box-sizing:border-box;flex:none;min-height:28px;padding:6px 11px;color:var(--dsw-alias-state-business-primary);background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent);font:var(--dsw-font-xxs-12)}.rScV5Q_containerNotice[data-state=error]{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);border-bottom-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 18%,transparent)}.rScV5Q_containerContent{min-width:0;min-height:0;flex:1;display:flex;overflow:auto}.rScV5Q_containerContent>.rScV5Q_webFrameShell{flex:1}.rScV5Q_containerChart{box-sizing:border-box;min-width:0;min-height:0;width:100%;padding:14px 16px 10px;display:flex;flex-direction:column;justify-content:center}.rScV5Q_containerChart svg{display:block;width:100%;min-height:0;max-height:320px;overflow:visible}.rScV5Q_chartGrid{stroke:var(--dsw-alias-border-l2);stroke-width:1}.rScV5Q_chartAxis{stroke:var(--dsw-alias-label-tertiary);stroke-width:1.2}.rScV5Q_chartLabel{fill:var(--dsw-alias-label-secondary);font:12px STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_chartLegend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_chartLegend span{display:inline-flex;align-items:center;gap:5px}.rScV5Q_chartLegend i{width:9px;height:9px}.rScV5Q_containerTableScroll{box-sizing:border-box;width:100%;padding:14px;overflow:auto}.rScV5Q_containerTableScroll table{width:100%;border-collapse:collapse;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-13)}.rScV5Q_containerTableScroll th,.rScV5Q_containerTableScroll td{padding:9px 10px;border:1px solid var(--dsw-alias-border-l2);text-align:left;vertical-align:top}.rScV5Q_containerTableScroll th{white-space:nowrap;background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-strong-13)}.rScV5Q_containerTableScroll tr:nth-child(even) td{background:color-mix(in srgb,var(--dsw-alias-bg-base) 65%,transparent)}.rScV5Q_containerKpis{box-sizing:border-box;width:100%;padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-content:center}.rScV5Q_containerKpis>div{box-sizing:border-box;min-height:96px;padding:14px;display:flex;flex-direction:column;justify-content:center;gap:5px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}.rScV5Q_containerKpis span{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerKpis strong{color:var(--dsw-alias-label-primary);font:var(--dsw-font-xl-strong-24);font-variant-numeric:tabular-nums}.rScV5Q_containerKpis em{color:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);font-style:normal}.rScV5Q_containerMarkdown{box-sizing:border-box;width:100%;padding:18px 20px;overflow:auto;color:var(--dsw-alias-label-primary);user-select:text}";
 +				tag.textContent += ".rScV5Q_mindMapRoot{position:relative}.rScV5Q_mindMapRoot:after{content:\"\";position:absolute;left:100%;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapRoot+.rScV5Q_mindMapChildren:after{display:none}";
 +				tag.textContent += ".rScV5Q_contextDownloadGroup{position:relative}.rScV5Q_contextDownloadFormats{box-sizing:border-box;z-index:32;min-width:92px;padding:4px;position:absolute;left:calc(100% + 6px);top:-4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:9px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_contextDownloadFormats button{justify-content:flex-start;gap:6px}.rScV5Q_downloadFeedback{box-sizing:border-box;z-index:28;pointer-events:auto;min-height:32px;max-width:240px;padding:7px 9px;display:flex;align-items:center;gap:8px;position:absolute;transform:translate(-50%,0);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:var(--dsw-shadow-lv2);font:var(--dsw-font-xxs-12)}.rScV5Q_downloadFeedback[data-state=error]{color:var(--dsw-alias-state-error-primary);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 45%,var(--dsw-alias-border-l2))}.rScV5Q_downloadFeedback span{min-width:0;overflow-wrap:anywhere}.rScV5Q_downloadFeedback button{flex:none;height:24px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;cursor:pointer}.rScV5Q_downloadFeedback button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_downloadFeedback button:disabled{opacity:.45;cursor:default}";
++				tag.textContent += ".rScV5Q_linkPopover button,.rScV5Q_containerDraftFooter button{height:34px;padding:0 14px;border:0;border-radius:8px;color:#fff;background:#0f1115;box-shadow:0 1px 2px rgba(0,0,0,.12);font:var(--dsw-font-xs-strong-13);cursor:pointer;transition:background-color .12s ease,color .12s ease,transform .08s ease}.rScV5Q_linkPopover button:hover:not(:disabled),.rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#23262b}.rScV5Q_linkPopover button:active:not(:disabled),.rScV5Q_containerDraftFooter button:active:not(:disabled){background:#050607;transform:translateY(1px)}.rScV5Q_linkPopover button:focus-visible,.rScV5Q_containerDraftFooter button:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-label-primary) 55%,transparent);outline-offset:2px}.rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{color:#8a9099;background:#d7dae0;cursor:default}.rScV5Q_linkPopover button:disabled{opacity:1}body[data-ds-dark-theme] .rScV5Q_linkPopover button,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button{color:#202124;background:#f5f5f5}body[data-ds-dark-theme] .rScV5Q_linkPopover button:hover:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#fff}body[data-ds-dark-theme] .rScV5Q_linkPopover button:active:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:active:not(:disabled){background:#dedede}body[data-ds-dark-theme] .rScV5Q_linkPopover button:disabled,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:disabled{color:#969ca5;background:#454950}";
++				tag.textContent += ".rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{opacity:1;box-shadow:none}";
 +				document.head.appendChild(tag);
 +		}
 +		const ResearchCanvas_module_css_default = { root: "rScV5Q_root" };
@@ -7268,6 +7392,27 @@ index 1dd0e89..e0536d3 100644
 +					} catch {}
 +				};
 +			}, [workspace]);
++			(0, react.useEffect)(() => {
++				const root = rootRef.current;
++				const nativeWheel = window.dshDesktop?.researchCanvasWheel;
++				if (root === null || typeof nativeWheel?.subscribeCommandState !== "function") return;
++				const onCommandState = (active) => {
++					if (active === true) root.setAttribute("data-command-pressed", "true");
++					else root.removeAttribute("data-command-pressed");
++				};
++				let unsubscribe;
++				try {
++					unsubscribe = nativeWheel.subscribeCommandState(onCommandState);
++				} catch {
++					return;
++				}
++				return () => {
++					root.removeAttribute("data-command-pressed");
++					try {
++						if (typeof unsubscribe === "function") unsubscribe();
++					} catch {}
++				};
++			}, [workspace]);
 +			const activateArtifact = (node) => {
 +				actions?.setResearchRightTab?.("conversation");
 +				workspace.setPendingMessageJump(node.messageId);
@@ -7417,6 +7562,15 @@ index 1dd0e89..e0536d3 100644
 +					}
 +				};
 +				const onKeyDown = (event) => {
++					const historyShortcut = event.metaKey && !event.altKey && (event.code === "KeyZ" || event.code === "KeyY");
++					if (historyShortcut && canvasOwnsFocus() && !isInteractiveTarget(event.target)) {
++						event.preventDefault();
++						event.stopPropagation();
++						finishOperation(void 0, false);
++						if (event.code === "KeyY" || event.shiftKey) workspace.redo();
++						else workspace.undo();
++						return;
++					}
 +					if (event.code === "Escape" && canvasOwnsFocus()) {
 +						event.preventDefault();
 +						setContextMenu(null);
@@ -7472,10 +7626,13 @@ index 1dd0e89..e0536d3 100644
 +						root.setAttribute("data-research-operation", "pan");
 +						return;
 +					}
++					const nodeElement = event.target?.closest?.("[data-research-node-id]");
++					const nodeId = nodeElement?.getAttribute("data-research-node-id");
 +					const resizeHandle = event.target?.closest?.("[data-research-resize-handle]");
 +					const resizeNodeId = resizeHandle?.getAttribute("data-research-resize-node-id");
 +					const resizeCorner = resizeHandle?.getAttribute("data-research-resize-handle");
 +					if (resizeNodeId !== null && resizeNodeId !== void 0 && ["nw", "ne", "sw", "se"].includes(resizeCorner)) {
++						workspace.bringNodeToFront(resizeNodeId, false);
 +						setContextMenu(null);
 +						setMindMapMenuOpen(false);
 +						event.preventDefault();
@@ -7487,8 +7644,6 @@ index 1dd0e89..e0536d3 100644
 +						root.setAttribute("data-research-operation", "resize");
 +						return;
 +					}
-+					const nodeElement = event.target?.closest?.("[data-research-node-id]");
-+					const nodeId = nodeElement?.getAttribute("data-research-node-id");
 +					let nextSelection = null;
 +					if (nodeId !== null && nodeId !== void 0) {
 +						const currentSnapshot = workspace.getSnapshot();
@@ -7498,7 +7653,11 @@ index 1dd0e89..e0536d3 100644
 +						nextSelection = alreadySelected && !event.metaKey && !event.shiftKey ? current : updateResearchSelection(current, [nodeId], mode, currentSnapshot.files);
 +						if (nextSelection !== current) workspace.setSelection(nextSelection);
 +					}
-+					if (isInteractiveTarget(event.target)) return;
++					if (nodeId !== null && nodeId !== void 0) workspace.bringNodeToFront(nodeId, false);
++					if (isInteractiveTarget(event.target)) {
++						workspace.persist();
++						return;
++					}
 +					setContextMenu(null);
 +					setMindMapMenuOpen(false);
 +					setDownloadMenuNodeId(null);
@@ -7535,6 +7694,7 @@ index 1dd0e89..e0536d3 100644
 +						return;
 +					}
 +					const current = workspace.getSnapshot();
++					workspace.bringNodeToFront(nodeId);
 +					if (!current.selection.selectedNodeIds.includes(nodeId)) workspace.updateSelection([nodeId], "replace");
 +					setContextMenu({ nodeId, left: event.clientX - bounds.left, top: event.clientY - bounds.top });
 +				};
@@ -7753,6 +7913,10 @@ index 1dd0e89..e0536d3 100644
 +					className: "rScV5Q_contentLayer",
 +					"data-research-content-layer": "",
 +					style: { transform: researchCanvasContentTransform(viewport) },
++					onFocusCapture: (event) => {
++						const nodeId = event.target?.closest?.("[data-research-node-id]")?.getAttribute("data-research-node-id");
++						if (nodeId !== null && nodeId !== void 0) workspace.bringNodeToFront(nodeId);
++					},
 +					children: [files.map((node) => (0, react_jsx_runtime.jsx)(ResearchCanvasFileCard, {
 +						node,
 +						sessionId,
@@ -7767,7 +7931,10 @@ index 1dd0e89..e0536d3 100644
 +							setEditingNodeId(null);
 +						},
 +						onRenameCancel: () => setEditingNodeId(null),
-+						onSelect: (file) => workspace.updateSelection([file.id], "replace"),
++						onSelect: (file) => {
++							workspace.bringNodeToFront(file.id);
++							workspace.updateSelection([file.id], "replace");
++						},
 +						onNaturalSize: (naturalWidth, naturalHeight) => {
 +							const geometry = researchCanvasNodeKind(node) === "pdf" ? researchPdfGeometryForPage(node, naturalWidth, naturalHeight) : researchImageGeometryForNaturalSize(node, naturalWidth, naturalHeight);
 +							if (geometry !== null) workspace.updateNodeGeometry(node.id, geometry);
@@ -7804,6 +7971,7 @@ index 1dd0e89..e0536d3 100644
 +							setDownloadMenuNodeId(null);
 +							root.focus({ preventScroll: true });
 +							const current = workspace.getSnapshot();
++							workspace.bringNodeToFront(node.id);
 +							if (!current.selection.selectedNodeIds.includes(node.id)) workspace.updateSelection([node.id], "replace");
 +							const bounds = root.getBoundingClientRect();
 +							setContextMenu({ nodeId: node.id, left: event.clientX - bounds.left, top: event.clientY - bounds.top });
@@ -7912,7 +8080,7 @@ index 1dd0e89..e0536d3 100644
 +											setLinkPopoverOpen(false);
 +										}
 +									}
-+								}), (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-link-submit": "", onClick: submitLink, children: "添加" })]
++								}), (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-link-submit": "", disabled: linkDraft.trim() === "", onClick: submitLink, children: "添加" })]
 +							}), linkError === null ? null : (0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_linkError", role: "alert", children: linkError })]
 +						})]
 +					}), (0, react_jsx_runtime.jsxs)("button", {
@@ -8070,7 +8238,7 @@ index 1dd0e89..e0536d3 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +13874,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +14042,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -8089,7 +8257,7 @@ index 1dd0e89..e0536d3 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +13913,355 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +14081,355 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -8446,7 +8614,7 @@ index 1dd0e89..e0536d3 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +14271,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +14439,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -8618,7 +8786,7 @@ index 1dd0e89..e0536d3 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +14441,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +14609,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -8630,7 +8798,7 @@ index 1dd0e89..e0536d3 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +14451,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +14619,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -8638,7 +8806,7 @@ index 1dd0e89..e0536d3 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +14483,8 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +14651,8 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -8647,7 +8815,7 @@ index 1dd0e89..e0536d3 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +14501,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +14669,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -8752,7 +8920,7 @@ index 1dd0e89..e0536d3 100644
  				})]
  			});
  		}
-@@ -6951,6 +14583,21 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +14751,21 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -8774,7 +8942,7 @@ index 1dd0e89..e0536d3 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +14627,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +14795,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -8795,7 +8963,7 @@ index 1dd0e89..e0536d3 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +14649,12 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +14817,12 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -8810,7 +8978,7 @@ index 1dd0e89..e0536d3 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +14697,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +14865,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -8828,7 +8996,7 @@ index 1dd0e89..e0536d3 100644
  				})] })
  			});
  		}
-@@ -7053,14 +14707,72 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +14875,72 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -8903,7 +9071,7 @@ index 1dd0e89..e0536d3 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +14783,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +14951,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -8920,7 +9088,7 @@ index 1dd0e89..e0536d3 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +14806,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +14974,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -8929,7 +9097,7 @@ index 1dd0e89..e0536d3 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +14859,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +15027,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -8947,7 +9115,7 @@ index 1dd0e89..e0536d3 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +14895,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +15063,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -8955,7 +9123,7 @@ index 1dd0e89..e0536d3 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +15787,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +15955,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -8986,7 +9154,7 @@ index 1dd0e89..e0536d3 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +15832,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +16000,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -9011,7 +9179,7 @@ index 1dd0e89..e0536d3 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +16786,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +16954,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -9020,7 +9188,7 @@ index 1dd0e89..e0536d3 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +16876,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +17044,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -9062,7 +9230,7 @@ index 1dd0e89..e0536d3 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +17085,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +17253,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -9079,7 +9247,7 @@ index 1dd0e89..e0536d3 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +17255,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +17423,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -9089,7 +9257,7 @@ index 1dd0e89..e0536d3 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +17297,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +17465,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -9104,7 +9272,7 @@ index 1dd0e89..e0536d3 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +17315,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +17483,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -9117,7 +9285,7 @@ index 1dd0e89..e0536d3 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +17364,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +17532,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -9131,7 +9299,7 @@ index 1dd0e89..e0536d3 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +17402,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +17570,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -9141,7 +9309,7 @@ index 1dd0e89..e0536d3 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +17534,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +17702,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -9156,7 +9324,7 @@ index 1dd0e89..e0536d3 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +17550,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +17718,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -9165,7 +9333,7 @@ index 1dd0e89..e0536d3 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +17574,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +17742,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -9174,7 +9342,7 @@ index 1dd0e89..e0536d3 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +17600,143 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +17768,143 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
