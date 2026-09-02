@@ -217,7 +217,8 @@ export function buildResearchTaskPrompt(request) {
   const instruction = validated.kind === 'mind-map'
     ? `请基于下方选中的研究材料生成思维导图。${mindMapDetailInstruction(validated.detail)}请用 Markdown 层级列表输出：第一行以“# ”开头写中心主题，后续使用“- ”和两个空格缩进表达分支；每个节点使用简洁中文短语并尽量控制在 18 个中文字符以内，避免末行仅剩单个汉字；完整句子左对齐，短语或词语居中。不要输出说明、前言或代码围栏。结构应采用横向展开、适合直接截图粘贴到公司 PPT。`
     : '请基于下方选中的研究材料进行总结提炼。请输出一段结构紧凑、信息密度高的中文总结，保留关键结论、依据、风险和待验证事项，不要复述任务说明。'
-  return `${instruction}\n\n${sources}`
+  const completionGuard = '当前任务不提供网页搜索或网页读取工具。必须仅依据下方材料完成；即使材料包含网址，也不得尝试访问外部网页。不得只输出分析、计划或推理过程，必须直接输出最终正文。'
+  return `${instruction}${completionGuard}\n\n${sources}`
 }
 
 function truncateUtf8(value, maxBytes) {
@@ -724,13 +725,15 @@ export class ResearchTaskRuntime {
       if (result?.stopReason === 'completed' && output !== undefined) {
         await this.finish(task, 'completed', { finalOutput: output })
       } else {
-        const message = result?.stopReason === 'max-tokens'
-          ? '生成内容达到长度上限，请重试。'
-          : result?.stopReason === 'refusal'
-            ? '任务未能生成内容，请重试。'
-            : result?.stopReason === 'aborted'
-              ? '任务已取消，可重试。'
-              : '生成失败，请重试。'
+        const message = result?.stopReason === 'completed'
+          ? '模型未返回可用正文，请重试。'
+          : result?.stopReason === 'max-tokens'
+            ? '生成内容达到长度上限，请重试。'
+            : result?.stopReason === 'refusal'
+              ? '任务未能生成内容，请重试。'
+              : result?.stopReason === 'aborted'
+                ? '任务已取消，可重试。'
+                : '生成失败，请重试。'
         await this.finish(
           task,
           result?.stopReason === 'aborted' ? 'cancelled' : 'failed',
