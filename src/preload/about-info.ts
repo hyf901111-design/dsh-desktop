@@ -18,6 +18,19 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.7.7',
+      date: '2026-09-02',
+      items: [
+        '智能容器可自行检索实时数据，补全社交媒体与动态追踪类需求识别，并在模型仅完成分析却未返回正文时自动恢复生成',
+        '链接组件支持授权登录后的网页内容提取，飞书等受保护页面可在授权后用于生成完整的思维导图和总结提炼',
+        '研究画布支持 Command+Z 撤销、Command+Shift+Z 重做，删除组件后也可恢复；鼠标位于网页等组件内时仍可用 Command+滚轮缩放画布',
+        '画布组件按最后点选顺序置于最上层，并优化组件顶栏高度以及链接“添加”和容器“创建”按钮的深浅主题样式',
+        '没有对话的新研究也会持久化到工作区会话，用户下次可从侧栏直接回到对应研究画布',
+        '修复研究模式发送消息后跳回对话模式，以及从其他模式返回研究时右侧栏宽度异常扩大的问题',
+        '改进链接页面授权、容器失败重试和实时监控结果渲染的稳定性'
+      ]
+    },
+    {
       version: '0.7.6',
       date: '2026-09-02',
       items: [
@@ -102,6 +115,19 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.7.7',
+      date: '2026-09-02',
+      items: [
+        'Smart containers can now retrieve live data autonomously, recognize social-media and activity-tracking requests, and recover automatically when a model finishes its analysis without returning final content',
+        'Link components can extract content from authenticated pages, allowing protected pages such as Feishu documents to generate complete mind maps and summaries after authorization',
+        'Added Command+Z undo and Command+Shift+Z redo to the Research canvas, including deleted-component recovery, and kept Command+wheel canvas zoom available while the pointer is over embedded content',
+        'The most recently selected canvas component now moves to the top, with slightly taller component headers and refined light/dark styling for the Link Add and Container Create buttons',
+        'New Research canvases are persisted in workspace sessions even without a conversation, so they can be reopened directly from the sidebar',
+        'Fixed Research messages switching back to Chat and preserved the user\'s right-panel width when returning to Research from another mode',
+        'Improved authenticated link loading, container retry behavior, and native rendering stability for live monitoring results'
+      ]
+    },
     {
       version: '0.7.6',
       date: '2026-09-02',
