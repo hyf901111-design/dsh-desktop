@@ -151,33 +151,31 @@ describe('Sherlock About settings', () => {
     expect(zh.productName).toBe('Sherlock')
     expect(zh.version).toBe('9.8.7')
     expect(zh.releaseNotes[0]).toEqual({
-      version: '0.7.6',
+      version: '0.7.7',
       date: '2026-09-02',
       items: [
-        '研究组件新增“思维导图”和“总结提炼”工具：可在所选内容旁生成新组件，思维导图提供简要、常规和详细三种模式',
-        '画布生成任务改为在目标组件内独立展示进度与失败重试，支持最多四路并发，并与右侧对话互不占用',
-        '统一思维导图为适合直接粘贴到 PPT 的横向白底样式，优化节点宽度、换行、对齐、连线和画布比例；支持双击编辑节点',
-        '总结提炼组件支持双击编辑；消息和输入框中的研究标签采用紧凑布局、补全类型图标，并可点击定位到对应画布组件',
-        '修复侧栏收起时点击搜索无法显示输入框的问题，展开后会直接聚焦搜索框',
-        '画布空白处右键新增“整理画布”，按内容尺寸混合平铺组件；“全选”会选择画布中的全部组件',
-        '画布底部新增“链接”和“容器”：链接组件可自动读取网页标题、自适应显示页面，并为微信文章提供安全阅读视图；智能容器可生成 KPI、图表、表格或文字内容',
-        '所有研究组件新增下载入口，思维导图支持 SVG、PNG 和 JPG；同时优化底栏间距和画布缩放下限',
-        '修复从 PowerPoint 组件生成思维导图失败、网页与微信链接读取竞态及智能容器生成失败等问题'
+        '智能容器可自行检索实时数据，补全社交媒体与动态追踪类需求识别，并在模型仅完成分析却未返回正文时自动恢复生成',
+        '链接组件支持授权登录后的网页内容提取，飞书等受保护页面可在授权后用于生成完整的思维导图和总结提炼',
+        '研究画布支持 Command+Z 撤销、Command+Shift+Z 重做，删除组件后也可恢复；鼠标位于网页等组件内时仍可用 Command+滚轮缩放画布',
+        '画布组件按最后点选顺序置于最上层，并优化组件顶栏高度以及链接“添加”和容器“创建”按钮的深浅主题样式',
+        '没有对话的新研究也会持久化到工作区会话，用户下次可从侧栏直接回到对应研究画布',
+        '修复研究模式发送消息后跳回对话模式，以及从其他模式返回研究时右侧栏宽度异常扩大的问题',
+        '改进链接页面授权、容器失败重试和实时监控结果渲染的稳定性'
       ]
     })
-    expect(zh.releaseNotes[1]?.version).toBe('0.7.5')
+    expect(zh.releaseNotes[1]?.version).toBe('0.7.6')
     expect(en.version).toBe('9.8.7')
     expect(en.releaseNotes[0]?.items[1]).toBe(
-      'Canvas generation jobs now show progress and retry states inside their target components, support up to four concurrent jobs, and no longer occupy the right-side conversation'
+      'Link components can extract content from authenticated pages, allowing protected pages such as Feishu documents to generate complete mind maps and summaries after authorization'
     )
     expect(en.releaseNotes[0]?.items).toContain(
-      'Added Link and Container tools to the canvas toolbar: Link components resolve real page titles, resize web content responsively, and use a safe reader for WeChat articles, while smart containers can generate KPI panels, charts, tables, or text'
+      'Added Command+Z undo and Command+Shift+Z redo to the Research canvas, including deleted-component recovery, and kept Command+wheel canvas zoom available while the pointer is over embedded content'
     )
     expect(en.releaseNotes[0]?.items).toContain(
-      'Added downloads to every Research component, including SVG, PNG, and JPG for mind maps, and refined the bottom toolbar spacing and canvas zoom floor'
+      'New Research canvases are persisted in workspace sessions even without a conversation, so they can be reopened directly from the sidebar'
     )
     expect(en.releaseNotes[0]?.items).toContain(
-      'Fixed mind-map generation from PowerPoint components, web and WeChat reader races, and failed smart-container generation'
+      'Improved authenticated link loading, container retry behavior, and native rendering stability for live monitoring results'
     )
 
     const manualCheck = vi.fn(async () => ({
