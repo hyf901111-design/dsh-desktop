@@ -1262,6 +1262,40 @@ describe('Sherlock workspace and composer controls', () => {
     )
   })
 
+  it('uses matching monochrome primary buttons and a slightly taller component title bar', async () => {
+    const styles: InjectedStyle[] = []
+    await loadClientBundle('dsh-client-ui-conversation', undefined, { styles })
+    const researchCss = styles.find(({ pluginCss }) =>
+      pluginCss?.endsWith('/ResearchCanvas.module.css')
+    )?.textContent ?? ''
+
+    expect(researchCss).toContain(
+      '.rScV5Q_nodeTitle{box-sizing:border-box;height:36px;min-height:36px'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button,.rScV5Q_containerDraftFooter button{height:34px'
+    )
+    expect(researchCss).toContain('color:#fff;background:#0f1115')
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:hover:not(:disabled),.rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#23262b}'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:active:not(:disabled),.rScV5Q_containerDraftFooter button:active:not(:disabled){background:#050607;transform:translateY(1px)}'
+    )
+    expect(researchCss).toContain(
+      'body[data-ds-dark-theme] .rScV5Q_linkPopover button,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button{color:#202124;background:#f5f5f5}'
+    )
+    expect(researchCss).toContain(
+      'body[data-ds-dark-theme] .rScV5Q_linkPopover button:hover:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#fff}'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:focus-visible,.rScV5Q_containerDraftFooter button:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-label-primary) 55%,transparent);outline-offset:2px}'
+    )
+    expect(researchCss).toContain(
+      '.rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{color:#8a9099;background:#d7dae0;cursor:default}'
+    )
+  })
+
   it('reserves a large inline cell for readable Research file tags', async () => {
     const styles: InjectedStyle[] = []
     await loadClientBundle('dsh-client-ui-conversation', undefined, { styles })
@@ -3603,7 +3637,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(mounted.host.querySelector('[data-research-node-title]')?.textContent)
         .toContain('1 / 3')
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 320, height: 320 / 0.75 + 32, aspectRatio: 0.75, sizeMode: 'auto'
+        width: 320, height: 320 / 0.75 + 36, aspectRatio: 0.75, sizeMode: 'auto'
       })
       expect(harness.getDocumentInputs[0]).toEqual({
         url: 'sherlock-preview://capability-pdf-1/',
@@ -3669,7 +3703,7 @@ describe('Sherlock workspace and composer controls', () => {
         bodySize.height = 531
         ;(mounted.workspace as unknown as {
           updateNodeGeometry(id: string, geometry: Record<string, unknown>): void
-        }).updateNodeGeometry('pdf-1', { width: 400, height: 400 / 0.75 + 32 })
+        }).updateNodeGeometry('pdf-1', { width: 400, height: 400 / 0.75 + 36 })
         resizeObserverCallbacks.at(-1)?.()
         await Promise.resolve(); await Promise.resolve()
       })
@@ -3696,7 +3730,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(restoreSequence).toBe(2)
       expect(mounted.host.querySelectorAll('[data-research-pdf-page]')).toHaveLength(3)
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 400, height: 400 / 0.75 + 32, aspectRatio: 0.75, sizeMode: 'auto'
+        width: 400, height: 400 / 0.75 + 36, aspectRatio: 0.75, sizeMode: 'auto'
       })
       await mounted.cleanup()
       cleaned = true
@@ -3818,7 +3852,7 @@ describe('Sherlock workspace and composer controls', () => {
         .toContain('encrypted.pdf')
       expect(mounted.host.querySelector('[data-research-pdf-error]')).not.toBeNull()
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 540, height: 540 / 1.4 + 32, sizeMode: 'manual', aspectRatio: 1.4
+        width: 540, height: 540 / 1.4 + 36, sizeMode: 'manual', aspectRatio: 1.4
       })
       expect(releases).toHaveLength(1)
     } finally {
@@ -3835,7 +3869,7 @@ describe('Sherlock workspace and composer controls', () => {
       files: [{
         id: 'pdf-body-size', name: 'body-size.pdf', source: 'computer',
         authorizationId: 'authorization-body-size', contentType: 'application/pdf',
-        x: 200, y: 200, width: 320, height: 320 / 0.75 + 32,
+        x: 200, y: 200, width: 320, height: 320 / 0.75 + 36,
         sizeMode: 'auto', aspectRatio: 0.75
       }],
       pdfjs: harness.pdfjs,
@@ -3887,7 +3921,7 @@ describe('Sherlock workspace and composer controls', () => {
         ;(mounted.workspace as unknown as {
           updateNodeGeometry(id: string, geometry: Record<string, unknown>): void
         }).updateNodeGeometry('pdf-body-size', {
-          width: 400, height: 400 / 0.75 + 32, sizeMode: 'manual'
+          width: 400, height: 400 / 0.75 + 36, sizeMode: 'manual'
         })
         resizeObserverCallbacks.at(-1)?.()
         await Promise.resolve(); await Promise.resolve()
@@ -8793,9 +8827,16 @@ describe('Sherlock workspace and composer controls', () => {
 
       await act(async () => { click(browserWindow, linkButton) })
       const linkInput = host.querySelector('[data-research-link-input]') as HTMLInputElement | null
+      const linkSubmit = host.querySelector('[data-research-link-submit]') as
+        (HappyDOMHTMLElement & { disabled: boolean }) | null
       expect(host.querySelector('[data-research-link-popover]')).not.toBeNull()
       expect(browserWindow.document.activeElement).toBe(linkInput)
-      if (linkInput === null) return
+      expect(linkSubmit?.disabled).toBe(true)
+      if (linkInput === null || linkSubmit === null) return
+      expect(browserWindow.getComputedStyle(linkSubmit).height).toBe('34px')
+      expect(browserWindow.getComputedStyle(linkSubmit).opacity).toBe('1')
+      expect(browserWindow.getComputedStyle(linkSubmit).backgroundColor)
+        .toBe('#d7dae0')
       Object.getOwnPropertyDescriptor(
         browserWindow.HTMLInputElement.prototype, 'value'
       )?.set?.call(linkInput, 'https://Example.com/dashboard')
@@ -8803,6 +8844,9 @@ describe('Sherlock workspace and composer controls', () => {
         linkInput.dispatchEvent(new browserWindow.Event('input', { bubbles: true }) as unknown as Event)
       })
       expect(linkInput.value).toBe('https://Example.com/dashboard')
+      expect(linkSubmit.disabled).toBe(false)
+      expect(browserWindow.getComputedStyle(linkSubmit).backgroundColor)
+        .toBe('#0f1115')
       await act(async () => {
         click(browserWindow, host.querySelector('[data-research-link-submit]'))
         await Promise.resolve()
@@ -8826,15 +8870,23 @@ describe('Sherlock workspace and composer controls', () => {
 
       await act(async () => { click(browserWindow, containerButton) })
       const prompt = host.querySelector('[data-research-container-prompt]') as HTMLTextAreaElement | null
+      const containerSubmit = host.querySelector('[data-research-container-submit]') as
+        (HappyDOMHTMLElement & { disabled: boolean }) | null
       expect(prompt).not.toBeNull()
       expect(browserWindow.document.activeElement).toBe(prompt)
-      if (prompt === null) return
+      expect(containerSubmit?.disabled).toBe(true)
+      if (prompt === null || containerSubmit === null) return
+      expect(browserWindow.getComputedStyle(containerSubmit).height).toBe('34px')
+      expect(browserWindow.getComputedStyle(containerSubmit).opacity).toBe('1')
+      expect(browserWindow.getComputedStyle(containerSubmit).backgroundColor)
+        .toBe('#d7dae0')
       Object.getOwnPropertyDescriptor(
         browserWindow.HTMLTextAreaElement.prototype, 'value'
       )?.set?.call(prompt, '制作月度收入柱状图')
       await act(async () => {
         prompt.dispatchEvent(new browserWindow.Event('input', { bubbles: true }) as unknown as Event)
       })
+      expect(containerSubmit.disabled).toBe(false)
       await act(async () => {
         prompt.dispatchEvent(new browserWindow.KeyboardEvent('keydown', {
           key: 'Enter', code: 'Enter', metaKey: true, bubbles: true, cancelable: true
