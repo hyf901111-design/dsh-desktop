@@ -105,6 +105,7 @@ describe('research link frame authorization', () => {
     })
     const executeJavaScript = vi.fn(async (script: string) => ({
       title: ` ${'真实标题'.repeat(80)} `,
+      sourceText: ` 页面导航\n\n授权后的正文\u0000内容 `,
       scrollWidth: 1_280,
       clientWidth: 720
     }))
@@ -121,11 +122,14 @@ describe('research link frame authorization', () => {
     )).resolves.toEqual({
       url: 'https://example.com/redirected',
       title: '真实标题'.repeat(80).slice(0, 512),
+      sourceText: '页面导航\n\n授权后的正文 内容',
       scrollWidth: 1_280,
       clientWidth: 720
     })
     expect(executeJavaScript).toHaveBeenCalledOnce()
     expect(executeJavaScript.mock.calls[0]?.[0]).toContain('document.title')
+    expect(executeJavaScript.mock.calls[0]?.[0]).toContain('innerText')
+    expect(executeJavaScript.mock.calls[0]?.[0]).not.toContain('.value')
     expect(executeJavaScript.mock.calls[0]?.[0]).not.toContain('session-1')
     expect(executeJavaScript.mock.calls[0]?.[0]).not.toContain('node-1')
 
