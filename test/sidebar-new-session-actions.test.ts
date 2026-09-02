@@ -396,4 +396,117 @@ describe('Sherlock sidebar new-session actions', () => {
       await act(async () => { root.unmount() })
     }
   })
+
+  it('marks a Research session after its first durable canvas component and never unmarks it', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    installBrowserGlobals(browserWindow)
+    const client = await loadClientBundle('dsh-client-ui-conversation', browserWindow)
+    const Registry = client.ResearchWorkspaceRegistry as new (storage: Storage) => {
+      for(sessionId: string): {
+        getSnapshot(): { artifacts: Array<{ id: string }> }
+        addAssistantResult(input: { messageId: string; text: string; at: { x: number; y: number } }): void
+        removeNodes(nodeIds: string[]): void
+      }
+    }
+    const sessionId = 'session-canvas-only-research'
+    const engagementKey = `sherlock.research.session-engaged.v1:${sessionId}`
+    const engaged: string[] = []
+    browserWindow.addEventListener('sherlock:research-session-engaged', (event) => {
+      engaged.push((event as unknown as { detail: { sessionId: string } }).detail.sessionId)
+    })
+    const workspace = new Registry(browserWindow.localStorage as Storage).for(sessionId)
+
+    expect(browserWindow.localStorage.getItem(engagementKey)).toBeNull()
+    workspace.addAssistantResult({ messageId: 'assistant-1', text: '研究结论', at: { x: 0, y: 0 } })
+    expect(browserWindow.localStorage.getItem(engagementKey)).toBe('1')
+    expect(engaged).toEqual([sessionId])
+
+    workspace.removeNodes(workspace.getSnapshot().artifacts.map((artifact) => artifact.id))
+    expect(browserWindow.localStorage.getItem(engagementKey)).toBe('1')
+  })
+
+  it('shows a persisted blank Research session in workspace projections', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    installBrowserGlobals(browserWindow)
+    const client = await loadClientBundle(
+      'dsh-client-ui-workspace', browserWindow,
+      ['sessionVisible', 'sessionTitle']
+    )
+    const sessionVisible = client.__testsessionVisible as (
+      session: Record<string, unknown>, current: string | undefined, archived: Set<string>
+    ) => boolean
+    const sessionTitle = client.__testsessionTitle as (session: Record<string, unknown>) => string
+    const summary = {
+      id: 'session-canvas-only-research', origin: 'root', blank: true,
+      displayTitle: 'New Session'
+    }
+
+    expect(sessionVisible(summary, undefined, new Set())).toBe(false)
+    browserWindow.localStorage.setItem(
+      'sherlock.research.session-engaged.v1:session-canvas-only-research',
+      '1'
+    )
+    expect(sessionVisible(summary, undefined, new Set())).toBe(true)
+    expect(sessionTitle(summary)).toBe('New Research')
+  })
+
+  it('opens a persisted zero-message Research session directly on its canvas', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    installBrowserGlobals(browserWindow)
+    const sessionId = 'session-persisted-research'
+    browserWindow.localStorage.setItem(
+      `sherlock.research.session-engaged.v1:${sessionId}`,
+      '1'
+    )
+    const client = await loadClientBundle(
+      'dsh-client-ui-conversation', browserWindow,
+      ['ConversationSession']
+    )
+    const ConversationSession = client.__testConversationSession as (
+      props: Record<string, unknown>
+    ) => unknown
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    const actions = {
+      setView: vi.fn(), setDraft: vi.fn(), setInspect: vi.fn()
+    }
+
+    try {
+      await act(async () => {
+        root.render(createElement(ConversationSession, {
+          sessionId,
+          useSession: (selector: (value: Record<string, unknown>) => unknown) => selector({
+            composerPhase: 'blank', blank: true
+          }),
+          useInput: (selector: (value: Record<string, unknown>) => unknown) => selector({ draft: '' }),
+          inputActions: { setDraft: vi.fn() },
+          useStore: (selector: (value: Record<string, unknown>) => unknown) => selector({
+            view: 'chat', draft: '', selection: null, inspect: null,
+            researchRightTab: 'conversation', researchFilesTabOpen: true,
+            researchConversationUnread: false
+          }),
+          actions,
+          views: {
+            subscribe: () => () => {},
+            version: () => 1,
+            list: () => [{ id: 'chat', label: '对话' }, { id: 'research', label: '研究' }]
+          },
+          renderSlot: (_name: string, _props?: unknown, options?: { only: string }) =>
+            options?.only === undefined
+              ? null
+              : createElement('div', { 'data-rendered-view': options.only }),
+          bindDraftMirror: () => () => {},
+          releaseSessionImages: vi.fn(),
+          releaseResearchWorkspace: vi.fn()
+        }))
+      })
+
+      expect(host.querySelector('[data-rendered-view="research"]')).not.toBeNull()
+      expect(host.querySelector('[data-rendered-view="chat"]')).toBeNull()
+      expect(actions.setView).toHaveBeenCalledWith('research')
+    } finally {
+      await act(async () => { root.unmount() })
+    }
+  })
 })
