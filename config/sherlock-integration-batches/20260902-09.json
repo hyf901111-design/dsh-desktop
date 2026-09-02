@@ -115,6 +115,59 @@
           "正文最多保留 120000 个字符，超长页面会按上限截断"
         ],
         "generatedAt": "2026-09-02T07:41:13Z"
+      },
+      "merged": {
+        "mergeCommit": "9ef2f605d7d9105970168ca230360d52b8dd05d4",
+        "verificationCommit": "9ef2f605d7d9105970168ca230360d52b8dd05d4",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-link-frame.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/security.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-link-frame.test.ts test/research-task-runtime.test.js test/security.test.ts",
+            "verifiedCommit": "9ef2f605d7d9105970168ca230360d52b8dd05d4",
+            "completedAt": "2026-09-02T07:43:53.699Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "refreshes authenticated web text|uses the authorized frame name|renders public WeChat articles|updates only current automatic web titles|grants first-party storage only"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/sherlock-composer-workspace-ui.test.ts -t refreshes authenticated web text|uses the authorized frame name|renders public WeChat articles|updates only current automatic web titles|grants first-party storage only",
+            "verifiedCommit": "9ef2f605d7d9105970168ca230360d52b8dd05d4",
+            "completedAt": "2026-09-02T07:43:53.699Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9ef2f605d7d9105970168ca230360d52b8dd05d4",
+            "completedAt": "2026-09-02T07:43:53.699Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T07:43:53.699Z"
       }
     }
   ],
