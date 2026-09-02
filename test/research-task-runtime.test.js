@@ -747,7 +747,7 @@ describe('Research task Subagent adapter', () => {
     expect(dispose).toHaveBeenCalledTimes(1)
   })
 
-  it('lets a live-data container child refine incomplete host evidence with read-only web tools', async () => {
+  it('lets a live-data container child refine host evidence with the registered read-only search tool', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     const parent = { id: 'parent-1', session: { events: [] } }
     const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
@@ -795,7 +795,7 @@ describe('Research task Subagent adapter', () => {
     expect(ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/csi300' }, expect.any(AbortSignal))
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
       parent,
-      toolFilter: { allow: ['web_search', 'web_fetch'] },
+      toolFilter: { allow: ['web_search'] },
       prompt: [expect.objectContaining({
         text: expect.stringMatching(/产品固定 JSON 提示词[\s\S]*主机已获取[\s\S]*3,987\.42/u)
       })]
