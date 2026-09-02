@@ -2168,6 +2168,60 @@ describe('Research canvas file drops', () => {
     expect(notices).toEqual([])
   })
 
+  it('includes inspected webpage text when a link component tag is sent to Research chat', async () => {
+    const client = await loadConversationClient()
+    expect(client.InputHub).toBeTypeOf('function')
+    expect(client.ResearchWorkspaceRegistry).toBeTypeOf('function')
+    if (typeof client.InputHub !== 'function' ||
+        typeof client.ResearchWorkspaceRegistry !== 'function') return
+
+    const sourceText = 'DaDa 是面向 Z 世代投资者的 ETF 投资伙伴，支持观点转组合与动态再平衡。'
+    const link = {
+      id: 'web-link-1', kind: 'web-link', messageId: 'web-link-1',
+      title: 'DaDa：AI 原生的 Z 世代 ETF 投资伙伴',
+      excerpt: 'https://efund.feishu.cn/docx/example',
+      url: 'https://efund.feishu.cn/docx/example',
+      sourceText,
+      x: 100, y: 120
+    }
+    const sessionId = 'session-web-link-chat-reference'
+    const storage = memoryStorage({
+      [`sherlock.research.canvas.artifacts.v1:${sessionId}`]: JSON.stringify([link]),
+      [`sherlock.research.canvas.selection.v1:${sessionId}`]: JSON.stringify({
+        selectedNodeIds: [link.id], orderedFileIds: []
+      })
+    })
+    const registry = new client.ResearchWorkspaceRegistry(storage)
+    const sendSession = vi.fn(async (_session: unknown, _prompt: string) => undefined)
+    const hub = new client.InputHub({
+      get: (name: string) => name === 'conversation'
+        ? { sendSession, releaseDraftImage: () => undefined }
+        : undefined
+    }, (key: string) => key, registry)
+    hub.setResearchActive(sessionId, true)
+
+    const reference = client.researchArtifactReference(link)
+    const marker = await client.researchArtifactReferenceCodec.serialize(
+      reference.ref,
+      new AbortController().signal
+    )
+    expect(marker).not.toContain(sourceText)
+    await hub.sink({ sessionId }, `${marker}请分析该网页的产品定位`, [], 'queue')
+
+    expect(sendSession).toHaveBeenCalledTimes(1)
+    const prompt = sendSession.mock.calls[0]?.[1] as string
+    expect(client.parseResearchPrompt(prompt)).toMatchObject({
+      text: '请分析该网页的产品定位',
+      artifacts: [{
+        id: link.id,
+        kind: 'web-link',
+        title: link.title,
+        excerpt: link.excerpt,
+        sourceText
+      }]
+    })
+  })
+
   it('admits file-only Research sends and blocks pathless or unavailable files without clearing', async () => {
     const availability = vi.fn(async (paths: string[]) => paths.map((path) => !path.includes('missing')))
     const client = await loadClientBundle(
