@@ -123,6 +123,72 @@
           "逐会话研究侧栏宽度只在当前客户端运行期间记忆，应用重启后回到 420 像素默认值"
         ],
         "generatedAt": "2026-09-02T06:53:58Z"
+      },
+      "merged": {
+        "mergeCommit": "a2ed1fa6381f1051c599057dd9652489fafc0ce2",
+        "verificationCommit": "a2ed1fa6381f1051c599057dd9652489fafc0ce2",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-canvas-storage.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-canvas-storage.test.ts",
+            "verifiedCommit": "a2ed1fa6381f1051c599057dd9652489fafc0ce2",
+            "completedAt": "2026-09-02T06:56:34.627Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sidebar-new-session-actions.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/sidebar-new-session-actions.test.ts",
+            "verifiedCommit": "a2ed1fa6381f1051c599057dd9652489fafc0ce2",
+            "completedAt": "2026-09-02T06:56:34.627Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "registers Research conversation as|restores each session Research sidebar width|refreshes the workspace list when a blank session first gains Research canvas content"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/sherlock-composer-workspace-ui.test.ts -t registers Research conversation as|restores each session Research sidebar width|refreshes the workspace list when a blank session first gains Research canvas content",
+            "verifiedCommit": "a2ed1fa6381f1051c599057dd9652489fafc0ce2",
+            "completedAt": "2026-09-02T06:56:34.627Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a2ed1fa6381f1051c599057dd9652489fafc0ce2",
+            "completedAt": "2026-09-02T06:56:34.627Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T06:56:34.627Z"
       }
     }
   ],
