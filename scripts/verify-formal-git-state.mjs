@@ -114,7 +114,11 @@ export function verifyFormalGitState(repository) {
 
   const cancelledIntegrationBranches = explicitlyCancelledIntegrationBranches(context.worktreeRoot)
   const unmergedBranches = localBranches(context.worktreeRoot)
-    .filter((candidate) => candidate !== 'main' && !cancelledIntegrationBranches.has(candidate))
+    .filter((candidate) =>
+      candidate !== 'main' &&
+      !candidate.startsWith('archive/') &&
+      !cancelledIntegrationBranches.has(candidate)
+    )
     .map((candidate) => ({
       name: candidate,
       ahead: Number(
