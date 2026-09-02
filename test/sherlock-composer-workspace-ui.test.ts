@@ -8655,6 +8655,20 @@ describe('Sherlock workspace and composer controls', () => {
     expect(layout(900, 1_000)).toEqual({ logicalWidth: 1_000, scale: 0.9 })
   })
 
+  it('grants first-party storage only to Feishu web frames', async () => {
+    const client = await loadClientBundle(
+      'dsh-client-ui-conversation', undefined,
+      { window: new Window({ url: 'https://sherlock.local/' }) }
+    )
+    const sandbox = client.researchWebFrameSandbox as (url: string) => string
+    expect(sandbox).toBeTypeOf('function')
+    expect(sandbox('https://efund.feishu.cn/wiki/example')).toContain('allow-same-origin')
+    expect(sandbox('https://accounts.feishu.cn/accounts/page/login'))
+      .toContain('allow-same-origin')
+    expect(sandbox('https://evilfeishu.cn/wiki/example')).not.toContain('allow-same-origin')
+    expect(sandbox('https://example.com/report')).not.toContain('allow-same-origin')
+  })
+
   it('uses the authorized frame name, applies inspected titles, and rescales after resize', async () => {
     const resizeObserverCallbacks: Array<() => void> = []
     const inspect = vi.fn(async () => ({
@@ -8690,6 +8704,7 @@ describe('Sherlock workspace and composer controls', () => {
       const viewport = mounted.host.querySelector('[data-research-web-frame-viewport]') as HTMLElement | null
       expect(iframe?.getAttribute('name'))
         .toBe('sherlock-research-link-0123456789abcdef0123456789abcdef')
+      expect(iframe?.getAttribute('sandbox')).not.toContain('allow-same-origin')
       expect(viewport).not.toBeNull()
       if (iframe === null || viewport === null) return
 
