@@ -4,6 +4,7 @@ import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-tru
 
 const MAX_ID_LENGTH = 256
 const MAX_URL_LENGTH = 8_192
+const MAX_SOURCE_TEXT_LENGTH = 120_000
 const TRUSTED_RESEARCH_REDIRECT_SITES = ['feishu.cn'] as const
 
 type ResearchLinkIdentity = {
@@ -19,6 +20,7 @@ export type ResearchLinkAuthorization = ResearchLinkIdentity & {
 export type ResearchLinkFrameInspection = {
   url: string
   title: string
+  sourceText: string
   scrollWidth: number
   clientWidth: number
 }
@@ -70,6 +72,7 @@ function researchLinkAuthorization(
 
 const RESEARCH_LINK_INSPECTION_SCRIPT = `(() => ({
   title: document.title,
+  sourceText: String(document.body?.innerText ?? '').slice(0, ${MAX_SOURCE_TEXT_LENGTH}),
   scrollWidth: Math.max(document.documentElement?.scrollWidth ?? 0, document.body?.scrollWidth ?? 0),
   clientWidth: Math.max(document.documentElement?.clientWidth ?? 0, window.innerWidth ?? 0)
 }))()`
@@ -84,6 +87,18 @@ function inspectionTitle(value: unknown): string {
   return typeof value === 'string'
     ? value.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 512)
     : ''
+}
+
+function inspectionSourceText(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return value
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+/g, ' ')
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, MAX_SOURCE_TEXT_LENGTH)
 }
 
 export function normalizeResearchLinkUrl(value: unknown): string | null {
@@ -178,6 +193,7 @@ export class ResearchLinkFrameRegistry {
       return {
         url,
         title: inspectionTitle(record.title),
+        sourceText: inspectionSourceText(record.sourceText),
         scrollWidth,
         clientWidth
       }

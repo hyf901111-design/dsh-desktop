@@ -8737,6 +8737,79 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('refreshes authenticated web text before starting a summary task', async () => {
+    const inspect = vi.fn()
+      .mockResolvedValueOnce({
+        url: 'https://efund.feishu.cn/wiki/example',
+        title: '飞书研究文档',
+        scrollWidth: 1_200,
+        clientWidth: 720
+      })
+      .mockResolvedValue({
+        url: 'https://efund.feishu.cn/wiki/example',
+        title: '飞书研究文档',
+        sourceText: '授权后读取到的完整正文，包括项目定位、目标用户、核心领域和产品形态。',
+        scrollWidth: 1_200,
+        clientWidth: 720
+      })
+    const generate = vi.fn(async () => ({ ok: true }))
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-authenticated-web-generation',
+      artifacts: [{
+        id: 'feishu-link', kind: 'web-link', messageId: 'feishu-link',
+        title: 'efund.feishu.cn', titleMode: 'auto',
+        excerpt: 'https://efund.feishu.cn/wiki/example',
+        url: 'https://efund.feishu.cn/wiki/example', x: 400, y: 300,
+        width: 720, height: 480, sizeMode: 'manual'
+      }],
+      selection: { selectedNodeIds: ['feishu-link'], orderedFileIds: [] },
+      dshDesktop: {
+        researchLinkFrame: {
+          authorize: vi.fn(async (value) => ({
+            url: value.url,
+            frameName: 'sherlock-research-link-fedcba9876543210fedcba9876543210'
+          })),
+          inspect,
+          release: vi.fn(async () => ({ ok: true })),
+          releaseSession: vi.fn(async () => ({ ok: true, removed: 0 }))
+        }
+      },
+      selectionGeneration: { generate }
+    })
+    try {
+      await act(async () => {
+        mounted.workspace.setCanvasSize({ width: 1_200, height: 800 })
+        await Promise.resolve(); await Promise.resolve()
+      })
+      const iframe = mounted.host.querySelector('[data-research-web-frame]')
+      expect(iframe).not.toBeNull()
+      await act(async () => {
+        iframe?.dispatchEvent(new mounted.browserWindow.Event('load'))
+        await Promise.resolve(); await Promise.resolve()
+      })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).not.toHaveProperty('sourceText')
+
+      await act(async () => {
+        click(mounted.browserWindow, mounted.host.querySelector('button[aria-label="总结提炼"]'))
+        await Promise.resolve(); await Promise.resolve()
+      })
+
+      expect(inspect).toHaveBeenCalledTimes(2)
+      expect(generate).toHaveBeenCalledTimes(1)
+      const generated = mounted.workspace.getSnapshot().artifacts.find(
+        (node) => node.kind === 'generated-summary'
+      )
+      expect(generated).toMatchObject({
+        generationSources: [{
+          id: 'feishu-link', type: 'artifact', title: '飞书研究文档',
+          text: '授权后读取到的完整正文，包括项目定位、目标用户、核心领域和产品形态。'
+        }]
+      })
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('renders public WeChat articles through the scriptless safe reader', async () => {
     const read = vi.fn(async () => ({
       status: 'ready',
