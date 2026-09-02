@@ -105,6 +105,54 @@
           "正文桥接仅覆盖已支持安全阅读的微信公众号文章，普通网页仍使用现有链接来源行为"
         ],
         "generatedAt": "2026-09-02T04:35:01.000Z"
+      },
+      "merged": {
+        "mergeCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+        "verificationCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-web-reader.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-web-reader.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+            "completedAt": "2026-09-02T04:37:16.641Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "persists an immutable bounded source snapshot and task identity|updates only current automatic web titles and preserves a user rename|renders public WeChat articles through the scriptless safe reader"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/sherlock-composer-workspace-ui.test.ts -t persists an immutable bounded source snapshot and task identity|updates only current automatic web titles and preserves a user rename|renders public WeChat articles through the scriptless safe reader",
+            "verifiedCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+            "completedAt": "2026-09-02T04:37:16.641Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+            "completedAt": "2026-09-02T04:37:16.641Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T04:37:16.641Z"
       }
     }
   ],
