@@ -703,7 +703,7 @@ describe('Research task Subagent adapter', () => {
     result.resolve({ stopReason: 'completed', output: [{ type: 'text', text: '完成' }] })
   })
 
-  it('starts a fresh local child from the exact live parent without external tools', async () => {
+  it('keeps a non-live container child isolated from external tools', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     const parent = { id: 'parent-1', session: { events: [] } }
     const first = assistantChunk('text-delta', '已读取材料')
@@ -720,7 +720,8 @@ describe('Research task Subagent adapter', () => {
 
     const handle = await createSubagentAdapter(ctx).start({
       parentSessionId: parent.id,
-      kind: 'summary',
+      kind: 'container',
+      query: '制作一张展示月度收入趋势的柱状图',
       prompt: '产品固定提示词',
       signal: new AbortController().signal,
       onSessionEvent
@@ -746,7 +747,7 @@ describe('Research task Subagent adapter', () => {
     expect(dispose).toHaveBeenCalledTimes(1)
   })
 
-  it('collects bounded web evidence as the exact live parent before starting an isolated container child', async () => {
+  it('lets a live-data container child refine incomplete host evidence with read-only web tools', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     const parent = { id: 'parent-1', session: { events: [] } }
     const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
@@ -794,7 +795,7 @@ describe('Research task Subagent adapter', () => {
     expect(ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/csi300' }, expect.any(AbortSignal))
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
       parent,
-      toolFilter: { allow: [] },
+      toolFilter: { allow: ['web_search', 'web_fetch'] },
       prompt: [expect.objectContaining({
         text: expect.stringMatching(/产品固定 JSON 提示词[\s\S]*主机已获取[\s\S]*3,987\.42/u)
       })]
