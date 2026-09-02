@@ -76,6 +76,40 @@
           "自动恢复最多重试一次，避免异常模型持续空结果时形成无限循环"
         ],
         "generatedAt": "2026-09-02T08:33:33Z"
+      },
+      "merged": {
+        "mergeCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+        "verificationCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-task-runtime.test.js",
+            "verifiedCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+            "completedAt": "2026-09-02T08:34:47.666Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+            "completedAt": "2026-09-02T08:34:47.666Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T08:34:47.666Z"
       }
     }
   ],
