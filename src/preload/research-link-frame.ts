@@ -21,6 +21,7 @@ export function createResearchLinkFrameBridge(invoke: ResearchLinkFrameInvoke) {
       return invoke('research:link-frame:inspect', value) as Promise<{
         url: string
         title: string
+        sourceText: string
         scrollWidth: number
         clientWidth: number
       } | null>
