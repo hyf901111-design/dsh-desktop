@@ -8388,11 +8388,12 @@ describe('Sherlock workspace and composer controls', () => {
       expect(mounted.workspace.applyWebLinkInspection(
         nodeId,
         'https://example.com/report',
-        { title: '不应覆盖' }
-      )).toBe(false)
+        { title: '不应覆盖', sourceText: '文章正文' }
+      )).toBe(true)
       expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({
         title: '我的标题',
-        titleMode: 'custom'
+        titleMode: 'custom',
+        sourceText: '文章正文'
       })
 
       await act(async () => {
@@ -8409,6 +8410,7 @@ describe('Sherlock workspace and composer controls', () => {
         titleMode: 'auto',
         url: 'https://next.example/dashboard'
       })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).not.toHaveProperty('sourceText')
     } finally {
       await mounted.cleanup()
     }
@@ -8501,7 +8503,8 @@ describe('Sherlock workspace and composer controls', () => {
       title: '英伟达豪掷70亿，下场做开放大模型了',
       author: '示例作者',
       publishTime: '2026年9月1日',
-      bodyHtml: '<p><strong>文章正文</strong></p>'
+      bodyHtml: '<p><strong>文章正文</strong></p>',
+      bodyText: '文章正文'
     }))
     const authorize = vi.fn(async (value: { url: string }) => ({ url: value.url }))
     const mounted = await mountResearchCanvas({
@@ -8540,7 +8543,20 @@ describe('Sherlock workspace and composer controls', () => {
       expect(iframe?.srcdoc).toContain('文章正文')
       expect(iframe?.srcdoc).not.toContain('<script')
       expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({
-        title: '英伟达豪掷70亿，下场做开放大模型了', titleMode: 'auto'
+        title: '英伟达豪掷70亿，下场做开放大模型了',
+        titleMode: 'auto',
+        sourceText: '文章正文'
+      })
+      expect(mounted.workspace.beginGeneration(
+        'summary', ['wechat-link'],
+        { x: 900, y: 300, width: 520, height: 300, sizeMode: 'auto' }
+      )).toMatchObject({
+        generationSources: [{
+          id: 'wechat-link',
+          type: 'artifact',
+          title: '英伟达豪掷70亿，下场做开放大模型了',
+          text: '文章正文'
+        }]
       })
     } finally {
       await mounted.cleanup()

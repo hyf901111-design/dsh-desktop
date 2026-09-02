@@ -11,6 +11,7 @@ const MAX_TITLE_LENGTH = 160
 const MAX_DESCRIPTION_LENGTH = 500
 const MAX_AUTHOR_LENGTH = 120
 const MAX_PUBLISH_TIME_LENGTH = 80
+const MAX_BODY_TEXT_LENGTH = 120_000
 
 export type ResearchWebReaderResult =
   | {
@@ -21,6 +22,7 @@ export type ResearchWebReaderResult =
       author?: string
       publishTime?: string
       bodyHtml: string
+      bodyText: string
     }
   | {
       status: 'unavailable'
@@ -111,6 +113,7 @@ function sanitizedArticleBody(html: string): {
   author?: string
   publishTime?: string
   bodyHtml?: string
+  bodyText?: string
   tooLarge: boolean
 } {
   const $ = load(html)
@@ -143,6 +146,10 @@ function sanitizedArticleBody(html: string): {
   }).trim()
 
   const bodyBytes = new TextEncoder().encode(bodyHtml).byteLength
+  const bodyDocument = load(`<body>${bodyHtml}</body>`)
+  bodyDocument('br').replaceWith(' ')
+  bodyDocument('p,div,li,blockquote,pre,h1,h2,h3,h4,tr,th,td').append(' ')
+  const bodyText = boundedText(bodyDocument('body').text(), MAX_BODY_TEXT_LENGTH)
   return {
     title: boundedText($('meta[property="og:title"]').attr('content'), MAX_TITLE_LENGTH),
     description: boundedText(
@@ -153,6 +160,7 @@ function sanitizedArticleBody(html: string): {
     author: boundedText($('#js_name').first().text(), MAX_AUTHOR_LENGTH),
     publishTime: boundedText($('#publish_time').first().text(), MAX_PUBLISH_TIME_LENGTH),
     bodyHtml,
+    bodyText,
     tooLarge: bodyBytes > MAX_BODY_BYTES
   }
 }
@@ -215,7 +223,8 @@ export async function readResearchWechatArticle(
         ...(article.description === undefined ? {} : { description: article.description }),
         ...(article.author === undefined ? {} : { author: article.author }),
         ...(article.publishTime === undefined ? {} : { publishTime: article.publishTime }),
-        bodyHtml: article.bodyHtml
+        bodyHtml: article.bodyHtml,
+        bodyText: article.bodyText ?? article.description ?? article.title
       }
     }
   } catch {
