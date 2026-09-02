@@ -1592,6 +1592,126 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('refreshes the workspace list when a blank session first gains Research canvas content', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    const primitives = new Proxy(
+      {
+        Tooltip: ({ children }: { children: ReactNode }) => children,
+        HoverCard: ({ anchor }: { anchor: ReactNode }) => anchor,
+        Menu: ({ anchor }: { anchor: ReactNode }) => anchor,
+        Modal: () => null,
+        Button: ({ children }: { children: ReactNode }) =>
+          createElement('button', null, children),
+        StateDot: () => null
+      },
+      {
+        get(target, property) {
+          return Reflect.get(target, property) ?? (() => null)
+        }
+      }
+    )
+    const client = await loadClientBundle('dsh-client-ui-workspace', undefined, {
+      document: browserWindow.document,
+      window: browserWindow,
+      modules: {
+        '@deepseek-ai/dsh-client-ui-primitives': primitives,
+        clsx: requireModule('clsx')
+      },
+      transformSource: (source) => source.replace(
+        '\t\texports.apply = apply;',
+        '\t\texports.apply = apply;\n\t\texports.__testWorkspaceBrowser = WorkspaceBrowser;'
+      )
+    })
+    const WorkspaceBrowser = client.__testWorkspaceBrowser as ComponentType<Record<string, unknown>>
+    const container = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(container)
+    const root = createRoot(container)
+    const sessionId = 'session-canvas-only-research'
+    const open = vi.fn()
+    const workspaceSnapshot = { items: [], phase: 'ready', archivedSessionIds: [] }
+    const sessionSnapshot = {
+      ids: [sessionId],
+      byId: {
+        [sessionId]: {
+          id: sessionId,
+          origin: 'root',
+          blank: true,
+          displayTitle: 'New Session',
+          updatedAt: 1,
+          running: false
+        }
+      },
+      phase: 'ready'
+    }
+    const storeSnapshot = {
+      groupBy: 'flat',
+      orderBy: 'manual',
+      groupExpansion: {},
+      sessionOrderByAccount: {},
+      sessionUpdatedAtByAccount: {}
+    }
+
+    try {
+      await act(async () => {
+        root.render(createElement(WorkspaceBrowser, {
+          wide: true,
+          expandSidebar: () => {},
+          useSessions: (selector: (state: typeof sessionSnapshot) => unknown) => selector(sessionSnapshot),
+          useWorkspaces: (selector: (state: typeof workspaceSnapshot) => unknown) => selector(workspaceSnapshot),
+          useStore: (selector: (state: typeof storeSnapshot) => unknown) => selector(storeSnapshot),
+          useDirectoryFlow: (selector: (occupied: boolean) => unknown) => selector(false),
+          actions: {
+            retainAccountKeys: () => {},
+            setGroupBy: () => {},
+            setOrderBy: () => {},
+            syncSessionOrderAccount: () => {},
+            setSessionOrder: () => {},
+            setGroupExpanded: () => {}
+          },
+          startSession: () => {},
+          open,
+          openWorkspacePath: async () => {},
+          renameSession: async () => {},
+          forkSession: async () => {},
+          renameWorkspace: async () => {},
+          deleteWorkspace: async () => {},
+          insertWorkspaceBefore: async () => {},
+          archiveSession: async () => {},
+          insertSessionBefore: async () => {},
+          createWorkspace: async () => ({ workspaceId: 'workspace-new' }),
+          searchSessions: async () => ({ items: [], hasMore: false }),
+          searchResultLimit: 20,
+          renderSlot: () => null,
+          t: (key: string) => key === 'session.research' ? '新研究' : key
+        }))
+      })
+      expect(container.textContent).not.toContain('新研究')
+
+      browserWindow.localStorage.setItem(
+        `sherlock.research.session-engaged.v1:${sessionId}`,
+        '1'
+      )
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent(
+          'sherlock:research-session-engaged',
+          { detail: { sessionId } }
+        ))
+      })
+
+      expect(container.textContent).toContain('新研究')
+      const row = container.querySelector('[role="treeitem"]') as HappyDOMHTMLElement | null
+      expect(row).not.toBeNull()
+      row?.click()
+      expect(open).toHaveBeenCalledWith(sessionId)
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      restoreGlobals()
+    }
+  })
+
   it('does not dismiss the visible search while the rail expansion click is still in flight', async () => {
     const workspaceClient = await readFile(
       'node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js',
@@ -1894,7 +2014,7 @@ describe('Sherlock workspace and composer controls', () => {
     })
     expect(calls[1]).toEqual({
       name: 'setPanelState',
-      args: [{ open: true }, { sessionId: 'research-session' }]
+      args: [{ open: true, width: 420 }, { sessionId: 'research-session' }]
     })
 
     coordinator.leave('research-session')
@@ -1918,6 +2038,56 @@ describe('Sherlock workspace and composer controls', () => {
         args: [{ open: false, width: 438 }, { sessionId: 'research-session' }]
       }
     ])
+  })
+
+  it('restores each session Research sidebar width instead of inheriting another mode width', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    expect(client.ResearchSidebarCoordinator).toBeTypeOf('function')
+    if (typeof client.ResearchSidebarCoordinator !== 'function') return
+
+    const state = {
+      panelOpen: false,
+      width: 500,
+      activePane: 'pane-1',
+      splits: {
+        kind: 'leaf', id: 'pane-1', active: 'files-tab',
+        tabs: [{ id: 'files-tab', type: 'editor', title: 'Files' }]
+      }
+    }
+    const panelStates: Array<{ open?: boolean; width?: number }> = []
+    const service = {
+      registerTab: () => () => undefined,
+      getSnapshot: () => ({ sessionId: 'research-session', state }),
+      openTab: () => undefined,
+      updateTab: () => undefined,
+      closeTab: () => undefined,
+      activateTab: () => undefined,
+      setPanelState(patch: { open?: boolean; width?: number }) {
+        panelStates.push(patch)
+        Object.assign(state, {
+          ...(patch.open === undefined ? {} : { panelOpen: patch.open }),
+          ...(patch.width === undefined ? {} : { width: patch.width })
+        })
+      }
+    }
+    const Coordinator = client.ResearchSidebarCoordinator as new () => {
+      attach(service: Record<string, unknown>, t: (key: string) => string): () => void
+      enter(sessionId: string): void
+      leave(sessionId: string): void
+    }
+    const coordinator = new Coordinator()
+    coordinator.attach(service, (key: string) => key)
+
+    coordinator.enter('research-session')
+    expect(panelStates.at(-1)).toEqual({ open: true, width: 420 })
+
+    state.width = 384
+    coordinator.leave('research-session')
+    expect(panelStates.at(-1)).toEqual({ open: false, width: 500 })
+
+    state.width = 512
+    coordinator.enter('research-session')
+    expect(panelStates.at(-1)).toEqual({ open: true, width: 384 })
   })
 
   it('renders the Research sidebar content without its own duplicate tab strip', async () => {
