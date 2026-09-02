@@ -194,7 +194,7 @@ function containerPromptHasExplicitWebUrl(prompt) {
 }
 
 function containerNeedsWebData(prompt) {
-  return /(?:实时|即时|最新|当前|今日|今天|监控|行情|报价|价格|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|live|latest|current|today|now|price|quote|market)/iu.test(prompt)
+  return /(?:实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|推特|微博|社交媒体|社媒|行情|报价|价格|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|live|latest|current|today|now|price|quote|market|twitter|tweet|social)/iu.test(prompt)
 }
 
 function containsContainerPlaceholder(value) {
@@ -709,18 +709,20 @@ export class ResearchTaskRuntime {
     let handle
     const startingEvents = []
     try {
-      handle = await this.adapter.start({
+      const executionPrompt = await buildResearchTaskExecutionPrompt(taskRequest(task))
+      const startHandle = (prompt) => this.adapter.start({
         taskId: task.taskId,
         parentSessionId: task.parentSessionId,
         kind: task.kind,
         ...(task.kind === 'container' ? { query: task.prompt } : {}),
-        prompt: await buildResearchTaskExecutionPrompt(taskRequest(task)),
+        prompt,
         signal: task.controller.signal,
         onSessionEvent: (event) => {
           if (task.state === 'running') this.onSessionEvent(task, event)
           else if (!terminalState(task.state)) startingEvents.push(event)
         }
       })
+      handle = await startHandle(executionPrompt)
       if (task.cancelRequested || terminalState(task.state)) return
       task.childSessionId = requiredString(
         handle.childSessionId,
@@ -732,9 +734,33 @@ export class ResearchTaskRuntime {
       this.appendEvent(task, { type: 'started' })
       for (const event of startingEvents) this.onSessionEvent(task, event)
       await this.persist()
-      const result = await handle.result
+      let result = await handle.result
       if (task.cancelRequested || terminalState(task.state)) return
-      const output = finalText(result?.output)
+      let output = finalText(result?.output)
+      if (
+        task.kind === 'container' &&
+        result?.stopReason === 'completed' &&
+        output === undefined
+      ) {
+        await handle.dispose().catch(() => undefined)
+        handle = undefined
+        if (task.cancelRequested || terminalState(task.state)) return
+        handle = await startHandle([
+          executionPrompt,
+          '',
+          '上一次生成只完成了内部分析，没有返回最终 JSON。请完成所需的只读检索，并直接输出符合上述 schema 的最终 JSON；不得停在计划、分析或推理过程。'
+        ].join('\n'))
+        if (task.cancelRequested || terminalState(task.state)) return
+        task.childSessionId = requiredString(
+          handle.childSessionId,
+          MAX_ID_LENGTH,
+          '子会话标识无效'
+        )
+        await this.persist()
+        result = await handle.result
+        if (task.cancelRequested || terminalState(task.state)) return
+        output = finalText(result?.output)
+      }
       if (
         result?.stopReason === 'completed' &&
         output !== undefined &&
