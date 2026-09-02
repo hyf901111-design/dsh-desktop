@@ -4,6 +4,7 @@ import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-tru
 
 const MAX_ID_LENGTH = 256
 const MAX_URL_LENGTH = 8_192
+const TRUSTED_RESEARCH_REDIRECT_SITES = ['feishu.cn'] as const
 
 type ResearchLinkIdentity = {
   sessionId: string
@@ -114,6 +115,17 @@ export function normalizeResearchLinkUrl(value: unknown): string | null {
   }
 }
 
+function hostBelongsToSite(hostname: string, site: string): boolean {
+  return hostname === site || hostname.endsWith(`.${site}`)
+}
+
+function sharesTrustedResearchRedirectSite(source: URL, target: URL): boolean {
+  if (source.protocol !== 'https:' || target.protocol !== 'https:') return false
+  return TRUSTED_RESEARCH_REDIRECT_SITES.some((site) => (
+    hostBelongsToSite(source.hostname, site) && hostBelongsToSite(target.hostname, site)
+  ))
+}
+
 export class ResearchLinkFrameRegistry {
   private readonly nodes = new Map<string, ResearchLinkAuthorization>()
 
@@ -193,9 +205,11 @@ export class ResearchLinkFrameRegistry {
   allows(value: unknown): boolean {
     const url = normalizeResearchLinkUrl(value)
     if (url === null) return false
-    const origin = new URL(url).origin
+    const target = new URL(url)
     return [...this.nodes.values()].some((authorization) => (
-      authorization.url === url || new URL(authorization.url).origin === origin
+      authorization.url === url ||
+      new URL(authorization.url).origin === target.origin ||
+      sharesTrustedResearchRedirectSite(new URL(authorization.url), target)
     ))
   }
 
