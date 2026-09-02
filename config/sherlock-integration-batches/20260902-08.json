@@ -114,6 +114,59 @@
           "若企业后续新增 feishu.cn 之外的专用 SSO 跳转域名，仍会按安全策略拒绝并需要单独评估"
         ],
         "generatedAt": "2026-09-02T07:18:38Z"
+      },
+      "merged": {
+        "mergeCommit": "7fe486717ecd02be982c78a32d3ff17a5735f49e",
+        "verificationCommit": "7fe486717ecd02be982c78a32d3ff17a5735f49e",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/research-link-frame.test.ts",
+              "test/security.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/sidebar-new-session-actions.test.ts test/research-link-frame.test.ts test/security.test.ts",
+            "verifiedCommit": "7fe486717ecd02be982c78a32d3ff17a5735f49e",
+            "completedAt": "2026-09-02T07:20:50.714Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "grants first-party storage only|uses the authorized frame name"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/sherlock-composer-workspace-ui.test.ts -t grants first-party storage only|uses the authorized frame name",
+            "verifiedCommit": "7fe486717ecd02be982c78a32d3ff17a5735f49e",
+            "completedAt": "2026-09-02T07:20:50.714Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7fe486717ecd02be982c78a32d3ff17a5735f49e",
+            "completedAt": "2026-09-02T07:20:50.714Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T07:20:50.714Z"
       }
     }
   ],
