@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260902-07",
+  "branch": "codex/integration/20260902-07",
+  "baseMainCommit": "4149918cfdc1de7f0230e45fc4e00effeb914037",
+  "expectedMainCommit": "4149918cfdc1de7f0230e45fc4e00effeb914037",
+  "createdAt": "2026-09-02T06:55:13.456Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布空对话会话持久化与侧栏宽度恢复",
+        "branch": "codex/feat/research-session-persistence-width-20260902",
+        "baseCommit": "4149918cfdc1de7f0230e45fc4e00effeb914037",
+        "tipCommit": "432d8c924af20552e6143f3387d75f9034df8d17",
+        "commits": [
+          {
+            "commit": "432d8c924af20552e6143f3387d75f9034df8d17",
+            "parents": [
+              "4149918cfdc1de7f0230e45fc4e00effeb914037"
+            ],
+            "subject": "修复研究画布会话持久化与侧栏宽度恢复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-workspace+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-storage.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-canvas-storage.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "研究画布桌面持久化白名单与会话标记 6 项测试通过",
+            "verifiedCommit": "432d8c924af20552e6143f3387d75f9034df8d17",
+            "completedAt": "2026-09-02T06:53:58Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sidebar-new-session-actions.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "空对话研究会话标记、侧栏投影和直接打开画布 8 项测试通过",
+            "verifiedCommit": "432d8c924af20552e6143f3387d75f9034df8d17",
+            "completedAt": "2026-09-02T06:53:58Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "registers Research conversation as|restores each session Research sidebar width|refreshes the workspace list when a blank session first gains Research canvas content"
+            ],
+            "outcome": "passed",
+            "summary": "研究侧栏即时刷新、默认宽度和逐会话宽度恢复 3 项聚焦测试通过",
+            "verifiedCommit": "432d8c924af20552e6143f3387d75f9034df8d17",
+            "completedAt": "2026-09-02T06:53:58Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node 与 Electron TypeScript 类型检查通过",
+            "verifiedCommit": "432d8c924af20552e6143f3387d75f9034df8d17",
+            "completedAt": "2026-09-02T06:53:58Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按治理不构建共享客户端；晋升后从干净 main 构建并核验真实 Sherlock 主界面。"
+        },
+        "acceptanceCriteria": [
+          "新研究未发生对话但首次持久化画布组件后，工作区侧栏立即显示新研究会话",
+          "重新启动或稍后点击该零消息会话时直接打开其研究画布并恢复已有组件",
+          "从其他模式返回研究模式时不继承其他模式的宽侧栏，首次使用 420 像素，后续按该会话上次研究宽度恢复"
+        ],
+        "risks": [
+          "旧版本已创建但从未写入研究会话标记的历史空对话画布，需要在新版中再次修改一次组件才能出现在侧栏",
+          "逐会话研究侧栏宽度只在当前客户端运行期间记忆，应用重启后回到 420 像素默认值"
+        ],
+        "generatedAt": "2026-09-02T06:53:58Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/research-canvas-storage.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/sidebar-new-session-actions.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "-t",
+        "registers Research conversation as|restores each session Research sidebar width|refreshes the workspace list when a blank session first gains Research canvas content"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
