@@ -1,8 +1,57 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js
-index ec779d5..bf024e2 100644
+index ec779d5..7b7c9bb 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js
-@@ -337,7 +337,7 @@ window.__ModuleLoader__.load({
+@@ -75,6 +75,15 @@ window.__ModuleLoader__.load({
+ 		}
+ 		/** Display label for the ungrouped bucket row. */
+ 		const UNGROUPED_LABEL = "Ungrouped";
++		const RESEARCH_SESSION_ENGAGED_PREFIX = "sherlock.research.session-engaged.v1:";
++		const RESEARCH_SESSION_ENGAGED_EVENT = "sherlock:research-session-engaged";
++		function researchSessionEngaged(sessionId) {
++			try {
++				return typeof localStorage !== "undefined" && localStorage.getItem(`${RESEARCH_SESSION_ENGAGED_PREFIX}${sessionId}`) === "1";
++			} catch {
++				return false;
++			}
++		}
+ 		/**
+ 		* Directory display label: basename of the path (both separators accepted).
+ 		* Ungrouped-bucket fallback for surfaces without a workspace title.
+@@ -98,7 +107,7 @@ window.__ModuleLoader__.load({
+ 		* unarchiving restores position.
+ 		*/
+ 		function sessionVisible(session, current, archived) {
+-			return session.origin !== "subagent" && !archived.has(session.id) && (!session.blank || session.id === current);
++			return session.origin !== "subagent" && !archived.has(session.id) && (!session.blank || session.id === current || researchSessionEngaged(session.id));
+ 		}
+ 		/**
+ 		* A blank session is the selected Workspace's provisional New Session row;
+@@ -106,7 +115,8 @@ window.__ModuleLoader__.load({
+ 		* and the renderer localizes its display label.
+ 		*/
+ 		function sessionTitle(session) {
+-			return session.blank ? "New Session" : session.displayTitle;
++			if (!session.blank) return session.displayTitle;
++			return researchSessionEngaged(session.id) ? "New Research" : "New Session";
+ 		}
+ 		/** Build one group without projecting session lineage into presentation. */
+ 		function buildGroup(key, workspaceId, cwd, createdAt, label, members, order) {
+@@ -163,10 +173,12 @@ window.__ModuleLoader__.load({
+ 			return groups;
+ 		}
+ 		function sessionNode(s, descendants) {
++			const research = s.blank && researchSessionEngaged(s.id);
+ 			return {
+ 				id: s.id,
+ 				title: sessionTitle(s),
+-				blank: s.blank,
++				blank: s.blank && !research,
++				research,
+ 				running: s.running,
+ 				runningSubagentCount: descendants.get(s.id)?.runningCount ?? 0,
+ 				completed: s.completed === true,
+@@ -337,7 +349,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-workspace";
  			tag.dataset.pluginCss = tagId$2;
@@ -11,7 +60,16 @@ index ec779d5..bf024e2 100644
  			document.head.appendChild(tag);
  		}
  		var Rows_module_css_default = {
-@@ -413,6 +413,10 @@ window.__ModuleLoader__.load({
+@@ -387,7 +399,7 @@ window.__ModuleLoader__.load({
+ 		*/
+ 		/** Row display title: blank rows show the localized New Session label. */
+ 		function displayTitle(node, t) {
+-			return node.blank ? t("session.new") : node.title;
++			return node.research ? t("session.research") : node.blank ? t("session.new") : node.title;
+ 		}
+ 		/** Localized compact relative time ("刚刚"/"5分钟" in zh, "now"/"5min" in en). */
+ 		function timeLabel(updatedAt, now, t) {
+@@ -413,6 +425,10 @@ window.__ModuleLoader__.load({
  				d: d.getDate()
  			})} ${pad2(d.getHours())}:${pad2(d.getMinutes())}` });
  		}
@@ -22,7 +80,7 @@ index ec779d5..bf024e2 100644
  		/** Hover-card body: workspace title, full directory path, absolute creation time. */
  		function WorkspaceHoverContent({ label, cwd, createdAt, t }) {
  			return (0, react_jsx_runtime.jsxs)("div", {
-@@ -438,6 +442,39 @@ window.__ModuleLoader__.load({
+@@ -438,6 +454,39 @@ window.__ModuleLoader__.load({
  			const rect = e.currentTarget.getBoundingClientRect();
  			return e.clientY < rect.top + rect.height / 2 ? "before" : "after";
  		}
@@ -62,7 +120,7 @@ index ec779d5..bf024e2 100644
  		/**
  		* Project (workspace) header row: folder + title;
  		* hover reveals the chevron and create button, and dwelling on a real
-@@ -455,16 +492,7 @@ window.__ModuleLoader__.load({
+@@ -455,16 +504,7 @@ window.__ModuleLoader__.load({
  			const label = row.workspaceId === void 0 ? t("group.ungrouped") : row.label;
  			const active = group.expanded && group.containsCurrent;
  			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
@@ -80,7 +138,7 @@ index ec779d5..bf024e2 100644
  			const ownRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: clsx(Rows_module_css_default.projectRow, menuOpen && Rows_module_css_default.menuOpen),
  				role: "treeitem",
-@@ -480,7 +508,7 @@ window.__ModuleLoader__.load({
+@@ -480,7 +520,7 @@ window.__ModuleLoader__.load({
  				children: [
  					(0, react_jsx_runtime.jsx)("span", {
  						className: clsx(Rows_module_css_default.slot, Rows_module_css_default.folder, active && Rows_module_css_default.folderActive),
@@ -89,7 +147,7 @@ index ec779d5..bf024e2 100644
  					}),
  					(0, react_jsx_runtime.jsx)("span", {
  						className: clsx(Rows_module_css_default.slot, Rows_module_css_default.chevron),
-@@ -500,13 +528,10 @@ window.__ModuleLoader__.load({
+@@ -500,13 +540,10 @@ window.__ModuleLoader__.load({
  							onClose: () => {
  								setMenuOpen(false);
  							},
@@ -105,7 +163,7 @@ index ec779d5..bf024e2 100644
  							},
  							portal: true,
  							closeOnPointerLeave: true,
-@@ -971,7 +996,7 @@ window.__ModuleLoader__.load({
+@@ -971,7 +1008,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-workspace";
  			tag.dataset.pluginCss = tagId;
@@ -114,7 +172,7 @@ index ec779d5..bf024e2 100644
  			document.head.appendChild(tag);
  		}
  		var WorkspaceBrowser_module_css_default = {
-@@ -1030,6 +1055,8 @@ window.__ModuleLoader__.load({
+@@ -1030,6 +1067,8 @@ window.__ModuleLoader__.load({
  		* focus() forces a synchronous layout and would jank the slide.
  		*/
  		const EXPAND_SLIDE_MS = 300;
@@ -123,16 +181,26 @@ index ec779d5..bf024e2 100644
  		/** Pause between the latest keystroke and a Host content-search request. */
  		const SEARCH_DEBOUNCE_MS = 250;
  		/** `session.search` wire bound, measured in JavaScript UTF-16 code units. */
-@@ -1196,7 +1223,7 @@ window.__ModuleLoader__.load({
+@@ -1196,7 +1235,7 @@ window.__ModuleLoader__.load({
  			return e.clientY < rect.top + rect.height / 2 ? "before" : "after";
  		}
  		/** The scrolling session tree; unmounting drops the sessions subscription and expand-all state. */
 -		function SessionTree({ useSessions, startSession, open, forkSession, workspaces, archivedSessionIds, onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive, insertWorkspaceBefore, insertSessionBefore, orderBy, groupExpansion, setGroupExpanded, sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t }) {
-+		function SessionTree({ useSessions, startSession, open, openWorkspacePath, forkSession, workspaces, archivedSessionIds, onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive, insertWorkspaceBefore, insertSessionBefore, orderBy, groupExpansion, setGroupExpanded, sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t }) {
++		function SessionTree({ useSessions, startSession, open, openWorkspacePath, forkSession, workspaces, archivedSessionIds, researchSessionRevision, onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive, insertWorkspaceBefore, insertSessionBefore, orderBy, groupExpansion, setGroupExpanded, sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t }) {
  			const list = useSessions((s) => s);
  			const current = list.current;
  			const [expandedSessionGroups, setExpandedSessionGroups] = (0, react.useState)([]);
-@@ -1388,8 +1415,14 @@ window.__ModuleLoader__.load({
+@@ -1272,7 +1311,8 @@ window.__ModuleLoader__.load({
+ 				orderedWorkspaces,
+ 				archivedSessionIds,
+ 				expandedGroups,
+-				sessionOrderByAccount
++				sessionOrderByAccount,
++				researchSessionRevision
+ 			]);
+ 			const now = Date.now();
+ 			const commitSessionDrag = (activeDrag, over) => {
+@@ -1388,8 +1428,14 @@ window.__ModuleLoader__.load({
  											}
  										},
  										drag: workspaceDragProps,
@@ -149,7 +217,19 @@ index ec779d5..bf024e2 100644
  												/* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
  												if (group.workspaceId !== void 0) onRenameRequest(group.workspaceId, group.label);
  											},
-@@ -1644,7 +1677,7 @@ window.__ModuleLoader__.load({
+@@ -1465,9 +1511,9 @@ window.__ModuleLoader__.load({
+ 			});
+ 		}
+ 		/** The flat "In one list" body: every session is one draggable top-level row. */
+-		function FlatList({ useSessions, open, forkSession, onSessionRename, onSessionArchive, archivedSessionIds, orderBy, sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t }) {
++		function FlatList({ useSessions, open, forkSession, onSessionRename, onSessionArchive, archivedSessionIds, researchSessionRevision, orderBy, sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t }) {
+ 			const list = useSessions((s) => s);
+-			const baseRows = (0, react.useMemo)(() => deriveFlat(list, archivedSessionIds), [list, archivedSessionIds]);
++			const baseRows = (0, react.useMemo)(() => deriveFlat(list, archivedSessionIds), [list, archivedSessionIds, researchSessionRevision]);
+ 			const sessionIds = (0, react.useMemo)(() => baseRows.map((row) => row.id), [baseRows]);
+ 			const previousOrderBy = (0, react.useRef)(orderBy);
+ 			(0, react.useEffect)(() => {
+@@ -1644,7 +1690,7 @@ window.__ModuleLoader__.load({
  		* @param props - composed slot props (shell owner share + store + injected actions).
  		* @returns the region element tree.
  		*/
@@ -158,7 +238,20 @@ index ec779d5..bf024e2 100644
  			const workspaces = useWorkspaces((state) => state.items);
  			const workspacePhase = useWorkspaces((state) => state.phase);
  			const archivedSessionIds = useWorkspaces((state) => state.archivedSessionIds);
-@@ -1667,7 +1700,8 @@ window.__ModuleLoader__.load({
+@@ -1654,6 +1700,12 @@ window.__ModuleLoader__.load({
+ 			const groupExpansion = useStore((s) => s.groupExpansion);
+ 			const sessionOrderByAccount = useStore((s) => s.sessionOrderByAccount);
+ 			const sessionUpdatedAtByAccount = useStore((s) => s.sessionUpdatedAtByAccount);
++			const [researchSessionRevision, setResearchSessionRevision] = (0, react.useState)(0);
++			(0, react.useEffect)(() => {
++				const refresh = () => setResearchSessionRevision((revision) => revision + 1);
++				window.addEventListener(RESEARCH_SESSION_ENGAGED_EVENT, refresh);
++				return () => window.removeEventListener(RESEARCH_SESSION_ENGAGED_EVENT, refresh);
++			}, []);
+ 			(0, react.useEffect)(() => {
+ 				if (workspacePhase !== "ready") return;
+ 				actions.retainAccountKeys([
+@@ -1667,7 +1719,8 @@ window.__ModuleLoader__.load({
  				workspaces
  			]);
  			const [query, setQuery] = (0, react.useState)("");
@@ -168,7 +261,7 @@ index ec779d5..bf024e2 100644
  			const normalizedQuery = sanitizeSearchQuery(query).trim();
  			const [remoteSearch, setRemoteSearch] = (0, react.useState)({
  				query: "",
-@@ -1680,11 +1714,12 @@ window.__ModuleLoader__.load({
+@@ -1680,11 +1733,12 @@ window.__ModuleLoader__.load({
  			const [wsPickerOpen, setWsPickerOpen] = (0, react.useState)(false);
  			const wsPlusRef = (0, react.useRef)(null);
  			const composingRef = (0, react.useRef)(false);
@@ -182,7 +275,7 @@ index ec779d5..bf024e2 100644
  						setSearchOnExpand(false);
  					}, EXPAND_SLIDE_MS);
  					return () => {
-@@ -1701,7 +1736,7 @@ window.__ModuleLoader__.load({
+@@ -1701,7 +1755,7 @@ window.__ModuleLoader__.load({
  				searchOnExpand
  			]);
  			(0, react.useEffect)(() => {
@@ -191,7 +284,7 @@ index ec779d5..bf024e2 100644
  				const onClick = (event) => {
  					if (!(event.target instanceof Node) || searchRoot.current?.contains(event.target) === true) return;
  					searchInput.current?.blur();
-@@ -1714,6 +1749,7 @@ window.__ModuleLoader__.load({
+@@ -1714,6 +1768,7 @@ window.__ModuleLoader__.load({
  				};
  			}, [
  				normalizedQuery,
@@ -199,7 +292,7 @@ index ec779d5..bf024e2 100644
  				wide,
  				searchExpanded
  			]);
-@@ -1972,6 +2008,7 @@ window.__ModuleLoader__.load({
+@@ -1972,6 +2027,7 @@ window.__ModuleLoader__.load({
  								className: WorkspaceBrowser_module_css_default.searchButton,
  								"aria-label": t("search.sessions.aria"),
  								onClick: () => {
@@ -207,7 +300,15 @@ index ec779d5..bf024e2 100644
  									setSearchExpanded(true);
  									setSearchOnExpand(true);
  									expandSidebar();
-@@ -2006,6 +2043,7 @@ window.__ModuleLoader__.load({
+@@ -1998,6 +2054,7 @@ window.__ModuleLoader__.load({
+ 							onSessionRename,
+ 							onSessionArchive,
+ 							archivedSessionIds,
++							researchSessionRevision,
+ 							orderBy,
+ 							sessionOrderByAccount,
+ 							sessionUpdatedAtByAccount,
+@@ -2006,6 +2063,7 @@ window.__ModuleLoader__.load({
  							t
  						}) : (0, react_jsx_runtime.jsx)(SessionTree, {
  							useSessions,
@@ -215,7 +316,23 @@ index ec779d5..bf024e2 100644
  							onSessionRename,
  							onSessionArchive,
  							forkSession,
-@@ -2211,6 +2249,7 @@ window.__ModuleLoader__.load({
+@@ -2017,6 +2075,7 @@ window.__ModuleLoader__.load({
+ 							syncSessionOrderAccount: actions.syncSessionOrderAccount,
+ 							setSessionOrder: actions.setSessionOrder,
+ 							archivedSessionIds,
++							researchSessionRevision,
+ 							startSession,
+ 							open,
+ 							insertWorkspaceBefore,
+@@ -2184,6 +2243,7 @@ window.__ModuleLoader__.load({
+ 		const zh = {
+ 			"group.ungrouped": "未分组",
+ 			"session.new": "新会话",
++			"session.research": "新研究",
+ 			"section.workspaces": "工作区",
+ 			"section.sessions": "会话",
+ 			"viewOptions.label": "视图选项",
+@@ -2211,6 +2271,7 @@ window.__ModuleLoader__.load({
  			"conflict.named": "已存在名为“{name}”的工作区。",
  			"folderError.title": "无法打开文件夹",
  			"folderError.retry": "重新选择",
@@ -223,7 +340,15 @@ index ec779d5..bf024e2 100644
  			"rename": "重命名",
  			"rename.workspace.title": "重命名工作区",
  			"rename.session.title": "重命名会话",
-@@ -2276,6 +2315,7 @@ window.__ModuleLoader__.load({
+@@ -2249,6 +2310,7 @@ window.__ModuleLoader__.load({
+ 		const en = {
+ 			"group.ungrouped": "Ungrouped",
+ 			"session.new": "New Session",
++			"session.research": "New Research",
+ 			"section.workspaces": "Workspaces",
+ 			"section.sessions": "Sessions",
+ 			"viewOptions.label": "View options",
+@@ -2276,6 +2338,7 @@ window.__ModuleLoader__.load({
  			"conflict.named": "A workspace named “{name}” already exists.",
  			"folderError.title": "Couldn’t open folder",
  			"folderError.retry": "Choose again",
@@ -231,7 +356,7 @@ index ec779d5..bf024e2 100644
  			"rename": "Rename",
  			"rename.workspace.title": "Rename workspace",
  			"rename.session.title": "Rename session",
-@@ -2357,6 +2397,7 @@ window.__ModuleLoader__.load({
+@@ -2357,6 +2420,7 @@ window.__ModuleLoader__.load({
  				open: (sessionId) => {
  					ctx.sessions.open(sessionId);
  				},
@@ -239,7 +364,7 @@ index ec779d5..bf024e2 100644
  				searchSessions,
  				searchResultLimit: ctx.sessions.searchResultLimit,
  				renameSession: async (sessionId, title) => {
-@@ -2418,6 +2459,10 @@ window.__ModuleLoader__.load({
+@@ -2418,6 +2482,10 @@ window.__ModuleLoader__.load({
  		//#endregion
  		exports.apply = apply;
  		exports.inject = inject;
