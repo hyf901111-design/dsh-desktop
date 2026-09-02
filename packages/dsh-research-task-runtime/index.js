@@ -951,7 +951,7 @@ export function createSubagentAdapter(ctx) {
         prompt: [{ type: 'text', text: effectivePrompt }],
         maxDepth: 1,
         toolFilter: {
-          allow: needsWebData ? ['web_search', 'web_fetch'] : []
+          allow: needsWebData ? ['web_search'] : []
         },
         persona: RESEARCH_TASK_PERSONA
       })
