@@ -103,6 +103,19 @@ describe('formal Git source gate', () => {
     expect(result.stderr).toContain('尚未合并到 main')
   })
 
+  it('ignores an explicitly archived branch with commits missing from main', () => {
+    const repository = createRepository()
+    runGit(repository, 'switch', '-c', 'archive/upstream-main-20260902-b2cfbfe9')
+    writeFileSync(path.join(repository, 'upstream-history.txt'), 'archived upstream history\n', 'utf8')
+    runGit(repository, 'add', 'upstream-history.txt')
+    runGit(repository, 'commit', '-m', '归档上游历史')
+    runGit(repository, 'switch', 'main')
+
+    const result = verify(repository)
+
+    expect(result.status, result.stderr).toBe(0)
+  })
+
   it('ignores an integration branch whose exact batch was explicitly cancelled and archived', () => {
     const repository = createRepository()
     const baseMainCommit = runGit(repository, 'rev-parse', 'HEAD')
