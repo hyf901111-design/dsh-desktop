@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260902-08",
+  "branch": "codex/integration/20260902-08",
+  "baseMainCommit": "c80e3ee9e5c522b11ea4419d583a2fa4ba4e426a",
+  "expectedMainCommit": "c80e3ee9e5c522b11ea4419d583a2fa4ba4e426a",
+  "createdAt": "2026-09-02T07:19:18.706Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "新研究首条消息保持模式与飞书链接加载修复",
+        "branch": "codex/feat/research-send-stays-research-20260902",
+        "baseCommit": "c80e3ee9e5c522b11ea4419d583a2fa4ba4e426a",
+        "tipCommit": "d72b8094085f32f351965c1ed9572d9ad796f7e1",
+        "commits": [
+          {
+            "commit": "830b79e8960235a4e522f9553c0616882e4b4228",
+            "parents": [
+              "c80e3ee9e5c522b11ea4419d583a2fa4ba4e426a"
+            ],
+            "subject": "修复：新研究首条消息保持研究模式"
+          },
+          {
+            "commit": "d72b8094085f32f351965c1ed9572d9ad796f7e1",
+            "parents": [
+              "830b79e8960235a4e522f9553c0616882e4b4228"
+            ],
+            "subject": "修复：飞书链接组件登录跳转与加载"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-link-frame.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-link-frame.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/research-link-frame.test.ts",
+              "test/security.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "研究首条消息、链接授权和窗口安全策略 25 项测试通过",
+            "verifiedCommit": "d72b8094085f32f351965c1ed9572d9ad796f7e1",
+            "completedAt": "2026-09-02T07:18:38Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "grants first-party storage only|uses the authorized frame name"
+            ],
+            "outcome": "passed",
+            "summary": "飞书专属同源存储和普通链接隔离 2 项聚焦测试通过",
+            "verifiedCommit": "d72b8094085f32f351965c1ed9572d9ad796f7e1",
+            "completedAt": "2026-09-02T07:18:38Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node 与 Electron TypeScript 类型检查通过",
+            "verifiedCommit": "d72b8094085f32f351965c1ed9572d9ad796f7e1",
+            "completedAt": "2026-09-02T07:18:38Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按治理不构建共享客户端；晋升后从干净 main 构建并核验真实 Sherlock 主界面和飞书链接组件。"
+        },
+        "acceptanceCriteria": [
+          "新研究空白会话发送首条消息后继续停留在研究模式，右侧输入和研究画布不切换到对话模式",
+          "用户在空白研究会话主动点击对话页签时仍可正常切换",
+          "efund.feishu.cn 链接允许 accounts.feishu.cn 与 login.feishu.cn 登录跳转并获得站内登录存储能力",
+          "非飞书链接继续使用隔离沙箱，仿冒域名和无关域名跳转继续被拒绝"
+        ],
+        "risks": [
+          "Sherlock 的飞书登录态与系统浏览器相互独立，首次在组件中打开时可能仍需扫码或登录",
+          "若企业后续新增 feishu.cn 之外的专用 SSO 跳转域名，仍会按安全策略拒绝并需要单独评估"
+        ],
+        "generatedAt": "2026-09-02T07:18:38Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/sidebar-new-session-actions.test.ts",
+        "test/research-link-frame.test.ts",
+        "test/security.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "-t",
+        "grants first-party storage only|uses the authorized frame name"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
