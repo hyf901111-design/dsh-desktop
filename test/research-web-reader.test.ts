@@ -74,6 +74,8 @@ describe('Research WeChat article reader', () => {
     expect(result.bodyHtml).toContain('<p>正文<strong>重点</strong></p>')
     expect(result.bodyHtml).toContain('src="https://mmbiz.qpic.cn/a.png"')
     expect(result.bodyHtml).not.toMatch(/script|iframe|onclick|onerror|javascript:/i)
+    expect(result.bodyText).toBe('正文重点 坏链接')
+    expect(result.bodyText).not.toMatch(/steal|script|iframe|javascript:/i)
     expect(fetch).toHaveBeenCalledWith(
       'https://mp.weixin.qq.com/s/article-id',
       expect.objectContaining({
@@ -257,7 +259,8 @@ describe('Research WeChat article reader', () => {
       status: 'ready' as const,
       url: 'https://mp.weixin.qq.com/s/article-id',
       title: '文章标题',
-      bodyHtml: '<p>正文</p>'
+      bodyHtml: '<p>正文</p>',
+      bodyText: '正文'
     }))
     registerResearchWebReaderHandlers({
       ipcMain,

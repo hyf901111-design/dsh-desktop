@@ -234,6 +234,8 @@ describe('Research task contract and prompt', () => {
     expect(prompt).toContain('适合直接截图粘贴到公司 PPT')
     expect(prompt).toContain('/workspace/黄金研究报告.pdf')
     expect(prompt).toContain('金价的核心驱动包括实际利率、美元和央行购金。')
+    expect(prompt).toContain('当前任务不提供网页搜索或网页读取工具')
+    expect(prompt).toContain('不得只输出分析、计划或推理过程')
     expect(prompt).not.toContain('systemPrompt')
   })
 
@@ -619,6 +621,28 @@ describe('Research task cancellation and terminal cleanup', () => {
     expect(completed).toMatchObject({ state: 'completed', finalOutput: '最终结果', events: [] })
     expect(completed.lastSeq).toBeGreaterThan(runningSeq)
     expect(JSON.stringify(storage.snapshot())).not.toContain('流式草稿')
+  })
+
+  it('reports a completed child without final text precisely', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const launches = deferredTaskAdapter()
+    const runtime = new ResearchTaskRuntime({
+      adapter: launches.adapter,
+      storage: memoryTaskStorage(),
+      createId: sequentialTaskIds()
+    })
+    const receipt = await runtime.start(summaryRequest('node-no-final-text'))
+    await launches.waitForStarts(1)
+
+    launches.complete(receipt.taskId, undefined, 'completed')
+    await launches.waitForDisposed(receipt.taskId)
+
+    expect(runtime.inspect({
+      parentSessionId: 'parent-1', taskId: receipt.taskId, afterSeq: 0
+    })).toMatchObject({
+      state: 'failed',
+      error: '模型未返回可用正文，请重试。'
+    })
   })
 })
 
