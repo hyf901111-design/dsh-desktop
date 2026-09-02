@@ -9749,6 +9749,63 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('keeps the last clicked component above every earlier canvas component and persists that stack', async () => {
+    const sessionId = 'session-click-to-front'
+    const mounted = await mountResearchCanvas({
+      sessionId,
+      files: [{
+        id: 'file-behind', path: '/w/source.txt', name: 'source.txt',
+        source: 'computer', previewEligible: false, x: 320, y: 240
+      }],
+      artifacts: [{
+        id: 'artifact-front', kind: 'assistant-result', messageId: 'message-front',
+        title: '分析结果', excerpt: '重叠内容', x: 320, y: 240
+      }]
+    })
+    try {
+      const { browserWindow, canvas, client, host } = mounted
+      const file = host.querySelector('[data-research-file-card="file-behind"]') as HappyDOMHTMLElement | null
+      const artifact = host.querySelector('[data-research-artifact-card="artifact-front"]') as HappyDOMHTMLElement | null
+      expect(file).not.toBeNull()
+      expect(artifact).not.toBeNull()
+      if (file === null || artifact === null) return
+
+      await act(async () => {
+        file.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 71, x: 320, y: 240
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointerup', {
+          pointerId: 71, x: 320, y: 240
+        }))
+      })
+      expect(Number(file.style.zIndex)).toBeGreaterThan(Number(artifact.style.zIndex))
+
+      await act(async () => {
+        artifact.dispatchEvent(pointer(browserWindow, 'pointerdown', {
+          pointerId: 72, x: 320, y: 240
+        }))
+        canvas.dispatchEvent(pointer(browserWindow, 'pointerup', {
+          pointerId: 72, x: 320, y: 240
+        }))
+      })
+      expect(Number(artifact.style.zIndex)).toBeGreaterThan(Number(file.style.zIndex))
+
+      const Registry = client.ResearchWorkspaceRegistry as new (storage: Storage) => {
+        for(id: string): {
+          getSnapshot(): {
+            files: Array<{ id: string; stackOrder?: number }>
+            artifacts: Array<{ id: string; stackOrder?: number }>
+          }
+        }
+      }
+      const restored = new Registry(browserWindow.localStorage).for(sessionId).getSnapshot()
+      expect(restored.artifacts[0]?.stackOrder)
+        .toBeGreaterThan(restored.files[0]?.stackOrder ?? 0)
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('replaces selection before dragging an unselected node', async () => {
     const mounted = await mountResearchCanvas({
       sessionId: 'session-unselected-drag',
