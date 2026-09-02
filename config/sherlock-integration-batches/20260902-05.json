@@ -75,6 +75,40 @@
           "最终需在真实 Kimi K3 客户端验证 web_search 与 web_fetch 的工具注册和完整 KPI 输出"
         ],
         "generatedAt": "2026-09-02T05:51:06Z"
+      },
+      "merged": {
+        "mergeCommit": "f01c81ba4f0eac2babfcbeab07944fc45e8a2b59",
+        "verificationCommit": "f01c81ba4f0eac2babfcbeab07944fc45e8a2b59",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-task-runtime.test.js",
+            "verifiedCommit": "f01c81ba4f0eac2babfcbeab07944fc45e8a2b59",
+            "completedAt": "2026-09-02T05:52:12.289Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f01c81ba4f0eac2babfcbeab07944fc45e8a2b59",
+            "completedAt": "2026-09-02T05:52:12.289Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T05:52:12.289Z"
       }
     }
   ],
