@@ -940,7 +940,8 @@ export function createSubagentAdapter(ctx) {
   return {
     async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent }) {
       const parent = await resolveParent(parentSessionId)
-      const effectivePrompt = kind === 'container' && containerNeedsWebData(query ?? '')
+      const needsWebData = kind === 'container' && containerNeedsWebData(query ?? '')
+      const effectivePrompt = needsWebData
         ? `${prompt}\n\n${await collectContainerEvidence(parent, query, signal)}`
         : prompt
       const run = await ctx.subagents.start('spawn', {
@@ -950,7 +951,7 @@ export function createSubagentAdapter(ctx) {
         prompt: [{ type: 'text', text: effectivePrompt }],
         maxDepth: 1,
         toolFilter: {
-          allow: []
+          allow: needsWebData ? ['web_search', 'web_fetch'] : []
         },
         persona: RESEARCH_TASK_PERSONA
       })
