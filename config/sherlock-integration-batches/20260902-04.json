@@ -167,6 +167,68 @@
           "按钮深浅主题与顶栏比例需要在最终本地客户端进行视觉确认"
         ],
         "generatedAt": "2026-09-02T05:28:15Z"
+      },
+      "merged": {
+        "mergeCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+        "verificationCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-task-runtime.test.js",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-canvas-wheel.test.ts",
+              "test/research-canvas-wheel-preload.test.ts",
+              "test/preload-main-frame.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-canvas-wheel.test.ts test/research-canvas-wheel-preload.test.ts test/preload-main-frame.test.ts",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "uses matching monochrome primary buttons and a slightly taller component title bar|keeps a bottom global toolbar for links and native container drafts|keeps the last clicked component above every earlier canvas component and persists that stack|captures Command-wheel above an interactive web iframe|persists one live resize at every pointer finish boundary|undo|redo|renders a continuous PDF stream, keeps wheel scrolling native, and cleans up pages outside the viewport|sizes PDF backing from the bordered preview body across selection and manual resize"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/sherlock-composer-workspace-ui.test.ts -t uses matching monochrome primary buttons and a slightly taller component title bar|keeps a bottom global toolbar for links and native container drafts|keeps the last clicked component above every earlier canvas component and persists that stack|captures Command-wheel above an interactive web iframe|persists one live resize at every pointer finish boundary|undo|redo|renders a continuous PDF stream, keeps wheel scrolling native, and cleans up pages outside the viewport|sizes PDF backing from the bordered preview body across selection and manual resize",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T05:30:10.010Z"
       }
     }
   ],
