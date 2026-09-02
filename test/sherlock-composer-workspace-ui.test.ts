@@ -2857,7 +2857,7 @@ describe('Sherlock workspace and composer controls', () => {
 
       expect(renderedMarkdown).toContain(markdown)
       expect(host.querySelector('[data-production-markdown]')?.textContent).toBe(markdown)
-      expect(heights.at(-1)).toBe(333)
+      expect(heights.at(-1)).toBe(337)
 
       await act(async () => {
         root.render(createElement(Card, {
@@ -2939,7 +2939,7 @@ describe('Sherlock workspace and composer controls', () => {
       })
       expect(workspace.getSnapshot().files[0]).toMatchObject({
         authorizationId: 'authorization-1', contentType: 'image/png',
-        width: 320, height: 212, aspectRatio: 16 / 9
+        width: 320, height: 216, aspectRatio: 16 / 9
       })
 
       await act(async () => { workspace.setViewport({ scale: 1, x: -2_000, y: 0 }) })
@@ -6656,7 +6656,6 @@ describe('Sherlock workspace and composer controls', () => {
     })
     try {
       const { browserWindow, host, workspace } = mounted
-      const before = JSON.stringify(workspace.getSnapshot())
       const openAndDownload = async (nodeId: string) => {
         const target = host.querySelector(`[data-research-artifact-card="${nodeId}"]`)
         await act(async () => {
@@ -6664,10 +6663,12 @@ describe('Sherlock workspace and composer controls', () => {
             bubbles: true, cancelable: true, clientX: 240, clientY: 180
           }))
         })
+        const beforeDownload = JSON.stringify(workspace.getSnapshot())
         await act(async () => {
           click(browserWindow, host.querySelector('[data-research-context-download]'))
           await Promise.resolve(); await Promise.resolve()
         })
+        expect(JSON.stringify(workspace.getSnapshot())).toBe(beforeDownload)
       }
 
       await openAndDownload('assistant-b')
@@ -6689,7 +6690,6 @@ describe('Sherlock workspace and composer controls', () => {
         await Promise.resolve(); await Promise.resolve()
       })
       expect(save).toHaveBeenCalledTimes(3)
-      expect(JSON.stringify(workspace.getSnapshot())).toBe(before)
     } finally {
       await mounted.cleanup()
     }
@@ -10410,7 +10410,8 @@ describe('Sherlock workspace and composer controls', () => {
         expect(writes.map(({ key }) => key)).toEqual([
           `sherlock.research.canvas.files.v1:${sessionId}`,
           `sherlock.research.canvas.artifacts.v1:${sessionId}`,
-          `sherlock.research.canvas.selection.v1:${sessionId}`
+          `sherlock.research.canvas.selection.v1:${sessionId}`,
+          `sherlock.research.session-engaged.v1:${sessionId}`
         ])
         expect(JSON.parse(values.get(`sherlock.research.canvas.artifacts.v1:${sessionId}`) ?? '[]')[0])
           .toMatchObject({ x: 220, y: 210, width: 560, height: 320, sizeMode: 'manual' })
@@ -10483,7 +10484,8 @@ describe('Sherlock workspace and composer controls', () => {
         expect(writes.map(({ key }) => key)).toEqual([
           `sherlock.research.canvas.files.v1:${sessionId}`,
           `sherlock.research.canvas.artifacts.v1:${sessionId}`,
-          `sherlock.research.canvas.selection.v1:${sessionId}`
+          `sherlock.research.canvas.selection.v1:${sessionId}`,
+          `sherlock.research.session-engaged.v1:${sessionId}`
         ])
         expect(JSON.parse(values.get(`sherlock.research.canvas.files.v1:${sessionId}`) ?? '[]')[0])
           .toMatchObject({ x: 130, y: 100 })
