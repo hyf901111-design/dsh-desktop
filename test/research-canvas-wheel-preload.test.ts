@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createResearchCanvasWheelBridge } from '../src/preload/research-canvas-wheel'
 import {
+  RESEARCH_CANVAS_COMMAND_STATE_CHANNEL,
   RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL,
   RESEARCH_CANVAS_WHEEL_REGION_CHANNEL
 } from '../src/shared/research-canvas-wheel'
@@ -31,9 +32,22 @@ describe('research canvas preload wheel bridge', () => {
     }
     listeners.get(RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL)?.({}, value)
     expect(values).toEqual([value])
+
+    const commandValues: unknown[] = []
+    const unsubscribeCommand = bridge.subscribeCommandState((active) => {
+      commandValues.push(active)
+    })
+    listeners.get(RESEARCH_CANVAS_COMMAND_STATE_CHANNEL)?.({}, true)
+    listeners.get(RESEARCH_CANVAS_COMMAND_STATE_CHANNEL)?.({}, 'true')
+    listeners.get(RESEARCH_CANVAS_COMMAND_STATE_CHANNEL)?.({}, false)
+    expect(commandValues).toEqual([true, false])
+
     unsubscribe()
     unsubscribe()
-    expect(ipc.removeListener).toHaveBeenCalledTimes(1)
+    unsubscribeCommand()
+    unsubscribeCommand()
+    expect(ipc.removeListener).toHaveBeenCalledTimes(2)
     expect(listeners.has(RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL)).toBe(false)
+    expect(listeners.has(RESEARCH_CANVAS_COMMAND_STATE_CHANNEL)).toBe(false)
   })
 })
