@@ -75,6 +75,40 @@
           "最终需在真实 Kimi K3 客户端验证子任务可以创建、调用 web_search 并返回原生面板 JSON"
         ],
         "generatedAt": "2026-09-02T06:10:21Z"
+      },
+      "merged": {
+        "mergeCommit": "360769e7ece7e3a238927099d617c965bd843458",
+        "verificationCommit": "360769e7ece7e3a238927099d617c965bd843458",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-task-runtime.test.js",
+            "verifiedCommit": "360769e7ece7e3a238927099d617c965bd843458",
+            "completedAt": "2026-09-02T06:13:44.197Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "360769e7ece7e3a238927099d617c965bd843458",
+            "completedAt": "2026-09-02T06:13:44.197Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T06:13:44.197Z"
       }
     }
   ],
