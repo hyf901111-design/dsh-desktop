@@ -4643,16 +4643,21 @@ index 1dd0e89..72f21f5 100644
 +				if (!orphanRevocationsDurable) orphanRevocationsDurable = saveResearchCanvasRevocationOutbox(storage, sessionId, orphanRevocationIds);
 +				return orphanRevocationsDurable;
 +			};
++			const beginOrphanRevocation = (nodeId) => {
++				if (!orphanRevocationIds.includes(nodeId) || pendingNodeRevocations.has(nodeId)) return false;
++				pendingNodeRevocations.add(nodeId);
++				return true;
++			};
++			const endOrphanRevocation = (nodeId) => pendingNodeRevocations.delete(nodeId);
 +			const finalizeUnreachablePreviewNodes = () => {
 +				const revokeNode = window.dshDesktop?.researchPreview?.revokeNode;
 +				if (typeof revokeNode !== "function") return;
 +				const reachable = reachableHistoryFileIds();
 +				for (const nodeId of orphanRevocationIds) {
-+					if (reachable.has(nodeId) || pendingNodeRevocations.has(nodeId)) continue;
-+					pendingNodeRevocations.add(nodeId);
++					if (reachable.has(nodeId) || !beginOrphanRevocation(nodeId)) continue;
 +					Promise.resolve().then(() => revokeNode({ sessionId, nodeId })).then((result) => {
 +						if (result?.ok === true) updateOrphanRevocations([nodeId], true);
-+					}).catch(() => void 0).finally(() => pendingNodeRevocations.delete(nodeId));
++					}).catch(() => void 0).finally(() => endOrphanRevocation(nodeId));
 +				}
 +			};
 +			const recordHistory = (before, clearRedo = true) => {
@@ -4772,6 +4777,8 @@ index 1dd0e89..72f21f5 100644
 +				pendingOrphanRevocations() { return [...orphanRevocationIds]; },
 +				queueOrphanRevocations(nodeIds) { return updateOrphanRevocations(nodeIds); },
 +				completeOrphanRevocation(nodeId) { return updateOrphanRevocations([nodeId], true); },
++				beginOrphanRevocation,
++				endOrphanRevocation,
 +				setFiles(files2) { const nextFiles = parseResearchCanvasFileNodes(JSON.stringify(files2)); return commitUpdate({ files: nextFiles, selection: parseResearchCanvasSelection(JSON.stringify(snapshot.selection), nextFiles, snapshot.artifacts) }, true); },
 +				setArtifacts(artifacts2) { const nextArtifacts = boundedResearchCanvasArtifactNodes(artifacts2); commitUpdate({ artifacts: nextArtifacts, selection: parseResearchCanvasSelection(JSON.stringify(snapshot.selection), snapshot.files, nextArtifacts) }, true); },
 +				undo,
@@ -7296,12 +7303,14 @@ index 1dd0e89..72f21f5 100644
 +				if (orphanRevocationsInFlightRef.current.has(nodeId)) return;
 +				const revokeNode = window.dshDesktop?.researchPreview?.revokeNode;
 +				if (typeof revokeNode !== "function") return;
++				if (!workspace.beginOrphanRevocation(nodeId)) return;
 +				orphanRevocationsInFlightRef.current.add(nodeId);
 +				try {
 +					const result = await revokeNode({ sessionId, nodeId });
 +					if (result?.ok === true) workspace.completeOrphanRevocation(nodeId);
 +				} catch {} finally {
 +					orphanRevocationsInFlightRef.current.delete(nodeId);
++					workspace.endOrphanRevocation(nodeId);
 +				}
 +			}, [sessionId, workspace]);
 +			(0, react.useEffect)(() => {
