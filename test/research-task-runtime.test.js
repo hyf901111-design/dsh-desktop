@@ -746,41 +746,7 @@ describe('Research task Subagent adapter', () => {
     expect(dispose).toHaveBeenCalledTimes(1)
   })
 
-  it('allows only read-only web lookup tools for native container tasks', async () => {
-    const { createSubagentAdapter } = await runtimeModule()
-    const parent = {
-      id: 'parent-1',
-      session: { events: [] },
-      ctx: {
-        tools: {
-          get: vi.fn((name) => ['web_search', 'web_fetch'].includes(name) ? { name } : undefined)
-        }
-      }
-    }
-    const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
-    const run = {
-      id: child.id,
-      localAgent: child,
-      result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: '完成' }] }),
-      dispose: vi.fn(async () => undefined)
-    }
-    const ctx = sessionEventContext(parent, child, run)
-
-    const handle = await createSubagentAdapter(ctx).start({
-      parentSessionId: parent.id,
-      kind: 'container',
-      prompt: '生成比特币价格监控',
-      signal: new AbortController().signal,
-      onSessionEvent: vi.fn()
-    })
-
-    expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
-      toolFilter: { allow: ['web_search', 'web_fetch'] }
-    }))
-    await handle.dispose()
-  })
-
-  it('starts native container tasks without naming unavailable global web tools', async () => {
+  it('collects bounded web evidence as the exact live parent before starting an isolated container child', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     const parent = { id: 'parent-1', session: { events: [] } }
     const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
@@ -791,22 +757,85 @@ describe('Research task Subagent adapter', () => {
       dispose: vi.fn(async () => undefined)
     }
     const ctx = sessionEventContext(parent, child, run)
+    ctx.agents.withInitiator = vi.fn((_parent, operation) => operation())
+    ctx.web = {
+      search: vi.fn(async () => ({
+        content: '沪深300最新点位为 3,987.42 点，较前一交易日上涨 0.63%。',
+        sources: [{
+          url: 'https://example.com/csi300',
+          title: '沪深300行情',
+          snippet: '更新时间 2026-09-02 12:30'
+        }],
+        truncated: false
+      })),
+      fetch: vi.fn(async () => ({
+        url: 'https://example.com/csi300',
+        statusCode: 200,
+        body: { kind: 'text', content: '今开 3960.10，最高 3998.20，最低 3952.60。' },
+        truncated: false
+      }))
+    }
 
     const handle = await createSubagentAdapter(ctx).start({
       parentSessionId: parent.id,
       kind: 'container',
-      prompt: '生成比特币价格监控',
+      query: '生成沪深300行情监控，包含最新点位、涨跌幅、今开、最高和最低',
+      prompt: '产品固定 JSON 提示词',
       signal: new AbortController().signal,
       onSessionEvent: vi.fn()
     })
 
+    expect(ctx.agents.withInitiator).toHaveBeenCalledTimes(2)
+    expect(ctx.agents.withInitiator).toHaveBeenNthCalledWith(1, parent, expect.any(Function))
+    expect(ctx.web.search).toHaveBeenCalledWith({
+      query: '生成沪深300行情监控，包含最新点位、涨跌幅、今开、最高和最低',
+      maxResults: 5
+    }, expect.any(AbortSignal))
+    expect(ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/csi300' }, expect.any(AbortSignal))
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
+      parent,
       toolFilter: { allow: [] },
       prompt: [expect.objectContaining({
-        text: expect.stringContaining('当前任务未提供网页检索工具')
+        text: expect.stringMatching(/产品固定 JSON 提示词[\s\S]*主机已获取[\s\S]*3,987\.42/u)
       })]
     }))
+    const effectivePrompt = ctx.subagents.start.mock.calls[0][1].prompt[0].text
+    expect(effectivePrompt).toContain('今开 3960.10')
+    expect(effectivePrompt).toContain('https://example.com/csi300')
     await handle.dispose()
+  })
+
+  it('fails a live-data container explicitly instead of starting a placeholder child when host lookup fails', async () => {
+    const { createSubagentAdapter } = await runtimeModule()
+    const parent = { id: 'parent-1', session: { events: [] } }
+    const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
+    const run = {
+      id: child.id,
+      localAgent: child,
+      result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: '完成' }] }),
+      dispose: vi.fn(async () => undefined)
+    }
+    const ctx = sessionEventContext(parent, child, run)
+    ctx.agents.withInitiator = vi.fn((_parent, operation) => operation())
+    ctx.web = {
+      search: vi.fn(async () => {
+        throw new Error('offline')
+      })
+    }
+
+    await expect(createSubagentAdapter(ctx).start({
+      parentSessionId: parent.id,
+      kind: 'container',
+      query: '生成比特币最新价格监控',
+      prompt: '产品固定 JSON 提示词',
+      signal: new AbortController().signal,
+      onSessionEvent: vi.fn()
+    })).rejects.toMatchObject({
+      code: 'CONTAINER_DATA_UNAVAILABLE',
+      message: '暂时无法获取容器所需的最新数据，请检查网络或搜索设置后重试。'
+    })
+
+    expect(ctx.subagents.start).not.toHaveBeenCalled()
   })
 
   it('passes the validated task kind to the isolated task adapter', async () => {
@@ -831,7 +860,50 @@ describe('Research task Subagent adapter', () => {
     await runtime.start({ ...containerRequest(), prompt: '生成比特币价格监控' })
     await eventually(() => expect(start).toHaveBeenCalledTimes(1))
 
-    expect(start).toHaveBeenCalledWith(expect.objectContaining({ kind: 'container' }))
+    expect(start).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'container',
+      query: '生成比特币价格监控'
+    }))
+  })
+
+  it('rejects placeholder live-data output instead of completing a misleading native panel', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const runtime = new ResearchTaskRuntime({
+      adapter: {
+        start: vi.fn(async () => ({
+          childSessionId: 'child-placeholder',
+          result: Promise.resolve({
+            stopReason: 'completed',
+            output: [{
+              type: 'text',
+              text: '{"version":1,"type":"kpi","title":"沪深300","items":[{"label":"最新点位","value":"待接入数据源"}]}'
+            }]
+          }),
+          dispose: async () => undefined
+        }))
+      },
+      storage: memoryTaskStorage(),
+      createId: () => 'task-placeholder'
+    })
+
+    const receipt = await runtime.start({
+      ...containerRequest(),
+      prompt: '生成沪深300最新行情监控'
+    })
+    await eventually(() => expect(runtime.inspect({
+      parentSessionId: 'parent-1',
+      taskId: receipt.taskId,
+      afterSeq: 0
+    }).state).toBe('failed'))
+
+    expect(runtime.inspect({
+      parentSessionId: 'parent-1',
+      taskId: receipt.taskId,
+      afterSeq: 0
+    })).toMatchObject({
+      state: 'failed',
+      error: '未能取得足够的最新数据，未生成占位监控面板，请重试。'
+    })
   })
 
   it('fails without mutating the parent when the exact parent is no longer live', async () => {
