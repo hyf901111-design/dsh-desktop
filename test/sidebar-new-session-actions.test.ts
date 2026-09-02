@@ -328,6 +328,83 @@ describe('Sherlock sidebar new-session actions', () => {
       expect(host.querySelector('header')?.getAttribute('aria-hidden')).toBeNull()
       expect(host.querySelector('[data-conversation-view-id="research"]')
         ?.getAttribute('aria-selected')).toBe('true')
+
+      await act(async () => {
+        ;(host.querySelector('[data-conversation-view-id="chat"]') as HTMLElement | null)?.click()
+      })
+      expect(actions.setView).toHaveBeenLastCalledWith('chat')
+      expect(browserWindow.sessionStorage.getItem(
+        'sherlock.conversation.initial-research-session.v1'
+      )).toBeNull()
+    } finally {
+      await act(async () => { root.unmount() })
+    }
+  })
+
+  it('keeps a new Research session in Research when the first message commits', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    installBrowserGlobals(browserWindow)
+    const sessionId = 'session-new-research-first-message'
+    const initialResearchKey = 'sherlock.conversation.initial-research-session.v1'
+    browserWindow.sessionStorage.setItem(initialResearchKey, sessionId)
+    const client = await loadClientBundle(
+      'dsh-client-ui-conversation', browserWindow,
+      ['ConversationSession']
+    )
+    const ConversationSession = client.__testConversationSession as (
+      props: Record<string, unknown>
+    ) => unknown
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    const sessionState = { composerPhase: 'blank', blank: true }
+    const storeState = {
+      view: null as string | null,
+      draft: '', selection: null, inspect: null,
+      researchRightTab: 'conversation', researchFilesTabOpen: true,
+      researchConversationUnread: false
+    }
+    const actions = {
+      setView: vi.fn(), setDraft: vi.fn(), setInspect: vi.fn()
+    }
+    const renderSession = () => createElement(ConversationSession, {
+      sessionId,
+      useSession: (selector: (value: typeof sessionState) => unknown) => selector(sessionState),
+      useInput: (selector: (value: Record<string, unknown>) => unknown) => selector({ draft: '' }),
+      inputActions: { setDraft: vi.fn() },
+      useStore: (selector: (value: typeof storeState) => unknown) => selector(storeState),
+      actions,
+      views: {
+        subscribe: () => () => {},
+        version: () => 1,
+        list: () => [{ id: 'chat', label: '对话' }, { id: 'research', label: '研究' }]
+      },
+      renderSlot: (_name: string, _props?: unknown, options?: { only: string }) =>
+        options?.only === undefined
+          ? null
+          : createElement('div', { 'data-rendered-view': options.only }),
+      bindDraftMirror: () => () => {},
+      releaseSessionImages: vi.fn(),
+      releaseResearchWorkspace: vi.fn()
+    })
+
+    try {
+      await act(async () => { root.render(renderSession()) })
+
+      expect(host.querySelector('[data-rendered-view="research"]')).not.toBeNull()
+      expect(browserWindow.sessionStorage.getItem(initialResearchKey)).toBe(sessionId)
+
+      // The first accepted prompt changes the host Session from blank to active.
+      // Its store scope may be recreated with the default Chat view during that handoff.
+      sessionState.composerPhase = 'active'
+      sessionState.blank = false
+      storeState.view = 'chat'
+      await act(async () => { root.render(renderSession()) })
+
+      expect(host.querySelector('[data-rendered-view="research"]')).not.toBeNull()
+      expect(host.querySelector('[data-rendered-view="chat"]')).toBeNull()
+      expect(actions.setView).toHaveBeenLastCalledWith('research')
+      expect(browserWindow.sessionStorage.getItem(initialResearchKey)).toBeNull()
     } finally {
       await act(async () => { root.unmount() })
     }
