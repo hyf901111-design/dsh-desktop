@@ -34,6 +34,14 @@ describe('desktop Research canvas storage', () => {
     expect(new ResearchCanvasStorage(userData).getItem(key)).toBe(value)
   })
 
+  it('persists the durable Research-session engagement marker', () => {
+    const userData = temporaryUserData()
+    const key = 'sherlock.research.session-engaged.v1:session-research'
+
+    expect(new ResearchCanvasStorage(userData).setItem(key, '1')).toBe(true)
+    expect(new ResearchCanvasStorage(userData).getItem(key)).toBe('1')
+  })
+
   it('persists the preview revocation outbox through production IPC and a storage restart', () => {
     const userData = temporaryUserData()
     const key = 'sherlock.research.canvas.preview-revocations.v1:session-restart'
