@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260902-05",
+  "branch": "codex/integration/20260902-05",
+  "baseMainCommit": "8aa8b67717ccb6fcc2df6a1b82ac6d7d9ae190a4",
+  "expectedMainCommit": "8aa8b67717ccb6fcc2df6a1b82ac6d7d9ae190a4",
+  "createdAt": "2026-09-02T05:51:44.228Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布实时容器数据补充修复",
+        "branch": "codex/feat/research-container-data-recovery-20260902",
+        "baseCommit": "8aa8b67717ccb6fcc2df6a1b82ac6d7d9ae190a4",
+        "tipCommit": "690fcfe33620c9141aeecf1efb227af61e622d17",
+        "commits": [
+          {
+            "commit": "690fcfe33620c9141aeecf1efb227af61e622d17",
+            "parents": [
+              "8aa8b67717ccb6fcc2df6a1b82ac6d7d9ae190a4"
+            ],
+            "subject": "修复：允许实时容器补充只读网页数据"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "实时容器只读网页工具、普通容器隔离与任务失败保护 34 项测试通过",
+            "verifiedCommit": "690fcfe33620c9141aeecf1efb227af61e622d17",
+            "completedAt": "2026-09-02T05:51:06Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node 与 Electron TypeScript 类型检查通过",
+            "verifiedCommit": "690fcfe33620c9141aeecf1efb227af61e622d17",
+            "completedAt": "2026-09-02T05:51:06Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按治理不构建共享客户端；晋升后从干净 main 构建并在真实 Sherlock 研究画布复测。"
+        },
+        "acceptanceCriteria": [
+          "实时或监控类智能容器在主机证据不完整时可继续使用 web_search 与 web_fetch 补充当前数据并输出原生组件 JSON",
+          "实时容器子任务只获得两个只读网页工具，普通容器与其他画布生成任务仍没有外部工具权限",
+          "网页搜索或读取完全不可用时继续返回明确的数据获取错误，不生成占位面板"
+        ],
+        "risks": [
+          "实时数据结果仍取决于搜索提供方与目标网页当时的可用性，但子任务不再因工具被禁用而只返回推理",
+          "最终需在真实 Kimi K3 客户端验证 web_search 与 web_fetch 的工具注册和完整 KPI 输出"
+        ],
+        "generatedAt": "2026-09-02T05:51:06Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
