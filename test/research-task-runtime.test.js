@@ -645,6 +645,47 @@ describe('Research task cancellation and terminal cleanup', () => {
       error: '模型未返回可用正文，请重试。'
     })
   })
+
+  it('recovers a container when the first child completes with reasoning but no final JSON', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const finalJson = '{"version":1,"type":"kpi","title":"孙宇晨动态","items":[{"label":"最新动态","value":"已更新"}]}'
+    const results = [
+      {
+        stopReason: 'completed',
+        output: [{ type: 'reasoning', text: 'I should search the web first.' }]
+      },
+      {
+        stopReason: 'completed',
+        output: [{ type: 'text', text: finalJson }]
+      }
+    ]
+    const start = vi.fn(async () => {
+      const attempt = start.mock.calls.length
+      return {
+        childSessionId: `child-${attempt}`,
+        result: Promise.resolve(results[attempt - 1]),
+        dispose: vi.fn(async () => undefined)
+      }
+    })
+    const runtime = new ResearchTaskRuntime({
+      adapter: { start },
+      storage: memoryTaskStorage(),
+      createId: () => 'task-container-recovery'
+    })
+    const receipt = await runtime.start({
+      ...containerRequest('node-container-recovery'),
+      prompt: '生成一个追踪孙宇晨推特动态的面板'
+    })
+
+    await eventually(() => expect(runtime.inspect({
+      parentSessionId: 'parent-1', taskId: receipt.taskId, afterSeq: 0
+    })).toMatchObject({
+      state: 'completed',
+      childSessionId: 'child-2',
+      finalOutput: finalJson
+    }))
+    expect(start).toHaveBeenCalledTimes(2)
+  })
 })
 
 function sessionEventContext(parent, child, run) {
@@ -804,6 +845,46 @@ describe('Research task Subagent adapter', () => {
     const effectivePrompt = ctx.subagents.start.mock.calls[0][1].prompt[0].text
     expect(effectivePrompt).toContain('今开 3960.10')
     expect(effectivePrompt).toContain('https://example.com/csi300')
+    await handle.dispose()
+  })
+
+  it('treats tracking social updates as live data and keeps search available', async () => {
+    const { createSubagentAdapter } = await runtimeModule()
+    const parent = { id: 'parent-1', session: { events: [] } }
+    const child = { id: 'child-social', session: { id: 'child-social', events: [] } }
+    const run = {
+      id: child.id,
+      localAgent: child,
+      result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: '完成' }] }),
+      dispose: vi.fn(async () => undefined)
+    }
+    const ctx = sessionEventContext(parent, child, run)
+    ctx.agents.withInitiator = vi.fn((_parent, operation) => operation())
+    ctx.web = {
+      search: vi.fn(async () => ({
+        content: '孙宇晨近期发布了关于 TRON 生态进展的动态。',
+        sources: [],
+        truncated: false
+      }))
+    }
+
+    const handle = await createSubagentAdapter(ctx).start({
+      parentSessionId: parent.id,
+      kind: 'container',
+      query: '生成一个追踪孙宇晨推特动态的面板',
+      prompt: '产品固定 JSON 提示词',
+      signal: new AbortController().signal,
+      onSessionEvent: vi.fn()
+    })
+
+    expect(ctx.web.search).toHaveBeenCalledWith({
+      query: '生成一个追踪孙宇晨推特动态的面板',
+      maxResults: 5
+    }, expect.any(AbortSignal))
+    expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
+      toolFilter: { allow: ['web_search'] },
+      prompt: [expect.objectContaining({ text: expect.stringContaining('TRON 生态进展') })]
+    }))
     await handle.dispose()
   })
 
