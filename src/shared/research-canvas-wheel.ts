@@ -1,5 +1,6 @@
 export const RESEARCH_CANVAS_WHEEL_REGION_CHANNEL = 'research:canvas-wheel:set-region'
 export const RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL = 'research:canvas-wheel:native'
+export const RESEARCH_CANVAS_COMMAND_STATE_CHANNEL = 'research:canvas-wheel:command-state'
 
 export type ResearchCanvasWheelRegionUpdate =
   | {

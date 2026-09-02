@@ -82,6 +82,7 @@ describe('preload frame boundary', () => {
       researchCanvasWheel: {
         setRegion(value: unknown): boolean
         subscribe(listener: (value: unknown) => void): () => void
+        subscribeCommandState(listener: (active: boolean) => void): () => void
       }
     }
     expect(Object.isFrozen(desktop)).toBe(true)
@@ -103,6 +104,16 @@ describe('preload frame boundary', () => {
     unsubscribe()
     expect(electronFakes.removeListener).toHaveBeenCalledWith(
       'research:canvas-wheel:native',
+      expect.any(Function)
+    )
+    const unsubscribeCommand = desktop.researchCanvasWheel.subscribeCommandState(vi.fn())
+    expect(electronFakes.on).toHaveBeenCalledWith(
+      'research:canvas-wheel:command-state',
+      expect.any(Function)
+    )
+    unsubscribeCommand()
+    expect(electronFakes.removeListener).toHaveBeenCalledWith(
+      'research:canvas-wheel:command-state',
       expect.any(Function)
     )
   })

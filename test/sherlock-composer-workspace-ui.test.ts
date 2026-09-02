@@ -81,6 +81,7 @@ async function loadClientBundle(
     researchCanvasWheel?: {
       setRegion(value: Record<string, unknown>): boolean
       subscribe(listener: (value: Record<string, unknown>) => void): () => void
+      subscribeCommandState?(listener: (active: boolean) => void): () => void
     }
     researchLinkFrame?: {
       authorize(value: { sessionId: string; nodeId: string; url: string }): Promise<{ url: string; frameName?: string }>
@@ -939,6 +940,7 @@ async function mountResearchCanvas(options: {
     researchCanvasWheel?: {
       setRegion(value: Record<string, unknown>): boolean
       subscribe(listener: (value: Record<string, unknown>) => void): () => void
+      subscribeCommandState?(listener: (active: boolean) => void): () => void
     }
     researchLinkFrame?: {
       authorize(value: { sessionId: string; nodeId: string; url: string }): Promise<{ url: string; frameName?: string }>
@@ -9668,6 +9670,82 @@ describe('Sherlock workspace and composer controls', () => {
         sessionId: 'session-native-wheel', nodeId: 'native-html',
         authorizationId: 'authorization-native-html', capabilityToken: 'capability-native-html'
       })
+    }
+  })
+
+  it('captures Command-wheel above an interactive web iframe while leaving ordinary wheel input inside it', async () => {
+    const commandListeners = new Set<(active: boolean) => void>()
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-command-iframe-wheel',
+      artifacts: [{
+        id: 'web-command-wheel', kind: 'web-link', messageId: 'web-command-wheel',
+        title: '网页组件', excerpt: 'https://example.com/report',
+        url: 'https://example.com/report', x: 360, y: 260,
+        width: 640, height: 420, sizeMode: 'manual'
+      }],
+      dshDesktop: {
+        researchCanvasWheel: {
+          setRegion: () => true,
+          subscribe: () => () => undefined,
+          subscribeCommandState(listener) {
+            commandListeners.add(listener)
+            return () => { commandListeners.delete(listener) }
+          }
+        },
+        researchLinkFrame: {
+          async authorize() {
+            return { url: 'https://example.com/report', frameName: 'web-command-wheel-frame' }
+          },
+          async release() { return { ok: true } },
+          async releaseSession() { return { ok: true, removed: 0 } }
+        }
+      }
+    })
+    try {
+      await act(async () => { await Promise.resolve(); await Promise.resolve() })
+      const { browserWindow, canvas, host, workspace } = mounted
+      const shield = host.querySelector('[data-research-preview-shield]') as HappyDOMElement | null
+      const iframe = host.querySelector('[data-research-web-frame]') as HappyDOMElement | null
+      expect(shield).not.toBeNull()
+      expect(iframe).not.toBeNull()
+      expect(commandListeners.size).toBe(1)
+      if (shield === null || iframe === null) return
+
+      const initial = workspace.getSnapshot().viewport
+      const ordinary = new browserWindow.WheelEvent('wheel', {
+        bubbles: true, cancelable: true, deltaY: -100
+      })
+      await act(async () => { iframe.dispatchEvent(ordinary) })
+      expect(workspace.getSnapshot().viewport).toEqual(initial)
+      expect(ordinary.defaultPrevented).toBe(false)
+
+      await act(async () => { commandListeners.forEach((listener) => listener(true)) })
+      expect(canvas.getAttribute('data-command-pressed')).toBe('true')
+      expect(browserWindow.getComputedStyle(shield).pointerEvents).toBe('auto')
+      const commandWheel = new browserWindow.WheelEvent('wheel', {
+        bubbles: true, cancelable: true, deltaY: -100
+      })
+      Object.defineProperties(commandWheel, {
+        metaKey: { value: true },
+        clientX: { value: 360 },
+        clientY: { value: 260 }
+      })
+      await act(async () => { shield.dispatchEvent(commandWheel) })
+      expect(commandWheel.defaultPrevented).toBe(true)
+      expect(workspace.getSnapshot().viewport.scale).toBeGreaterThan(initial.scale)
+
+      await act(async () => { commandListeners.forEach((listener) => listener(false)) })
+      expect(canvas.hasAttribute('data-command-pressed')).toBe(false)
+      const css = Array.from(browserWindow.document.styleSheets)
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .map((rule) => rule.cssText)
+        .join('\n')
+      expect(css).toContain(
+        '.rScV5Q_root[data-command-pressed=true] .rScV5Q_previewShield'
+      )
+    } finally {
+      await mounted.cleanup()
+      expect(commandListeners.size).toBe(0)
     }
   })
 
