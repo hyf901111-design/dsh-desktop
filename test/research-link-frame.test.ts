@@ -49,6 +49,20 @@ describe('research link frame authorization', () => {
     expect(registry.allows('https://example.com/report')).toBe(false)
   })
 
+  it('allows Feishu account redirects without authorizing lookalike or unrelated hosts', () => {
+    const registry = new ResearchLinkFrameRegistry(() => 'c'.repeat(32))
+    registry.authorize({
+      sessionId: 'session-feishu', nodeId: 'node-feishu',
+      url: 'https://efund.feishu.cn/wiki/XBRmwCdmdiGqiwkH6uUcCYyEnRb'
+    })
+
+    expect(registry.allows('https://accounts.feishu.cn/accounts/page/login')).toBe(true)
+    expect(registry.allows('https://login.feishu.cn/accounts/trap')).toBe(true)
+    expect(registry.allows('https://evilfeishu.cn/accounts/page/login')).toBe(false)
+    expect(registry.allows('https://feishu.cn.evil.example/accounts/page/login')).toBe(false)
+    expect(registry.allows('https://unrelated.example/login')).toBe(false)
+  })
+
   it('releases exactly one session and rejects malformed identities', () => {
     const registry = new ResearchLinkFrameRegistry()
     registry.authorize({ sessionId: 'session-a', nodeId: 'node-1', url: 'https://a.example/' })
