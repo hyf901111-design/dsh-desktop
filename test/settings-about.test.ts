@@ -152,8 +152,11 @@ describe('Sherlock About settings', () => {
     expect(zh.version).toBe('9.8.7')
     expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
     expect(en.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
-    expect(zh.releaseNotes[0]?.items).toHaveLength(5)
-    expect(en.releaseNotes[0]?.items).toHaveLength(5)
+    expect(zh.releaseNotes[0]?.items).toHaveLength(6)
+    expect(en.releaseNotes[0]?.items).toHaveLength(6)
+    expect(zh.releaseNotes[0]?.items).toContain(
+      '修复首次配置模型后当前选项为空时模型列表加载失败，并避免显示原始数据校验错误'
+    )
     expect(zh.releaseNotes[1]).toEqual({
       version: '0.7.9',
       date: '2026-09-03',

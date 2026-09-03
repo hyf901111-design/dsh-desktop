@@ -25,7 +25,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         '新研究不再复用已有内容的画板；无对话的研究会话可从侧栏直接恢复对应画布，并按组件内容显示标题',
         '修复组件靠近画布边缘时功能栏换行溢出的问题；工具栏保持单行并自动避让，菜单与创建输入框保持可操作',
         '思维导图、总结提炼和基于所选创建的新组件优先出现在来源附近，允许重叠、自动选中并置顶，保留原有组件位置',
-        '容器和基于所选创建支持自包含交互网页交付物；按用户要求呈现活动页、用户体验地图等布局，不再强制降级为表格、文字或思维导图；修复实时搜索时工具调度器不兼容导致的生成失败'
+        '容器和基于所选创建支持自包含交互网页交付物；按用户要求呈现活动页、用户体验地图等布局，不再强制降级为表格、文字或思维导图；修复实时搜索时工具调度器不兼容导致的生成失败',
+        '修复首次配置模型后当前选项为空时模型列表加载失败，并避免显示原始数据校验错误'
       ]
     },
     {
@@ -158,7 +159,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         'New Research no longer reuses a populated canvas; reopen canvas-only sessions directly in Research with titles derived from their components',
         'Fixed floating component actions wrapping and overflowing at canvas edges; keep a single row with viewport-aware positioning and accessible menus and creation prompts',
         'Mind maps, summaries, and Create from Selection outputs appear near their sources, are selected and brought to the front, and may overlap neighbors without moving existing components',
-        'Containers and Create from Selection support self-contained interactive web deliverables, honoring requested layouts such as event pages and journey maps instead of forcing tables, text, or mind maps; fixed tool-scheduler incompatibility failures during live-data search'
+        'Containers and Create from Selection support self-contained interactive web deliverables, honoring requested layouts such as event pages and journey maps instead of forcing tables, text, or mind maps; fixed tool-scheduler incompatibility failures during live-data search',
+        'Fixed the model list failing to load when no current model is selected immediately after first-time setup, without exposing a raw validation error'
       ]
     },
     {
