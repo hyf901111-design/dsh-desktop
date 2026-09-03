@@ -8,6 +8,7 @@ import { parse } from 'yaml'
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   Menu,
@@ -67,6 +68,7 @@ import {
   type LocalSearchRuntime
 } from './search/local-search-runtime'
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import {
   assertTrustedMainWindowEvent,
@@ -717,6 +719,15 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     ipcMain,
     getMainWindow: () => mainWindow,
     registry: researchFilePreviewRegistry
+  })
+  registerResearchClipboardHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    service: new ResearchCanvasClipboard({
+      userDataPath: app.getPath('userData'), clipboard,
+      registry: researchFilePreviewRegistry,
+      revealFile: (target) => shell.showItemInFolder(target)
+    })
   })
   registerResearchCanvasWheelIpc({
     ipcMain,

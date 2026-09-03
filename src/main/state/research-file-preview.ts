@@ -925,6 +925,19 @@ export class ResearchFilePreviewRegistry {
     }
   }
 
+  // Main-process consumers may validate app-owned bytes without issuing a grant.
+  // This is deliberately not exposed as a renderer IPC operation.
+  async inspectFile(targetPath: string): Promise<{ contentType: string } | null> {
+    try {
+      const target = await this.fileSystem.realpath(targetPath)
+      const file = await this.fileSystem.stat(target)
+      const kind = rootKindForPath(target)
+      if (!file.isFile() || !isRootPreviewKind(kind) ||
+          !await validatesPreviewKind(this.fileSystem, target, file.size, kind, true)) return null
+      return { contentType: kind.contentType }
+    } catch { return null }
+  }
+
   async admitSidebar(value: unknown): Promise<ResearchFilePreviewDescriptor | null> {
     if (!this.validSidebarAdmission(value) || !this.options.workspaceResolver) return null
     const revocation = this.beginAdmissionRevocation(value.sessionId, value.nodeId)

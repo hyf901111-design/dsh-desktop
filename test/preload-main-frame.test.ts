@@ -53,6 +53,15 @@ afterEach(() => {
 })
 
 describe('preload frame boundary', () => {
+  it('exposes only a frozen main-frame clipboard bridge with opaque asset requests', async () => {
+    Object.defineProperty(process, 'isMainFrame', { configurable: true, value: true })
+    await import('../src/preload/index')
+    const desktop = electronFakes.exposeInMainWorld.mock.calls.find(([name]) => name === 'dshDesktop')?.[1]
+    expect(Object.isFrozen(desktop.researchClipboard)).toBe(true)
+    expect(Object.keys(desktop.researchClipboard)).toEqual(['inspect', 'copy', 'read', 'admit', 'open'])
+    await desktop.researchClipboard.admit({ assetId: 'opaque', sessionId: 'target', nodeId: 'new' })
+    expect(electronFakes.invoke).toHaveBeenCalledWith('research:clipboard:admit', { assetId: 'opaque', sessionId: 'target', nodeId: 'new' })
+  })
   it('exposes only capture identity, never the private context transport', async () => {
     Object.defineProperty(process, 'isMainFrame', { configurable: true, value: true })
     await import('../src/preload/index')
