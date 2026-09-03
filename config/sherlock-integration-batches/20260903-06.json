@@ -81,6 +81,42 @@
           "实时行情内容质量仍取决于所选模型和网页搜索结果，但工具调度不会再因模块副本Symbol身份不同而中断"
         ],
         "generatedAt": "2026-09-03T08:23:32Z"
+      },
+      "merged": {
+        "mergeCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+        "verificationCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/tool-runtime-scheduler-compat.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/tool-runtime-scheduler-compat.test.ts test/research-task-runtime.test.js test/settings-about.test.ts",
+            "verifiedCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+            "completedAt": "2026-09-03T08:26:00.284Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+            "completedAt": "2026-09-03T08:26:00.284Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-03T08:26:00.284Z"
       }
     }
   ],
