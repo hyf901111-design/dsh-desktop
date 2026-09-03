@@ -40,32 +40,40 @@ function publicUrl(value: unknown): string | undefined {
     return url.href.slice(0, 2048)
   } catch { return undefined }
 }
-function scalar(value: unknown): string {
-  return typeof value === 'number' && Number.isFinite(value) ? String(value) : text(value, 4000)
-}
-
 // Only user-visible native fields enter evidence. Prompts, refresh errors,
 // arbitrary object keys and web container URLs are never treated as page text.
-function containerText(value: unknown): string {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return ''
+function containerText(value: unknown): { text: string; truncated: boolean } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { text: '', truncated: false }
+  let truncated = false
+  const boundedText = (value: unknown, limit = 120_000): string => {
+    if (typeof value === 'string' && value.length > limit) truncated = true
+    return text(value, limit)
+  }
+  const boundedItems = <T>(items: T[], limit: number): T[] => {
+    if (items.length > limit) truncated = true
+    return items.slice(0, limit)
+  }
+  const scalar = (value: unknown): string =>
+    typeof value === 'number' && Number.isFinite(value) ? String(value) : boundedText(value, 4000)
   const spec = value as Node
-  const heading = text(spec.title, 512)
+  const heading = boundedText(spec.title, 512)
   let body = ''
-  if (spec.type === 'markdown') body = text(spec.content ?? spec.markdown)
+  if (spec.type === 'markdown') body = boundedText(spec.content ?? spec.markdown)
   if (spec.type === 'table' && Array.isArray(spec.columns) && Array.isArray(spec.rows) && spec.rows.length) {
-    const rows = spec.rows.slice(0, 500).filter(Array.isArray).map((row) => row.slice(0, 40).map(scalar))
-    if (rows.some((row) => row.some((cell) => cell.trim()))) body = [spec.columns.slice(0, 40).map(scalar).join(' | '), ...rows.map((row) => row.join(' | '))].join('\n')
+    const rows = boundedItems(spec.rows, 500).filter(Array.isArray).map((row) => boundedItems(row, 40).map(scalar))
+    if (rows.some((row) => row.some((cell) => cell.trim()))) body = [boundedItems(spec.columns, 40).map(scalar).join(' | '), ...rows.map((row) => row.join(' | '))].join('\n')
   }
   if (spec.type === 'kpi' && Array.isArray(spec.items)) {
-    body = spec.items.slice(0, 100).filter((item) => item && typeof item === 'object' && !Array.isArray(item) && scalar(item.label) && scalar(item.value))
+    body = boundedItems(spec.items, 100).filter((item) => item && typeof item === 'object' && !Array.isArray(item) && scalar(item.label) && scalar(item.value))
       .map((item) => `${scalar(item.label)}：${scalar(item.value)}${item.change === undefined ? '' : `（${scalar(item.change)}）`}`).join('\n')
   }
   if (spec.type === 'chart' && Array.isArray(spec.series)) {
-    const labels = Array.isArray(spec.labels) ? spec.labels.slice(0, 500).map(scalar) : []
-    body = spec.series.slice(0, 30).filter((series) => series && typeof series === 'object' && Array.isArray(series.values) && series.values.length > 0 && series.values.every((value: unknown) => typeof value === 'number' && Number.isFinite(value)))
-      .map((series) => `${scalar(series.name)}\n${series.values.slice(0, 500).map((value: unknown, index: number) => `${labels[index] ?? index}：${scalar(value)}`).join('\n')}`).join('\n')
+    const labels = Array.isArray(spec.labels) ? boundedItems(spec.labels, 500).map(scalar) : []
+    body = boundedItems(spec.series, 30).filter((series) => series && typeof series === 'object' && Array.isArray(series.values) && series.values.length > 0 && series.values.every((value: unknown) => typeof value === 'number' && Number.isFinite(value)))
+      .map((series) => `${scalar(series.name)}\n${boundedItems(series.values, 500).map((value: unknown, index: number) => `${labels[index] ?? index}：${scalar(value)}`).join('\n')}`).join('\n')
   }
-  return body.trim() ? text(`${heading}\n${body}`) : ''
+  const content = body.trim() ? boundedText(`${heading}\n${body}`) : ''
+  return { text: content, truncated }
 }
 
 export function readStoredResearchCanvas(storage: ResearchCanvasStorage, sessionId: string): Canvas {
@@ -172,7 +180,9 @@ export class ResearchContextBridge {
         }
         if (source.kind === 'generated-container') {
           source.status = text(node.generationStatus, 128) || 'unavailable'
-          source.text = containerText(node.containerSpec)
+          const container = containerText(node.containerSpec)
+          source.text = container.text
+          if (container.truncated) source.truncated = true
           if (source.text && (node.refreshError || source.status !== 'completed')) {
             source.text = `[保留上次成功内容；刷新失败或尚未完成；上次成功时间：${typeof node.lastSuccessfulAt === 'number' && Number.isFinite(node.lastSuccessfulAt) ? node.lastSuccessfulAt : '未知'}]\n${source.text}`
           }

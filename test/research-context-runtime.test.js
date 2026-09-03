@@ -125,6 +125,35 @@ describe('Research context runtime', () => {
     expect(bytes).toBeLessThanOrEqual(65536)
     expect(tokens).toBeLessThanOrEqual(12000)
   })
+  it('marks a valid large native table as truncated through capture, prepare and its final read page', async () => {
+    const bridge = new ResearchContextBridge({
+      readCanvas: () => ({ files: [], artifacts: [
+        { id: 'large', title: '大表', kind: 'generated-container', generationStatus: 'completed', containerSpec: { version: 1, type: 'table', title: '大表', columns: Array.from({ length: 12 }, (_, i) => `列${i}`), rows: Array.from({ length: 100 }, () => Array.from({ length: 12 }, () => 'a'.repeat(512))) } },
+        { id: 'small', title: '小表', kind: 'generated-container', generationStatus: 'completed', containerSpec: { version: 1, type: 'table', title: '小表', columns: ['指标'], rows: [['100']] } }
+      ] }), resolveFile: async () => null
+    })
+    const endpoint = await bridge.start()
+    cleanups.push(() => bridge.stop())
+    const capture = await bridge.capture({ sessionId: 'parent' })
+    const response = await fetch(`${endpoint.url}/snapshot`, { method: 'POST', headers: { authorization: `Bearer ${endpoint.token}` }, body: JSON.stringify({ sessionId: 'parent', captureId: capture.captureId }) })
+    const { sources } = await response.json()
+    expect(sources[0].text.length).toBeLessThanOrEqual(120000)
+    expect(sources[0].truncated).toBe(true)
+    expect(sources[1].truncated).toBeUndefined()
+    const f = fixture({ env: { SHERLOCK_RESEARCH_CONTEXT_URL: endpoint.url, SHERLOCK_RESEARCH_CONTEXT_TOKEN: endpoint.token }, fetch: globalThis.fetch })
+    const { status, body: packet } = await f.request({ sessionId: 'parent', captureId: capture.captureId, query: '大表' })
+    expect(status).toBe(200)
+    expect(packet.initialContext).toContain('已截断')
+    const read = f.tools.get('research_context_read')
+    const last = await read.execute({ snapshotId: packet.snapshotId, sourceId: 'large', cursor: Array.from(sources[0].text).length - 50 }, exec)
+    expect(last).toMatchObject({ status: 'truncated', truncated: true, limited: true })
+    expect(last.cursor).toBeUndefined()
+    expect(last.text).toContain('该资料在捕获时已截断')
+    const small = await read.execute({ snapshotId: packet.snapshotId, sourceId: 'small' }, exec)
+    expect(small).toMatchObject({ status: 'ready', limited: false })
+    expect(small.text).toContain('小表\n指标\n100')
+    expect(small.truncated).toBeUndefined()
+  })
   it('requires a same-origin POST, exact parameters and an existing parent including first-session resolution', async () => {
     const f = fixture()
     for (const [body, headers, method] of [[prepareArgs, { origin: 'https://evil.example' }, 'POST'], [prepareArgs, {}, 'GET'], [{ ...prepareArgs, path: '/private/secret' }, {}, 'POST'], [{ ...prepareArgs, sessionId: 'missing' }, {}, 'POST']]) {
