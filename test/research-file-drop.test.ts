@@ -2808,6 +2808,26 @@ describe('Research canvas file drops', () => {
     expect(result.y + result.height / 2).toBeLessThanOrEqual(388)
   })
 
+  it.each(['mind-map', 'summary', 'create'])('preserves the visible leading corner as %s grows through task completion', async (kind) => {
+    const client = await loadConversationClient()
+    const workspace = new client.ResearchWorkspaceRegistry(null).for('growing-output')
+    workspace.setCanvasSize({ width: 800, height: 600 })
+    workspace.setArtifacts([{ id: 'source', messageId: 'source', kind: 'assistant-result', title: '资料', excerpt: '正文', x: 750, y: 180, width: 300, height: 300 }])
+    const snapshot = workspace.getSnapshot()
+    const place = client.researchCanvasGeneratedPlacement(snapshot.artifacts, ['source'], kind, 'standard', snapshot)
+    const created = workspace.beginGeneration(kind, ['source'], place, kind === 'create' ? '生成图表' : 'standard')
+    const corner = { left: created.x - created.width / 2, top: created.y - created.height / 2 }
+    expect(workspace.attachGenerationTask(created.id, { taskId: 'task', canvasNodeId: created.id, state: 'running', lastSeq: 1 })).toBe(true)
+    const finalOutput = kind === 'create' ? JSON.stringify({ version: 1, type: 'chart', title: '图表', variant: 'bar', labels: ['A'], series: [{ name: '值', values: [1] }] }) : '# 结论\n' + '正文'.repeat(1000)
+    expect(workspace.applyGenerationInspection(created.id, { taskId: 'task', canvasNodeId: created.id, state: 'completed', lastSeq: 2, finalOutput })).toBe(true)
+    const completed = workspace.getSnapshot().artifacts.find((node: any) => node.id === created.id)
+    expect({ left: completed.x - completed.width / 2, top: completed.y - completed.height / 2 }).toEqual(corner)
+    workspace.updateNodeGeometry(created.id, { height: completed.height + 100, sizeMode: 'auto' })
+    const measured = workspace.getSnapshot().artifacts.find((node: any) => node.id === created.id)
+    expect(measured.y - measured.height / 2).toBe(corner.top)
+    expect(workspace.getSnapshot().viewport).toEqual(snapshot.viewport)
+  })
+
   it.each([90, 1_000_000])('creates above an existing stack of %i and preserves it through undo, redo and reload', async (stackOrder) => {
     const client = await loadConversationClient()
     const storage = memoryStorage({})
