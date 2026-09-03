@@ -247,6 +247,30 @@ describe('real workspace clipboard transactions', () => {
 })
 
 describe('rendered canvas clipboard ownership', () => {
+  it.each(['copy', 'paste', 'error'])('dismisses %s feedback two seconds after completion and restarts the timer for repeats', async (kind) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    let m: Awaited<ReturnType<typeof mounted>> | undefined
+    try {
+      m = await mounted({ researchClipboard: {
+        copy: async () => ({ ok: true }),
+        read: async () => { if (kind === 'error') throw new Error('无法粘贴'); return { kind: 'text', text: '粘贴内容' } }
+      } })
+      await act(async () => { await m!.workspace.insertClipboardNodes({ kind: 'text', text: '原文' }, { x: 100, y: 100 }) })
+      m.canvas.focus()
+      const run = async () => { await act(async () => { m!.canvas.dispatchEvent(new m!.win.Event(kind === 'copy' ? 'copy' : 'paste', { bubbles: true, cancelable: true })) }) }
+      await run()
+      expect(m.query('[data-research-clipboard-feedback]')?.textContent).toMatch(/已复制|已粘贴|无法粘贴/)
+      await act(async () => { await vi.advanceTimersByTimeAsync(1500) })
+      expect(m.query('[data-research-clipboard-feedback]')).not.toBeNull()
+      await run()
+      await act(async () => { await vi.advanceTimersByTimeAsync(500) })
+      expect(m.query('[data-research-clipboard-feedback]')).not.toBeNull()
+      await act(async () => { await vi.advanceTimersByTimeAsync(1499) })
+      expect(m.query('[data-research-clipboard-feedback]')).not.toBeNull()
+      await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+      expect(m.query('[data-research-clipboard-feedback]')).toBeNull()
+    } finally { await m?.unmount(); vi.useRealTimers() }
+  })
   it('measures pasted text intrinsically without a parent-height feedback loop or late observer reads', async () => {
     const observers: Array<() => void> = []
     const m = await mounted({}, (win) => {

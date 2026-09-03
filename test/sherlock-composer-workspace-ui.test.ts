@@ -7795,11 +7795,13 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { mounted.workspace.setCanvasSize({ width: 1200, height: 800 }) })
       const trigger = mounted.host.querySelector('[data-research-selection-create]')
       expect(trigger).not.toBeNull()
+      expect(trigger?.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
       await act(async () => { click(mounted.browserWindow, trigger) })
       const form = mounted.host.querySelector('[data-research-create-popover]')!
-      expect(form.querySelector('[data-artifact-kind="assistant-reply"]')).not.toBeNull()
-      expect(form.textContent).toContain('现金流材料')
+      expect(form.querySelector('[data-artifact-kind]')).toBeNull()
+      expect(form.textContent).not.toContain('现金流材料')
       expect(form.textContent).not.toContain('无关材料')
+      expect(Array.from(form.querySelectorAll('button')).map((button) => button.textContent)).toEqual(['创建'])
       const submit = form.querySelector('[data-research-create-submit]') as any
       expect(submit.disabled).toBe(true)
       const input = form.querySelector('textarea') as any
@@ -7821,6 +7823,48 @@ describe('Sherlock workspace and composer controls', () => {
       expect(retry).toMatchObject({ kind: 'create', prompt: '比较现金流', sourceNodeIds: ['a'], generationSources: [{ text: '现金流100' }] })
       const stored = JSON.parse(mounted.browserWindow.localStorage.getItem('sherlock.research.canvas.artifacts.v1:selection-create-ui') ?? '[]')
       expect(stored.find((node: any) => node.id === created.id)).toMatchObject({ creationMode: 'selection', sourceNodeIds: ['a'], containerPrompt: '比较现金流' })
+    } finally { await mounted.cleanup() }
+  })
+
+  it.each(['pointer', 'focus', 'window', 'escape'])('dismisses selected-create on outside %s while preserving inside editing and the canvas', async (action) => {
+    const mounted = await mountResearchCanvas({ sessionId: `create-dismiss-${action}`, artifacts: [
+      { id: 'a', kind: 'assistant-result', messageId: 'a', title: '材料', excerpt: '正文', x: 100, y: 200 }
+    ], selection: { selectedNodeIds: ['a'], orderedFileIds: [] }, selectionGeneration: { generate: async () => ({ ok: true }) } })
+    try {
+      await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-selection-create]')) })
+      const input = mounted.host.querySelector('[data-research-create-popover] textarea') as any
+      const popover = mounted.host.querySelector('[data-research-create-popover]')!
+      const paddingClick = pointer(mounted.browserWindow, 'pointerdown', { pointerId: 11, x: 16, y: 16 })
+      await act(async () => {
+        popover.dispatchEvent(paddingClick)
+        // Chromium focuses the nearest tabindex ancestor for an uncancelled padding click.
+        if (!paddingClick.defaultPrevented) (mounted.host.querySelector('[data-research-canvas]') as any).focus()
+        popover.dispatchEvent(pointer(mounted.browserWindow, 'pointerup', { pointerId: 11, x: 16, y: 16 }))
+      })
+      expect(mounted.host.querySelector('[data-research-create-popover]')).toBe(popover)
+      expect(mounted.host.querySelector('[data-research-marquee]')).toBeNull()
+      expect(mounted.workspace.getSnapshot().selection.selectedNodeIds).toEqual(['a'])
+      await act(async () => {
+        input.dispatchEvent(pointer(mounted.browserWindow, 'pointerdown', { pointerId: 12, x: 32, y: 32 }))
+        input.value = '新的分析'
+        input.dispatchEvent(new mounted.browserWindow.Event('input', { bubbles: true }))
+      })
+      const submit = mounted.host.querySelector('[data-research-create-submit]') as any
+      await act(async () => { submit.focus() })
+      expect(mounted.host.querySelector('[data-research-create-popover]')).not.toBeNull()
+      await act(async () => {
+        if (action === 'pointer') mounted.browserWindow.document.body.dispatchEvent(new mounted.browserWindow.Event('pointerdown', { bubbles: true }))
+        if (action === 'focus') {
+          const outside = mounted.browserWindow.document.createElement('input')
+          mounted.browserWindow.document.body.append(outside); outside.focus()
+        }
+        if (action === 'window') mounted.browserWindow.dispatchEvent(new mounted.browserWindow.Event('blur'))
+        if (action === 'escape') input.dispatchEvent(new mounted.browserWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      })
+      expect(mounted.host.querySelector('[data-research-create-popover]')).toBeNull()
+      expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(1)
+      await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-selection-create]')) })
+      expect((mounted.host.querySelector('[data-research-create-popover] textarea') as any).value).toBe('')
     } finally { await mounted.cleanup() }
   })
 
@@ -7930,7 +7974,7 @@ describe('Sherlock workspace and composer controls', () => {
     } finally { await mounted.cleanup() }
   })
 
-  it('cancels selected-source preparation without creating a late artifact', async () => {
+  it.each(['escape', 'outside'])('cancels selected-source preparation on %s without creating a late artifact', async (dismiss) => {
     const wait = deferred<Record<string, unknown>>()
     const generate = vi.fn(async () => ({ ok: true }))
     const mounted = await mountResearchCanvas({ sessionId: 'cancel-selected-create', artifacts: [{ id: 'web', kind: 'web-link', messageId: 'web', title: '页面', url: 'https://example.com/a', excerpt: 'url', x: 100, y: 100 }], selection: { selectedNodeIds: ['web'], orderedFileIds: [] }, selectionGeneration: { generate }, dshDesktop: { researchLinkFrame: { authorize: async ({ url }) => ({ url }), inspect: async () => wait.promise, release: async () => ({ ok: true }), releaseSession: async () => ({ ok: true, removed: 0 }) } } })
@@ -7940,7 +7984,11 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { input.value = '总结'; input.dispatchEvent(new mounted.browserWindow.Event('input', { bubbles: true })) })
       await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-create-submit]')) })
       expect(mounted.host.querySelector('[data-research-create-submit]')?.textContent).toBe('正在读取…')
-      await act(async () => { input.dispatchEvent(new mounted.browserWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); wait.resolve({ sourceText: '迟到的正文' }); await Promise.resolve() })
+      await act(async () => {
+        if (dismiss === 'escape') input.dispatchEvent(new mounted.browserWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+        else mounted.browserWindow.document.body.dispatchEvent(new mounted.browserWindow.Event('pointerdown', { bubbles: true }))
+        wait.resolve({ sourceText: '迟到的正文' }); await Promise.resolve()
+      })
       expect(mounted.host.querySelector('[data-research-create-popover]')).toBeNull()
       expect(generate).not.toHaveBeenCalled()
       expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(1)
