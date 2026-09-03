@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..2b00a50 100644
+index 1dd0e89..fa96d56 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -2795,7 +2795,7 @@ index 1dd0e89..2b00a50 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8549,6174 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8549,6193 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -4698,31 +4698,51 @@ index 1dd0e89..2b00a50 100644
 +			const offset = cascade * 24 / scale;
 +			return { x: center.x + offset, y: center.y + offset, ...dimensions, sizeMode: "auto" };
 +		}
-+		function researchCanvasGeneratedPlacement(nodes, selectedIds, kind, requestedDetail = "standard") {
++		function researchCanvasGeneratedPlacement(nodes, selectedIds, kind, requestedDetail = "standard", context = null) {
 +			const bounds = researchCanvasSelectionBounds(nodes, selectedIds);
 +			if (bounds === null) return null;
 +			if (kind !== "mind-map" && kind !== "summary" && kind !== "create") return null;
 +			const width = 520;
 +			const height = 300;
-+			let y = bounds.top + bounds.height / 2;
-+			const x = bounds.right + 32 + width / 2;
-+			if (kind === 'create') {
-+				for (let attempt = 0; attempt <= nodes.length; attempt += 1) {
-+					const collision = nodes.find((node) => {
-+						const geometry = normalizeResearchCanvasNodeGeometry(node);
-+						return Math.abs(node.x - x) < (geometry.width + width) / 2 + 16 && Math.abs(node.y - y) < (geometry.height + height) / 2 + 16;
-+					});
-+					if (collision === void 0) break;
-+					y = collision.y + normalizeResearchCanvasNodeGeometry(collision).height / 2 + height / 2 + 32;
-+				}
++			const center = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
++			const candidates = [
++				{ x: bounds.right + 32 + width / 2, y: center.y },
++				{ x: bounds.left - 32 - width / 2, y: center.y },
++				{ x: center.x, y: bounds.bottom + 32 + height / 2 },
++				{ x: center.x, y: bounds.top - 32 - height / 2 }
++			];
++			let point = candidates[0];
++			const viewport = context?.viewport;
++			const canvasSize = context?.canvasSize;
++			if (Number.isFinite(viewport?.scale) && viewport.scale > 0 && Number.isFinite(viewport.x) && Number.isFinite(viewport.y) && canvasSize?.width > 24 && canvasSize?.height > 24) {
++				const { scale, x, y } = viewport;
++				const visible = { left: (12 - x) / scale, right: (canvasSize.width - 12 - x) / scale, top: (12 - y) / scale, bottom: (canvasSize.height - 12 - y) / scale };
++				// Prefer adjacent space, but never push an output away to dodge other cards.
++				const fit = candidates.find((candidate) => candidate.x - width / 2 >= visible.left && candidate.x + width / 2 <= visible.right && candidate.y - height / 2 >= visible.top && candidate.y + height / 2 <= visible.bottom);
++				const clampCenter = (value, min, max, size) => max - min >= size ? Math.max(min + size / 2, Math.min(max - size / 2, value)) : min + size / 2;
++				point = fit ?? { x: clampCenter(point.x, visible.left, visible.right, width), y: clampCenter(point.y, visible.top, visible.bottom, height) };
 +			}
 +			return {
-+				x,
-+				y,
++				...point,
 +				width,
 +				height,
 +				sizeMode: "auto"
 +			};
++		}
++		function researchCanvasRaisedNodes(files, artifacts, nodeId) {
++			const allNodes = [...files, ...artifacts];
++			const target = allNodes.find((node) => node.id === nodeId);
++			if (target === void 0) return null;
++			const maximum = Math.max(0, ...allNodes.map((node) => researchCanvasStackOrder(node.stackOrder)));
++			const targetOrder = researchCanvasStackOrder(target.stackOrder);
++			if (targetOrder > 0 && targetOrder === maximum && allNodes.filter((node) => researchCanvasStackOrder(node.stackOrder) === maximum).length === 1) return null;
++			let stackOrders;
++			if (maximum >= 1e6) {
++				const ordered = allNodes.filter((node) => node.id !== nodeId).map((node, index) => ({ node, index })).sort((a, b) => researchCanvasStackOrder(a.node.stackOrder) - researchCanvasStackOrder(b.node.stackOrder) || a.index - b.index).map(({ node }) => node.id);
++				stackOrders = new Map([...ordered, nodeId].map((id, index) => [id, index + 1]));
++			} else stackOrders = new Map([[nodeId, maximum + 1]]);
++			const raise = (node) => stackOrders.has(node.id) ? { ...node, stackOrder: stackOrders.get(node.id) } : node;
++			return { files: files.map(raise), artifacts: artifacts.map(raise) };
 +		}
 +		function researchGenerationAutoGeometry(node, process = node) {
 +			if (node?.sizeMode === "manual") return null;
@@ -5408,11 +5428,12 @@ index 1dd0e89..2b00a50 100644
 +					if (artifact === null) return null;
 +					const artifacts2 = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, artifact]);
 +					if (!artifacts2.some((node) => node.id === id)) return null;
++					const raised = researchCanvasRaisedNodes(snapshot.files, artifacts2, id);
 +					commitUpdate({
-+						artifacts: artifacts2,
++						...raised,
 +						selection: { selectedNodeIds: [id], orderedFileIds: [] }
 +					}, true);
-+					return artifact;
++					return raised.artifacts.find((node) => node.id === id);
 +				},
 +				attachGenerationTask(nodeId, receipt) {
 +					const index = snapshot.artifacts.findIndex((node) => node.id === nodeId && node.generationStatus === 'queued' && node.generationTaskId === void 0);
@@ -5640,19 +5661,9 @@ index 1dd0e89..2b00a50 100644
 +					return true;
 +				},
 +				bringNodeToFront(nodeId, persist = true) {
-+					const allNodes = [...snapshot.files, ...snapshot.artifacts];
-+					const target = allNodes.find((node) => node.id === nodeId);
-+					if (target === void 0) return false;
-+					const maximum = Math.max(0, ...allNodes.map((node) => researchCanvasStackOrder(node.stackOrder)));
-+					const targetOrder = researchCanvasStackOrder(target.stackOrder);
-+					if (targetOrder > 0 && targetOrder === maximum && allNodes.filter((node) => researchCanvasStackOrder(node.stackOrder) === maximum).length === 1) return false;
-+					let stackOrders;
-+					if (maximum >= 1e6) {
-+						const ordered = allNodes.filter((node) => node.id !== nodeId).map((node, index) => ({ node, index })).sort((a, b) => researchCanvasStackOrder(a.node.stackOrder) - researchCanvasStackOrder(b.node.stackOrder) || a.index - b.index).map(({ node }) => node.id);
-+						stackOrders = new Map([...ordered, nodeId].map((id, index) => [id, index + 1]));
-+					} else stackOrders = new Map([[nodeId, maximum + 1]]);
-+					const raise = (node) => stackOrders.has(node.id) ? { ...node, stackOrder: stackOrders.get(node.id) } : node;
-+					update({ files: snapshot.files.map(raise), artifacts: snapshot.artifacts.map(raise) }, persist);
++					const raised = researchCanvasRaisedNodes(snapshot.files, snapshot.artifacts, nodeId);
++					if (raised === null) return false;
++					update(raised, persist);
 +					return true;
 +				},
 +				setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, snapshot.artifacts) }, true); },
@@ -8453,7 +8464,7 @@ index 1dd0e89..2b00a50 100644
 +			const selectionActionsVisible = selectionGeneration !== void 0 && selectionBounds !== null && selectedNodes.length > 0 && selectedNodes.every((node) => !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)) && draggingNodeIds.length === 0 && resizingNodeId === null && marquee === null;
 +			const selectionActionPosition = !selectionActionsVisible ? null : {
 +				left: Math.max(selectionToolbarWidth / 2 + 8, Math.min(Math.max(selectionToolbarWidth / 2 + 8, snapshot.canvasSize.width - selectionToolbarWidth / 2 - 8), (selectionBounds.left + selectionBounds.width / 2) * viewport.scale + viewport.x)),
-+				top: Math.max(54, selectionBounds.top * viewport.scale + viewport.y - 10)
++				top: Math.max(50, Math.min(Math.max(50, snapshot.canvasSize.height - 8), selectionBounds.top * viewport.scale + viewport.y - 10))
 +			};
 +			const startSelectedCreate = async () => {
 +				const prompt = createInputRef.current?.value?.trim() ?? createPrompt.trim();
@@ -8485,7 +8496,7 @@ index 1dd0e89..2b00a50 100644
 +					}
 +					if (createAttempt.current !== attempt) return;
 +					const current = workspace.getSnapshot();
-+					const placement = researchCanvasGeneratedPlacement([...current.files, ...current.artifacts], selectedNodeIds, 'create');
++					const placement = researchCanvasGeneratedPlacement([...current.files, ...current.artifacts], selectedNodeIds, 'create', 'standard', current);
 +					const target = workspace.beginGeneration('create', selectedNodeIds, placement, prompt, frozen);
 +					if (target === null) throw new Error('来源不可用、资料过长或选择已失效，请重新选择（最多24项）。');
 +					closeSelectedCreate();
@@ -8503,7 +8514,6 @@ index 1dd0e89..2b00a50 100644
 +				setMindMapMenuOpen(false);
 +				setContextMenu(null);
 +				const current = workspace.getSnapshot();
-+				const sourceNodes = [...current.files, ...current.artifacts];
 +				const selectedNodeIds = [...current.selection.selectedNodeIds];
 +				const inspect = window.dshDesktop?.researchLinkFrame?.inspect;
 +				if (typeof inspect === "function") {
@@ -8514,7 +8524,8 @@ index 1dd0e89..2b00a50 100644
 +						} catch {}
 +					}));
 +				}
-+				const placement = researchCanvasGeneratedPlacement(sourceNodes, selectedNodeIds, kind, detail);
++				const latest = workspace.getSnapshot();
++				const placement = researchCanvasGeneratedPlacement([...latest.files, ...latest.artifacts], selectedNodeIds, kind, detail, latest);
 +				const target = workspace.beginGeneration(kind, selectedNodeIds, placement, detail);
 +				if (target === null) return;
 +				try {
@@ -8729,9 +8740,13 @@ index 1dd0e89..2b00a50 100644
 +					"data-research-selection-actions": "",
 +					role: "toolbar",
 +					"aria-label": "选中组件操作",
-+					style: { left: `${selectionActionPosition.left}px`, top: `${selectionActionPosition.top}px`, maxWidth: 'calc(100% - 16px)', flexWrap: 'wrap' },
++					style: { left: `${selectionActionPosition.left}px`, top: `${selectionActionPosition.top}px`, width: 'max-content', maxWidth: 'calc(100% - 16px)', flexWrap: 'nowrap' },
 +					children: [(0, react_jsx_runtime.jsxs)("div", {
++						style: { display: 'flex', gap: 2, minWidth: 0, maxWidth: '100%', overflowX: 'auto', scrollbarWidth: 'none' },
++						"data-research-selection-action-row": "",
++						children: [(0, react_jsx_runtime.jsxs)("div", {
 +						className: "rScV5Q_mindMapControl",
++						style: { flexShrink: 0 },
 +						children: [(0, react_jsx_runtime.jsxs)("button", {
 +							type: "button",
 +							"aria-label": "思维导图",
@@ -8743,33 +8758,37 @@ index 1dd0e89..2b00a50 100644
 +								setMindMapMenuOpen((open) => !open);
 +							},
 +							children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutline16, { size: 16 }), "思维导图", (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { size: 14 })]
-+						}), !mindMapMenuOpen ? null : (0, react_jsx_runtime.jsx)("div", {
-+							className: "rScV5Q_mindMapMenu",
-+							"data-research-mind-map-menu": "",
-+							role: "menu",
-+							"aria-label": "思维导图详细度",
-+							children: RESEARCH_MIND_MAP_DETAIL_OPTIONS.map((option) => (0, react_jsx_runtime.jsxs)("button", {
-+								type: "button",
-+								role: "menuitem",
-+								"data-research-mind-map-detail": option.value,
-+								onClick: () => startSelectionGeneration('mind-map', option.value),
-+								children: [(0, react_jsx_runtime.jsx)("strong", { children: option.label }), (0, react_jsx_runtime.jsx)("span", { children: option.description })]
-+							}, option.value))
 +						})]
 +					}), (0, react_jsx_runtime.jsxs)("button", {
 +						type: "button",
 +						"aria-label": "总结提炼",
++						style: { flexShrink: 0 },
 +						disabled: selectionGeneration.disabled === true,
 +						onClick: () => startSelectionGeneration('summary'),
 +						children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconListPenOutline16, { size: 16 }), "总结提炼"]
 +					}), (0, react_jsx_runtime.jsxs)("button", {
 +						ref: createTriggerRef, type: 'button', 'data-research-selection-create': '', 'aria-label': '基于所选创建', 'aria-expanded': createSelection !== null, 'aria-haspopup': 'dialog', disabled: selectionGeneration.disabled === true,
++						style: { flexShrink: 0 },
 +						onClick: () => {
 +							const current = workspace.getSnapshot();
 +							const ids = Object.freeze([...current.selection.selectedNodeIds]);
 +							setMindMapMenuOpen(false); setCreatePrompt(''); setCreateError(ids.length > RESEARCH_GENERATION_MAX_SOURCES ? '最多选择24项资料' : null);
 +							setCreateSelection({ ids, files: current.files.filter((node) => ids.includes(node.id)), artifacts: current.artifacts.filter((node) => ids.includes(node.id)), position: selectionActionPosition });
 +						}, children: [(0, react_jsx_runtime.jsx)('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, focusable: false, children: (0, react_jsx_runtime.jsx)('path', { d: 'M8.5 3H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7.5M12 1.5v4M10 3.5h4M6 8h4M8 6v4' }) }), '基于所选创建']
++					})]
++					}), !mindMapMenuOpen ? null : (0, react_jsx_runtime.jsx)("div", {
++						className: "rScV5Q_mindMapMenu",
++						"data-research-mind-map-menu": "",
++						role: "menu",
++						"aria-label": "思维导图详细度",
++						style: { left: 5, maxWidth: 'calc(100% - 10px)', ...(selectionActionPosition.top + 174 > snapshot.canvasSize.height - 8 ? { top: 'auto', bottom: 48 } : { top: 48 }) },
++						children: RESEARCH_MIND_MAP_DETAIL_OPTIONS.map((option) => (0, react_jsx_runtime.jsxs)("button", {
++							type: "button",
++							role: "menuitem",
++							"data-research-mind-map-detail": option.value,
++							onClick: () => startSelectionGeneration('mind-map', option.value),
++							children: [(0, react_jsx_runtime.jsx)("strong", { children: option.label }), (0, react_jsx_runtime.jsx)("span", { children: option.description })]
++						}, option.value))
 +					})]
 +				}), createSelection === null ? null : (0, react_jsx_runtime.jsxs)('div', {
 +					ref: createPopoverRef, role: 'dialog', 'aria-label': '基于所选创建', 'data-research-create-popover': '',
@@ -9002,7 +9021,7 @@ index 1dd0e89..2b00a50 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +14725,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +14744,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9021,7 +9040,7 @@ index 1dd0e89..2b00a50 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +14764,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +14783,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -9381,7 +9400,7 @@ index 1dd0e89..2b00a50 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15125,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15144,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -9553,7 +9572,7 @@ index 1dd0e89..2b00a50 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +15295,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +15314,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -9565,7 +9584,7 @@ index 1dd0e89..2b00a50 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +15305,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +15324,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -9573,7 +9592,7 @@ index 1dd0e89..2b00a50 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +15337,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +15356,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -9583,7 +9602,7 @@ index 1dd0e89..2b00a50 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +15356,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +15375,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -9688,7 +9707,7 @@ index 1dd0e89..2b00a50 100644
  				})]
  			});
  		}
-@@ -6951,6 +15438,28 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +15457,28 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -9717,7 +9736,7 @@ index 1dd0e89..2b00a50 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +15489,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +15508,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -9738,7 +9757,7 @@ index 1dd0e89..2b00a50 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +15511,18 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +15530,18 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -9759,7 +9778,7 @@ index 1dd0e89..2b00a50 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +15565,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +15584,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -9777,7 +9796,7 @@ index 1dd0e89..2b00a50 100644
  				})] })
  			});
  		}
-@@ -7053,14 +15575,74 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +15594,74 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -9854,7 +9873,7 @@ index 1dd0e89..2b00a50 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +15653,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +15672,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -9871,7 +9890,7 @@ index 1dd0e89..2b00a50 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +15676,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +15695,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -9880,7 +9899,7 @@ index 1dd0e89..2b00a50 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +15729,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +15748,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -9898,7 +9917,7 @@ index 1dd0e89..2b00a50 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +15765,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +15784,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -9906,7 +9925,7 @@ index 1dd0e89..2b00a50 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +16657,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +16676,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -9937,7 +9956,7 @@ index 1dd0e89..2b00a50 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +16702,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +16721,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -9962,7 +9981,7 @@ index 1dd0e89..2b00a50 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +17656,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +17675,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -9971,7 +9990,7 @@ index 1dd0e89..2b00a50 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +17746,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +17765,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10013,7 +10032,7 @@ index 1dd0e89..2b00a50 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +17955,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +17974,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10030,7 +10049,7 @@ index 1dd0e89..2b00a50 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18125,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18144,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10040,7 +10059,7 @@ index 1dd0e89..2b00a50 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +18167,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18186,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10055,7 +10074,7 @@ index 1dd0e89..2b00a50 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +18185,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18204,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10068,7 +10087,7 @@ index 1dd0e89..2b00a50 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +18234,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +18253,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10082,7 +10101,7 @@ index 1dd0e89..2b00a50 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +18272,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +18291,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10092,7 +10111,7 @@ index 1dd0e89..2b00a50 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +18404,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +18423,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10107,7 +10126,7 @@ index 1dd0e89..2b00a50 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +18420,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +18439,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10116,7 +10135,7 @@ index 1dd0e89..2b00a50 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +18444,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +18463,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -10125,7 +10144,7 @@ index 1dd0e89..2b00a50 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +18470,144 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +18489,144 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);

@@ -28,7 +28,7 @@ async function fixture(desktop: any = {}, win?: Window) {
     if (id === 'react') return react
     if (id === 'react/jsx-runtime') return requireModule(id)
     if (id === 'react-dom') return requireModule(id)
-    if (id === '@deepseek-ai/dsh-client-ui-primitives') return new Proxy({ MarkdownText: ({ text }: any) => createElement('div', null, text) }, { get: (target, key) => Reflect.get(target, key) ?? fakeModule() })
+    if (id === '@deepseek-ai/dsh-client-ui-primitives') return new Proxy({ MarkdownText: ({ text }: any) => createElement('div', null, text) }, { get: (target, key) => Reflect.get(target, key) ?? (String(key).startsWith('Icon') ? () => null : fakeModule()) })
     return fakeModule()
   })
   const storage = new Storage()
@@ -39,7 +39,7 @@ const file = { assetId: 'a'.repeat(48), name: 'report.pdf', mimeType: 'applicati
 const grant = (nodeId: string) => ({ nodeId, sessionId: 'target', authorizationId: `auth-${nodeId}`, capabilityToken: 'runtime-only', url: 'sherlock-research-file://preview', name: 'report.pdf', contentType: 'application/pdf', path: '/managed/report.pdf' })
 const cleanups: Array<() => Promise<void>> = []
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup() })
-async function mounted(desktop: any = {}, configure?: (win: Window) => void) {
+async function mounted(desktop: any = {}, configure?: (win: Window) => void, selectionGeneration?: any) {
   const win = new Window({ url: 'https://sherlock.local/' })
   configure?.(win)
   const keys = ['window', 'document', 'navigator', 'IS_REACT_ACT_ENVIRONMENT']
@@ -52,7 +52,7 @@ async function mounted(desktop: any = {}, configure?: (win: Window) => void) {
   const host = win.document.createElement('div'); win.document.body.append(host)
   const root = createRoot(host)
   let unmounted = false
-  const render = async (sessionId = 'target') => { await act(async () => root.render(createElement(f.bundle.ResearchCanvas, { sessionId, t: (key: string) => key, researchWorkspaces: registry }))) }
+  const render = async (sessionId = 'target') => { await act(async () => root.render(createElement(f.bundle.ResearchCanvas, { sessionId, t: (key: string) => key, researchWorkspaces: registry, selectionGeneration }))) }
   const unmount = async () => { if (!unmounted) { await act(async () => root.unmount()); unmounted = true } }
   cleanups.push(async () => { await unmount(); await win.happyDOM.abort(); keys.forEach((key, i) => { if (originals[i]) Object.defineProperty(globalThis, key, originals[i]!); else delete (globalThis as any)[key] }) })
   await render()
@@ -67,6 +67,45 @@ async function mounted(desktop: any = {}, configure?: (win: Window) => void) {
   const query = (selector: string) => host.querySelector(selector) as any
   return { ...f, win, workspace, registry, host, canvas, query, event, render, unmount }
 }
+
+describe('selection actions at viewport edges', () => {
+  it('keeps the toolbar above the bottom boundary as the canvas resizes', async () => {
+    const m = await mounted({}, undefined, { generate: async () => ({ ok: true }) })
+    await act(async () => {
+      m.workspace.setArtifacts([textNode('edge', 950, 1100)])
+      m.workspace.updateSelection(['edge'], 'replace')
+    })
+    const toolbar = m.query('[data-research-selection-actions]')
+    expect(Number.parseFloat(toolbar.style.top)).toBeLessThanOrEqual(692)
+    await act(async () => m.workspace.setCanvasSize({ width: 600, height: 400 }))
+    expect(Number.parseFloat(toolbar.style.top)).toBeLessThanOrEqual(392)
+  })
+  it.each(['summary', 'mind-map', 'create'])('uses visible nearby placement and foreground stacking from the real %s control', async (kind) => {
+    const m = await mounted({}, undefined, { generate: async () => ({ ok: true }) })
+    await act(async () => {
+      m.workspace.setArtifacts([{ ...textNode('edge', 950, 350), stackOrder: 100 }, { ...textNode('neighbor', 500, 350), messageId: 'neighbor', stackOrder: 200 }])
+      m.workspace.updateSelection(['edge'], 'replace')
+    })
+    if (kind === 'create') {
+      await m.event('click', m.query('[data-research-selection-create]'))
+      const input = m.query('[data-research-create-popover] textarea')
+      input.value = '提炼重点'
+      await m.event('input', input)
+      await m.event('click', m.query('[data-research-create-submit]'))
+    } else if (kind === 'mind-map') {
+      await m.event('click', m.query('button[aria-label="思维导图"]'))
+      await m.event('click', m.query('[data-research-mind-map-detail="standard"]'))
+    } else await m.event('click', m.query('button[aria-label="总结提炼"]'))
+    const snapshot = m.workspace.getSnapshot()
+    const created = snapshot.artifacts.at(-1)
+    expect(created.x + created.width / 2).toBeLessThanOrEqual(988)
+    expect(created.y).toBe(350)
+    expect(created.stackOrder).toBeGreaterThan(200)
+    expect(snapshot.selection.selectedNodeIds).toEqual([created.id])
+    expect(Number(m.query(`[data-research-node-id="${created.id}"]`).style.zIndex)).toBeGreaterThan(200)
+    expect(snapshot.viewport).toMatchObject({ x: 0, y: 0, scale: 1 })
+  })
+})
 
 describe('real workspace clipboard transactions', () => {
   it('inserts independent identities, preserves relative/manual geometry and remaps provenance in one undo/redo', async () => {
