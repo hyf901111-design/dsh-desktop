@@ -1,0 +1,90 @@
+diff --git a/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js b/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js
+index b172a4f..1e3cdca 100644
+--- a/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js
+@@ -151,6 +151,27 @@ function parseArguments(raw) {
+ 	}
+ }
+ /**
++* Resolve the tool scheduler across duplicated dsh-tools module instances.
++*
++* User-installed profile packages can carry their own compatible dsh-tools
++* copy. Its private scheduler Symbol has the same description but a different
++* identity, so a direct lookup from this agent-loop copy would otherwise
++* produce `undefined` and crash before the first tool dispatch.
++*/
++function resolveToolRuntimeScheduler(registry) {
++	const direct = registry?.[TOOL_RUNTIME_SCHEDULER];
++	if (isToolRuntimeScheduler(direct)) return direct;
++	const compatible = Object.getOwnPropertySymbols(registry ?? {}).map((symbol) => ({
++		symbol,
++		value: registry[symbol]
++	})).filter(({ symbol, value }) => symbol.description === "@deepseek-ai/dsh-tools.scheduler" && isToolRuntimeScheduler(value));
++	if (compatible.length === 1) return compatible[0].value;
++	throw new Error("tool runtime scheduler is unavailable: dsh-agent-loop and dsh-tools are incompatible");
++}
++function isToolRuntimeScheduler(value) {
++	return value !== null && typeof value === "object" && typeof value.prepare === "function" && typeof value.dispatch === "function" && typeof value.finalize === "function" && typeof value.finish === "function";
++}
++/**
+ * Run one exclusive barrier or parallel pool. Later calls are reclassified
+ * before start; an exclusive reclassification waits for the current pool to
+ * drain and remains for the caller's next barrier. Results and contexts commit
+@@ -162,6 +183,7 @@ function parseArguments(raw) {
+ async function runGroup(ctx, turn, step, group, mode, signal, acceptContext) {
+ 	const { session } = ctx.agents.requireInitiator();
+ 	const { maxParallelToolCalls } = ctx.agentLoop.config;
++	const scheduler = resolveToolRuntimeScheduler(ctx.tools);
+ 	const slots = group.map(() => void 0);
+ 	const callSeqs = group.map(() => -1);
+ 	let nextToStart = 0;
+@@ -178,7 +200,7 @@ async function runGroup(ctx, turn, step, group, mode, signal, acceptContext) {
+ 			const slot = slots[committed];
+ 			if (slot === void 0) break;
+ 			const call = group[committed];
+-			const result = slot.needsPost ? await ctx.tools[TOOL_RUNTIME_SCHEDULER].finalize(slot.exec, slot.result) : ctx.tools[TOOL_RUNTIME_SCHEDULER].finish(slot.exec, slot.result);
++			const result = slot.needsPost ? await scheduler.finalize(slot.exec, slot.result) : scheduler.finish(slot.exec, slot.result);
+ 			appendToolResult(session, turn, step, call.block, result, callSeqs[committed]);
+ 			for (const context of result.additionalContexts ?? []) acceptContext(context);
+ 			concluded ||= result.concludesTurn === true;
+@@ -190,11 +212,11 @@ async function runGroup(ctx, turn, step, group, mode, signal, acceptContext) {
+ 		const call = group[index];
+ 		callSeqs[index] = appendToolCall(session, turn, step, call.block);
+ 		started++;
+-		const prepared = await ctx.tools[TOOL_RUNTIME_SCHEDULER].prepare(call.exec);
++		const prepared = await scheduler.prepare(call.exec);
+ 		throwSchedulerFailure();
+ 		switch (prepared.kind) {
+ 			case "dispatch": {
+-				const promise = ctx.tools[TOOL_RUNTIME_SCHEDULER].dispatch(prepared.exec).then((outcome) => {
++				const promise = scheduler.dispatch(prepared.exec).then((outcome) => {
+ 					slots[index] = {
+ 						exec: prepared.exec,
+ 						result: outcome.result,
+@@ -1292,4 +1314,4 @@ var AgentLoop = class extends Service {
+ 	}
+ };
+ //#endregion
+-export { AGENT_LOOP_SETTINGS_NAMESPACE, AGENT_LOOP_SETTINGS_SCHEMA, AgentLoop, AgentLoop as default, CONFIGURED_AGENT_IDENTITIES_KEY, DEFAULT_MAX_PARALLEL_TOOL_CALLS };
++export { AGENT_LOOP_SETTINGS_NAMESPACE, AGENT_LOOP_SETTINGS_SCHEMA, AgentLoop, AgentLoop as default, CONFIGURED_AGENT_IDENTITIES_KEY, DEFAULT_MAX_PARALLEL_TOOL_CALLS, resolveToolRuntimeScheduler };
+diff --git a/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts b/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts
+index 11b5535..1d96063 100644
+--- a/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts
++++ b/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts
+@@ -9,6 +9,7 @@ import z from '@deepseek-ai/schemastery';
+ import type { Agent, AgentFactory, AgentHandle, AgentOptions, CreateAgentOptions, ResumeAgentOptions } from '@deepseek-ai/dsh-agent';
+ import { SessionId } from '@deepseek-ai/dsh-session';
+ import type { SessionHeader } from '@deepseek-ai/dsh-session';
++import type { ToolRuntimeScheduler } from '@deepseek-ai/dsh-tools';
+ import { DEFAULT_MAX_PARALLEL_TOOL_CALLS } from './constants.ts';
+ declare module '@deepseek-ai/cordis' {
+     interface Context {
+@@ -40,6 +41,8 @@ declare module '@deepseek-ai/cordis' {
+     }
+ }
+ export { DEFAULT_MAX_PARALLEL_TOOL_CALLS };
++/** Resolve the internal scheduler even when a compatible dsh-tools copy owns it. */
++export declare function resolveToolRuntimeScheduler(registry: object): ToolRuntimeScheduler;
+ /**
+  * One launcher-selected session identity for a configured agent. `resume`
+  * distinguishes rehydrating existing persisted history from creating the
