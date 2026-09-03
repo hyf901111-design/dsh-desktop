@@ -287,6 +287,17 @@ describe('ResearchContextIndex', () => {
     await expect(search).rejects.toThrow(/不存在|snapshot/i)
   })
 
+  it('accounts stable search-order caches against storage and rejects an evicted snapshot before returning results', async () => {
+    const index = new ResearchContextIndex({ loadFileText: async () => '', maxStoredBytes: 850 })
+    const packet = await index.prepare({
+      sessionId: 'cache-limit', query: '初始',
+      sources: Array.from({ length: 2 }, (_, number) => source(`id-${number}-${'x'.repeat(100)}`, '正文'))
+    })
+
+    await expect(index.search('cache-limit', { snapshotId: packet.snapshotId, query: '新的排序问题' })).rejects.toThrow(/不存在|snapshot/i)
+    expect(index.snapshots.has(packet.snapshotId)).toBe(false)
+  })
+
   it('atomically limits concurrent tool reads and evicts old snapshots under configured storage limits', async () => {
     let number = 0
     const index = new ResearchContextIndex({
