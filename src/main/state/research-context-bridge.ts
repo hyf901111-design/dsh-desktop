@@ -172,7 +172,7 @@ export class ResearchContextBridge {
           }
         } catch { /* Authorization or stat failure yields metadata only. */ }
       } else if (!isFile) {
-        if (['assistant-result', 'assistant-excerpt'].includes(source.kind)) source.text = text(node.excerpt)
+        if (['pasted-text', 'assistant-result', 'assistant-excerpt'].includes(source.kind)) source.text = text(node.excerpt)
         if (source.kind === 'web-link') { source.text = text(node.sourceText); source.sourceUrl = publicUrl(node.url) }
         if (['generated-summary', 'generated-mind-map'].includes(source.kind)) {
           source.status = text(node.generationStatus, 128) || 'unavailable'

@@ -36,6 +36,15 @@ async function fixture(options = {}) {
 }
 
 describe('trusted research canvas capture', () => {
+  it('captures native pasted-text and explicitly marks long evidence truncation', async () => {
+    const f = await fixture()
+    f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')
+    f.storage.setItem('sherlock.research.canvas.artifacts.v1:parent', JSON.stringify([{ id: 'paste', kind: 'pasted-text', title: '原生文字', excerpt: '甲'.repeat(150_000) }]))
+    const capture = await f.bridge.capture({ sessionId: 'parent' })
+    const { sources } = await (await f.snapshot({ sessionId: 'parent', captureId: capture.captureId })).json()
+    expect(sources[0]).toMatchObject({ kind: 'pasted-text', status: 'ready', truncated: true })
+    expect(sources[0].text).toHaveLength(120_000)
+  })
   it('reads native mind-map content as evidence in right-side conversation', async () => {
     const f = await fixture()
     f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')

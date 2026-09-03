@@ -43,6 +43,31 @@ async function source(f: Awaited<ReturnType<typeof fixture>>, name = 'report.pdf
 afterEach(async () => { await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))) })
 
 describe('durable research clipboard', () => {
+  it('preserves an explicitly renamed webpage title mode across clipboard serialization', async () => {
+    const f = await fixture()
+    await f.service.copy({ sessionId: 's', nodes: [{ id: 'web', kind: 'web-link', title: '我的命名', titleMode: 'custom', url: 'https://example.com/article', excerpt: 'https://example.com/article', x: 0, y: 0 }] })
+    expect(await f.service.read()).toMatchObject({ kind: 'components', nodes: [{ title: '我的命名', titleMode: 'custom' }] })
+  })
+  it('does not label an in-flight copied summary as completed merely because its placeholder is nonempty', async () => {
+    const f = await fixture()
+    await f.service.copy({ sessionId: 'source', nodes: [{ id: 'pending', kind: 'generated-summary', title: '结果', excerpt: '正在生成…', generationStatus: 'running', generationTaskId: 'live-task', sourceNodeIds: ['old-source'], x: 0, y: 0 }] })
+    expect(await f.service.read()).toMatchObject({ kind: 'components', nodes: [{ generationStatus: 'interrupted' }] })
+  })
+  it('treats the metadata name in ordinary HTML prose as plain text, not a broken envelope', async () => {
+    const f = await fixture()
+    f.clipboard.html = '<span>sherlock-research-clipboard</span>'; f.clipboard.text = 'ordinary text'
+    expect(await f.service.inspect()).toEqual({ available: true })
+    expect(await f.service.read()).toEqual({ kind: 'text', text: 'ordinary text' })
+  })
+  it('returns a managed authoritative path only from successful target-bound admission', async () => {
+    const f = await fixture(); const s = await source(f)
+    await f.service.copy({ sessionId: 'source', nodes: [s.node] })
+    const payload = await f.service.read(); if (payload.kind !== 'components') throw new Error()
+    expect(payload.nodes[0]?.path).toBeUndefined()
+    const preview = await f.service.admit({ assetId: payload.nodes[0]!.assetId, sessionId: 'target', nodeId: 'new' })
+    expect(preview).toMatchObject({ path: expect.stringContaining('/research-clipboard/assets/') })
+    expect((preview as any).path).not.toBe(s.target)
+  })
   it('keeps a maximum-size text component readable after HTML fallback escaping expands it', async () => {
     const f = await fixture(); const content = '<'.repeat(1024 * 1024)
     expect(await f.service.copy({ sessionId: 's', nodes: [{ id: 'text', kind: 'pasted-text', title: 'text', excerpt: content, x: 0, y: 0 }] })).toEqual({ ok: true })

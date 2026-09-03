@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..cbbbd5c 100644
+index 1dd0e89..8282dec 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -2795,7 +2795,7 @@ index 1dd0e89..cbbbd5c 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8549,5882 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8549,6134 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -2931,7 +2931,8 @@ index 1dd0e89..cbbbd5c 100644
 +		const RESEARCH_GENERATION_MAX_SOURCES = 24;
 +		const RESEARCH_GENERATION_MAX_EVENTS = 80;
 +		const RESEARCH_GENERATION_MAX_PARTIAL_TEXT = 16384;
-+		const RESEARCH_ARTIFACT_KINDS = /* @__PURE__ */ new Set(["assistant-result", "assistant-excerpt", "generated-summary", "generated-mind-map", "web-link", "generated-container"]);
++		const RESEARCH_ARTIFACT_KINDS = /* @__PURE__ */ new Set(["pasted-text", "assistant-result", "assistant-excerpt", "generated-summary", "generated-mind-map", "web-link", "generated-container"]);
++		const RESEARCH_CLIPBOARD_TEXT_BYTES = 1048576;
 +		const RESEARCH_GENERATION_STATUSES = /* @__PURE__ */ new Set(["draft", "queued", "running", "completed", "failed", "cancelled", "interrupted"]);
 +		const RESEARCH_ACTIVE_GENERATION_STATUSES = /* @__PURE__ */ new Set(["queued", "running"]);
 +		const RESEARCH_CONTAINER_TYPES = /* @__PURE__ */ new Set(["web", "chart", "table", "kpi", "markdown", "mind-map"]);
@@ -3144,9 +3145,9 @@ index 1dd0e89..cbbbd5c 100644
 +			const kind = RESEARCH_ARTIFACT_KINDS.has(value.kind) ? value.kind : void 0;
 +			const messageId = boundedResearchArtifactString(value.messageId, RESEARCH_CANVAS_TEXT_LIMIT);
 +			const title = boundedResearchArtifactString(value.title, RESEARCH_ARTIFACT_MAX_TITLE);
-+			const excerpt = preserveResearchArtifactText(value.excerpt);
++			const excerpt = preserveResearchArtifactText(kind === "pasted-text" && typeof value.excerpt === "string" ? value.excerpt.slice(0, RESEARCH_ARTIFACT_MAX_EXCERPT) : value.excerpt);
 +			const sourceText = kind === "web-link" && value.sourceText !== void 0 ? preserveResearchArtifactText(value.sourceText, RESEARCH_PROMPT_WEB_SOURCE_TEXT_MAX) : null;
-+			return id === null || messageId === null || title === null || excerpt === null || value.sourceText !== void 0 && sourceText === null ? null : { id, ...(kind === void 0 ? {} : { kind }), messageId, title, excerpt, ...(sourceText === null ? {} : { sourceText }) };
++			return id === null || messageId === null || title === null || excerpt === null || value.sourceText !== void 0 && sourceText === null ? null : { id, ...(kind === void 0 ? {} : { kind }), messageId, title, excerpt, ...(kind === "pasted-text" && (value.truncated === true || value.excerpt.length > excerpt.length) ? { truncated: true } : {}), ...(sourceText === null ? {} : { sourceText }) };
 +		}
 +		function researchPromptArtifactsForSend(snapshot, references) {
 +			const liveArtifacts = new Map((snapshot?.artifacts ?? []).map((artifact) => [artifact.id, artifact]));
@@ -3418,6 +3419,7 @@ index 1dd0e89..cbbbd5c 100644
 +			});
 +		}
 +		function researchArtifactReferenceKind(artifact) {
++			if (artifact?.kind === "pasted-text") return "markdown";
 +			if (artifact?.kind === "generated-container") return artifact.containerSpec?.type ?? parseResearchContainerSpec(artifact.excerpt)?.type ?? "artifact";
 +			if (artifact?.kind === "web-link") return "web";
 +			if (artifact?.kind === "assistant-result") return "assistant-reply";
@@ -4077,6 +4079,7 @@ index 1dd0e89..cbbbd5c 100644
 +				id,
 +				...(path === void 0 ? {} : { path }),
 +				name,
++				...(typeof value.assetId === "string" && /^[a-f0-9]{48}$/.test(value.assetId) ? { assetId: value.assetId } : {}),
 +				...(displayName === null || displayName === void 0 ? {} : { displayName }),
 +				...(mediaType === void 0 ? {} : { mediaType }),
 +				...(authorizationId === void 0 ? {} : { authorizationId, contentType }),
@@ -4099,7 +4102,7 @@ index 1dd0e89..cbbbd5c 100644
 +				for (const item of value) {
 +					if (nodes.length >= RESEARCH_CANVAS_MAX_FILES_PER_SESSION) break;
 +					const node = canonicalResearchCanvasFileNode(item);
-+					if (node === null || ids.has(node.id) || node.path !== void 0 && paths.has(node.path)) continue;
++					if (node === null || ids.has(node.id) || !node.assetId && node.path !== void 0 && paths.has(node.path)) continue;
 +					ids.add(node.id);
 +					if (node.path !== void 0) paths.add(node.path);
 +					nodes.push(node);
@@ -4166,7 +4169,10 @@ index 1dd0e89..cbbbd5c 100644
 +			return typeof value === "string" && value.length <= limit && value.trim().length > 0 ? value : null;
 +		}
 +		function researchCanvasArtifactContentEditable(node) {
-+			return node?.kind === "assistant-result" || node?.kind === "generated-summary" && node?.generationStatus === "completed";
++			return node?.kind === "pasted-text" || node?.kind === "assistant-result" || node?.kind === "generated-summary" && node?.generationStatus === "completed";
++		}
++		function researchClipboardText(value) {
++			return typeof value === "string" && value.trim() && new TextEncoder().encode(value).byteLength <= RESEARCH_CLIPBOARD_TEXT_BYTES ? value : null;
 +		}
 +		function canonicalResearchGenerationSource(value, allowAudit = false) {
 +			if (typeof value !== "object" || value === null) return null;
@@ -4232,11 +4238,17 @@ index 1dd0e89..cbbbd5c 100644
 +				}
 +				const artifact = artifacts.get(id);
 +				if (requireEvidence && (artifact === void 0 || RESEARCH_ACTIVE_GENERATION_STATUSES.has(artifact.generationStatus) || artifact.kind === 'web-link' && !artifact.sourceText || artifact.kind === 'generated-container' && !artifact.containerSpec || ['failed', 'cancelled', 'interrupted', 'draft'].includes(artifact.generationStatus))) return null;
++				let evidence = artifact?.kind === 'generated-container' && artifact.containerSpec ? artifact.containerSpec.type === 'web' ? artifact.sourceText : researchContainerPlainText(artifact.containerSpec) : artifact?.sourceText ?? artifact?.excerpt;
++				if (artifact?.kind === "pasted-text" && typeof evidence === "string" && new TextEncoder().encode(evidence).byteLength > 119000) {
++					let end = Math.min(evidence.length, 119000);
++					while (new TextEncoder().encode(evidence.slice(0, end)).byteLength > 119000) end = Math.floor(end * .9);
++					evidence = `[来源文字过长，以下证据已截断；原文仍完整保存在画板。]\n${evidence.slice(0, end)}`;
++				}
 +				const source = canonicalResearchGenerationSource({
 +					id,
 +					type: "artifact",
 +					title: artifact?.displayName ?? artifact?.title,
-+					text: artifact?.kind === 'generated-container' && artifact.containerSpec ? artifact.containerSpec.type === 'web' ? artifact.sourceText : researchContainerPlainText(artifact.containerSpec) : artifact?.sourceText ?? artifact?.excerpt
++					text: evidence
 +				});
 +				if (source === null) return null;
 +				sources.push(source);
@@ -4334,7 +4346,7 @@ index 1dd0e89..cbbbd5c 100644
 +			const container = kind === "generated-container";
 +			const webLink = kind === "web-link";
 +			const generated = selectionGenerated || container;
-+			const rawExcerpt = kind === "assistant-result" ? preserveResearchArtifactText(value.excerpt) : generated ? preserveResearchArtifactText(value.excerpt, RESEARCH_GENERATION_MAX_OUTPUT) : boundedResearchArtifactString(value.excerpt, RESEARCH_ARTIFACT_MAX_EXCERPT);
++			const rawExcerpt = kind === "pasted-text" ? researchClipboardText(value.excerpt) : kind === "assistant-result" ? preserveResearchArtifactText(value.excerpt) : generated ? preserveResearchArtifactText(value.excerpt, RESEARCH_GENERATION_MAX_OUTPUT) : boundedResearchArtifactString(value.excerpt, RESEARCH_ARTIFACT_MAX_EXCERPT);
 +			const excerpt = kind === "assistant-excerpt" ? normalizeResearchArtifactText(rawExcerpt) : rawExcerpt;
 +			const generationStatus = generated ? researchGenerationStatus(value.generationStatus) : null;
 +			const sourceNodeIds = selectionGenerated ? researchSelectionIds(value.sourceNodeIds) : [];
@@ -4936,6 +4948,13 @@ index 1dd0e89..cbbbd5c 100644
 +			const undoHistory = [];
 +			const redoHistory = [];
 +			let pendingHistoryTransaction = null;
++			let clipboardQueue = Promise.resolve();
++			let clipboardEpoch = 0;
++			const clipboardAdmissionIds = new Set();
++			const cancelClipboardImports = () => {
++				clipboardEpoch += 1;
++				for (const nodeId of clipboardAdmissionIds) Promise.resolve().then(() => window.dshDesktop?.researchPreview?.revokeNode?.({ sessionId, nodeId })).catch(() => void 0);
++			};
 +			const persistSnapshot = () => {
 +				const filesDurable = saveResearchCanvasFiles(storage, sessionId, snapshot.files);
 +				const artifactsDurable = saveResearchCanvasArtifacts(storage, sessionId, snapshot.artifacts);
@@ -4986,7 +5005,7 @@ index 1dd0e89..cbbbd5c 100644
 +				if (typeof revokeNode !== "function") return;
 +				const reachable = reachableHistoryFileIds();
 +				for (const nodeId of orphanRevocationIds) {
-+					if (reachable.has(nodeId) || !beginOrphanRevocation(nodeId)) continue;
++					if (reachable.has(nodeId) || clipboardAdmissionIds.has(nodeId) || !beginOrphanRevocation(nodeId)) continue;
 +					Promise.resolve().then(() => revokeNode({ sessionId, nodeId })).then((result) => {
 +						if (result?.ok === true) updateOrphanRevocations([nodeId], true);
 +					}).catch(() => void 0).finally(() => endOrphanRevocation(nodeId));
@@ -5044,6 +5063,7 @@ index 1dd0e89..cbbbd5c 100644
 +				finalizeUnreachablePreviewNodes();
 +			};
 +			const undo = () => {
++				cancelClipboardImports();
 +				finalizeHistoryTransaction();
 +				const entry = undoHistory.pop();
 +				if (entry === void 0) return false;
@@ -5052,6 +5072,7 @@ index 1dd0e89..cbbbd5c 100644
 +				return true;
 +			};
 +			const redo = () => {
++				cancelClipboardImports();
 +				finalizeHistoryTransaction();
 +				const entry = redoHistory.pop();
 +				if (entry === void 0) return false;
@@ -5093,8 +5114,147 @@ index 1dd0e89..cbbbd5c 100644
 +					}, point, createResearchCanvasArtifactId)
 +				}, true);
 +			};
++			// Clipboard publishes once, only after all three persisted keys succeed. The
++			// existing storage bridge is multi-key: compensation is not crash atomic.
++			const persistClipboardBatch = (next) => {
++				const entries = [
++					[researchCanvasStorageKey(sessionId), JSON.stringify(next.files), JSON.stringify(snapshot.files)],
++					[researchCanvasArtifactsStorageKey(sessionId), JSON.stringify(next.artifacts), JSON.stringify(snapshot.artifacts)],
++					[researchCanvasSelectionStorageKey(sessionId), JSON.stringify(next.selection), JSON.stringify(snapshot.selection)]
++				];
++				const written = [];
++				try {
++					if (storage === null) throw new Error();
++					for (const entry of entries) {
++						written.push(entry);
++						if (storage.setItem(entry[0], entry[1]) === false) throw new Error();
++					}
++				} catch {
++					let restored = true;
++					for (const entry of written.reverse()) {
++						try { if (storage?.setItem(entry[0], entry[2]) === false) restored = false; } catch { restored = false; }
++					}
++					const error = new Error(restored ? "画板存储失败，修改未保存，请重试。" : "画板存储失败，旧数据恢复尚未完成；请恢复磁盘空间后重试，勿关闭画板。");
++					error.clipboardCompensationFailed = !restored;
++					throw error;
++				}
++			};
++			const insertClipboardBatch = async (payload, point, active, epoch) => {
++				const checkActive = () => { if (epoch !== clipboardEpoch || !active()) throw new Error("粘贴已取消或画板已切换。"); };
++				checkActive();
++				if (payload?.kind === "empty") return [];
++				let raw;
++				if (payload?.kind === "text") {
++					if (researchClipboardText(payload.text) === null) throw new Error("剪贴板文字为空或超过 1 MiB 上限。");
++					raw = [{ id: "clipboard-text", kind: "pasted-text", title: normalizeResearchArtifactText(payload.text, 60), excerpt: payload.text, x: 0, y: 0 }];
++				} else if (payload?.kind === "files") raw = payload.files?.map((file, index) => ({ ...file, id: `clipboard-file-${index}`, kind: "file", x: index * 36, y: index * 36 }));
++				else if (payload?.kind === "components") raw = payload.nodes;
++				if (!Array.isArray(raw) || raw.length === 0 || raw.length > 100 || new Set(raw.map((node) => node.id)).size !== raw.length || raw.some((node) => !Number.isFinite(node.x) || !Number.isFinite(node.y))) throw new Error("剪贴板组件数据无效或过多。");
++				const ids = new Map(raw.map((node) => [node.id, node.kind === "file" ? createResearchCanvasFileId() : createResearchCanvasArtifactId()]));
++				const origin = { x: Math.min(...raw.map((node) => node.x)), y: Math.min(...raw.map((node) => node.y)) };
++				const target = Number.isFinite(point?.x) && Number.isFinite(point?.y) ? point : visibleCenter();
++				const files2 = [], artifacts2 = [], admitted = [];
++				let keepCleanup = false;
++				const checkCapacity = () => {
++					if (snapshot.files.length + raw.filter((node) => node.kind === "file").length > RESEARCH_CANVAS_MAX_FILES_PER_SESSION || snapshot.artifacts.length + raw.filter((node) => node.kind !== "file").length > RESEARCH_CANVAS_MAX_ARTIFACTS_PER_SESSION) throw new Error("画板组件容量已满，请删除部分组件后重试。");
++				};
++				try {
++					checkCapacity();
++					for (const source of raw) {
++						checkActive();
++						const id = ids.get(source.id);
++						const node = { ...source, id, x: target.x + source.x - origin.x, y: target.y + source.y - origin.y };
++						if (source.kind === "file") {
++							if (typeof source.assetId !== "string" || !/^[a-f0-9]{48}$/.test(source.assetId)) throw new Error("剪贴板文件资源无效，请重新复制。");
++							delete node.path; delete node.authorizationId; delete node.contentType;
++							node.source = "computer"; node.mediaType = source.mimeType;
++							if (source.previewable !== false) {
++								if (orphanRevocationIds.length >= RESEARCH_CANVAS_MAX_REVOCATION_OUTBOX) throw new Error("文件授权清理记录已满，请稍后重试。");
++								admitted.push(id); clipboardAdmissionIds.add(id);
++								if (!updateOrphanRevocations([id]) || !orphanRevocationIds.includes(id)) throw new Error("无法保存文件授权清理记录，已停止粘贴。");
++								const descriptor = await window.dshDesktop?.researchClipboard?.admit?.({ assetId: source.assetId, sessionId, nodeId: id });
++								checkActive(); checkCapacity();
++								if (!descriptor?.authorizationId || !descriptor.contentType || !descriptor.path) throw new Error(`「${source.name}」导入失败，请重新复制。`);
++								await Promise.resolve().then(() => window.dshDesktop?.researchPreview?.release?.({ sessionId, nodeId: id, authorizationId: descriptor.authorizationId, capabilityToken: descriptor.capabilityToken })).catch(() => void 0);
++								checkActive(); checkCapacity();
++								Object.assign(node, { path: descriptor.path, authorizationId: descriptor.authorizationId, contentType: descriptor.contentType, name: descriptor.name });
++							} else node.previewEligible = false;
++							const canonical = canonicalResearchCanvasFileNode(node);
++							if (canonical === null) throw new Error("剪贴板文件组件无效。");
++							files2.push(canonical);
++						} else {
++							node.messageId = `clipboard-message-${createResearchCanvasArtifactId()}`;
++							for (const key of ["generationTaskId", "generationChildSessionId", "generationLastSeq", "generationStartedAt", "generationCompletedAt", "generationEvents", "generationPartialText", "generationError", "refreshError", "lastSuccessfulAt"]) delete node[key];
++							if (String(node.kind).startsWith("generated-")) {
++								if (RESEARCH_ACTIVE_GENERATION_STATUSES.has(source.generationStatus) || node.kind === "generated-container" && node.generationStatus === "completed" && !node.containerSpec) node.generationStatus = "interrupted";
++								if (!node.excerpt?.trim()) node.excerpt = "复制的组件尚未完成，请重试。";
++							}
++							if (node.kind === "generated-container") node.refreshMinutes = 0;
++							if (Array.isArray(node.sourceNodeIds)) node.sourceNodeIds = node.sourceNodeIds.map((oldId) => ids.get(oldId) ?? oldId);
++							const sources = canonicalResearchGenerationSources(source.generationSources?.map((item) => ({ ...item, id: ids.get(item.id) ?? item.id })));
++							delete node.generationSources;
++							if (sources !== null && sources.every((item) => item.type === "artifact") && sources.length === node.sourceNodeIds?.length && sources.every((item, index) => item.id === node.sourceNodeIds[index])) node.generationSources = sources;
++							const canonical = canonicalResearchCanvasArtifactNode(node);
++							if (canonical === null) throw new Error("剪贴板文字或组件内容无效或过大。");
++							artifacts2.push(canonical);
++						}
++					}
++					checkActive(); checkCapacity();
++					const nextFiles = parseResearchCanvasFileNodes(JSON.stringify([...snapshot.files, ...files2]));
++					const nextArtifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...artifacts2]);
++					if (nextFiles.length !== snapshot.files.length + files2.length || nextArtifacts.length !== snapshot.artifacts.length + artifacts2.length) throw new Error("画板存储容量已满或组件内容过大，未添加组件。");
++					const selection = { selectedNodeIds: raw.map((node) => ids.get(node.id)), orderedFileIds: files2.map((node) => node.id) };
++					const next = { ...snapshot, files: nextFiles, artifacts: nextArtifacts, selection };
++					persistClipboardBatch(next);
++					finalizeHistoryTransaction();
++					const before = historyState();
++					for (const id of admitted) { clipboardAdmissionIds.delete(id); updateOrphanRevocations([id], true); }
++					publish(next, false); recordHistory(before);
++					markResearchSessionEngaged(storage, sessionId);
++					return selection.selectedNodeIds;
++				} catch (error) {
++					keepCleanup = error?.clipboardCompensationFailed === true;
++					for (const nodeId of admitted) {
++						clipboardAdmissionIds.delete(nodeId);
++						// Revoke again after await: cancellation may have run before main created the grant.
++						updateOrphanRevocations([nodeId]);
++						try { const result = await window.dshDesktop?.researchPreview?.revokeNode?.({ sessionId, nodeId }); if (result?.ok === true && !keepCleanup) updateOrphanRevocations([nodeId], true); } catch {}
++					}
++					throw error;
++				}
++			};
 +			return {
 +				subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
++				cancelClipboardImports,
++				insertClipboardNodes(payload, point, options = {}) {
++					const epoch = clipboardEpoch;
++					const frozen = JSON.parse(JSON.stringify(payload));
++					const operation = () => insertClipboardBatch(frozen, point, options.active ?? (() => true), epoch);
++					const pending = clipboardQueue.then(operation, operation);
++					clipboardQueue = pending.catch(() => void 0);
++					return pending;
++				},
++				pasteClipboardNodes(point, options = {}) {
++					const epoch = clipboardEpoch;
++					const active = options.active ?? (() => true);
++					const operation = async () => {
++						if (epoch !== clipboardEpoch || !active()) throw new Error("粘贴已取消或画板已切换。");
++						if (typeof window.dshDesktop?.researchClipboard?.read !== "function") throw new Error("剪贴板服务暂时不可用。");
++						const payload = await window.dshDesktop.researchClipboard.read();
++						return insertClipboardBatch(payload, point, active, epoch);
++					};
++					const pending = clipboardQueue.then(operation, operation);
++					clipboardQueue = pending.catch(() => void 0);
++					return pending;
++				},
++				async copySelectedNodes() {
++					const selected = new Set(snapshot.selection.selectedNodeIds);
++					const nodes = [...snapshot.files.filter((node) => selected.has(node.id)).map((node) => ({ ...node, kind: "file" })), ...snapshot.artifacts.filter((node) => selected.has(node.id))];
++					if (nodes.length === 0) return false;
++					const result = await window.dshDesktop?.researchClipboard?.copy?.({ sessionId, nodes });
++					if (result?.ok !== true) throw new Error(result?.error ?? "复制失败，请重试。");
++					return true;
++				},
 +				getSnapshot() { return snapshot; },
 +				subscribeAssistantActions(listener) { assistantActionListeners.add(listener); return () => assistantActionListeners.delete(listener); },
 +				assistantActionsActive() { return assistantActionsActive; },
@@ -5394,11 +5554,9 @@ index 1dd0e89..cbbbd5c 100644
 +					if (kind === null) return null;
 +					if (['container', 'create'].includes(kind) && (typeof current.containerPrompt !== 'string' || current.containerPrompt.trim() === '')) return null;
 +					if (kind !== 'container' && canonicalResearchGenerationSources(current.generationSources) === null) {
-+						if (kind === 'create') {
-+							const artifacts2 = snapshot.artifacts.slice();
-+							artifacts2[index] = { ...current, generationError: '来源快照不可用，请重新选择资料创建。' };
-+							update({ artifacts: artifacts2 }, true);
-+						}
++						const artifacts2 = snapshot.artifacts.slice();
++						artifacts2[index] = { ...current, generationError: '来源快照不可用，请重新选择资料创建。' };
++						update({ artifacts: artifacts2 }, true);
 +						return null;
 +					}
 +					const artifacts2 = snapshot.artifacts.slice();
@@ -5452,10 +5610,16 @@ index 1dd0e89..cbbbd5c 100644
 +					const artifactIndex = snapshot.artifacts.findIndex((node) => node.id === nodeId && researchCanvasArtifactContentEditable(node));
 +					if (artifactIndex === -1) return false;
 +					const current = snapshot.artifacts[artifactIndex];
-+					const excerpt = preserveResearchArtifactText(rawContent, current.kind === "generated-summary" ? RESEARCH_GENERATION_MAX_OUTPUT : RESEARCH_ARTIFACT_MAX_EXCERPT);
++					const excerpt = current.kind === "pasted-text" ? researchClipboardText(rawContent) : preserveResearchArtifactText(rawContent, current.kind === "generated-summary" ? RESEARCH_GENERATION_MAX_OUTPUT : RESEARCH_ARTIFACT_MAX_EXCERPT);
 +					if (excerpt === null || excerpt === snapshot.artifacts[artifactIndex].excerpt) return false;
 +					const artifacts2 = snapshot.artifacts.slice();
 +					artifacts2[artifactIndex] = { ...artifacts2[artifactIndex], excerpt };
++					if (current.kind === "pasted-text") {
++						if (boundedResearchCanvasArtifactNodes(artifacts2).length !== artifacts2.length) throw new Error("画板存储容量已满，文字修改未保存。");
++						persistClipboardBatch({ ...snapshot, artifacts: artifacts2 });
++						commitUpdate({ artifacts: artifacts2 }, false);
++						return true;
++					}
 +					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
@@ -5602,6 +5766,7 @@ index 1dd0e89..cbbbd5c 100644
 +					update({ unavailableSourceMessageIds: [...unavailable] }, false);
 +				},
 +				cancelTransient() {
++					cancelClipboardImports();
 +					this.setAssistantActionsActive(false);
 +					generationCancelSink = void 0;
 +					Promise.resolve(window.dshDesktop?.researchLinkFrame?.releaseSession?.(sessionId)).catch(() => void 0);
@@ -5742,7 +5907,7 @@ index 1dd0e89..cbbbd5c 100644
 +			const settle = (commit) => {
 +				if (settledRef.current) return;
 +				settledRef.current = true;
-+				if (commit) onCommit(inputRef.current?.value ?? value);
++				if (commit) { if (onCommit(inputRef.current?.value ?? value) === false) settledRef.current = false; }
 +				else onCancel();
 +			};
 +			return (0, react_jsx_runtime.jsx)("textarea", {
@@ -6585,7 +6750,7 @@ index 1dd0e89..cbbbd5c 100644
 +				"data-research-node-id": node.id,
 +				"data-selected": selected || void 0,
 +				"data-node-dragging": dragging || void 0,
-+				"data-path-unavailable": node.path === void 0 ? true : void 0,
++				"data-path-unavailable": node.path === void 0 && !node.assetId ? true : void 0,
 +				role: "option",
 +				tabIndex: 0,
 +				"aria-selected": selected,
@@ -6628,7 +6793,14 @@ index 1dd0e89..cbbbd5c 100644
 +						}) : displayName
 +					}), (0, react_jsx_runtime.jsx)("span", {
 +						className: "rScV5Q_fileCaption",
-+						children: researchCanvasFileCaption(node)
++						children: node.assetId ? "暂不支持预览" : researchCanvasFileCaption(node)
++					}), !node.assetId ? null : (0, react_jsx_runtime.jsx)("button", {
++						type: "button", "data-research-clipboard-open": "", children: "在文件夹中显示",
++						onClick: async (event) => {
++							event.stopPropagation();
++							const result = await Promise.resolve(window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);
++							if (result?.ok !== true) event.currentTarget?.setAttribute("title", "文件不可用，请重新复制。");
++						}
 +					})]
 +				})]
 +			});
@@ -7135,7 +7307,7 @@ index 1dd0e89..cbbbd5c 100644
 +				if (spec.type === "kpi") return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.items.map((item) => `- ${item.label}：${item.value}${item.change === void 0 ? "" : `（${item.change}）`}`).join("\n")}\n` };
 +				return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.content.trim()}\n` };
 +			}
-+			if (["assistant-result", "assistant-excerpt", "generated-summary"].includes(node.kind)) return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(title, "md"), content: researchArtifactMarkdown(node) };
++			if (["pasted-text", "assistant-result", "assistant-excerpt", "generated-summary"].includes(node.kind)) return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(title, "md"), content: researchArtifactMarkdown(node) };
 +			return { kind: "text", format: "txt", suggestedName: researchCanvasExportFileName(title, "txt"), content: `${String(node.excerpt ?? "").trim()}\n` };
 +		}
 +		const RESEARCH_MIND_MAP_EXPORT_COLORS = ["rgb(0,80,150)", "rgb(0,120,180)", "rgb(30,185,225)", "rgb(179,235,255)", "rgb(193,198,200)", "rgb(255,200,25)"];
@@ -7393,17 +7565,19 @@ index 1dd0e89..cbbbd5c 100644
 +			const contentRef = (0, react.useRef)(null);
 +			(0, react.useLayoutEffect)(() => {
 +				if (node.sizeMode === "manual" || node.kind === "web-link" || node.kind === "generated-container" || RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || node.kind === 'generated-mind-map' && node.generationStatus === 'completed' || contentRef.current === null || typeof ResizeObserver === "undefined") return;
++				const content = contentRef.current;
++				let active = true;
 +				const measure = () => {
-+					if (!(contentRef.current.scrollHeight > 0)) return;
++					if (!active || !content.isConnected || !(content.scrollHeight > 0)) return;
 +					const minimum = node.kind === 'generated-summary' && node.generationStatus === 'completed' ? 280 : RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight;
 +					const maximum = node.kind === 'generated-summary' && node.generationStatus === 'completed' ? 640 : RESEARCH_CANVAS_MAX_NODE_SIZE;
-+					const height = Math.min(maximum, Math.max(minimum, Math.round(contentRef.current.scrollHeight + RESEARCH_CANVAS_TITLE_HEIGHT)));
++					const height = Math.min(maximum, Math.max(minimum, Math.round(content.scrollHeight + RESEARCH_CANVAS_TITLE_HEIGHT)));
 +					if (Math.round(node.height ?? RESEARCH_CANVAS_NODE_POLICIES.assistant.height) !== height) onAutoHeight?.(node, height);
 +				};
 +				const observer = new ResizeObserver(measure);
-+				observer.observe(contentRef.current);
++				observer.observe(content);
 +				measure();
-+				return () => observer.disconnect();
++				return () => { active = false; observer.disconnect(); };
 +			}, [node.id, node.sizeMode, node.height, onAutoHeight]);
 +			return (0, react_jsx_runtime.jsx)(ResearchCanvasRichNodeFrame, {
 +				node,
@@ -7433,6 +7607,7 @@ index 1dd0e89..cbbbd5c 100644
 +				children: (0, react_jsx_runtime.jsxs)("div", {
 +					ref: contentRef,
 +					className: "rScV5Q_artifactBody",
++					style: node.kind === "pasted-text" ? { minHeight: 0 } : void 0,
 +					"data-research-artifact-content": "",
 +					onDoubleClick: researchCanvasArtifactContentEditable(node) ? (event) => {
 +						event.preventDefault();
@@ -7440,6 +7615,8 @@ index 1dd0e89..cbbbd5c 100644
 +						onContentEdit?.(node);
 +					} : void 0,
 +					onContextMenu: (event) => {
++						const selection = window.getSelection?.();
++						if (selection?.toString() && (event.currentTarget.contains(selection.anchorNode) || event.currentTarget.contains(selection.focusNode))) { event.stopPropagation(); return; }
 +						event.preventDefault();
 +						event.stopPropagation();
 +						onOpenContextMenu?.(event, node);
@@ -7471,7 +7648,7 @@ index 1dd0e89..cbbbd5c 100644
 +						text: node.excerpt,
 +						detail: node.generationDetail,
 +						onNodeLabelCommit: onMindMapNodeCommit
-+					}) : node.kind === "assistant-result" || node.kind === "generated-summary" && node.generationStatus === 'completed' ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
++					}) : node.kind === "pasted-text" || node.kind === "assistant-result" || node.kind === "generated-summary" && node.generationStatus === 'completed' ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 +						text: node.excerpt,
 +						streaming: false
 +					}) : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? (0, react_jsx_runtime.jsxs)("div", {
@@ -7494,7 +7671,7 @@ index 1dd0e89..cbbbd5c 100644
 +						children: node.excerpt
 +					}), (0, react_jsx_runtime.jsxs)("span", {
 +					className: "rScV5Q_artifactMeta",
-+					children: [node.kind === "assistant-excerpt" ? "助手摘录" : node.kind === "generated-mind-map" ? "思维导图" : node.kind === "generated-summary" ? "总结提炼" : node.kind === "web-link" ? "链接" : node.kind === "generated-container" ? "智能容器" : "助手回复", sourceUnavailable ? " · 来源消息不可用" : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? " · 处理中" : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? " · 可重试" : node.kind === "web-link" || node.kind === "generated-container" ? "" : " · 来源消息"]
++					children: node.kind === "pasted-text" ? ["文字 · 可编辑"] : [node.kind === "assistant-excerpt" ? "助手摘录" : node.kind === "generated-mind-map" ? "思维导图" : node.kind === "generated-summary" ? "总结提炼" : node.kind === "web-link" ? "链接" : node.kind === "generated-container" ? "智能容器" : "助手回复", sourceUnavailable ? " · 来源消息不可用" : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? " · 处理中" : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? " · 可重试" : node.kind === "web-link" || node.kind === "generated-container" ? "" : " · 来源消息"]
 +				})]
 +				})
 +			});
@@ -7571,6 +7748,65 @@ index 1dd0e89..cbbbd5c 100644
 +			const [draggingNodeIds, setDraggingNodeIds] = (0, react.useState)([]);
 +			const [resizingNodeId, setResizingNodeId] = (0, react.useState)(null);
 +			const [contextMenu, setContextMenu] = (0, react.useState)(null);
++			const [clipboardFeedback, setClipboardFeedback] = (0, react.useState)(null);
++			const [clipboardAvailable, setClipboardAvailable] = (0, react.useState)(false);
++			const clipboardPointer = (0, react.useRef)(null);
++			const clipboardRepeat = (0, react.useRef)({ key: "", count: 0 });
++			const clipboardAction = (0, react.useCallback)((kind, fixedPoint) => {
++				const current = workspace.getSnapshot();
++				let point = fixedPoint;
++				if (kind === "paste" && !point) {
++					const local = clipboardPointer.current ?? { x: current.canvasSize.width / 2, y: current.canvasSize.height / 2 };
++					const world = { x: (local.x - current.viewport.x) / current.viewport.scale, y: (local.y - current.viewport.y) / current.viewport.scale };
++					const key = `${world.x}:${world.y}`;
++					const count = clipboardRepeat.current.key === key ? clipboardRepeat.current.count : 0;
++					point = { x: world.x + count * 24, y: world.y + count * 24 };
++					clipboardRepeat.current = { key, count: count + 1 };
++				}
++				setClipboardFeedback({ state: "pending", message: kind === "copy" ? "正在复制…" : "正在粘贴…" });
++				const operation = kind === "copy" ? workspace.copySelectedNodes() : workspace.pasteClipboardNodes(point, { active: () => dropLifecycle.active });
++				Promise.resolve(operation).then((result) => {
++					if (dropLifecycle.active) setClipboardFeedback({ state: "success", message: kind === "copy" ? result ? "已复制组件" : "请选择组件" : result.length ? `已粘贴 ${result.length} 个组件` : "剪贴板没有可粘贴内容" });
++				}).catch((error) => {
++					if (dropLifecycle.active) setClipboardFeedback({ state: "error", message: error?.message ?? "剪贴板操作失败，请重试。" });
++				});
++			}, [workspace, dropLifecycle]);
++			(0, react.useEffect)(() => {
++				setClipboardAvailable(false);
++				if (contextMenu?.nodeId !== null || typeof window.dshDesktop?.researchClipboard?.inspect !== "function") return;
++				let active = true;
++				Promise.resolve().then(() => window.dshDesktop?.researchClipboard?.inspect?.()).then((result) => { if (active) setClipboardAvailable(result?.available === true); }).catch(() => void 0);
++				return () => { active = false; };
++			}, [contextMenu]);
++			(0, react.useEffect)(() => {
++				clipboardPointer.current = null; clipboardRepeat.current = { key: "", count: 0 }; setClipboardFeedback(null);
++				const root = rootRef.current;
++				if (root === null) return;
++				let counterpart = null;
++				const interactive = (target) => target?.closest?.("input,textarea,button,select,a,iframe,[contenteditable]:not([contenteditable=false]),[data-research-preview-interactive]");
++				const owns = (event) => (document.activeElement === root || root.contains(document.activeElement)) && !interactive(event.target) && !interactive(document.activeElement) && !window.getSelection?.()?.toString();
++				const run = (event, kind, keyboard = false) => {
++					if (event.defaultPrevented || !owns(event) || kind === "copy" && workspace.getSnapshot().selection.selectedNodeIds.length === 0) return;
++					event.preventDefault(); event.stopPropagation();
++					if (!keyboard && counterpart?.kind === kind && Date.now() - counterpart.time < 250) { counterpart = null; return; }
++					counterpart = keyboard ? { kind, time: Date.now() } : null;
++					clipboardAction(kind);
++				};
++				const keydown = (event) => {
++					if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.repeat) return;
++					const key = String(event.key ?? "").toLowerCase();
++					if (event.code === "KeyC" || key === "c") run(event, "copy", true);
++					if (event.code === "KeyV" || key === "v") run(event, "paste", true);
++				};
++				const copy = (event) => run(event, "copy");
++				const paste = (event) => run(event, "paste");
++				const pointer = (event) => {
++					const bounds = root.getBoundingClientRect();
++					if (event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom) clipboardPointer.current = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
++				};
++				window.addEventListener("keydown", keydown); window.addEventListener("copy", copy); window.addEventListener("paste", paste); root.addEventListener("pointermove", pointer);
++				return () => { workspace.cancelClipboardImports(); window.removeEventListener("keydown", keydown); window.removeEventListener("copy", copy); window.removeEventListener("paste", paste); root.removeEventListener("pointermove", pointer); };
++			}, [workspace, clipboardAction]);
 +			const [mindMapMenuOpen, setMindMapMenuOpen] = (0, react.useState)(false);
 +			const [createSelection, setCreateSelection] = (0, react.useState)(null);
 +			const [createPrompt, setCreatePrompt] = (0, react.useState)("");
@@ -7816,6 +8052,7 @@ index 1dd0e89..cbbbd5c 100644
 +				};
 +			}, [workspace]);
 +			const activateArtifact = (node) => {
++				if (node.kind === "pasted-text") { setEditingContentNodeId(node.id); return; }
 +				actions?.setResearchRightTab?.("conversation");
 +				workspace.setPendingMessageJump(node.messageId);
 +			};
@@ -8092,7 +8329,8 @@ index 1dd0e89..cbbbd5c 100644
 +					root.focus({ preventScroll: true });
 +					const bounds = root.getBoundingClientRect();
 +					if (nodeId === null || nodeId === void 0) {
-+						setContextMenu({ nodeId: null, left: event.clientX - bounds.left, top: event.clientY - bounds.top });
++						const viewport = workspace.getSnapshot().viewport;
++						setContextMenu({ nodeId: null, left: event.clientX - bounds.left, top: event.clientY - bounds.top, point: { x: (event.clientX - bounds.left - viewport.x) / viewport.scale, y: (event.clientY - bounds.top - viewport.y) / viewport.scale } });
 +						return;
 +					}
 +					const current = workspace.getSnapshot();
@@ -8304,7 +8542,7 @@ index 1dd0e89..cbbbd5c 100644
 +			};
 +			const emptyViewport = canvasNodes.length > 0 && snapshot.canvasSize.width > 0 && snapshot.canvasSize.height > 0 && !researchCanvasHasVisibleNodes(canvasNodes, viewport, snapshot.canvasSize);
 +			const contextNode = contextMenu === null || contextMenu.nodeId === null ? null : canvasNodes.find((node) => node.id === contextMenu.nodeId) ?? null;
-+			const contextArtifact = contextMenu === null || contextMenu.nodeId === null ? null : artifacts.find((node) => node.id === contextMenu.nodeId && node.kind === "assistant-result") ?? null;
++			const contextArtifact = contextMenu === null || contextMenu.nodeId === null ? null : artifacts.find((node) => node.id === contextMenu.nodeId && researchCanvasArtifactContentEditable(node)) ?? null;
 +			const downloadFeedbackNode = downloadFeedback === null ? null : canvasNodes.find((node) => node.id === downloadFeedback.nodeId) ?? null;
 +			const downloadCanvasNode = async (node, format) => {
 +				if (downloadBusyNodeId !== null || node === null) return;
@@ -8414,7 +8652,12 @@ index 1dd0e89..cbbbd5c 100644
 +							setEditingContentNodeId(node.id);
 +						},
 +						onContentCommit: (content) => {
-+							workspace.updateArtifactContent(node.id, content);
++							if (node.kind === "pasted-text") {
++								if (researchClipboardText(content) === null) { setClipboardFeedback({ state: "error", message: "文字为空或超过 1 MiB 上限，修改未保存。" }); return false; }
++								try { workspace.updateArtifactContent(node.id, content); }
++								catch (error) { setClipboardFeedback({ state: "error", message: error?.message ?? "画板存储失败，修改未保存。" }); return false; }
++								setClipboardFeedback(null);
++							} else workspace.updateArtifactContent(node.id, content);
 +							setEditingContentNodeId(null);
 +						},
 +						onContentCancel: () => setEditingContentNodeId(null),
@@ -8581,11 +8824,17 @@ index 1dd0e89..cbbbd5c 100644
 +						onClick: () => downloadCanvasNode(downloadFeedbackNode, downloadFeedback.format),
 +						children: "重试"
 +					})]
++				}), clipboardFeedback === null ? null : (0, react_jsx_runtime.jsx)("div", {
++					className: "rScV5Q_downloadFeedback", role: clipboardFeedback.state === "error" ? "alert" : "status", "data-research-clipboard-feedback": "", "data-state": clipboardFeedback.state,
++					style: { left: "50%", bottom: 62, maxWidth: 460 }, children: clipboardFeedback.message
 +				}), contextMenu === null ? null : (0, react_jsx_runtime.jsx)("div", {
 +					className: "rScV5Q_contextMenu",
 +					role: "menu",
 +					style: { left: contextMenu.left, top: contextMenu.top },
 +					children: contextMenu.nodeId === null ? [(0, react_jsx_runtime.jsx)("button", {
++						type: "button", role: "menuitem", "data-research-context-paste": "", disabled: !clipboardAvailable, children: "粘贴",
++						onClick: () => { clipboardAction("paste", contextMenu.point); setContextMenu(null); }
++					}, "paste"), (0, react_jsx_runtime.jsx)("button", {
 +						type: "button",
 +						role: "menuitem",
 +						"data-research-context-arrange": "",
@@ -8609,6 +8858,9 @@ index 1dd0e89..cbbbd5c 100644
 +						},
 +						children: [(0, react_jsx_runtime.jsx)("span", { children: "全选" }), (0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_contextMenuShortcut", children: "⌘A" })]
 +					}, "select-all")] : [(0, react_jsx_runtime.jsx)("button", {
++						type: "button", role: "menuitem", "data-research-context-copy": "", children: "复制",
++						onClick: () => { clipboardAction("copy"); setContextMenu(null); }
++					}, "copy"), (0, react_jsx_runtime.jsx)("button", {
 +						type: "button",
 +						role: "menuitem",
 +						"data-research-context-rename": "",
@@ -8710,7 +8962,7 @@ index 1dd0e89..cbbbd5c 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +14433,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +14685,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -8729,7 +8981,7 @@ index 1dd0e89..cbbbd5c 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +14472,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +14724,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -9089,7 +9341,7 @@ index 1dd0e89..cbbbd5c 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +14833,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15085,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -9261,7 +9513,7 @@ index 1dd0e89..cbbbd5c 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +15003,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +15255,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -9273,7 +9525,7 @@ index 1dd0e89..cbbbd5c 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +15013,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +15265,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -9281,7 +9533,7 @@ index 1dd0e89..cbbbd5c 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +15045,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +15297,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -9291,7 +9543,7 @@ index 1dd0e89..cbbbd5c 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +15064,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +15316,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -9396,7 +9648,7 @@ index 1dd0e89..cbbbd5c 100644
  				})]
  			});
  		}
-@@ -6951,6 +15146,28 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +15398,28 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -9425,7 +9677,7 @@ index 1dd0e89..cbbbd5c 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +15197,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +15449,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -9446,7 +9698,7 @@ index 1dd0e89..cbbbd5c 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +15219,18 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +15471,18 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -9467,7 +9719,7 @@ index 1dd0e89..cbbbd5c 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +15273,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +15525,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -9485,7 +9737,7 @@ index 1dd0e89..cbbbd5c 100644
  				})] })
  			});
  		}
-@@ -7053,14 +15283,74 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +15535,74 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -9562,7 +9814,7 @@ index 1dd0e89..cbbbd5c 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +15361,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +15613,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -9579,7 +9831,7 @@ index 1dd0e89..cbbbd5c 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +15384,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +15636,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -9588,7 +9840,7 @@ index 1dd0e89..cbbbd5c 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +15437,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +15689,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -9606,7 +9858,7 @@ index 1dd0e89..cbbbd5c 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +15473,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +15725,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -9614,7 +9866,7 @@ index 1dd0e89..cbbbd5c 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +16365,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +16617,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -9645,7 +9897,7 @@ index 1dd0e89..cbbbd5c 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +16410,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +16662,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -9670,7 +9922,7 @@ index 1dd0e89..cbbbd5c 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +17364,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +17616,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -9679,7 +9931,7 @@ index 1dd0e89..cbbbd5c 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +17454,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +17706,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -9721,7 +9973,7 @@ index 1dd0e89..cbbbd5c 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +17663,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +17915,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -9738,7 +9990,7 @@ index 1dd0e89..cbbbd5c 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +17833,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18085,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -9748,7 +10000,7 @@ index 1dd0e89..cbbbd5c 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +17875,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18127,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -9763,7 +10015,7 @@ index 1dd0e89..cbbbd5c 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +17893,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18145,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -9776,7 +10028,7 @@ index 1dd0e89..cbbbd5c 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +17942,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +18194,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -9790,7 +10042,7 @@ index 1dd0e89..cbbbd5c 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +17980,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +18232,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -9800,7 +10052,7 @@ index 1dd0e89..cbbbd5c 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +18112,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +18364,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -9815,7 +10067,7 @@ index 1dd0e89..cbbbd5c 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +18128,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +18380,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -9824,7 +10076,7 @@ index 1dd0e89..cbbbd5c 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +18152,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +18404,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -9833,7 +10085,7 @@ index 1dd0e89..cbbbd5c 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +18178,144 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +18430,144 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
