@@ -5866,6 +5866,7 @@ describe('Sherlock workspace and composer controls', () => {
     const restoreGlobals = installBrowserGlobals(browserWindow)
     const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
       document: browserWindow.document, window: browserWindow, exposeInputBar: true,
+      transformSource: (source) => source.replace('\t\texports.apply = apply;', '\t\texports.apply = apply;\n\t\texports.__testZh = zh;'),
       modules: {
         '@deepseek-ai/dsh-client-runtime/client': { createSnapshotStore },
         '@deepseek-ai/dsh-client-ui-primitives': { Tooltip: ({ children }: any) => children },
@@ -5878,6 +5879,9 @@ describe('Sherlock workspace and composer controls', () => {
     workspace.addAssistantResult({ messageId: 'm', text: 'SECRET_SOURCE_BODY', at: { x: 9000, y: 9000 } })
     const id = workspace.getSnapshot().artifacts[0].id
     workspace.renameNode(id, '远处的结论')
+    for (let index = 0; index < 8; index += 1) {
+      workspace.addAssistantResult({ messageId: `other-${index}`, text: `资料 ${index}`, at: { x: 0, y: index * 500 } })
+    }
     const host = browserWindow.document.createElement('div')
     browserWindow.document.body.appendChild(host)
     const root = createRoot(host)
@@ -5888,24 +5892,40 @@ describe('Sherlock workspace and composer controls', () => {
       useNotices: (select: any) => select(null), useLexicon: (select: any) => select(new Map()),
       useMenuLauncher: (select: any) => select(null), useProjection: (_name: string, select?: any) => select?.(undefined),
       researchCanvasWorkspace: workspace, researchFileReferences: [], researchArtifactReferences: [],
-      sessionId: 'progressive-ui', t: (key: string, args?: any) => `${key}${args ? ` ${JSON.stringify(args)}` : ''}`, variant: 'composer'
+      sessionId: 'progressive-ui',
+      t: (key: string, args: Record<string, unknown> = {}) => Object.entries(args).reduce(
+        (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+        (client.__testZh as Record<string, string>)[key] ?? key
+      ),
+      variant: 'composer'
     }
     try {
       await act(async () => { root.render(createElement(client.__testInputBar as any, props)) })
       const badge = host.querySelector('[data-research-context-badge]')
       expect(badge).not.toBeNull()
-      expect(badge?.textContent).toContain('1')
+      expect(badge?.textContent).toBe('参考当前画板资料 · 9个组件')
       expect(host.innerHTML).not.toContain('SECRET_SOURCE_BODY')
       await act(async () => { (badge as any)?.click() })
       const directory = host.querySelector('[data-research-context-directory]')
       expect(directory?.textContent).toContain('远处的结论')
+      expect(directory?.textContent).not.toContain('发送时优先参考')
+      expect(directory?.querySelectorAll('li')).toHaveLength(9)
       expect(directory?.querySelector('[data-source-status]')).not.toBeNull()
       expect(host.innerHTML).not.toContain('SECRET_SOURCE_BODY')
+      expect(host.querySelector('[data-research-context-disable]')?.textContent).toBe('不参考画板资料回答')
       await act(async () => { (host.querySelector('[data-research-context-disable]') as any)?.click() })
       expect(shell.snapshot.researchContextOptOut).toBe(true)
       expect(host.querySelector('[data-research-context-badge]')?.getAttribute('data-opt-out')).toBe('true')
+      expect(host.querySelector('[data-research-context-badge]')?.textContent).toBe('不参考画板资料回答')
+      expect(host.querySelector('[data-research-context-directory]')).toBeNull()
+      await act(async () => { (host.querySelector('[data-research-context-badge]') as any)?.click() })
+      expect(host.querySelector('[data-research-context-disable]')?.textContent).toBe('参考当前画板资料回答')
+      await act(async () => { (host.querySelector('[data-research-context-disable]') as any)?.click() })
+      expect(shell.snapshot.researchContextOptOut).toBe(false)
+      expect(host.querySelector('[data-research-context-badge]')?.textContent).toBe('参考当前画板资料 · 9个组件')
+      await act(async () => { workspace.addAssistantResult({ messageId: 'new-source', text: '新增资料', at: { x: 0, y: 0 } }) })
+      expect(host.querySelector('[data-research-context-badge]')?.textContent).toBe('参考当前画板资料 · 10个组件')
       await act(async () => {
-        shell.setResearchContextOptOut(false)
         shell.insertReference((client.researchArtifactReference as any)(workspace.getSnapshot().artifacts[0]), { start: 0, end: 0, draftRev: shell.snapshot.draftRev })
       })
       expect(host.querySelector('[data-research-context-badge]')).toBeNull()
