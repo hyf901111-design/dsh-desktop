@@ -10847,8 +10847,7 @@ describe('Sherlock workspace and composer controls', () => {
         expect(writes.map(({ key }) => key)).toEqual([
           `sherlock.research.canvas.files.v1:${sessionId}`,
           `sherlock.research.canvas.artifacts.v1:${sessionId}`,
-          `sherlock.research.canvas.selection.v1:${sessionId}`,
-          `sherlock.research.session-engaged.v1:${sessionId}`
+          `sherlock.research.canvas.selection.v1:${sessionId}`
         ])
         expect(JSON.parse(values.get(`sherlock.research.canvas.artifacts.v1:${sessionId}`) ?? '[]')[0])
           .toMatchObject({ x: 220, y: 210, width: 560, height: 320, sizeMode: 'manual' })
@@ -10921,8 +10920,7 @@ describe('Sherlock workspace and composer controls', () => {
         expect(writes.map(({ key }) => key)).toEqual([
           `sherlock.research.canvas.files.v1:${sessionId}`,
           `sherlock.research.canvas.artifacts.v1:${sessionId}`,
-          `sherlock.research.canvas.selection.v1:${sessionId}`,
-          `sherlock.research.session-engaged.v1:${sessionId}`
+          `sherlock.research.canvas.selection.v1:${sessionId}`
         ])
         expect(JSON.parse(values.get(`sherlock.research.canvas.files.v1:${sessionId}`) ?? '[]')[0])
           .toMatchObject({ x: 130, y: 100 })
