@@ -164,6 +164,63 @@
           "只本地测试，不发布、上传、推送或公证。"
         ],
         "generatedAt": "2026-09-03T06:41:41Z"
+      },
+      "merged": {
+        "mergeCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+        "verificationCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+            "completedAt": "2026-09-03T07:01:58.872Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+            "completedAt": "2026-09-03T07:01:58.872Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-canvas-export.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/security.test.ts",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "test/settings-about.test.ts",
+              "test/patch-integrity.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sidebar-new-session-actions.test.ts test/research-canvas-storage.test.ts test/research-file-drop.test.ts test/research-canvas-clipboard-ui.test.ts test/research-task-runtime.test.js test/research-canvas-clipboard.test.ts test/research-canvas-export.test.ts test/research-context-bridge.test.ts test/security.test.ts test/sherlock-composer-workspace-ui.test.ts test/settings-about.test.ts test/patch-integrity.test.ts --reporter=dot",
+            "verifiedCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+            "completedAt": "2026-09-03T07:01:58.872Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-03T07:01:58.872Z"
       }
     },
     {
