@@ -412,11 +412,16 @@ export class ResearchContextIndex {
     const ids = rankedSources(snapshot, query).map((source) => source.id)
     if (snapshot.searchOrders.size >= 32) snapshot.searchOrders.delete(snapshot.searchOrders.keys().next().value)
     snapshot.searchOrders.set(key, ids)
+    this.#enforceStoredBytes(snapshot)
+    this.#assertLive(snapshot)
     return ids.map((id) => snapshot.sources.find((source) => source.id === id)).filter(Boolean)
   }
 
   #snapshotBytes(snapshot) {
-    return bytes(snapshot.sources.map(({ id, title, kind, text, status, path, revision, sourceUrl, sourceNodeIds, sourceNodeIdsTruncated, truncated }) => ({ id, title, kind, text, status, path, revision, sourceUrl, sourceNodeIds, sourceNodeIdsTruncated, truncated })))
+    return bytes({
+      sources: snapshot.sources.map(({ id, title, kind, text, status, path, revision, sourceUrl, sourceNodeIds, sourceNodeIdsTruncated, truncated }) => ({ id, title, kind, text, status, path, revision, sourceUrl, sourceNodeIds, sourceNodeIdsTruncated, truncated })),
+      searchOrders: [...snapshot.searchOrders.entries()]
+    })
   }
 
   #store(snapshot) {
