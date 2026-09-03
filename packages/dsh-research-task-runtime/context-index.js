@@ -172,6 +172,29 @@ function excerpt(source, terms, maximum = 1_500) {
   return content.length < value.length ? `${content}\n[资料内容尚有剩余]` : content
 }
 
+// Same relevance terms as progressive context, but every explicitly selected
+// source contributes. Small paragraph chunks prevent a long opening paragraph
+// from hiding a relevant passage near the end. No board-wide lookup occurs.
+export function selectedResearchExcerpt(text, query, maxBytes = 8_000) {
+  const normalized = normalizeText(text)
+  if (textBytes(normalized) <= maxBytes) return normalized
+  const terms = queryTerms(query)
+  const chunks = normalized.match(/[\s\S]{1,600}/gu) ?? []
+  const ranked = chunks.map((body, order) => ({ body, order, score: terms.reduce((total, term) => total + occurrences(body.toLocaleLowerCase(), term), 0) }))
+    .sort((a, b) => b.score - a.score || a.order - b.order)
+  const marker = '\n[仅提供与需求相关的节选，非全文]'
+  const selected = []
+  let remaining = maxBytes - textBytes(marker)
+  for (const chunk of ranked) {
+    const part = trimText(chunk.body, (candidate) => textBytes(candidate) <= remaining)
+    if (!part) break
+    selected.push({ ...chunk, body: part })
+    remaining -= textBytes(part) + 1
+    if (remaining <= 0) break
+  }
+  return selected.sort((a, b) => a.order - b.order).map((chunk) => chunk.body).join('\n').trim() + marker
+}
+
 function metadata(source, aliases = []) {
   const nodeIds = source.sourceNodeIds.slice(0, 16)
   return {

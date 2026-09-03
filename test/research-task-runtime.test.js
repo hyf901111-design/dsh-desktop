@@ -67,6 +67,58 @@ function containerRequest(canvasNodeId = 'container-1', parentSessionId = 'paren
   }
 }
 
+describe('selected-source create contract', () => {
+  const request = () => ({ ...summaryRequest('create-1'), kind: 'create', prompt: '比较现金流并生成思维导图' })
+  it('accepts a frozen bounded prompt and unique selected evidence only', async () => {
+    const { validateResearchTaskStart } = await runtimeModule()
+    const value = validateResearchTaskStart(request())
+    expect(value).toEqual(request())
+    expect(Object.isFrozen(value.sources)).toBe(true)
+    for (const invalid of [
+      { prompt: ' ' }, { prompt: 'x'.repeat(8001) }, { sources: [] },
+      { sources: [...request().sources, ...request().sources] },
+      { sources: Array.from({ length: 25 }, (_, i) => ({ ...request().sources[0], id: `s${i}` })) },
+      { sources: [{ id: 'audit', type: 'file', title: '副本来源' }] }, { detail: 'brief' }
+    ]) expect(() => validateResearchTaskStart({ ...request(), ...invalid })).toThrow()
+  })
+  it('uses real selected file evidence and relevant bounded chunks without web permissions', async () => {
+    const { buildResearchTaskExecutionPrompt } = await runtimeModule()
+    const prompt = await buildResearchTaskExecutionPrompt({ ...request(), sources: [
+      { id: 'file', type: 'file', title: '财报', path: '/w/report.txt' },
+      { id: 'page', type: 'artifact', title: '授权网页', text: '现金流同比增加20%。' }
+    ] }, { loadFileText: async () => `${'无关段落。\n'.repeat(3000)}现金流降至100，主要原因是库存增长。` })
+    expect(prompt).toContain('现金流降至100')
+    expect(prompt).toContain('现金流同比增加20%')
+    expect(prompt).toContain('"type": "mind-map"')
+    expect(prompt).not.toContain('/w/report.txt')
+    expect(Buffer.byteLength(prompt)).toBeLessThan(48_000)
+    expect(prompt).toContain('不得尝试访问外部网页')
+  })
+  it('fails the whole selection when any file fails, without starting on partial evidence', async () => {
+    const { buildResearchTaskExecutionPrompt } = await runtimeModule()
+    await expect(buildResearchTaskExecutionPrompt({ ...request(), sources: [
+      ...request().sources, { id: 'missing', type: 'file', title: '不可用文件', path: '/missing.txt' }
+    ] }, { loadFileText: async () => { throw new Error('read failed') } })).rejects.toThrow('read failed')
+  })
+  it('persists first resolved create evidence and exposes it only to the owning task inspection', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const storage = memoryTaskStorage()
+    const deferred = deferredTaskAdapter()
+    const runtime = new ResearchTaskRuntime({ adapter: deferred.adapter, storage, createId: () => 'create-frozen' })
+    const root = await mkdtemp(join(tmpdir(), 'selected-create-'))
+    try {
+      const path = join(root, 'cash.txt')
+      await writeFile(path, '现金流首次证据100')
+      await runtime.start({ ...request(), sources: [{ id: 'file', type: 'file', title: '现金流', path }] })
+      await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'create-frozen' })).toMatchObject({ resolvedSources: [{ id: 'file', type: 'artifact', title: '现金流', text: '现金流首次证据100' }] }))
+      await writeFile(path, '后来修改200')
+      await runtime.cancel({ parentSessionId: 'parent-1', taskId: 'create-frozen' })
+      expect(storage.snapshot().tasks[0]).toMatchObject({ sources: [{ type: 'artifact', text: '现金流首次证据100' }], resolvedSources: [{ text: '现金流首次证据100' }] })
+      expect(() => runtime.inspect({ parentSessionId: 'other', taskId: 'create-frozen' })).toThrow()
+    } finally { await runtime.dispose(); await rm(root, { recursive: true, force: true }) }
+  })
+})
+
 function memoryTaskStorage(initial = { version: 1, tasks: [] }) {
   let document = structuredClone(initial)
   return {

@@ -36,6 +36,17 @@ async function fixture(options = {}) {
 }
 
 describe('trusted research canvas capture', () => {
+  it('reads native mind-map content as evidence in right-side conversation', async () => {
+    const f = await fixture()
+    f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')
+    f.storage.setItem('sherlock.research.canvas.artifacts.v1:parent', JSON.stringify([
+      { id: 'map-native', kind: 'generated-container', title: '结果', generationStatus: 'completed', containerPrompt: '秘密提示词', containerSpec: { version: 1, type: 'mind-map', title: '现金流', content: '# 现金流\n- 库存增长' } }
+    ]))
+    const capture = await f.bridge.capture({ sessionId: 'parent' })
+    const { sources } = await (await f.snapshot({ sessionId: 'parent', captureId: capture.captureId })).json()
+    expect(sources[0].text).toContain('- 库存增长')
+    expect(sources[0].text).not.toContain('秘密提示词')
+  })
   it('freezes stored sources, resolves only authorized files, and normalizes evidence without private fields', async () => {
     const f = await fixture()
     const capture = await f.bridge.capture({ sessionId: 'parent' })
