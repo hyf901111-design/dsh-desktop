@@ -4,6 +4,7 @@ import { parse, stringify } from 'yaml'
 
 const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable'
 const REVALIDATE_CACHE = 'no-cache, max-age=0, must-revalidate'
+const STABLE_DOWNLOAD_CACHE = 'no-store, no-cache, max-age=0, must-revalidate'
 const METADATA_TARGETS = new Map([
   ['latest.yml', 'latest/latest.yml'],
   ['latest-mac.yml', 'latest/latest-mac.yml'],
@@ -73,7 +74,7 @@ export async function buildCloudflareReleasePlan(options) {
       source: path.join(assetDirectory, name),
       key: `download/${name}`,
       contentType: contentTypeFor(name),
-      cacheControl: REVALIDATE_CACHE
+      cacheControl: STABLE_DOWNLOAD_CACHE
     })
   }
 
