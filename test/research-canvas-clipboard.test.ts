@@ -43,6 +43,15 @@ async function source(f: Awaited<ReturnType<typeof fixture>>, name = 'report.pdf
 afterEach(async () => { await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))) })
 
 describe('durable research clipboard', () => {
+  it('copies exact bounded HTML artifact source without publishing executable clipboard HTML', async () => {
+    const f = await fixture()
+    const spec = { version: 1, type: 'html', title: '活动页', html: '<main>活动正文</main><script>window.localInteraction=true</script>' }
+    const node = { id: 'html', kind: 'generated-container', title: '活动页', excerpt: '活动正文', x: 0, y: 0, containerSpec: spec, generationStatus: 'completed', containerPrompt: '活动页', refreshMinutes: 0 }
+    expect(await f.service.copy({ sessionId: 's', nodes: [node] })).toEqual({ ok: true })
+    expect(await f.service.read()).toMatchObject({ kind: 'components', nodes: [{ containerSpec: spec }] })
+    expect(f.clipboard.html).not.toContain('<script>')
+    for (const bad of [{ ...spec, html: '文'.repeat(66_667) }, { ...spec, preload: '/private/preload.js' }]) expect((await f.service.copy({ sessionId: 's', nodes: [{ ...node, containerSpec: bad }] })).ok).toBe(false)
+  })
   it('preserves an explicitly renamed webpage title mode across clipboard serialization', async () => {
     const f = await fixture()
     await f.service.copy({ sessionId: 's', nodes: [{ id: 'web', kind: 'web-link', title: '我的命名', titleMode: 'custom', url: 'https://example.com/article', excerpt: 'https://example.com/article', x: 0, y: 0 }] })

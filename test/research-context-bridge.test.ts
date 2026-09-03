@@ -36,6 +36,15 @@ async function fixture(options = {}) {
 }
 
 describe('trusted research canvas capture', () => {
+  it('captures static HTML body evidence without executing or indexing scripts and styles', async () => {
+    const f = await fixture()
+    f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')
+    f.storage.setItem('sherlock.research.canvas.artifacts.v1:parent', JSON.stringify([{ id: 'html', kind: 'generated-container', title: '用户体验地图', generationStatus: 'completed', containerSpec: { version: 1, type: 'html', title: '用户体验地图', html: '<style>secretStyle</style><h1>用户体验地图</h1><p>触点：发现 &amp; 试用</p><script>secretCode</script>' } }]))
+    const capture = await f.bridge.capture({ sessionId: 'parent' })
+    const { sources } = await (await f.snapshot({ sessionId: 'parent', captureId: capture.captureId })).json()
+    expect(sources[0].text).toContain('触点：发现 & 试用')
+    expect(sources[0].text).not.toMatch(/secretStyle|secretCode|<h1/)
+  })
   it('captures native pasted-text and explicitly marks long evidence truncation', async () => {
     const f = await fixture()
     f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')
