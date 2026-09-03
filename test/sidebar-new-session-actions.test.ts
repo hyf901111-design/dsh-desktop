@@ -76,6 +76,8 @@ async function loadClientBundle(
     }
   })
   runInNewContext(source, {
+    TextEncoder,
+    TextDecoder,
     window: bundleWindow,
     document: browserWindow?.document,
     navigator: browserWindow?.navigator ?? { userAgent: '' },
@@ -112,6 +114,42 @@ async function loadClientBundle(
     return fakeModule()
   })
 }
+
+async function researchRuntimeFixture(options: {
+  values?: Map<string, string>
+  rename?: (payload: { sessionId: string; title: string }) => Promise<unknown>
+} = {}) {
+  const browserWindow = new Window({ url: 'https://sherlock.local/' })
+  installBrowserGlobals(browserWindow)
+  const values = options.values ?? new Map<string, string>()
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => { values.set(key, value); return true }
+  }
+  Object.assign(browserWindow, { dshDesktop: { researchCanvasStorage: storage } })
+  const client = await loadClientBundle('dsh-client-runtime', browserWindow)
+  const Runtime = client.SessionRuntime as new (...args: unknown[]) => any
+  const writes: Array<{ sessionId: string; title: string }> = []
+  const disposers: Array<() => void> = []
+  let nextId = 0
+  const runtime = new Runtime({
+    get: () => undefined,
+    reflect: { provide: () => {} },
+    effect: (start: () => (() => void)) => { disposers.push(start()) }
+  }, { sessions: {
+    create: async () => ({ result: { ok: true, value: { sessionId: `research-${++nextId}` } } }),
+    rename: async (payload: { sessionId: string; title: string }) => {
+      writes.push(payload)
+      return options.rename?.(payload) ?? { result: { ok: true, value: { title: payload.title, seq: writes.length } } }
+    }
+  } }, {})
+  const conversation = await loadClientBundle('dsh-client-ui-conversation', browserWindow)
+  const Registry = conversation.ResearchWorkspaceRegistry as new (storage: unknown) => any
+  const registry = new Registry(storage)
+  return { browserWindow, values, storage, client, runtime, registry, writes, dispose: () => disposers.forEach((dispose) => dispose()) }
+}
+
+const flushResearchEffects = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
 describe('Sherlock sidebar new-session actions', () => {
   it('renders distinct New Chat and New Research buttons and routes each action separately', async () => {
@@ -527,14 +565,20 @@ describe('Sherlock sidebar new-session actions', () => {
     expect(sessionTitle(summary)).toBe('New Research')
   })
 
-  it('opens a persisted zero-message Research session directly on its canvas', async () => {
+  it.each(['origin', 'desktop', 'legacy-desktop'])('opens a %s zero-message Research session directly on its canvas', async (storageKind) => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     installBrowserGlobals(browserWindow)
     const sessionId = 'session-persisted-research'
-    browserWindow.localStorage.setItem(
-      `sherlock.research.session-engaged.v1:${sessionId}`,
-      '1'
-    )
+    if (storageKind === 'origin') browserWindow.localStorage.setItem(`sherlock.research.session-engaged.v1:${sessionId}`, '1')
+    else Object.assign(browserWindow, { dshDesktop: { researchCanvasStorage: {
+      getItem: (key: string) => storageKind === 'desktop'
+        ? key === `sherlock.research.session-engaged.v1:${sessionId}` ? '1' : null
+        : key === `sherlock.research.canvas.artifacts.v1:${sessionId}` ? JSON.stringify([{
+          id: 'legacy-note', kind: 'assistant-excerpt', messageId: 'source-1',
+          title: '保留的研究', excerpt: '原有画板内容', x: 0, y: 0
+        }]) : null,
+      setItem: () => true
+    } } })
     const client = await loadClientBundle(
       'dsh-client-ui-conversation', browserWindow,
       ['ConversationSession']
@@ -584,6 +628,265 @@ describe('Sherlock sidebar new-session actions', () => {
       expect(actions.setView).toHaveBeenCalledWith('research')
     } finally {
       await act(async () => { root.unmount() })
+    }
+  })
+
+  it.each(['marker', 'legacy-artifacts', 'legacy-files'])('keeps %s desktop Research visible and content-named without an origin mirror', async (kind) => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    installBrowserGlobals(browserWindow)
+    const values = new Map<string, string>()
+    if (kind === 'marker') values.set('sherlock.research.session-engaged.v1:research', '1')
+    values.set(`sherlock.research.canvas.${kind === 'legacy-files' ? 'files' : 'artifacts'}.v1:research`, JSON.stringify([
+      kind === 'legacy-files'
+        ? { id: 'file-1', name: '现金流研究.pdf', path: '/research/report.pdf', x: 0, y: 0 }
+        : { id: 'note-1', kind: 'pasted-text', title: '现金流研究', excerpt: '正文', x: 0, y: 0 }
+    ]))
+    Object.assign(browserWindow, { dshDesktop: { researchCanvasStorage: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); return true }
+    } } })
+    const client = await loadClientBundle('dsh-client-ui-workspace', browserWindow, ['sessionVisible', 'sessionNode', 'displayTitle'])
+    const visible = client.__testsessionVisible as (summary: unknown, current: string, archived: Set<string>) => boolean
+    const node = client.__testsessionNode as (summary: unknown, descendants: Map<string, unknown>) => unknown
+    const display = client.__testdisplayTitle as (node: unknown, t: (key: string) => string) => string
+    const summary = { id: 'research', origin: 'root', blank: true, displayTitle: 'New Session' }
+    expect(visible(summary, 'another-session', new Set())).toBe(true)
+    expect(display(node(summary, new Map()), (key) => key)).toBe(kind === 'legacy-files' ? '现金流研究.pdf' : '现金流研究')
+    expect(display(node({ ...summary, title: '用户自定名称', displayTitle: '用户自定名称' }, new Map()), (key) => key)).toBe('用户自定名称')
+    expect(visible(summary, 'another-session', new Set(['research']))).toBe(false)
+  })
+
+  it.each(['origin', 'desktop', 'legacy-desktop'])('does not reuse an occupied zero-message %s Research canvas', async (kind) => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    installBrowserGlobals(browserWindow)
+    const values = new Map<string, string>(kind === 'legacy-desktop'
+      ? [['sherlock.research.canvas.artifacts.v1:occupied', JSON.stringify([{ id: 'node-1', title: '既有研究', kind: 'pasted-text', excerpt: '内容' }])]]
+      : [['sherlock.research.session-engaged.v1:occupied', '1']])
+    if (kind === 'origin') for (const [key, value] of values) browserWindow.localStorage.setItem(key, value)
+    else Object.assign(browserWindow, { dshDesktop: { researchCanvasStorage: { getItem: (key: string) => values.get(key) ?? null } } })
+    const client = await loadClientBundle('dsh-client-runtime', browserWindow)
+    const WorkspaceRuntime = client.WorkspaceRuntime as new (...args: unknown[]) => any
+    const created: string[] = []
+    const sessions = {
+      list: {
+        subscribe: () => () => {},
+        getSnapshot: () => ({ current: 'occupied', ids: ['occupied'], byId: { occupied: { id: 'occupied', blank: true, cwd: '/workspace' } } })
+      },
+      create: async ({ workspaceId }: { workspaceId: string }) => { created.push(workspaceId); return 'fresh-research' }
+    }
+    const runtime = new WorkspaceRuntime({ reflect: { provide: vi.fn() } }, {}, sessions)
+    runtime.list.update((draft: any) => { draft.items = [{ workspaceId: 'workspace-1', path: '/workspace', sessionIds: ['occupied'] }] })
+    expect(await runtime.connectWorkspace('workspace-1')).toBe('fresh-research')
+    expect(created).toEqual(['workspace-1'])
+    expect(values.size).toBe(1)
+  })
+
+  it('materializes the first canvas title through the real Session rename and title projection without starting a conversation', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    installBrowserGlobals(browserWindow)
+    const values = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); return true }
+    }
+    Object.assign(browserWindow, { dshDesktop: { researchCanvasStorage: storage } })
+    const client = await loadClientBundle('dsh-client-runtime', browserWindow)
+    const SessionRuntime = client.SessionRuntime as new (...args: unknown[]) => any
+    const writes: unknown[] = []
+    const disposers: Array<() => void> = []
+    const runtime = new SessionRuntime({
+      get: () => undefined,
+      reflect: { provide: vi.fn() },
+      effect: (start: () => (() => void)) => { disposers.push(start()) }
+    }, { sessions: {
+      create: async () => ({ result: { ok: true, value: { sessionId: 'research-title' } } }),
+      rename: async (payload: { sessionId: string; title: string }) => {
+        writes.push(payload)
+        return { result: { ok: true, value: { title: payload.title, seq: writes.length } } }
+      }
+    } }, {})
+    try {
+      await runtime.create({ cwd: '/workspace' })
+      const conversation = await loadClientBundle('dsh-client-ui-conversation', browserWindow)
+      const Registry = conversation.ResearchWorkspaceRegistry as new (storage: unknown) => any
+      const workspace = new Registry(storage).for('research-title')
+      workspace.addAssistantResult({ messageId: 'source-1', text: '# 现金流的质量\n证据与边界', at: { x: 0, y: 0 } })
+      await new Promise<void>((resolve) => setTimeout(resolve, 0))
+      expect(writes).toEqual([{ sessionId: 'research-title', title: '现金流的质量' }])
+      expect(runtime.list.getSnapshot().byId['research-title']).toMatchObject({ title: '现金流的质量', blank: true })
+      await runtime.manager.get('research-title').rename('用户改名')
+      workspace.createWebLink('https://example.com', { x: 20, y: 30 })
+      await new Promise<void>((resolve) => setTimeout(resolve, 0))
+      expect(writes).toEqual([
+        { sessionId: 'research-title', title: '现金流的质量' },
+        { sessionId: 'research-title', title: '用户改名' }
+      ])
+    } finally {
+      disposers.forEach((dispose) => dispose())
+    }
+  })
+
+  it.each([
+    ['file-drop', '季度研究.pdf'],
+    ['clipboard-text', '粘贴的研究事实'],
+    ['web-link', 'example.com'],
+    ['container-draft', '智能容器'],
+    ['assistant-result', '生成结果'],
+    ['clipboard-component', '保留的卡片'],
+    ['generated-summary', '组合研究摘要']
+  ])('persists the first %s component as a zero-message named session', async (kind, title) => {
+    const f = await researchRuntimeFixture()
+    try {
+      const id = await f.runtime.create({ cwd: '/workspace' })
+      const workspace = f.registry.for(id)
+      const at = { x: 10, y: 20 }
+      if (kind === 'file-drop') workspace.setFiles([{ id: 'file', name: title, source: 'computer', path: '/workspace/report.pdf', ...at }])
+      if (kind === 'clipboard-text') await workspace.insertClipboardNodes({ kind: 'text', text: title }, at)
+      if (kind === 'web-link') workspace.createWebLink('https://example.com/research', at)
+      if (kind === 'container-draft') workspace.createContainerDraft(at)
+      if (kind === 'assistant-result') workspace.addAssistantResult({ messageId: 'm-1', text: title, at })
+      if (kind === 'clipboard-component') await workspace.insertClipboardNodes({ kind: 'components', nodes: [{ id: 'source', kind: 'pasted-text', messageId: 'm-source', title, excerpt: '原文', ...at }] }, at)
+      if (kind === 'generated-summary') workspace.setArtifacts([{ id: 'summary', kind: 'generated-summary', title, messageId: 'm-summary', excerpt: '摘要正文', generationStatus: 'completed', generationLastSeq: 0, sourceNodeIds: ['source'], generationSources: [{ id: 'source', type: 'artifact', title: '参考资料', text: '原文' }], ...at }])
+      await flushResearchEffects()
+      expect(f.writes).toEqual([{ sessionId: id, title }])
+      expect(f.runtime.list.getSnapshot().byId[id]).toMatchObject({ title, blank: true })
+      expect(f.values.get(`sherlock.research.session-engaged.v1:${id}`)).toBe('1')
+      const afterRestart = new (f.registry.constructor)(f.storage).for(id).getSnapshot()
+      expect(afterRestart.files.length + afterRestart.artifacts.length).toBe(1)
+    } finally { f.dispose() }
+  })
+
+  it('recovers a legacy canvas before it is opened, and keeps the existing content after naming', async () => {
+    const key = 'sherlock.research.canvas.artifacts.v1:research-1'
+    const original = JSON.stringify([{ id: 'old', title: '旧画板研究', kind: 'pasted-text', messageId: 'old-message', excerpt: '不可丢失的内容', x: 0, y: 0 }])
+    const f = await researchRuntimeFixture({ values: new Map([[key, original]]) })
+    try {
+      await f.runtime.create({ cwd: '/workspace' })
+      await flushResearchEffects()
+      expect(f.writes).toEqual([{ sessionId: 'research-1', title: '旧画板研究' }])
+      expect(f.values.get(key)).toBe(original)
+      const workspace = f.registry.for('research-1')
+      expect(f.values.get('sherlock.research.session-engaged.v1:research-1')).toBe('1')
+      workspace.removeNodes(['old'])
+      expect(f.values.get('sherlock.research.session-engaged.v1:research-1')).toBe('1')
+    } finally { f.dispose() }
+  })
+
+  it('does not duplicate delayed title writes and never reuses a canvas when naming fails', async () => {
+    let rejectRename!: (reason: Error) => void
+    const delayed = new Promise((_resolve, reject) => { rejectRename = reject })
+    const f = await researchRuntimeFixture({ rename: () => delayed })
+    try {
+      const id = await f.runtime.create({ cwd: '/workspace' })
+      const workspace = f.registry.for(id)
+      workspace.createWebLink('https://example.com', { x: 0, y: 0 })
+      workspace.createContainerDraft({ x: 20, y: 20 })
+      await flushResearchEffects()
+      expect(f.writes).toEqual([{ sessionId: id, title: 'example.com' }])
+      const WorkspaceRuntime = f.client.WorkspaceRuntime as new (...args: unknown[]) => any
+      const runtime = new WorkspaceRuntime({ reflect: { provide: () => {} } }, {}, f.runtime)
+      runtime.list.update((draft: any) => { draft.items = [{ workspaceId: 'w', path: '/workspace', sessionIds: [id] }] })
+      expect(await runtime.connectWorkspace('w')).toBe('research-2')
+      rejectRename(new Error('offline'))
+      await flushResearchEffects()
+      runtime.list.update((draft: any) => { draft.items = [{ workspaceId: 'w', path: '/workspace', sessionIds: [id] }] })
+      expect(await runtime.connectWorkspace('w')).toBe('research-3')
+      expect(workspace.getSnapshot().artifacts).toHaveLength(2)
+    } finally { f.dispose() }
+  })
+
+  it('retries a rejected automatic title on the next durable canvas change', async () => {
+    let attempts = 0
+    const f = await researchRuntimeFixture({ rename: async (payload) => ++attempts === 1
+      ? { result: { ok: false, error: { code: 'offline', message: 'retry later' } } }
+      : { result: { ok: true, value: { title: payload.title, seq: 1 } } }
+    })
+    try {
+      const id = await f.runtime.create({ cwd: '/workspace' })
+      const workspace = f.registry.for(id)
+      workspace.createWebLink('https://example.com', { x: 0, y: 0 })
+      await flushResearchEffects()
+      expect(f.writes).toHaveLength(1)
+      expect(f.runtime.list.getSnapshot().byId[id].title).toBeUndefined()
+      workspace.createContainerDraft({ x: 20, y: 20 })
+      await flushResearchEffects()
+      expect(f.writes).toEqual([{ sessionId: id, title: 'example.com' }, { sessionId: id, title: 'example.com' }])
+      expect(f.runtime.list.getSnapshot().byId[id].title).toBe('example.com')
+    } finally { f.dispose() }
+  })
+
+  it('uses acknowledged desktop storage when the origin mirror rejects every canvas write', async () => {
+    const f = await researchRuntimeFixture()
+    try {
+      const id = await f.runtime.create({ cwd: '/workspace' })
+      Object.defineProperty(f.browserWindow.localStorage, 'setItem', { configurable: true, value: () => { throw new Error('origin quota') } })
+      const workspace = new (f.registry.constructor)().for(id)
+      workspace.createWebLink('https://example.com', { x: 0, y: 0 })
+      await flushResearchEffects()
+      expect(f.browserWindow.localStorage.getItem(`sherlock.research.session-engaged.v1:${id}`)).toBeNull()
+      expect(f.values.get(`sherlock.research.session-engaged.v1:${id}`)).toBe('1')
+      expect(f.runtime.list.getSnapshot().byId[id]).toMatchObject({ title: 'example.com', blank: true })
+      const workspaceClient = await loadClientBundle('dsh-client-ui-workspace', f.browserWindow, ['sessionVisible'])
+      expect((workspaceClient.__testsessionVisible as any)(f.runtime.list.getSnapshot().byId[id], 'other', new Set())).toBe(true)
+    } finally { f.dispose() }
+  })
+
+  it('keeps readable legacy metadata safe when an optional artifact kind is malformed', async () => {
+    const f = await researchRuntimeFixture({ values: new Map([
+      ['sherlock.research.canvas.artifacts.v1:research-1', JSON.stringify([{ id: 'legacy', kind: 7, title: '保留名称', x: 0, y: 0 }])]
+    ]) })
+    try {
+      await f.runtime.create({ cwd: '/workspace' })
+      await flushResearchEffects()
+      expect(f.writes).toEqual([{ sessionId: 'research-1', title: '保留名称' }])
+    } finally { f.dispose() }
+  })
+
+  it('preserves a pre-existing user title when an untitled legacy canvas is discovered', async () => {
+    const f = await researchRuntimeFixture({ values: new Map([
+      ['sherlock.research.canvas.files.v1:research-1', JSON.stringify([{ id: 'report', name: '自动候选.pdf', source: 'computer', x: 0, y: 0 }])]
+    ]) })
+    try {
+      f.runtime.manager.projectionStore('research-1').apply('title', '我的自定标题', 10)
+      await f.runtime.create({ cwd: '/workspace' })
+      await flushResearchEffects()
+      expect(f.writes).toEqual([])
+      expect(f.runtime.list.getSnapshot().byId['research-1'].title).toBe('我的自定标题')
+    } finally { f.dispose() }
+  })
+
+  it('hydrates legacy canvas identity without synchronously updating the sidebar during React render', async () => {
+    const f = await researchRuntimeFixture({ values: new Map([
+      ['sherlock.research.canvas.files.v1:research-1', JSON.stringify([{ id: 'file', name: '旧研究.pdf', source: 'computer', x: 0, y: 0 }])]
+    ]) })
+    const { useState, useEffect, useMemo, Fragment } = react as any
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const Sidebar = () => {
+      const [revision, setRevision] = useState(0)
+      useEffect(() => {
+        const refresh = () => setRevision((value: number) => value + 1)
+        f.browserWindow.addEventListener('sherlock:research-session-engaged', refresh)
+        return () => f.browserWindow.removeEventListener('sherlock:research-session-engaged', refresh)
+      }, [])
+      return createElement('span', { 'data-sidebar-revision': revision })
+    }
+    const Canvas = () => {
+      useMemo(() => f.registry.for('research-1'), [])
+      return createElement('div', { 'data-canvas': '' })
+    }
+    const host = f.browserWindow.document.createElement('div')
+    f.browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    try {
+      await act(async () => { root.render(createElement(Fragment, null, createElement(Sidebar), null)) })
+      await act(async () => { root.render(createElement(Fragment, null, createElement(Sidebar), createElement(Canvas))) })
+      expect(f.values.get('sherlock.research.session-engaged.v1:research-1')).toBe('1')
+      expect(host.querySelector('[data-sidebar-revision]')?.getAttribute('data-sidebar-revision')).toBe('1')
+      expect(errors.mock.calls.filter((args) => args.some((value) => String(value).includes('Cannot update a component')))).toEqual([])
+    } finally {
+      await act(async () => root.unmount())
+      errors.mockRestore()
+      f.dispose()
     }
   })
 })
