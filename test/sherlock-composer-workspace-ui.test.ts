@@ -7768,8 +7768,9 @@ describe('Sherlock workspace and composer controls', () => {
         generationDetail: 'brief',
         sourceNodeIds: ['file-a', 'file-b'],
         title: '思维导图',
-        x: 762,
-        y: 100,
+        // Keep the new card inside the 800px canvas instead of off its right edge.
+        x: 528,
+        y: 162,
         width: 520,
         height: 300,
         sizeMode: 'auto'
