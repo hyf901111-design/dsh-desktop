@@ -85,6 +85,35 @@ describe('Research context runtime', () => {
     expect(f.tools.size).toBe(0)
     expect(f.routes.size).toBe(0)
   })
+  it('discloses evidence absent from the first packet through the actual registered search and paged read tools', async () => {
+    const tail = '深层唯一证据：库存激增会使变量关系失效。'
+    const body = `黄金报告首轮摘要。\n${'A'.repeat(10000)}\n${tail}`
+    const f = fixture({ fetch: async () => new Response(JSON.stringify({ sources: [
+      { id: 'report', title: '黄金报告', kind: 'assistant-result', text: body }
+    ] })) })
+    const prepared = await f.request({ ...prepareArgs, query: '黄金报告' })
+    expect(prepared.status).toBe(200)
+    expect(prepared.body.initialContext).not.toContain(tail)
+    const snapshotId = prepared.body.snapshotId
+    const search = f.tools.get('research_context_search')
+    const found = await search.execute({ snapshotId, query: '深层唯一证据' }, exec)
+    expect(found.sources.some((source) => source.sourceId === 'report' && source.text.includes(tail))).toBe(true)
+    const read = f.tools.get('research_context_read')
+    const chunks = []
+    let cursor
+    for (let page = 0; page < 6; page++) {
+      const input = { snapshotId, sourceId: 'report', ...(cursor === undefined ? {} : { cursor }) }
+      const value = await read.execute(input, exec)
+      expect(validateJsonSchemaValue(read.output.schema, value)).toEqual([])
+      expect(Buffer.byteLength(read.output.render(input, value)[0].text)).toBeLessThanOrEqual(12288)
+      chunks.push(value.text)
+      if (value.cursor === undefined) break
+      expect(value.cursor).toBeGreaterThan(cursor ?? 0)
+      cursor = value.cursor
+    }
+    expect(chunks.join('')).toContain(tail)
+    await expect(read.execute({ snapshotId, sourceId: 'report' }, { agent: { session: { id: 'other' } } })).rejects.toThrow()
+  })
   it('runs the private HTTP transport and actual extractor end to end without publishing the authorized file path', async () => {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'research-context-http-')))
     cleanups.push(() => rm(root, { recursive: true, force: true }))
