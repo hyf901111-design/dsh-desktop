@@ -30,12 +30,14 @@ async function loadClientBundle(
   packageName: string,
   modules: Record<string, unknown> = {},
   dshDesktop?: {
+    researchContext?: { capture(request: { sessionId: string }): Promise<{ captureId: string; totalSources: number }> }
     researchFilesAvailable?(paths: string[]): Promise<boolean[]>
     researchCanvasStorage?: {
       getItem(key: string): string | null
       setItem(key: string, value: string): boolean
     }
-  }
+  },
+  fetch?: typeof globalThis.fetch
 ): Promise<ClientBundle> {
   const source = await readFile(
     `node_modules/@deepseek-ai/${packageName}/lib/client.js`,
@@ -47,8 +49,13 @@ async function loadClientBundle(
 
   runInNewContext(source, {
     AbortController: globalThis.AbortController,
+    Date: globalThis.Date,
+    TextEncoder: globalThis.TextEncoder,
+    setTimeout,
+    clearTimeout,
     window: {
       dshDesktop,
+      fetch,
       __ModuleLoader__: {
         load(value: BundleDescriptor) {
           descriptor = value
@@ -118,6 +125,224 @@ function createSnapshotStore<T>(initial: T) {
     }
   }
 }
+
+describe('progressive canvas context', () => {
+  const packet = { snapshotId: 'snap-1', totalSources: 3, initialSourceIds: ['source-2'], initialContext: 'FROZEN EVIDENCE: research_context_read snap-1' }
+  async function fixture(options: { capture?: () => Promise<{ captureId: string; totalSources: number }>; prepare?: () => Promise<unknown>; send?: () => Promise<void> } = {}) {
+    const capture = vi.fn(options.capture ?? (async () => ({ captureId: 'capture-1', totalSources: 3 })))
+    const requests: Array<{ path: string; body: any }> = []
+    const fetch = vi.fn(async (path: string, init: RequestInit) => {
+      requests.push({ path, body: JSON.parse(String(init.body)) })
+      return { ok: true, json: async () => options.prepare ? options.prepare() : structuredClone(packet) }
+    })
+    const client = await loadClientBundle('dsh-client-ui-conversation', {
+      '@deepseek-ai/dsh-client-runtime/client': { createSnapshotStore }
+    }, { researchContext: { capture }, researchFilesAvailable: async (paths) => paths.map(() => true) }, fetch as any)
+    const registry = new client.ResearchWorkspaceRegistry(memoryStorage({}))
+    const workspace = registry.for('s')
+    workspace.addAssistantResult({ messageId: 'm', text: 'Private source body', at: { x: 5000, y: 5000 } })
+    const sent: Array<{ prompt: string; images: string[] }> = []
+    const hub = new client.InputHub({ get: (name: string) => name === 'conversation' ? {
+      sendSession: async (_session: unknown, prompt: string, images: string[]) => { sent.push({ prompt, images }); await options.send?.() }
+    } : undefined }, (key: string) => key, registry)
+    const shell = new client.SessionInputShell({ actx: {}, defaultSink: () => undefined })
+    shell.setDraft('黄金的失效边界是什么')
+    hub.shells.set('s', shell)
+    hub.setResearchActive('s', true)
+    return { client, hub, shell, workspace, sent, capture, requests, fetch,
+      send: () => hub.sink({ sessionId: 's' }, shell.snapshot.draft, [...shell.snapshot.imageIds], 'queue') }
+  }
+
+  it('captures and prepares the current session before clearing the real draft and images', async () => {
+    const gate = deferred<unknown>()
+    const f = await fixture({ prepare: () => gate.promise })
+    f.shell.addImages(['i1'])
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.requests).toHaveLength(1))
+    expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    expect(f.shell.snapshot.imageIds).toEqual(['i1'])
+    expect(f.sent).toEqual([])
+    expect(f.capture).toHaveBeenCalledWith({ sessionId: 's' })
+    expect(f.requests).toEqual([{ path: '/sherlock/research-context/prepare', body: { sessionId: 's', captureId: 'capture-1', query: '黄金的失效边界是什么' } }])
+    gate.resolve(packet)
+    await operation
+    expect(f.client.parseResearchPrompt(f.sent[0]!.prompt)).toEqual({ text: '黄金的失效边界是什么', files: [], canvasContext: { version: 1, ...packet } })
+    expect(f.sent[0]!.images).toEqual(['i1'])
+    expect(f.shell.snapshot.draft).toBe('')
+    expect(f.shell.snapshot.imageIds).toEqual([])
+  })
+
+  it.each(['selection', 'explicit artifact', 'explicit file', 'chat reference', 'nonresearch', 'optout', 'empty'])('never captures for %s', async (reason) => {
+    const f = await fixture()
+    let text = f.shell.snapshot.draft
+    if (reason === 'selection') f.workspace.updateSelection([f.workspace.getSnapshot().artifacts[0].id], 'replace')
+    if (reason === 'explicit artifact') {
+      const ref = f.client.researchArtifactReference(f.workspace.getSnapshot().artifacts[0])
+      text = await f.client.researchArtifactReferenceCodec.serialize(ref.ref, new AbortController().signal) + text
+    }
+    if (reason === 'explicit file') text = await serializedResearchReferences(f.client, [{ id: 'f', name: 'a.txt', path: '/a.txt' }], text)
+    if (reason === 'chat reference') f.shell.actions.insertFilePaths(['/a.txt'])
+    if (reason === 'nonresearch') f.hub.setResearchActive('s', false)
+    if (reason === 'optout') f.shell.setResearchContextOptOut(true)
+    if (reason === 'empty') text = '  \n '
+    await f.hub.sink({ sessionId: 's' }, text, [], 'queue')
+    expect(f.capture).not.toHaveBeenCalled()
+    expect(f.requests).toEqual([])
+    if (reason === 'empty') expect(f.sent).toEqual([])
+    else expect(f.client.parseResearchPrompt(f.sent[0]!.prompt).canvasContext).toBeUndefined()
+  })
+
+  it('skips prepare for an empty capture and uses bounded/image-only retrieval queries without changing user text', async () => {
+    const empty = await fixture({ capture: async () => ({ captureId: 'zero', totalSources: 0 }) })
+    await empty.send()
+    expect(empty.requests).toEqual([])
+    expect(empty.sent[0]!.prompt).toBe('黄金的失效边界是什么')
+    const images = await fixture()
+    images.shell.setDraft('')
+    images.shell.addImages(['image'])
+    await images.send()
+    expect(images.requests[0]!.body.query).toBe('总结当前画板资料')
+    expect(images.client.parseResearchPrompt(images.sent[0]!.prompt).text).toBe('')
+    const long = await fixture()
+    long.shell.setDraft('问'.repeat(9000))
+    await long.send()
+    expect(long.requests[0]!.body.query).toHaveLength(8000)
+    expect(long.client.parseResearchPrompt(long.sent[0]!.prompt).text).toHaveLength(9000)
+  })
+
+  it('keeps draft and images with a visible generic notice when preparation rejects', async () => {
+    const f = await fixture({ prepare: async () => { throw new Error('/private/token secret') } })
+    f.shell.addImages(['i1'])
+    await f.send()
+    expect(f.sent).toEqual([])
+    expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    expect(f.shell.snapshot.imageIds).toEqual(['i1'])
+    expect(f.shell.notices.getSnapshot()).toMatchObject({ level: 'error' })
+    expect(f.shell.notices.getSnapshot().text).not.toContain('private')
+    expect(f.shell.snapshot.researchContextPreparing).toBe(false)
+  })
+
+  it.each(['draft', 'images', 'shell', 'mode', 'optout'])('does not send a stale async preparation after %s changes', async (change) => {
+    const gate = deferred<unknown>()
+    const f = await fixture({ prepare: () => gate.promise })
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.requests).toHaveLength(1))
+    if (change === 'draft') f.shell.setDraft('new question')
+    if (change === 'images') f.shell.addImages(['new-image'])
+    if (change === 'shell') f.hub.shells.delete('s')
+    if (change === 'mode') f.hub.setResearchActive('s', false)
+    if (change === 'optout') f.shell.setResearchContextOptOut(true)
+    gate.resolve(packet)
+    await operation
+    expect(f.sent).toEqual([])
+    expect(f.shell.snapshot.draft).toBe(change === 'draft' ? 'new question' : '黄金的失效边界是什么')
+  })
+
+  it('reuses a failed admitted snapshot after canvas edits but captures anew for an edited draft', async () => {
+    let fail = true
+    const f = await fixture({ send: async () => { if (fail) throw new Error('send failed') } })
+    await f.send()
+    expect(f.sent).toHaveLength(1)
+    f.workspace.addAssistantResult({ messageId: 'later', text: 'Later body', at: { x: 0, y: 0 } })
+    fail = false
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(1)
+    expect(f.sent[1]!.prompt).toBe(f.sent[0]!.prompt)
+    f.shell.setDraft('changed')
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(2)
+  })
+
+  it('retains per-send optout on failure and resets it only after successful admission', async () => {
+    let fail = true
+    const f = await fixture({ send: async () => { if (fail) throw new Error('send failed') } })
+    f.shell.setResearchContextOptOut(true)
+    await f.send()
+    expect(f.shell.snapshot.researchContextOptOut).toBe(true)
+    fail = false
+    await f.send()
+    expect(f.shell.snapshot.researchContextOptOut).toBe(false)
+    expect(f.capture).not.toHaveBeenCalled()
+  })
+
+  it('does not overwrite the next send optout while a previous admission settles', async () => {
+    const gate = deferred<void>()
+    const f = await fixture({ send: () => gate.promise })
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.sent).toHaveLength(1))
+    f.shell.setResearchContextOptOut(true)
+    gate.resolve()
+    await operation
+    expect(f.shell.snapshot.researchContextOptOut).toBe(true)
+  })
+
+  it('does not reuse a failed snapshot for user-edited text that happens to match the original question', async () => {
+    const gate = deferred<void>()
+    const f = await fixture({ send: () => gate.promise })
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.sent).toHaveLength(1))
+    f.shell.setDraft('another question')
+    f.shell.setDraft('黄金的失效边界是什么')
+    gate.reject(new Error('failed'))
+    await operation
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(2)
+  })
+
+  it('rejects an expired failed snapshot without silently recapturing the edited canvas', async () => {
+    const f = await fixture({ send: async () => { throw new Error('failed') } })
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1000)
+    try {
+      await f.send()
+      now.mockReturnValue(601001)
+      await f.send()
+      expect(f.sent).toHaveLength(1)
+      expect(f.capture).toHaveBeenCalledTimes(1)
+      expect(f.shell.notices.getSnapshot().text).toBe('research.context.expired')
+      expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    } finally { now.mockRestore() }
+  })
+
+  it('cancels the old capture for a newer send and ignores late preparation evidence', async () => {
+    const old = deferred<unknown>()
+    let calls = 0
+    const f = await fixture({ prepare: async () => ++calls === 1 ? old.promise : packet })
+    const first = f.send()
+    await vi.waitFor(() => expect(f.requests).toHaveLength(1))
+    f.shell.setDraft('new question')
+    await f.send()
+    old.resolve({ ...packet, snapshotId: 'obsolete' })
+    await first
+    expect(f.sent).toHaveLength(1)
+    expect(f.client.parseResearchPrompt(f.sent[0]!.prompt).text).toBe('new question')
+    expect(f.client.parseResearchPrompt(f.sent[0]!.prompt).canvasContext.snapshotId).toBe('snap-1')
+    expect(f.shell.notices.getSnapshot()).toBeNull()
+  })
+
+  it('rejects oversized escaped packet bytes and malformed preparation without clearing the draft', async () => {
+    const f = await fixture({ prepare: async () => ({ ...packet, version: 1, token: 'secret' }) })
+    await f.send()
+    expect(f.sent).toEqual([])
+    expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    const client = f.client
+    expect(() => client.serializeResearchPrompt([], 'question', [], [], [], { version: 1, ...packet, initialContext: '\u241f'.repeat(6000) })).toThrow()
+  })
+
+  it('round trips strictly bounded V1 packets while preserving legacy references and hiding no invalid envelope', async () => {
+    const client = await loadConversationClient()
+    const valid = { version: 1, ...packet }
+    const prompt = client.serializeResearchPrompt([], 'question', [], [], [], valid)
+    expect(client.parseResearchPrompt(prompt)).toEqual({ text: 'question', files: [], canvasContext: valid })
+    for (const value of [{ ...valid, version: 2 }, { ...valid, totalSources: -1 }, { ...valid, initialSourceIds: ['a', 'a'] }, { ...valid, initialSourceIds: ['a'.repeat(257)] }, { ...valid, initialContext: '中'.repeat(12000) }, { ...valid, secret: 'token' }]) {
+      expect(() => client.serializeResearchPrompt([], 'question', [], [], [], value)).toThrow()
+      const raw = prompt.replace(JSON.stringify(valid), JSON.stringify(value))
+      expect(client.parseResearchPrompt(raw).text).toBe(raw)
+    }
+    const legacy = client.serializeResearchPrompt([{ id: 'f', name: 'a.txt', path: '/a.txt' }], 'manual')
+    expect(client.parseResearchPrompt(legacy).files).toHaveLength(1)
+    expect(client.parseResearchPrompt(legacy).canvasContext).toBeUndefined()
+  })
+})
 
 describe('Research canvas file drops', () => {
   it('preserves bounded assistant-result Markdown while excerpts keep normalized semantics', async () => {

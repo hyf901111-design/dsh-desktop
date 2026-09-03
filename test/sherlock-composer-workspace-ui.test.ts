@@ -163,6 +163,7 @@ async function loadClientBundle(
   runInNewContext(source, {
     AbortController: globalThis.AbortController,
     TextDecoder: globalThis.TextDecoder,
+    TextEncoder: globalThis.TextEncoder,
     window: bundleWindow,
     document: styleDocument,
     localStorage: options?.window?.localStorage,
@@ -5858,6 +5859,155 @@ describe('Sherlock workspace and composer controls', () => {
     ].map(fileReferenceKind)).toEqual([
       'pdf', 'word', 'presentation', 'text', 'image', 'spreadsheet'
     ])
+  })
+
+  it('renders progressive canvas context in the actual InputBar with metadata-only expansion and per-send optout', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow, exposeInputBar: true,
+      modules: {
+        '@deepseek-ai/dsh-client-runtime/client': { createSnapshotStore },
+        '@deepseek-ai/dsh-client-ui-primitives': { Tooltip: ({ children }: any) => children },
+        '@deepseek-ai/dsh-client-ui-attachment': { DropOverlay: () => null, AttachmentRail: () => null }
+      }
+    })
+    const shell = new (client.SessionInputShell as any)({ actx: {}, defaultSink: () => undefined })
+    shell.setDraft('我的问题')
+    const workspace = new (client.ResearchWorkspaceRegistry as any)().for('progressive-ui')
+    workspace.addAssistantResult({ messageId: 'm', text: 'SECRET_SOURCE_BODY', at: { x: 9000, y: 9000 } })
+    const id = workspace.getSnapshot().artifacts[0].id
+    workspace.renameNode(id, '远处的结论')
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    const props: any = {
+      useSession: (select: any) => select({ running: false, promptError: null, subagent: null, removed: false }),
+      useInput: (select: any) => useSyncExternalStore(shell.state.subscribe, () => select(shell.snapshot), () => select(shell.snapshot)),
+      inputActions: shell.actions, keyboard: shell, renderSlot: () => null,
+      useNotices: (select: any) => select(null), useLexicon: (select: any) => select(new Map()),
+      useMenuLauncher: (select: any) => select(null), useProjection: (_name: string, select?: any) => select?.(undefined),
+      researchCanvasWorkspace: workspace, researchFileReferences: [], researchArtifactReferences: [],
+      sessionId: 'progressive-ui', t: (key: string, args?: any) => `${key}${args ? ` ${JSON.stringify(args)}` : ''}`, variant: 'composer'
+    }
+    try {
+      await act(async () => { root.render(createElement(client.__testInputBar as any, props)) })
+      const badge = host.querySelector('[data-research-context-badge]')
+      expect(badge).not.toBeNull()
+      expect(badge?.textContent).toContain('1')
+      expect(host.innerHTML).not.toContain('SECRET_SOURCE_BODY')
+      await act(async () => { (badge as any)?.click() })
+      const directory = host.querySelector('[data-research-context-directory]')
+      expect(directory?.textContent).toContain('远处的结论')
+      expect(directory?.querySelector('[data-source-status]')).not.toBeNull()
+      expect(host.innerHTML).not.toContain('SECRET_SOURCE_BODY')
+      await act(async () => { (host.querySelector('[data-research-context-disable]') as any)?.click() })
+      expect(shell.snapshot.researchContextOptOut).toBe(true)
+      expect(host.querySelector('[data-research-context-badge]')?.getAttribute('data-opt-out')).toBe('true')
+      await act(async () => {
+        shell.setResearchContextOptOut(false)
+        shell.insertReference((client.researchArtifactReference as any)(workspace.getSnapshot().artifacts[0]), { start: 0, end: 0, draftRev: shell.snapshot.draftRev })
+      })
+      expect(host.querySelector('[data-research-context-badge]')).toBeNull()
+      await act(async () => { shell.setDraft('普通问题'); workspace.updateSelection([id], 'replace') })
+      expect(host.querySelector('[data-research-context-badge]')).toBeNull()
+      await act(async () => { workspace.updateSelection([], 'replace'); root.render(createElement(client.__testInputBar as any, { ...props, researchCanvasWorkspace: undefined })) })
+      expect(host.querySelector('[data-research-context-badge]')).toBeNull()
+    } finally {
+      await act(async () => { root.unmount() })
+      host.remove(); restoreGlobals()
+    }
+  })
+
+  it('projects progressive canvas context as user text and small provenance without evidence or JSON', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow,
+      transformSource: (source) => source.replace('\t\texports.apply = apply;', '\t\texports.apply = apply;\n\t\texports.__testUserStyleBubble = UserStyleBubble;'),
+      modules: {
+        '@deepseek-ai/dsh-client-ui-attachment': { ImageGallery: () => null },
+        '@deepseek-ai/dsh-client-ui-primitives': { MessageText: ({ text }: any) => createElement('span', null, text) }
+      }
+    })
+    const prompt = (client.serializeResearchPrompt as any)([], '我的真实问题', [], [], [], {
+      version: 1, snapshotId: 'snap-ui', totalSources: 3, initialSourceIds: ['s2'], initialContext: 'SECRET EVIDENCE NEVER RENDER'
+    })
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    try {
+      await act(async () => { root.render(createElement(client.__testUserStyleBubble as any, {
+        content: [{ type: 'text', text: prompt }], imageLoader: () => Promise.resolve(), t: (key: string) => key
+      })) })
+      expect(host.textContent).toContain('我的真实问题')
+      expect(host.querySelector('[data-research-context-provenance]')).not.toBeNull()
+      expect(host.querySelector('[data-research-context-provenance]')?.getAttribute('title')).toContain('s2')
+      expect(host.innerHTML).not.toContain('SECRET EVIDENCE')
+      expect(host.innerHTML).not.toContain('initialContext')
+      expect(host.innerHTML).not.toContain('snap-ui')
+    } finally {
+      await act(async () => { root.unmount() })
+      host.remove(); restoreGlobals()
+    }
+  })
+
+  it('keeps progressive canvas context out of the real queue preview and explains why its frozen send cannot be edited', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow,
+      transformSource: (source) => source.replace('\t\texports.apply = apply;', '\t\texports.apply = apply;\n\t\texports.__testQueueDock = QueueDock;'),
+      modules: { '@deepseek-ai/dsh-client-ui-primitives': new Proxy({ Tooltip: ({ children }: any) => children }, { get: (obj, key) => Reflect.get(obj, key) ?? (() => null) }) }
+    })
+    const prompt = (client.serializeResearchPrompt as any)([], '排队问题', [], [], [], {
+      version: 1, snapshotId: 'snap-queue', totalSources: 3, initialSourceIds: ['s2'], initialContext: 'SECRET QUEUE EVIDENCE'
+    })
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    try {
+      for (const image of [false, true]) {
+        const queue = [{ id: 'q', placement: 'queued', content: [{ type: 'text', text: prompt }, ...(image ? [{ type: 'image', source: { type: 'url', url: 'test' } }] : [])], preview: prompt.slice(0, 200), text: image ? null : prompt }]
+        await act(async () => { root.render(createElement(client.__testQueueDock as any, {
+          useSession: (select: any) => select({ queue, subagent: null, running: true }), updateQueue: async () => undefined, notify: () => undefined,
+          t: (key: string) => key
+        })) })
+        expect(host.textContent).toContain('排队问题')
+        expect(host.innerHTML).not.toContain('SECRET QUEUE EVIDENCE')
+        expect(host.innerHTML).not.toContain('canvasContext')
+        const edit = host.querySelector('[aria-label="queue.edit"]')
+        expect(edit?.hasAttribute('disabled')).toBe(true)
+        expect(edit?.getAttribute('title')).toBe('research.context.queueEdit')
+        expect(host.querySelector('[aria-label="queue.remove"]')?.hasAttribute('disabled')).toBe(false)
+        expect(host.querySelector('[aria-label="queue.steer"]')?.hasAttribute('disabled')).toBe(false)
+      }
+    } finally { await act(async () => { root.unmount() }); host.remove(); restoreGlobals() }
+  })
+
+  it('passes only the question from progressive canvas context to the ChatView query rail', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    const previews: string[][] = []
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow,
+      // Replace only the downstream geometry-dependent rail, keeping the actual ChatView projection.
+      transformSource: (source) => source.replace('function QueryRail({', 'function OriginalQueryRail({').replace('\t\texports.apply = apply;', '\t\texports.apply = apply;\n\t\texports.__testChatView = ChatView;\n\t\tfunction QueryRail(props) { return react.createElement(window.__captureQueryRail, props); }'),
+      modules: { '@deepseek-ai/dsh-client-ui-primitives': new Proxy({}, { get: () => () => null }) }
+    })
+    ;(browserWindow as any).__captureQueryRail = ({ queries }: any) => { previews.push(queries.map((query: any) => query.preview)); return null }
+    const prompt = (client.serializeResearchPrompt as any)([], '导航中的真实问题', [], [], [], { version: 1, snapshotId: 'snap-rail', totalSources: 1, initialSourceIds: ['s'], initialContext: 'SECRET RAIL EVIDENCE' })
+    const state = { chat: { order: ['u'], nodes: new Map([['u', { kind: 'user', key: 'u', data: { content: [{ type: 'text', text: prompt }] } }]]), timeline: [] }, queue: [], running: false, openState: 'cold', hasMore: false, loadingOlder: false }
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    try {
+      await act(async () => { root.render(createElement(client.__testChatView as any, {
+        useSession: (select: any) => select(state), useSessions: (select: any) => select({ byId: {} }), useStore: (select: any) => select({}),
+        renderSlot: () => null, sessionId: 's', chatScroll: { read: () => null, save: () => undefined }, t: (key: string) => key
+      })) })
+      expect(previews.at(-1)).toEqual(['导航中的真实问题'])
+    } finally { await act(async () => { root.unmount() }); host.remove(); restoreGlobals() }
   })
 
   it('shows file-type icons and delayed full-name tooltips for Chat and Research tags', async () => {
