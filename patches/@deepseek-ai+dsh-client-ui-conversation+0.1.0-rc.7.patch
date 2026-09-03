@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..40464a1 100644
+index 1dd0e89..2b00a50 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -160,7 +160,7 @@ index 1dd0e89..40464a1 100644
  				addImages: (ids) => this.addImages(ids),
  				removeImage: (id) => {
  					this.removeImage(id);
-@@ -909,6 +1002,18 @@ window.__ModuleLoader__.load({
+@@ -909,12 +1002,38 @@ window.__ModuleLoader__.load({
  				},
  				submit: () => {
  					this.submit("queue");
@@ -179,7 +179,27 @@ index 1dd0e89..40464a1 100644
  				}
  			};
  			core = new InputMachine({ now: () => Date.now() });
-@@ -938,6 +1043,63 @@ window.__ModuleLoader__.load({
+ 			noticeSeq = 0;
+ 			lastDraft = "";
+ 			imageIds = [];
++			researchContextOptOut = false;
++			researchContextOptionRev = 0;
++			researchContextPreparing = false;
++			setResearchContextOptOut(value) {
++				if (this.researchContextOptOut === (value === true)) return;
++				this.researchContextOptOut = value === true;
++				this.researchContextOptionRev += 1;
++				this.publish();
++			}
++			setResearchContextPreparing(value) {
++				if (this.researchContextPreparing === value) return;
++				this.researchContextPreparing = value;
++				this.publish();
++			}
+ 			disposed = false;
+ 			/** Draft persistence mirror (chat store write; receives the clipboard projection, never raw placeholders). */
+ 			mirrorFn;
+@@ -938,6 +1057,63 @@ window.__ModuleLoader__.load({
  					...editRange !== void 0 ? { editRange } : {}
  				}));
  			}
@@ -243,7 +263,7 @@ index 1dd0e89..40464a1 100644
  			/** Append ordered image ids unless an admission transaction is locked. */
  			addImages(ids) {
  				if (this.snapshot.phase === "adjudicating" || this.snapshot.phase === "submitting") return false;
-@@ -969,20 +1131,30 @@ window.__ModuleLoader__.load({
+@@ -969,20 +1145,30 @@ window.__ModuleLoader__.load({
  			* @param ids - failed attempt image ids.
  			*/
  			restoreImages(ids) {
@@ -278,12 +298,25 @@ index 1dd0e89..40464a1 100644
  			}
  			/** Undo the latest transaction (InputBar intercepts the platform chord). */
  			undo() {
-@@ -1334,14 +1506,21 @@ window.__ModuleLoader__.load({
+@@ -1316,6 +1502,9 @@ window.__ModuleLoader__.load({
+ 				return {
+ 					...this.core.state,
+ 					imageIds: this.imageIds,
++					researchContextOptOut: this.researchContextOptOut,
++					researchContextOptionRev: this.researchContextOptionRev,
++					researchContextPreparing: this.researchContextPreparing,
+ 					queue: this.deps.queue?.getSnapshot() ?? EMPTY_QUEUE
+ 				};
+ 			}
+@@ -1334,14 +1523,28 @@ window.__ModuleLoader__.load({
  		var InputHub = class {
  			rootCtx;
  			t;
 +			researchWorkspaces;
 +			researchActiveSessions = /* @__PURE__ */ new Set();
++			researchContextAttempts = /* @__PURE__ */ new Map();
++			researchContextRetries = /* @__PURE__ */ new Map();
++			researchSendAttempts = /* @__PURE__ */ new Map();
  			shells = /* @__PURE__ */ new Map();
  			/**
  			* @param ctx - client root context (services resolved lazily per call — boot order stays free).
@@ -297,11 +330,15 @@ index 1dd0e89..40464a1 100644
 +			}
 +			setResearchActive(sessionId, active) {
 +				if (active) this.researchActiveSessions.add(sessionId);
-+				else this.researchActiveSessions.delete(sessionId);
++				else {
++					this.researchActiveSessions.delete(sessionId);
++					this.researchContextAttempts.get(sessionId)?.abort();
++					this.researchContextRetries.delete(sessionId);
++				}
  			}
  			/**
  			* Resolve the facade for one session-scope ctx (SessionInputResolver face).
-@@ -1373,6 +1552,9 @@ window.__ModuleLoader__.load({
+@@ -1373,6 +1576,9 @@ window.__ModuleLoader__.load({
  					defaultSink: (text, imageIds, mode) => {
  						this.sink(session, text, imageIds, mode);
  					},
@@ -311,15 +348,20 @@ index 1dd0e89..40464a1 100644
  					steerQueue: () => {
  						this.steerQueue(session, shell);
  					}
-@@ -1390,6 +1572,7 @@ window.__ModuleLoader__.load({
+@@ -1389,7 +1595,12 @@ window.__ModuleLoader__.load({
+ 						for (const off of offs) off();
  						const drafts = shell.snapshot.imageIds;
  						shell.dispose();
++						this.researchContextAttempts.get(id)?.abort();
++						this.researchContextAttempts.delete(id);
++						this.researchContextRetries.delete(id);
++						this.researchSendAttempts.delete(id);
  						this.shells.delete(id);
 +						this.researchActiveSessions.delete(id);
  						const conversation = this.rootCtx.get("conversation");
  						for (const imageId of drafts) conversation?.releaseDraftImage(imageId);
  					};
-@@ -1435,19 +1618,139 @@ window.__ModuleLoader__.load({
+@@ -1435,19 +1646,192 @@ window.__ModuleLoader__.load({
  			* exactly one path; a failed first prompt is an ordinary prompt failure
  			* (error strip via promptError, draft restored only while untouched).
  			*/
@@ -356,7 +398,51 @@ index 1dd0e89..40464a1 100644
 +					session,
 +					mode
 +				};
-+				if (attempt.text === "" && attempt.imageIds.length === 0 && attempt.files.length === 0 && attempt.artifacts.length === 0) return;
++				if (attempt.text.trim() === "" && attempt.imageIds.length === 0 && attempt.files.length === 0 && attempt.artifacts.length === 0) return;
++				const autoContext = researchActive && currentSelection.selectedNodeIds.length === 0 && files.length === 0 && artifacts.length === 0 && (shellSnapshot?.occurrences?.length ?? 0) === 0 && shellSnapshot?.researchContextOptOut !== true;
++				const sendAttempt = {};
++				this.researchSendAttempts.set(session.sessionId, sendAttempt);
++				const contextKey = JSON.stringify([text, attempt.imageIds, mode]);
++				let canvasContext;
++				let contextExpiresAt;
++				this.researchContextAttempts.get(session.sessionId)?.abort();
++				if (!autoContext) {
++					this.researchContextAttempts.delete(session.sessionId);
++					this.researchContextRetries.delete(session.sessionId);
++					shell?.setResearchContextPreparing?.(false);
++				}
++				if (autoContext) {
++					const controller = new AbortController();
++					this.researchContextAttempts.set(session.sessionId, controller);
++					const ownsDraft = () => this.researchContextAttempts.get(session.sessionId) === controller && this.researchActiveSessions.has(session.sessionId) && this.shells.get(session.sessionId) === shell && shell?.disposed !== true && (shell === void 0 || shell.snapshot.draftRev === shellSnapshot.draftRev && JSON.stringify(shell.snapshot.imageIds) === JSON.stringify(shellSnapshot.imageIds) && shell.snapshot.researchContextOptionRev === shellSnapshot.researchContextOptionRev && shell.snapshot.researchContextOptOut !== true);
++					shell?.setResearchContextPreparing?.(true);
++					const timeout = setTimeout(() => controller.abort(), 30000);
++					try {
++						const retry = this.researchContextRetries.get(session.sessionId);
++						if (retry !== void 0 && retry.shell === shell && retry.key === contextKey && retry.draftRev === shellSnapshot?.draftRev) {
++							if (Date.now() >= retry.expiresAt) {
++								shell?.notify("error", this.t("research.context.expired"));
++								return;
++								}
++							canvasContext = retry.packet;
++							contextExpiresAt = retry.expiresAt;
++						} else {
++							this.researchContextRetries.delete(session.sessionId);
++							contextExpiresAt = Date.now() + 10 * 60 * 1000;
++							canvasContext = await prepareResearchCanvasContext(session.sessionId, attempt.text.trim().slice(0, 8000) || "总结当前画板资料", controller.signal);
++						}
++						if (controller.signal.aborted || !ownsDraft()) return;
++					} catch {
++						if (ownsDraft()) shell?.notify("error", this.t("research.context.unavailable"));
++						return;
++					} finally {
++						clearTimeout(timeout);
++						if (this.researchContextAttempts.get(session.sessionId) === controller) {
++							this.researchContextAttempts.delete(session.sessionId);
++							shell?.setResearchContextPreparing?.(false);
++						}
++					}
++				}
 +				if (attempt.files.length > RESEARCH_PROMPT_MAX_FILES || attempt.files.some((file) => typeof file.path !== "string" || file.path.length === 0 || file.path.length > RESEARCH_CANVAS_TEXT_LIMIT)) {
 +					shell?.notify("error", this.t("research.files.unavailable"));
 +					return;
@@ -378,7 +464,7 @@ index 1dd0e89..40464a1 100644
 +						id: file.id,
 +						name: researchPromptBasename(file.name),
 +						path: file.path
-+					})), attempt.text, attempt.occurrences, attempt.artifacts, attempt.artifactOccurrences);
++					})), attempt.text, attempt.occurrences, attempt.artifacts, attempt.artifactOccurrences, canvasContext);
 +				} catch {
 +					shell?.notify("error", this.t("research.references.unavailable"));
 +					return;
@@ -388,13 +474,19 @@ index 1dd0e89..40464a1 100644
 +				if (researchActive && attempt.selection.selectedNodeIds.length > 0) workspace.commitSelection(attempt.selection);
 +				try {
 +					await this.conversation().sendSession(attempt.session, prompt, attempt.imageIds, attempt.mode);
++					if (this.researchSendAttempts.get(session.sessionId) === sendAttempt) {
++						this.researchContextRetries.delete(session.sessionId);
++						if (this.shells.get(session.sessionId) === shell && shell?.snapshot.researchContextOptionRev === shellSnapshot?.researchContextOptionRev) shell?.setResearchContextOptOut?.(false);
++					}
 +				} catch {
 +					if (researchActive && attempt.selection.selectedNodeIds.length > 0) workspace.restoreSelection(attempt.selection);
  					if (this.shells.get(session.sessionId) === shell) {
 -						shell?.restoreImages(imageIds);
 -						if (shell?.snapshot.draft === "") shell.setDraft(text);
 +						shell?.restoreImages(attempt.imageIds);
-+						if (shell?.snapshot.draft === "" && shell.snapshot.draftRev === committedDraftRev) shell.restoreDraftState(attempt.draftState);
++						const restoreDraft = shell?.snapshot.draft === "" && shell.snapshot.draftRev === committedDraftRev;
++						if (restoreDraft) shell.restoreDraftState(attempt.draftState);
++						if (canvasContext !== void 0 && restoreDraft && this.researchSendAttempts.get(session.sessionId) === sendAttempt && JSON.stringify(shell?.snapshot.imageIds) === JSON.stringify(attempt.imageIds)) this.researchContextRetries.set(session.sessionId, { shell, key: contextKey, packet: canvasContext, expiresAt: contextExpiresAt, draftRev: shell?.snapshot.draftRev });
  						return;
  					}
  					const conversation = this.rootCtx.get("conversation");
@@ -416,7 +508,7 @@ index 1dd0e89..40464a1 100644
 +					const prompt = typeof request?.prompt === 'string' && request.prompt.trim() !== '' && request.prompt.length <= RESEARCH_CONTAINER_MAX_PROMPT ? request.prompt.trim() : null;
 +					if (requestSessionId !== session.sessionId || targetNodeId === null || prompt === null || request?.selectedNodeIds !== void 0 || request?.detail !== void 0) return { ok: false, error: '无法读取容器需求' };
 +					const target = workspace.getSnapshot().artifacts.find((node) => node.id === targetNodeId && node.kind === 'generated-container' && node.generationStatus === 'queued');
-+					if (target === void 0 || target.containerPrompt !== prompt) return { ok: false, error: '生成组件已失效' };
++					if (target === void 0 || target.creationMode === 'selection' || target.containerPrompt !== prompt) return { ok: false, error: '生成组件已失效' };
 +					try {
 +						const result = await startResearchTask({
 +							parentSessionId: session.sessionId,
@@ -433,11 +525,13 @@ index 1dd0e89..40464a1 100644
 +					}
 +				}
 +				const selectedNodeIds = researchSelectionIds(request?.selectedNodeIds);
++				const prompt = kind === 'create' && typeof request.prompt === 'string' && request.prompt.trim() !== '' && request.prompt.length <= RESEARCH_CONTAINER_MAX_PROMPT ? request.prompt.trim() : null;
 +				const detail = kind === 'mind-map' && RESEARCH_MIND_MAP_DETAILS.has(request?.detail) ? request.detail : kind === 'mind-map' ? null : void 0;
-+				if (requestSessionId !== session.sessionId || targetNodeId === null || !['mind-map', 'summary'].includes(kind) || selectedNodeIds.length === 0 || kind === 'mind-map' && detail === null) return { ok: false, error: '无法读取选中的组件' };
++				if (requestSessionId !== session.sessionId || targetNodeId === null || !['mind-map', 'summary', 'create'].includes(kind) || selectedNodeIds.length === 0 || selectedNodeIds.length > RESEARCH_GENERATION_MAX_SOURCES || kind === 'mind-map' && detail === null || kind === 'create' && (prompt === null || request.detail !== void 0)) return { ok: false, error: '无法读取选中的组件或创建需求' };
 +				const target = workspace.getSnapshot().artifacts.find((node) => node.id === targetNodeId && node.generationStatus === 'queued');
 +				if (target === void 0 || kind === 'mind-map' && researchMindMapDetail(target.generationDetail) !== detail) return { ok: false, error: '生成组件已失效' };
-+				if (!Array.isArray(target.generationSources) || target.generationSources.length === 0 || selectedNodeIds.some((id, index) => target.sourceNodeIds[index] !== id)) {
++				if (kind === 'create' && (target.creationMode !== 'selection' || target.containerPrompt !== prompt)) return { ok: false, error: '创建需求已失效' };
++				if (canonicalResearchGenerationSources(target.generationSources) === null || selectedNodeIds.length !== target.sourceNodeIds.length || selectedNodeIds.some((id, index) => target.sourceNodeIds[index] !== id)) {
 +					workspace.failGeneration(targetNodeId, '选中的组件内容不可用');
 +					return { ok: false, error: '选中的组件内容不可用' };
 +				}
@@ -446,6 +540,7 @@ index 1dd0e89..40464a1 100644
 +						parentSessionId: session.sessionId,
 +						canvasNodeId: targetNodeId,
 +						kind,
++						...(kind === 'create' ? { prompt } : {}),
 +						...(kind === 'mind-map' ? { detail } : {}),
 +						sources: target.generationSources
 +					});
@@ -467,7 +562,7 @@ index 1dd0e89..40464a1 100644
  			}
  			/**
  			* Steer every still-pending queued message into the running turn, in FIFO
-@@ -1462,7 +1765,7 @@ window.__ModuleLoader__.load({
+@@ -1462,7 +1846,7 @@ window.__ModuleLoader__.load({
  			* @param shell - the resident shell (notice outlet).
  			*/
  			async steerQueue(session, shell) {
@@ -476,7 +571,7 @@ index 1dd0e89..40464a1 100644
  				if (queued.length === 0) return;
  				for (const item of queued) {
  					const result = await session.updateQueue(item.id, { kind: "steer" });
-@@ -2422,6 +2725,8 @@ window.__ModuleLoader__.load({
+@@ -2422,6 +2806,8 @@ window.__ModuleLoader__.load({
  			const chips = occurrences.map((o) => ({
  				occurrenceId: o.occurrenceId,
  				offset: o.offset,
@@ -485,7 +580,7 @@ index 1dd0e89..40464a1 100644
  				label: o.label,
  				invalid: o.invalid === true
  			}));
-@@ -2433,6 +2738,82 @@ window.__ModuleLoader__.load({
+@@ -2433,6 +2819,82 @@ window.__ModuleLoader__.load({
  				hint
  			};
  		}
@@ -568,7 +663,7 @@ index 1dd0e89..40464a1 100644
  		//#endregion
  		//#region lib/types/client/image-labels.js
  		/** Bridges the `conversation` locale namespace to the zero-cordis attachment
-@@ -3164,8 +3545,11 @@ window.__ModuleLoader__.load({
+@@ -3164,8 +3626,11 @@ window.__ModuleLoader__.load({
  			if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) return name;
  			return name.split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
  		}
@@ -582,7 +677,7 @@ index 1dd0e89..40464a1 100644
  		}
  		function PermissionSelect({ value, locked, command, t }) {
  			const [pick, setPick] = (0, react.useState)(null);
-@@ -3186,7 +3570,7 @@ window.__ModuleLoader__.load({
+@@ -3186,7 +3651,7 @@ window.__ModuleLoader__.load({
  				const icon = permissionGlyph(option.value);
  				return {
  					id: option.value,
@@ -591,7 +686,7 @@ index 1dd0e89..40464a1 100644
  					...icon === void 0 ? {} : { icon }
  				};
  			});
-@@ -3225,10 +3609,11 @@ window.__ModuleLoader__.load({
+@@ -3225,10 +3690,11 @@ window.__ModuleLoader__.load({
  					setOpen(false);
  				},
  				side: "top",
@@ -604,7 +699,7 @@ index 1dd0e89..40464a1 100644
  					title: current?.description,
  					disabled: locked || busy,
  					onClick: () => {
-@@ -3242,7 +3627,7 @@ window.__ModuleLoader__.load({
+@@ -3242,7 +3708,7 @@ window.__ModuleLoader__.load({
  						}),
  						(0, react_jsx_runtime.jsx)("span", {
  							className: PermissionSelect_module_css_default.triggerLabel,
@@ -613,7 +708,7 @@ index 1dd0e89..40464a1 100644
  						}),
  						(0, react_jsx_runtime.jsx)("span", {
  							className: clsx(PermissionSelect_module_css_default.chevron, open && PermissionSelect_module_css_default.chevronOpen),
-@@ -3298,13 +3683,21 @@ window.__ModuleLoader__.load({
+@@ -3298,13 +3764,21 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css.mjs
@@ -637,7 +732,7 @@ index 1dd0e89..40464a1 100644
  			document.head.appendChild(tag);
  		}
  		var InputBar_module_css_default = {
-@@ -3335,6 +3728,7 @@ window.__ModuleLoader__.load({
+@@ -3335,6 +3809,7 @@ window.__ModuleLoader__.load({
  			"chip": "uV2eYG_chip",
  			"cardWorkspaceTrigger": "uV2eYG_cardWorkspaceTrigger",
  			"grow": "uV2eYG_grow",
@@ -645,7 +740,7 @@ index 1dd0e89..40464a1 100644
  			"primary": "uV2eYG_primary",
  			"root": "uV2eYG_root",
  			"tools": "uV2eYG_tools",
-@@ -3356,7 +3750,103 @@ window.__ModuleLoader__.load({
+@@ -3356,7 +3831,135 @@ window.__ModuleLoader__.load({
  			textRefs: [],
  			hint: null
  		};
@@ -746,11 +841,43 @@ index 1dd0e89..40464a1 100644
 +				permissions
 +			] });
 +		}
-+		function InputBar({ useSession, useInput, inputActions, keyboard, addImages, removeImage, draftImages, resolveSubmitMode, toggleCommandMenu, stop, command, t, renderSlot, useNotices, useLexicon, useMenuLauncher, useProjection, sessionId, variant, disabled: inert = false, blocked, workspacePickerOpen = false, onRequestWorkspace, placeholder, accessory, researchFileReferences, researchArtifactReferences, overlay, leftItems, rightItems, footer }) {
++		function ResearchCanvasContextBadge({ workspace, input, keyboard, t, disabled = false }) {
++			const snapshot = (0, react.useSyncExternalStore)(workspace.subscribe, workspace.getSnapshot, workspace.getSnapshot);
++			const [open, setOpen] = (0, react.useState)(false);
++			const directoryId = (0, react.useId)();
++			const sources = (0, react.useMemo)(() => [
++				...snapshot.files.map((file) => ({ id: file.id, title: file.displayName || researchPromptBasename(file.name), file })),
++				...snapshot.artifacts.map((artifact) => ({ id: artifact.id, title: artifact.displayName || artifact.title, artifact }))
++			], [snapshot.files, snapshot.artifacts]);
++			if (sources.length === 0 || snapshot.selection.selectedNodeIds.length > 0 || (input?.occurrences?.length ?? 0) > 0) return null;
++			const optOut = input?.researchContextOptOut === true;
++			const preparing = input?.researchContextPreparing === true;
++			const buttonStyle = { border: "none", borderRadius: 8, background: "var(--dsw-alias-interactive-bg-hover)", color: "var(--dsw-alias-label-secondary)", font: "inherit", fontSize: 12, lineHeight: "20px", cursor: "pointer", padding: "3px 8px" };
++			const toggleStyle = { ...buttonStyle, display: "flex", alignItems: "center", justifyContent: "center", width: "100%", minHeight: 34, boxSizing: "border-box", textAlign: "center", padding: "6px 12px" };
++			return (0, react_jsx_runtime.jsxs)("div", {
++				style: { position: "relative", margin: "0 14px", alignSelf: "flex-start", maxWidth: "calc(100% - 28px)" },
++				onKeyDown: (event) => { if (event.key === "Escape") { setOpen(false); event.stopPropagation(); } },
++				onBlur: (event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); },
++				children: [(0, react_jsx_runtime.jsx)("button", {
++					type: "button", "data-research-context-badge": "", "data-opt-out": optOut || void 0,
++					"aria-expanded": open, "aria-controls": directoryId, disabled,
++					onClick: () => setOpen(!open), style: buttonStyle,
++					children: preparing ? t("research.context.preparing") : optOut ? t("research.context.disabled") : t("research.context.badge", { total: sources.length })
++				}), open && (0, react_jsx_runtime.jsxs)("div", {
++					id: directoryId, role: "region", "aria-label": t("research.context.scope"), "data-research-context-directory": "",
++					style: { position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: "min(320px, calc(100vw - 64px))", boxSizing: "border-box", zIndex: 20, padding: 12, borderRadius: 12, background: "var(--dsw-specific-input-major)", color: "var(--dsw-alias-label-secondary)", border: "1px solid var(--dsw-alias-border-l3)", boxShadow: "var(--dsw-shadow-lv2)", fontSize: 12, lineHeight: "18px" },
++					children: [(0, react_jsx_runtime.jsx)("ul", {
++						style: { listStyle: "none", padding: 0, margin: "0 0 10px", maxHeight: 200, overflowY: "auto" },
++						children: sources.map((source) => (0, react_jsx_runtime.jsxs)("li", { style: { display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }, children: [source.file ? (0, react_jsx_runtime.jsx)(FileReferenceIcon, { name: source.file.name }) : (0, react_jsx_runtime.jsx)(ResearchArtifactReferenceIcon, { artifact: source.artifact }), (0, react_jsx_runtime.jsx)("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, title: source.title, children: source.title })] }, source.id))
++					}), (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-context-disable": "", disabled: disabled || preparing, style: toggleStyle, onClick: () => { keyboard?.setResearchContextOptOut(!optOut); setOpen(false); }, children: t(optOut ? "research.context.enable" : "research.context.disable") })]
++				})]
++			});
++		}
++		function InputBar({ useSession, useInput, inputActions, keyboard, addImages, removeImage, draftImages, resolveSubmitMode, toggleCommandMenu, stop, command, t, renderSlot, useNotices, useLexicon, useMenuLauncher, useProjection, sessionId, variant, disabled: inert = false, blocked, workspacePickerOpen = false, onRequestWorkspace, placeholder, accessory, researchFileReferences, researchArtifactReferences, researchCanvasWorkspace, overlay, leftItems, rightItems, footer }) {
  			const input = useInput((s) => s);
  			const notice = useNotices((s) => s);
  			const lexicon = useLexicon((s) => s);
-@@ -3374,6 +3864,9 @@ window.__ModuleLoader__.load({
+@@ -3374,6 +3977,9 @@ window.__ModuleLoader__.load({
  			const [preview, setPreview] = (0, react.useState)(null);
  			const [dragActive, setDragActive] = (0, react.useState)(false);
  			const [toast, setToast] = (0, react.useState)(null);
@@ -760,7 +887,7 @@ index 1dd0e89..40464a1 100644
  			const toastSeq = (0, react.useRef)(0);
  			const showToast = (0, react.useCallback)((text) => {
  				toastSeq.current += 1;
-@@ -3397,9 +3890,24 @@ window.__ModuleLoader__.load({
+@@ -3397,9 +4003,24 @@ window.__ModuleLoader__.load({
  			]);
  			const inputRef = (0, react.useRef)(null);
  			const cardRef = (0, react.useRef)(null);
@@ -785,8 +912,12 @@ index 1dd0e89..40464a1 100644
  			const safari = (0, react.useMemo)(() => isSafariBrowser(navigator), []);
  			const safariNativeShrinkRef = (0, react.useRef)(false);
  			const composingRef = (0, react.useRef)(false);
-@@ -3420,7 +3928,15 @@ window.__ModuleLoader__.load({
- 			const machineBusy = input?.phase === "adjudicating" || input?.phase === "submitting";
+@@ -3417,10 +4038,18 @@ window.__ModuleLoader__.load({
+ 			const disabled = removed || inert || !live || blocked !== void 0 || parentOffline;
+ 			const locked = disabled;
+ 			const modelSeatLocked = removed || inert || !live;
+-			const machineBusy = input?.phase === "adjudicating" || input?.phase === "submitting";
++			const machineBusy = input?.phase === "adjudicating" || input?.phase === "submitting" || input?.researchContextPreparing === true;
  			const workspaceTrigger = inert && !removed && onRequestWorkspace !== void 0;
  			const textareaDisabled = removed || locked && !workspaceTrigger;
 -			const canSteerQueue = !locked && !machineBusy && !commandMenuOpen && empty && running && subagent === null && input.queue.some((row) => row.placement === "queued");
@@ -802,7 +933,7 @@ index 1dd0e89..40464a1 100644
  			(0, react.useEffect)(() => {
  				if (input === void 0 || inputActions === void 0) return;
  				if (attachments.length !== input.imageIds.length) inputActions.pruneImages(attachments.map((attachment) => attachment.id));
-@@ -3472,6 +3988,7 @@ window.__ModuleLoader__.load({
+@@ -3472,6 +4101,7 @@ window.__ModuleLoader__.load({
  			const restoreCaret = (el, caret) => {
  				requestAnimationFrame(() => {
  					el.setSelectionRange(caret, caret);
@@ -810,7 +941,7 @@ index 1dd0e89..40464a1 100644
  					revealCaret(caret);
  				});
  			};
-@@ -3503,6 +4020,24 @@ window.__ModuleLoader__.load({
+@@ -3503,6 +4133,24 @@ window.__ModuleLoader__.load({
  				if (keyboard === void 0 || inputActions === void 0) return;
  				if (e.key === "Enter" && e.shiftKey) return;
  				const composing = composingRef.current || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229;
@@ -835,7 +966,7 @@ index 1dd0e89..40464a1 100644
  				if (e.key === "ArrowUp" || e.key === "ArrowDown") {
  					if (keyboard.arbitrate(e.key === "ArrowUp" ? "up" : "down", composing) === "consumed") e.preventDefault();
  					return;
-@@ -3545,6 +4080,8 @@ window.__ModuleLoader__.load({
+@@ -3545,6 +4193,8 @@ window.__ModuleLoader__.load({
  				if (machineBusy) return;
  				const next = e.target.value;
  				safariNativeShrinkRef.current = safari && next.length < draft.length;
@@ -844,7 +975,7 @@ index 1dd0e89..40464a1 100644
  				keyboard.setDraft(next);
  				keyboard.track(next, e.target.selectionStart ?? next.length);
  			};
-@@ -3552,23 +4089,84 @@ window.__ModuleLoader__.load({
+@@ -3552,23 +4202,84 @@ window.__ModuleLoader__.load({
  				start: el.selectionStart ?? 0,
  				end: el.selectionEnd ?? el.selectionStart ?? 0
  			});
@@ -940,7 +1071,7 @@ index 1dd0e89..40464a1 100644
  				if (cut && !machineBusy && !locked) {
  					keyboard.setDraft(draft.slice(0, start) + draft.slice(end), {
  						start,
-@@ -3591,7 +4189,8 @@ window.__ModuleLoader__.load({
+@@ -3591,7 +4302,8 @@ window.__ModuleLoader__.load({
  				e.preventDefault();
  				const el = e.currentTarget;
  				const sel = selectionOf(el);
@@ -950,7 +1081,7 @@ index 1dd0e89..40464a1 100644
  				const caret = sel.start + text.length;
  				restoreCaret(el, caret);
  				keyboard.track(keyboard.snapshot.draft, caret);
-@@ -3672,6 +4271,23 @@ window.__ModuleLoader__.load({
+@@ -3672,6 +4384,23 @@ window.__ModuleLoader__.load({
  			})), [attachments, t]);
  			const onSelect = (e) => {
  				if (keyboard !== void 0 && keyboard.snapshot.paste !== void 0) keyboard.invalidatePaste();
@@ -974,7 +1105,7 @@ index 1dd0e89..40464a1 100644
  			};
  			const keepFocus = (e) => {
  				e.preventDefault();
-@@ -3700,17 +4316,40 @@ window.__ModuleLoader__.load({
+@@ -3700,17 +4429,40 @@ window.__ModuleLoader__.load({
  				t
  			}, sessionId);
  			const deco = input === void 0 ? INERT_DECORATIONS : deriveDecorations(input, lexicon);
@@ -1016,7 +1147,7 @@ index 1dd0e89..40464a1 100644
  						children: draft.slice(deco.token.start, deco.token.end)
  					}, "token"));
  					cursor = deco.token.end;
-@@ -3729,15 +4368,60 @@ window.__ModuleLoader__.load({
+@@ -3729,15 +4481,60 @@ window.__ModuleLoader__.load({
  					pushPlain(b.at);
  					if (b.kind === "chip") {
  						const chip = b.chip;
@@ -1083,7 +1214,7 @@ index 1dd0e89..40464a1 100644
  							})
  						}, `chip-${chip.occurrenceId}`));
  						cursor = chip.offset + 1;
-@@ -3745,6 +4429,8 @@ window.__ModuleLoader__.load({
+@@ -3745,6 +4542,8 @@ window.__ModuleLoader__.load({
  						backdrop.push((0, react_jsx_runtime.jsx)("mark", {
  							className: InputBar_module_css_default.textRef,
  							"data-decoration": "text-ref",
@@ -1092,7 +1223,7 @@ index 1dd0e89..40464a1 100644
  							children: draft.slice(b.ref.start, b.ref.end)
  						}, `ref-${b.ref.start}`));
  						cursor = b.ref.end;
-@@ -3763,6 +4449,20 @@ window.__ModuleLoader__.load({
+@@ -3763,6 +4562,20 @@ window.__ModuleLoader__.load({
  					}, "hint"));
  				}
  			}
@@ -1113,7 +1244,15 @@ index 1dd0e89..40464a1 100644
  			return (0, react_jsx_runtime.jsxs)("div", {
  				className: clsx(InputBar_module_css_default.root, variant === "hero" && InputBar_module_css_default.hero),
  				children: [
-@@ -3820,8 +4520,11 @@ window.__ModuleLoader__.load({
+@@ -3801,6 +4614,7 @@ window.__ModuleLoader__.load({
+ 								className: InputBar_module_css_default.accessory,
+ 								children: accessory
+ 							}),
++							researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),
+ 							railItems.length > 0 && (0, react_jsx_runtime.jsx)("div", {
+ 								className: InputBar_module_css_default.attachments,
+ 								children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_attachment.AttachmentRail, {
+@@ -3820,8 +4634,11 @@ window.__ModuleLoader__.load({
  								"data-input-scroll": true,
  								children: (0, react_jsx_runtime.jsxs)("div", {
  									className: InputBar_module_css_default.grow,
@@ -1125,7 +1264,7 @@ index 1dd0e89..40464a1 100644
  											"aria-hidden": true,
  											className: InputBar_module_css_default.backdrop,
  											"data-input-backdrop": true,
-@@ -3842,6 +4545,7 @@ window.__ModuleLoader__.load({
+@@ -3842,6 +4659,7 @@ window.__ModuleLoader__.load({
  											onChange,
  											onKeyDown,
  											onSelect,
@@ -1133,7 +1272,7 @@ index 1dd0e89..40464a1 100644
  											onCopy: (e) => {
  												onCopyOrCut(e, false);
  											},
-@@ -3850,14 +4554,16 @@ window.__ModuleLoader__.load({
+@@ -3850,14 +4668,16 @@ window.__ModuleLoader__.load({
  											},
  											onPaste,
  											onCompositionStart,
@@ -1152,7 +1291,7 @@ index 1dd0e89..40464a1 100644
  										})
  									]
  								})
-@@ -3866,29 +4572,25 @@ window.__ModuleLoader__.load({
+@@ -3866,29 +4686,25 @@ window.__ModuleLoader__.load({
  								className: InputBar_module_css_default.row,
  								children: [(0, react_jsx_runtime.jsxs)("div", {
  									className: InputBar_module_css_default.tools,
@@ -1192,7 +1331,7 @@ index 1dd0e89..40464a1 100644
  								}), (0, react_jsx_runtime.jsxs)("div", {
  									className: InputBar_module_css_default.trailing,
  									children: [
-@@ -4058,11 +4760,13 @@ window.__ModuleLoader__.load({
+@@ -4058,11 +4874,13 @@ window.__ModuleLoader__.load({
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/MessageItem.module.css.mjs
  		const css$15 = ".gdEzaW_userRow{flex-direction:column;align-items:flex-end;gap:6px;display:flex}.gdEzaW_userStack{flex-direction:column;align-items:flex-end;gap:8px;min-width:0;max-width:min(525px,82%);display:flex}.gdEzaW_bubble{background:var(--dsw-specific-bubble);max-width:100%;color:var(--dsw-alias-label-primary);border-radius:22px;padding:10px 16px;font-size:16px;line-height:24px}.gdEzaW_contextRow,.gdEzaW_compactionRow{padding:2px 0}.gdEzaW_compactionButton{width:100%;min-width:0;height:24px;color:inherit;font:inherit;text-align:left;background:0 0;border:none;border-radius:6px;align-items:center;padding:0;display:flex}.gdEzaW_compactionButton:not(:disabled){cursor:pointer}.gdEzaW_compactionButton:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover)}.gdEzaW_compactionLeading{width:16px;height:16px;color:var(--dsw-alias-label-secondary);flex:none;place-items:center;margin-right:6px;display:inline-grid}.gdEzaW_compactionContextIcon,.gdEzaW_compactionDisclosureIcon{grid-area:1/1;justify-content:center;align-items:center;display:inline-flex}.gdEzaW_compactionDisclosureIcon,.gdEzaW_compactionButton:not(:disabled):hover .gdEzaW_compactionContextIcon,.gdEzaW_compactionButton:not(:disabled):focus-visible .gdEzaW_compactionContextIcon{opacity:0}.gdEzaW_compactionButton:not(:disabled):hover .gdEzaW_compactionDisclosureIcon,.gdEzaW_compactionButton:not(:disabled):focus-visible .gdEzaW_compactionDisclosureIcon{opacity:1}.gdEzaW_compactionTitle{color:var(--dsw-alias-label-primary-dimmed);flex:none;font-size:14px;line-height:24px}.gdEzaW_compactionSep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.gdEzaW_compactionSummary{min-width:0;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:14px;line-height:24px;overflow:hidden}.gdEzaW_compactionBody{color:var(--dsw-alias-label-tertiary);padding:4px 0 4px 22px;font-size:14px;line-height:24px}.gdEzaW_retryRow{color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:20px}.gdEzaW_retrySummary{width:fit-content;color:inherit;cursor:pointer;user-select:none;border-radius:3px;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex}.gdEzaW_retrySummary::-webkit-details-marker{display:none}.gdEzaW_retrySummary:after{content:\"\";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg)}.gdEzaW_retrySummary:hover{color:var(--dsw-alias-label-secondary)}.gdEzaW_retrySummary:focus-visible{outline:1.5px solid var(--dsw-alias-button-info-fill);outline-offset:2px}.gdEzaW_retryText{color:inherit}.gdEzaW_retryRow[data-active] .gdEzaW_retryText{background:linear-gradient(90deg, var(--dsw-alias-label-tertiary) 0%, var(--dsw-alias-label-tertiary) 40%, var(--dsw-alias-label-secondary) 50%, var(--dsw-alias-label-tertiary) 60%, var(--dsw-alias-label-tertiary) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite gdEzaW_retry-shimmer}.gdEzaW_retryRow[open] .gdEzaW_retrySummary:after{transform:rotate(45deg)}.gdEzaW_retryDetails{overflow-wrap:anywhere;gap:2px;margin-top:3px;padding-left:14px;font-size:12px;line-height:18px;display:grid}.gdEzaW_retryDetailLabel{color:var(--dsw-alias-label-secondary)}.gdEzaW_turnErrorRow{grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;font-size:13px;line-height:20px;display:grid}.gdEzaW_turnErrorDot{margin-top:5px}.gdEzaW_turnErrorCopy{overflow-wrap:anywhere;min-width:0}.gdEzaW_turnErrorTitle{color:var(--dsw-alias-state-error-primary);margin-right:6px;font-weight:600}.gdEzaW_turnErrorMessage{color:var(--dsw-alias-label-secondary)}.gdEzaW_turnErrorCode{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-markdown-code-block-small)}.gdEzaW_maxTokensTitle{color:var(--dsw-alias-state-warn-primary);margin-right:6px;font-weight:600}@keyframes gdEzaW_retry-shimmer{0%{background-position:100%}to{background-position:0}}@media (prefers-reduced-motion:reduce){.gdEzaW_retryRow[data-active] .gdEzaW_retryText{color:inherit;background:0 0;animation:none}}.gdEzaW_refChip{color:var(--dsw-alias-label-primary);white-space:nowrap;vertical-align:baseline;background:#6187d838;border-radius:6px;margin:0 2px;padding:0 8px;font-size:.85em;line-height:1.6;display:inline-block}";
  		const tagId$15 = "@deepseek-ai/dsh-client-ui-conversation/MessageItem.module.css";
@@ -1207,7 +1346,7 @@ index 1dd0e89..40464a1 100644
  			document.head.appendChild(tag);
  		}
  		var MessageItem_module_css_default = {
-@@ -4103,7 +4807,8 @@ window.__ModuleLoader__.load({
+@@ -4103,7 +4921,8 @@ window.__ModuleLoader__.load({
  		*/
  		const CompactionItem = (0, react.memo)(function CompactionItem({ node, title, fallbackSummary, t }) {
  			const [expanded, setExpanded] = (0, react.useState)(false);
@@ -1217,7 +1356,7 @@ index 1dd0e89..40464a1 100644
  			const open = expandable && expanded;
  			const summary = node.shadowedItemCount !== null && node.shadowedTokenCount !== null ? t("message.compaction.completed", {
  				items: node.shadowedItemCount,
-@@ -4135,13 +4840,13 @@ window.__ModuleLoader__.load({
+@@ -4135,13 +4954,13 @@ window.__ModuleLoader__.load({
  						}),
  						(0, react_jsx_runtime.jsx)("span", {
  							className: MessageItem_module_css_default.compactionTitle,
@@ -1234,7 +1373,7 @@ index 1dd0e89..40464a1 100644
  							className: MessageItem_module_css_default.compactionSummary,
  							children: summary
  						})
-@@ -5094,17 +5799,82 @@ window.__ModuleLoader__.load({
+@@ -5094,17 +5913,82 @@ window.__ModuleLoader__.load({
  			if (cursor < text.length) parts.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MessageText, { text: text.slice(cursor) }, cursor));
  			return (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: parts });
  		}
@@ -1307,7 +1446,7 @@ index 1dd0e89..40464a1 100644
 +			const inlineResearch = (research.occurrences?.length ?? 0) > 0 || (research.artifactOccurrences?.length ?? 0) > 0;
  			const truncated = (total) => t("json.truncated", { total });
 -			const showBubble = text !== "" || rest.length > 0;
-+			const showBubble = research.text !== "" || research.files.length > 0 || (research.artifacts?.length ?? 0) > 0 || rest.length > 0;
++			const showBubble = research.text !== "" || research.files.length > 0 || (research.artifacts?.length ?? 0) > 0 || research.canvasContext !== void 0 || rest.length > 0;
  			return (0, react_jsx_runtime.jsxs)("div", {
  				className: MessageItem_module_css_default.userRow,
  				"data-pending-steering": pending || void 0,
@@ -1318,13 +1457,18 @@ index 1dd0e89..40464a1 100644
  					children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_attachment.ImageGallery, {
  						images,
  						load: imageLoader,
-@@ -5112,13 +5882,14 @@ window.__ModuleLoader__.load({
+@@ -5112,13 +5996,19 @@ window.__ModuleLoader__.load({
  						labels: messageImageLabels(t)
  					}), showBubble && (0, react_jsx_runtime.jsxs)("div", {
  						className: MessageItem_module_css_default.bubble,
 -						children: [projectUserText(text), rest.map((block, i) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 +						"data-research-inline": inlineResearch || void 0,
-+						children: [projectResearchUserText(research), rest.map((block, i) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
++						children: [projectResearchUserText(research), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {
++							"data-research-context-provenance": "",
++							style: { marginTop: research.text === "" ? 0 : 6, fontSize: 11, lineHeight: "16px", color: "var(--dsw-alias-label-tertiary)" },
++							title: `${t("research.context.initialSources")}: ${research.canvasContext.initialSourceIds.join(", ") || t("research.context.noInitialSources")}`,
++							children: t("research.context.sent", { total: research.canvasContext.totalSources, initial: research.canvasContext.initialSourceIds.length })
++						}), rest.map((block, i) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
  							label: t("message.extraBlock"),
  							payload: block,
  							truncatedLabel: truncated
@@ -1335,7 +1479,7 @@ index 1dd0e89..40464a1 100644
  			});
  		}
  		/**
-@@ -5209,7 +5980,7 @@ window.__ModuleLoader__.load({
+@@ -5209,7 +6099,7 @@ window.__ModuleLoader__.load({
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/ChatView.module.css.mjs
@@ -1344,7 +1488,7 @@ index 1dd0e89..40464a1 100644
  		const tagId$11 = "@deepseek-ai/dsh-client-ui-conversation/ChatView.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -5218,9 +5989,28 @@ window.__ModuleLoader__.load({
+@@ -5218,9 +6108,28 @@ window.__ModuleLoader__.load({
  			tag.textContent = css$11;
  			document.head.appendChild(tag);
  		}
@@ -1375,7 +1519,7 @@ index 1dd0e89..40464a1 100644
  			"callRow": "Md3f7G_callRow",
  			"hint": "Md3f7G_hint",
  			"root": "Md3f7G_root",
-@@ -5228,11 +6018,19 @@ window.__ModuleLoader__.load({
+@@ -5228,11 +6137,19 @@ window.__ModuleLoader__.load({
  			"older": "Md3f7G_older",
  			"flowItem": "Md3f7G_flowItem",
  			"toBottomSlot": "Md3f7G_toBottomSlot",
@@ -1396,17 +1540,44 @@ index 1dd0e89..40464a1 100644
  		//#endregion
  		//#region lib/types/client/chat/ChatNodeSeat.js
  		/** Subscribe and dispatch one stable Context key without observing sibling Nodes. */
-@@ -5278,6 +6076,131 @@ window.__ModuleLoader__.load({
+@@ -5278,34 +6195,174 @@ window.__ModuleLoader__.load({
  				})
  			});
  		});
+-		//#endregion
+-		//#region lib/types/client/chat/ChatView.js
+-		/** Active column host when present; otherwise the view-local scroller. */
+-		function scrollerOf(from) {
+-			return from.closest("[data-conversation-scroll]") ?? from;
+-		}
+-		/** Find an already-rendered settled row without interpolating a selector. */
+-		function anchorElement(list, key) {
+-			for (const row of list.querySelectorAll("[data-chat-anchor-key]")) if (row.dataset.chatAnchorKey === key) return row;
+-			return null;
+-		}
+-		/** Row position in scrollport coordinates (viewport-independent). */
+-		function flowTop(row, scrollport) {
+-			return row.getBoundingClientRect().top - scrollport.getBoundingClientRect().top;
 +		function ExecutionDetailGroupIcon({ id }) {
 +			if (id === "read-search") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutline16, { size: 14 });
 +			if (id === "tools-skills") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutline14, { size: 14 });
 +			if (id === "run-change") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutline16, { size: 14 });
 +			if (id === "task-verify") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChecklistOutline14, { size: 14 });
 +			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutline14, { size: 14 });
-+		}
+ 		}
+-		/** Select a visible stable node/call identity, falling back only when layout
+-		* has not exposed a visible box yet. */
+-		function pagingAnchor(list, scrollport) {
+-			const viewport = scrollport.getBoundingClientRect();
+-			const visibleBottom = scrollport.querySelector("[data-composer-seat]")?.getBoundingClientRect().top ?? viewport.bottom;
+-			if (typeof document.elementsFromPoint === "function" && visibleBottom > viewport.top) {
+-				const content = list.getBoundingClientRect();
+-				const left = Math.max(viewport.left, content.left);
+-				const right = Math.min(viewport.right, content.right);
+-				const x = left + Math.max(0, right - left) / 2;
+-				const height = visibleBottom - viewport.top;
+-				const points = [
+-					1,
 +		/** One turn-level status row whose disclosure owns all process detail. */
 +		const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {
 +			const [expanded, setExpanded] = (0, react.useState)(false);
@@ -1525,13 +1696,17 @@ index 1dd0e89..40464a1 100644
 +				})]
 +			});
 +		});
- 		//#endregion
- 		//#region lib/types/client/chat/ChatView.js
- 		/** Active column host when present; otherwise the view-local scroller. */
-@@ -5289,6 +6212,21 @@ window.__ModuleLoader__.load({
- 			for (const row of list.querySelectorAll("[data-chat-anchor-key]")) if (row.dataset.chatAnchorKey === key) return row;
- 			return null;
- 		}
++		//#endregion
++		//#region lib/types/client/chat/ChatView.js
++		/** Active column host when present; otherwise the view-local scroller. */
++		function scrollerOf(from) {
++			return from.closest("[data-conversation-scroll]") ?? from;
++		}
++		/** Find an already-rendered settled row without interpolating a selector. */
++		function anchorElement(list, key) {
++			for (const row of list.querySelectorAll("[data-chat-anchor-key]")) if (row.dataset.chatAnchorKey === key) return row;
++			return null;
++		}
 +		/** Select the query whose turn currently owns the reading position. */
 +		function queryAtViewport(list, scrollport, queries) {
 +			if (queries.length === 0) return null;
@@ -1547,10 +1722,27 @@ index 1dd0e89..40464a1 100644
 +			}
 +			return active;
 +		}
- 		/** Row position in scrollport coordinates (viewport-independent). */
- 		function flowTop(row, scrollport) {
- 			return row.getBoundingClientRect().top - scrollport.getBoundingClientRect().top;
-@@ -5332,35 +6270,537 @@ window.__ModuleLoader__.load({
++		/** Row position in scrollport coordinates (viewport-independent). */
++		function flowTop(row, scrollport) {
++			return row.getBoundingClientRect().top - scrollport.getBoundingClientRect().top;
++		}
++		/** Select a visible stable node/call identity, falling back only when layout
++		* has not exposed a visible box yet. */
++		function pagingAnchor(list, scrollport) {
++			const viewport = scrollport.getBoundingClientRect();
++			const visibleBottom = scrollport.querySelector("[data-composer-seat]")?.getBoundingClientRect().top ?? viewport.bottom;
++			if (typeof document.elementsFromPoint === "function" && visibleBottom > viewport.top) {
++				const content = list.getBoundingClientRect();
++				const left = Math.max(viewport.left, content.left);
++				const right = Math.min(viewport.right, content.right);
++				const x = left + Math.max(0, right - left) / 2;
++				const height = visibleBottom - viewport.top;
++				const points = [
++					1,
+ 					Math.min(32, height / 3),
+ 					height / 2,
+ 					Math.max(1, height - 1)
+@@ -5332,35 +6389,537 @@ window.__ModuleLoader__.load({
  				scrollTop: scrollport.scrollTop
  			};
  		}
@@ -1577,9 +1769,6 @@ index 1dd0e89..40464a1 100644
 -			(0, react.useEffect)(() => {
 -				const tick = () => {
 -					setElapsedMs(Math.max(0, Date.now() - anchor));
--				};
--				tick();
--				const id = setInterval(tick, 1e3);
 +		/** Stable Turn identity for every Chat node shape. */
 +		function conversationNodeTurn(node) {
 +			const location = node?.location;
@@ -1759,7 +1948,9 @@ index 1dd0e89..40464a1 100644
 +				return {
 +					name: String(call?.name ?? "").toLowerCase(),
 +					args: typeof args === "object" && args !== null && !Array.isArray(args) ? args : null
-+				};
+ 				};
+-				tick();
+-				const id = setInterval(tick, 1e3);
 +			} catch {
 +				return { name: String(call?.name ?? "").toLowerCase(), args: null };
 +			}
@@ -2113,7 +2304,7 @@ index 1dd0e89..40464a1 100644
  				})]
  			});
  		}
-@@ -5381,11 +6821,58 @@ window.__ModuleLoader__.load({
+@@ -5381,11 +6940,58 @@ window.__ModuleLoader__.load({
  			const loadingOlder = useSession((s) => s.loadingOlder);
  			const selectedCallId = useStore((s) => s.selection?.callId);
  			const pendingSteering = (0, react.useMemo)(() => inbox.filter((item) => item.placement === "steering"), [inbox]);
@@ -2126,7 +2317,7 @@ index 1dd0e89..40464a1 100644
 +					images: [],
 +					rest: []
 +				};
-+				const text = content.text.replace(/\s+/g, " ").trim();
++				const text = parseResearchPrompt(content.text).text.replace(/\s+/g, " ").trim();
 +				const preview = (text || (content.images.length > 0 ? document.documentElement.lang.startsWith("zh") ? "图片 Query" : "Image query" : document.documentElement.lang.startsWith("zh") ? "无文本 Query" : "Query without text")).slice(0, 240);
 +				return [{ key, preview }];
 +			}), [order, nodeStore]);
@@ -2173,7 +2364,7 @@ index 1dd0e89..40464a1 100644
  			/** Last position delivered or written on the main thread. */
  			const observedTopRef = (0, react.useRef)(0);
  			/** Paging anchor: semantic row/position at click, updated by reader scrolls
-@@ -5394,7 +6881,9 @@ window.__ModuleLoader__.load({
+@@ -5394,7 +7000,9 @@ window.__ModuleLoader__.load({
  			const firstSeqRef = (0, react.useRef)(null);
  			const openedRef = (0, react.useRef)(false);
  			const lastKeyRef = (0, react.useRef)(null);
@@ -2183,7 +2374,7 @@ index 1dd0e89..40464a1 100644
  			/** Flow tip signature — follow-scroll only when this moves, never on a
  			*  scroll-driven at-bottom chrome re-render (which would snap inertial
  			*  scrolls the rest of the way to the floor). */
-@@ -5402,26 +6891,37 @@ window.__ModuleLoader__.load({
+@@ -5402,26 +7010,37 @@ window.__ModuleLoader__.load({
  			const firstKey = order[0];
  			const firstSeq = firstKey === void 0 ? null : nodeStore.get(firstKey)?.anchorSeq ?? null;
  			const lastKey = order.at(-1) ?? null;
@@ -2225,7 +2416,7 @@ index 1dd0e89..40464a1 100644
  					else {
  						el.scrollTop = saved.scrollTop;
  						const row = anchorElement(local, saved.anchorKey);
-@@ -5436,6 +6936,7 @@ window.__ModuleLoader__.load({
+@@ -5436,6 +7055,7 @@ window.__ModuleLoader__.load({
  					}
  					firstSeqRef.current = firstSeq;
  					lastKeyRef.current = lastKey;
@@ -2233,7 +2424,7 @@ index 1dd0e89..40464a1 100644
  					lastSteeringIdRef.current = lastSteeringId;
  					followSigRef.current = followSig;
  					return;
-@@ -5449,18 +6950,26 @@ window.__ModuleLoader__.load({
+@@ -5449,18 +7069,26 @@ window.__ModuleLoader__.load({
  					firstSeqRef.current = firstSeq;
  					/* v8 ignore next -- ?? arm: a prepend adds nodes, so the flow list here is never empty. */
  					lastKeyRef.current = lastKey;
@@ -2262,7 +2453,7 @@ index 1dd0e89..40464a1 100644
  			});
  			const onScrollRef = (0, react.useRef)(() => {});
  			onScrollRef.current = () => {
-@@ -5468,6 +6977,7 @@ window.__ModuleLoader__.load({
+@@ -5468,6 +7096,7 @@ window.__ModuleLoader__.load({
  				/* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
  				if (local === null) return;
  				const el = scrollerOf(local);
@@ -2270,7 +2461,7 @@ index 1dd0e89..40464a1 100644
  				const floor = Math.max(0, el.scrollHeight - el.clientHeight);
  				const movedByReader = Math.abs(el.scrollTop - Math.min(observedTopRef.current, floor)) > .5;
  				const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;
-@@ -5487,6 +6997,10 @@ window.__ModuleLoader__.load({
+@@ -5487,6 +7116,10 @@ window.__ModuleLoader__.load({
  				else if (position !== null) chatScroll.save(position);
  				observedTopRef.current = el.scrollTop;
  			};
@@ -2281,7 +2472,7 @@ index 1dd0e89..40464a1 100644
  			(0, react.useEffect)(() => {
  				const local = listRef.current;
  				/* v8 ignore next -- ref-null guard: effect runs after the list node commits. */
-@@ -5514,11 +7028,13 @@ window.__ModuleLoader__.load({
+@@ -5514,11 +7147,13 @@ window.__ModuleLoader__.load({
  				const column = columnRef.current;
  				const local = listRef.current;
  				if (column === null || local === null || typeof ResizeObserver === "undefined") return;
@@ -2296,7 +2487,7 @@ index 1dd0e89..40464a1 100644
  				if (composer !== null) observer.observe(composer);
  				return () => {
  					observer.disconnect();
-@@ -5540,9 +7056,29 @@ window.__ModuleLoader__.load({
+@@ -5540,9 +7175,29 @@ window.__ModuleLoader__.load({
  				}
  				loadOlder();
  			};
@@ -2327,7 +2518,7 @@ index 1dd0e89..40464a1 100644
  					ref: listRef,
  					className: ChatView_module_css_default.scroll,
  					children: [(0, react_jsx_runtime.jsxs)("div", {
-@@ -5570,22 +7106,21 @@ window.__ModuleLoader__.load({
+@@ -5570,22 +7225,21 @@ window.__ModuleLoader__.load({
  									children: loadingOlder ? t("loading") : t("chat.loadOlder")
  								})
  							}),
@@ -2365,7 +2556,7 @@ index 1dd0e89..40464a1 100644
  							}),
  							pendingSteering.map((item) => (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
  								content: item.content,
-@@ -5607,7 +7142,7 @@ window.__ModuleLoader__.load({
+@@ -5607,7 +7261,7 @@ window.__ModuleLoader__.load({
  							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
  						})
  					})]
@@ -2374,7 +2565,7 @@ index 1dd0e89..40464a1 100644
  			});
  		}
  		//#endregion
-@@ -5816,6 +7351,18 @@ window.__ModuleLoader__.load({
+@@ -5816,6 +7470,33 @@ window.__ModuleLoader__.load({
  		/** Simplified Chinese dictionary (the key-set source of truth). */
  		const zh = {
  			"view.chat": "对话",
@@ -2388,12 +2579,27 @@ index 1dd0e89..40464a1 100644
 +			"research.right.source.computer": "本地电脑",
 +			"research.right.source.sherlock": "Sherlock",
 +			"research.files.unavailable": "所选文件不可用，请重新选择",
++			"research.context.badge": "参考当前画板资料 · {total}个组件",
++			"research.context.scope": "本次参考范围",
++			"research.context.disable": "不参考画板资料回答",
++			"research.context.enable": "参考当前画板资料回答",
++			"research.context.disabled": "不参考画板资料回答",
++			"research.context.preparing": "正在准备画板资料…",
++			"research.context.onDemand": "发送时检查",
++			"research.context.unavailable": "画板资料暂不可用，请重试；草稿已保留。",
++			"research.context.unavailableStatus": "不可用",
++			"research.context.expired": "本次资料快照已过期。请编辑问题重新发送，或关闭本次画板参考。",
++			"research.context.pending": "生成中",
++			"research.context.sent": "已参考画板 · 首轮 {initial}/{total} 项",
++			"research.context.initialSources": "首轮参考来源",
++			"research.context.noInitialSources": "暂无可读取正文",
++			"research.context.queueEdit": "此消息已冻结画板资料。请移除后在输入框重新发送，以匹配修改后的问题。",
 +			"research.references.unavailable": "所选重点引用过多或不可用，请减少后重试",
 +			"research.canvas": "研究画布",
  			"hint.plan": PLAN_NEXT_ACTION_ZH,
  			"hint.goal": "输入目标，智能体将持续执行",
  			"hint.goal.active": "当前目标进行中。可输入 edit 修改 / pause 暂停 / resume 继续 / clear 清除",
-@@ -5870,12 +7417,15 @@ window.__ModuleLoader__.load({
+@@ -5870,12 +7551,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "仅在智能体运行时生效；Cmd/Ctrl+Enter 使用另一行为",
  			"settings.enter.queue": "排队发送",
  			"settings.enter.steer": "插话发送",
@@ -2413,7 +2619,7 @@ index 1dd0e89..40464a1 100644
  			"hero.preview": "预览版",
  			"hero.chooseWorkspace": "选择工作区",
  			"session.hierarchy": "会话层级",
-@@ -5896,6 +7446,46 @@ window.__ModuleLoader__.load({
+@@ -5896,6 +7580,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "历史加载失败：{message}（{code}）",
  			"chat.loadOlder": "加载更早",
  			"chat.toBottom": "回到底部",
@@ -2460,7 +2666,7 @@ index 1dd0e89..40464a1 100644
  			"message.extraBlock": "附加内容块",
  			"message.contextInjection": "上下文注入",
  			"message.contextRecall": "跨会话召回",
-@@ -5981,6 +7571,18 @@ window.__ModuleLoader__.load({
+@@ -5981,6 +7705,33 @@ window.__ModuleLoader__.load({
  		/** English dictionary, checked complete against the zh key set. */
  		const en = {
  			"view.chat": "Chat",
@@ -2474,12 +2680,27 @@ index 1dd0e89..40464a1 100644
 +			"research.right.source.computer": "Computer",
 +			"research.right.source.sherlock": "Sherlock",
 +			"research.files.unavailable": "One or more selected files are unavailable. Please select them again.",
++			"research.context.badge": "Use current canvas · {total} components",
++			"research.context.scope": "Reference scope for this send",
++			"research.context.disable": "Answer without canvas material",
++			"research.context.enable": "Answer using current canvas material",
++			"research.context.disabled": "Answer without canvas material",
++			"research.context.preparing": "Preparing canvas sources…",
++			"research.context.onDemand": "Checked on send",
++			"research.context.unavailable": "Canvas sources are unavailable. Retry; your draft has been kept.",
++			"research.context.unavailableStatus": "Unavailable",
++			"research.context.expired": "This source snapshot expired. Edit your question to send again, or skip canvas for this send.",
++			"research.context.pending": "Generating",
++			"research.context.sent": "Canvas context · initially {initial}/{total} sources",
++			"research.context.initialSources": "Initial sources",
++			"research.context.noInitialSources": "No readable content yet",
++			"research.context.queueEdit": "Canvas sources are frozen for this message. Remove it and resend from the composer to match an edited question.",
 +			"research.references.unavailable": "One or more selected references are unavailable or too large. Remove some and try again.",
 +			"research.canvas": "Research canvas",
  			"hint.plan": PLAN_NEXT_ACTION_EN,
  			"hint.goal": "describe the objective for a long-running task",
  			"hint.goal.active": "goal active — edit / pause / resume / clear",
-@@ -6035,12 +7637,15 @@ window.__ModuleLoader__.load({
+@@ -6035,12 +7786,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "Busy only; Cmd/Ctrl+Enter uses the other behavior",
  			"settings.enter.queue": "Queue",
  			"settings.enter.steer": "Steer",
@@ -2496,7 +2717,7 @@ index 1dd0e89..40464a1 100644
  			"hero.preview": "Preview",
  			"hero.chooseWorkspace": "Choose workspace",
  			"session.hierarchy": "Session hierarchy",
-@@ -6061,6 +7666,46 @@ window.__ModuleLoader__.load({
+@@ -6061,6 +7815,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "Failed to load history: {message} ({code})",
  			"chat.loadOlder": "Load earlier",
  			"chat.toBottom": "Back to bottom",
@@ -2543,16 +2764,29 @@ index 1dd0e89..40464a1 100644
  			"message.extraBlock": "Extra content block",
  			"message.contextInjection": "Context injection",
  			"message.contextRecall": "Session recall",
-@@ -6383,7 +8028,7 @@ window.__ModuleLoader__.load({
+@@ -6383,7 +8177,11 @@ window.__ModuleLoader__.load({
  		*/
  		function QueueDock({ useSession, updateQueue, notify, t }) {
  			const inbox = useSession((s) => s.queue);
 -			const queue = (0, react.useMemo)(() => inbox.filter((row) => row.placement === "queued"), [inbox]);
-+			const queue = (0, react.useMemo)(() => userQueuedMessages(inbox), [inbox]);
++			const queue = (0, react.useMemo)(() => userQueuedMessages(inbox).map((row) => {
++				const text = Array.isArray(row.content) ? contentParts(row.content).text : row.text ?? row.preview;
++				const research = parseResearchPrompt(text);
++				return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };
++			}), [inbox, t]);
  			const running = useSession((s) => s.running);
  			const queueMutable = useSession((s) => s.subagent === null);
  			const [editing, setEditing] = (0, react.useState)(null);
-@@ -6627,7 +8272,7 @@ window.__ModuleLoader__.load({
+@@ -6532,7 +8330,7 @@ window.__ModuleLoader__.load({
+ 												type: "button",
+ 												className: QueueDock_module_css_default.action,
+ 												"aria-label": t("queue.edit"),
+-												title: row.text === null ? t("queue.edit.unsupported") : void 0,
++												title: row.frozenCanvasContext ? t("research.context.queueEdit") : row.text === null ? t("queue.edit.unsupported") : void 0,
+ 												disabled: busy !== null || row.text === null,
+ 												onClick: () => {
+ 													if (row.text !== null) setEditing({
+@@ -6627,7 +8425,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$7;
@@ -2561,7 +2795,7 @@ index 1dd0e89..40464a1 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8396,5711 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8549,6174 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -2697,10 +2931,11 @@ index 1dd0e89..40464a1 100644
 +		const RESEARCH_GENERATION_MAX_SOURCES = 24;
 +		const RESEARCH_GENERATION_MAX_EVENTS = 80;
 +		const RESEARCH_GENERATION_MAX_PARTIAL_TEXT = 16384;
-+		const RESEARCH_ARTIFACT_KINDS = /* @__PURE__ */ new Set(["assistant-result", "assistant-excerpt", "generated-summary", "generated-mind-map", "web-link", "generated-container"]);
++		const RESEARCH_ARTIFACT_KINDS = /* @__PURE__ */ new Set(["pasted-text", "assistant-result", "assistant-excerpt", "generated-summary", "generated-mind-map", "web-link", "generated-container"]);
++		const RESEARCH_CLIPBOARD_TEXT_BYTES = 1048576;
 +		const RESEARCH_GENERATION_STATUSES = /* @__PURE__ */ new Set(["draft", "queued", "running", "completed", "failed", "cancelled", "interrupted"]);
 +		const RESEARCH_ACTIVE_GENERATION_STATUSES = /* @__PURE__ */ new Set(["queued", "running"]);
-+		const RESEARCH_CONTAINER_TYPES = /* @__PURE__ */ new Set(["web", "chart", "table", "kpi", "markdown"]);
++		const RESEARCH_CONTAINER_TYPES = /* @__PURE__ */ new Set(["web", "chart", "table", "kpi", "markdown", "mind-map"]);
 +		const RESEARCH_CONTAINER_REFRESH_MINUTES = /* @__PURE__ */ new Set([0, 1, 5, 15, 30]);
 +		const RESEARCH_CONTAINER_MAX_PROMPT = 8e3;
 +		const RESEARCH_CONTAINER_MAX_MARKDOWN = 32e3;
@@ -2869,7 +3104,7 @@ index 1dd0e89..40464a1 100644
 +			}
 +			if (!researchContainerExactKeys(value, ["version", "type", "title", "content"])) return null;
 +			const content = researchContainerText(value.content, RESEARCH_CONTAINER_MAX_MARKDOWN);
-+			return content === null ? null : Object.freeze({ version: 1, type: "markdown", title, content });
++			return content === null || value.type === "mind-map" && !/^\s*#\s+.+\n[\s\S]*?[-*+]\s+/u.test(content) ? null : Object.freeze({ version: 1, type: value.type, title, content });
 +		}
 +		function normalizeResearchCanvasTitle(value) {
 +			if (typeof value !== "string") return null;
@@ -2910,9 +3145,9 @@ index 1dd0e89..40464a1 100644
 +			const kind = RESEARCH_ARTIFACT_KINDS.has(value.kind) ? value.kind : void 0;
 +			const messageId = boundedResearchArtifactString(value.messageId, RESEARCH_CANVAS_TEXT_LIMIT);
 +			const title = boundedResearchArtifactString(value.title, RESEARCH_ARTIFACT_MAX_TITLE);
-+			const excerpt = preserveResearchArtifactText(value.excerpt);
++			const excerpt = preserveResearchArtifactText(kind === "pasted-text" && typeof value.excerpt === "string" ? value.excerpt.slice(0, RESEARCH_ARTIFACT_MAX_EXCERPT) : value.excerpt);
 +			const sourceText = kind === "web-link" && value.sourceText !== void 0 ? preserveResearchArtifactText(value.sourceText, RESEARCH_PROMPT_WEB_SOURCE_TEXT_MAX) : null;
-+			return id === null || messageId === null || title === null || excerpt === null || value.sourceText !== void 0 && sourceText === null ? null : { id, ...(kind === void 0 ? {} : { kind }), messageId, title, excerpt, ...(sourceText === null ? {} : { sourceText }) };
++			return id === null || messageId === null || title === null || excerpt === null || value.sourceText !== void 0 && sourceText === null ? null : { id, ...(kind === void 0 ? {} : { kind }), messageId, title, excerpt, ...(kind === "pasted-text" && (value.truncated === true || value.excerpt.length > excerpt.length) ? { truncated: true } : {}), ...(sourceText === null ? {} : { sourceText }) };
 +		}
 +		function researchPromptArtifactsForSend(snapshot, references) {
 +			const liveArtifacts = new Map((snapshot?.artifacts ?? []).map((artifact) => [artifact.id, artifact]));
@@ -2970,12 +3205,52 @@ index 1dd0e89..40464a1 100644
 +			}
 +			return occurrences;
 +		}
-+		function serializeResearchPrompt(files, text, occurrences = [], artifacts = [], artifactOccurrences = []) {
-+			if ((!Array.isArray(files) || files.length === 0) && (!Array.isArray(artifacts) || artifacts.length === 0)) return String(text ?? "");
++		function canonicalResearchCanvasContext(value) {
++			if (value === null || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some((key) => !["version", "snapshotId", "totalSources", "initialSourceIds", "initialContext"].includes(key))) return null;
++			const validId = (id) => typeof id === "string" && id.length > 0 && id.length <= 256 && id.trim() === id && !/[\u0000-\u001f\u007f]/.test(id);
++			if (value.version !== 1 || !validId(value.snapshotId) || !Number.isSafeInteger(value.totalSources) || value.totalSources < 1 || value.totalSources > 1000 || !Array.isArray(value.initialSourceIds) || value.initialSourceIds.length > value.totalSources || value.initialSourceIds.some((id) => !validId(id)) || new Set(value.initialSourceIds).size !== value.initialSourceIds.length || typeof value.initialContext !== "string" || value.initialContext.trim() === "" || value.initialContext.length > 32768) return null;
++			const packet = { version: 1, snapshotId: value.snapshotId, totalSources: value.totalSources, initialSourceIds: [...value.initialSourceIds], initialContext: value.initialContext };
++			if (new TextEncoder().encode(JSON.stringify(packet).replaceAll(RESEARCH_PROMPT_SUFFIX, "\\u241f")).byteLength > 32768) return null;
++			Object.freeze(packet.initialSourceIds);
++			return Object.freeze(packet);
++		}
++		async function prepareResearchCanvasContext(sessionId, query, signal) {
++			let abort;
++			const cancelled = new Promise((_, reject) => {
++				abort = () => reject(new Error("Research context preparation cancelled"));
++				if (signal.aborted) abort();
++				else signal.addEventListener("abort", abort, { once: true });
++			});
++			try {
++				return await Promise.race([cancelled, (async () => {
++					const capture = await window.dshDesktop?.researchContext?.capture({ sessionId });
++					if (signal.aborted) throw new Error("Research context preparation cancelled");
++					if (capture === null || typeof capture !== "object" || typeof capture.captureId !== "string" || capture.captureId.length === 0 || capture.captureId.length > 256 || !Number.isSafeInteger(capture.totalSources) || capture.totalSources < 0 || capture.totalSources > 1000) throw new Error("Invalid research context capture");
++					if (capture.totalSources === 0) return void 0;
++					const response = await window.fetch("/sherlock/research-context/prepare", {
++						method: "POST", credentials: "same-origin", cache: "no-store", signal,
++						headers: { "content-type": "application/json", accept: "application/json" },
++						body: JSON.stringify({ sessionId, captureId: capture.captureId, query })
++					});
++					if (response?.ok !== true) throw new Error("Research context unavailable");
++					const body = await response.json();
++					if (body === null || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some((key) => !["snapshotId", "totalSources", "initialSourceIds", "initialContext"].includes(key))) throw new Error("Invalid research context packet");
++					const packet = canonicalResearchCanvasContext({ ...body, version: 1 });
++					if (packet === null || signal.aborted) throw new Error("Invalid research context packet");
++					return packet;
++				})()]);
++			} finally {
++				signal.removeEventListener("abort", abort);
++			}
++		}
++		function serializeResearchPrompt(files, text, occurrences = [], artifacts = [], artifactOccurrences = [], canvasContext) {
++			const context = canvasContext === void 0 ? void 0 : canonicalResearchCanvasContext(canvasContext);
++			if (context === null) throw new TypeError("Invalid Sherlock Research canvas context");
++			if (context === void 0 && (!Array.isArray(files) || files.length === 0) && (!Array.isArray(artifacts) || artifacts.length === 0)) return String(text ?? "");
 +			const descriptors = researchPromptFiles(files, true);
 +			if (descriptors === null) throw new TypeError("Invalid Sherlock Research file descriptors");
 +			const quotedArtifacts = researchPromptArtifacts(artifacts);
-+			if (quotedArtifacts === null || descriptors.length === 0 && quotedArtifacts.length === 0) throw new TypeError("Invalid Sherlock Research assistant references");
++			if (quotedArtifacts === null || descriptors.length === 0 && quotedArtifacts.length === 0 && context === void 0) throw new TypeError("Invalid Sherlock Research assistant references");
 +			const body = String(text ?? "");
 +			const positions = researchPromptOccurrences(occurrences, descriptors, body, "fileId");
 +			if (positions === null) throw new TypeError("Invalid Sherlock Research file occurrences");
@@ -2983,6 +3258,7 @@ index 1dd0e89..40464a1 100644
 +			if (quotePositions === null) throw new TypeError("Invalid Sherlock Research assistant occurrences");
 +			const payload = JSON.stringify({
 +				files: descriptors,
++				...(context === void 0 ? {} : { canvasContext: context }),
 +				...(positions.length === 0 ? {} : { occurrences: positions }),
 +				...(quotedArtifacts.length === 0 ? {} : { artifacts: quotedArtifacts }),
 +				...(quotePositions.length === 0 ? {} : { artifactOccurrences: quotePositions })
@@ -3063,14 +3339,16 @@ index 1dd0e89..40464a1 100644
 +				const value = JSON.parse(source.slice(RESEARCH_PROMPT_PREFIX.length, suffix));
 +				if (typeof value !== "object" || value === null) return { text: source, files: [] };
 +				const artifacts = researchPromptArtifacts(value.artifacts);
-+				const files = researchPromptFiles(value.files, artifacts !== null && artifacts.length > 0);
-+				if (files === null || artifacts === null || files.length === 0 && artifacts.length === 0) return { text: source, files: [] };
++				const canvasContext = value.canvasContext === void 0 ? void 0 : canonicalResearchCanvasContext(value.canvasContext);
++				const files = researchPromptFiles(value.files, canvasContext !== void 0 && canvasContext !== null || artifacts !== null && artifacts.length > 0);
++				if (canvasContext === null || files === null || artifacts === null || files.length === 0 && artifacts.length === 0 && canvasContext === void 0) return { text: source, files: [] };
 +				const body = source.slice(suffix + 1);
 +				const occurrences = researchPromptOccurrences(value.occurrences, files, body, "fileId");
 +				const artifactOccurrences = researchPromptOccurrences(value.artifactOccurrences, artifacts, body, "artifactId");
 +				return occurrences === null || artifactOccurrences === null ? { text: source, files: [] } : {
 +					text: body,
 +					files,
++					...(canvasContext === void 0 ? {} : { canvasContext }),
 +					...(occurrences.length === 0 ? {} : { occurrences }),
 +					...(artifacts.length === 0 ? {} : { artifacts }),
 +					...(artifactOccurrences.length === 0 ? {} : { artifactOccurrences })
@@ -3141,6 +3419,9 @@ index 1dd0e89..40464a1 100644
 +			});
 +		}
 +		function researchArtifactReferenceKind(artifact) {
++			if (artifact?.kind === "pasted-text") return "markdown";
++			if (artifact?.kind === "generated-container") return artifact.containerSpec?.type ?? parseResearchContainerSpec(artifact.excerpt)?.type ?? "artifact";
++			if (artifact?.kind === "web-link") return "web";
 +			if (artifact?.kind === "assistant-result") return "assistant-reply";
 +			if (artifact?.kind === "assistant-excerpt") return "assistant-excerpt";
 +			if (artifact?.kind === "generated-summary") return "summary";
@@ -3156,6 +3437,11 @@ index 1dd0e89..40464a1 100644
 +			const kind = researchArtifactReferenceKind(artifact);
 +			let drawing;
 +			if (kind === "assistant-reply") drawing = (0, react_jsx_runtime.jsx)("path", { d: "M3.25 3.5h9.5v6.4H7.2L4.1 12v-2.1h-.85z" });
++			else if (kind === "web") drawing = (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)('circle', { cx: 8, cy: 8, r: 5.5 }), (0, react_jsx_runtime.jsx)('path', { d: 'M2.5 8h11M8 2.5c-3 3-3 8 0 11M8 2.5c3 3 3 8 0 11' })] });
++			else if (kind === "chart") drawing = (0, react_jsx_runtime.jsx)('path', { d: 'M2.5 2.5v11h11M5 11V8M8 11V4M11 11V6' });
++			else if (kind === "table") drawing = (0, react_jsx_runtime.jsx)('path', { d: 'M2.5 3h11v10h-11zM2.5 6h11M2.5 9.5h11M7 3v10' });
++			else if (kind === "kpi") drawing = (0, react_jsx_runtime.jsx)('path', { d: 'M2.5 12.5l4-4 3 1 4-6M9.5 3.5h4v4' });
++			else if (kind === "markdown") drawing = (0, react_jsx_runtime.jsx)('path', { d: 'M3 2.5h10v11H3zM5 5h6M5 8h6M5 11h4' });
 +			else if (kind === "assistant-excerpt") drawing = (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("path", { d: "M3.1 4.2h3.6v3.4H4.8c0 1.1-.5 1.9-1.5 2.5" }), (0, react_jsx_runtime.jsx)("path", { d: "M9.1 4.2h3.6v3.4h-1.9c0 1.1-.5 1.9-1.5 2.5" })] });
 +			else if (kind === "summary") drawing = (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("path", { d: "M3.2 2.7h9.6v10.6H3.2z" }), (0, react_jsx_runtime.jsx)("path", { d: "M5.2 5.4h5.6M5.2 8h5.6M5.2 10.6h3.7" })] });
 +			else if (kind === "mind-map") drawing = (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("path", { d: "M4.2 8h3.1M8.7 8h1.1M9.8 8V4.2M9.8 8v3.8" }), (0, react_jsx_runtime.jsx)("rect", { x: "1.8", y: "6.2", width: "2.4", height: "3.6" }), (0, react_jsx_runtime.jsx)("rect", { x: "9.8", y: "2.5", width: "4", height: "3.2" }), (0, react_jsx_runtime.jsx)("rect", { x: "9.8", y: "10.3", width: "4", height: "3.2" })] });
@@ -3793,6 +4079,7 @@ index 1dd0e89..40464a1 100644
 +				id,
 +				...(path === void 0 ? {} : { path }),
 +				name,
++				...(typeof value.assetId === "string" && /^[a-f0-9]{48}$/.test(value.assetId) ? { assetId: value.assetId } : {}),
 +				...(displayName === null || displayName === void 0 ? {} : { displayName }),
 +				...(mediaType === void 0 ? {} : { mediaType }),
 +				...(authorizationId === void 0 ? {} : { authorizationId, contentType }),
@@ -3815,7 +4102,7 @@ index 1dd0e89..40464a1 100644
 +				for (const item of value) {
 +					if (nodes.length >= RESEARCH_CANVAS_MAX_FILES_PER_SESSION) break;
 +					const node = canonicalResearchCanvasFileNode(item);
-+					if (node === null || ids.has(node.id) || node.path !== void 0 && paths.has(node.path)) continue;
++					if (node === null || ids.has(node.id) || !node.assetId && node.path !== void 0 && paths.has(node.path)) continue;
 +					ids.add(node.id);
 +					if (node.path !== void 0) paths.add(node.path);
 +					nodes.push(node);
@@ -3882,13 +4169,17 @@ index 1dd0e89..40464a1 100644
 +			return typeof value === "string" && value.length <= limit && value.trim().length > 0 ? value : null;
 +		}
 +		function researchCanvasArtifactContentEditable(node) {
-+			return node?.kind === "assistant-result" || node?.kind === "generated-summary" && node?.generationStatus === "completed";
++			return node?.kind === "pasted-text" || node?.kind === "assistant-result" || node?.kind === "generated-summary" && node?.generationStatus === "completed";
 +		}
-+		function canonicalResearchGenerationSource(value) {
++		function researchClipboardText(value) {
++			return typeof value === "string" && value.trim() && new TextEncoder().encode(value).byteLength <= RESEARCH_CLIPBOARD_TEXT_BYTES ? value : null;
++		}
++		function canonicalResearchGenerationSource(value, allowAudit = false) {
 +			if (typeof value !== "object" || value === null) return null;
 +			const id = boundedResearchArtifactString(value.id, RESEARCH_CANVAS_TEXT_LIMIT);
 +			const title = boundedResearchArtifactString(value.title, RESEARCH_ARTIFACT_MAX_TITLE);
 +			if (id === null || title === null) return null;
++			if (allowAudit && ["file", "artifact"].includes(value.type) && value.path === void 0 && value.text === void 0) return Object.freeze({ id, type: value.type, title });
 +			if (value.type === "file") {
 +				const path = boundedResearchArtifactString(value.path, 8192);
 +				return path === null || !/^(?:\/|[A-Za-z]:[\\/])/.test(path) ? null : Object.freeze({ id, type: "file", title, path });
@@ -3899,19 +4190,34 @@ index 1dd0e89..40464a1 100644
 +			}
 +			return null;
 +		}
-+		function canonicalResearchGenerationSources(value) {
++		function canonicalResearchGenerationSources(value, allowAudit = false) {
 +			if (!Array.isArray(value) || value.length === 0 || value.length > RESEARCH_GENERATION_MAX_SOURCES) return null;
 +			const sources = [];
 +			const ids = /* @__PURE__ */ new Set();
 +			for (const raw of value) {
-+				const source = canonicalResearchGenerationSource(raw);
++				const source = canonicalResearchGenerationSource(raw, allowAudit);
 +				if (source === null || ids.has(source.id)) return null;
 +				ids.add(source.id);
 +				sources.push(source);
 +			}
-+			return Object.freeze(sources);
++			return new TextEncoder().encode(JSON.stringify(sources)).byteLength > 320000 ? null : Object.freeze(sources);
 +		}
-+		function researchGenerationSources(snapshot, selectedIds) {
++		function researchContainerPlainText(raw) {
++			const spec = parseResearchContainerSpec(raw);
++			if (spec === null || spec.type === 'web') return '';
++			if (spec.type === 'markdown' || spec.type === 'mind-map') return spec.content;
++			if (spec.type === 'table') return [spec.columns.join(' | '), ...spec.rows.map((row) => row.join(' | '))].join('\n');
++			if (spec.type === 'kpi') return spec.items.map((item) => `${item.label}：${item.value}${item.change === void 0 ? '' : `（${item.change}）`}`).join('\n');
++			return spec.series.map((series) => `${series.name}\n${series.values.map((value, index) => `${spec.labels[index]}：${value}`).join('\n')}`).join('\n');
++		}
++		function researchResolvedGenerationSources(node, inspection) {
++			const resolved = node.creationMode === 'selection' ? canonicalResearchGenerationSources(inspection?.resolvedSources) : null;
++			return resolved !== null && resolved.length === node.sourceNodeIds.length && resolved.every((source, index) => source.type === 'artifact' && source.id === node.sourceNodeIds[index]) ? { generationSources: resolved } : {};
++		}
++		function researchGenerationWebUrl(node) {
++			return node?.kind === 'web-link' ? normalizeResearchWebUrl(node.url) : node?.kind === 'generated-container' && node.containerSpec?.type === 'web' ? normalizeResearchWebUrl(node.containerSpec.url) : null;
++		}
++		function researchGenerationSources(snapshot, selectedIds, requireEvidence = false) {
 +			const ids = researchSelectionIds(selectedIds);
 +			if (ids.length === 0 || ids.length > RESEARCH_GENERATION_MAX_SOURCES) return null;
 +			const files = new Map((snapshot?.files ?? []).map((node) => [node.id, node]));
@@ -3931,16 +4237,23 @@ index 1dd0e89..40464a1 100644
 +					continue;
 +				}
 +				const artifact = artifacts.get(id);
++				if (requireEvidence && (artifact === void 0 || RESEARCH_ACTIVE_GENERATION_STATUSES.has(artifact.generationStatus) || artifact.kind === 'web-link' && !artifact.sourceText || artifact.kind === 'generated-container' && !artifact.containerSpec || ['failed', 'cancelled', 'interrupted', 'draft'].includes(artifact.generationStatus))) return null;
++				let evidence = artifact?.kind === 'generated-container' && artifact.containerSpec ? artifact.containerSpec.type === 'web' ? artifact.sourceText : researchContainerPlainText(artifact.containerSpec) : artifact?.sourceText ?? artifact?.excerpt;
++				if (artifact?.kind === "pasted-text" && typeof evidence === "string" && new TextEncoder().encode(evidence).byteLength > 119000) {
++					let end = Math.min(evidence.length, 119000);
++					while (new TextEncoder().encode(evidence.slice(0, end)).byteLength > 119000) end = Math.floor(end * .9);
++					evidence = `[来源文字过长，以下证据已截断；原文仍完整保存在画板。]\n${evidence.slice(0, end)}`;
++				}
 +				const source = canonicalResearchGenerationSource({
 +					id,
 +					type: "artifact",
-+					title: artifact?.title,
-+					text: artifact?.sourceText ?? artifact?.excerpt
++					title: artifact?.displayName ?? artifact?.title,
++					text: evidence
 +				});
 +				if (source === null) return null;
 +				sources.push(source);
 +			}
-+			return Object.freeze(sources);
++			return canonicalResearchGenerationSources(sources);
 +		}
 +		function researchMindMapLabel(value) {
 +			if (typeof value !== 'string') return null;
@@ -4028,15 +4341,16 @@ index 1dd0e89..40464a1 100644
 +			const id = boundedResearchArtifactString(value.id, RESEARCH_CANVAS_TEXT_LIMIT);
 +			const kind = boundedResearchArtifactString(value.kind, RESEARCH_CANVAS_TEXT_LIMIT);
 +			const messageId = boundedResearchArtifactString(value.messageId, RESEARCH_CANVAS_TEXT_LIMIT);
-+			const selectionGenerated = kind === "generated-summary" || kind === "generated-mind-map";
++			const selectedCreate = kind === "generated-container" && value.creationMode === "selection";
++			const selectionGenerated = kind === "generated-summary" || kind === "generated-mind-map" || selectedCreate;
 +			const container = kind === "generated-container";
 +			const webLink = kind === "web-link";
 +			const generated = selectionGenerated || container;
-+			const rawExcerpt = kind === "assistant-result" ? preserveResearchArtifactText(value.excerpt) : generated ? preserveResearchArtifactText(value.excerpt, RESEARCH_GENERATION_MAX_OUTPUT) : boundedResearchArtifactString(value.excerpt, RESEARCH_ARTIFACT_MAX_EXCERPT);
++			const rawExcerpt = kind === "pasted-text" ? researchClipboardText(value.excerpt) : kind === "assistant-result" ? preserveResearchArtifactText(value.excerpt) : generated ? preserveResearchArtifactText(value.excerpt, RESEARCH_GENERATION_MAX_OUTPUT) : boundedResearchArtifactString(value.excerpt, RESEARCH_ARTIFACT_MAX_EXCERPT);
 +			const excerpt = kind === "assistant-excerpt" ? normalizeResearchArtifactText(rawExcerpt) : rawExcerpt;
 +			const generationStatus = generated ? researchGenerationStatus(value.generationStatus) : null;
 +			const sourceNodeIds = selectionGenerated ? researchSelectionIds(value.sourceNodeIds) : [];
-+			const generationSources = selectionGenerated && value.generationSources !== void 0 ? canonicalResearchGenerationSources(value.generationSources) : null;
++			const generationSources = selectionGenerated && value.generationSources !== void 0 ? canonicalResearchGenerationSources(value.generationSources, selectedCreate) : null;
 +			const generationDetail = kind === "generated-mind-map" ? researchMindMapDetail(value.generationDetail) : null;
 +			const legacyInterrupted = generated && value.generationStatus === "pending";
 +			const generationError = generated && (value.generationError !== void 0 || legacyInterrupted) ? normalizeResearchArtifactText(value.generationError ?? "任务已中断，请重试。", 512) : null;
@@ -4053,6 +4367,7 @@ index 1dd0e89..40464a1 100644
 +			const refreshMinutes = container && RESEARCH_CONTAINER_REFRESH_MINUTES.has(value.refreshMinutes) ? value.refreshMinutes : container ? null : 0;
 +			const refreshError = container && value.refreshError !== void 0 ? normalizeResearchArtifactText(value.refreshError, 512) : null;
 +			const lastSuccessfulAt = container && Number.isFinite(value.lastSuccessfulAt) && value.lastSuccessfulAt >= 0 ? value.lastSuccessfulAt : null;
++			if (selectedCreate && containerSpec?.type === 'web') return null;
 +			if (id === null || kind === null || !RESEARCH_ARTIFACT_KINDS.has(kind) || messageId === null || title === null || excerpt === null || !Number.isFinite(value.x) || !Number.isFinite(value.y) || webLink && (url === null || value.sourceText !== void 0 && sourceText === null) || selectionGenerated && (generationStatus === null || generationStatus === "draft" || sourceNodeIds.length === 0 || value.generationSources !== void 0 && generationSources === null) || container && (generationStatus === null || containerPrompt === null || refreshMinutes === null || generationStatus === "completed" && containerSpec === null || value.containerSpec !== void 0 && containerSpec === null || value.refreshError !== void 0 && refreshError === null) || generated && (value.generationError !== void 0 && generationError === null || value.generationTaskId !== void 0 && generationTaskId === null || value.generationChildSessionId !== void 0 && generationChildSessionId === null)) return null;
 +			return {
 +				id,
@@ -4077,6 +4392,7 @@ index 1dd0e89..40464a1 100644
 +					...(Number.isFinite(value.generationCompletedAt) ? { generationCompletedAt: value.generationCompletedAt } : {})
 +				} : {}),
 +				...(container ? {
++					...(selectedCreate ? { creationMode: "selection" } : {}),
 +					containerPrompt,
 +					refreshMinutes,
 +					...(containerSpec === null ? {} : { containerSpec }),
@@ -4385,12 +4701,24 @@ index 1dd0e89..40464a1 100644
 +		function researchCanvasGeneratedPlacement(nodes, selectedIds, kind, requestedDetail = "standard") {
 +			const bounds = researchCanvasSelectionBounds(nodes, selectedIds);
 +			if (bounds === null) return null;
-+			if (kind !== "mind-map" && kind !== "summary") return null;
++			if (kind !== "mind-map" && kind !== "summary" && kind !== "create") return null;
 +			const width = 520;
 +			const height = 300;
++			let y = bounds.top + bounds.height / 2;
++			const x = bounds.right + 32 + width / 2;
++			if (kind === 'create') {
++				for (let attempt = 0; attempt <= nodes.length; attempt += 1) {
++					const collision = nodes.find((node) => {
++						const geometry = normalizeResearchCanvasNodeGeometry(node);
++						return Math.abs(node.x - x) < (geometry.width + width) / 2 + 16 && Math.abs(node.y - y) < (geometry.height + height) / 2 + 16;
++					});
++					if (collision === void 0) break;
++					y = collision.y + normalizeResearchCanvasNodeGeometry(collision).height / 2 + height / 2 + 32;
++				}
++			}
 +			return {
-+				x: bounds.right + 32 + width / 2,
-+				y: bounds.top + bounds.height / 2,
++				x,
++				y,
 +				width,
 +				height,
 +				sizeMode: "auto"
@@ -4620,6 +4948,13 @@ index 1dd0e89..40464a1 100644
 +			const undoHistory = [];
 +			const redoHistory = [];
 +			let pendingHistoryTransaction = null;
++			let clipboardQueue = Promise.resolve();
++			let clipboardEpoch = 0;
++			const clipboardAdmissionIds = new Set();
++			const cancelClipboardImports = () => {
++				clipboardEpoch += 1;
++				for (const nodeId of clipboardAdmissionIds) Promise.resolve().then(() => window.dshDesktop?.researchPreview?.revokeNode?.({ sessionId, nodeId })).catch(() => void 0);
++			};
 +			const persistSnapshot = () => {
 +				const filesDurable = saveResearchCanvasFiles(storage, sessionId, snapshot.files);
 +				const artifactsDurable = saveResearchCanvasArtifacts(storage, sessionId, snapshot.artifacts);
@@ -4670,7 +5005,7 @@ index 1dd0e89..40464a1 100644
 +				if (typeof revokeNode !== "function") return;
 +				const reachable = reachableHistoryFileIds();
 +				for (const nodeId of orphanRevocationIds) {
-+					if (reachable.has(nodeId) || !beginOrphanRevocation(nodeId)) continue;
++					if (reachable.has(nodeId) || clipboardAdmissionIds.has(nodeId) || !beginOrphanRevocation(nodeId)) continue;
 +					Promise.resolve().then(() => revokeNode({ sessionId, nodeId })).then((result) => {
 +						if (result?.ok === true) updateOrphanRevocations([nodeId], true);
 +					}).catch(() => void 0).finally(() => endOrphanRevocation(nodeId));
@@ -4728,6 +5063,7 @@ index 1dd0e89..40464a1 100644
 +				finalizeUnreachablePreviewNodes();
 +			};
 +			const undo = () => {
++				cancelClipboardImports();
 +				finalizeHistoryTransaction();
 +				const entry = undoHistory.pop();
 +				if (entry === void 0) return false;
@@ -4736,6 +5072,7 @@ index 1dd0e89..40464a1 100644
 +				return true;
 +			};
 +			const redo = () => {
++				cancelClipboardImports();
 +				finalizeHistoryTransaction();
 +				const entry = redoHistory.pop();
 +				if (entry === void 0) return false;
@@ -4777,8 +5114,147 @@ index 1dd0e89..40464a1 100644
 +					}, point, createResearchCanvasArtifactId)
 +				}, true);
 +			};
++			// Clipboard publishes once, only after all three persisted keys succeed. The
++			// existing storage bridge is multi-key: compensation is not crash atomic.
++			const persistClipboardBatch = (next) => {
++				const entries = [
++					[researchCanvasStorageKey(sessionId), JSON.stringify(next.files), JSON.stringify(snapshot.files)],
++					[researchCanvasArtifactsStorageKey(sessionId), JSON.stringify(next.artifacts), JSON.stringify(snapshot.artifacts)],
++					[researchCanvasSelectionStorageKey(sessionId), JSON.stringify(next.selection), JSON.stringify(snapshot.selection)]
++				];
++				const written = [];
++				try {
++					if (storage === null) throw new Error();
++					for (const entry of entries) {
++						written.push(entry);
++						if (storage.setItem(entry[0], entry[1]) === false) throw new Error();
++					}
++				} catch {
++					let restored = true;
++					for (const entry of written.reverse()) {
++						try { if (storage?.setItem(entry[0], entry[2]) === false) restored = false; } catch { restored = false; }
++					}
++					const error = new Error(restored ? "画板存储失败，修改未保存，请重试。" : "画板存储失败，旧数据恢复尚未完成；请恢复磁盘空间后重试，勿关闭画板。");
++					error.clipboardCompensationFailed = !restored;
++					throw error;
++				}
++			};
++			const insertClipboardBatch = async (payload, point, active, epoch) => {
++				const checkActive = () => { if (epoch !== clipboardEpoch || !active()) throw new Error("粘贴已取消或画板已切换。"); };
++				checkActive();
++				if (payload?.kind === "empty") return [];
++				let raw;
++				if (payload?.kind === "text") {
++					if (researchClipboardText(payload.text) === null) throw new Error("剪贴板文字为空或超过 1 MiB 上限。");
++					raw = [{ id: "clipboard-text", kind: "pasted-text", title: normalizeResearchArtifactText(payload.text, 60), excerpt: payload.text, x: 0, y: 0 }];
++				} else if (payload?.kind === "files") raw = payload.files?.map((file, index) => ({ ...file, id: `clipboard-file-${index}`, kind: "file", x: index * 36, y: index * 36 }));
++				else if (payload?.kind === "components") raw = payload.nodes;
++				if (!Array.isArray(raw) || raw.length === 0 || raw.length > 100 || new Set(raw.map((node) => node.id)).size !== raw.length || raw.some((node) => !Number.isFinite(node.x) || !Number.isFinite(node.y))) throw new Error("剪贴板组件数据无效或过多。");
++				const ids = new Map(raw.map((node) => [node.id, node.kind === "file" ? createResearchCanvasFileId() : createResearchCanvasArtifactId()]));
++				const origin = { x: Math.min(...raw.map((node) => node.x)), y: Math.min(...raw.map((node) => node.y)) };
++				const target = Number.isFinite(point?.x) && Number.isFinite(point?.y) ? point : visibleCenter();
++				const files2 = [], artifacts2 = [], admitted = [];
++				let keepCleanup = false;
++				const checkCapacity = () => {
++					if (snapshot.files.length + raw.filter((node) => node.kind === "file").length > RESEARCH_CANVAS_MAX_FILES_PER_SESSION || snapshot.artifacts.length + raw.filter((node) => node.kind !== "file").length > RESEARCH_CANVAS_MAX_ARTIFACTS_PER_SESSION) throw new Error("画板组件容量已满，请删除部分组件后重试。");
++				};
++				try {
++					checkCapacity();
++					for (const source of raw) {
++						checkActive();
++						const id = ids.get(source.id);
++						const node = { ...source, id, x: target.x + source.x - origin.x, y: target.y + source.y - origin.y };
++						if (source.kind === "file") {
++							if (typeof source.assetId !== "string" || !/^[a-f0-9]{48}$/.test(source.assetId)) throw new Error("剪贴板文件资源无效，请重新复制。");
++							delete node.path; delete node.authorizationId; delete node.contentType;
++							node.source = "computer"; node.mediaType = source.mimeType;
++							if (source.previewable !== false) {
++								if (orphanRevocationIds.length >= RESEARCH_CANVAS_MAX_REVOCATION_OUTBOX) throw new Error("文件授权清理记录已满，请稍后重试。");
++								admitted.push(id); clipboardAdmissionIds.add(id);
++								if (!updateOrphanRevocations([id]) || !orphanRevocationIds.includes(id)) throw new Error("无法保存文件授权清理记录，已停止粘贴。");
++								const descriptor = await window.dshDesktop?.researchClipboard?.admit?.({ assetId: source.assetId, sessionId, nodeId: id });
++								checkActive(); checkCapacity();
++								if (!descriptor?.authorizationId || !descriptor.contentType || !descriptor.path) throw new Error(`「${source.name}」导入失败，请重新复制。`);
++								await Promise.resolve().then(() => window.dshDesktop?.researchPreview?.release?.({ sessionId, nodeId: id, authorizationId: descriptor.authorizationId, capabilityToken: descriptor.capabilityToken })).catch(() => void 0);
++								checkActive(); checkCapacity();
++								Object.assign(node, { path: descriptor.path, authorizationId: descriptor.authorizationId, contentType: descriptor.contentType, name: descriptor.name });
++							} else node.previewEligible = false;
++							const canonical = canonicalResearchCanvasFileNode(node);
++							if (canonical === null) throw new Error("剪贴板文件组件无效。");
++							files2.push(canonical);
++						} else {
++							node.messageId = `clipboard-message-${createResearchCanvasArtifactId()}`;
++							for (const key of ["generationTaskId", "generationChildSessionId", "generationLastSeq", "generationStartedAt", "generationCompletedAt", "generationEvents", "generationPartialText", "generationError", "refreshError", "lastSuccessfulAt"]) delete node[key];
++							if (String(node.kind).startsWith("generated-")) {
++								if (RESEARCH_ACTIVE_GENERATION_STATUSES.has(source.generationStatus) || node.kind === "generated-container" && node.generationStatus === "completed" && !node.containerSpec) node.generationStatus = "interrupted";
++								if (!node.excerpt?.trim()) node.excerpt = "复制的组件尚未完成，请重试。";
++							}
++							if (node.kind === "generated-container") node.refreshMinutes = 0;
++							if (Array.isArray(node.sourceNodeIds)) node.sourceNodeIds = node.sourceNodeIds.map((oldId) => ids.get(oldId) ?? oldId);
++							const sources = canonicalResearchGenerationSources(source.generationSources?.map((item) => ({ ...item, id: ids.get(item.id) ?? item.id })));
++							delete node.generationSources;
++							if (sources !== null && sources.every((item) => item.type === "artifact") && sources.length === node.sourceNodeIds?.length && sources.every((item, index) => item.id === node.sourceNodeIds[index])) node.generationSources = sources;
++							const canonical = canonicalResearchCanvasArtifactNode(node);
++							if (canonical === null) throw new Error("剪贴板文字或组件内容无效或过大。");
++							artifacts2.push(canonical);
++						}
++					}
++					checkActive(); checkCapacity();
++					const nextFiles = parseResearchCanvasFileNodes(JSON.stringify([...snapshot.files, ...files2]));
++					const nextArtifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...artifacts2]);
++					if (nextFiles.length !== snapshot.files.length + files2.length || nextArtifacts.length !== snapshot.artifacts.length + artifacts2.length) throw new Error("画板存储容量已满或组件内容过大，未添加组件。");
++					const selection = { selectedNodeIds: raw.map((node) => ids.get(node.id)), orderedFileIds: files2.map((node) => node.id) };
++					const next = { ...snapshot, files: nextFiles, artifacts: nextArtifacts, selection };
++					persistClipboardBatch(next);
++					finalizeHistoryTransaction();
++					const before = historyState();
++					for (const id of admitted) { clipboardAdmissionIds.delete(id); updateOrphanRevocations([id], true); }
++					publish(next, false); recordHistory(before);
++					markResearchSessionEngaged(storage, sessionId);
++					return selection.selectedNodeIds;
++				} catch (error) {
++					keepCleanup = error?.clipboardCompensationFailed === true;
++					for (const nodeId of admitted) {
++						clipboardAdmissionIds.delete(nodeId);
++						// Revoke again after await: cancellation may have run before main created the grant.
++						updateOrphanRevocations([nodeId]);
++						try { const result = await window.dshDesktop?.researchPreview?.revokeNode?.({ sessionId, nodeId }); if (result?.ok === true && !keepCleanup) updateOrphanRevocations([nodeId], true); } catch {}
++					}
++					throw error;
++				}
++			};
 +			return {
 +				subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
++				cancelClipboardImports,
++				insertClipboardNodes(payload, point, options = {}) {
++					const epoch = clipboardEpoch;
++					const frozen = JSON.parse(JSON.stringify(payload));
++					const operation = () => insertClipboardBatch(frozen, point, options.active ?? (() => true), epoch);
++					const pending = clipboardQueue.then(operation, operation);
++					clipboardQueue = pending.catch(() => void 0);
++					return pending;
++				},
++				pasteClipboardNodes(point, options = {}) {
++					const epoch = clipboardEpoch;
++					const active = options.active ?? (() => true);
++					const operation = async () => {
++						if (epoch !== clipboardEpoch || !active()) throw new Error("粘贴已取消或画板已切换。");
++						if (typeof window.dshDesktop?.researchClipboard?.read !== "function") throw new Error("剪贴板服务暂时不可用。");
++						const payload = await window.dshDesktop.researchClipboard.read();
++						return insertClipboardBatch(payload, point, active, epoch);
++					};
++					const pending = clipboardQueue.then(operation, operation);
++					clipboardQueue = pending.catch(() => void 0);
++					return pending;
++				},
++				async copySelectedNodes() {
++					const selected = new Set(snapshot.selection.selectedNodeIds);
++					const nodes = [...snapshot.files.filter((node) => selected.has(node.id)).map((node) => ({ ...node, kind: "file" })), ...snapshot.artifacts.filter((node) => selected.has(node.id))];
++					if (nodes.length === 0) return false;
++					const result = await window.dshDesktop?.researchClipboard?.copy?.({ sessionId, nodes });
++					if (result?.ok !== true) throw new Error(result?.error ?? "复制失败，请重试。");
++					return true;
++				},
 +				getSnapshot() { return snapshot; },
 +				subscribeAssistantActions(listener) { assistantActionListeners.add(listener); return () => assistantActionListeners.delete(listener); },
 +				assistantActionsActive() { return assistantActionsActive; },
@@ -4905,19 +5381,22 @@ index 1dd0e89..40464a1 100644
 +					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
-+				beginGeneration(kind, sourceNodeIds, placement, requestedDetail = "standard") {
++				beginGeneration(kind, sourceNodeIds, placement, requestedDetail = "standard", frozenSnapshot = snapshot) {
 +					const selectedNodeIds = researchSelectionIds(sourceNodeIds);
 +					const liveIds = new Set([...snapshot.files, ...snapshot.artifacts].map((node) => node.id));
-+					if (!['mind-map', 'summary'].includes(kind) || selectedNodeIds.length === 0 || selectedNodeIds.some((id) => !liveIds.has(id)) || placement === null) return null;
-+					const generationSources = researchGenerationSources(snapshot, selectedNodeIds);
++					if (!['mind-map', 'summary', 'create'].includes(kind) || selectedNodeIds.length === 0 || selectedNodeIds.some((id) => !liveIds.has(id)) || placement === null) return null;
++					const prompt = kind === 'create' && typeof requestedDetail === 'string' && requestedDetail.trim() !== '' && requestedDetail.length <= RESEARCH_CONTAINER_MAX_PROMPT ? requestedDetail.trim() : null;
++					if (kind === 'create' && prompt === null) return null;
++					const generationSources = researchGenerationSources(frozenSnapshot, selectedNodeIds, kind === 'create');
 +					if (generationSources === null) return null;
 +					const generationDetail = kind === 'mind-map' ? researchMindMapDetail(requestedDetail) : null;
 +					const id = createResearchCanvasArtifactId();
 +					const artifact = canonicalResearchCanvasArtifactNode({
 +						id,
-+						kind: kind === 'mind-map' ? 'generated-mind-map' : 'generated-summary',
++						kind: kind === 'create' ? 'generated-container' : kind === 'mind-map' ? 'generated-mind-map' : 'generated-summary',
 +						messageId: id,
-+						title: kind === 'mind-map' ? '思维导图' : '总结提炼',
++						title: kind === 'create' ? '基于所选创建' : kind === 'mind-map' ? '思维导图' : '总结提炼',
++						...(kind === 'create' ? { creationMode: 'selection', containerPrompt: prompt, refreshMinutes: 0 } : {}),
 +						excerpt: '正在准备任务…',
 +						generationStatus: 'queued',
 +						sourceNodeIds: selectedNodeIds,
@@ -4947,6 +5426,7 @@ index 1dd0e89..40464a1 100644
 +					const partialText = events.filter((event) => event.type === 'assistant-delta').map((event) => event.text).join('').slice(0, RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
 +					const next = {
 +						...current,
++						...researchResolvedGenerationSources(current, receipt),
 +						generationStatus: state,
 +						generationTaskId: taskId,
 +						...(childSessionId === null ? {} : { generationChildSessionId: childSessionId }),
@@ -4993,7 +5473,7 @@ index 1dd0e89..40464a1 100644
 +						const spec = parseResearchContainerSpec(inspection.finalOutput);
 +						const completedAt = Number.isFinite(inspection.completedAt) ? inspection.completedAt : Date.now();
 +						const { generationEvents: _events, generationPartialText: _partial, generationError: _error, refreshError: _refreshError, ...completed } = current;
-+						if (spec === null) {
++						if (spec === null || current.creationMode === 'selection' && spec.type === 'web') {
 +							const error = '生成内容格式无效，请重试。';
 +							next = {
 +								...completed,
@@ -5044,7 +5524,7 @@ index 1dd0e89..40464a1 100644
 +						};
 +					}
 +					const artifacts2 = snapshot.artifacts.slice();
-+					artifacts2[index] = next;
++					artifacts2[index] = { ...next, ...researchResolvedGenerationSources(current, inspection) };
 +					update({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
@@ -5070,10 +5550,15 @@ index 1dd0e89..40464a1 100644
 +					const index = snapshot.artifacts.findIndex((node) => node.id === nodeId && ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus));
 +					if (index === -1) return null;
 +					const current = snapshot.artifacts[index];
-+					const kind = current.kind === 'generated-mind-map' ? 'mind-map' : current.kind === 'generated-summary' ? 'summary' : current.kind === 'generated-container' ? 'container' : null;
++					const kind = current.creationMode === 'selection' ? 'create' : current.kind === 'generated-mind-map' ? 'mind-map' : current.kind === 'generated-summary' ? 'summary' : current.kind === 'generated-container' ? 'container' : null;
 +					if (kind === null) return null;
-+					if (kind === 'container' && (typeof current.containerPrompt !== 'string' || current.containerPrompt.trim() === '')) return null;
-+					if (kind !== 'container' && (!Array.isArray(current.generationSources) || current.generationSources.length === 0)) return null;
++					if (['container', 'create'].includes(kind) && (typeof current.containerPrompt !== 'string' || current.containerPrompt.trim() === '')) return null;
++					if (kind !== 'container' && canonicalResearchGenerationSources(current.generationSources) === null) {
++						const artifacts2 = snapshot.artifacts.slice();
++						artifacts2[index] = { ...current, generationError: '来源快照不可用，请重新选择资料创建。' };
++						update({ artifacts: artifacts2 }, true);
++						return null;
++					}
 +					const artifacts2 = snapshot.artifacts.slice();
 +					const { generationError: _error, generationTaskId: _task, generationChildSessionId: _child, generationStartedAt: _started, generationCompletedAt: _completed, generationEvents: _events, generationPartialText: _partial, ...retrying } = current;
 +					artifacts2[index] = {
@@ -5083,7 +5568,7 @@ index 1dd0e89..40464a1 100644
 +						excerpt: '正在准备任务…'
 +					};
 +					commitUpdate({ artifacts: artifacts2 }, true);
-+					return kind === 'container' ? { id: nodeId, kind, prompt: current.containerPrompt } : { id: nodeId, kind, sourceNodeIds: [...current.sourceNodeIds], generationSources: current.generationSources, ...(kind === 'mind-map' ? { detail: researchMindMapDetail(current.generationDetail) } : {}) };
++					return kind === 'container' ? { id: nodeId, kind, prompt: current.containerPrompt } : { id: nodeId, kind, sourceNodeIds: [...current.sourceNodeIds], generationSources: current.generationSources, ...(kind === 'create' ? { prompt: current.containerPrompt } : {}), ...(kind === 'mind-map' ? { detail: researchMindMapDetail(current.generationDetail) } : {}) };
 +				},
 +				setGenerationCancelSink(sink) {
 +					generationCancelSink = typeof sink === 'function' ? sink : void 0;
@@ -5125,10 +5610,16 @@ index 1dd0e89..40464a1 100644
 +					const artifactIndex = snapshot.artifacts.findIndex((node) => node.id === nodeId && researchCanvasArtifactContentEditable(node));
 +					if (artifactIndex === -1) return false;
 +					const current = snapshot.artifacts[artifactIndex];
-+					const excerpt = preserveResearchArtifactText(rawContent, current.kind === "generated-summary" ? RESEARCH_GENERATION_MAX_OUTPUT : RESEARCH_ARTIFACT_MAX_EXCERPT);
++					const excerpt = current.kind === "pasted-text" ? researchClipboardText(rawContent) : preserveResearchArtifactText(rawContent, current.kind === "generated-summary" ? RESEARCH_GENERATION_MAX_OUTPUT : RESEARCH_ARTIFACT_MAX_EXCERPT);
 +					if (excerpt === null || excerpt === snapshot.artifacts[artifactIndex].excerpt) return false;
 +					const artifacts2 = snapshot.artifacts.slice();
 +					artifacts2[artifactIndex] = { ...artifacts2[artifactIndex], excerpt };
++					if (current.kind === "pasted-text") {
++						if (boundedResearchCanvasArtifactNodes(artifacts2).length !== artifacts2.length) throw new Error("画板存储容量已满，文字修改未保存。");
++						persistClipboardBatch({ ...snapshot, artifacts: artifacts2 });
++						commitUpdate({ artifacts: artifacts2 }, false);
++						return true;
++					}
 +					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
@@ -5275,6 +5766,7 @@ index 1dd0e89..40464a1 100644
 +					update({ unavailableSourceMessageIds: [...unavailable] }, false);
 +				},
 +				cancelTransient() {
++					cancelClipboardImports();
 +					this.setAssistantActionsActive(false);
 +					generationCancelSink = void 0;
 +					Promise.resolve(window.dshDesktop?.researchLinkFrame?.releaseSession?.(sessionId)).catch(() => void 0);
@@ -5415,7 +5907,7 @@ index 1dd0e89..40464a1 100644
 +			const settle = (commit) => {
 +				if (settledRef.current) return;
 +				settledRef.current = true;
-+				if (commit) onCommit(inputRef.current?.value ?? value);
++				if (commit) { if (onCommit(inputRef.current?.value ?? value) === false) settledRef.current = false; }
 +				else onCancel();
 +			};
 +			return (0, react_jsx_runtime.jsx)("textarea", {
@@ -6258,7 +6750,7 @@ index 1dd0e89..40464a1 100644
 +				"data-research-node-id": node.id,
 +				"data-selected": selected || void 0,
 +				"data-node-dragging": dragging || void 0,
-+				"data-path-unavailable": node.path === void 0 ? true : void 0,
++				"data-path-unavailable": node.path === void 0 && !node.assetId ? true : void 0,
 +				role: "option",
 +				tabIndex: 0,
 +				"aria-selected": selected,
@@ -6301,7 +6793,15 @@ index 1dd0e89..40464a1 100644
 +						}) : displayName
 +					}), (0, react_jsx_runtime.jsx)("span", {
 +						className: "rScV5Q_fileCaption",
-+						children: researchCanvasFileCaption(node)
++						children: node.assetId ? "暂不支持预览" : researchCanvasFileCaption(node)
++					}), !node.assetId ? null : (0, react_jsx_runtime.jsx)("button", {
++						type: "button", "data-research-clipboard-open": "", children: "在文件夹中显示",
++						onClick: async (event) => {
++							event.stopPropagation();
++							const button = event.currentTarget;
++							const result = await Promise.resolve(window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);
++							if (result?.ok !== true) button?.setAttribute("title", "文件不可用，请重新复制。");
++						}
 +					})]
 +				})]
 +			});
@@ -6808,7 +7308,7 @@ index 1dd0e89..40464a1 100644
 +				if (spec.type === "kpi") return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.items.map((item) => `- ${item.label}：${item.value}${item.change === void 0 ? "" : `（${item.change}）`}`).join("\n")}\n` };
 +				return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.content.trim()}\n` };
 +			}
-+			if (["assistant-result", "assistant-excerpt", "generated-summary"].includes(node.kind)) return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(title, "md"), content: researchArtifactMarkdown(node) };
++			if (["pasted-text", "assistant-result", "assistant-excerpt", "generated-summary"].includes(node.kind)) return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(title, "md"), content: researchArtifactMarkdown(node) };
 +			return { kind: "text", format: "txt", suggestedName: researchCanvasExportFileName(title, "txt"), content: `${String(node.excerpt ?? "").trim()}\n` };
 +		}
 +		const RESEARCH_MIND_MAP_EXPORT_COLORS = ["rgb(0,80,150)", "rgb(0,120,180)", "rgb(30,185,225)", "rgb(179,235,255)", "rgb(193,198,200)", "rgb(255,200,25)"];
@@ -7003,6 +7503,7 @@ index 1dd0e89..40464a1 100644
 +		}
 +		function ResearchContainerContent({ node, sessionId, visible }) {
 +			const spec = node.containerSpec;
++			if (spec.type === "mind-map") return (0, react_jsx_runtime.jsx)(ResearchMindMap, { nodeId: node.id, text: spec.content });
 +			if (spec.type === "web") return (0, react_jsx_runtime.jsx)(ResearchCanvasWebFrame, { node: { ...node, url: spec.url }, sessionId, visible });
 +			if (spec.type === "chart") return (0, react_jsx_runtime.jsx)(ResearchContainerChart, { spec });
 +			if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerTableScroll", children: (0, react_jsx_runtime.jsxs)("table", { "data-research-container-table": "", children: [(0, react_jsx_runtime.jsx)("thead", { children: (0, react_jsx_runtime.jsx)("tr", { children: spec.columns.map((column, index) => (0, react_jsx_runtime.jsx)("th", { children: column }, index)) }) }), (0, react_jsx_runtime.jsx)("tbody", { children: spec.rows.map((row, rowIndex) => (0, react_jsx_runtime.jsx)("tr", { children: row.map((cell, cellIndex) => (0, react_jsx_runtime.jsx)("td", { children: String(cell) }, cellIndex)) }, rowIndex)) })] }) });
@@ -7015,7 +7516,7 @@ index 1dd0e89..40464a1 100644
 +			const [editingPrompt, setEditingPrompt] = (0, react.useState)(false);
 +			refreshRef.current = onGenerate;
 +			(0, react.useEffect)(() => {
-+				if (node.refreshMinutes === 0 || node.generationStatus !== "completed") return;
++				if (node.creationMode === 'selection' || node.refreshMinutes === 0 || node.generationStatus !== "completed") return;
 +				let timer;
 +				let active = true;
 +				const schedule = () => {
@@ -7049,7 +7550,7 @@ index 1dd0e89..40464a1 100644
 +				"data-research-container-type": node.containerSpec.type,
 +				children: [(0, react_jsx_runtime.jsxs)("div", {
 +					className: "rScV5Q_containerControls",
-+					children: [(0, react_jsx_runtime.jsx)("span", { children: node.containerSpec.type === "web" ? "网页" : node.containerSpec.type === "chart" ? "图表" : node.containerSpec.type === "table" ? "表格" : node.containerSpec.type === "kpi" ? "指标" : "内容" }), (0, react_jsx_runtime.jsx)("button", { type: "button", onClick: () => setEditingPrompt(true), disabled: activeGeneration, children: "编辑需求" }), (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-container-refresh": "", onClick: () => onGenerate?.(node, node.containerPrompt), disabled: activeGeneration, children: "刷新" }), (0, react_jsx_runtime.jsxs)("select", {
++					children: node.creationMode === 'selection' ? [(0, react_jsx_runtime.jsxs)('details', { 'data-research-create-provenance': '', children: [(0, react_jsx_runtime.jsx)('summary', { children: `基于 ${node.sourceNodeIds.length} 项资料创建` }), (0, react_jsx_runtime.jsx)('div', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }, children: node.containerPrompt }), (0, react_jsx_runtime.jsx)('div', { children: (node.generationSources ?? []).map((source) => source.title).join('、') })] })] : [(0, react_jsx_runtime.jsx)("span", { children: node.containerSpec.type === "web" ? "网页" : node.containerSpec.type === "chart" ? "图表" : node.containerSpec.type === "table" ? "表格" : node.containerSpec.type === "kpi" ? "指标" : "内容" }), (0, react_jsx_runtime.jsx)("button", { type: "button", onClick: () => setEditingPrompt(true), disabled: activeGeneration, children: "编辑需求" }), (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-container-refresh": "", onClick: () => onGenerate?.(node, node.containerPrompt), disabled: activeGeneration, children: "刷新" }), (0, react_jsx_runtime.jsxs)("select", {
 +						"data-research-container-refresh-interval": "",
 +						"aria-label": "自动刷新间隔",
 +						value: node.refreshMinutes,
@@ -7065,17 +7566,19 @@ index 1dd0e89..40464a1 100644
 +			const contentRef = (0, react.useRef)(null);
 +			(0, react.useLayoutEffect)(() => {
 +				if (node.sizeMode === "manual" || node.kind === "web-link" || node.kind === "generated-container" || RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || node.kind === 'generated-mind-map' && node.generationStatus === 'completed' || contentRef.current === null || typeof ResizeObserver === "undefined") return;
++				const content = contentRef.current;
++				let active = true;
 +				const measure = () => {
-+					if (!(contentRef.current.scrollHeight > 0)) return;
++					if (!active || !content.isConnected || !(content.scrollHeight > 0)) return;
 +					const minimum = node.kind === 'generated-summary' && node.generationStatus === 'completed' ? 280 : RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight;
 +					const maximum = node.kind === 'generated-summary' && node.generationStatus === 'completed' ? 640 : RESEARCH_CANVAS_MAX_NODE_SIZE;
-+					const height = Math.min(maximum, Math.max(minimum, Math.round(contentRef.current.scrollHeight + RESEARCH_CANVAS_TITLE_HEIGHT)));
++					const height = Math.min(maximum, Math.max(minimum, Math.round(content.scrollHeight + RESEARCH_CANVAS_TITLE_HEIGHT)));
 +					if (Math.round(node.height ?? RESEARCH_CANVAS_NODE_POLICIES.assistant.height) !== height) onAutoHeight?.(node, height);
 +				};
 +				const observer = new ResizeObserver(measure);
-+				observer.observe(contentRef.current);
++				observer.observe(content);
 +				measure();
-+				return () => observer.disconnect();
++				return () => { active = false; observer.disconnect(); };
 +			}, [node.id, node.sizeMode, node.height, onAutoHeight]);
 +			return (0, react_jsx_runtime.jsx)(ResearchCanvasRichNodeFrame, {
 +				node,
@@ -7105,6 +7608,7 @@ index 1dd0e89..40464a1 100644
 +				children: (0, react_jsx_runtime.jsxs)("div", {
 +					ref: contentRef,
 +					className: "rScV5Q_artifactBody",
++					style: node.kind === "pasted-text" ? { minHeight: 0 } : void 0,
 +					"data-research-artifact-content": "",
 +					onDoubleClick: researchCanvasArtifactContentEditable(node) ? (event) => {
 +						event.preventDefault();
@@ -7112,6 +7616,8 @@ index 1dd0e89..40464a1 100644
 +						onContentEdit?.(node);
 +					} : void 0,
 +					onContextMenu: (event) => {
++						const selection = window.getSelection?.();
++						if (selection?.toString() && (event.currentTarget.contains(selection.anchorNode) || event.currentTarget.contains(selection.focusNode))) { event.stopPropagation(); return; }
 +						event.preventDefault();
 +						event.stopPropagation();
 +						onOpenContextMenu?.(event, node);
@@ -7143,7 +7649,7 @@ index 1dd0e89..40464a1 100644
 +						text: node.excerpt,
 +						detail: node.generationDetail,
 +						onNodeLabelCommit: onMindMapNodeCommit
-+					}) : node.kind === "assistant-result" || node.kind === "generated-summary" && node.generationStatus === 'completed' ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
++					}) : node.kind === "pasted-text" || node.kind === "assistant-result" || node.kind === "generated-summary" && node.generationStatus === 'completed' ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 +						text: node.excerpt,
 +						streaming: false
 +					}) : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? (0, react_jsx_runtime.jsxs)("div", {
@@ -7166,7 +7672,7 @@ index 1dd0e89..40464a1 100644
 +						children: node.excerpt
 +					}), (0, react_jsx_runtime.jsxs)("span", {
 +					className: "rScV5Q_artifactMeta",
-+					children: [node.kind === "assistant-excerpt" ? "助手摘录" : node.kind === "generated-mind-map" ? "思维导图" : node.kind === "generated-summary" ? "总结提炼" : node.kind === "web-link" ? "链接" : node.kind === "generated-container" ? "智能容器" : "助手回复", sourceUnavailable ? " · 来源消息不可用" : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? " · 处理中" : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? " · 可重试" : node.kind === "web-link" || node.kind === "generated-container" ? "" : " · 来源消息"]
++					children: node.kind === "pasted-text" ? ["文字 · 可编辑"] : [node.kind === "assistant-excerpt" ? "助手摘录" : node.kind === "generated-mind-map" ? "思维导图" : node.kind === "generated-summary" ? "总结提炼" : node.kind === "web-link" ? "链接" : node.kind === "generated-container" ? "智能容器" : "助手回复", sourceUnavailable ? " · 来源消息不可用" : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? " · 处理中" : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? " · 可重试" : node.kind === "web-link" || node.kind === "generated-container" ? "" : " · 来源消息"]
 +				})]
 +				})
 +			});
@@ -7243,7 +7749,120 @@ index 1dd0e89..40464a1 100644
 +			const [draggingNodeIds, setDraggingNodeIds] = (0, react.useState)([]);
 +			const [resizingNodeId, setResizingNodeId] = (0, react.useState)(null);
 +			const [contextMenu, setContextMenu] = (0, react.useState)(null);
++			const [clipboardFeedback, setClipboardFeedback] = (0, react.useState)(null);
++			const [clipboardAvailable, setClipboardAvailable] = (0, react.useState)(false);
++			const clipboardPointer = (0, react.useRef)(null);
++			const clipboardRepeat = (0, react.useRef)({ key: "", count: 0 });
++			const clipboardAction = (0, react.useCallback)((kind, fixedPoint) => {
++				// Menu buttons disappear after activation; retain the canvas as the next shortcut owner.
++				rootRef.current?.focus({ preventScroll: true });
++				const current = workspace.getSnapshot();
++				let point = fixedPoint;
++				if (kind === "paste" && !point) {
++					const local = clipboardPointer.current ?? { x: current.canvasSize.width / 2, y: current.canvasSize.height / 2 };
++					const world = { x: (local.x - current.viewport.x) / current.viewport.scale, y: (local.y - current.viewport.y) / current.viewport.scale };
++					const key = `${world.x}:${world.y}`;
++					const count = clipboardRepeat.current.key === key ? clipboardRepeat.current.count : 0;
++					point = { x: world.x + count * 24, y: world.y + count * 24 };
++					clipboardRepeat.current = { key, count: count + 1 };
++				}
++				setClipboardFeedback({ state: "pending", message: kind === "copy" ? "正在复制…" : "正在粘贴…" });
++				const operation = kind === "copy" ? workspace.copySelectedNodes() : workspace.pasteClipboardNodes(point, { active: () => dropLifecycle.active });
++				Promise.resolve(operation).then((result) => {
++					if (dropLifecycle.active) setClipboardFeedback({ state: "success", message: kind === "copy" ? result ? "已复制组件" : "请选择组件" : result.length ? `已粘贴 ${result.length} 个组件` : "剪贴板没有可粘贴内容" });
++				}).catch((error) => {
++					if (dropLifecycle.active) setClipboardFeedback({ state: "error", message: error?.message ?? "剪贴板操作失败，请重试。" });
++				});
++			}, [workspace, dropLifecycle]);
++			(0, react.useEffect)(() => {
++				if (clipboardFeedback === null || clipboardFeedback.state === "pending") return;
++				const timer = setTimeout(() => setClipboardFeedback((current) => current === clipboardFeedback ? null : current), 2000);
++				return () => clearTimeout(timer);
++			}, [clipboardFeedback]);
++			(0, react.useEffect)(() => {
++				setClipboardAvailable(false);
++				if (contextMenu?.nodeId !== null || typeof window.dshDesktop?.researchClipboard?.inspect !== "function") return;
++				let active = true;
++				Promise.resolve().then(() => window.dshDesktop?.researchClipboard?.inspect?.()).then((result) => { if (active) setClipboardAvailable(result?.available === true); }).catch(() => void 0);
++				return () => { active = false; };
++			}, [contextMenu]);
++			(0, react.useEffect)(() => {
++				clipboardPointer.current = null; clipboardRepeat.current = { key: "", count: 0 }; setClipboardFeedback(null);
++				const root = rootRef.current;
++				if (root === null) return;
++				let counterpart = null;
++				let pointerOverCanvas = false;
++				const interactive = (target) => target?.closest?.("input,textarea,button,select,a,iframe,[contenteditable]:not([contenteditable=false]),[data-research-preview-interactive]");
++				const protectedTarget = (target) => target?.closest?.("input,textarea,select,a,iframe,[contenteditable]:not([contenteditable=false]),[data-research-preview-interactive],[role=dialog],[role=menu]");
++				const owns = (event) => {
++					if (protectedTarget(event.target) || protectedTarget(document.activeElement) || window.getSelection?.()?.toString()) return false;
++					const focused = (document.activeElement === root || root.contains(document.activeElement)) && !interactive(event.target) && !interactive(document.activeElement);
++					// Entering Research may leave a navigation button focused. Hover is a fallback,
++					// never a reason to steal clipboard commands from an editor, frame or dialog.
++					return focused || pointerOverCanvas;
++				};
++				const run = (event, kind, keyboard = false) => {
++					if (event.defaultPrevented || !owns(event) || kind === "copy" && workspace.getSnapshot().selection.selectedNodeIds.length === 0) return;
++					event.preventDefault(); event.stopPropagation();
++					if (!keyboard && counterpart?.kind === kind && Date.now() - counterpart.time < 250) { counterpart = null; return; }
++					counterpart = keyboard ? { kind, time: Date.now() } : null;
++					clipboardAction(kind);
++				};
++				const keydown = (event) => {
++					if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.repeat) return;
++					const key = String(event.key ?? "").toLowerCase();
++					if (event.code === "KeyC" || key === "c") run(event, "copy", true);
++					if (event.code === "KeyV" || key === "v") run(event, "paste", true);
++				};
++				const copy = (event) => run(event, "copy");
++				const paste = (event) => run(event, "paste");
++				const pointer = (event) => {
++					const bounds = root.getBoundingClientRect();
++					const inside = event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
++					pointerOverCanvas = inside && !interactive(event.target);
++					if (inside) clipboardPointer.current = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
++				};
++				const leave = () => { pointerOverCanvas = false; };
++				const outside = (event) => { if (!root.contains(event.target)) leave(); };
++				window.addEventListener("keydown", keydown); window.addEventListener("copy", copy); window.addEventListener("paste", paste); window.addEventListener("pointerdown", outside, true); root.addEventListener("pointermove", pointer); root.addEventListener("pointerenter", pointer); root.addEventListener("pointerleave", leave);
++				return () => { workspace.cancelClipboardImports(); window.removeEventListener("keydown", keydown); window.removeEventListener("copy", copy); window.removeEventListener("paste", paste); window.removeEventListener("pointerdown", outside, true); root.removeEventListener("pointermove", pointer); root.removeEventListener("pointerenter", pointer); root.removeEventListener("pointerleave", leave); };
++			}, [workspace, clipboardAction]);
 +			const [mindMapMenuOpen, setMindMapMenuOpen] = (0, react.useState)(false);
++			const [createSelection, setCreateSelection] = (0, react.useState)(null);
++			const [createPrompt, setCreatePrompt] = (0, react.useState)("");
++			const [createError, setCreateError] = (0, react.useState)(null);
++			const [createPreparing, setCreatePreparing] = (0, react.useState)(false);
++			const createAttempt = (0, react.useRef)(null);
++			const createInputRef = (0, react.useRef)(null);
++			const createPopoverRef = (0, react.useRef)(null);
++			const createTriggerRef = (0, react.useRef)(null);
++			const closeSelectedCreate = (0, react.useCallback)(() => { createAttempt.current = null; setCreateSelection(null); setCreatePreparing(false); }, []);
++			const selectionToolbarRef = (0, react.useRef)(null);
++			const [selectionToolbarWidth, setSelectionToolbarWidth] = (0, react.useState)(420);
++			(0, react.useLayoutEffect)(() => {
++				const width = selectionToolbarRef.current?.getBoundingClientRect().width;
++				if (width > 0 && width !== selectionToolbarWidth) setSelectionToolbarWidth(width);
++			});
++			(0, react.useEffect)(() => {
++				if (createSelection === null) return;
++				createInputRef.current?.focus({ preventScroll: true });
++				const dismissOutside = (event) => {
++					if (createPopoverRef.current?.contains(event.target) || createTriggerRef.current?.contains(event.target)) return;
++					closeSelectedCreate();
++				};
++				const escape = (event) => { if (event.key === 'Escape') { event.preventDefault(); closeSelectedCreate(); } };
++				document.addEventListener('pointerdown', dismissOutside, true);
++				document.addEventListener('focusin', dismissOutside, true);
++				document.addEventListener('keydown', escape, true);
++				window.addEventListener('blur', closeSelectedCreate);
++				return () => {
++					document.removeEventListener('pointerdown', dismissOutside, true);
++					document.removeEventListener('focusin', dismissOutside, true);
++					document.removeEventListener('keydown', escape, true);
++					window.removeEventListener('blur', closeSelectedCreate);
++				};
++			}, [createSelection, closeSelectedCreate]);
++			(0, react.useEffect)(() => () => { createAttempt.current = null; }, [workspace]);
 +			const [editingNodeId, setEditingNodeId] = (0, react.useState)(null);
 +			const [editingContentNodeId, setEditingContentNodeId] = (0, react.useState)(null);
 +			const [downloadMenuNodeId, setDownloadMenuNodeId] = (0, react.useState)(null);
@@ -7472,6 +8091,7 @@ index 1dd0e89..40464a1 100644
 +				};
 +			}, [workspace]);
 +			const activateArtifact = (node) => {
++				if (node.kind === "pasted-text") { setEditingContentNodeId(node.id); return; }
 +				actions?.setResearchRightTab?.("conversation");
 +				workspace.setPendingMessageJump(node.messageId);
 +			};
@@ -7672,6 +8292,8 @@ index 1dd0e89..40464a1 100644
 +				};
 +				const onPointerDown = (event) => {
 +					if (event.button !== 0) return;
++					// This native listener runs before React's bubbling popover handler.
++					if (event.target?.closest?.('[data-research-create-popover]')) return;
 +					if (spacePressedRef.current) {
 +						setContextMenu(null);
 +						setMindMapMenuOpen(false);
@@ -7748,7 +8370,8 @@ index 1dd0e89..40464a1 100644
 +					root.focus({ preventScroll: true });
 +					const bounds = root.getBoundingClientRect();
 +					if (nodeId === null || nodeId === void 0) {
-+						setContextMenu({ nodeId: null, left: event.clientX - bounds.left, top: event.clientY - bounds.top });
++						const viewport = workspace.getSnapshot().viewport;
++						setContextMenu({ nodeId: null, left: event.clientX - bounds.left, top: event.clientY - bounds.top, point: { x: (event.clientX - bounds.left - viewport.x) / viewport.scale, y: (event.clientY - bounds.top - viewport.y) / viewport.scale } });
 +						return;
 +					}
 +					const current = workspace.getSnapshot();
@@ -7829,8 +8452,50 @@ index 1dd0e89..40464a1 100644
 +			const selectionBounds = researchCanvasSelectionBounds(canvasNodes, selection.selectedNodeIds);
 +			const selectionActionsVisible = selectionGeneration !== void 0 && selectionBounds !== null && selectedNodes.length > 0 && selectedNodes.every((node) => !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)) && draggingNodeIds.length === 0 && resizingNodeId === null && marquee === null;
 +			const selectionActionPosition = !selectionActionsVisible ? null : {
-+				left: Math.max(126, Math.min(Math.max(126, snapshot.canvasSize.width - 126), (selectionBounds.left + selectionBounds.width / 2) * viewport.scale + viewport.x)),
++				left: Math.max(selectionToolbarWidth / 2 + 8, Math.min(Math.max(selectionToolbarWidth / 2 + 8, snapshot.canvasSize.width - selectionToolbarWidth / 2 - 8), (selectionBounds.left + selectionBounds.width / 2) * viewport.scale + viewport.x)),
 +				top: Math.max(54, selectionBounds.top * viewport.scale + viewport.y - 10)
++			};
++			const startSelectedCreate = async () => {
++				const prompt = createInputRef.current?.value?.trim() ?? createPrompt.trim();
++				if (createSelection === null || createPreparing || selectionGeneration?.disabled || !prompt || prompt.length > RESEARCH_CONTAINER_MAX_PROMPT) return;
++				const attempt = {};
++				createAttempt.current = attempt;
++				setCreatePreparing(true); setCreateError(null);
++				try {
++					const selectedNodeIds = createSelection.ids;
++					const frozen = { files: createSelection.files, artifacts: [...createSelection.artifacts] };
++					for (let index = 0; index < frozen.artifacts.length; index += 1) {
++						const node = frozen.artifacts[index];
++						const expectedUrl = researchGenerationWebUrl(node);
++						if (expectedUrl === null) continue;
++						const hasExpectedUrl = () => researchGenerationWebUrl(workspace.getSnapshot().artifacts.find((current) => current.id === node.id)) === expectedUrl;
++						if (!hasExpectedUrl()) throw new Error(`「${node.title}」的网页来源已变化，请重新选择。`);
++						let sourceText;
++						if (isResearchWechatArticleUrl(expectedUrl)) {
++							const result = await Promise.resolve().then(() => window.dshDesktop?.researchWebReader?.read({ sessionId, nodeId: node.id, url: expectedUrl })).catch(() => null);
++							if (result?.status === 'ready') sourceText = result.bodyText;
++						} else {
++							const result = await Promise.resolve().then(() => window.dshDesktop?.researchLinkFrame?.inspect({ sessionId, nodeId: node.id })).catch(() => null);
++							sourceText = result?.sourceText;
++						}
++						if (createAttempt.current !== attempt) return;
++						if (!hasExpectedUrl()) throw new Error(`「${node.title}」的网页来源已变化，请重新选择。`);
++						if (preserveResearchArtifactText(sourceText, RESEARCH_WEB_SOURCE_TEXT_MAX) === null) throw new Error(`无法读取「${node.title}」的授权正文，请打开页面并完成授权后重试。`);
++						frozen.artifacts[index] = Object.freeze({ ...node, sourceText });
++					}
++					if (createAttempt.current !== attempt) return;
++					const current = workspace.getSnapshot();
++					const placement = researchCanvasGeneratedPlacement([...current.files, ...current.artifacts], selectedNodeIds, 'create');
++					const target = workspace.beginGeneration('create', selectedNodeIds, placement, prompt, frozen);
++					if (target === null) throw new Error('来源不可用、资料过长或选择已失效，请重新选择（最多24项）。');
++					closeSelectedCreate();
++					try {
++						const result = await selectionGeneration.generate({ sessionId, kind: 'create', prompt, selectedNodeIds, targetNodeId: target.id });
++						if (result?.ok !== true) workspace.failGeneration(target.id, result?.error ?? '创建请求未能启动');
++					} catch { workspace.failGeneration(target.id, '创建请求未能启动，请重试。'); }
++				} catch (error) {
++					if (createAttempt.current === attempt) { setCreateError(error instanceof Error ? error.message : '无法读取选中资料'); setCreatePreparing(false); }
++				}
 +			};
 +			const startSelectionGeneration = async (kind, requestedDetail = "standard") => {
 +				if (selectionGeneration === void 0 || selectionGeneration.disabled === true) return;
@@ -7878,6 +8543,7 @@ index 1dd0e89..40464a1 100644
 +					} : {
 +						sessionId,
 +						kind: target.kind,
++						...(target.kind === 'create' ? { prompt: target.prompt } : {}),
 +						...(target.kind === 'mind-map' ? { detail: target.detail } : {}),
 +						selectedNodeIds: target.sourceNodeIds,
 +						targetNodeId: target.id
@@ -7916,7 +8582,7 @@ index 1dd0e89..40464a1 100644
 +			};
 +			const emptyViewport = canvasNodes.length > 0 && snapshot.canvasSize.width > 0 && snapshot.canvasSize.height > 0 && !researchCanvasHasVisibleNodes(canvasNodes, viewport, snapshot.canvasSize);
 +			const contextNode = contextMenu === null || contextMenu.nodeId === null ? null : canvasNodes.find((node) => node.id === contextMenu.nodeId) ?? null;
-+			const contextArtifact = contextMenu === null || contextMenu.nodeId === null ? null : artifacts.find((node) => node.id === contextMenu.nodeId && node.kind === "assistant-result") ?? null;
++			const contextArtifact = contextMenu === null || contextMenu.nodeId === null ? null : artifacts.find((node) => node.id === contextMenu.nodeId && researchCanvasArtifactContentEditable(node)) ?? null;
 +			const downloadFeedbackNode = downloadFeedback === null ? null : canvasNodes.find((node) => node.id === downloadFeedback.nodeId) ?? null;
 +			const downloadCanvasNode = async (node, format) => {
 +				if (downloadBusyNodeId !== null || node === null) return;
@@ -8026,7 +8692,12 @@ index 1dd0e89..40464a1 100644
 +							setEditingContentNodeId(node.id);
 +						},
 +						onContentCommit: (content) => {
-+							workspace.updateArtifactContent(node.id, content);
++							if (node.kind === "pasted-text") {
++								if (researchClipboardText(content) === null) { setClipboardFeedback({ state: "error", message: "文字为空或超过 1 MiB 上限，修改未保存。" }); return false; }
++								try { workspace.updateArtifactContent(node.id, content); }
++								catch (error) { setClipboardFeedback({ state: "error", message: error?.message ?? "画板存储失败，修改未保存。" }); return false; }
++								setClipboardFeedback(null);
++							} else workspace.updateArtifactContent(node.id, content);
 +							setEditingContentNodeId(null);
 +						},
 +						onContentCancel: () => setEditingContentNodeId(null),
@@ -8053,11 +8724,12 @@ index 1dd0e89..40464a1 100644
 +						retryDisabled: selectionGeneration === void 0 || selectionGeneration.disabled === true
 +					}, node.id))]
 +				}), selectionActionPosition === null ? null : (0, react_jsx_runtime.jsxs)("div", {
++					ref: selectionToolbarRef,
 +					className: "rScV5Q_selectionActions",
 +					"data-research-selection-actions": "",
 +					role: "toolbar",
 +					"aria-label": "选中组件操作",
-+					style: { left: `${selectionActionPosition.left}px`, top: `${selectionActionPosition.top}px` },
++					style: { left: `${selectionActionPosition.left}px`, top: `${selectionActionPosition.top}px`, maxWidth: 'calc(100% - 16px)', flexWrap: 'wrap' },
 +					children: [(0, react_jsx_runtime.jsxs)("div", {
 +						className: "rScV5Q_mindMapControl",
 +						children: [(0, react_jsx_runtime.jsxs)("button", {
@@ -8090,7 +8762,23 @@ index 1dd0e89..40464a1 100644
 +						disabled: selectionGeneration.disabled === true,
 +						onClick: () => startSelectionGeneration('summary'),
 +						children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconListPenOutline16, { size: 16 }), "总结提炼"]
++					}), (0, react_jsx_runtime.jsxs)("button", {
++						ref: createTriggerRef, type: 'button', 'data-research-selection-create': '', 'aria-label': '基于所选创建', 'aria-expanded': createSelection !== null, 'aria-haspopup': 'dialog', disabled: selectionGeneration.disabled === true,
++						onClick: () => {
++							const current = workspace.getSnapshot();
++							const ids = Object.freeze([...current.selection.selectedNodeIds]);
++							setMindMapMenuOpen(false); setCreatePrompt(''); setCreateError(ids.length > RESEARCH_GENERATION_MAX_SOURCES ? '最多选择24项资料' : null);
++							setCreateSelection({ ids, files: current.files.filter((node) => ids.includes(node.id)), artifacts: current.artifacts.filter((node) => ids.includes(node.id)), position: selectionActionPosition });
++						}, children: [(0, react_jsx_runtime.jsx)('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, focusable: false, children: (0, react_jsx_runtime.jsx)('path', { d: 'M8.5 3H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7.5M12 1.5v4M10 3.5h4M6 8h4M8 6v4' }) }), '基于所选创建']
 +					})]
++				}), createSelection === null ? null : (0, react_jsx_runtime.jsxs)('div', {
++					ref: createPopoverRef, role: 'dialog', 'aria-label': '基于所选创建', 'data-research-create-popover': '',
++					style: { position: 'absolute', zIndex: 30, left: Math.max(12, Math.min(snapshot.canvasSize.width - 372, createSelection.position.left - 180)), top: Math.max(12, Math.min(snapshot.canvasSize.height - 300, createSelection.position.top + 8)), width: 360, maxWidth: 'calc(100% - 24px)', boxSizing: 'border-box', padding: 14, borderRadius: 12, background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l2)', boxShadow: 'var(--dsw-shadow-lv2)' },
++					onPointerDown: (event) => { event.stopPropagation(); if (!event.target?.closest?.('textarea,button')) event.preventDefault(); }, onKeyDown: (event) => { event.stopPropagation(); if (event.key === 'Escape') closeSelectedCreate(); },
++					children: [
++					(0, react_jsx_runtime.jsx)('textarea', { ref: createInputRef, 'aria-label': '创建需求', value: createPrompt, maxLength: RESEARCH_CONTAINER_MAX_PROMPT, rows: 4, disabled: createPreparing, placeholder: '想基于这些资料创建什么？', onInput: (event) => setCreatePrompt(event.currentTarget.value), onChange: (event) => setCreatePrompt(event.currentTarget.value), style: { width: '100%', boxSizing: 'border-box', resize: 'vertical', font: 'inherit', fontSize: 13, lineHeight: '20px', padding: 8, borderRadius: 8, color: 'var(--dsw-alias-label-primary)', background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l2)' } }),
++					createError && (0, react_jsx_runtime.jsx)('div', { role: 'alert', children: createError }),
++					(0, react_jsx_runtime.jsx)('div', { className: 'rScV5Q_containerDraftFooter', style: { display: 'flex', justifyContent: 'flex-end', marginTop: 10 }, children: (0, react_jsx_runtime.jsx)('button', { type: 'button', 'data-research-create-submit': '', onClick: startSelectedCreate, disabled: createPreparing || !createPrompt.trim() || createPrompt.length > RESEARCH_CONTAINER_MAX_PROMPT || createSelection.ids.length > RESEARCH_GENERATION_MAX_SOURCES || selectionGeneration?.disabled === true, children: createPreparing ? '正在读取…' : '创建' }) })]
 +				}), marquee === null ? null : (0, react_jsx_runtime.jsx)("div", {
 +					className: "rScV5Q_marquee",
 +					"data-research-marquee": "",
@@ -8176,11 +8864,17 @@ index 1dd0e89..40464a1 100644
 +						onClick: () => downloadCanvasNode(downloadFeedbackNode, downloadFeedback.format),
 +						children: "重试"
 +					})]
++				}), clipboardFeedback === null ? null : (0, react_jsx_runtime.jsx)("div", {
++					className: "rScV5Q_downloadFeedback", role: clipboardFeedback.state === "error" ? "alert" : "status", "data-research-clipboard-feedback": "", "data-state": clipboardFeedback.state,
++					style: { left: "50%", bottom: 86, maxWidth: 'min(460px, calc(100% - 24px))', transform: 'translateX(-50%)', pointerEvents: 'none' }, children: clipboardFeedback.message
 +				}), contextMenu === null ? null : (0, react_jsx_runtime.jsx)("div", {
 +					className: "rScV5Q_contextMenu",
 +					role: "menu",
 +					style: { left: contextMenu.left, top: contextMenu.top },
 +					children: contextMenu.nodeId === null ? [(0, react_jsx_runtime.jsx)("button", {
++						type: "button", role: "menuitem", "data-research-context-paste": "", disabled: !clipboardAvailable, children: "粘贴",
++						onClick: () => { clipboardAction("paste", contextMenu.point); setContextMenu(null); }
++					}, "paste"), (0, react_jsx_runtime.jsx)("button", {
 +						type: "button",
 +						role: "menuitem",
 +						"data-research-context-arrange": "",
@@ -8204,6 +8898,9 @@ index 1dd0e89..40464a1 100644
 +						},
 +						children: [(0, react_jsx_runtime.jsx)("span", { children: "全选" }), (0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_contextMenuShortcut", children: "⌘A" })]
 +					}, "select-all")] : [(0, react_jsx_runtime.jsx)("button", {
++						type: "button", role: "menuitem", "data-research-context-copy": "", children: "复制",
++						onClick: () => { clipboardAction("copy"); setContextMenu(null); }
++					}, "copy"), (0, react_jsx_runtime.jsx)("button", {
 +						type: "button",
 +						role: "menuitem",
 +						"data-research-context-rename": "",
@@ -8305,7 +9002,7 @@ index 1dd0e89..40464a1 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +14109,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +14725,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -8324,7 +9021,7 @@ index 1dd0e89..40464a1 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +14148,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +14764,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -8684,7 +9381,7 @@ index 1dd0e89..40464a1 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +14509,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15125,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -8856,7 +9553,7 @@ index 1dd0e89..40464a1 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +14679,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +15295,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -8868,7 +9565,7 @@ index 1dd0e89..40464a1 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +14689,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +15305,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -8876,16 +9573,17 @@ index 1dd0e89..40464a1 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +14721,8 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +15337,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
 +				researchFileReferences,
 +				researchArtifactReferences,
++				researchCanvasWorkspace: research && sessionId !== void 0 ? researchWorkspace : void 0,
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +14739,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +15356,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -8990,7 +9688,7 @@ index 1dd0e89..40464a1 100644
  				})]
  			});
  		}
-@@ -6951,6 +14821,28 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +15438,28 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -9019,7 +9717,7 @@ index 1dd0e89..40464a1 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +14872,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +15489,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -9040,7 +9738,7 @@ index 1dd0e89..40464a1 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +14894,18 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +15511,18 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -9061,7 +9759,7 @@ index 1dd0e89..40464a1 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +14948,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +15565,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -9079,7 +9777,7 @@ index 1dd0e89..40464a1 100644
  				})] })
  			});
  		}
-@@ -7053,14 +14958,74 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +15575,74 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -9156,7 +9854,7 @@ index 1dd0e89..40464a1 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +15036,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +15653,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -9173,7 +9871,7 @@ index 1dd0e89..40464a1 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +15059,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +15676,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -9182,7 +9880,7 @@ index 1dd0e89..40464a1 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +15112,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +15729,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -9200,7 +9898,7 @@ index 1dd0e89..40464a1 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +15148,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +15765,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -9208,7 +9906,7 @@ index 1dd0e89..40464a1 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +16040,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +16657,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -9239,7 +9937,7 @@ index 1dd0e89..40464a1 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +16085,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +16702,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -9264,7 +9962,7 @@ index 1dd0e89..40464a1 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +17039,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +17656,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -9273,7 +9971,7 @@ index 1dd0e89..40464a1 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +17129,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +17746,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -9315,7 +10013,7 @@ index 1dd0e89..40464a1 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +17338,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +17955,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -9332,7 +10030,7 @@ index 1dd0e89..40464a1 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +17508,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18125,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -9342,7 +10040,7 @@ index 1dd0e89..40464a1 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +17550,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18167,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -9357,7 +10055,7 @@ index 1dd0e89..40464a1 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +17568,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18185,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -9370,7 +10068,7 @@ index 1dd0e89..40464a1 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +17617,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +18234,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -9384,7 +10082,7 @@ index 1dd0e89..40464a1 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +17655,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +18272,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -9394,7 +10092,7 @@ index 1dd0e89..40464a1 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +17787,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +18404,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -9409,7 +10107,7 @@ index 1dd0e89..40464a1 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +17803,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +18420,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -9418,7 +10116,7 @@ index 1dd0e89..40464a1 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +17827,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +18444,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -9427,7 +10125,7 @@ index 1dd0e89..40464a1 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +17853,144 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +18470,144 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -9622,8 +10320,56 @@ index 0000000..b485863
 +export {};
 +//# sourceMappingURL=TurnTailNodeView.d.ts.map
 \ No newline at end of file
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/research-context.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/research-context.d.ts
+new file mode 100644
+index 0000000..1596957
+--- /dev/null
++++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/research-context.d.ts
+@@ -0,0 +1,42 @@
++/** Runtime-only, frozen evidence packet. The complete serialized V1 object is capped at 32 KiB. */
++export interface ResearchCanvasContext {
++    readonly version: 1;
++    readonly snapshotId: string;
++    readonly totalSources: number;
++    readonly initialSourceIds: readonly string[];
++    readonly initialContext: string;
++}
++export interface ResearchPromptFile {
++    readonly id: string;
++    readonly name: string;
++    readonly path?: string;
++}
++export interface ResearchPromptArtifact {
++    readonly id: string;
++    readonly kind?: string;
++    readonly messageId: string;
++    readonly title: string;
++    readonly excerpt: string;
++    readonly sourceText?: string;
++}
++export interface ResearchFileOccurrence { readonly fileId: string; readonly offset: number; readonly order?: number; }
++export interface ResearchArtifactOccurrence { readonly artifactId: string; readonly offset: number; readonly order?: number; }
++export interface ParsedResearchPrompt {
++    readonly text: string;
++    readonly files: readonly ResearchPromptFile[];
++    readonly occurrences?: readonly ResearchFileOccurrence[];
++    readonly artifacts?: readonly ResearchPromptArtifact[];
++    readonly artifactOccurrences?: readonly ResearchArtifactOccurrence[];
++    readonly canvasContext?: ResearchCanvasContext;
++}
++export declare function serializeResearchPrompt(files: readonly ResearchPromptFile[], text: string, occurrences?: readonly ResearchFileOccurrence[], artifacts?: readonly ResearchPromptArtifact[], artifactOccurrences?: readonly ResearchArtifactOccurrence[], canvasContext?: ResearchCanvasContext): string;
++export declare function parseResearchPrompt(text: string): ParsedResearchPrompt;
++/** Read-only workspace face used by the composer badge; source bodies are never projected into its DOM. */
++export interface ResearchCanvasContextWorkspace {
++    subscribe(listener: () => void): () => void;
++    getSnapshot(): {
++        readonly files: readonly { readonly id: string; readonly name: string; readonly displayName?: string; readonly authorizationId?: string }[];
++        readonly artifacts: readonly { readonly id: string; readonly title: string; readonly displayName?: string; readonly kind?: string; readonly sourceText?: string; readonly generationStatus?: string; readonly containerSpec?: unknown }[];
++        readonly selection: { readonly selectedNodeIds: readonly string[]; readonly orderedFileIds: readonly string[] };
++    };
++}
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/slots.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/slots.d.ts
-index 50939b2..7649406 100644
+index 50939b2..3e30e6f 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/slots.d.ts
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/slots.d.ts
 @@ -1,7 +1,7 @@
@@ -9687,7 +10433,16 @@ index 50939b2..7649406 100644
      /** Bind the input machine's draft persistence mirror to the session store. */
      bindDraftMirror: (write: (text: string) => void) => () => void;
  }
-@@ -516,6 +538,13 @@ export interface ComposerBarOwnerProps {
+@@ -492,6 +514,8 @@ export interface ConversationSessionHeaderInjected {
+  * results as chrome).
+  */
+ export interface ComposerBarOwnerProps {
++    /** Present only in Research, from its authoritative workspace registry. */
++    researchCanvasWorkspace?: import('./research-context.ts').ResearchCanvasContextWorkspace;
+     /** Hero = empty-state centered card; composer = resident bottom bar. */
+     variant: 'hero' | 'composer';
+     /**
+@@ -516,6 +540,13 @@ export interface ComposerBarOwnerProps {
      placeholder?: string;
      /** Optional content rendered above the textarea. */
      accessory?: ReactNode;
@@ -9773,8 +10528,21 @@ index 0000000..cbce2bd
 +}
 +//# sourceMappingURL=views.d.ts.map
 \ No newline at end of file
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/index.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/index.d.ts
+index ca95369..b1c888f 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/index.d.ts
++++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/index.d.ts
+@@ -14,6 +14,8 @@ export type {} from './conversation-nodes/turn-error.ts';
+ export type {} from './conversation-nodes/turn-max-tokens.ts';
+ export type {} from './conversation-nodes/turn-tail.ts';
+ export { apply, inject } from './apply.ts';
++export { parseResearchPrompt, serializeResearchPrompt } from './contract/research-context.ts';
++export type { ResearchCanvasContext, ParsedResearchPrompt, ResearchPromptFile, ResearchPromptArtifact, ResearchFileOccurrence, ResearchArtifactOccurrence, ResearchCanvasContextWorkspace } from './contract/research-context.ts';
+ export { ConversationController } from './service.ts';
+ export type { IConversation } from './service.ts';
+ export type { DraftAttachmentId } from './input/contract.ts';
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/contract.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/contract.d.ts
-index b8ebfaf..0bc8548 100644
+index b8ebfaf..a8dca6d 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/contract.d.ts
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/contract.d.ts
 @@ -65,6 +65,8 @@ export interface SessionInputResolver {
@@ -9786,7 +10554,13 @@ index b8ebfaf..0bc8548 100644
      /** Append ordered browser-owned image ids; busy admission phases refuse. */
      addImages(ids: readonly DraftAttachmentId[]): boolean;
      /** Remove one browser-owned image id. */
-@@ -92,6 +94,12 @@ export interface ComposerKeyboard {
+@@ -88,10 +90,18 @@ export interface InputNotice {
+  * satisfies it structurally.
+  */
+ export interface ComposerKeyboard {
++    /** Set the runtime-only canvas preference for this send. */
++    setResearchContextOptOut(value: boolean): void;
+     /** Live machine state for event-handler reads (render reads go through useInput). */
      readonly snapshot: InputState;
      /** Draft write with the DOM-observed edit shape (narrows occurrence math). */
      setDraft(text: string, editRange?: EditRange): void;
@@ -9799,7 +10573,17 @@ index b8ebfaf..0bc8548 100644
      /** Submit with an explicit delivery mode resolved by the keyboard policy. */
      submit(mode: InputSubmitMode): void;
      /**
-@@ -232,6 +240,18 @@ export type InputEvent =
+@@ -188,6 +198,9 @@ export interface InputMachineOptions {
+ }
+ /** Published input state (the currency; per-session). */
+ export interface InputState {
++    readonly researchContextOptOut?: boolean;
++    readonly researchContextOptionRev?: number;
++    readonly researchContextPreparing?: boolean;
+     readonly draft: string;
+     /** Ordered runtime-only image ids; bytes and URLs stay in ConversationController. */
+     readonly imageIds: readonly DraftAttachmentId[];
+@@ -232,6 +245,18 @@ export type InputEvent =
      readonly type: 'draft-changed';
      readonly draft: string;
      readonly editRange?: EditRange;
@@ -9818,7 +10602,7 @@ index b8ebfaf..0bc8548 100644
  } | {
      readonly type: 'begin-command';
      readonly claim: CommandClaim;
-@@ -256,6 +276,11 @@ export type InputEvent =
+@@ -256,6 +281,11 @@ export type InputEvent =
      readonly type: 'undo';
  } | {
      readonly type: 'redo';
@@ -9846,10 +10630,21 @@ index 34909b7..e1c0000 100644
      /** Owner-resolution failure styling bit. */
      readonly invalid: boolean;
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/facade.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/facade.d.ts
-index 339e1ba..6d946f4 100644
+index 339e1ba..43e2d28 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/facade.d.ts
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/facade.d.ts
-@@ -64,6 +64,14 @@ export declare class SessionInputShell implements SessionInput {
+@@ -42,6 +42,10 @@ export interface SessionInputDeps {
+  * setDraft/submit + the published InputState store.
+  */
+ export declare class SessionInputShell implements SessionInput {
++    /** Runtime-only, per-send canvas preference. */
++    setResearchContextOptOut(value: boolean): void;
++    /** InputHub marks only the asynchronous preparation stage as busy. */
++    setResearchContextPreparing(value: boolean): void;
+     private readonly deps;
+     /** Published machine state + queue overlay (the InputZone currency source). */
+     readonly state: SnapshotStore<InputState>;
+@@ -64,6 +68,14 @@ export declare class SessionInputShell implements SessionInput {
       * (narrows the machine's occurrence math; absent → diff scan).
       */
      setDraft(text: string, editRange?: EditRange): void;
@@ -9864,7 +10659,7 @@ index 339e1ba..6d946f4 100644
      /** Append ordered image ids unless an admission transaction is locked. */
      addImages(ids: readonly DraftAttachmentId[]): boolean;
      /** Remove one image id from this draft. */
-@@ -78,13 +86,15 @@ export declare class SessionInputShell implements SessionInput {
+@@ -78,13 +90,15 @@ export declare class SessionInputShell implements SessionInput {
       * @param ids - failed attempt image ids.
       */
      restoreImages(ids: readonly DraftAttachmentId[]): void;
@@ -9882,15 +10677,16 @@ index 339e1ba..6d946f4 100644
      undo(): void;
      /** Redo the latest undone transaction. */
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/hub.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/hub.d.ts
-index 00f283c..4ad026f 100644
+index 00f283c..18b9574 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/hub.d.ts
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/input/hub.d.ts
-@@ -13,6 +13,28 @@ import type { InputTriggerController } from '@deepseek-ai/dsh-client-ui-input-tr
+@@ -13,6 +13,29 @@ import type { InputTriggerController } from '@deepseek-ai/dsh-client-ui-input-tr
  import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client';
  import type { ComposerKeyboard, SessionInputResolver, SessionInput } from './contract.ts';
  import { SessionInputShell } from './facade.ts';
 +interface ResearchSubmissionWorkspaceRegistry {
 +    for(sessionId: SessionId): {
++        getSnapshot(): import('../contract/research-context.ts').ResearchCanvasContextWorkspace extends { getSnapshot(): infer Snapshot } ? Snapshot : never;
 +        selectedFiles(): readonly {
 +            id: string;
 +            name: string;
@@ -9914,7 +10710,7 @@ index 00f283c..4ad026f 100644
  /** Session-addressed input facade registry (SessionInputResolver face + composer-layer extras). */
  export declare class InputHub implements SessionInputResolver {
      private readonly rootCtx;
-@@ -22,7 +44,9 @@ export declare class InputHub implements SessionInputResolver {
+@@ -22,7 +45,9 @@ export declare class InputHub implements SessionInputResolver {
       * @param ctx - client root context (services resolved lazily per call — boot order stays free).
       * @param t - conversation-namespace translate thunk (reads the active locale at call time).
       */
@@ -9938,6 +10734,33 @@ index 0d55f64..3570ad7 100644
      /** Span CAS: revision equality (content identity follows) plus bounds sanity. */
      private casOk;
      private onBeginCommand;
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/locales.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/locales.d.ts
+index 7853f2b..7722876 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/locales.d.ts
++++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/locales.d.ts
+@@ -3,6 +3,22 @@
+ export declare const NS = "conversation";
+ /** Simplified Chinese dictionary (the key-set source of truth). */
+ export declare const zh: {
++    'research.context.badge': string;
++    'research.context.scope': string;
++    'research.context.priority': string;
++    'research.context.disable': string;
++    'research.context.enable': string;
++    'research.context.disabled': string;
++    'research.context.preparing': string;
++    'research.context.onDemand': string;
++    'research.context.unavailable': string;
++    'research.context.unavailableStatus': string;
++    'research.context.expired': string;
++    'research.context.pending': string;
++    'research.context.sent': string;
++    'research.context.initialSources': string;
++    'research.context.noInitialSources': string;
++    'research.context.queueEdit': string;
+     'view.chat': string;
+     'hint.plan': string;
+     'hint.goal': string;
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/skeleton/ConversationRoot.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/skeleton/ConversationRoot.d.ts
 index 627a46d..f9e5cff 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/skeleton/ConversationRoot.d.ts
@@ -10061,7 +10884,7 @@ index 0000000..e988aa0
 +//# sourceMappingURL=DetailsPanel.d.ts.map
 \ No newline at end of file
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/skeleton/InputBar.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/skeleton/InputBar.d.ts
-index 395a266..1005545 100644
+index 395a266..50365c3 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/skeleton/InputBar.d.ts
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/skeleton/InputBar.d.ts
 @@ -7,5 +7,5 @@
@@ -10069,7 +10892,7 @@ index 395a266..1005545 100644
  import type { ComposerBarProps } from '../contract/slots.ts';
  export type InputBarProps = ComposerBarProps;
 -export declare function InputBar({ useSession, useInput, inputActions, keyboard, addImages, removeImage, draftImages, resolveSubmitMode, toggleCommandMenu, stop, command, t, renderSlot, useNotices, useLexicon, useMenuLauncher, useProjection, sessionId, variant, disabled: inert, blocked, workspacePickerOpen, onRequestWorkspace, placeholder, accessory, overlay, leftItems, rightItems, footer, }: InputBarProps): import("react").JSX.Element;
-+export declare function InputBar({ useSession, useInput, inputActions, keyboard, addImages, removeImage, draftImages, resolveSubmitMode, toggleCommandMenu, stop, command, t, renderSlot, useNotices, useLexicon, useMenuLauncher, useProjection, sessionId, variant, disabled: inert, blocked, workspacePickerOpen, onRequestWorkspace, placeholder, accessory, researchFileReferences, overlay, leftItems, rightItems, footer, }: InputBarProps): import("react").JSX.Element;
++export declare function InputBar({ useSession, useInput, inputActions, keyboard, addImages, removeImage, draftImages, resolveSubmitMode, toggleCommandMenu, stop, command, t, renderSlot, useNotices, useLexicon, useMenuLauncher, useProjection, sessionId, variant, disabled: inert, blocked, workspacePickerOpen, onRequestWorkspace, placeholder, accessory, researchFileReferences, researchCanvasWorkspace, overlay, leftItems, rightItems, footer, }: InputBarProps): import("react").JSX.Element;
  //# sourceMappingURL=InputBar.d.ts.map
 \ No newline at end of file
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/stores.d.ts b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/stores.d.ts

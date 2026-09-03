@@ -18,6 +18,23 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.7.9',
+      date: '2026-09-03',
+      items: [
+        '研究模式未选择或手动引用组件时，默认参考当前画板全部资料，包含屏幕外组件',
+        '按问题相关性分配资料权重，先提供精简目录和关键证据，再按需检索、分页读取，减少无关内容占用上下文',
+        '新增当前画板资料提示与目录，可仅关闭本次自动引用；手动引用优先，发送失败保留草稿',
+        '改进资料快照、分页续读与取消清理，复用已授权网页正文，并对文件变化、不可读或截断内容明确提示',
+        '新增“基于所选创建”：根据一个或多个组件的真实内容和提示词生成独立组件，保留资料来源并支持失败重试',
+        '支持直接向画板粘贴文字、图片和文件；文字可编辑，文件持久保存并使用安全预览',
+        '支持组件跨研究画板复制粘贴，提供快捷键、右键菜单及整组撤销和重做，保留相对位置与独立文件副本',
+        '优化画板资料弹层：组件名称前增加类型图标，移除“发送时检查”，保留紧凑标签并优化参考开关',
+        '修复粘贴文字组件高度异常，并改进复制文件重新打开和失败提示的可靠性',
+        '修复画布快捷键粘贴的焦点归属：鼠标位于画布非编辑区域时也可粘贴，右键操作后可继续使用快捷键，保留输入框和网页自身的粘贴行为',
+        '复制粘贴提示上移并在完成后两秒消失；“基于所选创建”增加图标、精简输入弹层，点击外部或失焦时自动关闭'
+      ]
+    },
+    {
       version: '0.7.8',
       date: '2026-09-02',
       items: [
@@ -122,6 +139,23 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.7.9',
+      date: '2026-09-03',
+      items: [
+        'Research conversations now reference all material on the current canvas, including offscreen components, when nothing is selected or explicitly referenced',
+        'Allocate context by question relevance: start with a compact catalog and key evidence, then search and read additional material on demand within bounded context budgets',
+        'Added a current-canvas context indicator and source directory with a per-message opt-out; explicit references take priority and failed sends preserve the draft',
+        'Improved source snapshots, paginated reading, and cancellation cleanup; reuse captured authenticated webpage text and clearly report changed, unreadable, or truncated files',
+        'Added Create from Selection: generate an independent component from one or more selected components and a prompt, retaining source evidence and retry support',
+        'Paste text, images, and files directly onto the canvas; text stays editable and files are stored durably with safe previews',
+        'Copy and paste components across Research canvases with keyboard shortcuts, context menus, and grouped undo/redo, preserving relative positions and independent file copies',
+        'Refined the canvas source popover with component-type icons, removed the check-on-send column, and retained compact tags with an improved reference toggle',
+        'Fixed pasted-text component height loops and improved copied-file reopening and failure feedback',
+        'Fixed canvas clipboard shortcut focus: paste over non-editable canvas areas and keep shortcuts working after context-menu actions without intercepting editors or embedded pages',
+        'Moved clipboard feedback above the toolbar with a two-second dismissal; added a Create from Selection icon and a simplified popover that closes on outside click or focus loss'
+      ]
+    },
     {
       version: '0.7.8',
       date: '2026-09-02',
