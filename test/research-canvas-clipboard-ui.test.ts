@@ -375,6 +375,20 @@ describe('rendered canvas clipboard ownership', () => {
     await m.event('click', m.query('[data-research-clipboard-open]'))
     expect(open).toHaveBeenCalledWith({ assetId: file.assetId })
   })
+  it('keeps failed folder-reveal feedback after React clears the dispatched click currentTarget', async () => {
+    let finish!: (value: { ok: boolean }) => void
+    const m = await mounted({ researchClipboard: { open: () => new Promise<{ ok: boolean }>((resolve) => { finish = resolve }) } })
+    await act(async () => { await m.workspace.insertClipboardNodes({ kind: 'files', files: [{ ...file, name: 'archive.bin', previewable: false }] }, { x: 300, y: 300 }) })
+    const button = m.query('[data-research-clipboard-open]')
+    const click = await m.event('click', button)
+    // Complete the real rendered React handler only after dispatch has returned
+    // and currentTarget has been cleared, as in an asynchronous IPC response.
+    expect(click.currentTarget).toBeNull()
+    expect(button.getAttribute('title')).toBeNull()
+    await act(async () => { finish({ ok: false }); await new Promise((resolve) => setTimeout(resolve, 0)) })
+    expect(button.getAttribute('title')).toBe('文件不可用，请重新复制。')
+    expect(m.workspace.getSnapshot().files).toHaveLength(1)
+  })
   it('reports native text edit overflow and failed storage without dismissing or losing the draft', async () => {
     const m = await mounted()
     await act(async () => { await m.workspace.insertClipboardNodes({ kind: 'text', text: '原文' }, { x: 30, y: 30 }) })
