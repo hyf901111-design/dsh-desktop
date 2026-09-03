@@ -152,8 +152,8 @@ describe('Sherlock About settings', () => {
     expect(zh.version).toBe('9.8.7')
     expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
     expect(en.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
-    expect(zh.releaseNotes[0].items).toHaveLength(4)
-    expect(en.releaseNotes[0].items).toHaveLength(4)
+    expect(zh.releaseNotes[0]?.items).toHaveLength(4)
+    expect(en.releaseNotes[0]?.items).toHaveLength(4)
     expect(zh.releaseNotes[1]).toEqual({
       version: '0.7.9',
       date: '2026-09-03',

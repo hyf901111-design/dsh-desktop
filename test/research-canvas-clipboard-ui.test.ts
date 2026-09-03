@@ -69,6 +69,32 @@ async function mounted(desktop: any = {}, configure?: (win: Window) => void, sel
 }
 
 describe('selection actions at viewport edges', () => {
+  it('allows toolbar scrolling without panning while preserving Command-wheel zoom', async () => {
+    const m = await mounted({}, undefined, { generate: async () => ({ ok: true }) })
+    await act(async () => { m.workspace.setArtifacts([textNode()]); m.workspace.updateSelection(['source'], 'replace') })
+    const row = m.query('[data-research-selection-action-row]')
+    const wheel = await m.event('wheel', row, { deltaX: 100, deltaY: 0, clientX: 200, clientY: 200 })
+    expect(wheel.defaultPrevented).toBe(false)
+    expect(m.workspace.getSnapshot().viewport).toMatchObject({ x: 0, y: 0, scale: 1 })
+    const zoom = await m.event('wheel', row, { metaKey: true, deltaX: 0, deltaY: -80, clientX: 200, clientY: 200 })
+    expect(zoom.defaultPrevented).toBe(true)
+    expect(m.workspace.getSnapshot().viewport.scale).toBeGreaterThan(1)
+  })
+  it.each([250, 140])('keeps the detail menu in a short %ipx canvas with scrollable overflow', async (height) => {
+    const m = await mounted({}, undefined, { generate: async () => ({ ok: true }) })
+    await act(async () => {
+      m.workspace.setCanvasSize({ width: 400, height })
+      m.workspace.setArtifacts([{ ...textNode(), x: 200, y: 235, width: 520, height: 300 }])
+      m.workspace.updateSelection(['source'], 'replace')
+    })
+    await m.event('click', m.query('button[aria-label="思维导图"]'))
+    const menu = m.query('[data-research-mind-map-menu]')
+    const bottom = Number.parseFloat(m.query('[data-research-selection-actions]').style.top)
+    const available = menu.style.top === 'auto' ? bottom - 56 : height - bottom - 14
+    expect(Number.parseFloat(menu.style.maxHeight)).toBeLessThanOrEqual(available)
+    expect(available).toBeGreaterThan(0)
+    expect(menu.style.overflowY).toBe('auto')
+  })
   it('keeps the toolbar above the bottom boundary as the canvas resizes', async () => {
     const m = await mounted({}, undefined, { generate: async () => ({ ok: true }) })
     await act(async () => {
