@@ -122,6 +122,19 @@ describe('trusted research canvas capture', () => {
     const { sources } = await (await f.snapshot({ sessionId: 'parent', captureId: capture.captureId })).json()
     expect(sources.map((source: any) => source.text)).toEqual(['', '', ''])
   })
+  it('marks row, column and cell serialization caps even when the final native text fits', async () => {
+    const f = await fixture()
+    f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')
+    f.storage.setItem('sherlock.research.canvas.artifacts.v1:parent', JSON.stringify([
+      { id: 'rows', rows: Array.from({ length: 501 }, () => ['value']), columns: ['项目'] },
+      { id: 'columns', rows: [Array.from({ length: 41 }, () => 'value')], columns: Array.from({ length: 41 }, () => '项目') },
+      { id: 'cell', rows: [['x'.repeat(4001)]], columns: ['项目'] }
+    ].map(({ id, ...table }) => ({ id, title: id, kind: 'generated-container', generationStatus: 'completed', containerSpec: { version: 1, type: 'table', title: id, ...table } }))))
+    const capture = await f.bridge.capture({ sessionId: 'parent' })
+    const { sources } = await (await f.snapshot({ sessionId: 'parent', captureId: capture.captureId })).json()
+    expect(sources.map((source: any) => source.truncated)).toEqual([true, true, true])
+    expect(sources.every((source: any) => source.text.length < 120000)).toBe(true)
+  })
   it('stops in-flight capture insertion and sanitizes upstream errors', async () => {
     let finish!: (value: any) => void
     const f = await fixture({ readCanvas: () => new Promise((resolve) => { finish = resolve }) })
