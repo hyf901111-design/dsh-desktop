@@ -132,6 +132,11 @@ function queryTerms(query) {
   return [...terms].filter((term) => term.length > 0).slice(0, 32)
 }
 
+function isBroadResearchQuery(query, terms) {
+  const normalized = normalizeText(query).toLocaleLowerCase()
+  return terms.length === 0 || /^(?:总结(?:一下|当前画板资料|当前画布资料)?|概览|概述|继续|summary|overview)$/iu.test(normalized)
+}
+
 function occurrences(text, term) {
   if (!term) return 0
   let count = 0
@@ -363,23 +368,30 @@ export class ResearchContextIndex {
     ].join('\n')
     const catalogBudget = { bytes: Math.floor(maxBytes * INITIAL_CATALOG_SHARE), tokens: Math.floor(maxTokens * INITIAL_CATALOG_SHARE) }
     const catalogRows = []
-    for (const source of ranking) {
+    const catalogFits = (rows) => {
+      const value = rows.join('\n')
+      return textBytes(value) <= catalogBudget.bytes && estimateContextTokens(value) <= catalogBudget.tokens
+    }
+    const continuationFor = (count) => `- 另有 ${count} 项资料未列出；可调用 research_context_list 继续。`
+    for (let index = 0; index < ranking.length; index += 1) {
+      const source = ranking[index]
       const row = `- ${source.id}｜${shorten(source.title, 120)}｜${source.kind}｜${source.status === 'pending' ? '尚未读取' : source.status}${source.truncated ? '｜已截断' : ''}${aliasesFor(snapshot, source).length ? `｜重复别名：${aliasesFor(snapshot, source).map((alias) => alias.sourceId).join('、')}` : ''}`
-      const candidate = [...catalogRows, row].join('\n')
-      if (textBytes(candidate) > catalogBudget.bytes || estimateContextTokens(candidate) > catalogBudget.tokens) break
+      const remaining = ranking.length - index - 1
+      const candidate = remaining > 0 ? [...catalogRows, row, continuationFor(remaining)] : [...catalogRows, row]
+      if (!catalogFits(candidate)) break
       catalogRows.push(row)
     }
     const omittedCatalog = ranking.length - catalogRows.length
     if (omittedCatalog > 0) {
-      const continuation = `- 另有 ${omittedCatalog} 项资料未列出；可调用 research_context_list 继续。`
-      const candidate = [...catalogRows, continuation].join('\n')
-      if (textBytes(candidate) <= catalogBudget.bytes && estimateContextTokens(candidate) <= catalogBudget.tokens) catalogRows.push(continuation)
-      else if (catalogRows.length === 0) catalogRows.push('- 更多资料请调用 research_context_list。')
+      const continuation = continuationFor(omittedCatalog)
+      while (catalogRows.length > 0 && !catalogFits([...catalogRows, continuation])) catalogRows.pop()
+      if (catalogFits([...catalogRows, continuation])) catalogRows.push(continuation)
+      else catalogRows.push(continuation)
     }
     const catalog = catalogRows.join('\n') || '- 更多资料请调用 research_context_list。'
     const evidence = []
     const seen = new Set()
-    const broad = terms.length === 0 || query.length <= 2 || /^(总结|概览|继续|summary|overview)$/iu.test(query.trim())
+    const broad = isBroadResearchQuery(query, terms)
     const evidenceBudget = { bytes: Math.floor(maxBytes * (1 - INITIAL_CATALOG_SHARE)), tokens: Math.floor(maxTokens * (1 - INITIAL_CATALOG_SHARE)) }
     const contextFor = (entries) => `${header}\n${catalog}\n\n证据：\n${entries.map(({ source, body }) => `[${source.id}｜${shorten(source.title, 120)}]\n${body}`).join('\n\n')}`.trim()
     const packetFor = (entries) => ({
