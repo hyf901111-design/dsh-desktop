@@ -5904,6 +5904,10 @@ describe('Sherlock workspace and composer controls', () => {
       const badge = host.querySelector('[data-research-context-badge]')
       expect(badge).not.toBeNull()
       expect(badge?.textContent).toBe('参考当前画板资料 · 9个组件')
+      // Enlarging the popover action must not enlarge the compact composer tag.
+      expect((badge as HappyDOMHTMLElement).style.padding).toBe('3px 8px')
+      expect((badge as HappyDOMHTMLElement).style.width).toBe('')
+      expect((badge?.parentElement as HappyDOMHTMLElement).style.alignSelf).toBe('flex-start')
       expect(host.innerHTML).not.toContain('SECRET_SOURCE_BODY')
       await act(async () => { (badge as any)?.click() })
       const directory = host.querySelector('[data-research-context-directory]')
@@ -5913,6 +5917,12 @@ describe('Sherlock workspace and composer controls', () => {
       expect(directory?.querySelector('[data-source-status]')).not.toBeNull()
       expect(host.innerHTML).not.toContain('SECRET_SOURCE_BODY')
       expect(host.querySelector('[data-research-context-disable]')?.textContent).toBe('不参考画板资料回答')
+      const toggle = host.querySelector('[data-research-context-disable]') as HappyDOMHTMLElement
+      expect(toggle.style.width).toBe('100%')
+      expect(toggle.style.minHeight).toBe('34px')
+      expect(toggle.style.justifyContent).toBe('center')
+      // The source directory keeps its own width rather than shrinking to the tag.
+      expect((directory as HappyDOMHTMLElement).style.maxWidth).toBe('')
       await act(async () => { (host.querySelector('[data-research-context-disable]') as any)?.click() })
       expect(shell.snapshot.researchContextOptOut).toBe(true)
       expect(host.querySelector('[data-research-context-badge]')?.getAttribute('data-opt-out')).toBe('true')
