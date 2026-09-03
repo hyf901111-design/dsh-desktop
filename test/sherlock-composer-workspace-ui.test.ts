@@ -1115,6 +1115,9 @@ async function mountResearchCanvas(options: {
       setViewport(viewport: { scale: number; x: number; y: number }): void
       setCanvasSize(value: { width: number; height: number }): void
       setSelection(value: { selectedNodeIds: string[]; orderedFileIds: string[] }): void
+      updateSelection(nodeIds: string[], mode: string): void
+      updateArtifactContent(nodeId: string, content: string): boolean
+      setArtifacts(nodes: Array<Record<string, unknown>>): void
       selectedFiles(): Array<Record<string, unknown>>
       pendingOrphanRevocations(): string[]
       createWebLink(url: string, placement?: Record<string, unknown>): Record<string, unknown> | null
@@ -5914,7 +5917,8 @@ describe('Sherlock workspace and composer controls', () => {
       expect(directory?.textContent).toContain('远处的结论')
       expect(directory?.textContent).not.toContain('发送时优先参考')
       expect(directory?.querySelectorAll('li')).toHaveLength(9)
-      expect(directory?.querySelector('[data-source-status]')).not.toBeNull()
+      expect(directory?.querySelector('[data-source-status]')).toBeNull()
+      expect(directory?.querySelectorAll('[data-artifact-kind="assistant-reply"]')).toHaveLength(9)
       expect(host.innerHTML).not.toContain('SECRET_SOURCE_BODY')
       expect(host.querySelector('[data-research-context-disable]')?.textContent).toBe('不参考画板资料回答')
       const toggle = host.querySelector('[data-research-context-disable]') as HappyDOMHTMLElement
@@ -5943,6 +5947,24 @@ describe('Sherlock workspace and composer controls', () => {
       expect(host.querySelector('[data-research-context-badge]')).toBeNull()
       await act(async () => { workspace.updateSelection([], 'replace'); root.render(createElement(client.__testInputBar as any, { ...props, researchCanvasWorkspace: undefined })) })
       expect(host.querySelector('[data-research-context-badge]')).toBeNull()
+      await act(async () => {
+        workspace.setFiles([{ id: 'pdf', name: '材料.pdf', path: '/w/report.pdf', source: 'computer', x: 0, y: 0 }])
+        workspace.setArtifacts([
+          { id: 'table', kind: 'generated-container', messageId: 'table', title: '现金流表格', excerpt: '表格', x: 0, y: 0, generationStatus: 'completed', containerPrompt: '表格', refreshMinutes: 0, containerSpec: { version: 1, type: 'table', title: '现金流', columns: ['金额'], rows: [[100]] } },
+          { id: 'chart', kind: 'generated-container', messageId: 'chart', title: '现金流图表', excerpt: '图表', x: 0, y: 0, generationStatus: 'completed', containerPrompt: '图表', refreshMinutes: 0, containerSpec: { version: 1, type: 'chart', title: '现金流', variant: 'bar', labels: ['2026'], series: [{ name: '金额', values: [100] }] } }
+        ])
+        root.render(createElement(client.__testInputBar as any, props))
+      })
+      await act(async () => { (host.querySelector('[data-research-context-badge]') as any)?.click() })
+      const typedDirectory = host.querySelector('[data-research-context-directory]')!
+      expect(typedDirectory.querySelector('[data-file-kind="pdf"]')).not.toBeNull()
+      expect(typedDirectory.querySelector('[data-artifact-kind="table"] svg')?.innerHTML).not.toEqual(typedDirectory.querySelector('[data-artifact-kind="chart"] svg')?.innerHTML)
+      expect(typedDirectory.textContent).not.toContain('发送时检查')
+      await act(async () => {
+        const node = workspace.getSnapshot().artifacts.find((node: any) => node.id === 'table')
+        shell.insertReference((client.researchArtifactReference as any)({ ...node, excerpt: JSON.stringify(node.containerSpec) }), { start: 0, end: 0, draftRev: shell.snapshot.draftRev })
+      })
+      expect(host.querySelector('[data-artifact-kind="table"] svg')).not.toBeNull()
     } finally {
       await act(async () => { root.unmount() })
       host.remove(); restoreGlobals()
@@ -7758,6 +7780,142 @@ describe('Sherlock workspace and composer controls', () => {
     } finally {
       await mounted.cleanup()
     }
+  })
+
+  it('creates one independent native component from frozen toolbar sources and retries the same prompt', async () => {
+    const generate = vi.fn(async () => ({ ok: false, error: '可重试的失败' }))
+    const mounted = await mountResearchCanvas({
+      sessionId: 'selection-create-ui',
+      artifacts: [
+        { id: 'a', kind: 'assistant-result', messageId: 'a', title: '现金流材料', excerpt: '现金流100', x: 100, y: 200 },
+        { id: 'other', kind: 'assistant-result', messageId: 'other', title: '无关材料', excerpt: '不应提交', x: 900, y: 600 }
+      ], selection: { selectedNodeIds: ['a'], orderedFileIds: [] }, selectionGeneration: { generate }
+    })
+    try {
+      await act(async () => { mounted.workspace.setCanvasSize({ width: 1200, height: 800 }) })
+      const trigger = mounted.host.querySelector('[data-research-selection-create]')
+      expect(trigger).not.toBeNull()
+      await act(async () => { click(mounted.browserWindow, trigger) })
+      const form = mounted.host.querySelector('[data-research-create-popover]')!
+      expect(form.querySelector('[data-artifact-kind="assistant-reply"]')).not.toBeNull()
+      expect(form.textContent).toContain('现金流材料')
+      expect(form.textContent).not.toContain('无关材料')
+      const submit = form.querySelector('[data-research-create-submit]') as any
+      expect(submit.disabled).toBe(true)
+      const input = form.querySelector('textarea') as any
+      await act(async () => {
+        mounted.workspace.updateSelection(['other'], 'replace')
+        input.value = '  比较现金流  '
+        input.dispatchEvent(new mounted.browserWindow.Event('input', { bubbles: true }))
+      })
+      expect(submit.disabled).toBe(false)
+      await act(async () => { click(mounted.browserWindow, submit) })
+      expect(generate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', prompt: '比较现金流', selectedNodeIds: ['a'] }))
+      const created = mounted.workspace.getSnapshot().artifacts.find((node) => node.kind === 'generated-container')!
+      expect(created).toMatchObject({ creationMode: 'selection', containerPrompt: '比较现金流', sourceNodeIds: ['a'], generationSources: [{ id: 'a', type: 'artifact', title: '现金流材料', text: '现金流100' }], generationStatus: 'failed' })
+      expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(3)
+      expect(mounted.workspace.getSnapshot().artifacts[0]?.excerpt).toBe('现金流100')
+      await act(async () => { mounted.workspace.updateArtifactContent('a', '已改变的现金流') })
+      let retry: unknown
+      await act(async () => { retry = mounted.workspace.retryGeneration(String(created.id)) })
+      expect(retry).toMatchObject({ kind: 'create', prompt: '比较现金流', sourceNodeIds: ['a'], generationSources: [{ text: '现金流100' }] })
+      const stored = JSON.parse(mounted.browserWindow.localStorage.getItem('sherlock.research.canvas.artifacts.v1:selection-create-ui') ?? '[]')
+      expect(stored.find((node: any) => node.id === created.id)).toMatchObject({ creationMode: 'selection', sourceNodeIds: ['a'], containerPrompt: '比较现金流' })
+    } finally { await mounted.cleanup() }
+  })
+
+  it('renders safe native mind-map JSON and refuses executable extra fields', async () => {
+    const spec = { version: 1, type: 'mind-map', title: '现金流', content: '# 现金流\n- 库存增长' }
+    const mounted = await mountResearchCanvas({ sessionId: 'native-create-map', artifacts: [{
+      id: 'map', kind: 'generated-container', messageId: 'map', title: '现金流', excerpt: '现金流', x: 100, y: 100,
+      generationStatus: 'completed', creationMode: 'selection', containerPrompt: '生成导图', sourceNodeIds: ['removed-source'], refreshMinutes: 0, containerSpec: spec
+    }] })
+    try {
+      expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(1)
+      expect(mounted.host.querySelector('[data-research-mind-map]')?.textContent).toContain('库存增长')
+      const client = await loadClientBundle('dsh-client-ui-conversation')
+      const parse = client.parseResearchContainerSpec as any
+      expect(parse(spec)).toEqual(spec)
+      expect(parse({ ...spec, script: 'alert(1)' })).toBeNull()
+      expect(mounted.host.querySelector('[data-research-container-refresh-interval]')).toBeNull()
+      await act(async () => { mounted.workspace.setArtifacts([{ ...mounted.workspace.getSnapshot().artifacts[0], generationStatus: 'failed', generationError: '失败' }]) })
+      await act(async () => { expect(mounted.workspace.retryGeneration('map')).toBeNull() })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ generationError: expect.stringMatching(/来源/) })
+    } finally { await mounted.cleanup() }
+  })
+
+  it('rereads only selected authorized web content and fails honestly when mixed sources are unreadable', async () => {
+    let available = true
+    const inspected: string[] = []
+    const generate = vi.fn(async () => ({ ok: true }))
+    const mounted = await mountResearchCanvas({ sessionId: 'selected-live-web',
+      artifacts: [
+        { id: 'web', kind: 'web-link', messageId: 'web', title: '已授权材料', url: 'https://example.com/research', excerpt: 'https://example.com/research', sourceText: '过期正文', x: 100, y: 100 },
+        { id: 'note', kind: 'assistant-result', messageId: 'note', title: '笔记', excerpt: '笔记现金流', x: 400, y: 100 },
+        { id: 'ignore', kind: 'web-link', messageId: 'ignore', title: '不要读取', url: 'https://example.com/ignore', excerpt: 'https://example.com/ignore', x: 900, y: 100 }
+      ], selection: { selectedNodeIds: ['web', 'note'], orderedFileIds: [] }, selectionGeneration: { generate },
+      dshDesktop: { researchLinkFrame: { authorize: async ({ url }) => ({ url }), inspect: async ({ nodeId }) => { inspected.push(nodeId); if (!available) throw new Error('/private/internal-token'); return { sourceText: '真实授权现金流正文', title: '已授权材料' } }, release: async () => ({ ok: true }), releaseSession: async () => ({ ok: true, removed: 0 }) } }
+    })
+    try {
+      const submit = async () => {
+        await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-selection-create]')) })
+        const input = mounted.host.querySelector('[data-research-create-popover] textarea') as any
+        await act(async () => { input.value = '比较现金流'; input.dispatchEvent(new mounted.browserWindow.Event('input', { bubbles: true })) })
+        await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-create-submit]')) })
+      }
+      await act(async () => { mounted.workspace.setCanvasSize({ width: 1200, height: 800 }) })
+      inspected.length = 0
+      await submit()
+      expect(inspected).toEqual(['web'])
+      expect(generate).toHaveBeenCalledTimes(1)
+      expect(mounted.workspace.getSnapshot().artifacts.find((node) => node.creationMode === 'selection')).toMatchObject({ generationSources: [{ id: 'web', text: '真实授权现金流正文' }, { id: 'note', text: '笔记现金流' }] })
+      available = false
+      await act(async () => { mounted.workspace.updateSelection(['web', 'note'], 'replace') })
+      await submit()
+      expect(generate).toHaveBeenCalledTimes(1)
+      expect(mounted.host.querySelector('[role="alert"]')?.textContent).toContain('授权正文')
+      expect(mounted.host.textContent).not.toContain('/private/internal-token')
+      expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(4)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('cancels selected-source preparation without creating a late artifact', async () => {
+    const wait = deferred<Record<string, unknown>>()
+    const generate = vi.fn(async () => ({ ok: true }))
+    const mounted = await mountResearchCanvas({ sessionId: 'cancel-selected-create', artifacts: [{ id: 'web', kind: 'web-link', messageId: 'web', title: '页面', url: 'https://example.com/a', excerpt: 'url', x: 100, y: 100 }], selection: { selectedNodeIds: ['web'], orderedFileIds: [] }, selectionGeneration: { generate }, dshDesktop: { researchLinkFrame: { authorize: async ({ url }) => ({ url }), inspect: async () => wait.promise, release: async () => ({ ok: true }), releaseSession: async () => ({ ok: true, removed: 0 }) } } })
+    try {
+      await act(async () => { mounted.workspace.setCanvasSize({ width: 900, height: 700 }); click(mounted.browserWindow, mounted.host.querySelector('[data-research-selection-create]')) })
+      const input = mounted.host.querySelector('[data-research-create-popover] textarea') as any
+      await act(async () => { input.value = '总结'; input.dispatchEvent(new mounted.browserWindow.Event('input', { bubbles: true })) })
+      await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-create-submit]')) })
+      expect(mounted.host.querySelector('[data-research-create-submit]')?.textContent).toBe('正在读取…')
+      await act(async () => { input.dispatchEvent(new mounted.browserWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); wait.resolve({ sourceText: '迟到的正文' }); await Promise.resolve() })
+      expect(mounted.host.querySelector('[data-research-create-popover]')).toBeNull()
+      expect(generate).not.toHaveBeenCalled()
+      expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(1)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('freezes parent-task-bound resolved file evidence for selected-create transport and retry', async () => {
+    let nodeId = ''
+    const fetch = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>(async () => ({ ok: true, status: 202, json: async () => ({ taskId: 'frozen-task', canvasNodeId: nodeId, state: 'running', lastSeq: 2, events: [], resolvedSources: [{ id: 'file', type: 'artifact', title: '财报.txt', text: '首次真实文件100' }] }) } as Response))
+    const mounted = await mountResearchCanvas({ sessionId: 'create-transport', files: [{ id: 'file', name: '财报.txt', path: '/w/report.txt', source: 'computer', x: 100, y: 100 }], fetch })
+    try {
+      await act(async () => { const target = mounted.workspace.beginGeneration('create', ['file'], { x: 700, y: 100 }, '生成指标'); nodeId = String(target!.id) })
+      const Hub = mounted.client.InputHub as any
+      const hub = new Hub({}, (key: string) => key, mounted.researchWorkspaces)
+      await act(async () => { expect(await hub.generateResearchSelection({ sessionId: 'create-transport' }, { sessionId: 'create-transport', kind: 'container', targetNodeId: nodeId, prompt: '生成指标' })).toMatchObject({ ok: false }) })
+      expect(fetch).not.toHaveBeenCalled()
+      await act(async () => { expect(await hub.generateResearchSelection({ sessionId: 'create-transport' }, { sessionId: 'create-transport', kind: 'create', targetNodeId: nodeId, selectedNodeIds: ['file'], prompt: '生成指标' })).toMatchObject({ ok: true }) })
+      expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toMatchObject({ kind: 'create', prompt: '生成指标', sources: [{ id: 'file', type: 'file', path: '/w/report.txt' }] })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ generationSources: [{ type: 'artifact', text: '首次真实文件100' }] })
+      await act(async () => { mounted.workspace.applyGenerationInspection(nodeId, { taskId: 'frozen-task', canvasNodeId: nodeId, state: 'cancelled', lastSeq: 3, events: [] }) })
+      let retry: any
+      await act(async () => { retry = mounted.workspace.retryGeneration(nodeId) })
+      expect(retry).toMatchObject({ kind: 'create', prompt: '生成指标', generationSources: [{ type: 'artifact', text: '首次真实文件100' }] })
+      await act(async () => { await hub.generateResearchSelection({ sessionId: 'create-transport' }, { sessionId: 'create-transport', kind: retry.kind, prompt: retry.prompt, targetNodeId: nodeId, selectedNodeIds: retry.sourceNodeIds }) })
+      expect(JSON.parse(String(fetch.mock.calls.at(-1)?.[1]?.body)).sources).toEqual([{ id: 'file', type: 'artifact', title: '财报.txt', text: '首次真实文件100' }])
+    } finally { await mounted.cleanup() }
   })
 
   it('persists an immutable bounded source snapshot and task identity', async () => {

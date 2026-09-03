@@ -97,6 +97,7 @@
 **Files:**
 - Modify: node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js and declarations as needed; persist patch-package patch
 - Modify if required: src/preload/index.ts declarations
+- Modify if required: src/main/state/research-canvas-clipboard.ts and src/preload/research-canvas-clipboard.ts to return the newly authorized managed file path from admit (never consume a renderer path), so existing file-source generation remains functional for pasted files.
 - Modify: src/main/state/research-context-bridge.ts for native pasted-text content extraction
 - Test: test/research-canvas-clipboard-ui.test.ts (real bundled client / happy-dom), test/research-file-drop.test.ts
 
@@ -104,6 +105,7 @@
 - Consumes: Task 1 researchClipboard bridge and Task 2 canonical artifact schema.
 - Produces: workspace atomic insert of files+artifacts, clipboard keyboard and context actions, editable pasted-text native artifact (excerpt, title, synthetic messageId, geometry; no assistant origin or generation task) and safe unsupported-file card. Keep text within bridge bounds and reject over-limit/capacity explicitly rather than truncating.
 - Clipboard copy source file entries use kind:'file' explicitly. Bridge's generationSources are credential-free audit descriptors; if they cannot be reconstructed as complete valid evidence after remapping copied sources, omit generationSources for the independent result and preserve source IDs/prompt, with honest missing-source retry. After any cancelled in-flight admit settles, revoke the late grant too.
+- Verify pasted file nodes remain readable by existing researchGenerationSources and right-chat context. Existing generation uses file.path; if needed extend admit's response with an authoritative managed path alongside its fresh descriptor. This is an output-only path resolved by main for a valid asset; ordinary clipboard read/copy remains path-free and no renderer path becomes an admission request.
 
 - [ ] Step 1: Write failing real-workspace tests for multi-node copy/paste preserving relative positions and manual geometry with new IDs, one undo/redo transaction, snapshot persistence/reload and identity remapping, no active task/autorefresh copied. Render canvas to test Cmd/Ctrl+C/V scope, input/editor native paste, native webpage selection, right-click selection semantics, menu availability, mouse/world coordinate conversion, pasted text edit, and queue cancellation on unmount/session switch. Test file admission failure/quota and journal cleanup.
   ```ts
@@ -123,6 +125,7 @@
   // Publish the full batch once; rollback grants if persistence fails.
   ```
   Add copy to component menu and paste to canvas background menu; read availability when menu opens, not background polling. Keyboard handlers require canvas focus and non-editable target/no native selection; preserve iframe shortcuts. Track last pointer inside bounds; compute world coordinates; fixed context-menu paste point, repeated keyboard offset. Surface concise progress/errors, serialize imports, and recheck capacity after await.
+  Electron menu accelerators may dispatch native DOM copy/paste rather than keydown. Handle both paths without duplicate operations, default-preventing only canvas-owned events. Include native CopyEvent/PasteEvent tests as well as keyboard events.
 - [ ] Step 4: Run focused clipboard UI/workspace and directly affected tests plus typecheck. Exercise a safe isolated rendered canvas fixture through Browser for menu, multi-selection, creation dialog and icon rows. Do not operate or replace the shared app.
 - [ ] Step 5: Commit `功能：支持研究画板跨画板复制粘贴与内容导入`.
 

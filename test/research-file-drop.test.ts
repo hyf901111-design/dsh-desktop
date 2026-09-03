@@ -418,11 +418,11 @@ describe('Research canvas file drops', () => {
     })
 
     expect(workspace.getSnapshot().files[0]).toMatchObject({
-      width: 320, height: 212, sizeMode: 'auto', aspectRatio: 16 / 9
+      width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
     })
     expect(new client.ResearchWorkspaceRegistry(storage)
       .for('geometry-session').getSnapshot().files[0]).toMatchObject({
-        width: 320, height: 212, sizeMode: 'auto', aspectRatio: 16 / 9
+        width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
       })
   })
 
@@ -529,7 +529,7 @@ describe('Research canvas file drops', () => {
     )).toEqual({ scale: 0.5, x: -1_100, y: -700 })
   })
 
-  it('normalizes natural image ratio against the existing 32px titled-frame geometry', async () => {
+  it('normalizes natural image ratio against the existing 36px titled-frame geometry', async () => {
     const client = await loadConversationClient()
     expect(client.researchImageGeometryForNaturalSize).toBeTypeOf('function')
     if (typeof client.researchImageGeometryForNaturalSize !== 'function') return
@@ -539,7 +539,7 @@ describe('Research canvas file drops', () => {
       authorizationId: 'authorization-1', source: 'computer', x: 0, y: 0,
       width: 320, height: 272, sizeMode: 'auto'
     }, 1600, 900)).toMatchObject({
-      width: 320, height: 212, sizeMode: 'auto', aspectRatio: 16 / 9
+      width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
     })
     expect(client.researchImageGeometryForNaturalSize({}, 0, 900)).toBeNull()
   })
@@ -1256,7 +1256,7 @@ describe('Research canvas file drops', () => {
       'sherlock.research.canvas.files.v1:session-7'
     )
     expect(client.parseResearchCanvasFileNodes(JSON.stringify(valid))).toEqual([{
-      ...valid[0], width: 320, height: 320 / (17 / 22) + 32,
+      ...valid[0], width: 320, height: 320 / (17 / 22) + 36,
       sizeMode: 'auto', aspectRatio: 17 / 22
     }])
     expect(client.parseResearchCanvasFileNodes('[{"id":"1","name":"a","source":"computer","x":null,"y":2}]')).toEqual([])
@@ -1442,7 +1442,7 @@ describe('Research canvas file drops', () => {
 
     client.saveResearchCanvasFiles(memoryStorage, 's1', nodes)
     expect(client.loadResearchCanvasFiles(memoryStorage, 's1')).toEqual([{
-      ...nodes[0], width: 320, height: 320 / (17 / 22) + 32,
+      ...nodes[0], width: 320, height: 320 / (17 / 22) + 36,
       sizeMode: 'auto', aspectRatio: 17 / 22
     }])
 
@@ -1475,7 +1475,7 @@ describe('Research canvas file drops', () => {
     expect(workspace.getSnapshot().files).toEqual([{
       id: 'stable-file', path: '/w/stable.pdf', name: 'stable.pdf',
       source: 'sherlock', x: 12, y: 34, width: 320,
-      height: 320 / (17 / 22) + 32, sizeMode: 'auto', aspectRatio: 17 / 22
+      height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22
     }])
 
     workspace.setFiles([{
@@ -1485,7 +1485,7 @@ describe('Research canvas file drops', () => {
     expect(JSON.parse(values.get(key) ?? '[]')).toEqual([{
       id: 'next-file', path: '/w/next.pdf', name: 'next.pdf',
       source: 'sherlock', x: 56, y: 78, width: 320,
-      height: 320 / (17 / 22) + 32, sizeMode: 'auto', aspectRatio: 17 / 22
+      height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22
     }])
   })
 
@@ -1574,17 +1574,17 @@ describe('Research canvas file drops', () => {
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'icon', name: 'favicon.ico', contentType: 'image/x-icon',
       source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 272, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
+    })).toEqual({ width: 320, height: 276, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'assistant', kind: 'assistant-result', messageId: 'm1', title: 'Answer',
       excerpt: 'Evidence', x: 0, y: 0
     })).toEqual({ width: 520, height: 300, sizeMode: 'auto', resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'image', name: 'chart.png', mediaType: 'image/png', source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 272, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
+    })).toEqual({ width: 320, height: 276, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'pdf', name: 'filing.pdf', mediaType: 'application/pdf', source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 320 / (17 / 22) + 32, sizeMode: 'auto', aspectRatio: 17 / 22, resizable: true })
+    })).toEqual({ width: 320, height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'html', name: 'model.html', mediaType: 'text/html', source: 'computer', x: 0, y: 0
     })).toEqual({ width: 480, height: 360, sizeMode: 'auto', resizable: true })
@@ -1722,7 +1722,7 @@ describe('Research canvas file drops', () => {
       sizeMode: 'auto', aspectRatio: 17 / 22
     }
     expect(client.researchPdfGeometryForPage(initial, 600, 800)).toEqual({
-      width: 320, height: 320 / 0.75 + 32, sizeMode: 'auto', aspectRatio: 0.75
+      width: 320, height: 320 / 0.75 + 36, sizeMode: 'auto', aspectRatio: 0.75
     })
     expect(client.researchPdfGeometryForPage({
       ...initial, height: 320 / 0.75 + 32, aspectRatio: 0.75
@@ -1754,7 +1754,7 @@ describe('Research canvas file drops', () => {
       id: 'image', name: 'chart.png', mediaType: 'image/png', source: 'computer',
       x: 0, y: 0, width: 320, height: 272, sizeMode: 'auto', aspectRatio: 4 / 3
     }, 'se', { x: 80, y: 40 }, 2)).toMatchObject({
-      x: 20, y: 15, width: 360, height: 302, sizeMode: 'manual', aspectRatio: 4 / 3
+      x: 20, y: 15, width: 360, height: 306, sizeMode: 'manual', aspectRatio: 4 / 3
     })
   })
 
@@ -1770,18 +1770,18 @@ describe('Research canvas file drops', () => {
     }
 
     expect(client.normalizeResearchCanvasNodeGeometry(wideImage)).toEqual({
-      width: 960, height: 152, sizeMode: 'manual', aspectRatio: 8, resizable: true
+      width: 928, height: 152, sizeMode: 'manual', aspectRatio: 8, resizable: true
     })
     expect(client.resizeResearchCanvasNode(
       wideImage, 'se', { x: -5000, y: -5000 }, 1
     )).toMatchObject({
-      x: 0, y: 0, width: 960, height: 152,
+      x: 0, y: 0, width: 928, height: 152,
       sizeMode: 'manual', aspectRatio: 8
     })
     expect(client.normalizeResearchCanvasNodeGeometry({
       ...wideImage, id: 'tall-image', width: 120, aspectRatio: 0.25
     })).toEqual({
-      width: 160, height: 672, sizeMode: 'manual', aspectRatio: 0.25, resizable: true
+      width: 160, height: 676, sizeMode: 'manual', aspectRatio: 0.25, resizable: true
     })
   })
 
@@ -2772,6 +2772,43 @@ describe('Research canvas file drops', () => {
     expect(html).toContain('draggable="true"')
     expect(html).toContain('data-sherlock-file-drag-source="/w/outputs/report.pdf"')
     expect(html).toContain('>report.pdf</span>')
+  })
+
+  it('places selected-create output in a nearby free rectangle without moving existing nodes', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const nodes = [
+      { id: 'a', kind: 'assistant-result', x: 100, y: 100, width: 520, height: 300 },
+      { id: 'occupied', kind: 'assistant-result', x: 652, y: 100, width: 520, height: 300 }
+    ]
+    const original = JSON.stringify(nodes)
+    const place = client.researchCanvasGeneratedPlacement as any
+    const result = place(nodes, ['a'], 'create')
+    expect(result).not.toBeNull()
+    for (const node of nodes) expect(Math.abs(result.x - node.x) >= 520 || Math.abs(result.y - node.y) >= 300).toBe(true)
+    expect(JSON.stringify(nodes)).toBe(original)
+  })
+
+  it('preserves selected-create copy provenance but refuses source-free retry and nonnative outputs', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const parse = client.parseResearchCanvasArtifactNodes as any
+    const raw = { id: 'copy', messageId: 'copy', kind: 'generated-container', title: '副本', excerpt: '100', x: 0, y: 0, creationMode: 'selection', sourceNodeIds: ['old-file'], generationSources: [{ id: 'old-file', type: 'file', title: '财报.pdf' }], containerPrompt: '对比', refreshMinutes: 0, generationStatus: 'failed', containerSpec: { version: 1, type: 'markdown', title: '结果', content: '100' } }
+    expect(parse(JSON.stringify([raw]))).toMatchObject([{ creationMode: 'selection', sourceNodeIds: ['old-file'], generationSources: [{ id: 'old-file', title: '财报.pdf', type: 'file' }] }])
+    const Registry = client.ResearchWorkspaceRegistry as any
+    const workspace = new Registry(null).for('create-validation')
+    workspace.setArtifacts([raw])
+    expect(workspace.retryGeneration('copy')).toBeNull()
+    expect(workspace.getSnapshot().artifacts[0].generationError).toContain('来源快照不可用')
+    workspace.setArtifacts([{ ...raw, generationSources: undefined, generationStatus: 'completed', containerSpec: { version: 1, type: 'web', title: '不应授权', url: 'https://example.com' } }])
+    expect(workspace.getSnapshot().artifacts).toHaveLength(0)
+  })
+
+  it('rejects empty or oversized selected-create prompts before inserting a target', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const Registry = client.ResearchWorkspaceRegistry as any
+    const workspace = new Registry(null).for('create-prompt-validation')
+    workspace.setArtifacts([{ id: 'a', kind: 'assistant-result', messageId: 'a', title: '材料', excerpt: '真实正文', x: 0, y: 0 }])
+    for (const prompt of ['', ' ', 'x'.repeat(8001)]) expect(workspace.beginGeneration('create', ['a'], { x: 700, y: 0 }, prompt)).toBeNull()
+    expect(workspace.getSnapshot().artifacts).toHaveLength(1)
   })
 
   it('canonicalizes only safe web component URLs', async () => {

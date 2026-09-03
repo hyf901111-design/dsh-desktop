@@ -58,7 +58,7 @@ function containerText(value: unknown): { text: string; truncated: boolean } {
   const spec = value as Node
   const heading = boundedText(spec.title, 512)
   let body = ''
-  if (spec.type === 'markdown') body = boundedText(spec.content ?? spec.markdown)
+  if (spec.type === 'markdown' || spec.type === 'mind-map') body = boundedText(spec.content ?? spec.markdown)
   if (spec.type === 'table' && Array.isArray(spec.columns) && Array.isArray(spec.rows) && spec.rows.length) {
     const rows = boundedItems(spec.rows, 500).filter(Array.isArray).map((row) => boundedItems(row, 40).map(scalar))
     if (rows.some((row) => row.some((cell) => cell.trim()))) body = [boundedItems(spec.columns, 40).map(scalar).join(' | '), ...rows.map((row) => row.join(' | '))].join('\n')
