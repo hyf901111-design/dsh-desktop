@@ -1,0 +1,472 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260903-04",
+  "branch": "codex/integration/20260903-04",
+  "baseMainCommit": "806487f9bda011f7ba36691c51bd3e613cb3a5fb",
+  "expectedMainCommit": "806487f9bda011f7ba36691c51bd3e613cb3a5fb",
+  "createdAt": "2026-09-03T04:18:49.161Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画板创作与复制粘贴、0.7.9更新日志、弹层及快捷键焦点修复",
+        "branch": "codex/feat/research-create-clipboard-20260903",
+        "baseCommit": "806487f9bda011f7ba36691c51bd3e613cb3a5fb",
+        "tipCommit": "7a56042ce48e2ed4f54af842d21b81778bcb0c16",
+        "commits": [
+          {
+            "commit": "991a782d4748dfd54058529a38441b79b2915c18",
+            "parents": [
+              "806487f9bda011f7ba36691c51bd3e613cb3a5fb"
+            ],
+            "subject": "文档：记录研究画板渐进式上下文实施方案"
+          },
+          {
+            "commit": "ba7ceb72c802859f909037f8aeca4a38aac00944",
+            "parents": [
+              "991a782d4748dfd54058529a38441b79b2915c18"
+            ],
+            "subject": "功能：新增研究画板渐进式资料索引"
+          },
+          {
+            "commit": "897683538b1f161c8b4a5ef1f813db1668357126",
+            "parents": [
+              "ba7ceb72c802859f909037f8aeca4a38aac00944"
+            ],
+            "subject": "修复：收紧研究资料快照读取边界"
+          },
+          {
+            "commit": "f38bc89198f18b058b4a9690e54fbf68ca9efc5f",
+            "parents": [
+              "897683538b1f161c8b4a5ef1f813db1668357126"
+            ],
+            "subject": "修复：限制研究检索排序缓存"
+          },
+          {
+            "commit": "9b69ad4089f6b43227081cb32ad392b15bd2cf2a",
+            "parents": [
+              "f38bc89198f18b058b4a9690e54fbf68ca9efc5f"
+            ],
+            "subject": "功能：接通研究画板授权资料读取工具"
+          },
+          {
+            "commit": "c74064c0a55740792fe9356dc2fcdb26fd5d9899",
+            "parents": [
+              "9b69ad4089f6b43227081cb32ad392b15bd2cf2a"
+            ],
+            "subject": "修复：标记研究原生容器资料截断状态"
+          },
+          {
+            "commit": "61af8bcc982a78cb2c590fec06435e2c850163ca",
+            "parents": [
+              "c74064c0a55740792fe9356dc2fcdb26fd5d9899"
+            ],
+            "subject": "功能：让研究对话自动按需引用整个画板"
+          },
+          {
+            "commit": "0c458d08009f60f3fc213c6ead8614a3acddbbac",
+            "parents": [
+              "61af8bcc982a78cb2c590fec06435e2c850163ca"
+            ],
+            "subject": "修复：发送成功后清除本次画板参考偏好"
+          },
+          {
+            "commit": "8f12dea62d2f78cd8dec013cf370bd118e033441",
+            "parents": [
+              "0c458d08009f60f3fc213c6ead8614a3acddbbac"
+            ],
+            "subject": "测试：验证研究资料按需读取深层证据"
+          },
+          {
+            "commit": "b37eda2c57c60da04da3a378bf040d3447c404e1",
+            "parents": [
+              "8f12dea62d2f78cd8dec013cf370bd118e033441"
+            ],
+            "subject": "修复：校准研究首轮上下文预算"
+          },
+          {
+            "commit": "dff43980fafd8a9812e97605bbb5787712862add",
+            "parents": [
+              "b37eda2c57c60da04da3a378bf040d3447c404e1"
+            ],
+            "subject": "修复：完善研究首轮资料分配"
+          },
+          {
+            "commit": "d631d0d3292f32d609c3d81ecab571b6213a50d7",
+            "parents": [
+              "dff43980fafd8a9812e97605bbb5787712862add"
+            ],
+            "subject": "文档：记录研究画板上下文聚焦验收"
+          },
+          {
+            "commit": "971488c359b86f3297f581313a3135a1a05a3cae",
+            "parents": [
+              "d631d0d3292f32d609c3d81ecab571b6213a50d7"
+            ],
+            "subject": "修复：保证研究资料分页推进及取消后的提取清理"
+          },
+          {
+            "commit": "1f894bf7d6bf615a183bc64578bbd357cd268140",
+            "parents": [
+              "971488c359b86f3297f581313a3135a1a05a3cae"
+            ],
+            "subject": "文档：补充研究资料分页与取消清理验收记录"
+          },
+          {
+            "commit": "8f63e6b2cf89c06f02041a6db521f929ebda5b90",
+            "parents": [
+              "1f894bf7d6bf615a183bc64578bbd357cd268140"
+            ],
+            "subject": "版本：准备 Sherlock 0.7.9 本地测试并更新日志"
+          },
+          {
+            "commit": "80f974da09e0b9f347e75cb8051b07737be036f3",
+            "parents": [
+              "8f63e6b2cf89c06f02041a6db521f929ebda5b90"
+            ],
+            "subject": "界面：优化研究画板参考按钮文案与布局"
+          },
+          {
+            "commit": "165da7b38ac51cb369154e1fa303a9a821cf6b63",
+            "parents": [
+              "80f974da09e0b9f347e75cb8051b07737be036f3"
+            ],
+            "subject": "修复：保留画板参考标签紧凑尺寸仅加宽弹层开关"
+          },
+          {
+            "commit": "44f74659a0ebc60daebea49cc7b8185bd97a95a4",
+            "parents": [
+              "165da7b38ac51cb369154e1fa303a9a821cf6b63"
+            ],
+            "subject": "文档：记录研究画板创作与剪贴板实施方案"
+          },
+          {
+            "commit": "c6981bee571a98a8a2b30eb24c2f20a664c5eb3e",
+            "parents": [
+              "44f74659a0ebc60daebea49cc7b8185bd97a95a4"
+            ],
+            "subject": "功能：增加画板剪贴板与持久文件资源桥接"
+          },
+          {
+            "commit": "5a3d1b9579d5f1e5dd88ba4e113655ab416263de",
+            "parents": [
+              "c6981bee571a98a8a2b30eb24c2f20a664c5eb3e"
+            ],
+            "subject": "功能：根据所选资料创建组件并精简参考列表"
+          },
+          {
+            "commit": "de6c56524f66f55791a46b485e1f467a21f2e011",
+            "parents": [
+              "5a3d1b9579d5f1e5dd88ba4e113655ab416263de"
+            ],
+            "subject": "修复：支持根据既有网页容器正文创建组件"
+          },
+          {
+            "commit": "b0f403c08997e08146af0a7a6e898690b7403e92",
+            "parents": [
+              "de6c56524f66f55791a46b485e1f467a21f2e011"
+            ],
+            "subject": "功能：支持研究画板跨画板复制粘贴与内容导入"
+          },
+          {
+            "commit": "2ab3926297f7ec5e93da4eb62e21a1be244bd7f5",
+            "parents": [
+              "b0f403c08997e08146af0a7a6e898690b7403e92"
+            ],
+            "subject": "修复：保留文件定位失败后的提示"
+          },
+          {
+            "commit": "233589d1e92dca2a0cc9b3d8ca38a77c17942dc7",
+            "parents": [
+              "2ab3926297f7ec5e93da4eb62e21a1be244bd7f5"
+            ],
+            "subject": "文档：记录研究画板创作与剪贴板验证边界"
+          },
+          {
+            "commit": "fd210f7bf3e7774d47d84b18b6411b01bb0ebe56",
+            "parents": [
+              "233589d1e92dca2a0cc9b3d8ca38a77c17942dc7"
+            ],
+            "subject": "文档：补充 0.7.9 画板创作与复制粘贴更新日志"
+          },
+          {
+            "commit": "f4dca82d50c54e092d8b9d2b1dba6c10ed2e2aa3",
+            "parents": [
+              "fd210f7bf3e7774d47d84b18b6411b01bb0ebe56"
+            ],
+            "subject": "修复：画板复制粘贴提示自动消失并简化所选创建弹层"
+          },
+          {
+            "commit": "7a56042ce48e2ed4f54af842d21b81778bcb0c16",
+            "parents": [
+              "f4dca82d50c54e092d8b9d2b1dba6c10ed2e2aa3"
+            ],
+            "subject": "修复：画布快捷键粘贴焦点归属并补充0.7.9更新日志"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/research-create-clipboard-verification.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-09-03-research-create-clipboard.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-09-03-research-progressive-context.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-09-03-research-create-clipboard-design.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-09-03-research-progressive-context-design.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/verification/2026-09-03-research-progressive-context.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/context-abort.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/context-index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/context-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/package.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/pptx-extractor-worker.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/research-canvas-clipboard.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/research-context-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-file-preview.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-canvas-clipboard.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-context.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/preload-main-frame.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-clipboard-ui.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-clipboard.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-context-contract.typecheck.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-context-bridge.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-context-index.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-context-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-drop.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-file-extraction-cancellation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/runtime.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "test/settings-about.test.ts",
+              "test/build-and-run.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "4个直接影响测试文件258/258通过；既有composer SSR/act/static-children警告未隐藏。",
+            "verifiedCommit": "7a56042ce48e2ed4f54af842d21b81778bcb0c16",
+            "completedAt": "2026-09-03T04:18:37.852Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "7a56042ce48e2ed4f54af842d21b81778bcb0c16",
+            "completedAt": "2026-09-03T04:18:37.852Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过，中文提交后工作区干净。",
+            "verifiedCommit": "7a56042ce48e2ed4f54af842d21b81778bcb0c16",
+            "completedAt": "2026-09-03T04:18:37.852Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "apply",
+              "--reverse",
+              "--check",
+              "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+            ],
+            "outcome": "passed",
+            "summary": "补丁与本次依赖安装一致。",
+            "verifiedCommit": "7a56042ce48e2ed4f54af842d21b81778bcb0c16",
+            "completedAt": "2026-09-03T04:18:37.852Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实ResearchCanvas挂载回归：新建研究导航按钮保留焦点时，鼠标进入画布后快捷键/原生paste创建文字与文件；菜单后恢复焦点；编辑器、网页、对话框及选区保留原行为。隔离Browser当前源码渲染成功。旧原生客户端已复现新研究焦点导致无响应，修复后的原生键盘验证将在本次集成构建后执行，不视为用户验收。"
+        },
+        "acceptanceCriteria": [
+          "保留已有0.7.9研究资料与创作、剪贴板功能及中英文日志",
+          "修复画布非编辑区域快捷键粘贴文字文件，菜单后连续快捷键正常",
+          "输入框、网页、对话框和文本选区的原有复制粘贴不被接管",
+          "保留上轮提示两秒自动消失及所选创建精简弹层修正"
+        ],
+        "risks": [
+          "包含已交接功能前置提交。",
+          "用户本轮明确允许取消旧测试批次重建；20260903-03已按正式取消流程归档，保留源码与旧包。",
+          "待新integration构建后真实客户端回归，不接受或晋升main，不上传、发布、推送或公证。"
+        ],
+        "generatedAt": "2026-09-03T04:18:37.852Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/research-canvas-clipboard-ui.test.ts",
+        "test/research-canvas-clipboard.test.ts",
+        "test/preload-main-frame.test.ts",
+        "test/research-file-preview.test.ts",
+        "test/research-context-bridge.test.ts",
+        "test/research-file-drop.test.ts",
+        "test/research-task-runtime.test.js",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "test/settings-about.test.ts",
+        "test/build-and-run.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
