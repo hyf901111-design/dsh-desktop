@@ -85,7 +85,10 @@ describe('ResearchContextIndex', () => {
   })
 
   it('finds deep file evidence only after its scan-page and scans no more than eight unopened files per page', async () => {
-    const loadFileText = vi.fn(async (entry) => entry.id === 'file-12' ? '深层命中：黄金风险对冲' : 'ordinary file')
+    const loadFileText = vi.fn(async (entry) => ({
+      text: entry.id === 'file-12' ? '深层命中：黄金风险对冲' : 'ordinary file',
+      revision: entry.revision
+    }))
     const index = new ResearchContextIndex({ loadFileText })
     const packet = await index.prepare({
       sessionId: 'search', query: '无关',
@@ -96,11 +99,31 @@ describe('ResearchContextIndex', () => {
 
     const first = await index.search('search', { snapshotId: packet.snapshotId, query: '深层命中' })
     expect(first.sources).toHaveLength(0)
-    expect(loadFileText).toHaveBeenCalledTimes(12)
+    expect(loadFileText).toHaveBeenCalledTimes(8)
     expect(first.cursor).toBeDefined()
     const second = await index.search('search', { snapshotId: packet.snapshotId, query: '深层命中', cursor: first.cursor })
     expect(second.sources).toMatchObject([{ sourceId: 'file-12' }])
     expect(loadFileText).toHaveBeenCalledTimes(13)
+  })
+
+  it('paginates matching search results by a stable ranked source page without repeating the first hits', async () => {
+    const index = new ResearchContextIndex({ loadFileText: async () => '' })
+    const packet = await index.prepare({
+      sessionId: 'search-pages', query: '稳定排序',
+      sources: Array.from({ length: 20 }, (_, number) => source(`match-${number}`, `稳定排序 命中 ${number}`))
+    })
+
+    const first = await index.search('search-pages', { snapshotId: packet.snapshotId, query: '稳定排序' })
+    const second = await index.search('search-pages', {
+      snapshotId: packet.snapshotId, query: '稳定排序', cursor: first.cursor
+    })
+    const third = await index.search('search-pages', {
+      snapshotId: packet.snapshotId, query: '稳定排序', cursor: second.cursor
+    })
+
+    expect(first.sources.map((entry) => entry.sourceId)).toEqual(Array.from({ length: 8 }, (_, number) => `match-${number}`))
+    expect(second.sources.map((entry) => entry.sourceId)).toEqual(Array.from({ length: 8 }, (_, number) => `match-${number + 8}`))
+    expect(third.sources.map((entry) => entry.sourceId)).toEqual(Array.from({ length: 4 }, (_, number) => `match-${number + 16}`))
   })
 
   it('rotates broad summaries across independent sources rather than filling evidence from one source', async () => {
@@ -186,6 +209,82 @@ describe('ResearchContextIndex', () => {
 
     await expect(index.read('files', { snapshotId: packet.snapshotId, sourceId: 'changed' })).resolves.toMatchObject({ status: 'unavailable', text: '' })
     await expect(index.read('files', { snapshotId: packet.snapshotId, sourceId: 'failed' })).resolves.toMatchObject({ status: 'unavailable', text: '' })
+  })
+
+  it('requires a matching returned revision for every revision-frozen file', async () => {
+    const index = new ResearchContextIndex({ loadFileText: async () => 'stale extracted text' })
+    const packet = await index.prepare({
+      sessionId: 'frozen-file', query: '资料',
+      sources: [source('frozen', undefined, {
+        kind: 'file', path: '/trusted/frozen.pdf', revision: { size: 12, mtimeMs: 7 }
+      })]
+    })
+
+    await expect(index.read('frozen-file', { snapshotId: packet.snapshotId, sourceId: 'frozen' })).resolves.toMatchObject({
+      status: 'unavailable', text: ''
+    })
+  })
+
+  it('rejects prepare and delayed reads that cross the snapshot TTL while waiting for a file loader', async () => {
+    let clock = 0
+    const expiredDuringPrepare = new ResearchContextIndex({
+      now: () => clock,
+      loadFileText: async () => {
+        clock = 2 * 60 * 60 * 1_000 + 1
+        return { text: 'late', revision: { size: 1, mtimeMs: 1 } }
+      }
+    })
+    await expect(expiredDuringPrepare.prepare({
+      sessionId: 'prepare-expiry', query: 'x',
+      sources: [source('file', undefined, { kind: 'file', path: '/trusted/a', revision: { size: 1, mtimeMs: 1 } })]
+    })).rejects.toThrow(/过期|expired/i)
+
+    clock = 0
+    let release
+    const waiting = new Promise((resolve) => { release = resolve })
+    const expiredDuringRead = new ResearchContextIndex({
+      now: () => clock,
+      loadFileText: async (entry) => {
+        if (entry.id === 'late') await waiting
+        return { text: '正文', revision: { size: 1, mtimeMs: 1 } }
+      }
+    })
+    const packet = await expiredDuringRead.prepare({
+      sessionId: 'read-expiry', query: 'x',
+      sources: Array.from({ length: 5 }, (_, number) => source(number === 4 ? 'late' : `early-${number}`, undefined, {
+        kind: 'file', path: `/trusted/${number}`, revision: { size: 1, mtimeMs: 1 }
+      }))
+    })
+    const read = expiredDuringRead.read('read-expiry', { snapshotId: packet.snapshotId, sourceId: 'late' })
+    clock = 2 * 60 * 60 * 1_000 + 1
+    release()
+    await expect(read).rejects.toThrow(/过期|expired/i)
+  })
+
+  it('rejects a delayed search when another prepare evicts its snapshot before the loader resolves', async () => {
+    let release
+    const waiting = new Promise((resolve) => { release = resolve })
+    const index = new ResearchContextIndex({
+      maxSnapshots: 1,
+      loadFileText: async (entry) => {
+        if (entry.id === 'late') await waiting
+        return { text: 'needle evidence', revision: { size: 1, mtimeMs: 1 } }
+      }
+    })
+    const packet = await index.prepare({
+      sessionId: 'evicted-search', query: 'ordinary',
+      sources: Array.from({ length: 5 }, (_, number) => source(number === 4 ? 'late' : `early-${number}`, undefined, {
+        kind: 'file', title: number === 4 ? 'needle' : `ordinary-${number}`,
+        path: `/trusted/${number}`, revision: { size: 1, mtimeMs: 1 }
+      }))
+    })
+    const search = index.search('evicted-search', { snapshotId: packet.snapshotId, query: 'needle' })
+    await index.prepare({
+      sessionId: 'replacement', query: 'next',
+      sources: [source('replacement', 'replacement body')]
+    })
+    release()
+    await expect(search).rejects.toThrow(/不存在|snapshot/i)
   })
 
   it('atomically limits concurrent tool reads and evicts old snapshots under configured storage limits', async () => {

@@ -254,10 +254,11 @@ export class ResearchContextIndex {
     if (new Set(cloned.map((source) => source.id)).size !== cloned.length) throw new Error('资料标识重复')
     const snapshot = {
       id: safeString(this.id(), MAX_ID_LENGTH, '快照标识'), owner, createdAt: this.now(), sources: cloned,
-      toolBytes: 0, toolTokens: 0
+      toolBytes: 0, toolTokens: 0, searchOrders: new Map()
     }
     const candidates = rankedSources(snapshot, requestedQuery).filter((source) => source.status === 'pending').slice(0, INITIAL_FILE_LOADS)
     await Promise.all(candidates.map((source) => this.#hydrate(snapshot, source)))
+    this.#assertFresh(snapshot)
     this.#store(snapshot)
     const initial = this.#initialPacket(snapshot, requestedQuery, contextWindow)
     return initial
@@ -278,21 +279,17 @@ export class ResearchContextIndex {
   async search(sessionId, { snapshotId, query, cursor } = {}) {
     const snapshot = this.#snapshot(sessionId, snapshotId)
     const requestedQuery = safeString(query, 8_000, '检索问题')
-    const ranking = rankedSources(snapshot, requestedQuery)
+    const ranking = this.#searchRanking(snapshot, requestedQuery)
     const offset = parsePageCursor(cursor, 'search', ranking.length)
-    let next = offset
-    let loaded = 0
-    while (next < ranking.length && loaded < SEARCH_FILE_LOADS) {
-      const source = ranking[next]
-      next += 1
+    const next = Math.min(offset + SEARCH_FILE_LOADS, ranking.length)
+    for (const source of ranking.slice(offset, next)) {
       if (source.status !== 'pending') continue
-      loaded += 1
       await this.#hydrate(snapshot, source)
+      this.#assertLive(snapshot)
     }
     const terms = queryTerms(requestedQuery)
-    const matches = ranking
+    const matches = ranking.slice(offset, next)
       .filter((source) => source.text && terms.some((term) => source.text.toLocaleLowerCase().includes(term) || source.title.toLocaleLowerCase().includes(term)))
-      .slice(0, SEARCH_PAGE_SIZE)
       .map((source) => ({ ...metadata(source, aliasesFor(snapshot, source)), text: `${NOTICE}\n${excerpt(source, terms, 1_000)}` }))
     const result = boundedCollection({ totalSources: snapshot.sources.length }, matches, {
       nextCursor: next < ranking.length ? pageCursor('search', next) : undefined
@@ -305,7 +302,10 @@ export class ResearchContextIndex {
     const id = safeString(sourceId, MAX_ID_LENGTH, '资料标识')
     const source = snapshot.sources.find((candidate) => candidate.id === id)
     if (!source) throw new Error('资料不存在')
-    if (source.status === 'pending') await this.#hydrate(snapshot, source)
+    if (source.status === 'pending') {
+      await this.#hydrate(snapshot, source)
+      this.#assertLive(snapshot)
+    }
     const aliases = aliasesFor(snapshot, source)
     if (!source.text || source.status === 'unavailable' || source.status === 'unsupported') {
       return this.#reserve(snapshot, { ...metadata(source, aliases), text: '', status: source.status === 'pending' ? 'unavailable' : source.status, limited: false, message: statusText(source) })
@@ -369,7 +369,7 @@ export class ResearchContextIndex {
       }))
       const returned = typeof loaded === 'string' ? { text: loaded } : loaded
       if (!returned || typeof returned !== 'object' || typeof returned.text !== 'string') throw new Error('资料读取失败')
-      if (source.revision && returned.revision && !sameRevision(source.revision, cloneRevision(returned.revision))) throw new Error('资料版本已变化')
+      if (source.revision && (!returned.revision || !sameRevision(source.revision, cloneRevision(returned.revision)))) throw new Error('资料版本已变化')
       const value = normalizeText(returned.text)
       if (!value) throw new Error('资料没有可用正文')
       source.text = trimText(value, (candidate) => textBytes(candidate) <= MAX_SOURCE_BYTES)
@@ -389,11 +389,30 @@ export class ResearchContextIndex {
     const snapshot = this.snapshots.get(id)
     if (!snapshot) throw new Error('资料快照不存在')
     if (snapshot.owner !== owner) throw new Error('资料快照不属于当前会话')
+    this.#assertFresh(snapshot)
+    return snapshot
+  }
+
+  #assertFresh(snapshot) {
     if (this.now() - snapshot.createdAt > SNAPSHOT_TTL_MS) {
-      this.snapshots.delete(id)
+      if (this.snapshots.get(snapshot.id) === snapshot) this.snapshots.delete(snapshot.id)
       throw new Error('资料快照已过期')
     }
-    return snapshot
+  }
+
+  #assertLive(snapshot) {
+    this.#assertFresh(snapshot)
+    if (this.snapshots.get(snapshot.id) !== snapshot) throw new Error('资料快照不存在')
+  }
+
+  #searchRanking(snapshot, query) {
+    const key = normalizeText(query).toLocaleLowerCase()
+    const cached = snapshot.searchOrders.get(key)
+    if (cached) return cached.map((id) => snapshot.sources.find((source) => source.id === id)).filter(Boolean)
+    const ids = rankedSources(snapshot, query).map((source) => source.id)
+    if (snapshot.searchOrders.size >= 32) snapshot.searchOrders.delete(snapshot.searchOrders.keys().next().value)
+    snapshot.searchOrders.set(key, ids)
+    return ids.map((id) => snapshot.sources.find((source) => source.id === id)).filter(Boolean)
   }
 
   #snapshotBytes(snapshot) {
@@ -434,6 +453,7 @@ export class ResearchContextIndex {
   }
 
   #reserve(snapshot, result) {
+    this.#assertLive(snapshot)
     if (!packetWithin(result, TOOL_MAX_BYTES, TOOL_MAX_TOKENS)) return this.#limited(snapshot)
     const resultBytes = bytes(result)
     const resultTokens = estimateContextTokens(JSON.stringify(result))
