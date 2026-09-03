@@ -18,6 +18,16 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.7.9',
+      date: '2026-09-03',
+      items: [
+        '研究模式未选择或手动引用组件时，默认参考当前画板全部资料，包含屏幕外组件',
+        '按问题相关性分配资料权重，先提供精简目录和关键证据，再按需检索、分页读取，减少无关内容占用上下文',
+        '新增当前画板资料提示与目录，可仅关闭本次自动引用；手动引用优先，发送失败保留草稿',
+        '改进资料快照、分页续读与取消清理，复用已授权网页正文，并对文件变化、不可读或截断内容明确提示'
+      ]
+    },
+    {
       version: '0.7.8',
       date: '2026-09-02',
       items: [
@@ -122,6 +132,16 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.7.9',
+      date: '2026-09-03',
+      items: [
+        'Research conversations now reference all material on the current canvas, including offscreen components, when nothing is selected or explicitly referenced',
+        'Allocate context by question relevance: start with a compact catalog and key evidence, then search and read additional material on demand within bounded context budgets',
+        'Added a current-canvas context indicator and source directory with a per-message opt-out; explicit references take priority and failed sends preserve the draft',
+        'Improved source snapshots, paginated reading, and cancellation cleanup; reuse captured authenticated webpage text and clearly report changed, unreadable, or truncated files'
+      ]
+    },
     {
       version: '0.7.8',
       date: '2026-09-02',

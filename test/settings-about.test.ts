@@ -151,18 +151,32 @@ describe('Sherlock About settings', () => {
     expect(zh.productName).toBe('Sherlock')
     expect(zh.version).toBe('9.8.7')
     expect(zh.releaseNotes[0]).toEqual({
-      version: '0.7.8',
-      date: '2026-09-02',
+      version: '0.7.9',
+      date: '2026-09-03',
       items: [
-        '右侧对话引用链接组件时可读取已授权网页的完整正文，与画布中的思维导图和总结提炼保持一致'
+        '研究模式未选择或手动引用组件时，默认参考当前画板全部资料，包含屏幕外组件',
+        '按问题相关性分配资料权重，先提供精简目录和关键证据，再按需检索、分页读取，减少无关内容占用上下文',
+        '新增当前画板资料提示与目录，可仅关闭本次自动引用；手动引用优先，发送失败保留草稿',
+        '改进资料快照、分页续读与取消清理，复用已授权网页正文，并对文件变化、不可读或截断内容明确提示'
       ]
     })
-    expect(zh.releaseNotes[1]?.version).toBe('0.7.7')
+    expect(zh.releaseNotes[1]?.version).toBe('0.7.8')
     expect(en.version).toBe('9.8.7')
+    expect(en.releaseNotes[0]?.version).toBe('0.7.9')
+    expect(en.releaseNotes[0]?.date).toBe('2026-09-03')
     expect(en.releaseNotes[0]?.items).toEqual([
-      'Right-side conversations can now read the full authenticated webpage body when a link component is referenced, matching canvas mind maps and summaries'
+      'Research conversations now reference all material on the current canvas, including offscreen components, when nothing is selected or explicitly referenced',
+      'Allocate context by question relevance: start with a compact catalog and key evidence, then search and read additional material on demand within bounded context budgets',
+      'Added a current-canvas context indicator and source directory with a per-message opt-out; explicit references take priority and failed sends preserve the draft',
+      'Improved source snapshots, paginated reading, and cancellation cleanup; reuse captured authenticated webpage text and clearly report changed, unreadable, or truncated files'
     ])
-    expect(en.releaseNotes[1]?.version).toBe('0.7.7')
+    expect(en.releaseNotes[1]?.version).toBe('0.7.8')
+
+    const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+    const lockfile = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'))
+    expect(manifest.version).toBe(zh.releaseNotes[0]?.version)
+    expect(lockfile.version).toBe(manifest.version)
+    expect(lockfile.packages[''].version).toBe(manifest.version)
 
     const manualCheck = vi.fn(async () => ({
       phase: 'up-to-date' as const,
