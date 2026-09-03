@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { runInNewContext } from 'node:vm'
 import { describe, expect, it, vi } from 'vitest'
 import { ResearchContextIndex, estimateContextTokens } from '../packages/dsh-research-task-runtime/context-index.js'
 
@@ -8,6 +11,48 @@ const source = (id, text, overrides = {}) => ({
   text,
   ...overrides
 })
+
+const requireModule = createRequire(import.meta.url)
+
+function fakeModule() {
+  let fake
+  const target = function () {}
+  fake = new Proxy(target, {
+    get: () => fake,
+    apply: () => fake,
+    construct: () => ({})
+  })
+  return fake
+}
+
+async function loadActualResearchSerializer() {
+  const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+  const react = requireModule('react')
+  const jsxRuntime = requireModule('react/jsx-runtime')
+  let descriptor
+  runInNewContext(source, {
+    AbortController: globalThis.AbortController,
+    Date: globalThis.Date,
+    TextEncoder: globalThis.TextEncoder,
+    setTimeout,
+    clearTimeout,
+    btoa: globalThis.btoa,
+    URL: globalThis.URL,
+    document: undefined,
+    window: { __ModuleLoader__: { load(value) { descriptor = value } }
+    }
+  })
+  if (!descriptor) throw new Error('conversation bundle did not register')
+  return descriptor.factory((id) => {
+    if (id === 'react') return react
+    if (id === 'react/jsx-runtime') return jsxRuntime
+    return fakeModule()
+  })
+}
+
+function serializedHeader(client, packet) {
+  return client.serializeResearchPrompt([], '', [], [], [], { version: 1, ...packet })
+}
 
 describe('ResearchContextIndex', () => {
   it('ranks Chinese evidence, keeps the question outside evidence, and isolates snapshots by session', async () => {
@@ -32,13 +77,78 @@ describe('ResearchContextIndex', () => {
   it('honors initial serialized-byte and token budgets including wrappers for long multilingual text', async () => {
     const index = new ResearchContextIndex({ loadFileText: async () => '' })
     const packet = await index.prepare({
-      sessionId: 'budget', query: 'gold rates', contextWindow: 1_000_000,
+      sessionId: 'budget', query: 'English market', contextWindow: 1_000_000,
       sources: [source('long', `${'黄金风险 English market data '.repeat(12_000)}\n尾部`)]
     })
 
     expect(Buffer.byteLength(packet.initialContext, 'utf8')).toBeLessThanOrEqual(32 * 1024)
     expect(estimateContextTokens(packet.initialContext)).toBeLessThanOrEqual(6_000)
     expect(packet.initialContext).toMatch(/截断|剩余/i)
+  })
+
+  it('reserves the actual V1 serializer envelope, including suffix escaping, inside the initial budget', async () => {
+    const client = await loadActualResearchSerializer()
+    const index = new ResearchContextIndex({ loadFileText: async () => '' })
+    const packet = await index.prepare({
+      sessionId: 'serialized-budget', query: '市场证据',
+      sources: Array.from({ length: 4 }, (_, number) => source(
+        `quoted-${number}`, `${'市场证据 \u241f "quoted" 多语言资料。'.repeat(8_000)}`
+      ))
+    })
+    const prompt = serializedHeader(client, packet)
+
+    expect(prompt).toContain('\\u241f')
+    expect(Buffer.byteLength(prompt, 'utf8')).toBeLessThanOrEqual(32 * 1024)
+    expect(estimateContextTokens(prompt)).toBeLessThanOrEqual(6_000)
+  })
+
+  it('uses exactly eight percent of a known small context window and rejects an impossible minimum packet', async () => {
+    const client = await loadActualResearchSerializer()
+    const index = new ResearchContextIndex({ loadFileText: async () => '' })
+    const packet = await index.prepare({
+      sessionId: 'small-window', query: '黄金', contextWindow: 4_096,
+      sources: [source('gold', '黄金失效边界的实际利率证据。')]
+    })
+    const prompt = serializedHeader(client, packet)
+
+    expect(estimateContextTokens(prompt)).toBeLessThanOrEqual(Math.floor(4_096 * 0.08))
+    await expect(index.prepare({
+      sessionId: 'impossible-window', query: '黄金', contextWindow: 64,
+      sources: [source('tiny', '黄金证据')]
+    })).rejects.toThrow(/窗口|预算|context/i)
+  })
+
+  it('allocates a bounded catalog and reports only evidence provenance that remains in the packet', async () => {
+    const index = new ResearchContextIndex({ loadFileText: async () => '' })
+    const packet = await index.prepare({
+      sessionId: 'many-titles', query: 'needle evidence',
+      sources: Array.from({ length: 100 }, (_, number) => source(`s${number}`, `NEEDLE_EVIDENCE_${number} needle evidence`, {
+        title: `资料 ${number} ${'长标题'.repeat(100)}`
+      }))
+    })
+    const evidence = packet.initialContext.split('\n\n证据：\n')[1]
+    const evidenceIds = [...evidence.matchAll(/^\[([^｜\]]+)/gmu)].map((match) => match[1])
+
+    expect(packet.initialContext).toContain('另有')
+    expect(evidence).toMatch(/NEEDLE_EVIDENCE_\d+/)
+    expect(packet.initialSourceIds).toEqual(evidenceIds)
+  })
+
+  it('keeps match-free sources in the catalog without using their body as initial evidence filler', async () => {
+    const index = new ResearchContextIndex({ loadFileText: async () => '' })
+    const packet = await index.prepare({
+      sessionId: 'relevance', query: '黄金失效边界',
+      sources: [
+        source('gold', '黄金失效边界：实际利率上行会压低估值。', { title: '黄金报告' }),
+        source('travel', '旅行打包清单：袜子、护照、充电器。', { title: '旅行清单' })
+      ]
+    })
+    const evidence = packet.initialContext.split('\n\n证据：\n')[1]
+
+    expect(packet.initialContext).toContain('旅行清单')
+    expect(packet.initialSourceIds).toEqual(['gold'])
+    expect(evidence).toContain('实际利率')
+    expect(evidence).not.toContain('袜子、护照、充电器')
   })
 
   it('limits initial evidence identifiers as well as context text when many sources match', async () => {
