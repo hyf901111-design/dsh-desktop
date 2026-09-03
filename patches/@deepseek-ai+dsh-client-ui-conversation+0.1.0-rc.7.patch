@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..f8f9b69 100644
+index 1dd0e89..2d909b9 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -8752,7 +8752,7 @@ index 1dd0e89..f8f9b69 100644
 +					"data-research-selection-actions": "",
 +					role: "toolbar",
 +					"aria-label": "选中组件操作",
-+					style: { left: `${selectionActionPosition.left}px`, top: `${selectionActionPosition.top}px`, width: 'max-content', maxWidth: 'calc(100% - 16px)', flexWrap: 'nowrap' },
++					style: { left: `${selectionActionPosition.left}px`, top: `${selectionActionPosition.top}px`, width: 'max-content', maxWidth: 'calc(100% - 16px)', flexWrap: 'nowrap', zIndex: 44 },
 +					children: [(0, react_jsx_runtime.jsxs)("div", {
 +						style: { display: 'flex', gap: 2, minWidth: 0, maxWidth: '100%', overflowX: 'auto', scrollbarWidth: 'none' },
 +						"data-research-selection-action-row": "",
@@ -8804,7 +8804,7 @@ index 1dd0e89..f8f9b69 100644
 +					})]
 +				}), createSelection === null ? null : (0, react_jsx_runtime.jsxs)('div', {
 +					ref: createPopoverRef, role: 'dialog', 'aria-label': '基于所选创建', 'data-research-create-popover': '',
-+					style: { position: 'absolute', zIndex: 30, left: Math.max(12, Math.min(snapshot.canvasSize.width - 372, createSelection.position.left - 180)), top: Math.max(12, Math.min(snapshot.canvasSize.height - 300, createSelection.position.top + 8)), width: 360, maxWidth: 'calc(100% - 24px)', boxSizing: 'border-box', padding: 14, borderRadius: 12, background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l2)', boxShadow: 'var(--dsw-shadow-lv2)' },
++					style: { position: 'absolute', zIndex: 45, left: Math.max(12, Math.min(snapshot.canvasSize.width - 372, createSelection.position.left - 180)), top: Math.max(12, Math.min(snapshot.canvasSize.height - 300, createSelection.position.top + 8)), width: 360, maxWidth: 'calc(100% - 24px)', boxSizing: 'border-box', padding: 14, borderRadius: 12, background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l2)', boxShadow: 'var(--dsw-shadow-lv2)' },
 +					onPointerDown: (event) => { event.stopPropagation(); if (!event.target?.closest?.('textarea,button')) event.preventDefault(); }, onKeyDown: (event) => { event.stopPropagation(); if (event.key === 'Escape') closeSelectedCreate(); },
 +					children: [
 +					(0, react_jsx_runtime.jsx)('textarea', { ref: createInputRef, 'aria-label': '创建需求', value: createPrompt, maxLength: RESEARCH_CONTAINER_MAX_PROMPT, rows: 4, disabled: createPreparing, placeholder: '想基于这些资料创建什么？', onInput: (event) => setCreatePrompt(event.currentTarget.value), onChange: (event) => setCreatePrompt(event.currentTarget.value), style: { width: '100%', boxSizing: 'border-box', resize: 'vertical', font: 'inherit', fontSize: 13, lineHeight: '20px', padding: 8, borderRadius: 8, color: 'var(--dsw-alias-label-primary)', background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l2)' } }),

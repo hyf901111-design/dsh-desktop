@@ -90,6 +90,7 @@ describe('selection actions at viewport edges', () => {
     await m.event('click', m.query('button[aria-label="思维导图"]'))
     const menu = m.query('[data-research-mind-map-menu]')
     const bottom = Number.parseFloat(m.query('[data-research-selection-actions]').style.top)
+    expect(Number(m.query('[data-research-selection-actions]').style.zIndex)).toBeGreaterThan(40)
     const available = menu.style.top === 'auto' ? bottom - 56 : height - bottom - 14
     expect(Number.parseFloat(menu.style.maxHeight)).toBeLessThanOrEqual(available)
     expect(available).toBeGreaterThan(0)
