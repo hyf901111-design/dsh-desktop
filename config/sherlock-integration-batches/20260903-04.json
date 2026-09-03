@@ -427,6 +427,61 @@
           "待新integration构建后真实客户端回归，不接受或晋升main，不上传、发布、推送或公证。"
         ],
         "generatedAt": "2026-09-03T04:18:37.852Z"
+      },
+      "merged": {
+        "mergeCommit": "6fc19d653a967ac723550a039a9e9aefa33e4f6d",
+        "verificationCommit": "6fc19d653a967ac723550a039a9e9aefa33e4f6d",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "6fc19d653a967ac723550a039a9e9aefa33e4f6d",
+            "completedAt": "2026-09-03T04:19:00.309Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6fc19d653a967ac723550a039a9e9aefa33e4f6d",
+            "completedAt": "2026-09-03T04:19:00.309Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-canvas-clipboard.test.ts",
+              "test/preload-main-frame.test.ts",
+              "test/research-file-preview.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "test/settings-about.test.ts",
+              "test/build-and-run.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-clipboard-ui.test.ts test/research-canvas-clipboard.test.ts test/preload-main-frame.test.ts test/research-file-preview.test.ts test/research-context-bridge.test.ts test/research-file-drop.test.ts test/research-task-runtime.test.js test/sherlock-composer-workspace-ui.test.ts test/settings-about.test.ts test/build-and-run.test.ts --reporter=dot",
+            "verifiedCommit": "6fc19d653a967ac723550a039a9e9aefa33e4f6d",
+            "completedAt": "2026-09-03T04:19:00.309Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-03T04:19:00.309Z"
       }
     }
   ],
