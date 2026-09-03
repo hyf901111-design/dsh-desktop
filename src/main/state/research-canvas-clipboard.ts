@@ -19,6 +19,7 @@ type RecordValue = Record<string, unknown>
 export type ClipboardAsset = { assetId: string; name: string; size: number; mimeType: string; previewable: boolean }
 export type ClipboardNode = RecordValue & { id: string; kind: string; x: number; y: number; assetId?: string }
 export type ResearchClipboardRead = { kind: 'empty' } | { kind: 'text'; text: string } | { kind: 'files'; files: ClipboardAsset[] } | { kind: 'components'; nodes: ClipboardNode[] }
+export type ResearchClipboardAdmission = ResearchFilePreviewDescriptor & { path: string }
 export interface NativeResearchClipboard {
   availableFormats(): string[]
   has?(format: string): boolean
@@ -82,14 +83,17 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.sizeMode === 'auto' || input.sizeMode === 'manual') output.sizeMode = input.sizeMode
   for (const key of ['title', 'displayName', 'name', 'messageId', 'generationDetail']) if (input[key] !== undefined) output[key] = boundedText(input[key], 2048)
   for (const key of ['excerpt', 'sourceText', 'containerPrompt']) if (input[key] !== undefined) output[key] = boundedText(input[key])
-  if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = input.titleMode === 'manual' ? 'manual' : 'auto' }
+  if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = ['custom', 'manual'].includes(String(input.titleMode)) ? 'custom' : 'auto' }
   if (input.containerSpec !== undefined) {
     const spec = record(input.containerSpec)
     if (!['markdown', 'table', 'chart', 'kpi', 'web', 'mind-map'].includes(String(spec.type))) throw new Error('组件类型不支持复制。')
     output.containerSpec = safeSpec(spec)
   }
   if (String(input.kind).startsWith('generated-')) {
-    output.generationStatus = input.containerSpec !== undefined || typeof input.excerpt === 'string' && input.excerpt.trim() ? 'completed' : 'failed'
+    output.generationStatus = input.containerSpec !== undefined ? 'completed'
+      : ['queued', 'running', 'pending'].includes(String(input.generationStatus)) ? 'interrupted'
+      : ['draft', 'failed', 'cancelled', 'interrupted'].includes(String(input.generationStatus)) ? input.generationStatus
+      : input.containerSpec !== undefined || typeof input.excerpt === 'string' && input.excerpt.trim() ? 'completed' : 'failed'
     if (input.kind === 'generated-container') output.refreshMinutes = 0
   }
   if (input.creationMode === 'selection') output.creationMode = 'selection'
@@ -161,7 +165,7 @@ export class ResearchCanvasClipboard {
       return data.toString()
     }
     const html = this.options.clipboard.readHTML()
-    if (!html.includes('sherlock-research-clipboard')) return null
+    if (!/<meta\b[^>]*\bname\s*=\s*(?:"sherlock-research-clipboard"|'sherlock-research-clipboard'|sherlock-research-clipboard(?=\s|\/?>))/i.test(html)) return null
     if (html.length > MAX_HTML_ENVELOPE) throw new Error('Sherlock 剪贴板引用无效，请重新复制。')
     const ref = html.match(/<meta name="sherlock-research-clipboard" content="([a-f0-9]{48})">/)?.[1]
     if (!ref) throw new Error('Sherlock 剪贴板引用无效，请重新复制。')
@@ -256,13 +260,14 @@ export class ResearchCanvasClipboard {
       } catch (error) { throw new Error(error instanceof Error && !('code' in error) ? error.message : '剪贴板资源已失效或不可用，请重新复制。') }
     })
   }
-  async admit(value: unknown): Promise<ResearchFilePreviewDescriptor | null> {
+  async admit(value: unknown): Promise<ResearchClipboardAdmission | null> {
     try {
       const input = record(value)
       if (!exactKeys(input, ['assetId', 'sessionId', 'nodeId']) || !opaque(input.assetId) || !boundedId(input.sessionId) || !boundedId(input.nodeId)) return null
       const asset = await this.loadAsset(input.assetId)
       if (!asset.manifest.previewable) return null
-      return this.options.registry.admitFinder({ path: asset.path, sessionId: input.sessionId, nodeId: input.nodeId })
+      const descriptor = await this.options.registry.admitFinder({ path: asset.path, sessionId: input.sessionId, nodeId: input.nodeId })
+      return descriptor === null ? null : { ...descriptor, path: asset.path }
     } catch { return null }
   }
   async open(value: unknown): Promise<{ ok: boolean }> {
