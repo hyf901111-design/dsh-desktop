@@ -173,7 +173,7 @@ function excerpt(source, terms, maximum = 1_500) {
 }
 
 function metadata(source, aliases = []) {
-  const nodeIds = source.sourceNodeIds.slice(0, 16).map((value) => shorten(value, 64))
+  const nodeIds = source.sourceNodeIds.slice(0, 16)
   return {
     sourceId: source.id,
     title: shorten(source.title, 120),
@@ -238,20 +238,43 @@ function initialPacketWithin(packet, maxBytes, maxTokens) {
   return textBytes(prompt) <= maxBytes && estimateContextTokens(prompt) <= maxTokens
 }
 
+function fitMetadata(entry, fits) {
+  const result = { ...entry }
+  // Keep trusted source IDs intact; trim only optional presentation metadata.
+  while (!fits(result) && result.aliases?.length) {
+    result.aliases = result.aliases.slice(0, -1)
+    if (!result.aliases.length) delete result.aliases
+  }
+  while (!fits(result) && result.sourceNodeIds?.length > 1) {
+    result.sourceNodeIds = result.sourceNodeIds.slice(0, -1)
+    result.sourceNodeIdsTruncated = true
+  }
+  if (!fits(result) && result.sourceUrl) result.sourceUrl = shorten(result.sourceUrl, 64)
+  if (!fits(result)) result.title = shorten(result.title, 48)
+  return result
+}
+
 function boundedCollection(base, entries, { nextCursor, partialCursor } = {}) {
   const sources = []
-  for (const entry of entries) {
-    const candidate = { ...base, sources: [...sources, entry], ...(nextCursor ? { cursor: nextCursor, limited: true } : {}) }
-    if (!packetWithin(candidate, TOOL_MAX_BYTES, TOOL_MAX_TOKENS)) break
+  const packet = (values) => {
+    const omitted = values.length < entries.length
+    const cursor = omitted ? partialCursor?.(values.length) : nextCursor
+    return { ...base, sources: values, ...(cursor || omitted ? { ...(cursor ? { cursor } : {}), limited: true } : {}) }
+  }
+  for (let entry of entries) {
+    const fits = (value) => packetWithin(packet([...sources, value]), TOOL_MAX_BYTES, TOOL_MAX_TOKENS)
+    if (!fits(entry) && sources.length === 0) {
+      const text = entry.text
+      const marker = '\n[资料内容尚有剩余；可按来源 ID 继续读取。]'
+      entry = fitMetadata(entry, (value) => fits(typeof text === 'string' ? { ...value, text: `${shorten(text, 180)}${marker}` } : value))
+      if (typeof text === 'string' && !fits(entry)) {
+        entry.text = `${trimText(text, (value) => fits({ ...entry, text: `${value}${marker}` }))}${marker}`
+      }
+    }
+    if (!fits(entry)) break
     sources.push(entry)
   }
-  const omitted = sources.length < entries.length
-  const cursor = omitted ? partialCursor?.(sources.length) : nextCursor
-  return {
-    ...base,
-    sources,
-    ...(cursor || omitted ? { ...(cursor ? { cursor } : {}), limited: true } : {})
-  }
+  return packet(sources)
 }
 
 export class ResearchContextIndex {
@@ -267,7 +290,8 @@ export class ResearchContextIndex {
     this.snapshots = new Map()
   }
 
-  async prepare({ sessionId, query, sources, contextWindow } = {}) {
+  async prepare({ sessionId, query, sources, contextWindow } = {}, { signal } = {}) {
+    signal?.throwIfAborted()
     const owner = safeString(sessionId, MAX_ID_LENGTH, '会话标识')
     const requestedQuery = safeString(query, 8_000, '研究问题')
     if (!Array.isArray(sources) || sources.length === 0 || sources.length > 1_000) throw new Error('资料数量无效')
@@ -278,7 +302,10 @@ export class ResearchContextIndex {
       toolBytes: 0, toolTokens: 0, searchOrders: new Map()
     }
     const candidates = rankedSources(snapshot, requestedQuery).filter((source) => source.status === 'pending').slice(0, INITIAL_FILE_LOADS)
-    await Promise.all(candidates.map((source) => this.#hydrate(snapshot, source)))
+    const loads = await Promise.allSettled(candidates.map((source) => this.#hydrate(snapshot, source, signal, true)))
+    signal?.throwIfAborted()
+    const failure = loads.find((result) => result.status === 'rejected')
+    if (failure) throw failure.reason
     this.#assertFresh(snapshot)
     this.#store(snapshot)
     try {
@@ -289,7 +316,8 @@ export class ResearchContextIndex {
     }
   }
 
-  async list(sessionId, { snapshotId, cursor } = {}) {
+  async list(sessionId, { snapshotId, cursor } = {}, { signal } = {}) {
+    signal?.throwIfAborted()
     const snapshot = this.#snapshot(sessionId, snapshotId)
     const offset = parsePageCursor(cursor, 'list', snapshot.sources.length)
     const values = snapshot.sources.slice(offset, offset + LIST_PAGE_SIZE).map((source) => metadata(source, aliasesFor(snapshot, source)))
@@ -301,49 +329,57 @@ export class ResearchContextIndex {
     return this.#reserve(snapshot, result)
   }
 
-  async search(sessionId, { snapshotId, query, cursor } = {}) {
+  async search(sessionId, { snapshotId, query, cursor } = {}, { signal } = {}) {
+    signal?.throwIfAborted()
     const snapshot = this.#snapshot(sessionId, snapshotId)
     const requestedQuery = safeString(query, 8_000, '检索问题')
     const ranking = this.#searchRanking(snapshot, requestedQuery)
     const offset = parsePageCursor(cursor, 'search', ranking.length)
     const next = Math.min(offset + SEARCH_FILE_LOADS, ranking.length)
     for (const source of ranking.slice(offset, next)) {
+      signal?.throwIfAborted()
       if (source.status !== 'pending') continue
-      await this.#hydrate(snapshot, source)
+      await this.#hydrate(snapshot, source, signal)
+      signal?.throwIfAborted()
       this.#assertLive(snapshot)
     }
     const terms = queryTerms(requestedQuery)
     const matches = ranking.slice(offset, next)
-      .filter((source) => source.text && terms.some((term) => source.text.toLocaleLowerCase().includes(term) || source.title.toLocaleLowerCase().includes(term)))
-      .map((source) => ({ ...metadata(source, aliasesFor(snapshot, source)), text: `${NOTICE}\n${excerpt(source, terms, 1_000)}` }))
-    const result = boundedCollection({ totalSources: snapshot.sources.length }, matches, {
-      nextCursor: next < ranking.length ? pageCursor('search', next) : undefined
+      .map((source, position) => ({ source, position: offset + position }))
+      .filter(({ source }) => source.text && terms.some((term) => source.text.toLocaleLowerCase().includes(term) || source.title.toLocaleLowerCase().includes(term)))
+    const entries = matches.map(({ source }) => ({ ...metadata(source, aliasesFor(snapshot, source)), text: `${NOTICE}\n${excerpt(source, terms, 600)}` }))
+    const result = boundedCollection({ totalSources: snapshot.sources.length }, entries, {
+      nextCursor: next < ranking.length ? pageCursor('search', next) : undefined,
+      partialCursor: (count) => pageCursor('search', matches[count].position)
     })
     return this.#reserve(snapshot, result)
   }
 
-  async read(sessionId, { snapshotId, sourceId, cursor } = {}) {
+  async read(sessionId, { snapshotId, sourceId, cursor } = {}, { signal } = {}) {
+    signal?.throwIfAborted()
     const snapshot = this.#snapshot(sessionId, snapshotId)
     const id = safeString(sourceId, MAX_ID_LENGTH, '资料标识')
     const source = snapshot.sources.find((candidate) => candidate.id === id)
     if (!source) throw new Error('资料不存在')
     if (source.status === 'pending') {
-      await this.#hydrate(snapshot, source)
+      await this.#hydrate(snapshot, source, signal)
+      signal?.throwIfAborted()
       this.#assertLive(snapshot)
     }
     const aliases = aliasesFor(snapshot, source)
     if (!source.text || source.status === 'unavailable' || source.status === 'unsupported') {
-      return this.#reserve(snapshot, { ...metadata(source, aliases), text: '', status: source.status === 'pending' ? 'unavailable' : source.status, limited: false, message: statusText(source) })
+      const result = { ...metadata(source, aliases), text: '', status: source.status === 'pending' ? 'unavailable' : source.status, limited: false, message: statusText(source) }
+      return this.#reserve(snapshot, fitMetadata(result, (value) => packetWithin(value, TOOL_MAX_BYTES, TOOL_MAX_TOKENS)))
     }
     const points = codePoints(source.text)
     const offset = parseReadCursor(cursor, points.length)
-    const base = { ...metadata(source, aliases), text: '', status: source.status, limited: false }
     const suffix = source.truncated ? '\n[该资料在捕获时已截断，之后内容不可用。]' : ''
     const whole = points.slice(offset).join('')
+    const marker = '\n[本次仅返回部分资料；请使用 cursor 继续读取。]'
+    const base = fitMetadata({ ...metadata(source, aliases), text: '', status: source.status, limited: false }, (value) => packetWithin({ ...value, text: `${NOTICE}\n${points.slice(offset, offset + 128).join('')}${marker}${suffix}`, cursor: offset + 128, limited: true }, TOOL_MAX_BYTES, TOOL_MAX_TOKENS))
     let content = trimText(whole, (candidate) => packetWithin({ ...base, text: `${NOTICE}\n${candidate}${suffix}` }, TOOL_MAX_BYTES, TOOL_MAX_TOKENS))
     let consumed = codePoints(content).length
     if (consumed < codePoints(whole).length) {
-      const marker = '\n[本次仅返回部分资料；请使用 cursor 继续读取。]'
       content = trimText(whole, (candidate) => packetWithin({ ...base, text: `${NOTICE}\n${candidate}${marker}${suffix}`, cursor: offset + codePoints(candidate).length, limited: true }, TOOL_MAX_BYTES, TOOL_MAX_TOKENS))
       consumed = codePoints(content).length
       const result = { ...base, text: `${NOTICE}\n${content}${marker}${suffix}`, cursor: offset + consumed, limited: true }
@@ -426,14 +462,18 @@ export class ResearchContextIndex {
     return packet
   }
 
-  async #hydrate(snapshot, source) {
+  async #hydrate(snapshot, source, signal, preparing = false) {
+    signal?.throwIfAborted()
     if (source.loaded) return source
     source.loaded = true
     try {
       const loaded = await this.loadFileText(Object.freeze({
         id: source.id, kind: source.kind, title: source.title, path: source.path,
         revision: source.revision ? { ...source.revision } : undefined
-      }))
+      }), signal)
+      signal?.throwIfAborted()
+      if (preparing) this.#assertFresh(snapshot)
+      else this.#assertLive(snapshot)
       const returned = typeof loaded === 'string' ? { text: loaded } : loaded
       if (!returned || typeof returned !== 'object' || typeof returned.text !== 'string') throw new Error('资料读取失败')
       if (source.revision && (!returned.revision || !sameRevision(source.revision, cloneRevision(returned.revision)))) throw new Error('资料版本已变化')
@@ -444,6 +484,12 @@ export class ResearchContextIndex {
       source.status = source.truncated ? 'truncated' : 'ready'
       this.#enforceStoredBytes(snapshot)
     } catch {
+      if (signal?.aborted) {
+        source.loaded = false
+        signal.throwIfAborted()
+      }
+      if (preparing) this.#assertFresh(snapshot)
+      else this.#assertLive(snapshot)
       source.text = ''
       source.status = 'unavailable'
     }

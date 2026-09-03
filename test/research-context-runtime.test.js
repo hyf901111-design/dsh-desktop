@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream'
+import { EventEmitter } from 'node:events'
 import { mkdtemp, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -21,11 +22,12 @@ function fixture(options = {}) {
     return new Response(JSON.stringify({ sources: [{ id: 'report', title: '报告', kind: 'assistant-result', text: '失效边界：库存。\n'.repeat(300), sourceNodeIds: ['original'] }] }))
   }, ...options })
   cleanups.push(() => runtime.dispose())
-  const request = async (body, headers = {}, method = 'POST') => {
+  const request = async (body, headers = {}, method = 'POST', observe) => {
     const req = Readable.from([JSON.stringify(body)])
     Object.assign(req, { method, headers: { host: '127.0.0.1:4310', origin: 'http://127.0.0.1:4310', ...headers }, socket: { remoteAddress: '127.0.0.1' } })
     let result
-    const res = { writeHead: (status) => { result = { status } }, end: (text) => { result.body = JSON.parse(text) } }
+    const res = Object.assign(new EventEmitter(), { writeHead: (status) => { result = { status } }, end: (text) => { result.body = JSON.parse(text); res.writableEnded = true } })
+    observe?.(req, res)
     await routes.get(PREPARE_CONTEXT_PATH).handler(req, res)
     return result
   }
@@ -35,6 +37,167 @@ const prepareArgs = { sessionId: 'parent', captureId: 'capture', query: '失效�
 const exec = { agent: { session: { id: 'parent' } } }
 
 describe('Research context runtime', () => {
+  it('cancels a stalled snapshot response body and leaves no late prepare after disconnect', async () => {
+    let streamStarted = false, cancelled = false, response, stream
+    const f = fixture({ fetch: async () => new Response(new ReadableStream({
+      start(controller) { stream = controller; streamStarted = true; controller.enqueue(Buffer.from('{"sources":')) },
+      cancel() { cancelled = true }
+    })) })
+    const pending = f.request(prepareArgs, {}, 'POST', (_req, res) => { response = res })
+    await vi.waitFor(() => expect(streamStarted).toBe(true))
+    response.emit('close')
+    try {
+      await vi.waitFor(() => expect(cancelled).toBe(true), { timeout: 200 })
+      expect(await pending).toBeUndefined()
+    } finally {
+      // Dispose must not keep a cancelled body reader alive either.
+      if (!cancelled) stream.close()
+      await pending
+      await f.runtime.dispose()
+    }
+  })
+  it('disposes an admitted prepare while its HTTP request body is still pending', async () => {
+    let finish, settled = false
+    const f = fixture({ readJsonBody: () => new Promise((resolve) => { finish = () => resolve(prepareArgs) }) })
+    const pending = f.request(prepareArgs).finally(() => { settled = true })
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    const disposing = f.runtime.dispose()
+    try {
+      await vi.waitFor(() => expect(settled).toBe(true), { timeout: 200 })
+    } finally {
+      finish()
+      await pending
+      await disposing
+    }
+  })
+  it('rejects a pre-aborted execution signal without returning a registered tool result', async () => {
+    const f = fixture()
+    const { body: packet } = await f.request(prepareArgs)
+    for (const kind of ['list', 'search', 'read']) {
+      const args = { snapshotId: packet.snapshotId, ...(kind === 'search' ? { query: '库存' } : {}), ...(kind === 'read' ? { sourceId: 'report' } : {}) }
+      await expect(f.tools.get(`research_context_${kind}`).execute(args, { ...exec, signal: AbortSignal.abort() })).rejects.toThrow()
+    }
+  })
+  it('cancels the owned first scan extraction on exec abort and never starts the next file', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'context-scan-abort-')))
+    cleanups.push(() => rm(root, { recursive: true, force: true }))
+    const path = join(root, 'file.md')
+    await writeFile(path, '库存')
+    const revision = await stat(path)
+    const started = [], cleaned = []
+    let finish
+    const f = fixture({ fetch: async () => new Response(JSON.stringify({ sources: Array.from({ length: 8 }, (_, i) => ({ id: `f${i}`, title: '报告', kind: 'file', path, revision })) })), loadFileText: async (source, signal) => {
+      started.push(source.id)
+      if (source.id !== 'f4') return 'ordinary'
+      return new Promise((resolve, reject) => {
+        finish = () => resolve('late')
+        signal?.addEventListener('abort', () => { cleaned.push(source.id); reject(signal.reason) }, { once: true })
+      })
+    } })
+    const { body: packet } = await f.request(prepareArgs)
+    const controller = new AbortController()
+    const pending = f.tools.get('research_context_search').execute({ snapshotId: packet.snapshotId, query: '库存' }, { ...exec, signal: controller.signal })
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    controller.abort()
+    finish()
+    await expect(pending).rejects.toThrow()
+    expect(started.slice(0, 4).sort()).toEqual(['f0', 'f1', 'f2', 'f3'])
+    expect(started.slice(4)).toEqual(['f4'])
+    expect(cleaned).toEqual(['f4'])
+  })
+  it.each(['disconnect', 'dispose'])('aborts in-flight prepare extraction and cleans request listeners on %s', async (mode) => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'context-prepare-abort-')))
+    cleanups.push(() => rm(root, { recursive: true, force: true }))
+    const path = join(root, 'file.md')
+    await writeFile(path, '库存')
+    const revision = await stat(path)
+    let extractionSignal, finish, request, response
+    let cleaned = false
+    const f = fixture({ fetch: async () => new Response(JSON.stringify({ sources: [{ id: 'f', title: '报告', kind: 'file', path, revision }] })), loadFileText: async (_source, signal) => new Promise((resolve, reject) => {
+      extractionSignal = signal
+      finish = () => resolve('late')
+      signal?.addEventListener('abort', () => { cleaned = true; reject(signal.reason) }, { once: true })
+    }) })
+    const pending = f.request(prepareArgs, {}, 'POST', (req, res) => { request = req; response = res })
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    if (mode === 'disconnect') response.emit('close')
+    else await f.runtime.dispose()
+    finish()
+    const result = await pending
+    expect(extractionSignal?.aborted).toBe(true)
+    expect(cleaned).toBe(true)
+    expect(result?.status ?? 400).toBeGreaterThanOrEqual(400)
+    expect(request.listenerCount('aborted')).toBe(0)
+    expect(response.listenerCount('close')).toBe(0)
+  })
+  it('aborts the extractor on frozen-loader timeout and skips a pre-aborted load', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'context-timeout-abort-')))
+    cleanups.push(() => rm(root, { recursive: true, force: true }))
+    const path = join(root, 'file.md')
+    await writeFile(path, '库存')
+    const revision = await stat(path)
+    let cleaned = false, extractionSignal
+    const extract = vi.fn((_source, signal) => new Promise((_resolve, reject) => {
+      extractionSignal = signal
+      signal?.addEventListener('abort', () => { cleaned = true; reject(signal.reason) }, { once: true })
+    }))
+    const load = createFrozenResearchFileLoader(extract, { timeoutMs: 20 })
+    await expect(load({ path, revision }, AbortSignal.abort())).rejects.toThrow()
+    expect(extract).not.toHaveBeenCalled()
+    await expect(load({ path, revision })).rejects.toThrow()
+    expect(extractionSignal?.aborted).toBe(true)
+    expect(cleaned).toBe(true)
+  })
+  it('continues budget-truncated Chinese search pages through every registered tool result', async () => {
+    const f = fixture({ fetch: async () => new Response(JSON.stringify({ sources: Array.from({ length: 8 }, (_, i) => ({
+      id: `s${i}`, title: `市场研究${i}`, kind: 'artifact', text: `库存${'中'.repeat(1200)}${i}`
+    })) })) })
+    const { body: packet } = await f.request(prepareArgs)
+    const tool = f.tools.get('research_context_search')
+    const ids = []
+    let cursor
+    for (let page = 0; page < 8; page++) {
+      const args = { snapshotId: packet.snapshotId, query: '库存', ...(cursor ? { cursor } : {}) }
+      const value = await tool.execute(args, exec)
+      expect(validateJsonSchemaValue(tool.output.schema, value)).toEqual([])
+      const rendered = tool.output.render(args, value)[0].text
+      expect(Buffer.byteLength(rendered)).toBeLessThanOrEqual(12288)
+      expect(estimateContextTokens(rendered)).toBeLessThanOrEqual(1800)
+      expect(value.sources.length).toBeGreaterThan(0)
+      ids.push(...value.sources.map((source) => source.sourceId))
+      if (!value.cursor) break
+      expect(value.cursor).not.toBe(cursor)
+      cursor = value.cursor
+    }
+    expect(ids).toEqual(['s0', 's1', 's2', 's3', 's4', 's5', 's6', 's7'])
+  })
+  it('returns useful first entries and advancing cursors even when metadata alone exceeds the tool budget', async () => {
+    const sources = Array.from({ length: 2 }, (_, i) => ({
+      id: `源${'甲'.repeat(200)}${i}`, title: '长标题'.repeat(170), kind: 'artifact',
+      sourceUrl: `https://example.com/${'中文路径'.repeat(400)}`,
+      sourceNodeIds: Array.from({ length: 16 }, (_, n) => `节点${n}${'乙'.repeat(250)}`),
+      text: `库存${'中文'.repeat(900)}${i}`
+    }))
+    const f = fixture({ fetch: async () => new Response(JSON.stringify({ sources })) })
+    const { body: packet } = await f.request(prepareArgs)
+    for (const kind of ['list', 'search', 'read']) {
+      const tool = f.tools.get(`research_context_${kind}`)
+      const args = { snapshotId: packet.snapshotId, ...(kind === 'search' ? { query: '库存' } : {}), ...(kind === 'read' ? { sourceId: sources[0].id } : {}) }
+      const value = await tool.execute(args, exec)
+      expect(value.status).not.toBe('limited')
+      expect(validateJsonSchemaValue(tool.output.schema, value)).toEqual([])
+      const entry = kind === 'read' ? value : value.sources[0]
+      expect(entry?.sourceId).toBe(sources[0].id)
+      expect(entry.sourceNodeIds[0]).toBe(sources[0].sourceNodeIds[0])
+      expect(entry.sourceNodeIdsTruncated).toBe(true)
+      if (kind !== 'list') expect(entry.text).toContain('库存')
+      expect(value.cursor).toBeDefined()
+      if (kind === 'read') expect(value.cursor).toBeGreaterThan(0)
+      const rendered = tool.output.render(args, value)[0].text
+      expect(Buffer.byteLength(rendered)).toBeLessThanOrEqual(12288)
+      expect(estimateContextTokens(rendered)).toBeLessThanOrEqual(1800)
+    }
+  })
   it('composes actual plugin setup with existing generation routes and cleanup', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'research-context-plugin-'))
     cleanups.push(() => rm(directory, { recursive: true, force: true }))
@@ -71,6 +234,7 @@ describe('Research context runtime', () => {
       const input = { snapshotId: packet.snapshotId, ...args }
       expect(tool.parameters.properties.sessionId).toBeUndefined()
       expect(tool.parameters.properties.path).toBeUndefined()
+      expect(tool.parameters.properties.signal).toBeUndefined()
       const value = await tool.execute(input, exec)
       expect(validateJsonSchemaValue(tool.output.schema, value)).toEqual([])
       const blocks = tool.output.render(input, value)
@@ -79,6 +243,7 @@ describe('Research context runtime', () => {
       expect(estimateContextTokens(blocks[0].text)).toBeLessThanOrEqual(1800)
       await expect(tool.execute(input, { agent: { session: { id: 'other' } } })).rejects.toThrow()
       await expect(tool.execute({ ...input, sessionId: 'parent', path: '/private/secret' }, exec)).rejects.toThrow()
+      await expect(tool.execute({ ...input, signal: {} }, exec)).rejects.toThrow()
       await expect(tool.execute(input, {})).rejects.toThrow()
     }
     await f.runtime.dispose()
@@ -213,7 +378,7 @@ describe('Research context runtime', () => {
     const file = await stat(path)
     let finish, observedIndex
     const original = ResearchContextIndex.prototype.prepare
-    const observation = vi.spyOn(ResearchContextIndex.prototype, 'prepare').mockImplementation(function (args) { observedIndex = this; return original.call(this, args) })
+    const observation = vi.spyOn(ResearchContextIndex.prototype, 'prepare').mockImplementation(function (...args) { observedIndex = this; return original.apply(this, args) })
     cleanups.push(() => observation.mockRestore())
     const f = fixture({ loadFileText: () => new Promise((resolve) => { finish = resolve }), fetch: async () => new Response(JSON.stringify({ sources: [{ id: 'file', title: '报告', kind: 'file', path, revision: { size: file.size, mtimeMs: file.mtimeMs } }] })) })
     const pending = f.request(prepareArgs)

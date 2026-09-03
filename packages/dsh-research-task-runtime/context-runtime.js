@@ -1,6 +1,7 @@
 import { realpath, stat } from 'node:fs/promises'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { ResearchContextIndex } from './context-index.js'
+import { abortable } from './context-abort.js'
 
 export const PREPARE_CONTEXT_PATH = '/sherlock/research-context/prepare'
 const unavailable = () => new Error('研究资料当前不可用，请重新发送问题。')
@@ -12,23 +13,31 @@ function exact(value, keys, required = keys) {
 function boundedId(value) { return typeof value === 'string' && value.trim().length > 0 && value.length <= 256 }
 function sameRevision(a, b) { return a?.size === b?.size && a?.mtimeMs === b?.mtimeMs }
 
-export function createFrozenResearchFileLoader(loadFileText, { timeoutMs = 15_000 } = {}) {
-  return async (source) => {
-    let timer
+export function createFrozenResearchFileLoader(loadFileText, { timeoutMs = 15_000, cooperativeCancellation = false } = {}) {
+  return async (source, signal) => {
+    const controller = new AbortController()
+    const onAbort = () => controller.abort(signal.reason)
+    if (signal?.aborted) onAbort()
+    else signal?.addEventListener('abort', onAbort, { once: true })
+    const timer = setTimeout(() => controller.abort(unavailable()), timeoutMs)
+    const activeSignal = controller.signal
     try {
-      return await Promise.race([
-        (async () => {
-          if (!source.revision || typeof source.path !== 'string' || await realpath(source.path) !== source.path) throw unavailable()
-          const before = await stat(source.path)
-          if (!before.isFile() || before.size > 64 * 1024 * 1024 || !sameRevision(source.revision, before)) throw unavailable()
-          const text = await loadFileText(source)
-          const after = await stat(source.path)
-          if (await realpath(source.path) !== source.path || !after.isFile() || !sameRevision(before, after) || !sameRevision(source.revision, after)) throw unavailable()
-          return { text, revision: { size: after.size, mtimeMs: after.mtimeMs } }
-        })(),
-        new Promise((_, reject) => { timer = setTimeout(() => reject(unavailable()), timeoutMs) })
-      ])
-    } catch { throw unavailable() } finally { clearTimeout(timer) }
+      activeSignal.throwIfAborted()
+      if (!source.revision || typeof source.path !== 'string' || await abortable(() => realpath(source.path), activeSignal) !== source.path) throw unavailable()
+      activeSignal.throwIfAborted()
+      const before = await abortable(() => stat(source.path), activeSignal)
+      activeSignal.throwIfAborted()
+      if (!before.isFile() || before.size > 64 * 1024 * 1024 || !sameRevision(source.revision, before)) throw unavailable()
+      const run = () => loadFileText(source, activeSignal)
+      // Only the owned production extractor promises to settle after cleanup.
+      // Arbitrary legacy injections still get a bounded wait and no late insert.
+      const text = await (cooperativeCancellation ? run() : abortable(run, activeSignal))
+      activeSignal.throwIfAborted()
+      const after = await abortable(() => stat(source.path), activeSignal)
+      if (await abortable(() => realpath(source.path), activeSignal) !== source.path || !after.isFile() || !sameRevision(before, after) || !sameRevision(source.revision, after)) throw unavailable()
+      activeSignal.throwIfAborted()
+      return { text, revision: { size: after.size, mtimeMs: after.mtimeMs } }
+    } catch { throw unavailable() } finally { clearTimeout(timer); signal?.removeEventListener('abort', onAbort) }
   }
 }
 
@@ -63,10 +72,12 @@ async function resolveParent(ctx, sessionId) {
   throw unavailable()
 }
 
-export function registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText, env = process.env, fetch: fetchSnapshot = globalThis.fetch } = {}) {
-  const index = new ResearchContextIndex({ loadFileText: createFrozenResearchFileLoader(loadFileText) })
+export function registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText, cooperativeFileCancellation = false, env = process.env, fetch: fetchSnapshot = globalThis.fetch } = {}) {
+  const index = new ResearchContextIndex({ loadFileText: createFrozenResearchFileLoader(loadFileText, { cooperativeCancellation: cooperativeFileCancellation }) })
   let disposed = false
+  let disposal
   const controllers = new Set()
+  const operations = new Set()
   const disposers = []
   const ensureLive = () => {
     if (!disposed) return
@@ -75,35 +86,61 @@ export function registerResearchContextRuntime(ctx, { isTrustedRequest, readJson
     index.snapshots.clear()
     throw unavailable()
   }
-  const prepare = async (input) => {
+  const runOperation = async (signal, run) => {
+    ensureLive()
+    const controller = new AbortController()
+    const onAbort = () => controller.abort(signal.reason)
+    if (signal?.aborted) onAbort()
+    else signal?.addEventListener('abort', onAbort, { once: true })
+    controllers.add(controller)
+    const operation = (async () => { controller.signal.throwIfAborted(); return run(controller) })()
+    operations.add(operation)
+    try { return await operation } finally {
+      operations.delete(operation)
+      controllers.delete(controller)
+      signal?.removeEventListener('abort', onAbort)
+    }
+  }
+  const prepare = async (input, signal) => runOperation(signal, async (controller) => {
     exact(input, ['sessionId', 'captureId', 'query'])
     if (!boundedId(input.sessionId) || !boundedId(input.captureId) || typeof input.query !== 'string' || !input.query.trim() || input.query.length > 8000) throw unavailable()
     ensureLive()
-    await resolveParent(ctx, input.sessionId)
+    await abortable(() => resolveParent(ctx, input.sessionId), controller.signal)
     ensureLive()
     const url = new URL(env.SHERLOCK_RESEARCH_CONTEXT_URL)
     if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.username || url.password || url.search || url.hash || url.pathname !== '/' || !env.SHERLOCK_RESEARCH_CONTEXT_TOKEN) throw unavailable()
-    const controller = new AbortController()
-    controllers.add(controller)
     const timer = setTimeout(() => controller.abort(), 15_000)
     try {
-      const response = await fetchSnapshot(`${url.origin}/snapshot`, { method: 'POST', redirect: 'error', signal: controller.signal, headers: { authorization: `Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: input.sessionId, captureId: input.captureId }) })
+      const response = await abortable(() => fetchSnapshot(`${url.origin}/snapshot`, { method: 'POST', redirect: 'error', signal: controller.signal, headers: { authorization: `Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: input.sessionId, captureId: input.captureId }) }), controller.signal)
       if (!response.ok || Number(response.headers.get('content-length')) > 32 * 1024 * 1024 + 1024) throw unavailable()
       const chunks = []
       let length = 0
-      for await (const chunk of response.body) {
-        length += chunk.length
-        if (length > 32 * 1024 * 1024 + 1024) { controller.abort(); throw unavailable() }
-        chunks.push(Buffer.from(chunk))
+      const reader = response.body.getReader()
+      const cancelRead = () => { void reader.cancel().catch(() => {}) }
+      controller.signal.addEventListener('abort', cancelRead, { once: true })
+      try {
+        while (true) {
+          const { value: chunk, done } = await abortable(() => reader.read(), controller.signal)
+          if (done) break
+          length += chunk.length
+          if (length > 32 * 1024 * 1024 + 1024) { controller.abort(); throw unavailable() }
+          chunks.push(Buffer.from(chunk))
+        }
+      } finally {
+        controller.signal.removeEventListener('abort', cancelRead)
+        if (controller.signal.aborted) await reader.cancel().catch(() => {})
+        reader.releaseLock()
       }
       ensureLive()
+      controller.signal.throwIfAborted()
       const snapshot = JSON.parse(Buffer.concat(chunks).toString('utf8'))
       exact(snapshot, ['sources'])
-      const packet = await index.prepare({ sessionId: input.sessionId, query: input.query, sources: snapshot.sources })
+      const packet = await index.prepare({ sessionId: input.sessionId, query: input.query, sources: snapshot.sources }, { signal: controller.signal })
+      controller.signal.throwIfAborted()
       ensureLive()
       return packet
-    } finally { clearTimeout(timer); controllers.delete(controller) }
-  }
+    } finally { clearTimeout(timer) }
+  })
   const send = (res, status, value) => {
     const body = JSON.stringify(value)
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'content-length': Buffer.byteLength(body) })
@@ -113,7 +150,25 @@ export function registerResearchContextRuntime(ctx, { isTrustedRequest, readJson
     disposers.push(ctx.webServer.register({ kind: 'exact', path: PREPARE_CONTEXT_PATH, handler: async (req, res) => {
       if (req.method !== 'POST') return send(res, 405, { error: '资料请求方式无效。' })
       if (!isTrustedRequest(req, true)) return send(res, 403, { error: '资料请求被拒绝。' })
-      try { send(res, 200, await prepare(await readJsonBody(req))) } catch { send(res, 400, { error: unavailable().message }) }
+      const controller = new AbortController()
+      const onAbort = () => controller.abort()
+      const onClose = () => { if (!res.writableEnded) onAbort() }
+      req.on('aborted', onAbort)
+      res.on('close', onClose)
+      if (req.aborted || res.destroyed) onAbort()
+      try {
+        await runOperation(controller.signal, async (operationController) => {
+          const input = await abortable(() => readJsonBody(req), operationController.signal)
+          const packet = await prepare(input, operationController.signal)
+          operationController.signal.throwIfAborted()
+          send(res, 200, packet)
+        })
+      } catch {
+        if (!controller.signal.aborted && !res.destroyed) send(res, 400, { error: unavailable().message })
+      } finally {
+        req.off('aborted', onAbort)
+        res.off('close', onClose)
+      }
     } }))
     for (const kind of ['list', 'search', 'read']) {
       const parameters = {
@@ -133,22 +188,27 @@ export function registerResearchContextRuntime(ctx, { isTrustedRequest, readJson
             exact(args, Object.keys(parameters), Object.keys(parameters).filter((key) => parameters[key].required))
             const sessionId = exec.agent?.session?.id
             if (!boundedId(sessionId)) throw unavailable()
-            const result = await index[kind](sessionId, args)
-            ensureLive()
-            return result
+            return await runOperation(exec.signal, async (controller) => {
+              const result = await index[kind](sessionId, args, { signal: controller.signal })
+              controller.signal.throwIfAborted()
+              ensureLive()
+              return result
+            })
           } catch { throw unavailable() }
         }
       })))
     }
   } catch (error) { for (const dispose of disposers.reverse()) dispose(); throw error }
   return {
-    async dispose() {
-      if (disposed) return
+    dispose() {
+      if (disposal) return disposal
       disposed = true
       for (const controller of controllers) controller.abort()
       controllers.clear()
       for (const dispose of disposers.reverse()) dispose()
       index.snapshots.clear()
+      disposal = Promise.allSettled([...operations]).then(() => {})
+      return disposal
     }
   }
 }
