@@ -134,6 +134,18 @@ describe('ResearchContextIndex', () => {
     expect(packet.initialSourceIds).toEqual(evidenceIds)
   })
 
+  it('reserves an explicit catalog continuation even when accepted rows nearly consume its allocation', async () => {
+    const index = new ResearchContextIndex({ loadFileText: async () => '' })
+    const packet = await index.prepare({
+      sessionId: 'catalog-continuation', query: '主题', contextWindow: 12_000,
+      sources: Array.from({ length: 3 }, (_, number) => source(
+        `源${'甲'.repeat(60)}${number}`, '主题相关证据', { title: `题${'乙'.repeat(70)}` }
+      ))
+    })
+
+    expect(packet.initialContext).toMatch(/另有 \d+ 项资料未列出；可调用 research_context_list 继续。/)
+  })
+
   it('keeps match-free sources in the catalog without using their body as initial evidence filler', async () => {
     const index = new ResearchContextIndex({ loadFileText: async () => '' })
     const packet = await index.prepare({
@@ -149,6 +161,24 @@ describe('ResearchContextIndex', () => {
     expect(packet.initialSourceIds).toEqual(['gold'])
     expect(evidence).toContain('实际利率')
     expect(evidence).not.toContain('袜子、护照、充电器')
+  })
+
+  it('does not treat a two-character security query as broad, while common summary intent remains diverse', async () => {
+    const index = new ResearchContextIndex({ loadFileText: async () => '' })
+    const specific = await index.prepare({
+      sessionId: 'two-character', query: '黄金',
+      sources: [
+        source('gold', '黄金的失效边界与实际利率。'),
+        source('travel', '旅行打包清单：袜子、护照、充电器。')
+      ]
+    })
+    const broad = await index.prepare({
+      sessionId: 'broad-intent', query: '总结当前画板资料',
+      sources: [source('one', '第一项独立结论。'), source('two', '第二项独立结论。'), source('three', '第三项独立结论。')]
+    })
+
+    expect(specific.initialSourceIds).toEqual(['gold'])
+    expect(broad.initialSourceIds).toEqual(expect.arrayContaining(['one', 'two', 'three']))
   })
 
   it('limits initial evidence identifiers as well as context text when many sources match', async () => {
