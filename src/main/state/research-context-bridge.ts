@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
+import { parseResearchHtmlArtifact, researchHtmlText } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import { stat } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server } from 'node:http'
 import { extname } from 'node:path'
@@ -58,6 +59,7 @@ function containerText(value: unknown): { text: string; truncated: boolean } {
   const spec = value as Node
   const heading = boundedText(spec.title, 512)
   let body = ''
+  if (spec.type === 'html' && parseResearchHtmlArtifact(spec) !== null) body = boundedText(researchHtmlText(spec.html))
   if (spec.type === 'markdown' || spec.type === 'mind-map') body = boundedText(spec.content ?? spec.markdown)
   if (spec.type === 'table' && Array.isArray(spec.columns) && Array.isArray(spec.rows) && spec.rows.length) {
     const rows = boundedItems(spec.rows, 500).filter(Array.isArray).map((row) => boundedItems(row, 40).map(scalar))

@@ -2851,7 +2851,7 @@ describe('Research canvas file drops', () => {
     assertTop(new client.ResearchWorkspaceRegistry(storage).for('raised-generation').getSnapshot())
   })
 
-  it('preserves selected-create copy provenance but refuses source-free retry and nonnative outputs', async () => {
+  it('preserves selected-create copy provenance but refuses source-free retry and unauthorized external web outputs', async () => {
     const client = await loadClientBundle('dsh-client-ui-conversation')
     const parse = client.parseResearchCanvasArtifactNodes as any
     const raw = { id: 'copy', messageId: 'copy', kind: 'generated-container', title: '副本', excerpt: '100', x: 0, y: 0, creationMode: 'selection', sourceNodeIds: ['old-file'], generationSources: [{ id: 'old-file', type: 'file', title: '财报.pdf' }], containerPrompt: '对比', refreshMinutes: 0, generationStatus: 'failed', containerSpec: { version: 1, type: 'markdown', title: '结果', content: '100' } }
@@ -2863,6 +2863,86 @@ describe('Research canvas file drops', () => {
     expect(workspace.getSnapshot().artifacts[0].generationError).toContain('来源快照不可用')
     workspace.setArtifacts([{ ...raw, generationSources: undefined, generationStatus: 'completed', containerSpec: { version: 1, type: 'web', title: '不应授权', url: 'https://example.com' } }])
     expect(workspace.getSnapshot().artifacts).toHaveLength(0)
+  })
+
+  it('completes, persists, copies and reuses an HTML deliverable as readable selected evidence', async () => {
+    const client = await loadConversationClient()
+    const storage = memoryStorage({})
+    const workspace = new client.ResearchWorkspaceRegistry(storage).for('html-create')
+    workspace.setArtifacts([{ id: 'source', kind: 'assistant-result', messageId: 'source', title: '活动方案', excerpt: '9月8日，广州，报名截止9月6日。', x: 0, y: 0 }])
+    const target = workspace.beginGeneration('create', ['source'], { x: 700, y: 0 }, '生成互动活动页')
+    expect(workspace.attachGenerationTask(target.id, { taskId: 'html-task', canvasNodeId: target.id, state: 'running', lastSeq: 1 })).toBe(true)
+    const spec = { version: 1, type: 'html', title: '研究员活动', html: '<!doctype html><html><head><style>.private-css{color:red}</style></head><body><h1>研究员活动</h1><p>9月8日 &amp; 广州</p><button onclick="this.textContent=\'报名说明\'">报名</button><script>const privateCode = 1;</script></body></html>' }
+    expect(client.parseResearchContainerSpec(spec)).toEqual(spec)
+    expect(workspace.applyGenerationInspection(target.id, { taskId: 'html-task', canvasNodeId: target.id, state: 'completed', lastSeq: 2, finalOutput: JSON.stringify(spec) })).toBe(true)
+    const node = workspace.getSnapshot().artifacts.find((n: any) => n.id === target.id)
+    expect(node).toMatchObject({ generationStatus: 'completed', containerSpec: spec, width: 960, height: 680 })
+    const evidence = client.researchGenerationSources(workspace.getSnapshot(), [target.id], true)
+    expect(evidence[0].text).toContain('9月8日 & 广州')
+    expect(evidence[0].text).not.toMatch(/privateCode|private-css|onclick|<html/)
+    expect(new client.ResearchWorkspaceRegistry(storage).for('html-create').getSnapshot().artifacts.find((n: any) => n.id === target.id).containerSpec).toEqual(spec)
+    await workspace.insertClipboardNodes({ kind: 'components', nodes: [node] }, { x: 1700, y: 0 })
+    expect(workspace.getSnapshot().artifacts.at(-1)).toMatchObject({ containerSpec: spec, creationMode: 'selection' })
+    const { renderToStaticMarkup } = requireModule('react-dom/server')
+    const html = renderToStaticMarkup(requireModule('react').createElement(client.ResearchCanvasArtifactCard, { node, sessionId: 'html-create' }))
+    expect(html).toContain('data-research-html-artifact')
+    expect(html).toContain('sandbox="allow-scripts"')
+    expect(html).toContain('srcDoc=')
+    expect(html).not.toContain('allow-same-origin')
+    const exported = client.researchCanvasExportDescriptor(node, 'html-create')
+    expect(exported).toMatchObject({ kind: 'text', format: 'html', suggestedName: '研究员活动.html' })
+    expect(exported.content).toContain('sandbox="allow-scripts"')
+    expect(exported.content).toContain('frame-src')
+  })
+
+  it('rejects malformed HTML specs and exposes an explicit byte-limit failure', async () => {
+    const client = await loadConversationClient()
+    const good = { version: 1, type: 'html', title: '页面', html: '<main>正文</main>' }
+    for (const invalid of [{ ...good, html: '' }, { ...good, html: {} }, { ...good, url: 'https://example.com' }, { ...good, html: '文'.repeat(66_667) }]) expect(client.parseResearchContainerSpec(invalid)).toBeNull()
+    const workspace = new client.ResearchWorkspaceRegistry(null).for('html-limit')
+    const draft = workspace.createContainerDraft()
+    workspace.updateContainerDraft(draft.id, '活动页')
+    workspace.beginContainerGeneration(draft.id, '活动页')
+    workspace.attachGenerationTask(draft.id, { taskId: 'large', canvasNodeId: draft.id, state: 'running', lastSeq: 1 })
+    workspace.applyGenerationInspection(draft.id, { taskId: 'large', canvasNodeId: draft.id, state: 'completed', lastSeq: 2, finalOutput: JSON.stringify({ ...good, html: '文'.repeat(66_667) }) })
+    expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ generationStatus: 'failed', generationError: expect.stringMatching(/HTML.*200.*KB/) })
+  })
+
+  it('keeps host and canvas HTML parser, static evidence, and sandbox documents equivalent', async () => {
+    const client = await loadConversationClient()
+    const host = await import('../packages/dsh-research-task-runtime/html-artifact.js')
+    for (const html of ['<h1>活动 &amp; 地点</h1><script>secret</script>', '<head><style>private</style></head><p>&#x4E2D;文</p>', '<p>safe</p><script>unclosed', '<main>' + '"'.repeat(150_000) + '</main>', '文'.repeat(66_667)]) {
+      const spec = { version: 1, type: 'html', title: '一致性', html }
+      expect(client.parseResearchContainerSpec(spec)).toEqual(host.parseResearchHtmlArtifact(spec))
+      expect(client.buildResearchHtmlPreview(html, spec.title) === host.buildResearchHtmlPreview(html, spec.title)).toBe(true)
+      if (host.parseResearchHtmlArtifact(spec)) {
+        const node = { id: 'html', title: spec.title, kind: 'generated-container', generationStatus: 'completed', containerSpec: spec }
+        expect(client.researchGenerationSources({ files: [], artifacts: [node] }, ['html'], true)?.[0]?.text).toBe(host.researchHtmlText(html) || spec.title)
+      }
+    }
+  })
+
+  it('requires a fail-closed Trusted Types bootstrap and rejects prebuilt child realms', async () => {
+    const client = await loadConversationClient()
+    const host = await import('../packages/dsh-research-task-runtime/html-artifact.js')
+    for (const html of ['<iframe></iframe>', '<FRAME src="about:blank">', '<object></object>', '<embed>', '<svg><foreignObject><iframe></iframe></foreignObject></svg>']) {
+      const spec = { version: 1, type: 'html', title: '嵌套页面', html }
+      expect(host.parseResearchHtmlArtifact(spec)).toBeNull()
+      expect(client.parseResearchContainerSpec(spec)).toBeNull()
+      expect(host.buildResearchHtmlPreview(html, spec.title)).toContain('HTML 页面格式无效')
+      expect(client.buildResearchHtmlPreview(html, spec.title)).toContain('HTML 页面格式无效')
+    }
+    const html = '<button onclick="this.textContent=\'完成\'">开始</button>'
+    for (const build of [host.buildResearchHtmlPreview, client.buildResearchHtmlPreview]) {
+      const preview = build(html, '安全交互')
+      expect(preview).toContain("require-trusted-types-for 'script'")
+      expect(preview).toContain("trusted-types 'none'")
+      expect(preview).toContain('RTCPeerConnection')
+      expect(preview).toContain('configurable:false')
+      expect(preview).toContain('writable:false')
+      expect(preview).toContain('isHTML')
+      expect(preview).toContain('当前浏览器不支持安全交互网页')
+    }
   })
 
   it('rejects empty or oversized selected-create prompts before inserting a target', async () => {

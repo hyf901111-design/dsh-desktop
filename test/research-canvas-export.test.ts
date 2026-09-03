@@ -32,6 +32,12 @@ function dependencies(options: {
 }
 
 describe('Research canvas export service', () => {
+  it('saves HTML through the parent-owned save dialog without opening it', async () => {
+    const f = dependencies()
+    const html = '<!doctype html><iframe sandbox="allow-scripts" srcdoc="&lt;h1&gt;活动&lt;/h1&gt;"></iframe>'
+    expect(await saveResearchCanvasExport({ kind: 'text', format: 'html', suggestedName: '活动.html', content: html }, f.value)).toEqual({ status: 'saved' })
+    expect(f.writeFile).toHaveBeenCalledWith('/tmp/export-result.html', html, expect.anything())
+  })
   it('validates exact text requests, cleans names, and enforces the selected extension', async () => {
     const fixture = dependencies({ filePath: '/tmp/user-choice.bad' })
     await expect(saveResearchCanvasExport({

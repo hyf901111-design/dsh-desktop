@@ -18,6 +18,12 @@ export function secureWindow(
   })
 
   window.webContents.on('will-frame-navigate', (event) => {
+    // Offline generated documents cannot borrow another link's URL authorization.
+    // CSP blocks subresources; this guard also blocks a frame's own navigation.
+    if (/^about:srcdoc(?:[?#]|$)/i.test(event.frame?.url ?? '') || /^about:srcdoc(?:[?#]|$)/i.test(event.initiator?.url ?? '')) {
+      event.preventDefault()
+      return
+    }
     if (event.isMainFrame) {
       const initiator = event.initiator
       const mainFrame = window.webContents.mainFrame
