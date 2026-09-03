@@ -11,6 +11,11 @@ import {
   formatExitCode,
   updateReadyStability
 } from '../src/main/runtime/harness-runtime'
+
+it('passes context credentials only as trusted Harness environment overrides', () => {
+  const options = buildHarnessSpawnOptions('/tmp/launch', '/tmp/harness', 'darwin', { PATH: '/usr/bin', SHERLOCK_RESEARCH_CONTEXT_TOKEN: 'stale' }, undefined, undefined, undefined, undefined, undefined, { url: 'http://127.0.0.1:45124', token: 'context-secret' })
+  expect(options.env).toMatchObject({ SHERLOCK_RESEARCH_CONTEXT_URL: 'http://127.0.0.1:45124', SHERLOCK_RESEARCH_CONTEXT_TOKEN: 'context-secret' })
+})
 import { canGrantWindowPermission, isTrustedAppUrl } from '../src/main/security-policy'
 import {
   isAbortedNavigationError,

@@ -17,6 +17,7 @@ export interface HarnessRuntimeOptions {
   bundledResearchTaskEntry: string
   localSearchUrl: string
   localSearchToken: string
+  researchContext?: { url: string; token: string }
   dshHome: string
   logPath: string
   launchProcess(
@@ -48,7 +49,8 @@ export function buildHarnessSpawnOptions(
   bundledWebSearchEntry?: string,
   localSearch?: { url: string; token: string },
   bundledMarketInstallerEntry?: string,
-  bundledResearchTaskEntry?: string
+  bundledResearchTaskEntry?: string,
+  researchContext?: { url: string; token: string }
 ): SpawnOptionsWithoutStdio {
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...parentEnvironment } = environment
   const pathKey = platform === 'win32' ? 'Path' : 'PATH'
@@ -74,6 +76,12 @@ export function buildHarnessSpawnOptions(
         ? {
             SHERLOCK_LOCAL_SEARCH_URL: localSearch.url,
             SHERLOCK_LOCAL_SEARCH_TOKEN: localSearch.token
+          }
+        : {}),
+      ...(researchContext
+        ? {
+            SHERLOCK_RESEARCH_CONTEXT_URL: researchContext.url,
+            SHERLOCK_RESEARCH_CONTEXT_TOKEN: researchContext.token
           }
         : {}),
       NO_COLOR: '1',
@@ -206,7 +214,8 @@ export class HarnessRuntime {
             token: this.options.localSearchToken
           },
           this.options.bundledMarketInstallerEntry,
-          this.options.bundledResearchTaskEntry
+          this.options.bundledResearchTaskEntry,
+          this.options.researchContext
         )
       )
     } catch (error) {

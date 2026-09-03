@@ -30,12 +30,14 @@ async function loadClientBundle(
   packageName: string,
   modules: Record<string, unknown> = {},
   dshDesktop?: {
+    researchContext?: { capture(request: { sessionId: string }): Promise<{ captureId: string; totalSources: number }> }
     researchFilesAvailable?(paths: string[]): Promise<boolean[]>
     researchCanvasStorage?: {
       getItem(key: string): string | null
       setItem(key: string, value: string): boolean
     }
-  }
+  },
+  fetch?: typeof globalThis.fetch
 ): Promise<ClientBundle> {
   const source = await readFile(
     `node_modules/@deepseek-ai/${packageName}/lib/client.js`,
@@ -47,8 +49,13 @@ async function loadClientBundle(
 
   runInNewContext(source, {
     AbortController: globalThis.AbortController,
+    Date: globalThis.Date,
+    TextEncoder: globalThis.TextEncoder,
+    setTimeout,
+    clearTimeout,
     window: {
       dshDesktop,
+      fetch,
       __ModuleLoader__: {
         load(value: BundleDescriptor) {
           descriptor = value
@@ -119,6 +126,242 @@ function createSnapshotStore<T>(initial: T) {
   }
 }
 
+describe('progressive canvas context', () => {
+  const packet = { snapshotId: 'snap-1', totalSources: 3, initialSourceIds: ['source-2'], initialContext: 'FROZEN EVIDENCE: research_context_read snap-1' }
+  async function fixture(options: { capture?: () => Promise<{ captureId: string; totalSources: number }>; prepare?: () => Promise<unknown>; send?: () => Promise<void> } = {}) {
+    const capture = vi.fn(options.capture ?? (async () => ({ captureId: 'capture-1', totalSources: 3 })))
+    const requests: Array<{ path: string; body: any }> = []
+    const fetch = vi.fn(async (path: string, init: RequestInit) => {
+      requests.push({ path, body: JSON.parse(String(init.body)) })
+      return { ok: true, json: async () => options.prepare ? options.prepare() : structuredClone(packet) }
+    })
+    const client = await loadClientBundle('dsh-client-ui-conversation', {
+      '@deepseek-ai/dsh-client-runtime/client': { createSnapshotStore }
+    }, { researchContext: { capture }, researchFilesAvailable: async (paths) => paths.map(() => true) }, fetch as any)
+    const registry = new client.ResearchWorkspaceRegistry(memoryStorage({}))
+    const workspace = registry.for('s')
+    workspace.addAssistantResult({ messageId: 'm', text: 'Private source body', at: { x: 5000, y: 5000 } })
+    const sent: Array<{ prompt: string; images: string[] }> = []
+    const hub = new client.InputHub({ get: (name: string) => name === 'conversation' ? {
+      sendSession: async (_session: unknown, prompt: string, images: string[]) => { sent.push({ prompt, images }); await options.send?.() }
+    } : undefined }, (key: string) => key, registry)
+    const shell = new client.SessionInputShell({ actx: {}, defaultSink: () => undefined })
+    shell.setDraft('黄金的失效边界是什么')
+    hub.shells.set('s', shell)
+    hub.setResearchActive('s', true)
+    return { client, hub, shell, workspace, sent, capture, requests, fetch,
+      send: () => hub.sink({ sessionId: 's' }, shell.snapshot.draft, [...shell.snapshot.imageIds], 'queue') }
+  }
+
+  it('captures and prepares the current session before clearing the real draft and images', async () => {
+    const gate = deferred<unknown>()
+    const f = await fixture({ prepare: () => gate.promise })
+    f.shell.addImages(['i1'])
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.requests).toHaveLength(1))
+    expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    expect(f.shell.snapshot.imageIds).toEqual(['i1'])
+    expect(f.sent).toEqual([])
+    expect(f.capture).toHaveBeenCalledWith({ sessionId: 's' })
+    expect(f.requests).toEqual([{ path: '/sherlock/research-context/prepare', body: { sessionId: 's', captureId: 'capture-1', query: '黄金的失效边界是什么' } }])
+    gate.resolve(packet)
+    await operation
+    expect(f.client.parseResearchPrompt(f.sent[0]!.prompt)).toEqual({ text: '黄金的失效边界是什么', files: [], canvasContext: { version: 1, ...packet } })
+    expect(f.sent[0]!.images).toEqual(['i1'])
+    expect(f.shell.snapshot.draft).toBe('')
+    expect(f.shell.snapshot.imageIds).toEqual([])
+  })
+
+  it.each(['selection', 'explicit artifact', 'explicit file', 'chat reference', 'nonresearch', 'optout', 'empty'])('never captures for %s', async (reason) => {
+    const f = await fixture()
+    let text = f.shell.snapshot.draft
+    if (reason === 'selection') f.workspace.updateSelection([f.workspace.getSnapshot().artifacts[0].id], 'replace')
+    if (reason === 'explicit artifact') {
+      const ref = f.client.researchArtifactReference(f.workspace.getSnapshot().artifacts[0])
+      text = await f.client.researchArtifactReferenceCodec.serialize(ref.ref, new AbortController().signal) + text
+    }
+    if (reason === 'explicit file') text = await serializedResearchReferences(f.client, [{ id: 'f', name: 'a.txt', path: '/a.txt' }], text)
+    if (reason === 'chat reference') f.shell.actions.insertFilePaths(['/a.txt'])
+    if (reason === 'nonresearch') f.hub.setResearchActive('s', false)
+    if (reason === 'optout') f.shell.setResearchContextOptOut(true)
+    if (reason === 'empty') text = '  \n '
+    await f.hub.sink({ sessionId: 's' }, text, [], 'queue')
+    expect(f.capture).not.toHaveBeenCalled()
+    expect(f.requests).toEqual([])
+    if (reason === 'empty') expect(f.sent).toEqual([])
+    else expect(f.client.parseResearchPrompt(f.sent[0]!.prompt).canvasContext).toBeUndefined()
+  })
+
+  it('skips prepare for an empty capture and uses bounded/image-only retrieval queries without changing user text', async () => {
+    const empty = await fixture({ capture: async () => ({ captureId: 'zero', totalSources: 0 }) })
+    await empty.send()
+    expect(empty.requests).toEqual([])
+    expect(empty.sent[0]!.prompt).toBe('黄金的失效边界是什么')
+    const images = await fixture()
+    images.shell.setDraft('')
+    images.shell.addImages(['image'])
+    await images.send()
+    expect(images.requests[0]!.body.query).toBe('总结当前画板资料')
+    expect(images.client.parseResearchPrompt(images.sent[0]!.prompt).text).toBe('')
+    const long = await fixture()
+    long.shell.setDraft('问'.repeat(9000))
+    await long.send()
+    expect(long.requests[0]!.body.query).toHaveLength(8000)
+    expect(long.client.parseResearchPrompt(long.sent[0]!.prompt).text).toHaveLength(9000)
+  })
+
+  it('keeps draft and images with a visible generic notice when preparation rejects', async () => {
+    const f = await fixture({ prepare: async () => { throw new Error('/private/token secret') } })
+    f.shell.addImages(['i1'])
+    await f.send()
+    expect(f.sent).toEqual([])
+    expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    expect(f.shell.snapshot.imageIds).toEqual(['i1'])
+    expect(f.shell.notices.getSnapshot()).toMatchObject({ level: 'error' })
+    expect(f.shell.notices.getSnapshot().text).not.toContain('private')
+    expect(f.shell.snapshot.researchContextPreparing).toBe(false)
+  })
+
+  it.each(['draft', 'images', 'shell', 'mode', 'optout'])('does not send a stale async preparation after %s changes', async (change) => {
+    const gate = deferred<unknown>()
+    const f = await fixture({ prepare: () => gate.promise })
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.requests).toHaveLength(1))
+    if (change === 'draft') f.shell.setDraft('new question')
+    if (change === 'images') f.shell.addImages(['new-image'])
+    if (change === 'shell') f.hub.shells.delete('s')
+    if (change === 'mode') f.hub.setResearchActive('s', false)
+    if (change === 'optout') f.shell.setResearchContextOptOut(true)
+    gate.resolve(packet)
+    await operation
+    expect(f.sent).toEqual([])
+    expect(f.shell.snapshot.draft).toBe(change === 'draft' ? 'new question' : '黄金的失效边界是什么')
+  })
+
+  it('reuses a failed admitted snapshot after canvas edits but captures anew for an edited draft', async () => {
+    let fail = true
+    const f = await fixture({ send: async () => { if (fail) throw new Error('send failed') } })
+    await f.send()
+    expect(f.sent).toHaveLength(1)
+    f.workspace.addAssistantResult({ messageId: 'later', text: 'Later body', at: { x: 0, y: 0 } })
+    fail = false
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(1)
+    expect(f.sent[1]!.prompt).toBe(f.sent[0]!.prompt)
+    f.shell.setDraft('changed')
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(2)
+  })
+
+  it('retains per-send optout on failure and resets it only after successful admission', async () => {
+    let fail = true
+    const f = await fixture({ send: async () => { if (fail) throw new Error('send failed') } })
+    f.shell.setResearchContextOptOut(true)
+    await f.send()
+    expect(f.shell.snapshot.researchContextOptOut).toBe(true)
+    fail = false
+    await f.send()
+    expect(f.shell.snapshot.researchContextOptOut).toBe(false)
+    expect(f.capture).not.toHaveBeenCalled()
+  })
+
+  it('does not overwrite the next send optout while a previous admission settles', async () => {
+    const gate = deferred<void>()
+    const f = await fixture({ send: () => gate.promise })
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.sent).toHaveLength(1))
+    f.shell.setResearchContextOptOut(true)
+    gate.resolve()
+    await operation
+    expect(f.shell.snapshot.researchContextOptOut).toBe(true)
+  })
+
+  it('resets a successful per-send optout while preserving a next question typed during admission', async () => {
+    const gate = deferred<void>()
+    const f = await fixture({ send: () => gate.promise })
+    f.shell.setResearchContextOptOut(true)
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.sent).toHaveLength(1))
+    f.shell.setDraft('继续分析第二个问题')
+    gate.resolve()
+    await operation
+    expect(f.shell.snapshot.draft).toBe('继续分析第二个问题')
+    expect(f.shell.snapshot.researchContextOptOut).toBe(false)
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(1)
+    expect(f.client.parseResearchPrompt(f.sent[1]!.prompt)).toMatchObject({
+      text: '继续分析第二个问题', canvasContext: { snapshotId: 'snap-1' }
+    })
+  })
+
+  it('does not reuse a failed snapshot for user-edited text that happens to match the original question', async () => {
+    const gate = deferred<void>()
+    const f = await fixture({ send: () => gate.promise })
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.sent).toHaveLength(1))
+    f.shell.setDraft('another question')
+    f.shell.setDraft('黄金的失效边界是什么')
+    gate.reject(new Error('failed'))
+    await operation
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(2)
+  })
+
+  it('rejects an expired failed snapshot without silently recapturing the edited canvas', async () => {
+    const f = await fixture({ send: async () => { throw new Error('failed') } })
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1000)
+    try {
+      await f.send()
+      now.mockReturnValue(601001)
+      await f.send()
+      expect(f.sent).toHaveLength(1)
+      expect(f.capture).toHaveBeenCalledTimes(1)
+      expect(f.shell.notices.getSnapshot().text).toBe('research.context.expired')
+      expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    } finally { now.mockRestore() }
+  })
+
+  it('cancels the old capture for a newer send and ignores late preparation evidence', async () => {
+    const old = deferred<unknown>()
+    let calls = 0
+    const f = await fixture({ prepare: async () => ++calls === 1 ? old.promise : packet })
+    const first = f.send()
+    await vi.waitFor(() => expect(f.requests).toHaveLength(1))
+    f.shell.setDraft('new question')
+    await f.send()
+    old.resolve({ ...packet, snapshotId: 'obsolete' })
+    await first
+    expect(f.sent).toHaveLength(1)
+    expect(f.client.parseResearchPrompt(f.sent[0]!.prompt).text).toBe('new question')
+    expect(f.client.parseResearchPrompt(f.sent[0]!.prompt).canvasContext.snapshotId).toBe('snap-1')
+    expect(f.shell.notices.getSnapshot()).toBeNull()
+  })
+
+  it('rejects oversized escaped packet bytes and malformed preparation without clearing the draft', async () => {
+    const f = await fixture({ prepare: async () => ({ ...packet, version: 1, token: 'secret' }) })
+    await f.send()
+    expect(f.sent).toEqual([])
+    expect(f.shell.snapshot.draft).toBe('黄金的失效边界是什么')
+    const client = f.client
+    expect(() => client.serializeResearchPrompt([], 'question', [], [], [], { version: 1, ...packet, initialContext: '\u241f'.repeat(6000) })).toThrow()
+  })
+
+  it('round trips strictly bounded V1 packets while preserving legacy references and hiding no invalid envelope', async () => {
+    const client = await loadConversationClient()
+    const valid = { version: 1, ...packet }
+    const prompt = client.serializeResearchPrompt([], 'question', [], [], [], valid)
+    expect(client.parseResearchPrompt(prompt)).toEqual({ text: 'question', files: [], canvasContext: valid })
+    for (const value of [{ ...valid, version: 2 }, { ...valid, totalSources: -1 }, { ...valid, initialSourceIds: ['a', 'a'] }, { ...valid, initialSourceIds: ['a'.repeat(257)] }, { ...valid, initialContext: '中'.repeat(12000) }, { ...valid, secret: 'token' }]) {
+      expect(() => client.serializeResearchPrompt([], 'question', [], [], [], value)).toThrow()
+      const raw = prompt.replace(JSON.stringify(valid), JSON.stringify(value))
+      expect(client.parseResearchPrompt(raw).text).toBe(raw)
+    }
+    const legacy = client.serializeResearchPrompt([{ id: 'f', name: 'a.txt', path: '/a.txt' }], 'manual')
+    expect(client.parseResearchPrompt(legacy).files).toHaveLength(1)
+    expect(client.parseResearchPrompt(legacy).canvasContext).toBeUndefined()
+  })
+})
+
 describe('Research canvas file drops', () => {
   it('preserves bounded assistant-result Markdown while excerpts keep normalized semantics', async () => {
     const client = await loadConversationClient()
@@ -175,11 +418,11 @@ describe('Research canvas file drops', () => {
     })
 
     expect(workspace.getSnapshot().files[0]).toMatchObject({
-      width: 320, height: 212, sizeMode: 'auto', aspectRatio: 16 / 9
+      width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
     })
     expect(new client.ResearchWorkspaceRegistry(storage)
       .for('geometry-session').getSnapshot().files[0]).toMatchObject({
-        width: 320, height: 212, sizeMode: 'auto', aspectRatio: 16 / 9
+        width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
       })
   })
 
@@ -286,7 +529,7 @@ describe('Research canvas file drops', () => {
     )).toEqual({ scale: 0.5, x: -1_100, y: -700 })
   })
 
-  it('normalizes natural image ratio against the existing 32px titled-frame geometry', async () => {
+  it('normalizes natural image ratio against the existing 36px titled-frame geometry', async () => {
     const client = await loadConversationClient()
     expect(client.researchImageGeometryForNaturalSize).toBeTypeOf('function')
     if (typeof client.researchImageGeometryForNaturalSize !== 'function') return
@@ -296,7 +539,7 @@ describe('Research canvas file drops', () => {
       authorizationId: 'authorization-1', source: 'computer', x: 0, y: 0,
       width: 320, height: 272, sizeMode: 'auto'
     }, 1600, 900)).toMatchObject({
-      width: 320, height: 212, sizeMode: 'auto', aspectRatio: 16 / 9
+      width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
     })
     expect(client.researchImageGeometryForNaturalSize({}, 0, 900)).toBeNull()
   })
@@ -1013,7 +1256,7 @@ describe('Research canvas file drops', () => {
       'sherlock.research.canvas.files.v1:session-7'
     )
     expect(client.parseResearchCanvasFileNodes(JSON.stringify(valid))).toEqual([{
-      ...valid[0], width: 320, height: 320 / (17 / 22) + 32,
+      ...valid[0], width: 320, height: 320 / (17 / 22) + 36,
       sizeMode: 'auto', aspectRatio: 17 / 22
     }])
     expect(client.parseResearchCanvasFileNodes('[{"id":"1","name":"a","source":"computer","x":null,"y":2}]')).toEqual([])
@@ -1199,7 +1442,7 @@ describe('Research canvas file drops', () => {
 
     client.saveResearchCanvasFiles(memoryStorage, 's1', nodes)
     expect(client.loadResearchCanvasFiles(memoryStorage, 's1')).toEqual([{
-      ...nodes[0], width: 320, height: 320 / (17 / 22) + 32,
+      ...nodes[0], width: 320, height: 320 / (17 / 22) + 36,
       sizeMode: 'auto', aspectRatio: 17 / 22
     }])
 
@@ -1232,7 +1475,7 @@ describe('Research canvas file drops', () => {
     expect(workspace.getSnapshot().files).toEqual([{
       id: 'stable-file', path: '/w/stable.pdf', name: 'stable.pdf',
       source: 'sherlock', x: 12, y: 34, width: 320,
-      height: 320 / (17 / 22) + 32, sizeMode: 'auto', aspectRatio: 17 / 22
+      height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22
     }])
 
     workspace.setFiles([{
@@ -1242,7 +1485,7 @@ describe('Research canvas file drops', () => {
     expect(JSON.parse(values.get(key) ?? '[]')).toEqual([{
       id: 'next-file', path: '/w/next.pdf', name: 'next.pdf',
       source: 'sherlock', x: 56, y: 78, width: 320,
-      height: 320 / (17 / 22) + 32, sizeMode: 'auto', aspectRatio: 17 / 22
+      height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22
     }])
   })
 
@@ -1331,17 +1574,17 @@ describe('Research canvas file drops', () => {
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'icon', name: 'favicon.ico', contentType: 'image/x-icon',
       source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 272, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
+    })).toEqual({ width: 320, height: 276, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'assistant', kind: 'assistant-result', messageId: 'm1', title: 'Answer',
       excerpt: 'Evidence', x: 0, y: 0
     })).toEqual({ width: 520, height: 300, sizeMode: 'auto', resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'image', name: 'chart.png', mediaType: 'image/png', source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 272, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
+    })).toEqual({ width: 320, height: 276, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'pdf', name: 'filing.pdf', mediaType: 'application/pdf', source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 320 / (17 / 22) + 32, sizeMode: 'auto', aspectRatio: 17 / 22, resizable: true })
+    })).toEqual({ width: 320, height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'html', name: 'model.html', mediaType: 'text/html', source: 'computer', x: 0, y: 0
     })).toEqual({ width: 480, height: 360, sizeMode: 'auto', resizable: true })
@@ -1479,7 +1722,7 @@ describe('Research canvas file drops', () => {
       sizeMode: 'auto', aspectRatio: 17 / 22
     }
     expect(client.researchPdfGeometryForPage(initial, 600, 800)).toEqual({
-      width: 320, height: 320 / 0.75 + 32, sizeMode: 'auto', aspectRatio: 0.75
+      width: 320, height: 320 / 0.75 + 36, sizeMode: 'auto', aspectRatio: 0.75
     })
     expect(client.researchPdfGeometryForPage({
       ...initial, height: 320 / 0.75 + 32, aspectRatio: 0.75
@@ -1511,7 +1754,7 @@ describe('Research canvas file drops', () => {
       id: 'image', name: 'chart.png', mediaType: 'image/png', source: 'computer',
       x: 0, y: 0, width: 320, height: 272, sizeMode: 'auto', aspectRatio: 4 / 3
     }, 'se', { x: 80, y: 40 }, 2)).toMatchObject({
-      x: 20, y: 15, width: 360, height: 302, sizeMode: 'manual', aspectRatio: 4 / 3
+      x: 20, y: 15, width: 360, height: 306, sizeMode: 'manual', aspectRatio: 4 / 3
     })
   })
 
@@ -1527,18 +1770,18 @@ describe('Research canvas file drops', () => {
     }
 
     expect(client.normalizeResearchCanvasNodeGeometry(wideImage)).toEqual({
-      width: 960, height: 152, sizeMode: 'manual', aspectRatio: 8, resizable: true
+      width: 928, height: 152, sizeMode: 'manual', aspectRatio: 8, resizable: true
     })
     expect(client.resizeResearchCanvasNode(
       wideImage, 'se', { x: -5000, y: -5000 }, 1
     )).toMatchObject({
-      x: 0, y: 0, width: 960, height: 152,
+      x: 0, y: 0, width: 928, height: 152,
       sizeMode: 'manual', aspectRatio: 8
     })
     expect(client.normalizeResearchCanvasNodeGeometry({
       ...wideImage, id: 'tall-image', width: 120, aspectRatio: 0.25
     })).toEqual({
-      width: 160, height: 672, sizeMode: 'manual', aspectRatio: 0.25, resizable: true
+      width: 160, height: 676, sizeMode: 'manual', aspectRatio: 0.25, resizable: true
     })
   })
 
@@ -2529,6 +2772,43 @@ describe('Research canvas file drops', () => {
     expect(html).toContain('draggable="true"')
     expect(html).toContain('data-sherlock-file-drag-source="/w/outputs/report.pdf"')
     expect(html).toContain('>report.pdf</span>')
+  })
+
+  it('places selected-create output in a nearby free rectangle without moving existing nodes', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const nodes = [
+      { id: 'a', kind: 'assistant-result', x: 100, y: 100, width: 520, height: 300 },
+      { id: 'occupied', kind: 'assistant-result', x: 652, y: 100, width: 520, height: 300 }
+    ]
+    const original = JSON.stringify(nodes)
+    const place = client.researchCanvasGeneratedPlacement as any
+    const result = place(nodes, ['a'], 'create')
+    expect(result).not.toBeNull()
+    for (const node of nodes) expect(Math.abs(result.x - node.x) >= 520 || Math.abs(result.y - node.y) >= 300).toBe(true)
+    expect(JSON.stringify(nodes)).toBe(original)
+  })
+
+  it('preserves selected-create copy provenance but refuses source-free retry and nonnative outputs', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const parse = client.parseResearchCanvasArtifactNodes as any
+    const raw = { id: 'copy', messageId: 'copy', kind: 'generated-container', title: '副本', excerpt: '100', x: 0, y: 0, creationMode: 'selection', sourceNodeIds: ['old-file'], generationSources: [{ id: 'old-file', type: 'file', title: '财报.pdf' }], containerPrompt: '对比', refreshMinutes: 0, generationStatus: 'failed', containerSpec: { version: 1, type: 'markdown', title: '结果', content: '100' } }
+    expect(parse(JSON.stringify([raw]))).toMatchObject([{ creationMode: 'selection', sourceNodeIds: ['old-file'], generationSources: [{ id: 'old-file', title: '财报.pdf', type: 'file' }] }])
+    const Registry = client.ResearchWorkspaceRegistry as any
+    const workspace = new Registry(null).for('create-validation')
+    workspace.setArtifacts([raw])
+    expect(workspace.retryGeneration('copy')).toBeNull()
+    expect(workspace.getSnapshot().artifacts[0].generationError).toContain('来源快照不可用')
+    workspace.setArtifacts([{ ...raw, generationSources: undefined, generationStatus: 'completed', containerSpec: { version: 1, type: 'web', title: '不应授权', url: 'https://example.com' } }])
+    expect(workspace.getSnapshot().artifacts).toHaveLength(0)
+  })
+
+  it('rejects empty or oversized selected-create prompts before inserting a target', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const Registry = client.ResearchWorkspaceRegistry as any
+    const workspace = new Registry(null).for('create-prompt-validation')
+    workspace.setArtifacts([{ id: 'a', kind: 'assistant-result', messageId: 'a', title: '材料', excerpt: '真实正文', x: 0, y: 0 }])
+    for (const prompt of ['', ' ', 'x'.repeat(8001)]) expect(workspace.beginGeneration('create', ['a'], { x: 700, y: 0 }, prompt)).toBeNull()
+    expect(workspace.getSnapshot().artifacts).toHaveLength(1)
   })
 
   it('canonicalizes only safe web component URLs', async () => {
