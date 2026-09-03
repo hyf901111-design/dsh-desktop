@@ -85,6 +85,42 @@
           "模型列表的实际内容仍取决于用户已配置且可发现的模型提供商，但空当前选项不会再阻断目录渲染"
         ],
         "generatedAt": "2026-09-03T08:50:08Z"
+      },
+      "merged": {
+        "mergeCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+        "verificationCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/model-picker-null-current.test.ts",
+              "test/model-session-selection.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/model-picker-null-current.test.ts test/model-session-selection.test.ts test/settings-about.test.ts",
+            "verifiedCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+            "completedAt": "2026-09-03T08:51:28.473Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+            "completedAt": "2026-09-03T08:51:28.473Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-03T08:51:28.473Z"
       }
     }
   ],
