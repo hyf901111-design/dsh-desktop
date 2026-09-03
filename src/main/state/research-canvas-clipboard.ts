@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
+import { parseResearchHtmlArtifact, RESEARCH_HTML_LIMIT_ERROR } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import { constants, realpathSync } from 'node:fs'
 import { lstat, mkdir, open, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -86,8 +87,14 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = ['custom', 'manual'].includes(String(input.titleMode)) ? 'custom' : 'auto' }
   if (input.containerSpec !== undefined) {
     const spec = record(input.containerSpec)
-    if (!['markdown', 'table', 'chart', 'kpi', 'web', 'mind-map'].includes(String(spec.type))) throw new Error('组件类型不支持复制。')
-    output.containerSpec = safeSpec(spec)
+    if (spec.type === 'html') {
+      const html = parseResearchHtmlArtifact(spec)
+      if (html === null) throw new Error(`网页组件格式无效；${RESEARCH_HTML_LIMIT_ERROR}`)
+      output.containerSpec = html
+    } else {
+      if (!['markdown', 'table', 'chart', 'kpi', 'web', 'mind-map'].includes(String(spec.type))) throw new Error('组件类型不支持复制。')
+      output.containerSpec = safeSpec(spec)
+    }
   }
   if (String(input.kind).startsWith('generated-')) {
     output.generationStatus = input.containerSpec !== undefined ? 'completed'
