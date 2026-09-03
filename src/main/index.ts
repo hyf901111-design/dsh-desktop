@@ -67,6 +67,7 @@ import {
   type LocalSearchRuntime
 } from './search/local-search-runtime'
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import {
   assertTrustedMainWindowEvent,
   registerPrivilegedMainWindowHandlers
@@ -116,6 +117,8 @@ const PLUGIN_RECOVERY_ACTIONS = new Set<PluginRecoveryAction>([
 let mainWindow: BrowserWindow | undefined
 let runtime: HarnessRuntime
 let localSearchRuntime: LocalSearchRuntime | undefined
+let researchContextBridge: ResearchContextBridge | undefined
+let disposeResearchContextHandlers: (() => void) | undefined
 let launchDirectory: string
 let quitting = false
 let failureRecoveryVisible = false
@@ -622,9 +625,7 @@ function restartHarness(): Promise<void> {
   return launchHarness()
 }
 
-function registerHarnessHandlers(): void {
-  const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
-
+function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): void {
   ipcMain.removeHandler('harness:restart')
   ipcMain.handle('harness:restart', async (event) => {
     assertTrustedMainWindowEvent(event, mainWindow)
@@ -1068,6 +1069,15 @@ async function bootstrap(): Promise<void> {
     storage: new FileResearchPreviewAuthorizationStorage(app.getPath('userData')),
     workspaceResolver: new HarnessWorkspaceFileResolver(dshHome)
   })
+  const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
+  researchContextBridge = new ResearchContextBridge({
+    readCanvas: (sessionId) => readStoredResearchCanvas(researchCanvasStorage, sessionId),
+    resolveFile: (identity) => researchFilePreviewRegistry!.resolveExportSource(identity)
+  })
+  const researchContext = await researchContextBridge.start()
+  disposeResearchContextHandlers = registerResearchContextHandlers({
+    ipcMain, getMainWindow: () => mainWindow, bridge: researchContextBridge
+  })
   protocol.handle(
     RESEARCH_PREVIEW_SCHEME,
     (request) => handleResearchFilePreviewProtocolRequest(
@@ -1091,6 +1101,7 @@ async function bootstrap(): Promise<void> {
     bundledResearchTaskEntry: bundledResearchTaskEntry(),
     localSearchUrl: localSearchRuntime.endpoint.url,
     localSearchToken: localSearchRuntime.endpoint.token,
+    researchContext,
     dshHome,
     logPath: join(app.getPath('logs'), 'harness.log'),
     launchProcess: (executablePath, args, options) => spawn(executablePath, args, options),
@@ -1102,7 +1113,7 @@ async function bootstrap(): Promise<void> {
       }
     }
   })
-  registerHarnessHandlers()
+  registerHarnessHandlers(researchCanvasStorage)
   ipcMain.handle('developer-mode:set-enabled', (event, enabled: unknown) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (typeof enabled !== 'boolean') {
@@ -1150,6 +1161,8 @@ async function bootstrap(): Promise<void> {
       prepareToInstall: async () => {
         await runtime.stop()
         await localSearchRuntime?.stop()
+        disposeResearchContextHandlers?.()
+        await researchContextBridge?.stop()
         quitting = true
         stopUpdateManager()
       }
@@ -1172,6 +1185,8 @@ if (!singleInstance) {
   app.whenReady().then(bootstrap).catch(async (error: unknown) => {
     showUnexpectedError(error)
     await localSearchRuntime?.stop()
+    disposeResearchContextHandlers?.()
+    await researchContextBridge?.stop()
     app.quit()
   })
   app.on('activate', () => {
@@ -1191,6 +1206,7 @@ if (!singleInstance) {
     quitting = true
     stopHarnessThemePreferenceSync()
     stopUpdateManager()
-    void Promise.all([runtime.stop(), localSearchRuntime?.stop()]).finally(() => app.quit())
+    disposeResearchContextHandlers?.()
+    void Promise.all([runtime.stop(), localSearchRuntime?.stop(), researchContextBridge?.stop()]).finally(() => app.quit())
   })
 }

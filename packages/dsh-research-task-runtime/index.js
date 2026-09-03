@@ -2,9 +2,10 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, extname, isAbsolute, join } from 'node:path'
+import { registerResearchContextRuntime } from './context-runtime.js'
 
 export const name = 'sherlock-research-task-runtime'
-export const inject = ['agents', 'subagents', 'typert', 'web', 'webServer']
+export const inject = ['agents', 'subagents', 'typert', 'web', 'webServer', 'tools']
 
 export const MAX_ACTIVE_PER_PARENT = 4
 export const MAX_SOURCES = 24
@@ -1221,7 +1222,15 @@ export async function apply(ctx) {
   await runtime.restore()
   ctx.effect(() => {
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
+    let context
+    try {
+      context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText })
+    } catch (error) {
+      disposeRoutes()
+      throw error
+    }
     return async () => {
+      await context.dispose()
       disposeRoutes()
       await runtime.dispose()
     }
