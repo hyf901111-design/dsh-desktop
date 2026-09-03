@@ -2774,7 +2774,7 @@ describe('Research canvas file drops', () => {
     expect(html).toContain('>report.pdf</span>')
   })
 
-  it('places selected-create output in a nearby free rectangle without moving existing nodes', async () => {
+  it.each(['create', 'summary', 'mind-map'])('places %s beside its source even when a neighbor occupies that space', async (kind) => {
     const client = await loadClientBundle('dsh-client-ui-conversation')
     const nodes = [
       { id: 'a', kind: 'assistant-result', x: 100, y: 100, width: 520, height: 300 },
@@ -2782,10 +2782,73 @@ describe('Research canvas file drops', () => {
     ]
     const original = JSON.stringify(nodes)
     const place = client.researchCanvasGeneratedPlacement as any
-    const result = place(nodes, ['a'], 'create')
-    expect(result).not.toBeNull()
-    for (const node of nodes) expect(Math.abs(result.x - node.x) >= 520 || Math.abs(result.y - node.y) >= 300).toBe(true)
+    const result = place(nodes, ['a'], kind)
+    expect(result).toMatchObject({ x: 652, y: 100, width: 520, height: 300 })
     expect(JSON.stringify(nodes)).toBe(original)
+  })
+
+  it.each(['create', 'summary', 'mind-map'])('keeps %s visible near an edge selection at the current zoom', async (kind) => {
+    const client = await loadConversationClient()
+    const nodes = [{ id: 'a', kind: 'assistant-result', x: 1800, y: 1000, width: 520, height: 300 }]
+    const context = { viewport: { x: -400, y: -100, scale: 0.5 }, canvasSize: { width: 600, height: 500 } }
+    // Source is at screen (500, 400). Its right neighbor is off-screen;
+    // the left neighbor fits without changing the viewport or existing geometry.
+    expect(client.researchCanvasGeneratedPlacement(nodes, ['a'], kind, 'standard', context))
+      .toMatchObject({ x: 1248, y: 1000 })
+  })
+
+  it('keeps a large multi-selection result in the visible canvas instead of beyond the group', async () => {
+    const client = await loadConversationClient()
+    const nodes = [{ id: 'a', kind: 'assistant-result', x: -1000, y: -1000, width: 520, height: 300 }, { id: 'b', kind: 'assistant-result', x: 3000, y: 3000, width: 520, height: 300 }]
+    const context = { viewport: { x: 0, y: 0, scale: 1 }, canvasSize: { width: 600, height: 400 } }
+    const result = client.researchCanvasGeneratedPlacement(nodes, ['a', 'b'], 'create', 'standard', context)
+    expect(result.x - result.width / 2).toBeGreaterThanOrEqual(12)
+    expect(result.x + result.width / 2).toBeLessThanOrEqual(588)
+    expect(result.y - result.height / 2).toBeGreaterThanOrEqual(12)
+    expect(result.y + result.height / 2).toBeLessThanOrEqual(388)
+  })
+
+  it.each(['mind-map', 'summary', 'create'])('preserves the visible leading corner as %s grows through task completion', async (kind) => {
+    const client = await loadConversationClient()
+    const workspace = new client.ResearchWorkspaceRegistry(null).for('growing-output')
+    workspace.setCanvasSize({ width: 800, height: 600 })
+    workspace.setArtifacts([{ id: 'source', messageId: 'source', kind: 'assistant-result', title: '资料', excerpt: '正文', x: 750, y: 180, width: 300, height: 300 }])
+    const snapshot = workspace.getSnapshot()
+    const place = client.researchCanvasGeneratedPlacement(snapshot.artifacts, ['source'], kind, 'standard', snapshot)
+    const created = workspace.beginGeneration(kind, ['source'], place, kind === 'create' ? '生成图表' : 'standard')
+    const corner = { left: created.x - created.width / 2, top: created.y - created.height / 2 }
+    expect(workspace.attachGenerationTask(created.id, { taskId: 'task', canvasNodeId: created.id, state: 'running', lastSeq: 1 })).toBe(true)
+    const finalOutput = kind === 'create' ? JSON.stringify({ version: 1, type: 'chart', title: '图表', variant: 'bar', labels: ['A'], series: [{ name: '值', values: [1] }] }) : '# 结论\n' + '正文'.repeat(1000)
+    expect(workspace.applyGenerationInspection(created.id, { taskId: 'task', canvasNodeId: created.id, state: 'completed', lastSeq: 2, finalOutput })).toBe(true)
+    const completed = workspace.getSnapshot().artifacts.find((node: any) => node.id === created.id)
+    expect({ left: completed.x - completed.width / 2, top: completed.y - completed.height / 2 }).toEqual(corner)
+    workspace.updateNodeGeometry(created.id, { height: completed.height + 100, sizeMode: 'auto' })
+    const measured = workspace.getSnapshot().artifacts.find((node: any) => node.id === created.id)
+    expect(measured.y - measured.height / 2).toBe(corner.top)
+    expect(workspace.getSnapshot().viewport).toEqual(snapshot.viewport)
+  })
+
+  it.each([90, 1_000_000])('creates above an existing stack of %i and preserves it through undo, redo and reload', async (stackOrder) => {
+    const client = await loadConversationClient()
+    const storage = memoryStorage({})
+    const workspace = new client.ResearchWorkspaceRegistry(storage).for('raised-generation')
+    workspace.setArtifacts([
+      { id: 'a', kind: 'assistant-result', messageId: 'a', title: '来源', excerpt: '原文', x: 100, y: 100, stackOrder },
+      { id: 'b', kind: 'assistant-result', messageId: 'b', title: '邻居', excerpt: '不变', x: 652, y: 100, stackOrder: 50 }
+    ])
+    const created = workspace.beginGeneration('summary', ['a'], { x: 652, y: 100 })
+    const assertTop = (snapshot: any) => {
+      const target = snapshot.artifacts.find((node: any) => node.id === created.id)
+      expect(target.stackOrder).toBeGreaterThan(Math.max(...snapshot.artifacts.filter((node: any) => node.id !== created.id).map((node: any) => node.stackOrder ?? 0)))
+      expect(snapshot.selection.selectedNodeIds).toEqual([created.id])
+      expect(snapshot.artifacts.find((node: any) => node.id === 'b')).toMatchObject({ x: 652, y: 100, excerpt: '不变' })
+    }
+    assertTop(workspace.getSnapshot())
+    expect(workspace.undo()).toBe(true)
+    expect(workspace.getSnapshot().artifacts.map((node: any) => node.id)).toEqual(['a', 'b'])
+    expect(workspace.redo()).toBe(true)
+    assertTop(workspace.getSnapshot())
+    assertTop(new client.ResearchWorkspaceRegistry(storage).for('raised-generation').getSnapshot())
   })
 
   it('preserves selected-create copy provenance but refuses source-free retry and nonnative outputs', async () => {

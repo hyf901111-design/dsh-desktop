@@ -150,7 +150,11 @@ describe('Sherlock About settings', () => {
 
     expect(zh.productName).toBe('Sherlock')
     expect(zh.version).toBe('9.8.7')
-    expect(zh.releaseNotes[0]).toEqual({
+    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
+    expect(en.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
+    expect(zh.releaseNotes[0]?.items).toHaveLength(5)
+    expect(en.releaseNotes[0]?.items).toHaveLength(5)
+    expect(zh.releaseNotes[1]).toEqual({
       version: '0.7.9',
       date: '2026-09-03',
       items: [
@@ -167,11 +171,11 @@ describe('Sherlock About settings', () => {
         '复制粘贴提示上移并在完成后两秒消失；“基于所选创建”增加图标、精简输入弹层，点击外部或失焦时自动关闭'
       ]
     })
-    expect(zh.releaseNotes[1]?.version).toBe('0.7.8')
+    expect(zh.releaseNotes[2]?.version).toBe('0.7.8')
     expect(en.version).toBe('9.8.7')
-    expect(en.releaseNotes[0]?.version).toBe('0.7.9')
-    expect(en.releaseNotes[0]?.date).toBe('2026-09-03')
-    expect(en.releaseNotes[0]?.items).toEqual([
+    expect(en.releaseNotes[1]?.version).toBe('0.7.9')
+    expect(en.releaseNotes[1]?.date).toBe('2026-09-03')
+    expect(en.releaseNotes[1]?.items).toEqual([
       'Research conversations now reference all material on the current canvas, including offscreen components, when nothing is selected or explicitly referenced',
       'Allocate context by question relevance: start with a compact catalog and key evidence, then search and read additional material on demand within bounded context budgets',
       'Added a current-canvas context indicator and source directory with a per-message opt-out; explicit references take priority and failed sends preserve the draft',
@@ -184,7 +188,7 @@ describe('Sherlock About settings', () => {
       'Fixed canvas clipboard shortcut focus: paste over non-editable canvas areas and keep shortcuts working after context-menu actions without intercepting editors or embedded pages',
       'Moved clipboard feedback above the toolbar with a two-second dismissal; added a Create from Selection icon and a simplified popover that closes on outside click or focus loss'
     ])
-    expect(en.releaseNotes[1]?.version).toBe('0.7.8')
+    expect(en.releaseNotes[2]?.version).toBe('0.7.8')
 
     const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
     const lockfile = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'))
