@@ -55,6 +55,59 @@ function serializedHeader(client, packet) {
 }
 
 describe('ResearchContextIndex', () => {
+  it('rejects pre-aborted index calls before loading files or charging the snapshot budget', async () => {
+    const loadFileText = vi.fn(async () => 'unused')
+    const index = new ResearchContextIndex({ loadFileText })
+    const signal = AbortSignal.abort()
+    await expect(index.prepare({ sessionId: 'cancel', query: 'x', sources: [source('file', undefined, { kind: 'file', path: '/trusted/a' })] }, { signal })).rejects.toThrow()
+    expect(loadFileText).not.toHaveBeenCalled()
+    expect(index.snapshots.size).toBe(0)
+    const packet = await index.prepare({ sessionId: 'cancel', query: 'x', sources: [source('one', '库存')] })
+    for (const kind of ['list', 'search', 'read']) {
+      await expect(index[kind]('cancel', { snapshotId: packet.snapshotId, query: '库存', sourceId: 'one' }, { signal })).rejects.toThrow()
+    }
+    expect(index.snapshots.get(packet.snapshotId).toolBytes).toBe(0)
+  })
+  it('stops scans after cancellation and discards a late uncooperative loader result without poisoning retry', async () => {
+    const controller = new AbortController()
+    const loaded = []
+    let finish
+    const index = new ResearchContextIndex({ loadFileText: async (entry, signal) => {
+      loaded.push(entry.id)
+      if (entry.id === 'f4' && !finish) return new Promise((resolve) => { finish = () => resolve({ text: 'late private result', revision: entry.revision }) })
+      return { text: '库存', revision: entry.revision }
+    } })
+    const packet = await index.prepare({ sessionId: 'cancel', query: 'ordinary', sources: Array.from({ length: 8 }, (_, i) => source(`f${i}`, undefined, { kind: 'file', path: `/trusted/${i}`, revision: { size: 1, mtimeMs: 1 } })) })
+    const pending = index.search('cancel', { snapshotId: packet.snapshotId, query: '库存' }, { signal: controller.signal })
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    controller.abort()
+    finish()
+    await expect(pending).rejects.toThrow()
+    expect(loaded).toEqual(['f0', 'f1', 'f2', 'f3', 'f4'])
+    const snapshot = index.snapshots.get(packet.snapshotId)
+    expect(snapshot.sources[4]).toMatchObject({ text: '', status: 'pending', loaded: false })
+    expect(snapshot.toolBytes).toBe(0)
+    expect((await index.read('cancel', { snapshotId: packet.snapshotId, sourceId: 'f4' })).text).toContain('库存')
+  })
+  it('resumes at the first omitted ranked match across nonmatches and unopened scan pages', async () => {
+    const loaded = []
+    const index = new ResearchContextIndex({ loadFileText: async (entry) => {
+      loaded.push(entry.id)
+      return { text: ['f4', 'f6', 'f9'].includes(entry.id) ? `库存${'中'.repeat(1200)}${entry.id}` : 'ordinary', revision: entry.revision }
+    } })
+    const packet = await index.prepare({ sessionId: 'mixed', query: 'ordinary', sources: Array.from({ length: 10 }, (_, i) => source(`f${i}`, undefined, { kind: 'file', path: `/trusted/${i}`, revision: { size: 1, mtimeMs: 1 } })) })
+    const first = await index.search('mixed', { snapshotId: packet.snapshotId, query: '库存' })
+    expect(first.sources.map((entry) => entry.sourceId)).toEqual(['f4'])
+    expect(first.cursor).toBe('search:6')
+    expect(loaded).toHaveLength(8)
+    const second = await index.search('mixed', { snapshotId: packet.snapshotId, query: '库存', cursor: first.cursor })
+    expect(second.sources[0].sourceId).toBe('f6')
+    expect(second.cursor).toBe('search:9')
+    const third = await index.search('mixed', { snapshotId: packet.snapshotId, query: '库存', cursor: second.cursor })
+    expect(third.sources.map((entry) => entry.sourceId)).toEqual(['f9'])
+    expect(third.cursor).toBeUndefined()
+    expect(loaded).toHaveLength(10)
+  })
   it('ranks Chinese evidence, keeps the question outside evidence, and isolates snapshots by session', async () => {
     const index = new ResearchContextIndex({ loadFileText: async () => 'file text', id: () => 'snapshot-a' })
     const packet = await index.prepare({

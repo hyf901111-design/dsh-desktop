@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, extname, isAbsolute, join } from 'node:path'
+import { Worker } from 'node:worker_threads'
 import { registerResearchContextRuntime } from './context-runtime.js'
+import { abortable } from './context-abort.js'
 
 export const name = 'sherlock-research-task-runtime'
 export const inject = ['agents', 'subagents', 'typert', 'web', 'webServer', 'tools']
@@ -250,20 +252,25 @@ function boundedExtractedText(value) {
   return truncateUtf8(text, MAX_EXTRACTED_SOURCE_BYTES).trim()
 }
 
-async function boundedSourceBytes(path) {
-  const info = await stat(path)
+async function boundedSourceBytes(path, signal) {
+  signal?.throwIfAborted()
+  const info = await abortable(() => stat(path), signal)
+  signal?.throwIfAborted()
   if (!info.isFile() || info.size <= 0) {
     throw new ResearchTaskError('SOURCE_UNREADABLE', '选中的文件无法读取')
   }
   if (info.size > MAX_SOURCE_FILE_BYTES) {
     throw new ResearchTaskError('SOURCE_TOO_LARGE', '选中的文件过大')
   }
-  return new Uint8Array(await readFile(path))
+  const data = new Uint8Array(await readFile(path, { signal }))
+  signal?.throwIfAborted()
+  return data
 }
 
-async function extractPdfText(path) {
-  const data = await boundedSourceBytes(path)
+async function extractPdfText(path, signal) {
+  const data = await boundedSourceBytes(path, signal)
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  signal?.throwIfAborted()
   const loadingTask = getDocument({
     data,
     isEvalSupported: false,
@@ -271,17 +278,24 @@ async function extractPdfText(path) {
     useWorkerFetch: false
   })
   let document
+  let cleanup
+  const destroy = () => cleanup ??= Promise.resolve().then(() => document ? document.destroy?.() : loadingTask.destroy?.())
+  const onAbort = () => { void destroy().catch(() => {}) }
+  signal?.addEventListener('abort', onAbort, { once: true })
   try {
-    document = await loadingTask.promise
+    document = await abortable(() => loadingTask.promise, signal)
+    signal?.throwIfAborted()
     if (!Number.isSafeInteger(document?.numPages) || document.numPages < 1) {
       throw new ResearchTaskError('SOURCE_UNREADABLE', '选中的 PDF 无法读取')
     }
     const pages = []
     let totalBytes = 0
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber)
+      signal?.throwIfAborted()
+      const page = await abortable(() => document.getPage(pageNumber), signal)
       try {
-        const content = await page.getTextContent()
+        const content = await abortable(() => page.getTextContent(), signal)
+        signal?.throwIfAborted()
         const text = content.items
           .map((item) => `${typeof item?.str === 'string' ? item.str : ''}${item?.hasEOL ? '\n' : ''}`)
           .join('')
@@ -301,88 +315,61 @@ async function extractPdfText(path) {
     }
     return boundedExtractedText(pages.join('\n\n'))
   } finally {
-    await (document?.destroy?.() ?? loadingTask.destroy?.())
+    signal?.removeEventListener('abort', onAbort)
+    await destroy()
   }
 }
 
-function decodeXmlText(value) {
-  return value.replace(/&(#x[\da-f]+|#\d+|amp|apos|gt|lt|quot);/giu, (entity, code) => {
-    if (code === 'amp') return '&'
-    if (code === 'apos') return "'"
-    if (code === 'gt') return '>'
-    if (code === 'lt') return '<'
-    if (code === 'quot') return '"'
-    const numeric = code[1]?.toLowerCase() === 'x'
-      ? Number.parseInt(code.slice(2), 16)
-      : Number.parseInt(code.slice(1), 10)
-    try {
-      return Number.isSafeInteger(numeric) ? String.fromCodePoint(numeric) : entity
-    } catch {
-      return entity
-    }
+async function extractPptxText(path, signal) {
+  const data = await boundedSourceBytes(path, signal)
+  signal?.throwIfAborted()
+  // fflate may synchronously decompress even through its async API. Isolate the
+  // bounded archive so cancellation can terminate CPU work, not just its caller.
+  const worker = new Worker(new URL('./pptx-extractor-worker.js', import.meta.url), {
+    workerData: { data, maxSlides: MAX_PPTX_SLIDES, maxSlideXmlBytes: MAX_PPTX_SLIDE_XML_BYTES, maxTotalXmlBytes: MAX_PPTX_TOTAL_XML_BYTES },
+    transferList: [data.buffer]
   })
-}
-
-function extractPptxSlideXmlText(xml) {
-  const parts = []
-  const tokenPattern = /<a:t(?:\s[^>]*)?>([\s\S]*?)<\/a:t>|<a:br\b[^>]*\/?\s*>|<a:tab\b[^>]*\/?\s*>|<\/a:p\s*>/giu
-  for (const match of xml.matchAll(tokenPattern)) {
-    if (match[1] !== undefined) {
-      parts.push(decodeXmlText(match[1]))
-    } else if (/^<a:tab/iu.test(match[0])) {
-      parts.push('\t')
-    } else {
-      parts.push('\n')
-    }
-  }
-  return parts.join('').replace(/[ \t]+\n/gu, '\n').replace(/\n{2,}/gu, '\n').trim()
-}
-
-async function extractPptxText(path) {
-  const data = await boundedSourceBytes(path)
-  const { strFromU8, unzipSync } = await import('fflate')
-  let slideCount = 0
-  let totalXmlBytes = 0
-  let archive
+  let termination, onMessage, onError, onExit
+  const terminate = () => termination ??= worker.terminate()
+  const onAbort = () => { void terminate().catch(() => {}) }
+  signal?.addEventListener('abort', onAbort, { once: true })
   try {
-    archive = unzipSync(data, {
-      filter(file) {
-        if (!/^ppt\/slides\/slide\d+\.xml$/u.test(file.name)) return false
-        slideCount += 1
-        totalXmlBytes += file.originalSize
-        if (
-          slideCount > MAX_PPTX_SLIDES ||
-          file.originalSize > MAX_PPTX_SLIDE_XML_BYTES ||
-          totalXmlBytes > MAX_PPTX_TOTAL_XML_BYTES
-        ) {
-          throw new ResearchTaskError('SOURCE_TOO_LARGE', '所选 PPT 内容过大')
-        }
-        return true
+    const text = await abortable(() => new Promise((resolve, reject) => {
+      onMessage = (value) => {
+        if (value.error === 'SOURCE_TOO_LARGE') reject(new ResearchTaskError('SOURCE_TOO_LARGE', '所选 PPT 内容过大'))
+        else if (typeof value.text !== 'string') reject(new ResearchTaskError('SOURCE_UNREADABLE', '所选 PPT 无法读取'))
+        else resolve(value.text)
       }
-    })
+      onError = reject
+      onExit = () => reject(new ResearchTaskError('SOURCE_UNREADABLE', '所选 PPT 无法读取'))
+      worker.once('message', onMessage)
+      worker.once('error', onError)
+      worker.once('exit', onExit)
+    }), signal)
+    signal?.throwIfAborted()
+    return boundedExtractedText(text)
   } catch (error) {
+    signal?.throwIfAborted()
     if (error instanceof ResearchTaskError) throw error
     throw new ResearchTaskError('SOURCE_UNREADABLE', '所选 PPT 无法读取')
+  } finally {
+    signal?.removeEventListener('abort', onAbort)
+    await terminate()
+    if (onMessage) worker.off('message', onMessage)
+    if (onError) worker.off('error', onError)
+    if (onExit) worker.off('exit', onExit)
   }
-  const slides = Object.entries(archive)
-    .map(([name, bytes]) => {
-      const number = Number.parseInt(name.match(/^ppt\/slides\/slide(\d+)\.xml$/u)?.[1] ?? '', 10)
-      return { number, text: extractPptxSlideXmlText(strFromU8(bytes)) }
-    })
-    .filter((slide) => Number.isSafeInteger(slide.number) && slide.text.length > 0)
-    .sort((left, right) => left.number - right.number)
-    .map((slide) => `第 ${slide.number} 页\n${slide.text}`)
-  return boundedExtractedText(slides.join('\n\n'))
 }
 
-export async function loadResearchFileText(source) {
+export async function loadResearchFileText(source, signal) {
+  signal?.throwIfAborted()
   const extension = extname(source.path).toLowerCase()
-  if (extension === '.pdf') return extractPdfText(source.path)
-  if (extension === '.pptx') return extractPptxText(source.path)
+  if (extension === '.pdf') return extractPdfText(source.path, signal)
+  if (extension === '.pptx') return extractPptxText(source.path, signal)
   if (!NATIVE_TEXT_EXTENSIONS.has(extension)) {
     throw new ResearchTaskError('SOURCE_UNSUPPORTED', '暂不支持读取所选文件类型')
   }
-  return boundedExtractedText(Buffer.from(await boundedSourceBytes(source.path)).toString('utf8'))
+  return boundedExtractedText(Buffer.from(await boundedSourceBytes(source.path, signal)).toString('utf8'))
 }
 
 export async function buildResearchTaskExecutionPrompt(
@@ -1224,7 +1211,7 @@ export async function apply(ctx) {
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     let context
     try {
-      context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText })
+      context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
     } catch (error) {
       disposeRoutes()
       throw error
