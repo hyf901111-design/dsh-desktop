@@ -276,6 +276,24 @@ describe('progressive canvas context', () => {
     expect(f.shell.snapshot.researchContextOptOut).toBe(true)
   })
 
+  it('resets a successful per-send optout while preserving a next question typed during admission', async () => {
+    const gate = deferred<void>()
+    const f = await fixture({ send: () => gate.promise })
+    f.shell.setResearchContextOptOut(true)
+    const operation = f.send()
+    await vi.waitFor(() => expect(f.sent).toHaveLength(1))
+    f.shell.setDraft('继续分析第二个问题')
+    gate.resolve()
+    await operation
+    expect(f.shell.snapshot.draft).toBe('继续分析第二个问题')
+    expect(f.shell.snapshot.researchContextOptOut).toBe(false)
+    await f.send()
+    expect(f.capture).toHaveBeenCalledTimes(1)
+    expect(f.client.parseResearchPrompt(f.sent[1]!.prompt)).toMatchObject({
+      text: '继续分析第二个问题', canvasContext: { snapshotId: 'snap-1' }
+    })
+  })
+
   it('does not reuse a failed snapshot for user-edited text that happens to match the original question', async () => {
     const gate = deferred<void>()
     const f = await fixture({ send: () => gate.promise })
