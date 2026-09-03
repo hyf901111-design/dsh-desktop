@@ -343,6 +343,26 @@ describe('Cloudflare release plan', () => {
     expect(plan.at(-1)?.cacheControl).toBe('no-cache, max-age=0, must-revalidate')
   })
 
+  it('prevents the mutable DMG alias from inheriting CDN static-file caching', async () => {
+    const { assets, prepared } = await fixture()
+    const plan = await buildCloudflareReleasePlan({
+      version: '0.6.0',
+      assetDirectory: assets,
+      outputDirectory: prepared
+    })
+
+    const stableDownload = plan.find((item) => item.key === 'download/sherlock-mac-arm64.dmg')
+    expect(stableDownload?.cacheControl.split(',').map((directive) => directive.trim())).toContain(
+      'no-store'
+    )
+    expect(plan.filter((item) => item.phase === 'immutable').every((item) =>
+      item.cacheControl === 'public, max-age=31536000, immutable'
+    )).toBe(true)
+    expect(plan.filter((item) => item.phase === 'metadata').every((item) =>
+      item.cacheControl === 'no-cache, max-age=0, must-revalidate'
+    )).toBe(true)
+  })
+
   it('publishes an independent notarized macOS channel while keeping the legacy channel', async () => {
     const { assets, prepared } = await fixture()
     await Promise.all([
