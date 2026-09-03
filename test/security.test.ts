@@ -15,7 +15,8 @@ type NavigationEvent = {
   preventDefault(): void
   url?: string
   isMainFrame?: boolean
-  initiator?: { processId: number; routingId: number } | null
+  initiator?: { processId: number; routingId: number; url?: string } | null
+  frame?: { url: string }
 }
 
 function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false) {
@@ -39,6 +40,17 @@ function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = 
 }
 
 describe('main-window navigation security', () => {
+  it('blocks offline srcdoc navigation even to a URL authorized by another research link', () => {
+    const allows = vi.fn(() => true)
+    const { listeners } = secureWindowFixture(allows)
+    for (const url of ['https://approved.example/?private=document', 'sherlock-preview://token/private.html']) for (const sourceUrl of ['about:srcdoc', 'about:srcdoc#section']) {
+      const preventDefault = vi.fn()
+      listeners.get('will-frame-navigate')?.({ url, isMainFrame: false, frame: { url: sourceUrl }, preventDefault })
+      expect(preventDefault).toHaveBeenCalledOnce()
+    }
+    expect(allows).not.toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+  })
   it('keeps the application preload and Node integration out of HTML child frames', async () => {
     const main = await readFile('src/main/index.ts', 'utf8')
 

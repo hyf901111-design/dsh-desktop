@@ -205,6 +205,18 @@ function sequentialTaskIds() {
 }
 
 describe('Research task contract and prompt', () => {
+  it('marks only an oversized restored HTML task as failed and preserves other task history', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const tasks = ['bad', 'good', 'broken-json', 'broken-html'].map((id) => ({ ...containerRequest(id), taskId: id, state: 'completed', createdAt: 1, completedAt: 2, lastSeq: 3, finalOutput: id === 'broken-json' ? '{"version":1,"type":"html",' : JSON.stringify({ version: 1, type: 'html', title: id, html: id === 'bad' ? '文'.repeat(70_000) : id === 'broken-html' ? {} : '<h1>保留的活动</h1>' }) }))
+    const storage = memoryTaskStorage({ version: 1, tasks })
+    const runtime = new ResearchTaskRuntime({ adapter: deferredTaskAdapter().adapter, storage })
+    await expect(runtime.restore()).resolves.toBeUndefined()
+    expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'bad' })).toMatchObject({ state: 'failed', error: expect.stringMatching(/HTML.*200.*KB/) })
+    expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'good' })).toMatchObject({ state: 'completed', finalOutput: tasks[1].finalOutput })
+    for (const id of ['broken-json', 'broken-html']) expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: id })).toMatchObject({ state: 'failed', error: expect.stringContaining('格式无效') })
+    expect(storage.snapshot().tasks[0]).toMatchObject({ state: 'failed' })
+    await runtime.dispose()
+  })
   it('accepts only a bounded prompt for native container tasks', async () => {
     const { validateResearchTaskStart } = await runtimeModule()
 
@@ -220,7 +232,7 @@ describe('Research task contract and prompt', () => {
     }
   })
 
-  it('builds the fixed native container JSON contract without executable output', async () => {
+  it('offers native formats and self-contained interactive deliverables without external URL substitution', async () => {
     const { buildResearchTaskExecutionPrompt, buildResearchTaskPrompt } = await runtimeModule()
 
     const prompt = buildResearchTaskPrompt(containerRequest())
@@ -232,13 +244,15 @@ describe('Research task contract and prompt', () => {
 
     expect(executionPrompt).toBe(prompt)
     expect(prompt).toContain('"version": 1')
-    for (const type of ['chart', 'table', 'kpi', 'markdown']) {
+    for (const type of ['chart', 'table', 'kpi', 'markdown', 'mind-map', 'html']) {
       expect(prompt).toContain(`"type": "${type}"`)
     }
     expect(prompt).not.toContain('"type": "web"')
     expect(prompt).toContain('未提供明确网址时，不得生成 web')
     expect(prompt).toContain('实时、监控或最新数据')
-    expect(prompt).toContain('不要输出 HTML 或 JavaScript')
+    expect(prompt).toContain('用户明确的呈现要求始终优先')
+    expect(prompt).toContain('HTML/CSS/JavaScript')
+    expect(prompt).toContain('离线')
     expect(prompt).toContain('制作一张展示月度收入趋势的柱状图')
     expect(prompt).not.toContain('来源 1')
 
@@ -247,6 +261,59 @@ describe('Research task contract and prompt', () => {
       prompt: '在组件中加载 https://example.com/dashboard'
     })
     expect(explicitWebPrompt).toContain('"type": "web"')
+  })
+
+  it('uses the selected document body for an interactive activity page or a professional journey map', async () => {
+    const { buildResearchTaskExecutionPrompt } = await runtimeModule()
+    for (const requirement of ['制作报名活动页，按钮打开报名说明', '制作专业用户体验地图，包含阶段、触点、情绪和改进机会']) {
+      const prompt = await buildResearchTaskExecutionPrompt({ ...summaryRequest('deliverable'), kind: 'create', prompt: requirement, sources: [{ id: 'f', type: 'file', title: '活动方案.md', path: '/selected/plan.md' }] }, { loadFileText: async () => '真实活动正文：9月8日，广州，面向研究员，报名截止9月6日。' })
+      expect(prompt).toContain('9月8日，广州')
+      expect(prompt).toContain(requirement)
+      expect(prompt).toContain('"type": "html"')
+      expect(prompt).toContain('不得把网页降级成文字说明')
+      expect(prompt).toContain('不得把体验地图改成思维导图')
+      expect(prompt).not.toContain('禁止输出 HTML')
+      expect(prompt).not.toContain('/selected/plan.md')
+    }
+  })
+
+  it('preserves large valid HTML JSON and fails UTF-8 HTML overflow without truncating it into a completed result', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const storage = memoryTaskStorage()
+    const deferred = deferredTaskAdapter()
+    const runtime = new ResearchTaskRuntime({ adapter: deferred.adapter, storage, createId: sequentialTaskIds() })
+    try {
+      await runtime.start(containerRequest('valid'))
+      await deferred.waitForStarts(1)
+      const output = JSON.stringify({ version: 1, type: 'html', title: '活动页', html: '<main>' + '"'.repeat(150_000) + '</main>' })
+      deferred.complete('task-1', output)
+      await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' }).state).toBe('completed'))
+      expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' }).finalOutput === output).toBe(true)
+      await runtime.start(containerRequest('oversized'))
+      await deferred.waitForStarts(2)
+      deferred.complete('task-2', JSON.stringify({ version: 1, type: 'html', title: '过大', html: '<main>' + '文'.repeat(70_000) + '</main>' }))
+      await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-2' })).toMatchObject({ state: 'failed', error: expect.stringMatching(/HTML.*200.*KB/) }))
+      expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-2' }).finalOutput).toBeUndefined()
+      await runtime.dispose()
+      const restored = new ResearchTaskRuntime({ adapter: deferred.adapter, storage })
+      await restored.restore()
+      expect(restored.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' }).finalOutput === output).toBe(true)
+      await restored.dispose()
+    } finally { await runtime.dispose() }
+  })
+
+  it('turns an explicit deliverable failure into a failed task rather than a completed replacement artifact', async () => {
+    const { ResearchTaskRuntime, buildResearchTaskPrompt } = await runtimeModule()
+    const deferred = deferredTaskAdapter()
+    const runtime = new ResearchTaskRuntime({ adapter: deferred.adapter, storage: memoryTaskStorage(), createId: sequentialTaskIds() })
+    try {
+      expect(buildResearchTaskPrompt(containerRequest())).toContain('"type": "error"')
+      await runtime.start(containerRequest('failure'))
+      await deferred.waitForStarts(1)
+      deferred.complete('task-1', JSON.stringify({ version: 1, type: 'error', message: '所需活动页超过资源上限，请精简内容。' }))
+      await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' })).toMatchObject({ state: 'failed', error: '所需活动页超过资源上限，请精简内容。' }))
+      expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' }).finalOutput).toBeUndefined()
+    } finally { await runtime.dispose() }
   })
 
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {
