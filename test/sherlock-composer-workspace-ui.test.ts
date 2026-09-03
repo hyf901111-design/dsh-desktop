@@ -7879,6 +7879,57 @@ describe('Sherlock workspace and composer controls', () => {
     } finally { await mounted.cleanup() }
   })
 
+  it.each(['ready', 'empty', 'changed'] as const)('reads selected legacy web-container through authenticated frame and InputHub (%s)', async (mode) => {
+    const sessionId = `selected-web-container-${mode}`
+    const expectedUrl = 'https://example.com/authorized-report'
+    const source = { id: 'legacy-web', kind: 'generated-container', messageId: 'legacy-web', title: '既有网页容器', excerpt: expectedUrl, x: 300, y: 200, generationStatus: 'completed', containerPrompt: '打开研究报告', refreshMinutes: 0, containerSpec: { version: 1, type: 'web', title: '既有网页容器', url: expectedUrl } }
+    let hub: any
+    let workspace: any
+    const inspected: unknown[] = []
+    const payloads: Array<Record<string, any>> = []
+    const mounted = await mountResearchCanvas({
+      sessionId, artifacts: [source], selection: { selectedNodeIds: ['legacy-web'], orderedFileIds: [] },
+      selectionGeneration: { generate: (request) => hub.generateResearchSelection({ sessionId }, request) },
+      fetch: async (input, init) => {
+        expect(input).toBe('/sherlock/research-tasks/start')
+        const payload = JSON.parse(String(init?.body))
+        payloads.push(payload)
+        return { ok: true, status: 202, json: async () => ({ taskId: 'legacy-source-task', canvasNodeId: payload.canvasNodeId, state: 'running', lastSeq: 1, events: [] }) } as Response
+      },
+      dshDesktop: { researchLinkFrame: {
+        authorize: async ({ url }) => ({ url }),
+        inspect: async (identity) => {
+          inspected.push(identity)
+          if (mode === 'changed') workspace.setArtifacts([{ ...source, containerSpec: { ...source.containerSpec, url: 'https://example.com/replaced' } }])
+          return { url: expectedUrl, title: '页面标题不足以构成证据', sourceText: mode === 'empty' ? '' : '首次授权网页正文：现金流100，库存增长。', scrollWidth: 720, clientWidth: 720 }
+        },
+        release: async () => ({ ok: true }), releaseSession: async () => ({ ok: true, removed: 0 })
+      } }
+    })
+    workspace = mounted.workspace
+    hub = new (mounted.client.InputHub as any)({}, (key: string) => key, mounted.researchWorkspaces)
+    try {
+      await act(async () => { workspace.setCanvasSize({ width: 1200, height: 800 }) })
+      expect(mounted.host.querySelector('[data-research-web-frame]')?.getAttribute('src')).toBe(expectedUrl)
+      await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-selection-create]')) })
+      const input = mounted.host.querySelector('[data-research-create-popover] textarea') as any
+      await act(async () => { input.value = '提炼现金流'; input.dispatchEvent(new mounted.browserWindow.Event('input', { bubbles: true })) })
+      await act(async () => { click(mounted.browserWindow, mounted.host.querySelector('[data-research-create-submit]')) })
+      expect(inspected).toEqual([{ sessionId, nodeId: 'legacy-web' }])
+      if (mode === 'ready') {
+        expect(payloads).toHaveLength(1)
+        expect(payloads[0]).toMatchObject({ kind: 'create', prompt: '提炼现金流', sources: [{ id: 'legacy-web', type: 'artifact', title: '既有网页容器', text: '首次授权网页正文：现金流100，库存增长。' }] })
+        expect(JSON.stringify(payloads[0]?.sources)).not.toContain(expectedUrl)
+        expect(workspace.getSnapshot().artifacts).toHaveLength(2)
+        expect(workspace.getSnapshot().artifacts[0]).toMatchObject(source)
+      } else {
+        expect(payloads).toHaveLength(0)
+        expect(workspace.getSnapshot().artifacts).toHaveLength(1)
+        expect(mounted.host.querySelector('[role="alert"]')?.textContent).toMatch(/授权正文|已变化/)
+      }
+    } finally { await mounted.cleanup() }
+  })
+
   it('cancels selected-source preparation without creating a late artifact', async () => {
     const wait = deferred<Record<string, unknown>>()
     const generate = vi.fn(async () => ({ ok: true }))
