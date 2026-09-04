@@ -22,7 +22,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       date: '2026-09-04',
       items: [
         '修复客户端重启后新研究画板首次拖入 PDF、PPTX、DOCX 等文件时只显示文件卡片的问题，无需切换其他画板即可直接加载预览',
-        '研究画布支持通过苹果触控板双指捏合与外扩缩放，并以手势中心为锚点；画布空白区及网页、PDF 等组件内部均可使用'
+        '研究画布支持通过苹果触控板双指捏合与外扩缩放，提升手势灵敏度并以手势中心为锚点；画布空白区及网页、PDF 等组件内部均可使用'
       ]
     },
     {
@@ -164,7 +164,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       date: '2026-09-04',
       items: [
         'Fixed PDF, PPTX, DOCX, and other files showing only a file card when first dropped onto a new Research canvas after restarting the client; previews now load without visiting another canvas first',
-        'Added Apple trackpad pinch and spread zoom centered on the gesture, available on blank canvas areas and inside web, PDF, and other components'
+        'Added responsive Apple trackpad pinch and spread zoom centered on the gesture, available on blank canvas areas and inside web, PDF, and other components'
       ]
     },
     {
