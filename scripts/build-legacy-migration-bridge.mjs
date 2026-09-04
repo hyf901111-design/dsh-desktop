@@ -23,6 +23,19 @@ const bridgeContract = {
   signingFingerprint: '8B8FCCFB659D94D5C9A9CE2B735EB0FAE457CC7B'
 }
 
+export function createEmbeddedAppValidationCommands(embeddedApp, allowUnnotarizedApp = false) {
+  const commands = [
+    ['/usr/bin/codesign', ['--verify', '--deep', '--strict', embeddedApp]]
+  ]
+  if (!allowUnnotarizedApp) {
+    commands.push(
+      ['/usr/bin/xcrun', ['stapler', 'validate', embeddedApp]],
+      ['/usr/sbin/spctl', ['--assess', '--type', 'execute', embeddedApp]]
+    )
+  }
+  return commands
+}
+
 export async function buildLegacyMigrationBridge(options) {
   if (process.platform !== 'darwin' || process.arch !== 'arm64') {
     throw new Error('The legacy migration bridge must be built on Apple Silicon macOS.')
@@ -104,9 +117,12 @@ export async function buildLegacyMigrationBridge(options) {
     ])
   }
   await copyFile(path.join(notarizedApp, 'Contents', 'Resources', 'icon.icns'), path.join(resourcesDirectory, 'icon.icns'))
-  await execFile('/usr/bin/codesign', ['--verify', '--deep', '--strict', embeddedApp])
-  await execFile('/usr/bin/xcrun', ['stapler', 'validate', embeddedApp])
-  await execFile('/usr/sbin/spctl', ['--assess', '--type', 'execute', embeddedApp])
+  for (const [command, arguments_] of createEmbeddedAppValidationCommands(
+    embeddedApp,
+    options.allowUnnotarizedApp
+  )) {
+    await execFile(command, arguments_)
+  }
 
   await execFile('/usr/bin/codesign', [
     '--force',
@@ -146,13 +162,21 @@ export async function buildLegacyMigrationBridge(options) {
   return { wrapperApp, zip, blockmap }
 }
 
-function parseArguments(argv) {
+export function parseLegacyBridgeArguments(argv) {
   const values = new Map()
-  for (let index = 0; index < argv.length; index += 2) {
+  let allowUnnotarizedApp = false
+  for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index]
+    if (key === '--allow-unnotarized-app') {
+      allowUnnotarizedApp = true
+      continue
+    }
     const value = argv[index + 1]
-    if (!key?.startsWith('--') || !value) throw new Error('Invalid legacy bridge arguments.')
+    if (!key?.startsWith('--') || !value || value.startsWith('--')) {
+      throw new Error('Invalid legacy bridge arguments.')
+    }
     values.set(key.slice(2), value)
+    index += 1
   }
   for (const required of ['version', 'app', 'output']) {
     if (!values.has(required)) throw new Error(`--${required} is required.`)
@@ -161,13 +185,16 @@ function parseArguments(argv) {
     version: values.get('version'),
     notarizedApp: values.get('app'),
     outputDirectory: values.get('output'),
-    identity: values.get('identity')
+    identity: values.get('identity'),
+    allowUnnotarizedApp
   }
 }
 
 if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
   try {
-    const result = await buildLegacyMigrationBridge(parseArguments(process.argv.slice(2)))
+    const result = await buildLegacyMigrationBridge(
+      parseLegacyBridgeArguments(process.argv.slice(2))
+    )
     process.stdout.write(`Prepared legacy migration bridge: ${result.zip}\n`)
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
