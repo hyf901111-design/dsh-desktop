@@ -60,7 +60,7 @@ describe('research canvas native wheel router', () => {
     })).toBe(false)
   })
 
-  it('routes only bounded Command-wheel inside the current active content-DIP region', () => {
+  it('routes bounded Command-wheel and trackpad pinch inside the active content-DIP region', () => {
     const { contents, router } = fixture()
     expect(router.setRegion({
       active: true, generation: 1,
@@ -70,7 +70,6 @@ describe('research canvas native wheel router', () => {
 
     for (const mouse of [
       { type: 'mouseWheel', modifiers: [], x: 120, y: 80, deltaX: 0, deltaY: -100 },
-      { type: 'mouseWheel', modifiers: ['control'], x: 120, y: 80, deltaX: 0, deltaY: -100 },
       { type: 'mouseMove', modifiers: ['meta'], x: 120, y: 80, deltaX: 0, deltaY: -100 },
       { type: 'mouseWheel', modifiers: ['meta'], x: 99, y: 80, deltaX: 0, deltaY: -100 },
       { type: 'mouseWheel', modifiers: ['meta'], x: 600, y: 80, deltaX: 0, deltaY: -100 },
@@ -85,7 +84,7 @@ describe('research canvas native wheel router', () => {
     }
     expect(contents.send).not.toHaveBeenCalled()
 
-    for (const modifier of ['meta', 'command', 'cmd']) {
+    for (const modifier of ['meta', 'command', 'cmd', 'control', 'ctrl']) {
       const event = wheelEvent()
       contents.emit('before-mouse-event', event, {
         type: 'mouseWheel', modifiers: [modifier],
@@ -93,7 +92,7 @@ describe('research canvas native wheel router', () => {
       })
       expect(event.preventDefault).toHaveBeenCalledOnce()
     }
-    expect(contents.send).toHaveBeenCalledTimes(3)
+    expect(contents.send).toHaveBeenCalledTimes(5)
     expect(contents.send).toHaveBeenLastCalledWith(RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL, {
       generation: 1,
       ownerId: 'canvas-1',

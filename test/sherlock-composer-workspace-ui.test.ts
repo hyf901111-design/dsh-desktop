@@ -3875,6 +3875,25 @@ describe('Sherlock workspace and composer controls', () => {
       expect(zoomed.scale).toBeCloseTo(1.105170918, 8)
       expect((320 - zoomed.x) / zoomed.scale).toBeCloseTo(320, 7)
       expect((240 - zoomed.y) / zoomed.scale).toBeCloseTo(240, 7)
+
+      const pinch = new mounted.browserWindow.WheelEvent('wheel', {
+        bubbles: true, cancelable: true, deltaY: 100, deltaMode: 0
+      })
+      Object.defineProperties(pinch, {
+        ctrlKey: { value: true },
+        clientX: { value: 320 },
+        clientY: { value: 240 }
+      })
+      await act(async () => {
+        pdfBody.dispatchEvent(pinch)
+        await Promise.resolve(); await Promise.resolve()
+      })
+      const pinched = mounted.workspace.getSnapshot().viewport
+      expect(pinch.defaultPrevented).toBe(true)
+      expect(bubbledWheels).toBe(1)
+      expect(pinched.scale).toBeCloseTo(1, 8)
+      expect((320 - pinched.x) / pinched.scale).toBeCloseTo(320, 7)
+      expect((240 - pinched.y) / pinched.scale).toBeCloseTo(240, 7)
       pdfBody.scrollTop = 872
       await act(async () => {
         pdfBody.dispatchEvent(new mounted.browserWindow.Event('scroll', { bubbles: true }))
@@ -10301,6 +10320,29 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('keeps trackpad pinch pointer anchoring on a blank canvas target', async () => {
+    const mounted = await mountResearchCanvas({ sessionId: 'session-blank-trackpad-pinch' })
+    try {
+      const { browserWindow, canvas, workspace } = mounted
+      const pinch = new browserWindow.WheelEvent('wheel', {
+        bubbles: true, cancelable: true, deltaY: -100
+      })
+      Object.defineProperties(pinch, {
+        ctrlKey: { value: true },
+        clientX: { value: 360 },
+        clientY: { value: 260 }
+      })
+      await act(async () => { canvas.dispatchEvent(pinch) })
+      const zoomed = workspace.getSnapshot().viewport
+      expect(pinch.defaultPrevented).toBe(true)
+      expect(zoomed.scale).toBeCloseTo(1.105170918, 8)
+      expect((360 - zoomed.x) / zoomed.scale).toBeCloseTo(360, 7)
+      expect((260 - zoomed.y) / zoomed.scale).toBeCloseTo(260, 7)
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('registers a monotonic native wheel region and rejects stale, outside, or malformed native events', async () => {
     const regionUpdates: Array<Record<string, unknown>> = []
     const nativeListeners = new Set<(value: Record<string, unknown>) => void>()
@@ -12383,7 +12425,7 @@ describe('Sherlock workspace and composer controls', () => {
     expect(workspace.getSnapshot()).toBe(beforeMissing)
   })
 
-  it('ignores wheel zoom when Command is not held', async () => {
+  it('ignores wheel zoom when neither Command nor trackpad pinch is active', async () => {
     const client = await loadClientBundle('dsh-client-ui-conversation')
     expect(client.nextResearchCanvasViewport).toBeTypeOf('function')
     if (typeof client.nextResearchCanvasViewport !== 'function') return
@@ -12391,6 +12433,7 @@ describe('Sherlock workspace and composer controls', () => {
     const initial = { scale: 1, x: 0, y: 0 }
     const next = client.nextResearchCanvasViewport(initial, {
       metaKey: false,
+      ctrlKey: false,
       deltaY: -100,
       pointerX: 100,
       pointerY: 80
@@ -12408,6 +12451,27 @@ describe('Sherlock workspace and composer controls', () => {
       { scale: 1, x: 0, y: 0 },
       {
         metaKey: true,
+        deltaY: -100,
+        pointerX: 100,
+        pointerY: 80
+      }
+    ) as { scale: number; x: number; y: number }
+
+    expect(next.scale).toBeCloseTo(1.105170918, 8)
+    expect(next.x).toBeCloseTo(-10.5170918, 7)
+    expect(next.y).toBeCloseTo(-8.41367344, 7)
+  })
+
+  it('keeps the pointer anchored while a trackpad pinch zooms the canvas', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    expect(client.nextResearchCanvasViewport).toBeTypeOf('function')
+    if (typeof client.nextResearchCanvasViewport !== 'function') return
+
+    const next = client.nextResearchCanvasViewport(
+      { scale: 1, x: 0, y: 0 },
+      {
+        metaKey: false,
+        ctrlKey: true,
         deltaY: -100,
         pointerX: 100,
         pointerY: 80
