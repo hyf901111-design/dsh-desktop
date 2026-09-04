@@ -185,11 +185,15 @@ describe('GitHub release contract', () => {
     for (const script of [
       'package:mac',
       'package:mac:arm64',
+      'package:mac:arm64:unsigned-ci',
       'package:mac:x64',
+      'package:mac:x64:unsigned-ci',
       'package:win'
     ]) {
       expect(packageJson.scripts[script]).toContain('--publish never')
     }
+    expect(packageJson.scripts['package:mac:arm64:unsigned-ci']).toContain('--skip-signature')
+    expect(packageJson.scripts['package:mac:x64:unsigned-ci']).toContain('--skip-signature')
   })
 
   it('builds a legacy updater bridge and an Apple-notarized public installer', async () => {
@@ -344,6 +348,8 @@ describe('GitHub release contract', () => {
     expect(workflow.match(/codesign --keychain .*--timestamp=none --force/g)).toHaveLength(2)
     expect(workflow.match(/refresh-mac-update-metadata\.mjs/g)).toHaveLength(2)
     expect(workflow.match(/CSC_IDENTITY_AUTO_DISCOVERY: 'false'/g)).toHaveLength(2)
+    expect(workflow).toContain('npm run package:mac:arm64:unsigned-ci')
+    expect(workflow).toContain('npm run package:mac:x64:unsigned-ci')
     expect(workflow).toContain('npm run release:cloudflare')
     expect(workflow).toContain('--bucket sherlock-releases')
     expect(workflow).toContain('https://updates.evanarts.com/latest/latest-mac.yml')

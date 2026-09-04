@@ -64,7 +64,7 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npm run package:mac:arm64
+        run: npm run package:mac:arm64:unsigned-ci
       - name: Preserve Apple Silicon update metadata
         run: mv dist/latest-mac.yml dist/latest-mac-arm64.yml
       - name: Sign Apple Silicon DMG with the Sherlock update identity
@@ -157,7 +157,7 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npm run package:mac:x64
+        run: npm run package:mac:x64:unsigned-ci
       - name: Preserve Intel update metadata
         run: mv dist/latest-mac.yml dist/latest-mac-x64.yml
       - name: Sign Intel DMG with the Sherlock update identity
