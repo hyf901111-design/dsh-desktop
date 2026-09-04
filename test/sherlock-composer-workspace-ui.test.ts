@@ -2246,7 +2246,7 @@ describe('Sherlock workspace and composer controls', () => {
     expect(itemReads).toBeLessThanOrEqual(256)
   })
 
-  it('does not create another durable preview admission while orphan revocation is pending', async () => {
+  it('waits for cold-start orphan cleanup before admitting a new preview', async () => {
     const storage = new MemoryStorage()
     const sessionId = 'session-pending-orphan'
     storage.setItem(
@@ -2254,6 +2254,8 @@ describe('Sherlock workspace and composer controls', () => {
       JSON.stringify(['pending-orphan'])
     )
     const admissions: Array<Record<string, string>> = []
+    const revocations: Array<Record<string, string>> = []
+    const cleanup = deferred<{ ok: boolean }>()
     const mounted = await mountResearchCanvas({
       sessionId,
       storage,
@@ -2263,16 +2265,16 @@ describe('Sherlock workspace and composer controls', () => {
           admitFinderFile(_file, identity) {
             admissions.push(identity)
             return Promise.resolve({
-              authorizationId: 'unexpected-authorization',
-              capabilityToken: 'unexpected-capability',
-              url: 'sherlock-preview://unexpected-capability/',
+              authorizationId: 'new-authorization',
+              capabilityToken: 'new-capability',
+              url: 'sherlock-preview://new-capability/',
               contentType: 'image/png',
               name: 'new.png'
             })
           },
           async release() { return { ok: true } },
           async restore() { return null },
-          async revokeNode() { return { ok: false } }
+          revokeNode(value) { revocations.push(value); return cleanup.promise }
         }
       }
     })
@@ -2286,19 +2288,35 @@ describe('Sherlock workspace and composer controls', () => {
         })
         await Promise.resolve()
         await Promise.resolve()
+      })
+      expect(revocations.length).toBeGreaterThanOrEqual(1)
+      expect(admissions).toEqual([])
+      expect(mounted.workspace.getSnapshot().files).toEqual([])
+
+      cleanup.resolve({ ok: true })
+      await act(async () => {
+        await cleanup.promise
+        await Promise.resolve()
+        await Promise.resolve()
         await Promise.resolve()
       })
 
-      expect(admissions).toEqual([])
+      const node = mounted.workspace.getSnapshot().files[0]
+      expect(revocations.every(
+        (value) => value.sessionId === sessionId && value.nodeId === 'pending-orphan'
+      )).toBe(true)
+      expect(admissions).toEqual([{ sessionId, nodeId: node?.id }])
       expect(mounted.workspace.getSnapshot().files).toHaveLength(1)
-      expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
+      expect(node).toMatchObject({
         path: '/workspace/new.png',
         name: 'new.png',
-        previewEligible: false
+        authorizationId: 'new-authorization',
+        contentType: 'image/png'
       })
+      expect(node).not.toHaveProperty('previewEligible')
       expect(JSON.parse(storage.getItem(
         `sherlock.research.canvas.preview-revocations.v1:${sessionId}`
-      ) ?? '[]')).toEqual(['pending-orphan'])
+      ) ?? '[]')).toEqual([])
     } finally {
       await mounted.cleanup()
     }
@@ -5069,7 +5087,7 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('blocks a second mount admission while the first mount response is still deferred', async () => {
+  it('waits for cross-mount cleanup before handling the next preview drop', async () => {
     const storage = new MemoryStorage()
     const sessionId = 'session-prejournal-cross-mount'
     const outboxKey = `sherlock.research.canvas.preview-revocations.v1:${sessionId}`
@@ -5114,7 +5132,13 @@ describe('Sherlock workspace and composer controls', () => {
       dshDesktop: {
         getPathForFile: () => '/workspace/second.png',
         researchPreview: {
-          async admitFinderFile(_file, identity) { secondAdmissions.push(identity); return null },
+          async admitFinderFile(_file, identity) {
+            secondAdmissions.push(identity)
+            return {
+              authorizationId: 'authorization-second', capabilityToken: 'capability-second',
+              url: 'sherlock-preview://capability-second/', contentType: 'image/png', name: 'second.png'
+            }
+          },
           async release() { return { ok: true } },
           async restore() { return null },
           revokeNode(value) { secondRevocations.push(value); return secondRevocation.promise }
@@ -5134,9 +5158,7 @@ describe('Sherlock workspace and composer controls', () => {
         sessionId, nodeId: firstAdmissions[0]?.nodeId
       }])
       expect(secondAdmissions).toEqual([])
-      expect(secondMount.workspace.getSnapshot().files[0]).toMatchObject({
-        path: '/workspace/second.png', previewEligible: false
-      })
+      expect(secondMount.workspace.getSnapshot().files).toEqual([])
 
       firstAdmission.resolve({
         authorizationId: 'authorization-first', capabilityToken: 'capability-first',
@@ -5150,13 +5172,27 @@ describe('Sherlock workspace and composer controls', () => {
       expect(firstRevocations).toEqual([{
         sessionId, nodeId: firstAdmissions[0]?.nodeId
       }])
+      secondRevocation.resolve({ ok: true })
+      await act(async () => {
+        await secondRevocation.promise
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      const secondNode = secondMount.workspace.getSnapshot().files[0]
+      expect(secondAdmissions).toEqual([{ sessionId, nodeId: secondNode?.id }])
+      expect(secondNode).toMatchObject({
+        path: '/workspace/second.png', authorizationId: 'authorization-second',
+        contentType: 'image/png'
+      })
+      expect(secondNode).not.toHaveProperty('previewEligible')
       expect(JSON.parse(
         storage.getItem(`sherlock.research.canvas.files.v1:${sessionId}`) ?? '[]'
       )).toMatchObject([{
-        path: '/workspace/second.png', previewEligible: false
+        path: '/workspace/second.png', authorizationId: 'authorization-second'
       }])
     } finally {
-      secondRevocation.resolve({ ok: false })
+      secondRevocation.resolve({ ok: true })
       await secondMount.cleanup()
     }
   })
