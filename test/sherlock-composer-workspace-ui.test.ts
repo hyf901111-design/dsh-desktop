@@ -3877,7 +3877,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect((240 - zoomed.y) / zoomed.scale).toBeCloseTo(240, 7)
 
       const pinch = new mounted.browserWindow.WheelEvent('wheel', {
-        bubbles: true, cancelable: true, deltaY: 100, deltaMode: 0
+        bubbles: true, cancelable: true, deltaY: 40, deltaMode: 0
       })
       Object.defineProperties(pinch, {
         ctrlKey: { value: true },
@@ -10320,12 +10320,12 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('keeps trackpad pinch pointer anchoring on a blank canvas target', async () => {
+  it('uses tuned trackpad pinch sensitivity while anchoring a blank canvas target', async () => {
     const mounted = await mountResearchCanvas({ sessionId: 'session-blank-trackpad-pinch' })
     try {
       const { browserWindow, canvas, workspace } = mounted
       const pinch = new browserWindow.WheelEvent('wheel', {
-        bubbles: true, cancelable: true, deltaY: -100
+        bubbles: true, cancelable: true, deltaY: -40
       })
       Object.defineProperties(pinch, {
         ctrlKey: { value: true },
@@ -12462,7 +12462,7 @@ describe('Sherlock workspace and composer controls', () => {
     expect(next.y).toBeCloseTo(-8.41367344, 7)
   })
 
-  it('keeps the pointer anchored while a trackpad pinch zooms the canvas', async () => {
+  it('uses tuned trackpad pinch sensitivity while keeping the pointer anchored', async () => {
     const client = await loadClientBundle('dsh-client-ui-conversation')
     expect(client.nextResearchCanvasViewport).toBeTypeOf('function')
     if (typeof client.nextResearchCanvasViewport !== 'function') return
@@ -12472,7 +12472,7 @@ describe('Sherlock workspace and composer controls', () => {
       {
         metaKey: false,
         ctrlKey: true,
-        deltaY: -100,
+        deltaY: -40,
         pointerX: 100,
         pointerY: 80
       }

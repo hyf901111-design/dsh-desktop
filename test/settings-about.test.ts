@@ -155,7 +155,7 @@ describe('Sherlock About settings', () => {
     expect(zh.releaseNotes[0]?.items).toHaveLength(2)
     expect(en.releaseNotes[0]?.items).toHaveLength(2)
     expect(zh.releaseNotes[0]?.items).toContain(
-      '研究画布支持通过苹果触控板双指捏合与外扩缩放，并以手势中心为锚点；画布空白区及网页、PDF 等组件内部均可使用'
+      '研究画布支持通过苹果触控板双指捏合与外扩缩放，提升手势灵敏度并以手势中心为锚点；画布空白区及网页、PDF 等组件内部均可使用'
     )
     expect(zh.releaseNotes[1]?.version).toBe('0.8.0')
     expect(zh.releaseNotes[2]).toEqual({
