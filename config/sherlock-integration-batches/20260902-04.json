@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260902-04",
+  "branch": "codex/integration/20260902-04",
+  "baseMainCommit": "f6209b09774723fdf324cf1c481ec6f2a6545b9a",
+  "expectedMainCommit": "f6209b09774723fdf324cf1c481ec6f2a6545b9a",
+  "createdAt": "2026-09-02T05:29:52.567Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布容器取数、历史操作、交互缩放、组件层级与主题样式修复",
+        "branch": "codex/feat/research-canvas-reliability-20260902",
+        "baseCommit": "f6209b09774723fdf324cf1c481ec6f2a6545b9a",
+        "tipCommit": "c4f00c58c7cd09e089cb464f0819c75b1fd0b0d5",
+        "commits": [
+          {
+            "commit": "90947f1fdb6715bc9e5d9be0989c4e2a30043ac7",
+            "parents": [
+              "f6209b09774723fdf324cf1c481ec6f2a6545b9a"
+            ],
+            "subject": "修复：让智能容器主动获取最新数据"
+          },
+          {
+            "commit": "83b38771924e485cec93b62fbe0392337015a7e7",
+            "parents": [
+              "90947f1fdb6715bc9e5d9be0989c4e2a30043ac7"
+            ],
+            "subject": "功能：支持研究画布撤销与重做"
+          },
+          {
+            "commit": "8c0074367a8dfc1e0ff422ebb9e4881b92053dc8",
+            "parents": [
+              "83b38771924e485cec93b62fbe0392337015a7e7"
+            ],
+            "subject": "修复：支持组件内命令滚轮缩放"
+          },
+          {
+            "commit": "0e2cdad3f11f839d42ecde493e3c0acb0f668533",
+            "parents": [
+              "8c0074367a8dfc1e0ff422ebb9e4881b92053dc8"
+            ],
+            "subject": "功能：让最后点选的画布组件置顶"
+          },
+          {
+            "commit": "c4f00c58c7cd09e089cb464f0819c75b1fd0b0d5",
+            "parents": [
+              "0e2cdad3f11f839d42ecde493e3c0acb0f668533"
+            ],
+            "subject": "优化：统一研究组件按钮与顶栏样式"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-wheel.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-canvas-wheel.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/research-canvas-wheel.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/preload-main-frame.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-wheel-preload.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-wheel.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "智能容器实时数据获取与失败保护 34 项测试通过",
+            "verifiedCommit": "c4f00c58c7cd09e089cb464f0819c75b1fd0b0d5",
+            "completedAt": "2026-09-02T05:27:48Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-canvas-wheel.test.ts",
+              "test/research-canvas-wheel-preload.test.ts",
+              "test/preload-main-frame.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "画布原生滚轮、Command 状态桥接与 preload 边界 9 项测试通过",
+            "verifiedCommit": "c4f00c58c7cd09e089cb464f0819c75b1fd0b0d5",
+            "completedAt": "2026-09-02T05:27:49Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "uses matching monochrome primary buttons and a slightly taller component title bar|keeps a bottom global toolbar for links and native container drafts|keeps the last clicked component above every earlier canvas component and persists that stack|captures Command-wheel above an interactive web iframe|persists one live resize at every pointer finish boundary|undo|redo|renders a continuous PDF stream, keeps wheel scrolling native, and cleans up pages outside the viewport|sizes PDF backing from the bordered preview body across selection and manual resize"
+            ],
+            "outcome": "passed",
+            "summary": "撤销重做、组件内缩放、层级、按钮主题与顶栏几何 12 项聚焦测试通过",
+            "verifiedCommit": "c4f00c58c7cd09e089cb464f0819c75b1fd0b0d5",
+            "completedAt": "2026-09-02T05:27:50Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node 与 Electron TypeScript 类型检查通过",
+            "verifiedCommit": "c4f00c58c7cd09e089cb464f0819c75b1fd0b0d5",
+            "completedAt": "2026-09-02T05:28:05Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按治理不构建共享客户端；真实 Sherlock 客户端将在批次晋升后从干净 main 构建并核验。"
+        },
+        "acceptanceCriteria": [
+          "需要最新或实时数据的智能容器由父会话只读搜索与抓取后生成原生 KPI、图表或表格，不再把待接入数据源当作成功结果",
+          "画布删除、移动、缩放、重命名与内容编辑支持 Command-Z 撤销以及 Command-Shift-Z 或 Command-Y 重做",
+          "鼠标位于链接网页等交互组件内部时，普通滚轮仍属于组件，按住 Command 滚轮则缩放整体画布",
+          "最后点选的文件或生成组件跨类型置于最上层，并在研究会话重载后保持层级",
+          "链接添加与容器创建按钮在深浅主题下采用一致的中性高对比样式并具备完整交互和禁用状态",
+          "组件顶栏高度从 32px 小幅增加到 36px，比例型组件同步补偿正文几何"
+        ],
+        "risks": [
+          "智能容器的最新数据质量仍取决于当时搜索结果，运行时会保留来源并在未取得有效证据时明确失败",
+          "跨域 iframe 内的 Command 状态依赖主进程键盘事件桥接，需在真实 Electron 窗口继续验证",
+          "按钮深浅主题与顶栏比例需要在最终本地客户端进行视觉确认"
+        ],
+        "generatedAt": "2026-09-02T05:28:15Z"
+      },
+      "merged": {
+        "mergeCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+        "verificationCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-task-runtime.test.js",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-canvas-wheel.test.ts",
+              "test/research-canvas-wheel-preload.test.ts",
+              "test/preload-main-frame.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-canvas-wheel.test.ts test/research-canvas-wheel-preload.test.ts test/preload-main-frame.test.ts",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "uses matching monochrome primary buttons and a slightly taller component title bar|keeps a bottom global toolbar for links and native container drafts|keeps the last clicked component above every earlier canvas component and persists that stack|captures Command-wheel above an interactive web iframe|persists one live resize at every pointer finish boundary|undo|redo|renders a continuous PDF stream, keeps wheel scrolling native, and cleans up pages outside the viewport|sizes PDF backing from the bordered preview body across selection and manual resize"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/sherlock-composer-workspace-ui.test.ts -t uses matching monochrome primary buttons and a slightly taller component title bar|keeps a bottom global toolbar for links and native container drafts|keeps the last clicked component above every earlier canvas component and persists that stack|captures Command-wheel above an interactive web iframe|persists one live resize at every pointer finish boundary|undo|redo|renders a continuous PDF stream, keeps wheel scrolling native, and cleans up pages outside the viewport|sizes PDF backing from the bordered preview body across selection and manual resize",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b33c9f9d4d019cd8a4fe118c60625dadbc600c2c",
+            "completedAt": "2026-09-02T05:30:10.010Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T05:30:10.010Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/research-canvas-wheel.test.ts",
+        "test/research-canvas-wheel-preload.test.ts",
+        "test/preload-main-frame.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "-t",
+        "uses matching monochrome primary buttons and a slightly taller component title bar|keeps a bottom global toolbar for links and native container drafts|keeps the last clicked component above every earlier canvas component and persists that stack|captures Command-wheel above an interactive web iframe|persists one live resize at every pointer finish boundary|undo|redo|renders a continuous PDF stream, keeps wheel scrolling native, and cleans up pages outside the viewport|sizes PDF backing from the bordered preview body across selection and manual resize"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}

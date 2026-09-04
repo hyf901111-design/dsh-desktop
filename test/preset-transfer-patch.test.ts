@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { toFetchHandler } from '@deepseek-ai/dsh-host-apiproxy'
-import { patchPath, projectRoot } from './patch-path'
+
+const projectRoot = path.resolve(import.meta.dirname, '..')
 
 describe('agent preset package transfer', () => {
   it('routes binary export and two-phase import requests outside the JSON RPC carrier', async () => {
@@ -57,7 +58,11 @@ describe('agent preset package transfer', () => {
 
   it('keeps the archive boundary strict and installs through an atomic validated directory move', async () => {
     const patch = await readFile(
-      patchPath('@deepseek-ai/dsh-host-apiproxy'),
+      path.join(
+        projectRoot,
+        'patches',
+        '@deepseek-ai+dsh-host-apiproxy+0.1.0-rc.7.patch'
+      ),
       'utf8'
     )
 
@@ -75,64 +80,17 @@ describe('agent preset package transfer', () => {
     expect(patch).toContain('absolute-paths')
   })
 
-  it('adds import preview, conflict rename, trust warning, and custom-card export controls', async () => {
-    const patch = await readFile(
-      patchPath('@deepseek-ai/dsh-client-ui-agent-preset'),
-      'utf8'
-    )
-
-    expect(patch).toContain('ImportDialog')
-    expect(patch).toContain('previewImport(file)')
-    expect(patch).toContain('confirmImport()')
-    expect(patch).toContain('exportPreset(id)')
-    expect(patch).toContain('IconArchiveOutline20')
-    expect(patch).toContain('IconDownloadOutline16')
-    expect(patch).toContain('Custom presets can run tools and commands')
-    expect(patch).toContain('自定义预设可以使用与 Agent 相同权限的工具和命令')
-    expect(patch).toContain('draft.conflict ? "idTaken"')
-    expect(patch).toContain('.dshpreset')
-    expect(patch).toContain('importPreset: "Import"')
-    expect(patch).toContain('awesomePreset: "Awesome preset"')
-    expect(patch).toContain('https://www.dshdesktop.com/preset/')
-    expect(patch).toContain('"_blank", "noopener,noreferrer"')
-    expect(patch).toContain('AgentPresetSection_module_css_default.sectionActions')
-    expect(patch).toContain('.rtSEdW_sectionHead{align-items:center;gap:16px;display:flex}')
-    expect(patch).toContain('justify-content:flex-end')
-    expect(patch).toContain('margin-left:auto')
-    expect(patch).toContain('.rtSEdW_hiddenInput{display:none}')
-  })
-
-  it('keeps a large mode roster searchable, grouped, compact, and connected to Awesome Presets', async () => {
-    const patch = await readFile(
-      patchPath('@deepseek-ai/dsh-client-ui-agent-preset'),
-      'utf8'
-    )
-
-    expect(patch).toContain('searchPresets: "Search modes…"')
-    expect(patch).toContain('recentPresets: "Recent"')
-    expect(patch).toContain('RECENT_PRESETS_KEY')
-    expect(patch).toContain('option.trust === "system"')
-    expect(patch).toContain('option.trust === "user"')
-    expect(patch).toContain('text-overflow:ellipsis')
-    expect(patch).toContain('IconSearchOutline16')
-    expect(patch).toContain('IconSparkle16')
-    expect(patch).toContain('selectedItem')
-    expect(patch).toContain(':focus-within')
-    expect(patch).toContain('[role=menu]:has(')
-    expect(patch).toContain('max-height:min(360px')
-    expect(patch).toContain('side: "bottom"')
-    expect(patch).toContain('footer: [{')
-    expect(patch).toContain('id: AWESOME_PRESETS_ID')
-    expect(patch).toContain('browseAwesomePresets: "浏览 Awesome Presets…"')
-  })
-
   it('keeps the loopback API discoverable by an explicitly requested online Skill', async () => {
     const webApp = await readFile(
       path.join(projectRoot, 'node_modules', '@deepseek-ai', 'dsh-web-app', 'lib', 'index.js'),
       'utf8'
     )
     const hostPatch = await readFile(
-      patchPath('@deepseek-ai/dsh-host-apiproxy'),
+      path.join(
+        projectRoot,
+        'patches',
+        '@deepseek-ai+dsh-host-apiproxy+0.1.0-rc.7.patch'
+      ),
       'utf8'
     )
 

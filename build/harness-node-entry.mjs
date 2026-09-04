@@ -1,17 +1,5 @@
+import { registerHooks } from 'node:module'
 import { pathToFileURL } from 'node:url'
-
-// On macOS Harness runs inside an Electron utility process (TCC responsibility
-// isolation), so `process.execPath` and `argv0` point at the Electron helper
-// instead of a Node binary. Plugins re-invoke the dsh CLI through the
-// executable running them — dsh-market forwards `process.execArgv` with it —
-// and without Node mode that child boots as an Electron app, where the leading
-// `--expose-internals` shifts argv and the CLI answers "--profile <name> is
-// required" instead of installing. Declaring it here, after this process has
-// already parsed the Chromium switches it was launched with, marks only the
-// children as Node processes. Bundled-Node hosts (Windows, Linux) skip it.
-if (process.versions.electron !== undefined) {
-  process.env.ELECTRON_RUN_AS_NODE = '1'
-}
 
 const [dshEntryPath, ...dshArguments] = process.argv.slice(2)
 
@@ -28,6 +16,39 @@ process.stdout.write(
 process.stdout.write(`[harness-node] execPath=${process.execPath}\n`)
 process.stdout.write(`[harness-node] cwd=${process.cwd()}\n`)
 process.stdout.write(`[harness-node] DSH_HOME=${process.env.DSH_HOME ?? ''}\n`)
+
+const bundledWebSearchEntry = process.env.DSH_DESKTOP_WEB_SEARCH_ENTRY
+const bundledMarketInstallerEntry = process.env.DSH_DESKTOP_MARKET_INSTALLER_ENTRY
+const bundledResearchTaskEntry = process.env.DSH_DESKTOP_RESEARCH_TASK_ENTRY
+const bundledPackageEntries = new Map([
+  ...(bundledWebSearchEntry
+    ? [['dsh-web-search-session-model', bundledWebSearchEntry]]
+    : []),
+  ...(bundledMarketInstallerEntry
+    ? [['dsh-desktop-market-installer', bundledMarketInstallerEntry]]
+    : []),
+  ...(bundledResearchTaskEntry
+    ? [['dsh-research-task-runtime', bundledResearchTaskEntry]]
+    : [])
+])
+if (bundledPackageEntries.size > 0) {
+  registerHooks({
+    resolve(specifier, context, nextResolve) {
+      const bundledEntry = bundledPackageEntries.get(specifier)
+      if (bundledEntry) return { url: bundledEntry, shortCircuit: true }
+      return nextResolve(specifier, context)
+    }
+  })
+}
+if (bundledWebSearchEntry) {
+  process.stdout.write('[harness-node] bundled session-model web search mapped\n')
+}
+if (bundledMarketInstallerEntry) {
+  process.stdout.write('[harness-node] bundled market installer mapped\n')
+}
+if (bundledResearchTaskEntry) {
+  process.stdout.write('[harness-node] bundled Research task runtime mapped\n')
+}
 
 if (!dshEntryPath) {
   report('startup error', 'missing DSH entry path')

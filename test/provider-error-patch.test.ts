@@ -1,15 +1,19 @@
 import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { patchPath } from './patch-path'
 
-async function readPatch(packageName: string): Promise<string> {
-  return readFile(patchPath(packageName), 'utf8')
+const projectRoot = path.resolve(import.meta.dirname, '..')
+
+async function readPatch(name: string): Promise<string> {
+  return readFile(path.join(projectRoot, 'patches', name), 'utf8')
 }
 
 describe('provider error classification patches', () => {
   it('distinguishes quota, authentication, and forbidden failures', async () => {
-    const deepseekPatch = await readPatch('@deepseek-ai/dsh-llm-deepseek')
-    const piAiPatch = await readPatch('@deepseek-ai/dsh-llm-pi-ai')
+    const deepseekPatch = await readPatch(
+      '@deepseek-ai+dsh-llm-deepseek+0.1.0-rc.7.patch'
+    )
+    const piAiPatch = await readPatch('@deepseek-ai+dsh-llm-pi-ai+0.1.0-rc.7.patch')
 
     expect(deepseekPatch).toContain('+\tif (status === 401) return "AUTH";')
     expect(deepseekPatch).toContain(
@@ -30,7 +34,9 @@ describe('provider error classification patches', () => {
   })
 
   it('shows distinct English quota, forbidden, and authentication messages', async () => {
-    const runtimePatch = await readPatch('@deepseek-ai/dsh-client-runtime')
+    const runtimePatch = await readPatch(
+      '@deepseek-ai+dsh-client-runtime+0.1.0-rc.7.patch'
+    )
 
     expect(runtimePatch).toContain('record.code === "QUOTA"')
     expect(runtimePatch).toContain(

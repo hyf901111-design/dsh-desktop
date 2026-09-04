@@ -37,7 +37,7 @@ describe('plugin recovery view model', () => {
 
   it.each([
     ['cannot resolve profile bundle example', '插件没有完整安装'],
-    ['package declares no dsh.bundle', '安装的包不是兼容的 DSH 插件'],
+    ['package declares no dsh.bundle', '安装的包不是兼容的 Sherlock 插件'],
     ['failed to import loader entry example', '插件代码加载失败'],
     ['duplicate loader entry id: storage', '插件注册了重复的服务组件'],
     ['single slot "conversation.hero.workspace.directoryFlow" already has a registration at priority 0', '插件存在界面插槽冲突']
@@ -57,8 +57,6 @@ describe('plugin recovery view model', () => {
     expect(model.plugins).toEqual(['plugin-a', 'plugin-b'])
     expect(model.primaryLabel).toBe('卸载这 2 个插件并继续检测')
     expect(model.canUninstall).toBe(true)
-    expect(model.restartLabel).toBe('重启 Harness')
-    expect(model.restartBusyLabel).toBe('正在重启…')
     expect(model).not.toHaveProperty('status')
     expect(model.advancedLabel).toBe('查看技术详情')
   })
@@ -94,7 +92,5 @@ describe('plugin recovery view model', () => {
     })
     expect(model.canUninstall).toBe(false)
     expect(model.primaryLabel).toBe('Open Harness log')
-    expect(model.restartLabel).toBe('Restart Harness')
-    expect(model.restartBusyLabel).toBe('Restarting…')
   })
 })

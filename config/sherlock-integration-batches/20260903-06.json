@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260903-06",
+  "branch": "codex/integration/20260903-06",
+  "baseMainCommit": "0850126a840ace28364328e3738ff1315e83a270",
+  "expectedMainCommit": "0850126a840ace28364328e3738ff1315e83a270",
+  "createdAt": "2026-09-03T08:24:26.076Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "智能容器实时搜索工具调度兼容修复",
+        "branch": "codex/feat/tool-scheduler-compat-20260903",
+        "baseCommit": "0850126a840ace28364328e3738ff1315e83a270",
+        "tipCommit": "93e79c819ebc5b184e18143836a617f6a9a520a2",
+        "commits": [
+          {
+            "commit": "93e79c819ebc5b184e18143836a617f6a9a520a2",
+            "parents": [
+              "0850126a840ace28364328e3738ff1315e83a270"
+            ],
+            "subject": "修复：兼容容器实时搜索工具调度"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "patches/@deepseek-ai+dsh-agent-loop+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/tool-runtime-scheduler-compat.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/tool-runtime-scheduler-compat.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "工具调度兼容、研究任务运行时和0.8.0更新日志共50项聚焦测试通过",
+            "verifiedCommit": "93e79c819ebc5b184e18143836a617f6a9a520a2",
+            "completedAt": "2026-09-03T08:23:32Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node与Electron TypeScript类型检查通过",
+            "verifiedCommit": "93e79c819ebc5b184e18143836a617f6a9a520a2",
+            "completedAt": "2026-09-03T08:23:32Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能worktree按治理不构建共享客户端；合入main后使用本地测试手册构建，并在真实客户端验证实时容器搜索生成路径。"
+        },
+        "acceptanceCriteria": [
+          "隔离画布子任务使用来自另一兼容dsh-tools模块实例的工具调度器时仍可发起搜索",
+          "主流加密货币行情监控等实时容器可连续执行多个web_search调用，不再出现undefined.prepare错误",
+          "缺少任何兼容调度器时返回明确的内部兼容错误，而不是模糊的属性读取异常",
+          "0.8.0中英文更新日志记录实时搜索生成稳定性修复"
+        ],
+        "risks": [
+          "实时行情内容质量仍取决于所选模型和网页搜索结果，但工具调度不会再因模块副本Symbol身份不同而中断"
+        ],
+        "generatedAt": "2026-09-03T08:23:32Z"
+      },
+      "merged": {
+        "mergeCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+        "verificationCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/tool-runtime-scheduler-compat.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/tool-runtime-scheduler-compat.test.ts test/research-task-runtime.test.js test/settings-about.test.ts",
+            "verifiedCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+            "completedAt": "2026-09-03T08:26:00.284Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e738ec1aae3f1e27851ff59658abfb0192a4d374",
+            "completedAt": "2026-09-03T08:26:00.284Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-03T08:26:00.284Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/tool-runtime-scheduler-compat.test.ts",
+        "test/research-task-runtime.test.js",
+        "test/settings-about.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}

@@ -15,22 +15,15 @@ const downloading: UpdateStatus = {
   manual: false
 }
 
-const downloaded: UpdateStatus = {
-  phase: 'downloaded',
-  currentVersion: '1.0.0',
-  availableVersion: '1.1.0',
-  manual: false
-}
-
-describe('desktop update card visibility', () => {
-  it('shows automatic downloads but keeps automatic background checks quiet', () => {
+describe('desktop update control visibility', () => {
+  it('shows update actions but keeps checks quiet until an update exists', () => {
     expect(shouldShowUpdate(downloading)).toBe(true)
     expect(
       shouldShowUpdate({ phase: 'checking', currentVersion: '1.0.0', manual: false })
     ).toBe(false)
     expect(
       shouldShowUpdate({ phase: 'checking', currentVersion: '1.0.0', manual: true })
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('keeps a dismissed version hidden while its download phase changes', () => {
@@ -40,45 +33,31 @@ describe('desktop update card visibility', () => {
     )
   })
 
-  it('dismisses a downloaded update when the user closes the card', () => {
-    expect(isUpdateDismissed(downloaded, null)).toBe(false)
-    expect(isUpdateDismissed(downloaded, '1.0.0')).toBe(false)
-    expect(isUpdateDismissed(downloaded, '1.1.0')).toBe(true)
-  })
-
   it('formats localized progress copy', () => {
     expect(updateMessage(downloading, 'zh')).toBe('正在下载更新 42%')
     expect(updateMessage(downloading, 'en')).toBe('Downloading update 42%')
   })
 })
 
-describe('secure update card wiring', () => {
+describe('secure sidebar update wiring', () => {
   it('bundles a preload and mounts it without enabling Node in Harness', async () => {
-    const [config, main, preload] = await Promise.all([
+    const [config, main, preload, sidebarControl] = await Promise.all([
       readFile('electron.vite.config.ts', 'utf8'),
       readFile('src/main/index.ts', 'utf8'),
-      readFile('src/preload/index.ts', 'utf8')
+      readFile('src/preload/index.ts', 'utf8'),
+      readFile('src/preload/sidebar-update-control.ts', 'utf8')
     ])
 
     expect(config).toContain('preload:')
     expect(main).toContain("preload: join(import.meta.dirname, '../preload/index.cjs')")
     expect(main).toContain('nodeIntegration: false')
     expect(preload).toContain("ipcRenderer.on('updates:status-changed'")
+    expect(preload).toContain("ipcRenderer.invoke('updates:download')")
     expect(preload).toContain("ipcRenderer.invoke('updates:install')")
-    expect(preload).toContain("'right:20px'")
-    expect(preload).toContain("'bottom:20px'")
-  })
-})
-
-describe('accepting an update is what starts the download', () => {
-  it('asks rather than announcing a download already under way', () => {
-    const available: UpdateStatus = {
-      phase: 'available',
-      currentVersion: '0.4.3',
-      availableVersion: '0.4.4',
-      manual: false
-    }
-    expect(updateMessage(available, 'zh')).toBe('发现新版本 0.4.4，是否更新？')
-    expect(updateMessage(available, 'en')).toBe('DSH Desktop 0.4.4 is available. Update now?')
+    expect(preload).toContain('new SidebarUpdateControl(document, locale')
+    expect(sidebarControl).toContain("'[data-dsh-sidebar-footer]'")
+    expect(sidebarControl).toContain('width: 28px')
+    expect(sidebarControl).toContain('width: 88px')
+    expect(sidebarControl).toContain('background: #1677ff')
   })
 })

@@ -7,7 +7,6 @@ import {
 const HOST_ID = 'dsh-desktop-windows-titlebar'
 const LAYOUT_STYLE_ID = `${HOST_ID}-layout`
 const SIDEBAR_WIDTH_PROPERTY = '--dsh-desktop-windows-sidebar-width'
-const CAPTION_WIDTH_PROPERTY = '--dsh-desktop-windows-caption-width'
 
 type MenuEntry =
   | { kind: 'command'; command: DesktopMenuCommand; label: string; shortcut?: string }
@@ -21,6 +20,26 @@ interface TitlebarMountOptions {
   locale: 'en' | 'zh'
 }
 
+const nativeThemeSyncedDocuments = new WeakSet<Document>()
+
+export function mountNativeThemeSync(
+  options: Pick<TitlebarMountOptions, 'document' | 'ipcRenderer'>
+): void {
+  const { document, ipcRenderer } = options
+  if (!document.body || nativeThemeSyncedDocuments.has(document)) return
+  nativeThemeSyncedDocuments.add(document)
+
+  syncTheme(document, ipcRenderer)
+  const themeObserver = new MutationObserver(() => syncTheme(document, ipcRenderer))
+  themeObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-ds-dark-theme']
+  })
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    syncTheme(document, ipcRenderer)
+  })
+}
+
 export function mountWindowsTitlebar(options: TitlebarMountOptions): void {
   const { document, ipcRenderer, locale } = options
   if (!document.body || document.getElementById(HOST_ID)) return
@@ -30,7 +49,7 @@ export function mountWindowsTitlebar(options: TitlebarMountOptions): void {
 
   const host = document.createElement('div')
   host.id = HOST_ID
-  host.setAttribute('aria-label', locale === 'zh' ? 'DSH Desktop 标题栏' : 'DSH Desktop title bar')
+  host.setAttribute('aria-label', locale === 'zh' ? 'Sherlock 标题栏' : 'Sherlock title bar')
   const shadow = host.attachShadow({ mode: 'closed' })
   const style = document.createElement('style')
   style.textContent = titlebarStyles
@@ -97,16 +116,7 @@ export function mountWindowsTitlebar(options: TitlebarMountOptions): void {
   bar.appendChild(safeArea)
   shadow.append(style, bar)
   document.body.appendChild(host)
-  syncTheme(document, ipcRenderer)
-
-  const themeObserver = new MutationObserver(() => syncTheme(document, ipcRenderer))
-  themeObserver.observe(document.body, {
-    attributes: true,
-    attributeFilter: ['data-ds-dark-theme', 'class', 'style']
-  })
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    syncTheme(document, ipcRenderer)
-  })
+  mountNativeThemeSync({ document, ipcRenderer })
 }
 
 function installLayout(document: Document): void {
@@ -118,7 +128,6 @@ function installLayout(document: Document): void {
   style.textContent = `
     html, body { height: 100% !important; }
     body.dsh-desktop-windows-titlebar-layout {
-      ${CAPTION_WIDTH_PROPERTY}: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 140px)));
       box-sizing: border-box !important;
       height: 100% !important;
       padding-top: 0 !important;
@@ -130,18 +139,6 @@ function installLayout(document: Document): void {
     body.dsh-desktop-windows-titlebar-layout [data-dsh-sidebar-root][data-dsh-sidebar-wide="true"] {
       padding-top: 6px !important;
     }
-    body.dsh-desktop-windows-titlebar-layout [data-slot="conversation.session.header"] > header {
-      padding-right: calc(var(${CAPTION_WIDTH_PROPERTY}, 140px) + 52px) !important;
-    }
-    body.dsh-desktop-windows-titlebar-layout button,
-    body.dsh-desktop-windows-titlebar-layout a,
-    body.dsh-desktop-windows-titlebar-layout input,
-    body.dsh-desktop-windows-titlebar-layout select,
-    body.dsh-desktop-windows-titlebar-layout textarea,
-    body.dsh-desktop-windows-titlebar-layout [role="button"],
-    body.dsh-desktop-windows-titlebar-layout [data-dsh-no-drag] {
-      -webkit-app-region: no-drag !important;
-    }
   `
   document.head.appendChild(style)
 }
@@ -151,22 +148,22 @@ function trackSidebarLayout(document: Document): void {
   const resizeObserver = new ResizeObserver(() => updateSidebarWidth())
 
   const updateSidebarWidth = (): void => {
-    if (!observedSidebarColumn) {
-      document.documentElement.style.setProperty(SIDEBAR_WIDTH_PROPERTY, '0px')
-      return
-    }
+    if (!observedSidebarColumn) return
     const width = observedSidebarColumn.getBoundingClientRect().width
-    document.documentElement.style.setProperty(SIDEBAR_WIDTH_PROPERTY, `${Math.max(0, width)}px`)
+    if (width > 0) {
+      document.documentElement.style.setProperty(SIDEBAR_WIDTH_PROPERTY, `${width}px`)
+    }
   }
 
   const sync = (): void => {
     const sidebarRoot = document.querySelector<HTMLElement>('[data-dsh-sidebar-root]')
     const sidebarColumn = sidebarRoot?.parentElement ?? null
+    if (!sidebarColumn) return
 
     if (sidebarColumn !== observedSidebarColumn) {
       if (observedSidebarColumn) resizeObserver.unobserve(observedSidebarColumn)
       observedSidebarColumn = sidebarColumn
-      if (sidebarColumn) resizeObserver.observe(sidebarColumn)
+      resizeObserver.observe(sidebarColumn)
     }
     updateSidebarWidth()
   }
@@ -276,12 +273,6 @@ function menuEntries(locale: 'en' | 'zh'): MenuEntry[] {
     { kind: 'label', label: 'HARNESS' },
     {
       kind: 'command',
-      command: 'connect-phone',
-      label: zh ? '连接手机…' : 'Connect Phone…',
-      shortcut: 'Ctrl+Shift+M'
-    },
-    {
-      kind: 'command',
       command: 'restart-harness',
       label: zh ? '重启 Harness' : 'Restart Harness',
       shortcut: 'Ctrl+Shift+R'
@@ -330,7 +321,7 @@ function menuEntries(locale: 'en' | 'zh'): MenuEntry[] {
     {
       kind: 'command',
       command: 'about',
-      label: zh ? '关于 DSH Desktop' : 'About DSH Desktop'
+      label: zh ? '关于 Sherlock' : 'About Sherlock'
     },
     { kind: 'command', command: 'quit', label: zh ? '退出' : 'Exit' }
   ]
@@ -370,10 +361,10 @@ const titlebarStyles = `
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
     right: 44px;
-    height: ${WINDOWS_TITLEBAR_HEIGHT}px;
-    pointer-events: none;
+    height: 5px;
+    left: var(${SIDEBAR_WIDTH_PROPERTY}, 280px);
+    pointer-events: auto;
     -webkit-app-region: drag;
   }
   .menuButton {

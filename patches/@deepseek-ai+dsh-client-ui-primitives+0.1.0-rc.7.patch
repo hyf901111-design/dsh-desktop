@@ -1,0 +1,26 @@
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js b/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js
+index 0d58268..6ca50e3 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js
+@@ -2442,18 +2442,19 @@ function Tooltip({ label, side = "right", delayMs = 0, disabled = false, maxWidt
+ 			triggers.current.focus = false;
+ 			hide();
+ 		}
+-	}), pos !== null && jsx("span", {
++	}), pos !== null && createPortal(jsx("span", {
+ 		ref: bubble,
+ 		className: Tooltip_module_css_default.bubble,
+ 		"data-side": placement,
+ 		style: {
++			position: "fixed",
+ 			left: pos.x,
+ 			top: y,
+ 			...maxWidth === void 0 ? {} : { maxWidth }
+ 		},
+ 		role: "tooltip",
+ 		children: resolvedLabel
+-	})] });
++	}), document.body)] });
+ }
+ //#endregion
+ //#region \0dsh-css-stub:./Toast.module.css.mjs

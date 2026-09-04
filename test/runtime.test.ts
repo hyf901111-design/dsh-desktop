@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   buildHarnessArguments,
@@ -10,14 +8,16 @@ import {
   extractOffendingPlugin,
   extractOffendingPlugins,
   extractPluginFailureReferences,
-  extractSlotConflictName,
   formatExitCode,
   updateReadyStability
 } from '../src/main/runtime/harness-runtime'
+
+it('passes context credentials only as trusted Harness environment overrides', () => {
+  const options = buildHarnessSpawnOptions('/tmp/launch', '/tmp/harness', 'darwin', { PATH: '/usr/bin', SHERLOCK_RESEARCH_CONTEXT_TOKEN: 'stale' }, undefined, undefined, undefined, undefined, undefined, { url: 'http://127.0.0.1:45124', token: 'context-secret' })
+  expect(options.env).toMatchObject({ SHERLOCK_RESEARCH_CONTEXT_URL: 'http://127.0.0.1:45124', SHERLOCK_RESEARCH_CONTEXT_TOKEN: 'context-secret' })
+})
 import { canGrantWindowPermission, isTrustedAppUrl } from '../src/main/security-policy'
-import { buildDisclaimedUtilityProcessSpec } from '../src/main/runtime/disclaimed-utility-process'
 import {
-  desktopHarnessUrl,
   isAbortedNavigationError,
   shouldLoadHarnessUrl
 } from '../src/main/window-navigation'
@@ -38,7 +38,6 @@ describe('Harness launch contract', () => {
   it('binds the web server to a random loopback port', () => {
     expect(buildHarnessArguments(43127)).toEqual([
       'web',
-      '--no-open',
       '--host',
       '127.0.0.1',
       '--port',
@@ -46,16 +45,11 @@ describe('Harness launch contract', () => {
     ])
   })
 
-  it('keeps Harness from handing the loopback URL to the system browser', () => {
-    expect(buildHarnessArguments(43127)).toContain('--no-open')
-  })
-
   it('applies the desktop composition patch before web arguments', () => {
     expect(buildHarnessArguments(43127, 'C:\\app\\dsh-desktop.patch.yml')).toEqual([
       'web',
       '--patch',
       'C:\\app\\dsh-desktop.patch.yml',
-      '--no-open',
       '--host',
       '127.0.0.1',
       '--port',
@@ -88,6 +82,92 @@ describe('Harness launch contract', () => {
     expect(options.env).not.toHaveProperty('ELECTRON_RUN_AS_NODE')
   })
 
+  it('exposes Sherlock bundled skills to the Harness process', () => {
+    const options = buildHarnessSpawnOptions(
+      '/Users/tester/Library/Application Support/dsh-desktop/launch-root',
+      '/Users/tester/Library/Application Support/dsh-desktop/harness',
+      'darwin',
+      { PATH: '/usr/bin' },
+      '/Applications/Sherlock.app/Contents/Resources/sherlock-skills'
+    )
+
+    expect(options.env).toMatchObject({
+      DSH_BUNDLED_SKILL_DIR:
+        '/Applications/Sherlock.app/Contents/Resources/sherlock-skills'
+    })
+  })
+
+  it('exposes the bundled session-model web search entry to Harness', () => {
+    const options = buildHarnessSpawnOptions(
+      '/Users/tester/Library/Application Support/dsh-desktop/launch-root',
+      '/Users/tester/Library/Application Support/dsh-desktop/harness',
+      'darwin',
+      { PATH: '/usr/bin' },
+      '/Applications/Sherlock.app/Contents/Resources/sherlock-skills',
+      'file:///Applications/Sherlock.app/Contents/Resources/app/node_modules/dsh-web-search-session-model/index.js'
+    )
+
+    expect(options.env).toMatchObject({
+      DSH_DESKTOP_WEB_SEARCH_ENTRY:
+        'file:///Applications/Sherlock.app/Contents/Resources/app/node_modules/dsh-web-search-session-model/index.js'
+    })
+  })
+
+  it('exposes the bundled market installer entry to Harness', () => {
+    const options = buildHarnessSpawnOptions(
+      '/Users/tester/Library/Application Support/dsh-desktop/launch-root',
+      '/Users/tester/Library/Application Support/dsh-desktop/harness',
+      'darwin',
+      { PATH: '/usr/bin' },
+      '/Applications/Sherlock.app/Contents/Resources/sherlock-skills',
+      undefined,
+      undefined,
+      'file:///Applications/Sherlock.app/Contents/Resources/app/node_modules/dsh-desktop-market-installer/index.js'
+    )
+
+    expect(options.env).toMatchObject({
+      DSH_DESKTOP_MARKET_INSTALLER_ENTRY:
+        'file:///Applications/Sherlock.app/Contents/Resources/app/node_modules/dsh-desktop-market-installer/index.js'
+    })
+  })
+
+  it('exposes the bundled Research task runtime entry to Harness', () => {
+    const options = buildHarnessSpawnOptions(
+      '/Users/tester/Library/Application Support/dsh-desktop/launch-root',
+      '/Users/tester/Library/Application Support/dsh-desktop/harness',
+      'darwin',
+      { PATH: '/usr/bin' },
+      '/Applications/Sherlock.app/Contents/Resources/sherlock-skills',
+      undefined,
+      undefined,
+      undefined,
+      'file:///Applications/Sherlock.app/Contents/Resources/app/node_modules/dsh-research-task-runtime/index.js'
+    )
+
+    expect(options.env).toMatchObject({
+      DSH_DESKTOP_RESEARCH_TASK_ENTRY:
+        'file:///Applications/Sherlock.app/Contents/Resources/app/node_modules/dsh-research-task-runtime/index.js'
+    })
+  })
+
+  it('passes the authenticated local-search endpoint only to the Harness environment', () => {
+    const options = buildHarnessSpawnOptions(
+      '/Users/tester/Library/Application Support/dsh-desktop/launch-root',
+      '/Users/tester/Library/Application Support/dsh-desktop/harness',
+      'darwin',
+      { PATH: '/usr/bin' },
+      '/Applications/Sherlock.app/Contents/Resources/sherlock-skills',
+      'file:///Applications/Sherlock.app/Contents/Resources/app/node_modules/dsh-web-search-session-model/index.js',
+      { url: 'http://127.0.0.1:45123', token: 'ephemeral-token' }
+    )
+
+    expect(options.env).toMatchObject({
+      SHERLOCK_LOCAL_SEARCH_URL: 'http://127.0.0.1:45123',
+      SHERLOCK_LOCAL_SEARCH_TOKEN: 'ephemeral-token'
+    })
+    expect(JSON.stringify(options)).not.toContain('authorization')
+  })
+
   it('passes the internal-loader flag directly to bundled Node.js', () => {
     expect(
       buildNodeArguments(
@@ -103,95 +183,11 @@ describe('Harness launch contract', () => {
       'web',
       '--patch',
       'C:\\app\\dsh-desktop.patch.yml',
-      '--no-open',
       '--host',
       '127.0.0.1',
       '--port',
       '43127'
     ])
-  })
-
-  it('disclaims macOS TCC responsibility when Harness runs as a utility process', () => {
-    const spawnOptions = buildHarnessSpawnOptions(
-      '/Users/tester/Library/Application Support/dsh-desktop/launch-root',
-      '/Users/tester/Library/Application Support/dsh-desktop/harness',
-      'darwin',
-      { PATH: '/usr/bin', ELECTRON_RUN_AS_NODE: '1' }
-    )
-    const nodeArguments = buildNodeArguments(
-      '/Applications/DSH Desktop.app/Contents/Resources/harness-node-entry.mjs',
-      '/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js',
-      43127,
-      '/Applications/DSH Desktop.app/Contents/Resources/dsh-desktop.patch.yml'
-    )
-
-    expect(buildDisclaimedUtilityProcessSpec(nodeArguments, spawnOptions)).toEqual({
-      modulePath: '/Applications/DSH Desktop.app/Contents/Resources/harness-node-entry.mjs',
-      args: [
-        '/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js',
-        'web',
-        '--patch',
-        '/Applications/DSH Desktop.app/Contents/Resources/dsh-desktop.patch.yml',
-        '--no-open',
-        '--host',
-        '127.0.0.1',
-        '--port',
-        '43127'
-      ],
-      options: {
-        cwd: '/Users/tester/Library/Application Support/dsh-desktop/launch-root',
-        env: {
-          PATH: '/usr/bin',
-          DSH_HOME: '/Users/tester/Library/Application Support/dsh-desktop/harness',
-          NO_COLOR: '1',
-          PNPM_MAX_WORKERS: '1',
-          npm_config_child_concurrency: '1',
-          npm_config_package_import_method: 'clone-or-copy',
-          npm_config_side_effects_cache: 'false',
-          PNPM_CONFIG_CHILD_CONCURRENCY: '1',
-          PNPM_CONFIG_PACKAGE_IMPORT_METHOD: 'clone-or-copy',
-          PNPM_CONFIG_SIDE_EFFECTS_CACHE: 'false'
-        },
-        execArgv: ['--expose-internals'],
-        stdio: 'pipe',
-        serviceName: 'DSH Harness',
-        disclaim: true
-      }
-    })
-
-    expect(
-      buildDisclaimedUtilityProcessSpec(nodeArguments, spawnOptions, { disclaim: false }).options
-        .disclaim
-    ).toBe(false)
-  })
-
-  it('declares Node mode for Harness children without imposing it on the utility process', async () => {
-    // dsh-market re-runs the dsh CLI as `execPath [...execArgv] bin.js plugin
-    // --profile web add …`. On macOS execPath is the Electron helper, so
-    // without Node mode that child boots as an Electron app, the leading
-    // `--expose-internals` shifts argv, and the CLI answers "--profile <name>
-    // is required" instead of installing. The flag cannot travel in the
-    // process environment: the utility process is launched with Chromium
-    // switches Node rejects, so the entry sets it from the inside instead.
-    const macOptions = buildHarnessSpawnOptions('/launch-root', '/harness', 'darwin', {
-      PATH: '/usr/bin',
-      ELECTRON_RUN_AS_NODE: '1'
-    })
-    expect(macOptions.env).not.toHaveProperty('ELECTRON_RUN_AS_NODE')
-
-    const entry = await readFile(join(process.cwd(), 'build', 'harness-node-entry.mjs'), 'utf8')
-    expect(entry).toContain('process.versions.electron !== undefined')
-    expect(entry).toContain("process.env.ELECTRON_RUN_AS_NODE = '1'")
-  })
-
-  it('rejects an unexpected macOS Harness argument layout', () => {
-    expect(() =>
-      buildDisclaimedUtilityProcessSpec(['entry.mjs'], {
-        cwd: '/tmp/dsh',
-        env: {},
-        stdio: ['pipe', 'pipe', 'pipe']
-      })
-    ).toThrow('Unexpected Harness Node arguments')
   })
 
   it('makes native Windows termination codes diagnosable', () => {
@@ -342,15 +338,6 @@ describe('offending plugin extraction', () => {
     expect(extractOffendingPlugins(logs)).toEqual([])
   })
 
-  it('extracts a generic renderer slot conflict without registration identities', () => {
-    const logs = [
-      '[stderr] UI slot "conversation.hero.workspace.directoryFlow" has duplicate registrations from conflicting plugins.'
-    ]
-    expect(extractSlotConflictName(logs)).toBe(
-      'conversation.hero.workspace.directoryFlow'
-    )
-  })
-
   it('returns undefined when no plugin error is matched', () => {
     const logs = [
       '[stderr] [harness-node] uncaught exception: ReferenceError: x is not defined'
@@ -439,18 +426,6 @@ describe('navigation trust boundary', () => {
 })
 
 describe('Harness window activation', () => {
-  it('stamps Windows renderer URLs so plugins can avoid the native titlebar overlay', () => {
-    expect(desktopHarnessUrl('http://127.0.0.1:43127', 'win32')).toBe(
-      'http://127.0.0.1:43127/?dsh-desktop-mode=advanced&dsh-desktop-platform=win32'
-    )
-    expect(desktopHarnessUrl('http://127.0.0.1:43127/?workspace=demo', 'win32')).toBe(
-      'http://127.0.0.1:43127/?workspace=demo&dsh-desktop-mode=advanced&dsh-desktop-platform=win32'
-    )
-    expect(desktopHarnessUrl('http://127.0.0.1:43127', 'darwin')).toBe(
-      'http://127.0.0.1:43127'
-    )
-  })
-
   it('preserves the current page when the existing Harness instance is focused again', () => {
     expect(
       shouldLoadHarnessUrl(

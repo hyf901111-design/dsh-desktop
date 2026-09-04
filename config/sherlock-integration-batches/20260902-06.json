@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260902-06",
+  "branch": "codex/integration/20260902-06",
+  "baseMainCommit": "2c689fdd00fcf4d7de280b73f7d184c6f7c2d87d",
+  "expectedMainCommit": "2c689fdd00fcf4d7de280b73f7d184c6f7c2d87d",
+  "createdAt": "2026-09-02T06:12:35.395Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布实时容器网页工具兼容修复",
+        "branch": "codex/feat/research-container-web-tool-compat-20260902",
+        "baseCommit": "2c689fdd00fcf4d7de280b73f7d184c6f7c2d87d",
+        "tipCommit": "d2912f9e22bac6335ba025682e6e6227de959132",
+        "commits": [
+          {
+            "commit": "d2912f9e22bac6335ba025682e6e6227de959132",
+            "parents": [
+              "2c689fdd00fcf4d7de280b73f7d184c6f7c2d87d"
+            ],
+            "subject": "修复：兼容实时容器的网页工具权限"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "实时容器网页工具权限、普通容器隔离与任务失败保护 34 项测试通过",
+            "verifiedCommit": "d2912f9e22bac6335ba025682e6e6227de959132",
+            "completedAt": "2026-09-02T06:10:21Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node 与 Electron TypeScript 类型检查通过",
+            "verifiedCommit": "d2912f9e22bac6335ba025682e6e6227de959132",
+            "completedAt": "2026-09-02T06:10:21Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按治理不构建共享客户端；晋升后从干净 main 构建并在真实 Sherlock 研究任务接口复测。"
+        },
+        "acceptanceCriteria": [
+          "实时容器子任务只申请 Sherlock 当前已注册的 web_search 工具，不再因未知 web_fetch 工具在创建阶段失败",
+          "主机继续负责搜索与网页正文预抓取，子任务可用只读搜索补充最新数值",
+          "普通容器及其他画布生成任务继续保持无外部工具权限"
+        ],
+        "risks": [
+          "实时数据仍取决于当前模型搜索提供方和公开网页的可用性",
+          "最终需在真实 Kimi K3 客户端验证子任务可以创建、调用 web_search 并返回原生面板 JSON"
+        ],
+        "generatedAt": "2026-09-02T06:10:21Z"
+      },
+      "merged": {
+        "mergeCommit": "360769e7ece7e3a238927099d617c965bd843458",
+        "verificationCommit": "360769e7ece7e3a238927099d617c965bd843458",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-task-runtime.test.js",
+            "verifiedCommit": "360769e7ece7e3a238927099d617c965bd843458",
+            "completedAt": "2026-09-02T06:13:44.197Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "360769e7ece7e3a238927099d617c965bd843458",
+            "completedAt": "2026-09-02T06:13:44.197Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T06:13:44.197Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}

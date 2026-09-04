@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260902-10",
+  "branch": "codex/integration/20260902-10",
+  "baseMainCommit": "0b119d77585be03e5a05dd468d989ede136aa2ab",
+  "expectedMainCommit": "0b119d77585be03e5a05dd468d989ede136aa2ab",
+  "createdAt": "2026-09-02T08:34:31.514Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "实时容器识别与空结果自动恢复",
+        "branch": "codex/feat/research-container-final-output-recovery-20260902",
+        "baseCommit": "0b119d77585be03e5a05dd468d989ede136aa2ab",
+        "tipCommit": "c30de61831ef1ca847d80b33975494357c6ff130",
+        "commits": [
+          {
+            "commit": "c30de61831ef1ca847d80b33975494357c6ff130",
+            "parents": [
+              "0b119d77585be03e5a05dd468d989ede136aa2ab"
+            ],
+            "subject": "修复：恢复实时容器空结果生成"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "研究任务运行时 36 项测试通过，覆盖社媒追踪联网识别与空结果重试",
+            "verifiedCommit": "c30de61831ef1ca847d80b33975494357c6ff130",
+            "completedAt": "2026-09-02T08:33:33Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node 与 Electron TypeScript 类型检查通过",
+            "verifiedCommit": "c30de61831ef1ca847d80b33975494357c6ff130",
+            "completedAt": "2026-09-02T08:33:33Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按治理不构建共享客户端；晋升后从干净 main 构建，并用用户原始提示验证真实容器生成路径。"
+        },
+        "acceptanceCriteria": [
+          "追踪推特或社交媒体动态的容器需求被识别为实时任务，主机先获取网页证据并向子任务保留只读搜索工具",
+          "容器子任务第一次只输出分析或计划而没有最终 JSON 时自动重试一次，不立即向用户显示空结果失败",
+          "自动重试成功后任务绑定新的子会话并持久化最终原生组件 JSON",
+          "总结和思维导图等非容器任务的既有空结果失败语义保持不变"
+        ],
+        "risks": [
+          "社媒公开信息的完整度仍受搜索索引与站点访问限制影响",
+          "自动恢复最多重试一次，避免异常模型持续空结果时形成无限循环"
+        ],
+        "generatedAt": "2026-09-02T08:33:33Z"
+      },
+      "merged": {
+        "mergeCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+        "verificationCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-task-runtime.test.js",
+            "verifiedCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+            "completedAt": "2026-09-02T08:34:47.666Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6a7c7d80a9f2d68ab539d98f40e1f9b05b34fb22",
+            "completedAt": "2026-09-02T08:34:47.666Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T08:34:47.666Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}

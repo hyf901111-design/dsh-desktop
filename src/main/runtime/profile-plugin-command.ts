@@ -5,7 +5,6 @@ import { delimiter, dirname, join } from 'node:path'
 
 const PROFILE = 'web'
 const OPERATION_TIMEOUT_MS = 15 * 60 * 1000
-const REPAIR_TIMEOUT_MS = 5 * 60 * 1000
 const MAX_OUTPUT_BYTES = 32 * 1024
 
 export interface ProfilePluginCommandOptions {
@@ -13,13 +12,6 @@ export interface ProfilePluginCommandOptions {
   dshEntryPath: string
   nodeExecutablePath: string
   pnpmEntryPath: string
-  /**
-   * The packaged lock-recovery runner. The shims below share a directory with
-   * the ones the Harness-side installer writes, so leaving this out would
-   * replace a runner-routed pnpm with a plain one and silently drop the
-   * recovery until Harness next rewrote them.
-   */
-  pnpmRunnerPath?: string
   environment?: NodeJS.ProcessEnv
 }
 
@@ -39,44 +31,14 @@ export function buildProfilePluginRemoveArguments(
   return [dshEntryPath, 'plugin', '--profile', PROFILE, 'remove', pluginName]
 }
 
-/**
- * Reinstall everything the profile manifest asks for. This runs before Harness
- * starts, which is the only moment the packages it would otherwise hold open
- * can be replaced — so it is also how a profile left damaged by an earlier
- * failure gets its packages back.
- *
- * The lockfile is explicitly allowed to move. This repair runs with CI set,
- * which is pnpm's signal to install with a frozen lockfile, and the profile it
- * has to repair is exactly the one where the lockfile cannot be trusted: a
- * `pnpm add` that fails while linking has already written the new version into
- * pnpm-lock.yaml while package.json still names the old one. Frozen there
- * fails on the divergence — `ERR_PNPM_OUTDATED_LOCKFILE` — which turns the one
- * path out of a damaged profile into another way to stay in it. The manifest
- * is what the profile is meant to be; the lockfile follows it.
- */
-export function buildProfileInstallArguments(dshEntryPath: string): string[] {
-  return [dshEntryPath, 'plugin', '--profile', PROFILE, 'install', '--no-frozen-lockfile']
-}
-
-export function buildPnpmShimCommand(options: ProfilePluginCommandOptions): string[] {
-  const runner =
-    options.pnpmRunnerPath !== undefined && existsSync(options.pnpmRunnerPath)
-      ? [options.pnpmRunnerPath]
-      : []
-  return [...runner, options.pnpmEntryPath]
-}
-
 export async function ensureProfilePnpmShim(options: ProfilePluginCommandOptions): Promise<string> {
   const directory = join(options.dshHome, '.desktop-bin')
   await mkdir(directory, { recursive: true })
-  const command = buildPnpmShimCommand(options)
 
   if (process.platform === 'win32') {
     await writeFile(
       join(directory, 'pnpm.cmd'),
-      `@chcp 65001 >nul\r\n@echo off\r\n"${options.nodeExecutablePath}" ${command
-        .map((part) => `"${part}"`)
-        .join(' ')} %*\r\n`,
+      `@chcp 65001 >nul\r\n@echo off\r\n"${options.nodeExecutablePath}" "${options.pnpmEntryPath}" %*\r\n`,
       'utf8'
     )
     await writeFile(
@@ -88,9 +50,7 @@ export async function ensureProfilePnpmShim(options: ProfilePluginCommandOptions
     const pnpmPath = join(directory, 'pnpm')
     await writeFile(
       pnpmPath,
-      `#!/bin/sh\nexec ${shellQuote(options.nodeExecutablePath)} ${command
-        .map(shellQuote)
-        .join(' ')} "$@"\n`,
+      `#!/bin/sh\nexec ${shellQuote(options.nodeExecutablePath)} ${shellQuote(options.pnpmEntryPath)} "$@"\n`,
       { encoding: 'utf8', mode: 0o755 }
     )
     await chmod(pnpmPath, 0o755)
@@ -129,31 +89,7 @@ export function buildProfilePluginCommandEnvironment(
   result.DSH_HOME = result.DSH_HOME ?? ''
   result.CI = 'true'
   result.NO_COLOR = '1'
-  result.PNPM_MAX_WORKERS = '1'
-  result.npm_config_child_concurrency = '1'
-  result.npm_config_package_import_method = 'clone-or-copy'
-  result.npm_config_side_effects_cache = 'false'
-  result.PNPM_CONFIG_CHILD_CONCURRENCY = '1'
-  result.PNPM_CONFIG_PACKAGE_IMPORT_METHOD = 'clone-or-copy'
-  result.PNPM_CONFIG_SIDE_EFFECTS_CACHE = 'false'
   return result
-}
-
-/**
- * The line worth reporting from a failed run. dsh's own wrapper ("pnpm failed
- * in profile directory …") is always last and names no cause, so a line that
- * does name one wins — otherwise a failure reads as a dead end.
- */
-export function diagnosticLine(output: string): string | undefined {
-  const lines = output
-    .trim()
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter(Boolean)
-  const named = lines.filter((line: string) =>
-    /EPERM|EBUSY|EACCES|EEXIST|ENOTEMPTY|ENOENT|ERR_PNPM|error:/u.test(line)
-  )
-  return (named.at(-1) ?? lines.at(-1))?.slice(0, 800)
 }
 
 function killProcessTree(child: ReturnType<typeof spawn>): void {
@@ -176,35 +112,13 @@ export async function removeProfilePluginWithDsh(
   options: ProfilePluginCommandOptions,
   pluginName: string
 ): Promise<ProfilePluginCommandResult> {
-  return runProfileCommand(options, buildProfilePluginRemoveArguments(options.dshEntryPath, pluginName), 'Plugin removal', OPERATION_TIMEOUT_MS)
-}
-
-/**
- * Restore the profile's packages with Harness stopped.
- * @param timeoutMs - shorter than a user-initiated operation on purpose: this
- * one sits between the user and their window, so it gives up rather than
- * turning a damaged profile into a launch that looks hung.
- */
-export async function installProfileDependenciesWithDsh(
-  options: ProfilePluginCommandOptions,
-  timeoutMs = REPAIR_TIMEOUT_MS
-): Promise<ProfilePluginCommandResult> {
-  return runProfileCommand(options, buildProfileInstallArguments(options.dshEntryPath), 'Profile repair', timeoutMs)
-}
-
-async function runProfileCommand(
-  options: ProfilePluginCommandOptions,
-  commandArguments: string[],
-  label: string,
-  timeoutMs: number
-): Promise<ProfilePluginCommandResult> {
   const requiredPaths = [
     options.dshEntryPath,
     options.nodeExecutablePath,
     options.pnpmEntryPath
   ]
   if (requiredPaths.some((path) => !existsSync(path))) {
-    return { ok: false, detail: 'The bundled DSH, Node.js, or pnpm runtime was not found.' }
+    return { ok: false, detail: 'The bundled Sherlock, Node.js, or pnpm runtime was not found.' }
   }
 
   const profileDirectory = join(options.dshHome, 'profiles', PROFILE)
@@ -223,7 +137,7 @@ async function runProfileCommand(
 
     const child = spawn(
       options.nodeExecutablePath,
-      commandArguments,
+      buildProfilePluginRemoveArguments(options.dshEntryPath, pluginName),
       {
         cwd: profileDirectory,
         env: environment,
@@ -244,7 +158,7 @@ async function runProfileCommand(
     const timer = setTimeout(() => {
       timedOut = true
       killProcessTree(child)
-    }, timeoutMs)
+    }, OPERATION_TIMEOUT_MS)
 
     try {
       const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
@@ -254,18 +168,15 @@ async function runProfileCommand(
         }
       )
       if (timedOut) {
-        return {
-          ok: false,
-          detail: `${label} timed out after ${Math.round(timeoutMs / 60_000)} minutes.`
-        }
+        return { ok: false, detail: 'Plugin removal timed out after 15 minutes.' }
       }
       if (exit.code !== 0) {
-        const detail = diagnosticLine(output)
+        const detail = output.trim().split(/\r?\n/u).at(-1)?.slice(0, 800)
         return {
           ok: false,
           detail:
             detail ||
-            `${label} exited with ${exit.signal ? `signal ${exit.signal}` : `code ${exit.code}`}.`
+            `Plugin removal exited with ${exit.signal ? `signal ${exit.signal}` : `code ${exit.code}`}.`
         }
       }
       return { ok: true }

@@ -1,41 +1,38 @@
-import type { SpawnOptionsWithoutStdio } from 'node:child_process'
-import type { EventEmitter } from 'node:events'
-import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs'
+import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
+import { createWriteStream, existsSync, type WriteStream } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { dirname, join } from 'node:path'
 import type { RuntimePhase, RuntimeSnapshot } from '../../shared/contracts'
+import { ensureDshFileDropResearchCanvasCompatibility } from '../state/dsh-file-drop-compat'
 
 export interface HarnessRuntimeOptions {
   dshEntryPath: string
   nodeExecutablePath: string
   nodeEntryPath: string
   dshPatchPath: string
+  bundledSkillDirectory: string
+  bundledWebSearchEntry: string
+  bundledMarketInstallerEntry: string
+  bundledResearchTaskEntry: string
+  localSearchUrl: string
+  localSearchToken: string
+  researchContext?: { url: string; token: string }
   dshHome: string
   logPath: string
   launchProcess(
     executablePath: string,
     args: string[],
     options: SpawnOptionsWithoutStdio
-  ): HarnessChildProcess
+  ): ChildProcessWithoutNullStreams
   startupTimeoutMs?: number
   onChanged(snapshot: RuntimeSnapshot): void
-}
-
-export interface HarnessChildProcess extends EventEmitter {
-  readonly stdout: NodeJS.ReadableStream
-  readonly stderr: NodeJS.ReadableStream
-  readonly exitCode: number | null
-  kill(signal?: NodeJS.Signals): boolean
 }
 
 export function buildHarnessArguments(port: number, patchPath?: string): string[] {
   return [
     'web',
     ...(patchPath ? ['--patch', patchPath] : []),
-    // The desktop window is the only intended surface. Without this, Harness
-    // hands the same loopback URL to the system browser on every launch.
-    '--no-open',
     '--host',
     '127.0.0.1',
     '--port',
@@ -47,28 +44,47 @@ export function buildHarnessSpawnOptions(
   launchDirectory: string,
   dshHome: string,
   platform: NodeJS.Platform = process.platform,
-  environment: NodeJS.ProcessEnv = process.env
+  environment: NodeJS.ProcessEnv = process.env,
+  bundledSkillDirectory?: string,
+  bundledWebSearchEntry?: string,
+  localSearch?: { url: string; token: string },
+  bundledMarketInstallerEntry?: string,
+  bundledResearchTaskEntry?: string,
+  researchContext?: { url: string; token: string }
 ): SpawnOptionsWithoutStdio {
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...parentEnvironment } = environment
   const pathKey = platform === 'win32' ? 'Path' : 'PATH'
 
-  // ELECTRON_RUN_AS_NODE must not reach the Harness process itself: the macOS
-  // utility process is launched with Chromium switches (--type=utility, …)
-  // that Node rejects as bad options. The Harness entry re-declares Node mode
-  // from the inside, for its children only.
   return {
     cwd: launchDirectory,
     env: {
       ...parentEnvironment,
       DSH_HOME: dshHome,
+      ...(bundledSkillDirectory
+        ? { DSH_BUNDLED_SKILL_DIR: bundledSkillDirectory }
+        : {}),
+      ...(bundledWebSearchEntry
+        ? { DSH_DESKTOP_WEB_SEARCH_ENTRY: bundledWebSearchEntry }
+        : {}),
+      ...(bundledMarketInstallerEntry
+        ? { DSH_DESKTOP_MARKET_INSTALLER_ENTRY: bundledMarketInstallerEntry }
+        : {}),
+      ...(bundledResearchTaskEntry
+        ? { DSH_DESKTOP_RESEARCH_TASK_ENTRY: bundledResearchTaskEntry }
+        : {}),
+      ...(localSearch
+        ? {
+            SHERLOCK_LOCAL_SEARCH_URL: localSearch.url,
+            SHERLOCK_LOCAL_SEARCH_TOKEN: localSearch.token
+          }
+        : {}),
+      ...(researchContext
+        ? {
+            SHERLOCK_RESEARCH_CONTEXT_URL: researchContext.url,
+            SHERLOCK_RESEARCH_CONTEXT_TOKEN: researchContext.token
+          }
+        : {}),
       NO_COLOR: '1',
-      PNPM_MAX_WORKERS: '1',
-      npm_config_child_concurrency: '1',
-      npm_config_package_import_method: 'clone-or-copy',
-      npm_config_side_effects_cache: 'false',
-      PNPM_CONFIG_CHILD_CONCURRENCY: '1',
-      PNPM_CONFIG_PACKAGE_IMPORT_METHOD: 'clone-or-copy',
-      PNPM_CONFIG_SIDE_EFFECTS_CACHE: 'false',
       [pathKey]: environment[pathKey] ?? environment.PATH ?? ''
     },
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -105,7 +121,7 @@ export function updateReadyStability(
 }
 
 export class HarnessRuntime {
-  private child?: HarnessChildProcess
+  private child?: ChildProcessWithoutNullStreams
   private logStream?: WriteStream
   private phase: RuntimePhase = 'idle'
   private message = 'Harness is not running.'
@@ -143,13 +159,27 @@ export class HarnessRuntime {
       return
     }
     if (!existsSync(this.options.dshPatchPath)) {
-      this.setState('failed', `DSH Desktop patch was not found: ${this.options.dshPatchPath}`)
+      this.setState('failed', `Sherlock runtime patch was not found: ${this.options.dshPatchPath}`)
       return
     }
 
     await mkdir(this.options.dshHome, { recursive: true })
     await mkdir(dirname(this.options.logPath), { recursive: true })
-    this.logStream ??= createWriteStream(this.options.logPath, { flags: 'a' })
+    this.logStream = createWriteStream(this.options.logPath, { flags: 'a' })
+
+    try {
+      const compatibility = await ensureDshFileDropResearchCanvasCompatibility(
+        this.options.dshHome
+      )
+      if (compatibility.status === 'patched') {
+        this.writeLog('[desktop] applied dsh-file-drop Research canvas compatibility')
+      } else if (compatibility.status === 'unsupported') {
+        this.writeLog(`[desktop] skipped dsh-file-drop compatibility: ${compatibility.reason}`)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.writeLog(`[desktop] failed to apply dsh-file-drop compatibility: ${message}`)
+    }
 
     const port = await reservePort()
     const url = `http://127.0.0.1:${port}`
@@ -165,14 +195,28 @@ export class HarnessRuntime {
     this.writeLog(`\n[desktop] starting ${new Date().toISOString()}`)
     this.writeLog(`[desktop] launch directory ${launchDirectory}`)
     this.writeLog(`[desktop] endpoint ${url}`)
-    this.setState('starting', 'Starting DeepSeek Harness…')
+    this.setState('starting', 'Starting Sherlock…')
 
-    let child: HarnessChildProcess
+    let child: ChildProcessWithoutNullStreams
     try {
       child = this.options.launchProcess(
         this.options.nodeExecutablePath,
         args,
-        buildHarnessSpawnOptions(launchDirectory, this.options.dshHome)
+        buildHarnessSpawnOptions(
+          launchDirectory,
+          this.options.dshHome,
+          process.platform,
+          process.env,
+          this.options.bundledSkillDirectory,
+          this.options.bundledWebSearchEntry,
+          {
+            url: this.options.localSearchUrl,
+            token: this.options.localSearchToken
+          },
+          this.options.bundledMarketInstallerEntry,
+          this.options.bundledResearchTaskEntry,
+          this.options.researchContext
+        )
       )
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -247,7 +291,7 @@ ${cause}`
     this.setState('idle', 'Harness is not running.')
   }
 
-  private async stopChild(child: HarnessChildProcess): Promise<void> {
+  private async stopChild(child: ChildProcessWithoutNullStreams): Promise<void> {
     if (child.exitCode !== null) return
     const exitPromise = new Promise<boolean>((resolve) =>
       child.once('exit', () => resolve(true))
@@ -270,23 +314,6 @@ ${cause}`
     for (const line of chunk.toString('utf8').split(/\r?\n/)) {
       if (line.length > 0) this.writeLog(`[${source}] ${line}`)
     }
-  }
-
-  /**
-   * Record a line the desktop wants in the Harness log, including before a
-   * launch: what happens to the profile between launches is exactly what
-   * someone reading the log after a failed install needs to see.
-   */
-  note(line: string): void {
-    if (!this.logStream) {
-      try {
-        mkdirSync(dirname(this.options.logPath), { recursive: true })
-        this.logStream = createWriteStream(this.options.logPath, { flags: 'a' })
-      } catch {
-        // Keep the line in the in-memory buffer regardless.
-      }
-    }
-    this.writeLog(line)
   }
 
   private writeLog(line: string): void {
@@ -444,15 +471,8 @@ export function extractSlotConflictName(
 ): string | undefined {
   for (const line of latestHarnessAttemptLogs(logLines)) {
     if (!line.startsWith('[stderr] ')) continue
-    const text = line.slice(8)
-    const loaderMatch = text.match(
-      /single slot\s+["']([^"']+)["']\s+already has a registration/i
-    )
-    if (loaderMatch?.[1]) return loaderMatch[1].trim()
-    const rendererMatch = text.match(
-      /UI slot\s+["']([^"']+)["']\s+has duplicate registrations/i
-    )
-    if (rendererMatch?.[1]) return rendererMatch[1].trim()
+    const match = line.slice(8).match(/single slot\s+["']([^"']+)["']\s+already has a registration/i)
+    if (match?.[1]) return match[1].trim()
   }
   return undefined
 }

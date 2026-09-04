@@ -6,11 +6,15 @@ import { promisify } from 'node:util'
 import { afterEach, describe, expect, it } from 'vitest'
 import { parse, stringify } from 'yaml'
 import {
-  AUTO_INSTALL_ON_APP_QUIT,
   shouldCheckAfterResume,
   supportsAutoUpdates,
   UPDATE_CHECK_INTERVAL_MS
 } from '../src/main/update/update-policy'
+import {
+  initialUpdateStatus,
+  reduceUpdateStatus
+} from '../src/main/update/update-state'
+import { updateAction } from '../src/preload/update-view'
 
 const execFile = promisify(execFileCallback)
 const projectRoot = path.resolve(import.meta.dirname, '..')
@@ -21,10 +25,6 @@ afterEach(async () => {
 })
 
 describe('desktop update policy', () => {
-  it('only installs a downloaded update after explicit user confirmation', () => {
-    expect(AUTO_INSTALL_ON_APP_QUIT).toBe(false)
-  })
-
   it('only enables updates for installed macOS and Windows builds', () => {
     expect(supportsAutoUpdates(true, 'darwin')).toBe(true)
     expect(supportsAutoUpdates(true, 'win32')).toBe(true)
@@ -36,6 +36,45 @@ describe('desktop update policy', () => {
     const now = 20_000_000
     expect(shouldCheckAfterResume(now - UPDATE_CHECK_INTERVAL_MS, now)).toBe(true)
     expect(shouldCheckAfterResume(now - UPDATE_CHECK_INTERVAL_MS + 1, now)).toBe(false)
+  })
+})
+
+describe('sidebar update action', () => {
+  it('offers download after discovery and holds the progress ring at completion', () => {
+    const idle = initialUpdateStatus('0.5.0')
+    const available = reduceUpdateStatus(idle, {
+      type: 'available',
+      version: '0.6.0'
+    })
+    const downloading = reduceUpdateStatus(available, {
+      type: 'progress',
+      percent: 42.6
+    })
+    const downloaded = reduceUpdateStatus(downloading, {
+      type: 'downloaded',
+      version: '0.6.0'
+    })
+
+    expect(updateAction(idle)).toEqual({ kind: 'hidden' })
+    expect(updateAction(available)).toEqual({ kind: 'download', version: '0.6.0' })
+    expect(updateAction(downloading)).toEqual({ kind: 'progress', percent: 42.6 })
+    expect(updateAction(downloaded)).toEqual({ kind: 'progress', percent: 100 })
+  })
+
+  it('keeps automatic failures hidden and makes manual failures retryable', () => {
+    const idle = initialUpdateStatus('0.5.0')
+    const automatic = reduceUpdateStatus(idle, {
+      type: 'error',
+      message: 'offline'
+    })
+    const checking = reduceUpdateStatus(idle, { type: 'check', manual: true })
+    const manual = reduceUpdateStatus(checking, {
+      type: 'error',
+      message: 'offline'
+    })
+
+    expect(updateAction(automatic)).toEqual({ kind: 'hidden' })
+    expect(updateAction(manual)).toEqual({ kind: 'retry', message: 'offline' })
   })
 })
 
@@ -70,10 +109,10 @@ describe('macOS update metadata', () => {
     }
     expect(merged.version).toBe('0.2.0')
     expect(merged.files.map((file) => file.url)).toEqual([
-      'dsh-desktop-mac-arm64.zip',
-      'dsh-desktop-mac-x64.zip'
+      'sherlock-mac-arm64.zip',
+      'sherlock-mac-x64.zip'
     ])
-    expect(merged.path).toBe('dsh-desktop-mac-arm64.zip')
+    expect(merged.path).toBe('sherlock-mac-arm64.zip')
     expect(merged.releaseDate).toBe('2026-08-14T02:00:00.000Z')
   })
 })
@@ -83,12 +122,12 @@ function metadata(architecture: 'arm64' | 'x64', releaseDate: string) {
     version: '0.2.0',
     files: [
       {
-        url: `dsh-desktop-mac-${architecture}.zip`,
+        url: `sherlock-mac-${architecture}.zip`,
         sha512: `zip-${architecture}`,
         size: 100
       },
       {
-        url: `dsh-desktop-mac-${architecture}.dmg`,
+        url: `sherlock-mac-${architecture}.dmg`,
         sha512: `dmg-${architecture}`,
         size: 200
       }

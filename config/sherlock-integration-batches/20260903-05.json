@@ -1,0 +1,668 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260903-05",
+  "branch": "codex/integration/20260903-05",
+  "baseMainCommit": "c9a2673b4550867685aaab1ab35b05a817285e55",
+  "expectedMainCommit": "c9a2673b4550867685aaab1ab35b05a817285e55",
+  "createdAt": "2026-09-03T07:01:46.023Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布边缘工具栏与就近生成及0.8.0版本日志",
+        "branch": "codex/feat/research-edge-placement-20260903",
+        "baseCommit": "c9a2673b4550867685aaab1ab35b05a817285e55",
+        "tipCommit": "043e595cc9598a0b0a801cb33b36d245f3d6eda6",
+        "commits": [
+          {
+            "commit": "0c31d9863f5e0a9b5d61264f36dd5429e8b0010b",
+            "parents": [
+              "c9a2673b4550867685aaab1ab35b05a817285e55"
+            ],
+            "subject": "修复：画布边缘工具栏避让及新组件就近置顶"
+          },
+          {
+            "commit": "2bcdffad3f372a873a5ec85caa893ee66b823443",
+            "parents": [
+              "0c31d9863f5e0a9b5d61264f36dd5429e8b0010b"
+            ],
+            "subject": "更新：版本设为0.8.0并补充研究画布修复日志"
+          },
+          {
+            "commit": "15b5816ce88583814fae1fea7485ca1814decdea",
+            "parents": [
+              "2bcdffad3f372a873a5ec85caa893ee66b823443"
+            ],
+            "subject": "修复：补齐工具栏滚动避让与生成完成后的标题可见性"
+          },
+          {
+            "commit": "043e595cc9598a0b0a801cb33b36d245f3d6eda6",
+            "parents": [
+              "15b5816ce88583814fae1fea7485ca1814decdea"
+            ],
+            "subject": "完善：边缘弹层层级及0.8.0网页交付物更新说明"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-clipboard-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-drop.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/settings-about.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "4个直接相关文件208项通过。",
+            "verifiedCommit": "043e595cc9598a0b0a801cb33b36d245f3d6eda6",
+            "completedAt": "2026-09-03T06:41:41Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "selected|marquee|mind.map|toolbar|stack|raises"
+            ],
+            "outcome": "passed",
+            "summary": "受影响的组件选择与生成路径39项通过，176项跳过。",
+            "verifiedCommit": "043e595cc9598a0b0a801cb33b36d245f3d6eda6",
+            "completedAt": "2026-09-03T06:41:41Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "043e595cc9598a0b0a801cb33b36d245f3d6eda6",
+            "completedAt": "2026-09-03T06:41:41Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过，功能worktree干净。",
+            "verifiedCommit": "043e595cc9598a0b0a801cb33b36d245f3d6eda6",
+            "completedAt": "2026-09-03T06:41:41Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "apply",
+              "--reverse",
+              "--check",
+              "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+            ],
+            "outcome": "passed",
+            "summary": "patch-package补丁与独立依赖一致。",
+            "verifiedCommit": "043e595cc9598a0b0a801cb33b36d245f3d6eda6",
+            "completedAt": "2026-09-03T06:41:41Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实ResearchCanvas隔离Browser：585px右边缘344px工具栏保持单行、窄300px不换行、上下菜单可操作、250px矮画布菜单受视口约束且不被常驻工具栏遮挡；三种生成保持附近选中置顶；实际attachGenerationTask/applyGenerationInspection完成的960x800思维导图保持左上标题可见；多选、50%缩放和深浅主题检查。不连接用户模型/会话，不冒充原生客户端验证。独立复核关闭2项P2；追加层级回归已验证。"
+        },
+        "acceptanceCriteria": [
+          "边缘工具栏单行且不裁切操作，窄画布可横滚，Cmd滚轮继续缩放",
+          "生成结果就近出现、允许重叠、自动选中置顶，原组件/视口不移动",
+          "生成完成或自动测量尺寸增长时保持左上标题锚点，手动尺寸保持不变",
+          "版本0.8.0及中英文日志包含本批三项修复与网页交付物"
+        ],
+        "risks": [
+          "日志同时描述待整合的session持久化和通用网页容器功能；必须与这两个功能交接一起构建。",
+          "局部React/Browser验证通过；最终原生主界面、历史数据与新会话重启待integration构建后复核。",
+          "只本地测试，不发布、上传、推送或公证。"
+        ],
+        "generatedAt": "2026-09-03T06:41:41Z"
+      },
+      "merged": {
+        "mergeCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+        "verificationCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+            "completedAt": "2026-09-03T07:01:58.872Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+            "completedAt": "2026-09-03T07:01:58.872Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-canvas-export.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/security.test.ts",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "test/settings-about.test.ts",
+              "test/patch-integrity.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sidebar-new-session-actions.test.ts test/research-canvas-storage.test.ts test/research-file-drop.test.ts test/research-canvas-clipboard-ui.test.ts test/research-task-runtime.test.js test/research-canvas-clipboard.test.ts test/research-canvas-export.test.ts test/research-context-bridge.test.ts test/security.test.ts test/sherlock-composer-workspace-ui.test.ts test/settings-about.test.ts test/patch-integrity.test.ts --reporter=dot",
+            "verifiedCommit": "fcd421dcdfed1c9a855d1f591ad44a46954ad3fe",
+            "completedAt": "2026-09-03T07:01:58.872Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-03T07:01:58.872Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "无对话研究会话持久化与新建隔离",
+        "branch": "codex/feat/research-session-durable-20260903",
+        "baseCommit": "c9a2673b4550867685aaab1ab35b05a817285e55",
+        "tipCommit": "39788836d5beab7b1f341fef8d464875e341774b",
+        "commits": [
+          {
+            "commit": "39788836d5beab7b1f341fef8d464875e341774b",
+            "parents": [
+              "c9a2673b4550867685aaab1ab35b05a817285e55"
+            ],
+            "subject": "修复：持久保留无对话研究会话并阻止新建复用已占用画板"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/verification/2026-09-03-research-session-durable.md"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-runtime+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-workspace+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/patch-integrity.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "提交后 6 个直接相关测试文件，400 项通过；含初始9项失败回归、React hydration失败回归与patch反向适用性检查。",
+            "verifiedCommit": "39788836d5beab7b1f341fef8d464875e341774b",
+            "completedAt": "2026-09-03T06:42:17Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "提交后 TypeScript 类型检查通过。",
+            "verifiedCommit": "39788836d5beab7b1f341fef8d464875e341774b",
+            "completedAt": "2026-09-03T06:42:17Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "提交后diff检查通过，工作树干净。",
+            "verifiedCommit": "39788836d5beab7b1f341fef8d464875e341774b",
+            "completedAt": "2026-09-03T06:42:17Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js"
+            ],
+            "outcome": "passed",
+            "summary": "dsh-client-runtime bundle语法检查通过。",
+            "verifiedCommit": "39788836d5beab7b1f341fef8d464875e341774b",
+            "completedAt": "2026-09-03T06:42:17Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js"
+            ],
+            "outcome": "passed",
+            "summary": "dsh-client-ui-workspace bundle语法检查通过。",
+            "verifiedCommit": "39788836d5beab7b1f341fef8d464875e341774b",
+            "completedAt": "2026-09-03T06:42:17Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js"
+            ],
+            "outcome": "passed",
+            "summary": "dsh-client-ui-conversation bundle语法检查通过。",
+            "verifiedCommit": "39788836d5beab7b1f341fef8d464875e341774b",
+            "completedAt": "2026-09-03T06:42:17Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "内存中的真实 React 组件/画板/侧栏投影与 Session RPC 标题投影回归通过；独立只读审查通过。未在功能worktree构建、替换或启动共享客户端。真实0.8.0主界面与重启验收由父任务集成后执行。"
+        },
+        "acceptanceCriteria": [
+          "首个持久组件产生研究身份，native成功而origin失败仍保留侧栏入口",
+          "内容命名通过真实Session.rename持久化且不伪造消息；保留已有用户标题",
+          "再次新研究不复用有画板的blank会话，rename延迟或失败不影响隔离",
+          "Host仍列出的旧native数组缺marker时可恢复；读取不重写节点内容",
+          "重开零聊天研究会话直接显示画板"
+        ],
+        "risks": [
+          "恢复限于Host已知session id；完全脱离Host的历史孤儿native画板需单独迁移，不承诺覆盖",
+          "父任务替换仍在运行的旧客户端前应先给目标零聊天session写持久标题并验证flush，避免旧版lazy持久化缺口",
+          "与研究边缘布局分支共享conversation vendor patch；集成后必须重新生成/验证联合补丁",
+          "真实客户端验收尚待父任务本地0.8.0构建完成"
+        ],
+        "generatedAt": "2026-09-03T06:42:17Z"
+      },
+      "merged": {
+        "mergeCommit": "73565dafaa089bc4e876bae130c09a177ed92064",
+        "verificationCommit": "73565dafaa089bc4e876bae130c09a177ed92064",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "73565dafaa089bc4e876bae130c09a177ed92064",
+            "completedAt": "2026-09-03T07:03:51.652Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "73565dafaa089bc4e876bae130c09a177ed92064",
+            "completedAt": "2026-09-03T07:03:51.652Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-canvas-export.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/security.test.ts",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "test/settings-about.test.ts",
+              "test/patch-integrity.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sidebar-new-session-actions.test.ts test/research-canvas-storage.test.ts test/research-file-drop.test.ts test/research-canvas-clipboard-ui.test.ts test/research-task-runtime.test.js test/research-canvas-clipboard.test.ts test/research-canvas-export.test.ts test/research-context-bridge.test.ts test/security.test.ts test/sherlock-composer-workspace-ui.test.ts test/settings-about.test.ts test/patch-integrity.test.ts --reporter=dot",
+            "verifiedCommit": "73565dafaa089bc4e876bae130c09a177ed92064",
+            "completedAt": "2026-09-03T07:03:51.652Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-03T07:03:51.652Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布自由布局与隔离交互网页交付物",
+        "branch": "codex/feat/research-flexible-container-20260903",
+        "baseCommit": "c9a2673b4550867685aaab1ab35b05a817285e55",
+        "tipCommit": "f3d2489ec84468cbb426e193fad495052237cf7d",
+        "commits": [
+          {
+            "commit": "f3d2489ec84468cbb426e193fad495052237cf7d",
+            "parents": [
+              "c9a2673b4550867685aaab1ab35b05a817285e55"
+            ],
+            "subject": "功能：画布支持按资料生成隔离交互网页与自由布局交付物"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/html-artifact.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/main/security.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-clipboard.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-export.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-context-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-clipboard.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-export.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-context-bridge.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-drop.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/security.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-task-runtime.test.js",
+              "test/research-file-drop.test.ts",
+              "test/security.test.ts",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/research-canvas-export.test.ts",
+              "test/research-link-frame.test.ts",
+              "test/research-canvas-wheel.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "9 个直接相关测试文件、260 项聚焦测试通过；覆盖 HTML 生成、无损持久化、复制、资料提取、显式失败、网页授权隔离、导出及既有滚轮路径。",
+            "verifiedCommit": "f3d2489ec84468cbb426e193fad495052237cf7d",
+            "completedAt": "2026-09-03T07:01:01Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "tsc --noEmit -p tsconfig.node.json 通过。",
+            "verifiedCommit": "f3d2489ec84468cbb426e193fad495052237cf7d",
+            "completedAt": "2026-09-03T07:01:01Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "HEAD",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "精确 tip 已提交，worktree 干净；补丁已由 patch-package 重新生成。",
+            "verifiedCommit": "f3d2489ec84468cbb426e193fad495052237cf7d",
+            "completedAt": "2026-09-03T07:01:01Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "独立 Browser 的真实 ResearchCanvasArtifactCard fixture http://127.0.0.1:54291 与 /export 可点击展开报名说明；root 独立复验通过。目标 Electron 43.4.0/Chrome150 的独立安全矩阵由 reviewer 验证：正常 onclick、缺 Trusted Types 时不执行、RTC/新 realm/TT 动态注入/Worker/fetch/WebSocket 阻断，UDP/HTTP/WS/preconnect 测试计数为0。未构建或替换共享 Sherlock；真实客户端 Cmd滚轮、焦点置顶与重启验收由集成负责人完成。"
+        },
+        "acceptanceCriteria": [
+          "基于所选与容器两入口支持 type:html 的自包含 HTML/CSS/JavaScript 网页；交付形式优先用户要求，native 格式保留为可选。",
+          "网页、活动页和专业体验地图不再被提示词强制替换为 Markdown 或思维导图；native 标签/列数限制不作为业务内容限制。",
+          "HTML正文可再次作为资料引用，不把脚本、CSS或JSON整段用作正文；复制及持久化保留完整spec与960x680默认尺寸。",
+          "双层 opaque sandbox、前置 CSP、Trusted Types 与锁定RTC入口保护主窗口；保留既有明确URL的 web-link授权读取。",
+          "HTML最多200000 UTF-8字节、结构化输出最多1250000字节，超限/损坏/显式error输出标记失败，不静默截断为成功结果。",
+          "导出走父级受控保存，保存同一安全wrapper，不自动执行或发布裸HTML。"
+        ],
+        "risks": [
+          "当前交付物为自包含离线预览，不包含外网托管、外部网络资源、表单提交或下载；图片支持内联SVG/data URL。",
+          "必要交互支持原生DOM API；innerHTML、document.write、DOMParser、srcdoc、eval、动态脚本、嵌套frame、WebRTC等高风险能力不可用。无Trusted Types浏览器明确提示并不执行网页。",
+          "真实目标Electron安全矩阵覆盖已知新增路径，不声称证明所有浏览器网络侧通道；DNS resolver级事件未独立采集。",
+          "生成质量和具体用户需求仍需真实模型样本验收；显式失败已有独立failed通道，不做不可靠的语义合格推断。",
+          "共享客户端未从功能worktree构建，集成后须按root安排验证Cmd滚轮、组件focus、跨画板复制和重开。"
+        ],
+        "generatedAt": "2026-09-03T07:01:05Z"
+      },
+      "merged": {
+        "mergeCommit": "3e8fd8bc441717bea8748b094d24e350b3a64277",
+        "verificationCommit": "3e8fd8bc441717bea8748b094d24e350b3a64277",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "3e8fd8bc441717bea8748b094d24e350b3a64277",
+            "completedAt": "2026-09-03T07:05:59.008Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3e8fd8bc441717bea8748b094d24e350b3a64277",
+            "completedAt": "2026-09-03T07:05:59.008Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-canvas-export.test.ts",
+              "test/research-context-bridge.test.ts",
+              "test/security.test.ts",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "test/settings-about.test.ts",
+              "test/patch-integrity.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sidebar-new-session-actions.test.ts test/research-canvas-storage.test.ts test/research-file-drop.test.ts test/research-canvas-clipboard-ui.test.ts test/research-task-runtime.test.js test/research-canvas-clipboard.test.ts test/research-canvas-export.test.ts test/research-context-bridge.test.ts test/security.test.ts test/sherlock-composer-workspace-ui.test.ts test/settings-about.test.ts test/patch-integrity.test.ts --reporter=dot",
+            "verifiedCommit": "3e8fd8bc441717bea8748b094d24e350b3a64277",
+            "completedAt": "2026-09-03T07:05:59.008Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-03T07:05:59.008Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/sidebar-new-session-actions.test.ts",
+        "test/research-canvas-storage.test.ts",
+        "test/research-file-drop.test.ts",
+        "test/research-canvas-clipboard-ui.test.ts",
+        "test/research-task-runtime.test.js",
+        "test/research-canvas-clipboard.test.ts",
+        "test/research-canvas-export.test.ts",
+        "test/research-context-bridge.test.ts",
+        "test/security.test.ts",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "test/settings-about.test.ts",
+        "test/patch-integrity.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

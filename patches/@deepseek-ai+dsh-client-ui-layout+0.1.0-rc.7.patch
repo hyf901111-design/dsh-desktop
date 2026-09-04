@@ -1,0 +1,64 @@
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js
+index 74e58cb..039b304 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js
++++ b/node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js
+@@ -11,6 +11,7 @@ window.__ModuleLoader__.load({
+ 		* LG breakpoint); a manual toggle below it re-expands over the squeezed center
+ 		* (stores.ts narrowExpanded). */
+ 		const SIDEBAR_AUTO_COLLAPSE = 1024;
++		const COLLAPSED_SIDEBAR_WIDTH = navigator.userAgent.includes("Macintosh") ? 80 : 56;
+ 		/**
+ 		* Clamp a panel width into its contract range.
+ 		* @param px - requested width.
+@@ -32,7 +33,7 @@ window.__ModuleLoader__.load({
+ 		* @returns resolved widths; details 0 means visually closed (never unmounted), while a closed sidebar keeps its compact rail.
+ 		*/
+ 		function computeColumns(viewport, sidebar, details) {
+-			const s = sidebar === 0 ? 56 : clampWidth(sidebar, 264, 420);
++			const s = sidebar === 0 ? COLLAPSED_SIDEBAR_WIDTH : clampWidth(sidebar, 264, 420);
+ 			const d0 = details === 0 ? 0 : clampWidth(details, 300, 520);
+ 			if (s + d0 + 640 <= viewport) return {
+ 				sidebar: s,
+@@ -59,7 +60,7 @@ window.__ModuleLoader__.load({
+ 			const tag = document.createElement("style");
+ 			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-layout";
+ 			tag.dataset.pluginCss = tagId;
+-			tag.textContent = css;
++			tag.textContent = css + (navigator.userAgent.includes("Macintosh") ? "html,body,#root{background-color:transparent!important}.pI_x6G_frame,.pI_x6G_sidebarCol{background:transparent}.pI_x6G_sidebarCol{border-right:0}.pI_x6G_centerCol,.pI_x6G_detailsCol{background:var(--dsw-alias-bg-base)}" : "");
+ 			document.head.appendChild(tag);
+ 		}
+ 		var AppFrame_module_css_default = {
+@@ -88,6 +89,7 @@ window.__ModuleLoader__.load({
+ 		function CenterColumn(props) {
+ 			return (0, react_jsx_runtime.jsx)("div", {
+ 				className: AppFrame_module_css_default.centerCol,
++				"data-pane": "conversation",
+ 				children: props.children
+ 			});
+ 		}
+@@ -218,6 +220,7 @@ window.__ModuleLoader__.load({
+ 			return (0, react_jsx_runtime.jsxs)("div", {
+ 				ref: frameRef,
+ 				className: AppFrame_module_css_default.frame,
++				"data-dsh-frame": true,
+ 				style: { gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px` },
+ 				"data-sidebar-collapsed": sidebarCollapsed || void 0,
+ 				"data-details-collapsed": cols.details === 0 || void 0,
+@@ -287,7 +290,7 @@ window.__ModuleLoader__.load({
+ 						d.sidebar = clampWidth(px, 264, 420);
+ 					},
+ 					setDetails: (d, px) => {
+-						d.details = clampWidth(px, 300, 520);
++						d.details = px === 0 ? 0 : clampWidth(px, 300, 520);
+ 					},
+ 					toggleSidebar: (d) => {
+ 						if (d.narrow) d.narrowExpanded = !d.narrowExpanded;
+@@ -447,6 +450,8 @@ window.__ModuleLoader__.load({
+ 		}
+ 		//#endregion
+ 		exports.LayoutController = LayoutController;
++		exports.AppFrame = AppFrame;
++		exports.createLayoutStore = createLayoutStore;
+ 		exports.apply = apply;
+ 		exports.inject = inject;
+ 		return module.exports;

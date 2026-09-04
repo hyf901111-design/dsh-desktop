@@ -1,26 +1,22 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { chmod, copyFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
-import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { delimiter, dirname, join, resolve } from 'node:path'
 
-import { SIDELINE_MARKER } from './pnpm-runner.mjs'
-import { removeTree } from './remove-tree.mjs'
-
-export const RECOMMENDED_MARKET_VERSION = 'latest'
+export const RECOMMENDED_MARKET_VERSION = '1.9.0'
 export const MARKET_PACKAGE = 'dshmarket'
 export const MARKET_PROFILE = 'web'
-export const STATUS_PATH = '/dsh-desktop/market-installer/status'
-export const INSTALL_PATH = '/dsh-desktop/market-installer/install'
-export const UNINSTALL_PATH = '/dsh-desktop/market-installer/uninstall'
+export const STATUS_PATH = '/sherlock/market-installer/status'
+export const INSTALL_PATH = '/sherlock/market-installer/install'
+export const UNINSTALL_PATH = '/sherlock/market-installer/uninstall'
 
 const OPERATION_TIMEOUT_MS = 15 * 60 * 1000
 const MAX_LOG_BYTES = 32 * 1024
 
-export const name = 'dsh-desktop-market-installer'
-export const inject = []
+export const name = 'sherlock-market-installer'
+export const inject = ['webServer']
 
 function dshHome() {
   return process.env.DSH_HOME || join(homedir(), '.dsh')
@@ -28,42 +24,6 @@ function dshHome() {
 
 export function profileDirectory(home = dshHome()) {
   return join(home, 'profiles', MARKET_PROFILE)
-}
-
-/** Leftovers of an interrupted pnpm run, or of a Windows locked-rename recovery. */
-export function isDisposableModuleDirectory(name) {
-  return name.includes('_tmp_') || name.includes(SIDELINE_MARKER)
-}
-
-/**
- * Sweep the leftovers of interrupted pnpm runs from a profile's node_modules.
- *
- * A package's own node_modules is swept too. Once the package being replaced
- * is a dependency of a dependency, that is where the leftovers land —
- * `cytoscape-fcose/node_modules/cose-base.dsh-old-…` — and a sweep that stops
- * at the top level leaves one copy behind per attempt.
- */
-export async function cleanStaleTemporaryDirectories(home = dshHome()) {
-  const directory = profileDirectory(home)
-  const sweep = async (nodeModulesPath) => {
-    let entries
-    try {
-      entries = await readdir(nodeModulesPath, { withFileTypes: true })
-    } catch {
-      // node_modules directory may not exist yet
-      return
-    }
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.isSymbolicLink()) continue
-      const path = join(nodeModulesPath, entry.name)
-      if (isDisposableModuleDirectory(entry.name)) {
-        await removeTree(path).catch(() => undefined)
-        continue
-      }
-      await sweep(entry.name.startsWith('@') ? path : join(path, 'node_modules'))
-    }
-  }
-  await sweep(join(directory, 'node_modules'))
 }
 
 function readObject(text) {
@@ -87,15 +47,9 @@ export async function readMarketInstallation(home = dshHome()) {
   const directory = profileDirectory(home)
   const manifest = await readJson(join(directory, 'package.json'))
   const dependency = manifest?.dependencies?.[MARKET_PACKAGE]
-  if (typeof dependency !== 'string') {
-    return {
-      dependency: undefined,
-      installedVersion: undefined
-    }
-  }
   const installed = await readJson(join(directory, 'node_modules', MARKET_PACKAGE, 'package.json'))
   return {
-    dependency,
+    dependency: typeof dependency === 'string' ? dependency : undefined,
     installedVersion: typeof installed?.version === 'string' ? installed.version : undefined
   }
 }
@@ -159,93 +113,40 @@ export function resolvePnpmEntry(requireFrom = import.meta.url) {
   return entry
 }
 
-/**
- * Put the lock-recovery runner where the shims can invoke it.
- * @returns the staged runner path, or undefined when neither the staged copy
- * nor the packaged original can be used — the shims then call pnpm directly.
- */
-export async function stagePnpmRunner(directory) {
-  const source = fileURLToPath(new URL('./pnpm-runner.mjs', import.meta.url))
-  const staged = join(directory, 'pnpm-runner.mjs')
-  try {
-    await copyFile(source, staged)
-    return staged
-  } catch {
-    return existsSync(source) ? source : undefined
-  }
-}
-
 export async function ensurePnpmShim(home = dshHome()) {
   const directory = join(home, '.desktop-bin')
   await mkdir(directory, { recursive: true })
   const pnpmEntry = resolvePnpmEntry()
   const executable = process.execPath
 
-  // pnpm is reached through this shim by every profile package operation —
-  // DSH Desktop's installer and the community market alike — so the runner it
-  // points at is where a Windows locked rename gets recovered for both. A
-  // runner that cannot be staged must not take the shims down with it: pnpm
-  // still has to be reachable, just without the recovery, and the harness log
-  // has to say so rather than leaving a stale shim to be mistaken for a fresh
-  // one.
-  const runnerPath = await stagePnpmRunner(directory)
-  const pnpmCommand = runnerPath === undefined ? [pnpmEntry] : [runnerPath, pnpmEntry]
-  process.stdout.write(
-    runnerPath === undefined
-      ? 'dsh-desktop: pnpm shim written without the lock-recovery runner\n'
-      : `dsh-desktop: pnpm shim written via ${runnerPath}\n`
-  )
-
-  // The packaged executable is Electron on macOS, where Harness runs as a
-  // utility process. Anything invoked through these shims expects Node
-  // semantics — a leading node flag included — so the shims declare Node mode
-  // themselves instead of relying on the caller's environment. The real Node
-  // runtime bundled on the other platforms ignores the variable.
   if (process.platform === 'win32') {
     const pnpmPath = join(directory, 'pnpm.cmd')
     await writeFile(
       pnpmPath,
-      `@chcp 65001 >nul\r\n@echo off\r\n@set ELECTRON_RUN_AS_NODE=1\r\n\"${executable}\" ${pnpmCommand.map((part) => `\"${part}\"`).join(' ')} %*\r\n`,
+      `@chcp 65001 >nul\r\n@echo off\r\n\"${executable}\" \"${pnpmEntry}\" %*\r\n`,
       'utf8'
     )
     const nodePath = join(directory, 'node.cmd')
     await writeFile(
       nodePath,
-      `@chcp 65001 >nul\r\n@echo off\r\n@set ELECTRON_RUN_AS_NODE=1\r\n\"${executable}\" %*\r\n`,
+      `@chcp 65001 >nul\r\n@echo off\r\n\"${executable}\" %*\r\n`,
       'utf8'
     )
   } else {
     const pnpmPath = join(directory, 'pnpm')
     await writeFile(
       pnpmPath,
-      `#!/bin/sh\nexport ELECTRON_RUN_AS_NODE=1\nexec ${shellQuote(executable)} ${pnpmCommand.map(shellQuote).join(' ')} \"$@\"\n`,
+      `#!/bin/sh\nexec ${shellQuote(executable)} ${shellQuote(pnpmEntry)} \"$@\"\n`,
       { encoding: 'utf8', mode: 0o755 }
     )
     await chmod(pnpmPath, 0o755)
     const nodePath = join(directory, 'node')
     await writeFile(
       nodePath,
-      `#!/bin/sh\nexport ELECTRON_RUN_AS_NODE=1\nexec ${shellQuote(executable)} \"$@\"\n`,
+      `#!/bin/sh\nexec ${shellQuote(executable)} \"$@\"\n`,
       { encoding: 'utf8', mode: 0o755 }
     )
     await chmod(nodePath, 0o755)
-  }
-
-  // Also write .npmrc in profiles/web to prevent Windows file lock conflicts and racing worker threads
-  const profileDir = profileDirectory(home)
-  await mkdir(profileDir, { recursive: true })
-  const npmrcPath = join(profileDir, '.npmrc')
-  const npmrcContent = [
-    'package-import-method=clone-or-copy',
-    'child-concurrency=1',
-    'side-effects-cache=false'
-  ].join('\n') + '\n'
-  try {
-    if (!existsSync(npmrcPath)) {
-      await writeFile(npmrcPath, npmrcContent, 'utf8')
-    }
-  } catch {
-    // ignore
   }
 
   const nodeDir = dirname(executable)
@@ -263,155 +164,10 @@ export async function ensurePnpmShim(home = dshHome()) {
   return directory
 }
 
-function processPath(environment) {
-  return (
-    (process.platform === 'win32' ? environment.Path : environment.PATH) ??
-    environment.PATH ??
-    environment.Path ??
-    ''
-  )
-}
-
-export function buildPnpmEnvironment(
-  binDirectory,
-  environment = process.env,
-  executablePath = process.execPath
-) {
-  // The child is spawned as `process.execPath`, which on macOS is the Electron
-  // helper binary: it only runs the dsh CLI as Node when ELECTRON_RUN_AS_NODE
-  // is set. The harness entry (harness-node-entry.mjs) declares that flag in
-  // its own environment so that children spawned here inherit Node mode —
-  // deleting it here makes the helper exit 0 without ever running the CLI,
-  // which the market then mistakes for a successful pnpm run. Pass it through;
-  // the bundled-Node hosts (Windows, Linux) never set it and are unaffected.
-  const result = { ...environment }
-
-  const seen = new Set()
-  const paths = [binDirectory, dirname(executablePath), ...processPath(environment).split(delimiter)]
-    .map((entry) => entry.trim())
-    .filter((entry) => {
-      if (!entry) return false
-      const identity = process.platform === 'win32' ? entry.toLowerCase() : entry
-      if (seen.has(identity)) return false
-      seen.add(identity)
-      return true
-    })
-  const value = paths.join(delimiter)
-  result.PATH = value
-  if (process.platform === 'win32') result.Path = value
-  result.CI = 'true'
-  result.NO_COLOR = '1'
-  result.PNPM_MAX_WORKERS = '1'
-  result.npm_config_child_concurrency = '1'
-  result.npm_config_package_import_method = 'clone-or-copy'
-  result.npm_config_side_effects_cache = 'false'
-  result.PNPM_CONFIG_CHILD_CONCURRENCY = '1'
-  result.PNPM_CONFIG_PACKAGE_IMPORT_METHOD = 'clone-or-copy'
-  result.PNPM_CONFIG_SIDE_EFFECTS_CACHE = 'false'
-  return result
-}
-
-export function createDesktopProfilesService(home = dshHome()) {
-  const current = Object.freeze({
-    name: MARKET_PROFILE,
-    dir: profileDirectory(home)
-  })
-  return Object.freeze({
-    current,
-    list: () => [current],
-    select: async (name) => {
-      if (name !== MARKET_PROFILE) {
-        throw new Error(`DSH Desktop only exposes the ${MARKET_PROFILE} profile.`)
-      }
-    }
-  })
-}
-
-function validatePluginOperation(args, invokingDir) {
-  if (!Array.isArray(args) || args.length === 0) {
-    throw new Error('Desktop pnpm requires at least one plugin argument.')
-  }
-  if (args.some((argument) => typeof argument !== 'string' || !argument || argument.includes('\0'))) {
-    throw new Error('Desktop pnpm arguments must be non-empty strings without NUL.')
-  }
-  if (typeof invokingDir !== 'string' || !isAbsolute(invokingDir) || invokingDir.includes('\0')) {
-    throw new Error('Desktop pnpm requires an absolute invoking directory without NUL.')
-  }
-}
-
-export function createDesktopPnpmService(options) {
-  const {
-    binDirectory,
-    dshEntryPath = resolveDshEntry(),
-    executablePath = process.execPath,
-    environment = process.env,
-    spawnProcess = spawn,
-    home = dshHome()
-  } = options
-  let active
-  let closed = false
-
-  const runPlugin = (args, invokingDir, signal) => {
-    validatePluginOperation(args, invokingDir)
-    if (closed) throw new Error('The DSH Desktop pnpm service has been disposed.')
-    if (signal?.aborted) throw signal.reason ?? new Error('The package operation was aborted.')
-    if (active) throw new Error('Another desktop pnpm operation is already running.')
-
-    void cleanStaleTemporaryDirectories(home).catch(() => undefined)
-
-    const child = spawnProcess(
-      executablePath,
-      [dshEntryPath, 'plugin', '--profile', MARKET_PROFILE, ...args],
-      {
-        cwd: invokingDir,
-        env: buildPnpmEnvironment(binDirectory, environment, executablePath),
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true,
-        detached: process.platform !== 'win32'
-      }
-    )
-    const cancel = () => killProcessTree(child)
-    const done = new Promise((resolveDone, rejectDone) => {
-      child.once('error', rejectDone)
-      child.once('close', (exitCode, exitSignal) => {
-        resolveDone({ exitCode, signal: exitSignal })
-      })
-    })
-    const handle = {
-      stdout: child.stdout,
-      stderr: child.stderr,
-      done,
-      cancel
-    }
-    active = handle
-
-    const abort = () => cancel()
-    signal?.addEventListener('abort', abort, { once: true })
-    if (signal?.aborted) abort()
-    const release = () => {
-      signal?.removeEventListener('abort', abort)
-      if (active === handle) active = undefined
-    }
-    void done.then(release, release)
-    return handle
-  }
-
-  return Object.freeze({
-    runPlugin,
-    async dispose() {
-      closed = true
-      const operation = active
-      if (!operation) return
-      operation.cancel()
-      await operation.done.catch(() => undefined)
-    }
-  })
-}
-
 export function resolveDshEntry(argv = process.argv) {
   const entry = argv[1]
   if (!entry || !/[/\\]bin\.js$/u.test(entry)) {
-    throw new Error('The running DSH entry could not be identified.')
+    throw new Error('The bundled runtime entry could not be identified.')
   }
   return resolve(entry)
 }
@@ -423,6 +179,7 @@ export function buildInstallArguments(dshEntry = resolveDshEntry()) {
     '--profile',
     MARKET_PROFILE,
     'add',
+    '--save-exact',
     `${MARKET_PACKAGE}@${RECOMMENDED_MARKET_VERSION}`
   ]
 }
@@ -432,13 +189,13 @@ export function buildUninstallArguments(dshEntry = resolveDshEntry()) {
 }
 
 async function atomicWrite(path, contents) {
-  const temporary = `${path}.dsh-desktop-${process.pid}-${Date.now()}.tmp`
+  const temporary = `${path}.sherlock-${process.pid}-${Date.now()}.tmp`
   await writeFile(temporary, contents, 'utf8')
   await rename(temporary, path)
 }
 
 function killProcessTree(child) {
-  if (!child || child.exitCode !== null || !child.pid) return
+  if (!child || child.exitCode !== null) return
   if (process.platform === 'win32') {
     spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], {
       windowsHide: true,
@@ -453,58 +210,15 @@ function killProcessTree(child) {
   }
 }
 
-export async function apply(ctx) {
+export function apply(ctx) {
   const home = dshHome()
   const directory = profileDirectory(home)
   const manifestPath = join(directory, 'package.json')
+  let activeChild
   let operationPromise
   let phase = 'idle'
   let detail
   let restartRequired = false
-
-  // These generation-scoped services are the supported Desktop integration
-  // boundary consumed by dsh-market 1.6+. The market therefore never probes
-  // or provisions a system package manager and all mutations stay on the
-  // packaged Node/pnpm pair.
-  const binDirectory = await ensurePnpmShim(home)
-  const desktopProfiles = createDesktopProfilesService(home)
-  const desktopPnpm = createDesktopPnpmService({ binDirectory })
-  ctx.provide('desktopProfiles', desktopProfiles)
-  ctx.provide('desktopPnpm', desktopPnpm)
-  ctx.effect(() => () => desktopPnpm.dispose(), 'dsh-desktop-market-installer: desktop pnpm')
-
-  const runProfileCommand = async (args, action) => {
-    const handle = desktopPnpm.runPlugin(args, directory)
-    let output = ''
-    const append = (chunk) => {
-      output = `${output}${chunk.toString('utf8')}`.slice(-MAX_LOG_BYTES)
-      const lines = output.trim().split(/\r?\n/u)
-      detail = lines.at(-1)?.slice(0, 800)
-    }
-    handle.stdout.on('data', append)
-    handle.stderr.on('data', append)
-
-    let timedOut = false
-    const timer = setTimeout(() => {
-      timedOut = true
-      handle.cancel()
-    }, OPERATION_TIMEOUT_MS)
-
-    try {
-      const exit = await handle.done
-      if (timedOut) throw new Error(`${action} timed out after 15 minutes.`)
-      if (exit.exitCode !== 0) {
-        throw new Error(
-          detail ||
-            `${action} exited with ${exit.signal ? `signal ${exit.signal}` : `code ${exit.exitCode}`}.`
-        )
-      }
-    } finally {
-      clearTimeout(timer)
-      handle.stdout.off('data', append)
-      handle.stderr.off('data', append)
-    }
-  }
 
   const status = async () => {
     const installation = await readMarketInstallation(home)
@@ -560,7 +274,6 @@ export async function apply(ctx) {
       return
     }
 
-    await cleanStaleTemporaryDirectories(home)
     await ensurePnpmShim(home)
     await mkdir(directory, { recursive: true })
     let manifestSnapshot
@@ -570,11 +283,50 @@ export async function apply(ctx) {
       if (error?.code !== 'ENOENT') throw error
     }
 
+    const pathKey = process.platform === 'win32' ? 'Path' : 'PATH'
+    const envPath = process.env[pathKey] ?? process.env.PATH ?? process.env.Path ?? ''
+    const child = spawn(process.execPath, buildInstallArguments(), {
+      cwd: directory,
+      env: {
+        ...process.env,
+        PATH: envPath,
+        Path: envPath,
+        CI: 'true',
+        NO_COLOR: '1'
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      detached: process.platform !== 'win32'
+    })
+    activeChild = child
+
+    let output = ''
+    const append = (chunk) => {
+      output = `${output}${chunk.toString('utf8')}`.slice(-MAX_LOG_BYTES)
+      const lines = output.trim().split(/\r?\n/u)
+      detail = lines.at(-1)?.slice(0, 800)
+    }
+    child.stdout.on('data', append)
+    child.stderr.on('data', append)
+
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      killProcessTree(child)
+    }, OPERATION_TIMEOUT_MS)
+
     try {
-      await runProfileCommand(
-        ['add', `${MARKET_PACKAGE}@${RECOMMENDED_MARKET_VERSION}`],
-        'Installation'
-      )
+      const exit = await new Promise((resolveExit, rejectExit) => {
+        child.once('error', rejectExit)
+        child.once('exit', (code, signal) => resolveExit({ code, signal }))
+      })
+      if (timedOut) throw new Error('Installation timed out after 15 minutes.')
+      if (exit.code !== 0) {
+        throw new Error(
+          detail ||
+            `The installer exited with ${exit.signal ? `signal ${exit.signal}` : `code ${exit.code}`}.`
+        )
+      }
 
       const installed = await readMarketInstallation(home)
       if (!installed.installedVersion) {
@@ -584,15 +336,15 @@ export async function apply(ctx) {
       detail = undefined
       restartRequired = true
     } catch (error) {
-      await cleanStaleTemporaryDirectories(home).catch(() => undefined)
       if (manifestSnapshot !== undefined) {
         await atomicWrite(manifestPath, manifestSnapshot).catch(() => undefined)
       }
-      const lockfilePath = join(directory, 'pnpm-lock.yaml')
-      await rm(lockfilePath, { force: true }).catch(() => undefined)
       phase = 'error'
       detail = error instanceof Error ? error.message : String(error)
       ctx.logger.warn(error instanceof Error ? error : new Error(detail))
+    } finally {
+      clearTimeout(timer)
+      if (activeChild === child) activeChild = undefined
     }
   }
 
@@ -607,7 +359,6 @@ export async function apply(ctx) {
       return
     }
 
-    await cleanStaleTemporaryDirectories(home)
     await ensurePnpmShim(home)
     let manifestSnapshot
     try {
@@ -616,8 +367,50 @@ export async function apply(ctx) {
       if (error?.code !== 'ENOENT') throw error
     }
 
+    const pathKey = process.platform === 'win32' ? 'Path' : 'PATH'
+    const envPath = process.env[pathKey] ?? process.env.PATH ?? process.env.Path ?? ''
+    const child = spawn(process.execPath, buildUninstallArguments(), {
+      cwd: directory,
+      env: {
+        ...process.env,
+        PATH: envPath,
+        Path: envPath,
+        CI: 'true',
+        NO_COLOR: '1'
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      detached: process.platform !== 'win32'
+    })
+    activeChild = child
+
+    let output = ''
+    const append = (chunk) => {
+      output = `${output}${chunk.toString('utf8')}`.slice(-MAX_LOG_BYTES)
+      const lines = output.trim().split(/\r?\n/u)
+      detail = lines.at(-1)?.slice(0, 800)
+    }
+    child.stdout.on('data', append)
+    child.stderr.on('data', append)
+
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      killProcessTree(child)
+    }, OPERATION_TIMEOUT_MS)
+
     try {
-      await runProfileCommand(['remove', MARKET_PACKAGE], 'Uninstallation')
+      const exit = await new Promise((resolveExit, rejectExit) => {
+        child.once('error', rejectExit)
+        child.once('exit', (code, signal) => resolveExit({ code, signal }))
+      })
+      if (timedOut) throw new Error('Uninstallation timed out after 15 minutes.')
+      if (exit.code !== 0) {
+        throw new Error(
+          detail ||
+            `The uninstaller exited with ${exit.signal ? `signal ${exit.signal}` : `code ${exit.code}`}.`
+        )
+      }
 
       const removed = await readMarketInstallation(home)
       if (removed.dependency || removed.installedVersion) {
@@ -627,17 +420,20 @@ export async function apply(ctx) {
       detail = undefined
       restartRequired = true
     } catch (error) {
-      await cleanStaleTemporaryDirectories(home).catch(() => undefined)
-      const lockfilePath = join(directory, 'pnpm-lock.yaml')
-      await rm(lockfilePath, { force: true }).catch(() => undefined)
+      if (manifestSnapshot !== undefined) {
+        await atomicWrite(manifestPath, manifestSnapshot).catch(() => undefined)
+      }
       phase = 'error'
       detail = error instanceof Error ? error.message : String(error)
       ctx.logger.warn(error instanceof Error ? error : new Error(detail))
+    } finally {
+      clearTimeout(timer)
+      if (activeChild === child) activeChild = undefined
     }
   }
 
-  ctx.inject(['webServer'], (webCtx) => webCtx.effect(() => {
-    const disposeStatus = webCtx.webServer.register({
+  ctx.effect(() => {
+    const disposeStatus = ctx.webServer.register({
       kind: 'exact',
       path: STATUS_PATH,
       handler: async (req, res) => {
@@ -648,7 +444,7 @@ export async function apply(ctx) {
         sendJson(res, 200, await status())
       }
     })
-    const disposeInstall = webCtx.webServer.register({
+    const disposeInstall = ctx.webServer.register({
       kind: 'exact',
       path: INSTALL_PATH,
       handler: async (req, res) => {
@@ -675,7 +471,7 @@ export async function apply(ctx) {
           .catch((error) => {
             phase = 'error'
             detail = error instanceof Error ? error.message : String(error)
-            webCtx.logger.warn(error instanceof Error ? error : new Error(detail))
+            ctx.logger.warn(error instanceof Error ? error : new Error(detail))
           })
           .finally(() => {
             operationPromise = undefined
@@ -683,7 +479,7 @@ export async function apply(ctx) {
         sendJson(res, 202, await status())
       }
     })
-    const disposeUninstall = webCtx.webServer.register({
+    const disposeUninstall = ctx.webServer.register({
       kind: 'exact',
       path: UNINSTALL_PATH,
       handler: async (req, res) => {
@@ -712,7 +508,7 @@ export async function apply(ctx) {
           .catch((error) => {
             phase = 'error'
             detail = error instanceof Error ? error.message : String(error)
-            webCtx.logger.warn(error instanceof Error ? error : new Error(detail))
+            ctx.logger.warn(error instanceof Error ? error : new Error(detail))
           })
           .finally(() => {
             operationPromise = undefined
@@ -725,7 +521,14 @@ export async function apply(ctx) {
       disposeUninstall()
       disposeInstall()
       disposeStatus()
+      killProcessTree(activeChild)
       await operationPromise?.catch(() => undefined)
     }
-  }, 'dsh-desktop-market-installer: fixed package routes'))
+  }, 'sherlock-market-installer: fixed package routes')
+
+  ctx.effect(() => {
+    void ensurePnpmShim(home).catch((error) => {
+      ctx.logger.warn(error instanceof Error ? error : new Error(String(error)))
+    })
+  }, 'sherlock-market-installer: packaged pnpm shim')
 }

@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260903-07",
+  "branch": "codex/integration/20260903-07",
+  "baseMainCommit": "1b6e4308bed0c93a20847a0eda20f8267ce9a07f",
+  "expectedMainCommit": "1b6e4308bed0c93a20847a0eda20f8267ce9a07f",
+  "createdAt": "2026-09-03T08:50:40.040Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首次配置后的模型列表恢复",
+        "branch": "codex/feat/model-picker-null-current-20260903",
+        "baseCommit": "1b6e4308bed0c93a20847a0eda20f8267ce9a07f",
+        "tipCommit": "7bc93b4091353f61db523be5caac33882cc35b72",
+        "commits": [
+          {
+            "commit": "7bc93b4091353f61db523be5caac33882cc35b72",
+            "parents": [
+              "1b6e4308bed0c93a20847a0eda20f8267ce9a07f"
+            ],
+            "subject": "修复：恢复首次配置后的模型列表"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-connection+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/model-picker-null-current.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/model-picker-null-current.test.ts",
+              "test/model-session-selection.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "首次配置模型传输、会话模型持久化与0.8.0更新日志共9项聚焦测试通过",
+            "verifiedCommit": "7bc93b4091353f61db523be5caac33882cc35b72",
+            "completedAt": "2026-09-03T08:50:08Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node与Electron TypeScript类型检查通过",
+            "verifiedCommit": "7bc93b4091353f61db523be5caac33882cc35b72",
+            "completedAt": "2026-09-03T08:50:08Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能worktree按治理不构建共享客户端；合入main后使用本地测试手册构建，并在真实客户端验证模型选择器。"
+        },
+        "acceptanceCriteria": [
+          "首次配置完成但会话尚无当前模型时，session.models可接受current为null",
+          "current为空时仍返回并展示可用模型分组，不再抛出原始Zod校验错误",
+          "已有会话的模型选择和队列anchorSeq兼容补丁保持不回退",
+          "0.8.0中英文更新日志记录首次配置模型列表修复"
+        ],
+        "risks": [
+          "模型列表的实际内容仍取决于用户已配置且可发现的模型提供商，但空当前选项不会再阻断目录渲染"
+        ],
+        "generatedAt": "2026-09-03T08:50:08Z"
+      },
+      "merged": {
+        "mergeCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+        "verificationCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/model-picker-null-current.test.ts",
+              "test/model-session-selection.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/model-picker-null-current.test.ts test/model-session-selection.test.ts test/settings-about.test.ts",
+            "verifiedCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+            "completedAt": "2026-09-03T08:51:28.473Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6fb7e74a5a150beb35411f8578e733307785235a",
+            "completedAt": "2026-09-03T08:51:28.473Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-03T08:51:28.473Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/model-picker-null-current.test.ts",
+        "test/model-session-selection.test.ts",
+        "test/settings-about.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}

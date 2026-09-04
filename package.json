@@ -1,7 +1,7 @@
 {
-  "name": "dsh-desktop",
-  "version": "0.1.1",
-  "description": "A cross-platform desktop shell for DeepSeek Harness.",
+  "name": "sherlock",
+  "version": "0.8.1",
+  "description": "Sherlock local-first desktop knowledge assistant.",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
@@ -16,71 +16,91 @@
   },
   "homepage": "https://github.com/dataelement/dsh-desktop#readme",
   "keywords": [
-    "deepseek",
+    "sherlock",
+    "local-first",
+    "knowledge-assistant",
     "harness",
     "electron",
     "desktop",
     "agent"
   ],
   "scripts": {
-    "postinstall": "patch-package && node scripts/install-brand-assets.mjs && install-electron --no",
+    "postinstall": "patch-package && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && install-electron --no",
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json",
+    "git:policy:install": "node scripts/install-local-git-policy.mjs",
+    "git:formal:verify": "node scripts/verify-formal-git-state.mjs",
+    "git:handoff": "node scripts/create-sherlock-session-handoff.mjs",
+    "git:integration:preflight": "node scripts/verify-sherlock-integration.mjs",
+    "git:integration": "node scripts/manage-sherlock-integration.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "package:dir": "npm run build && electron-builder --dir",
+    "prepare:bundled-plugin-profile": "node scripts/prepare-bundled-plugin-profile.mjs",
+    "package:formal:dir": "npm run prepare:bundled-plugin-profile && npm run build && electron-builder --dir --publish never --config electron-builder.notarized.cjs --config.mac.notarize=false",
     "package:dev:dir": "npm run build && electron-builder --dir --config electron-builder.dev.cjs",
-    "package:dev:mac:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never --config electron-builder.dev.cjs",
-    "package:dev:mac:x64": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never --config electron-builder.dev.cjs",
     "package:dev:win": "node scripts/verify-target.mjs win32 x64 && npm run build && electron-builder --win --x64 --publish never --config electron-builder.dev.cjs",
-    "package:mac": "npm run build && electron-builder --mac --publish never",
-    "package:mac:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never",
-    "package:mac:x64": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never",
-    "package:win": "node scripts/verify-target.mjs win32 x64 && npm run build && electron-builder --win --x64 --publish never"
+    "package:mac": "npm run build && electron-builder --mac --publish never && npm run verify:package:mac -- --app auto",
+    "package:mac:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/Sherlock.app\"",
+    "package:mac:arm64:unsigned-ci": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/Sherlock.app\" --skip-signature",
+    "package:mac:x64": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/Sherlock.app\"",
+    "package:mac:x64:unsigned-ci": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/Sherlock.app\" --skip-signature",
+    "package:mac:notarized:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run prepare:bundled-plugin-profile && npm run build && electron-builder --mac --arm64 --publish never --config electron-builder.notarized.cjs && npm run verify:package:mac -- --app \"dist-notarized/mac-arm64/Sherlock.app\"",
+    "verify:package:mac": "node scripts/verify-packaged-macos.mjs",
+    "release:cloudflare": "node scripts/publish-cloudflare-release.mjs",
+    "release:cloudflare:prune-oldest": "node scripts/prune-oldest-cloudflare-release.mjs",
+    "package:win": "node scripts/verify-target.mjs win32 x64 && npm run build && electron-builder --win --x64 --publish never",
+    "sync:plugins:to-dev": "node scripts/sync-plugin-profile.mjs formal-to-dev",
+    "sync:plugins:to-formal": "node scripts/sync-plugin-profile.mjs dev-to-formal"
   },
   "dependencies": {
     "@deepseek-ai/cordis-plugin-group": "1.0.1",
-    "@deepseek-ai/dsh": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-anonymous-user-id": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-atomic-write": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-authorization": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-bash-local": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-code-runtime": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-compaction": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-fs": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-invariants": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-output-retention": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-sandbox": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-scope": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-session-telemetry": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-session-title-llm": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-shell": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-spill": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-subprocess": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-timeout": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-workflow": "0.1.1-rc.1",
-    "dsh-desktop-hmr-fallback": "file:packages/dsh-desktop-hmr-fallback",
+    "@deepseek-ai/dsh": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-anonymous-user-id": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-atomic-write": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-bash-local": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-code-runtime": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-compaction": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-fs": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-invariants": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-output-retention": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-sandbox": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-scope": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-session-telemetry": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-session-title-llm": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-shell": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-spill": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-subprocess": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-timeout": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-workflow": "0.1.0-rc.7",
+    "apache-arrow": "18.1.0",
+    "cheerio": "^1.2.0",
     "dsh-desktop-market-installer": "file:packages/dsh-desktop-market-installer",
+    "dsh-research-task-runtime": "file:packages/dsh-research-task-runtime",
+    "dsh-web-search-session-model": "file:packages/dsh-web-search-session-model",
     "electron-updater": "^6.8.9",
     "node": "24.9.0",
     "pnpm": "10.34.5",
     "qrcode": "^1.5.4",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "sanitize-html": "^2.17.7"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
     "@types/qrcode": "^1.5.6",
+    "@types/sanitize-html": "^2.16.1",
     "electron": "43.4.0",
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
+    "happy-dom": "^20.11.6",
     "patch-package": "^8.0.1",
+    "pdfjs-dist": "4.10.38",
     "typescript": "5.9.3",
     "vitest": "^4.1.10",
+    "wrangler": "4.125.0",
     "yaml": "^2.8.3"
   },
   "overrides": {
@@ -88,7 +108,7 @@
   },
   "build": {
     "appId": "io.dsh.desktop",
-    "productName": "DSH Desktop",
+    "productName": "Sherlock",
     "asar": false,
     "npmRebuild": false,
     "compression": "maximum",
@@ -106,6 +126,9 @@
     "files": [
       "out/**/*",
       "node_modules/**/*",
+      "!node_modules/pdfjs-dist/**",
+      "!node_modules/@napi-rs/canvas/**",
+      "!node_modules/@napi-rs/canvas-*/**",
       "package.json",
       "!**/*.map",
       "!**/node_modules/@mistralai/mistralai/src/**"
@@ -128,21 +151,25 @@
         "to": "splash.html"
       },
       {
-        "from": "build/dsh-loader.gif",
-        "to": "dsh-loader.gif"
+        "from": "build/sherlock-logo.svg",
+        "to": "sherlock-logo.svg"
       },
       {
         "from": "build/plugin-recovery.html",
         "to": "plugin-recovery.html"
+      },
+      {
+        "from": "skills",
+        "to": "sherlock-skills"
       }
     ],
     "publish": [
       {
         "provider": "generic",
-        "url": "https://dshdesktop.com/updates/latest/"
+        "url": "https://updates.evanarts.com/latest/"
       }
     ],
-    "artifactName": "dsh-desktop-${os}-${arch}.${ext}",
+    "artifactName": "sherlock-${os}-${arch}.${ext}",
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
@@ -169,7 +196,7 @@
       ]
     },
     "nsis": {
-      "artifactName": "dsh-desktop-windows-${arch}-setup.${ext}",
+      "artifactName": "sherlock-windows-${arch}-setup.${ext}",
       "include": "build/installer.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

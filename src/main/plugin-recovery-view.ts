@@ -17,8 +17,6 @@ export interface PluginRecoveryViewModel {
   safetyNote: string
   primaryLabel: string
   primaryBusyLabel: string
-  restartLabel: string
-  restartBusyLabel: string
   logLabel: string
   advancedLabel: string
   errorLabel: string
@@ -97,11 +95,11 @@ export function describePluginFailure(
   if (/declares no dsh\.bundle/i.test(text)) {
     return locale === 'zh'
       ? {
-          title: '安装的包不是兼容的 DSH 插件',
-          detail: '这个包缺少 DSH 插件所需的入口声明，因此 Harness 无法加载。'
+          title: '安装的包不是兼容的 Sherlock 插件',
+          detail: '这个包缺少 Sherlock 插件所需的入口声明，因此 Harness 无法加载。'
         }
       : {
-          title: 'The package is not a compatible DSH plugin',
+          title: 'The package is not a compatible Sherlock plugin',
           detail: 'It does not declare the entry point required by Harness.'
         }
   }
@@ -160,7 +158,7 @@ export function buildPluginRecoveryViewModel(options: {
   if (locale === 'zh') {
     return {
       locale,
-      brand: 'DSH Desktop',
+      brand: 'Sherlock',
       badge: '启动修复',
       heading: canUninstall
         ? multiple ? `发现 ${plugins.length} 个导致启动失败的插件` : '发现导致启动失败的插件'
@@ -181,22 +179,20 @@ export function buildPluginRecoveryViewModel(options: {
         ? multiple ? `卸载这 ${plugins.length} 个插件并继续检测` : '卸载此插件并继续检测'
         : '打开 Harness 日志',
       primaryBusyLabel: canUninstall ? '正在处理并重新检测…' : '正在打开日志…',
-      restartLabel: '重启 Harness',
-      restartBusyLabel: '正在重启…',
       logLabel: '打开 Harness 日志',
       advancedLabel: '查看技术详情',
       errorLabel: '错误信息',
       launchDirectoryLabel: '启动目录',
       launchDirectory: snapshot.launchDirectory,
       rawError: snapshot.message,
-      quitLabel: '退出 DSH Desktop',
+      quitLabel: '退出 Sherlock',
       canUninstall
     }
   }
 
   return {
     locale,
-    brand: 'DSH Desktop',
+    brand: 'Sherlock',
     badge: 'Startup recovery',
     heading: canUninstall
       ? multiple ? `${plugins.length} plugins are preventing startup` : 'A plugin is preventing startup'
@@ -217,15 +213,13 @@ export function buildPluginRecoveryViewModel(options: {
       ? multiple ? `Remove these ${plugins.length} plugins and continue` : 'Remove this plugin and continue'
       : 'Open Harness log',
     primaryBusyLabel: canUninstall ? 'Removing and checking again…' : 'Opening log…',
-    restartLabel: 'Restart Harness',
-    restartBusyLabel: 'Restarting…',
     logLabel: 'Open Harness log',
     advancedLabel: 'View technical details',
     errorLabel: 'Error details',
     launchDirectoryLabel: 'Launch directory',
     launchDirectory: snapshot.launchDirectory,
     rawError: snapshot.message,
-    quitLabel: 'Quit DSH Desktop',
+    quitLabel: 'Quit Sherlock',
     canUninstall
   }
 }

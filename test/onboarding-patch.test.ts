@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import { describe, expect, it } from 'vitest'
-import { patchPath } from './patch-path'
 
 const PI_AI_ONBOARDING_PROVIDERS = [
   'openai',
@@ -24,7 +23,7 @@ describe('desktop provider onboarding patch', () => {
 
   it('is captured as a reproducible dependency patch', async () => {
     const [patch, installed] = await Promise.all([
-      readFile(patchPath('@deepseek-ai/dsh-client-ui-settings-models'), 'utf8'),
+      readFile('patches/@deepseek-ai+dsh-client-ui-settings-models+0.1.0-rc.7.patch', 'utf8'),
       readFile('node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js', 'utf8')
     ])
     expect(patch).toContain('ONBOARDING_PROVIDERS')
@@ -37,7 +36,9 @@ describe('desktop provider onboarding patch', () => {
     expect(installed).toContain('providerSearch: "搜索提供方"')
     expect(installed).toContain('.dshProviderCard[aria-pressed=true]{border-color:var(--dsw-alias-border-l1)')
     expect(installed).toContain('SETTINGS_PROVIDER_PRIORITY')
-    expect(installed.indexOf('"deepseek-official"')).toBeLessThan(installed.indexOf('"openai"'))
+    expect(installed).not.toContain('displayName: "DeepSeek"')
+    expect(installed).toContain('(0, react.useState)("openai")')
+    expect(installed).toContain('Sherlock will enable that provider')
     expect(installed).toContain('left.entry.displayName.localeCompare(right.entry.displayName)')
   })
 })

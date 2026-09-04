@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260902-03",
+  "branch": "codex/integration/20260902-03",
+  "baseMainCommit": "011f0ea82152f1a19d3a74ef5cb7a6276cc8bbda",
+  "expectedMainCommit": "011f0ea82152f1a19d3a74ef5cb7a6276cc8bbda",
+  "createdAt": "2026-09-02T04:35:58.521Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "微信文章研究生成正文桥接",
+        "branch": "codex/feat/research-source-fix-20260902",
+        "baseCommit": "011f0ea82152f1a19d3a74ef5cb7a6276cc8bbda",
+        "tipCommit": "aa9a705566b091018f616e471011f5b08344a422",
+        "commits": [
+          {
+            "commit": "aa9a705566b091018f616e471011f5b08344a422",
+            "parents": [
+              "011f0ea82152f1a19d3a74ef5cb7a6276cc8bbda"
+            ],
+            "subject": "修复：让微信文章正文进入研究生成任务"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-web-reader.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-web-reader.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-web-reader.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "微信安全阅读与研究任务运行时 42 项测试通过",
+            "verifiedCommit": "aa9a705566b091018f616e471011f5b08344a422",
+            "completedAt": "2026-09-02T04:34:59.000Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "persists an immutable bounded source snapshot and task identity|updates only current automatic web titles and preserves a user rename|renders public WeChat articles through the scriptless safe reader"
+            ],
+            "outcome": "passed",
+            "summary": "微信正文持久化与生成源聚焦 UI 测试 3 项通过",
+            "verifiedCommit": "aa9a705566b091018f616e471011f5b08344a422",
+            "completedAt": "2026-09-02T04:35:00.000Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "Node 与 Electron 类型检查通过",
+            "verifiedCommit": "aa9a705566b091018f616e471011f5b08344a422",
+            "completedAt": "2026-09-02T04:35:01.000Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按治理不启动共享客户端；真实客户端验收将在集成 tip 上完成。"
+        },
+        "acceptanceCriteria": [
+          "微信安全阅读结果包含清洗且限长的正文纯文本",
+          "微信文章组件生成思维导图或总结时使用正文而不是 URL",
+          "用户重命名不被阅读检查覆盖且链接变更会清除旧正文",
+          "无工具生成任务必须直接输出最终正文并准确报告空输出"
+        ],
+        "risks": [
+          "正文桥接仅覆盖已支持安全阅读的微信公众号文章，普通网页仍使用现有链接来源行为"
+        ],
+        "generatedAt": "2026-09-02T04:35:01.000Z"
+      },
+      "merged": {
+        "mergeCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+        "verificationCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-web-reader.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-web-reader.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+            "completedAt": "2026-09-02T04:37:16.641Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "persists an immutable bounded source snapshot and task identity|updates only current automatic web titles and preserves a user rename|renders public WeChat articles through the scriptless safe reader"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/sherlock-composer-workspace-ui.test.ts -t persists an immutable bounded source snapshot and task identity|updates only current automatic web titles and preserves a user rename|renders public WeChat articles through the scriptless safe reader",
+            "verifiedCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+            "completedAt": "2026-09-02T04:37:16.641Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a65d28d1bf35314cb5c26ded79c1c0a34a9c63f5",
+            "completedAt": "2026-09-02T04:37:16.641Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-02T04:37:16.641Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/research-web-reader.test.ts",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "-t",
+        "persists an immutable bounded source snapshot and task identity|updates only current automatic web titles and preserves a user rename|renders public WeChat articles through the scriptless safe reader"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}

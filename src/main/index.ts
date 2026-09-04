@@ -1,45 +1,41 @@
 import { spawn } from 'node:child_process'
-import { join } from 'node:path'
+import { homedir } from 'node:os'
+import { isAbsolute, join, normalize, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
+import { stat } from 'node:fs/promises'
 import { parse } from 'yaml'
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   Menu,
   nativeTheme,
+  net,
+  protocol,
+  session,
   shell,
-  utilityProcess,
-  type IpcMainInvokeEvent,
-  type MessageBoxOptions
+  type BrowserWindowConstructorOptions,
+  type SaveDialogOptions
 } from 'electron'
-import { extractFailureCause, HarnessRuntime } from './runtime/harness-runtime'
-import { launchDisclaimedUtilityProcess } from './runtime/disclaimed-utility-process'
 import {
-  installProfileDependenciesWithDsh,
-  removeProfilePluginWithDsh
-} from './runtime/profile-plugin-command'
-import { clearDamagedPackageDirectories, hasProfile } from './state/profile-repair'
-import { inspectProfileConsistency } from './state/profile-consistency'
-import { ensureStoreDirPinned, inspectStoreConsistency } from './state/profile-store'
-import { LanMobileBridge } from './mobile/lan-mobile-bridge'
-import {
-  detectPluginRecovery,
-  PLUGIN_RECOVERY_EVIDENCE_TIMEOUT_MS
-} from './plugin-recovery-detection'
+  extractDuplicateLoaderEntryId,
+  extractFailureCause,
+  extractPluginFailureReferences,
+  extractSlotConflictName,
+  HarnessRuntime
+} from './runtime/harness-runtime'
+import { removeProfilePluginWithDsh } from './runtime/profile-plugin-command'
 import { secureWindow } from './security'
 import { ensureLaunchRoot } from './state/launch-root'
 import {
-  pruneMissingProfileBundles,
   resetPluginProfile,
+  resolveProfileRecoveryPlugins,
   uninstallPluginFromProfile
 } from './state/plugin-recovery'
-import {
-  desktopHarnessUrl,
-  isAbortedNavigationError,
-  shouldLoadHarnessUrl
-} from './window-navigation'
+import { isAbortedNavigationError, shouldLoadHarnessUrl } from './window-navigation'
 import {
   checkForUpdates,
   registerUpdateHandlers,
@@ -49,27 +45,82 @@ import {
 import type { RuntimeSnapshot } from '../shared/contracts'
 import { resolveHarnessLocale } from './application-locale'
 import { installContextMenu } from './context-menu'
+import { isDeveloperModeEnabled, setDeveloperModeEnabled } from './developer-mode-state'
 import {
   WINDOWS_TITLEBAR_HEIGHT,
   isDesktopMenuCommand,
   type DesktopMenuCommand
 } from '../shared/desktop-menu'
+import { developerModeArgument } from '../shared/developer-mode'
+import { appVersionArgument } from '../shared/app-info'
 import { buildPluginRecoveryViewModel } from './plugin-recovery-view'
-import { aboutDetail, bundledHarnessVersion } from './version-info'
+import { resolveDesktopIdentity } from './app-identity'
+import { migrateLegacyUserData } from './app-data-migration'
+import { installBundledPluginProfile } from './bundled-plugin-profile'
+import { synchronizeBundledESkillOverrides } from './bundled-skill-sync'
+import {
+  configureBrowserSearchSecurity,
+  type BrowserSearchWindow
+} from './search/browser-search-controller'
+import { isAllowedSearchLocation } from './search/search-engines'
+import {
+  startLocalSearchRuntime,
+  type LocalSearchRuntime
+} from './search/local-search-runtime'
+import { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
+import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
+import {
+  assertTrustedMainWindowEvent,
+  registerPrivilegedMainWindowHandlers
+} from './ipc-trust'
+import {
+  FileResearchPreviewAuthorizationStorage,
+  HarnessWorkspaceFileResolver,
+  RESEARCH_PREVIEW_SCHEME,
+  ResearchFilePreviewRegistry,
+  handleResearchFilePreviewProtocolRequest,
+  registerResearchFilePreviewHandlers
+} from './state/research-file-preview'
+import {
+  installResearchCanvasWheelRouter,
+  registerResearchCanvasWheelIpc,
+  type ResearchCanvasWheelRouter
+} from './state/research-canvas-wheel'
+import {
+  ResearchLinkFrameRegistry,
+  registerResearchLinkFrameHandlers
+} from './state/research-link-frame'
+import { registerResearchWebReaderHandlers } from './state/research-web-reader'
+import {
+  registerResearchCanvasExportHandlers,
+  researchCanvasExportFileOperations
+} from './state/research-canvas-export'
 
-type PluginRecoveryAction = 'uninstall' | 'show-log' | 'quit' | 'restart' | 'refresh'
+protocol.registerSchemesAsPrivileged([{
+  scheme: RESEARCH_PREVIEW_SCHEME,
+  privileges: {
+    standard: true,
+    secure: true,
+    supportFetchAPI: true,
+    corsEnabled: true,
+    stream: true
+  }
+}])
+
+type PluginRecoveryAction = 'uninstall' | 'show-log' | 'quit' | 'restart'
 
 const PLUGIN_RECOVERY_ACTIONS = new Set<PluginRecoveryAction>([
   'uninstall',
   'show-log',
-  'quit',
-  'restart'
+  'quit'
 ])
 
 let mainWindow: BrowserWindow | undefined
-let mobileWindow: BrowserWindow | undefined
 let runtime: HarnessRuntime
-let mobileBridge: LanMobileBridge
+let localSearchRuntime: LocalSearchRuntime | undefined
+let researchContextBridge: ResearchContextBridge | undefined
+let disposeResearchContextHandlers: (() => void) | undefined
 let launchDirectory: string
 let quitting = false
 let failureRecoveryVisible = false
@@ -79,34 +130,10 @@ let mainWindowNavigationVersion = 0
 let rendererPluginFailureLogs: string[] = []
 let pluginRecoveryRemovedPlugins: string[] = []
 let pluginRecoveryResetTimer: ReturnType<typeof setTimeout> | undefined
-let pendingFrontendPluginRecovery = false
-let pendingFrontendPluginRecoveryMessage: string | undefined
-
-function appendRendererPluginFailureLog(message: string): void {
-  const trimmed = message.trim()
-  if (!trimmed) return
-  const logLine = `[stderr] ${trimmed}`
-  if (rendererPluginFailureLogs.at(-1) === logLine) return
-  rendererPluginFailureLogs.push(logLine)
-  rendererPluginFailureLogs = rendererPluginFailureLogs.slice(-50)
-}
-
-function queuePendingFrontendPluginRecovery(message?: string): void {
-  pendingFrontendPluginRecovery = true
-  if (message) pendingFrontendPluginRecoveryMessage = message
-  resolvePluginRecoveryAction('refresh')
-}
-
-function takePendingFrontendPluginRecovery(): {
-  pending: boolean
-  message?: string
-} {
-  const pending = pendingFrontendPluginRecovery
-  const message = pendingFrontendPluginRecoveryMessage
-  pendingFrontendPluginRecovery = false
-  pendingFrontendPluginRecoveryMessage = undefined
-  return { pending, message }
-}
+let harnessThemePreferenceSyncTimer: ReturnType<typeof setInterval> | undefined
+let researchFilePreviewRegistry: ResearchFilePreviewRegistry | undefined
+let researchCanvasWheelRouter: ResearchCanvasWheelRouter | undefined
+const researchLinkFrameRegistry = new ResearchLinkFrameRegistry()
 
 function cancelPluginRecoverySessionReset(): void {
   if (pluginRecoveryResetTimer) clearTimeout(pluginRecoveryResetTimer)
@@ -144,33 +171,29 @@ function appendRendererPluginRecoveryLog(logs: readonly string[]): void {
   }
 }
 
-function appendPluginRecoveryDetectionLog(plugins: readonly string[]): void {
-  try {
-    const result = plugins.length > 0 ? plugins.join(', ') : 'unresolved'
-    appendFileSync(
-      join(app.getPath('logs'), 'harness.log'),
-      `[desktop] plugin recovery detection: ${result}\n`,
-      'utf8'
-    )
-  } catch (error) {
-    console.warn('[desktop] failed to persist plugin recovery detection', error)
-  }
-}
-
-function isDevelopmentBuild(): boolean {
-  if (!app.isPackaged) return true
+function resolveDesktopChannel(): 'development' | 'legacy' | 'legacy-bridge' | 'notarized' {
+  if (!app.isPackaged) return 'development'
 
   try {
     const metadata = JSON.parse(
       readFileSync(join(app.getAppPath(), 'package.json'), 'utf8')
     ) as { dshDesktopChannel?: unknown }
-    return metadata.dshDesktopChannel === 'development'
+    if (
+      metadata.dshDesktopChannel === 'development' ||
+      metadata.dshDesktopChannel === 'notarized' ||
+      metadata.dshDesktopChannel === 'legacy-bridge' ||
+      metadata.dshDesktopChannel === 'legacy'
+    ) {
+      return metadata.dshDesktopChannel
+    }
+    return 'legacy'
   } catch {
-    return false
+    return 'legacy'
   }
 }
 
-const developmentBuild = isDevelopmentBuild()
+const desktopChannel = resolveDesktopChannel()
+const developmentBuild = desktopChannel === 'development'
 
 function windowsTitleBarOverlay(isDark: boolean): Electron.TitleBarOverlayOptions {
   return {
@@ -180,8 +203,30 @@ function windowsTitleBarOverlay(isDark: boolean): Electron.TitleBarOverlayOption
   }
 }
 
+function startHarnessThemePreferenceSync(): void {
+  if (harnessThemePreferenceSyncTimer) return
+  const sync = (): void => {
+    const preference = harnessThemePreference()
+    if (nativeTheme.themeSource !== preference) nativeTheme.themeSource = preference
+  }
+  sync()
+  harnessThemePreferenceSyncTimer = setInterval(sync, 250)
+  harnessThemePreferenceSyncTimer.unref?.()
+}
+
+function stopHarnessThemePreferenceSync(): void {
+  if (harnessThemePreferenceSyncTimer) clearInterval(harnessThemePreferenceSyncTimer)
+  harnessThemePreferenceSyncTimer = undefined
+}
+
 function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
   if (window.isDestroyed()) return
+  if (process.platform === 'darwin') {
+    window.setBackgroundColor('#00000000')
+    window.setVibrancy('menu')
+    return
+  }
+
   window.setBackgroundColor(isDark ? '#141416' : '#ffffff')
   if (process.platform === 'win32') {
     window.setTitleBarOverlay(windowsTitleBarOverlay(isDark))
@@ -189,18 +234,66 @@ function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
 }
 
 function configureAppIdentity(): void {
-  if (developmentBuild) {
-    app.setName('DSH Desktop Dev')
-    app.setPath('userData', join(app.getPath('appData'), 'dsh-desktop-dev'))
-    return
-  }
-
-  app.setName('DSH Desktop')
   // Keep the historical lowercase directory stable across product-name and
   // branding changes. Harness stores workspaces, sessions, credentials, and
   // custom presets below userData, so deriving this path from app.getName()
   // would make an ordinary upgrade look like a fresh installation.
-  app.setPath('userData', join(app.getPath('appData'), 'dsh-desktop'))
+  const explicitAppDataPath = app.commandLine.getSwitchValue('sherlock-app-data-dir').trim()
+  if (explicitAppDataPath && !isAbsolute(explicitAppDataPath)) {
+    throw new Error('The Sherlock app-data path must be absolute.')
+  }
+  const appDataPath = explicitAppDataPath ? normalize(explicitAppDataPath) : app.getPath('appData')
+  if (explicitAppDataPath) app.setPath('appData', appDataPath)
+  const explicitUserDataPath = app.commandLine.getSwitchValue('sherlock-user-data-dir')
+  const identity = resolveDesktopIdentity(appDataPath, desktopChannel, explicitUserDataPath)
+  if (
+    !explicitUserDataPath &&
+    (desktopChannel === 'legacy-bridge' || desktopChannel === 'notarized')
+  ) {
+    try {
+      migrateLegacyUserData(join(appDataPath, 'dsh-desktop'), identity.userData)
+    } catch (error) {
+      console.warn('[desktop] failed to migrate legacy Sherlock user data', error)
+    }
+  }
+  app.setName(identity.name)
+  app.setPath('userData', identity.userData)
+  if (app.isPackaged) {
+    try {
+      const agentsHome = resolve(
+        process.env.DSH_AGENTS_HOME?.trim() || join(homedir(), '.agents')
+      )
+      const result = synchronizeBundledESkillOverrides({
+        bundledSkillDirectory: join(process.resourcesPath, 'sherlock-skills'),
+        overrideSkillDirectories: [
+          join(identity.userData, 'harness', 'skills'),
+          join(agentsHome, 'skills')
+        ]
+      })
+      for (const upgrade of result.upgraded) {
+        console.info(
+          `[desktop] upgraded official skill ${upgrade.slug} from ${upgrade.fromVersion} to ${upgrade.toVersion}`
+        )
+      }
+    } catch (error) {
+      console.warn('[desktop] failed to synchronize bundled Sherlock skills', error)
+    }
+
+    const bundledProfilePath = join(process.resourcesPath, 'sherlock-plugin-profile')
+    try {
+      const result = installBundledPluginProfile({
+        userDataPath: identity.userData,
+        bundledProfilePath,
+        appVersion: app.getVersion()
+      })
+      if (result.installed) {
+        console.info('[desktop] installed bundled Sherlock plugin profile', result.plugins)
+      }
+    } catch (error) {
+      console.error('[desktop] failed to install bundled Sherlock plugin profile', error)
+      throw error
+    }
+  }
 }
 
 async function syncNativeTheme(window: BrowserWindow): Promise<void> {
@@ -224,7 +317,7 @@ async function syncNativeTheme(window: BrowserWindow): Promise<void> {
             zIndex: '18',
             top: '0',
             left: '80px',
-            right: '220px',
+            right: 'max(220px, var(--dsh-sidebar-width, 0px))',
             height: '24px',
             background: 'transparent',
             pointerEvents: 'auto',
@@ -267,21 +360,6 @@ function bundledNodePath(): string {
   return join(app.getAppPath(), 'node_modules', 'node', 'bin', executable)
 }
 
-/**
- * The packaged lock-recovery runner. The Harness-side installer stages its own
- * copy into .desktop-bin; the desktop writes shims to that same directory, so
- * it points at the same runner rather than replacing them with a plain pnpm
- * call that would silently drop the recovery.
- */
-function bundledPnpmRunnerPath(): string {
-  return join(
-    app.getAppPath(),
-    'node_modules',
-    'dsh-desktop-market-installer',
-    'pnpm-runner.mjs'
-  )
-}
-
 function bundledPnpmEntryPath(): string {
   const root = join(app.getAppPath(), 'node_modules', 'pnpm', 'bin')
   const candidates = [join(root, 'pnpm.cjs'), join(root, 'pnpm.mjs')]
@@ -298,21 +376,34 @@ function desktopResourcePath(name: string): string {
   return app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'build', name)
 }
 
+function bundledSkillDirectory(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'sherlock-skills')
+    : join(app.getAppPath(), 'skills')
+}
+
+function bundledWebSearchEntry(): string {
+  return pathToFileURL(
+    join(app.getAppPath(), 'node_modules', 'dsh-web-search-session-model', 'index.js')
+  ).href
+}
+
+function bundledMarketInstallerEntry(): string {
+  return pathToFileURL(
+    join(app.getAppPath(), 'node_modules', 'dsh-desktop-market-installer', 'index.js')
+  ).href
+}
+
+function bundledResearchTaskEntry(): string {
+  return pathToFileURL(
+    join(app.getAppPath(), 'node_modules', 'dsh-research-task-runtime', 'index.js')
+  ).href
+}
+
 function desktopIconPath(): string {
   return app.isPackaged
     ? join(process.resourcesPath, 'icon.png')
     : join(app.getAppPath(), 'build', 'app-icon.png')
-}
-
-function dshBrandLogoPath(variant: 'light' | 'dark'): string {
-  return join(
-    app.getAppPath(),
-    'node_modules',
-    '@deepseek-ai',
-    'dsh-web-frontend',
-    'dist',
-    `dsh-desktop-logo-${variant}.png`
-  )
 }
 
 function harnessLocale(): 'en' | 'zh' {
@@ -378,6 +469,7 @@ function installPluginRecoveryNavigation(window: BrowserWindow): void {
 }
 
 function createWindow(): BrowserWindow {
+  const isMacOS = process.platform === 'darwin'
   const isWindows = process.platform === 'win32'
   const window = new BrowserWindow({
     width: 1380,
@@ -395,11 +487,25 @@ function createWindow(): BrowserWindow {
           autoHideMenuBar: true
         }
       : {}),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#141416' : '#f8f8f6',
+    ...(isMacOS
+      ? {
+          acceptFirstMouse: true,
+          vibrancy: 'menu' as const,
+          visualEffectState: 'active' as const,
+          backgroundColor: '#00000000'
+        }
+      : {
+          backgroundColor: nativeTheme.shouldUseDarkColors ? '#141416' : '#f8f8f6'
+        }),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      nodeIntegrationInSubFrames: false,
       preload: join(import.meta.dirname, '../preload/index.cjs'),
+      additionalArguments: [
+        developerModeArgument(isDeveloperModeEnabled(app.getPath('userData'))),
+        appVersionArgument(app.getVersion())
+      ],
       sandbox: true,
       webSecurity: true
     }
@@ -418,12 +524,21 @@ function createWindow(): BrowserWindow {
     if (details.level !== 'error') return
     const sourceUrl = details.sourceId || window.webContents.getURL()
     if (!sourceUrl.startsWith('http://127.0.0.1:')) return
-    appendRendererPluginFailureLog(details.message)
+    const message = details.message.trim()
+    if (!message) return
+    rendererPluginFailureLogs.push(`[stderr] ${message}`)
+    rendererPluginFailureLogs = rendererPluginFailureLogs.slice(-50)
   })
   installPluginRecoveryNavigation(window)
-  secureWindow(window)
+  secureWindow(window, {
+    allowsResearchFrameUrl: (url) => researchLinkFrameRegistry.allows(url)
+  })
+  const canvasWheelRouter = installResearchCanvasWheelRouter(window)
+  researchCanvasWheelRouter = canvasWheelRouter
   installContextMenu(window, harnessLocale)
   window.on('closed', () => {
+    canvasWheelRouter.dispose()
+    if (researchCanvasWheelRouter === canvasWheelRouter) researchCanvasWheelRouter = undefined
     if (mainWindow === window) mainWindow = undefined
     resolvePluginRecoveryAction('quit')
   })
@@ -431,15 +546,44 @@ function createWindow(): BrowserWindow {
   return window
 }
 
+function createLocalSearchWindow(
+  options: BrowserWindowConstructorOptions
+): BrowserSearchWindow {
+  const window = new BrowserWindow(options)
+  const owner = mainWindow
+  const closeWithOwner = (): void => {
+    if (!window.isDestroyed()) window.destroy()
+  }
+  owner?.once('closed', closeWithOwner)
+  window.once('closed', () => {
+    owner?.removeListener('closed', closeWithOwner)
+  })
+  const partition = options.webPreferences?.partition
+  if (!partition) throw new Error('Local search browser requires an isolated partition.')
+  configureBrowserSearchSecurity(window, session.fromPartition(partition))
+  window.on('page-title-updated', (event) => {
+    event.preventDefault()
+  })
+  window.webContents.on('will-navigate', (event, url) => {
+    if (
+      isAllowedSearchLocation('bing', url) ||
+      isAllowedSearchLocation('duckduckgo', url)
+    ) {
+      return
+    }
+    event.preventDefault()
+  })
+  return window
+}
+
 async function openHarness(url: string): Promise<void> {
   const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : createWindow()
-  const rendererUrl = desktopHarnessUrl(url, process.platform)
   if (shouldLoadHarnessUrl(window.webContents.getURL(), url)) {
     const navigationVersion = ++mainWindowNavigationVersion
     rendererPluginFailureLogs = []
     window.webContents.stop()
     try {
-      await window.loadURL(rendererUrl)
+      await window.loadURL(url)
     } catch (error) {
       if (navigationVersion !== mainWindowNavigationVersion) return
       if (isAbortedNavigationError(error)) return
@@ -466,79 +610,11 @@ async function showSplash(): Promise<void> {
   window.focus()
 }
 
-/**
- * Clear what an earlier failed package operation left behind, then put the
- * packages back — both while Harness is stopped, the only moment either is
- * safe. A profile damaged by an older build heals on the first launch of this
- * one; an undamaged profile costs a directory scan. Failure here is not fatal:
- * the prune below still keeps the profile bootable, and Harness reports
- * whatever remains.
- */
-async function repairProfilePackages(dshHome: string): Promise<void> {
-  try {
-    if (!hasProfile(dshHome)) return
-    const removed = await clearDamagedPackageDirectories(dshHome)
-    if (removed.length === 0) return
-
-    runtime.note(
-      `[desktop] repairing profile: cleared ${removed.length} damaged package ${
-        removed.length === 1 ? 'directory' : 'directories'
-      }`
-    )
-    const result = await installProfileDependenciesWithDsh({
-      dshHome,
-      dshEntryPath: dshEntryPath(),
-      nodeExecutablePath: bundledNodePath(),
-      pnpmEntryPath: bundledPnpmEntryPath(),
-      pnpmRunnerPath: bundledPnpmRunnerPath()
-    })
-    runtime.note(
-      result.ok
-        ? '[desktop] profile repair completed'
-        : `[desktop] profile repair failed: ${result.detail ?? 'unknown error'}`
-    )
-  } catch (error) {
-    runtime.note(
-      `[desktop] profile repair failed: ${error instanceof Error ? error.message : String(error)}`
-    )
-  }
-}
-
-/**
- * Name what the profile contradicts about itself, once the repair above has
- * had its turn. A dangling declaration does not throw — it leaves a service
- * waiting on a provider that never arrives — so without this the profile reads
- * as a slow start and the fault is found by reading logs for an afternoon.
- * Reporting only: the launch continues either way.
- */
-async function reportProfileConsistency(dshHome: string): Promise<void> {
-  try {
-    const findings = await inspectProfileConsistency(dshHome)
-    const store = await inspectStoreConsistency(dshHome)
-    if (store) findings.push(store)
-    for (const finding of findings) runtime.note(`[desktop] profile inconsistency: ${finding}`)
-  } catch {
-    // A profile that cannot be inspected is not a reason to refuse a launch.
-  }
-}
-
 function launchHarness(): Promise<void> {
   if (harnessLaunchOperation) return harnessLaunchOperation
 
   harnessLaunchOperation = (async () => {
-    const dshHome = join(app.getPath('userData'), 'harness')
     await showSplash()
-    // The repair only holds on a stopped Harness, and a restart still has the
-    // previous one running: start() stops it, but that is after the repair.
-    // Stopping here is what makes the window this launch path assumes.
-    await runtime.stop()
-    // Before anything else runs pnpm: a store the profile does not pin makes
-    // every package operation fail, repairs included.
-    const pinned = await ensureStoreDirPinned(dshHome).catch(() => undefined)
-    if (pinned) runtime.note(`[desktop] pinned the profile's pnpm store: ${pinned}`)
-    await repairProfilePackages(dshHome)
-    await pruneMissingProfileBundles(dshHome).catch(() => false)
-    await reportProfileConsistency(dshHome)
     await runtime.start(launchDirectory)
   })().finally(() => {
     harnessLaunchOperation = undefined
@@ -551,12 +627,10 @@ function restartHarness(): Promise<void> {
   return launchHarness()
 }
 
-function registerHarnessHandlers(): void {
+function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): void {
   ipcMain.removeHandler('harness:restart')
   ipcMain.handle('harness:restart', async (event) => {
-    if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) {
-      throw new Error('Harness restart is only available from the DSH Desktop window.')
-    }
+    assertTrustedMainWindowEvent(event, mainWindow)
     if (runtime.snapshot().phase !== 'ready') {
       throw new Error('Harness is not ready to restart.')
     }
@@ -567,9 +641,9 @@ function registerHarnessHandlers(): void {
 
   ipcMain.removeHandler('desktop-menu:execute')
   ipcMain.handle('desktop-menu:execute', async (event, command: unknown) => {
-    assertTrustedMainWindowEvent(event)
+    assertTrustedMainWindowEvent(event, mainWindow)
     if (!isDesktopMenuCommand(command)) {
-      throw new Error('Unknown DSH Desktop menu command.')
+      throw new Error('Unknown Sherlock menu command.')
     }
     await executeDesktopMenuCommand(command)
     return { ok: true }
@@ -577,46 +651,120 @@ function registerHarnessHandlers(): void {
 
   ipcMain.removeHandler('desktop-titlebar:set-theme')
   ipcMain.handle('desktop-titlebar:set-theme', (event, isDark: unknown) => {
-    assertTrustedMainWindowEvent(event)
+    assertTrustedMainWindowEvent(event, mainWindow)
     if (typeof isDark !== 'boolean') {
-      throw new Error('The DSH Desktop titlebar theme must be a boolean.')
+      throw new Error('The Sherlock titlebar theme must be a boolean.')
     }
-    if (process.platform === 'win32' && mainWindow) {
+    if (
+      (process.platform === 'win32' || process.platform === 'darwin') &&
+      mainWindow
+    ) {
       applyWindowChromeTheme(mainWindow, isDark)
     }
     return { ok: true }
   })
-}
 
-function assertTrustedMainWindowEvent(event: IpcMainInvokeEvent): void {
-  if (
-    !mainWindow ||
-    mainWindow.isDestroyed() ||
-    event.sender !== mainWindow.webContents ||
-    event.senderFrame !== mainWindow.webContents.mainFrame
-  ) {
-    throw new Error('This action is only available from the main DSH Desktop window.')
-  }
-}
-
-async function showAbout(window: BrowserWindow): Promise<void> {
-  const locale = harnessLocale()
-  const checkForUpdatesLabel = locale === 'zh' ? '检查更新' : 'Check for Updates'
-  const result = await dialog.showMessageBox(window, {
-    type: 'info',
-    title: 'DSH Desktop',
-    message: locale === 'zh' ? '关于 DSH Desktop' : 'About DSH Desktop',
-    detail: aboutDetail(
-      app.getVersion(),
-      bundledHarnessVersion(app.getAppPath()),
-      locale
-    ),
-    buttons: [checkForUpdatesLabel, locale === 'zh' ? '关闭' : 'Close'],
-    defaultId: 1,
-    cancelId: 1,
-    noLink: true
+  registerPrivilegedMainWindowHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    showHarnessLog: () => {
+      shell.showItemInFolder(join(app.getPath('logs'), 'harness.log'))
+    },
+    openDirectory: async () => {
+      const window = mainWindow
+      if (!window) throw new Error('The main Sherlock window is unavailable.')
+      const result = await dialog.showOpenDialog(window, {
+        title: harnessLocale() === 'zh' ? '选择工作区目录' : 'Select Workspace Directory',
+        properties: ['openDirectory', 'createDirectory']
+      })
+      return result.canceled ? null : result.filePaths[0] ?? null
+    },
+    showItemInFolder: (path: unknown) => {
+      if (typeof path !== 'string' || !isAbsolute(path) || !existsSync(path)) {
+        throw new Error('Finder reveal requires an existing absolute filesystem path.')
+      }
+      shell.showItemInFolder(path)
+      return { ok: true }
+    },
+    researchFilesAvailable: async (paths: unknown) => {
+      const rejected = Array.isArray(paths)
+        ? Array.from({ length: Math.min(paths.length, 64) }, () => false)
+        : []
+      const values = Array.isArray(paths) ? Array.from(paths) : []
+      if (
+        !Array.isArray(paths) ||
+        values.length > 64 ||
+        values.some((path) =>
+          typeof path !== 'string' || path.length === 0 || path.length > 512
+        )
+      ) {
+        return rejected
+      }
+      return Promise.all(values.map((path) =>
+        stat(path).then((value) => value.isFile()).catch(() => false)
+      ))
+    },
+    researchCanvasStorageGet: (key: unknown) => researchCanvasStorage.getItem(key),
+    researchCanvasStorageSet: (key: unknown, value: unknown) =>
+      researchCanvasStorage.setItem(key, value),
+    onStorageReadRejected: (error) =>
+      console.warn('[research-canvas] rejected storage read', error),
+    onStorageWriteRejected: (error) =>
+      console.warn('[research-canvas] rejected storage write', error)
   })
-  if (result.response === 0) await checkForUpdates(true)
+  if (!researchFilePreviewRegistry) {
+    throw new Error('Research preview registry is unavailable.')
+  }
+  registerResearchFilePreviewHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    registry: researchFilePreviewRegistry
+  })
+  registerResearchClipboardHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    service: new ResearchCanvasClipboard({
+      userDataPath: app.getPath('userData'), clipboard,
+      registry: researchFilePreviewRegistry,
+      revealFile: (target) => shell.showItemInFolder(target)
+    })
+  })
+  registerResearchCanvasWheelIpc({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    getRouter: () => researchCanvasWheelRouter,
+    onRejected: (error) => console.warn('[research-canvas] rejected wheel region update', error)
+  })
+  registerResearchLinkFrameHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    registry: researchLinkFrameRegistry
+  })
+  registerResearchWebReaderHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    registry: researchLinkFrameRegistry,
+    dependencies: {
+      fetch: (input, init) => net.fetch(input, init),
+      createTimeoutSignal: (milliseconds) => AbortSignal.timeout(milliseconds)
+    }
+  })
+  const exportFileOperations = researchCanvasExportFileOperations()
+  registerResearchCanvasExportHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    dependencies: {
+      showSaveDialog: async (options) => {
+        const window = mainWindow
+        return !window || window.isDestroyed()
+          ? { canceled: true }
+          : dialog.showSaveDialog(window, options as SaveDialogOptions)
+      },
+      writeFile: exportFileOperations.writeFile,
+      copyFile: exportFileOperations.copyFile,
+      resolveExportSource: (value) => researchFilePreviewRegistry!.resolveExportSource(value)
+    }
+  })
 }
 
 async function executeDesktopMenuCommand(command: DesktopMenuCommand): Promise<void> {
@@ -625,9 +773,6 @@ async function executeDesktopMenuCommand(command: DesktopMenuCommand): Promise<v
   const contents = window.webContents
 
   switch (command) {
-    case 'connect-phone':
-      await showMobilePairing()
-      break
     case 'restart-harness':
       await restartHarness()
       break
@@ -674,7 +819,14 @@ async function executeDesktopMenuCommand(command: DesktopMenuCommand): Promise<v
       window.setFullScreen(!window.isFullScreen())
       break
     case 'about':
-      await showAbout(window)
+      await dialog.showMessageBox(window, {
+        type: 'info',
+        title: 'Sherlock',
+        message: `Sherlock ${app.getVersion()}`,
+        detail: 'A local-first desktop knowledge assistant.',
+        buttons: ['OK'],
+        noLink: true
+      })
       break
     case 'quit':
       app.quit()
@@ -721,13 +873,12 @@ async function waitForPluginRecoveryAction(options: {
 
 function showUnexpectedError(error: unknown): void {
   const message = error instanceof Error ? error.stack ?? error.message : String(error)
-  dialog.showErrorBox('DSH Desktop encountered an error', message)
+  dialog.showErrorBox('Sherlock encountered an error', message)
 }
 
 async function showPluginRecovery(options?: {
   message?: string
   logs?: readonly string[]
-  followRendererLogs?: boolean
 }): Promise<void> {
   if (failureRecoveryVisible || quitting) return
   failureRecoveryVisible = true
@@ -737,54 +888,33 @@ async function showPluginRecovery(options?: {
   cancelPluginRecoverySessionReset()
   const removedPlugins = pluginRecoveryRemovedPlugins
   let notice: string | undefined
-  let recoveryMessage = options?.message
-  let recoveryLogs = options?.logs
-  let followRendererLogs = options?.followRendererLogs === true
-  let waitForRendererEvidence = followRendererLogs
-
-  const applyPendingFrontendEvidence = (): boolean => {
-    const pending = takePendingFrontendPluginRecovery()
-    if (!pending.pending) return false
-    recoveryMessage = pending.message ?? recoveryMessage
-    recoveryLogs = [...rendererPluginFailureLogs]
-    followRendererLogs = true
-    waitForRendererEvidence = false
-    return true
-  }
 
   try {
     while (!quitting) {
-      const snapshot = runtime.snapshot()
-      const message = recoveryMessage ?? snapshot.message
-      const detection = await detectPluginRecovery({
+      let snapshot = runtime.snapshot()
+      const logs = options?.logs ?? snapshot.logs
+      const message = options?.message ?? snapshot.message
+      const offendingPlugins = await resolveProfileRecoveryPlugins(
         dshHome,
-        initialLogs: recoveryLogs ?? snapshot.logs,
-        readLatestLogs: followRendererLogs ? () => rendererPluginFailureLogs : undefined,
-        excludedPlugins: removedPlugins,
-        slotProviderNodeModulesPaths: [join(app.getAppPath(), 'node_modules')],
-        timeoutMs: waitForRendererEvidence ? PLUGIN_RECOVERY_EVIDENCE_TIMEOUT_MS : 0
-      })
-      appendPluginRecoveryDetectionLog(detection.plugins)
-      waitForRendererEvidence = false
-      if (applyPendingFrontendEvidence()) continue
+        extractPluginFailureReferences(logs),
+        extractDuplicateLoaderEntryId(logs),
+        extractSlotConflictName(logs),
+        removedPlugins
+      )
       const action = await waitForPluginRecoveryAction({
         snapshot: {
           ...snapshot,
-          message: message || snapshot.message,
-          logs: detection.logs
+          message: message || snapshot.message
         },
-        plugins: detection.plugins,
+        plugins: offendingPlugins,
         removedPlugins,
         notice
       })
       notice = undefined
 
-      if (action === 'refresh') {
-        applyPendingFrontendEvidence()
-        continue
-      } else if (action === 'uninstall' && detection.plugins.length > 0) {
+      if (action === 'uninstall' && offendingPlugins.length > 0) {
         const failedPlugins: string[] = []
-        for (const plugin of detection.plugins) {
+        for (const plugin of offendingPlugins) {
           const removed = await uninstallPluginFromProfile(dshHome, plugin, async (pluginName) => {
             const result = await removeProfilePluginWithDsh(
               {
@@ -792,7 +922,6 @@ async function showPluginRecovery(options?: {
                 dshEntryPath: dshEntryPath(),
                 nodeExecutablePath: bundledNodePath(),
                 pnpmEntryPath: bundledPnpmEntryPath(),
-                pnpmRunnerPath: bundledPnpmRunnerPath(),
                 environment: process.env
               },
               pluginName
@@ -807,16 +936,11 @@ async function showPluginRecovery(options?: {
           if (removed) {
             if (!removedPlugins.includes(plugin)) removedPlugins.push(plugin)
           } else {
-            const fallbackRemoved = await resetPluginProfile(dshHome, plugin)
-            if (fallbackRemoved) {
-              if (!removedPlugins.includes(plugin)) removedPlugins.push(plugin)
-            } else {
-              failedPlugins.push(plugin)
-            }
+            failedPlugins.push(plugin)
           }
         }
 
-        if (failedPlugins.length === detection.plugins.length) {
+        if (failedPlugins.length === offendingPlugins.length) {
           notice = isChinese
             ? '未能修改插件配置。请打开 Harness 日志查看详情，或选择其他恢复方式。'
             : 'The plugin profile could not be updated. Open the Harness log for details or choose another recovery option.'
@@ -828,7 +952,6 @@ async function showPluginRecovery(options?: {
             : `These plugins could not be removed: ${failedPlugins.join(', ')}`
         }
         await launchHarness()
-        if (applyPendingFrontendEvidence()) continue
         if (runtime.snapshot().phase === 'ready') {
           schedulePluginRecoverySessionReset()
           return
@@ -836,7 +959,6 @@ async function showPluginRecovery(options?: {
         continue
       } else if (action === 'restart') {
         await launchHarness()
-        if (applyPendingFrontendEvidence()) continue
         if (runtime.snapshot().phase === 'ready') {
           schedulePluginRecoverySessionReset()
           return
@@ -854,16 +976,6 @@ async function showPluginRecovery(options?: {
     showUnexpectedError(error)
   } finally {
     failureRecoveryVisible = false
-    const pending = takePendingFrontendPluginRecovery()
-    if (pending.pending && !quitting) {
-      queueMicrotask(() => {
-        void showPluginRecovery({
-          message: pending.message,
-          logs: [...rendererPluginFailureLogs],
-          followRendererLogs: true
-        })
-      })
-    }
   }
 }
 
@@ -882,14 +994,7 @@ function installMenu(): void {
           {
             label: app.name,
             submenu: [
-              {
-                label: isChinese ? '关于 DSH Desktop' : 'About DSH Desktop',
-                click: () => {
-                  if (mainWindow && !mainWindow.isDestroyed()) {
-                    void showAbout(mainWindow).catch(showUnexpectedError)
-                  }
-                }
-              },
+              { role: 'about' as const },
               {
                 label: checkForUpdatesLabel,
                 accelerator: 'CmdOrCtrl+U',
@@ -908,12 +1013,6 @@ function installMenu(): void {
     {
       label: 'Harness',
       submenu: [
-        {
-          label: isChinese ? '连接手机…' : 'Connect Phone…',
-          accelerator: 'CmdOrCtrl+Shift+M',
-          click: () => void showMobilePairing().catch(showUnexpectedError)
-        },
-        { type: 'separator' },
         {
           label: isChinese ? '重启 Harness' : 'Restart Harness',
           accelerator: 'CmdOrCtrl+Shift+R',
@@ -971,81 +1070,52 @@ function installMenu(): void {
   }
 }
 
-async function showMobilePairing(): Promise<void> {
-  if (runtime.snapshot().phase !== 'ready') {
-    const options: MessageBoxOptions = {
-      type: 'info',
-      message: 'Harness is still starting.',
-      detail: 'Wait until DSH Desktop is ready, then connect your phone again.',
-      buttons: ['OK']
-    }
-    await (mainWindow ? dialog.showMessageBox(mainWindow, options) : dialog.showMessageBox(options))
-    return
-  }
-
-  let snapshot = await mobileBridge.start()
-  if (!snapshot.desktopUrl) {
-    await mobileBridge.stop()
-    const options: MessageBoxOptions = {
-      type: 'warning',
-      message: 'Failed to start mobile bridge.',
-      detail: 'Please try again.',
-      buttons: ['OK']
-    }
-    await (mainWindow ? dialog.showMessageBox(mainWindow, options) : dialog.showMessageBox(options))
-    return
-  }
-
-  if (!snapshot.pairingUrl && !snapshot.tunnelActive) {
-    snapshot = await mobileBridge.toggleTunnel(true)
-  }
-
-  if (mobileWindow && !mobileWindow.isDestroyed()) mobileWindow.destroy()
-  nativeTheme.themeSource = harnessThemePreference()
-  mobileWindow = new BrowserWindow({
-    width: 560,
-    height: 720,
-    minWidth: 420,
-    minHeight: 560,
-    title: harnessLocale() === 'zh' ? '连接移动设备' : 'Connect Mobile Device',
-    icon: desktopIconPath(),
-    parent: mainWindow,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#141416' : '#ffffff',
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true
-    }
-  })
-  secureWindow(mobileWindow)
-  mobileWindow.on('closed', () => {
-    mobileWindow = undefined
-  })
-  if (!snapshot.desktopUrl) return
-  await mobileWindow.loadURL(snapshot.desktopUrl)
-  mobileWindow.show()
-  mobileWindow.focus()
-}
-
 async function bootstrap(): Promise<void> {
   if (process.platform === 'darwin') app.dock?.setIcon(desktopIconPath())
   launchDirectory = await ensureLaunchRoot(app.getPath('userData'))
-  registerUpdateHandlers()
+  registerUpdateHandlers(() => mainWindow)
+  if (process.platform === 'darwin') startHarnessThemePreferenceSync()
+  const dshHome = join(app.getPath('userData'), 'harness')
+  researchFilePreviewRegistry = new ResearchFilePreviewRegistry({
+    storage: new FileResearchPreviewAuthorizationStorage(app.getPath('userData')),
+    workspaceResolver: new HarnessWorkspaceFileResolver(dshHome)
+  })
+  const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
+  researchContextBridge = new ResearchContextBridge({
+    readCanvas: (sessionId) => readStoredResearchCanvas(researchCanvasStorage, sessionId),
+    resolveFile: (identity) => researchFilePreviewRegistry!.resolveExportSource(identity)
+  })
+  const researchContext = await researchContextBridge.start()
+  disposeResearchContextHandlers = registerResearchContextHandlers({
+    ipcMain, getMainWindow: () => mainWindow, bridge: researchContextBridge
+  })
+  protocol.handle(
+    RESEARCH_PREVIEW_SCHEME,
+    (request) => handleResearchFilePreviewProtocolRequest(
+      researchFilePreviewRegistry!,
+      () => mainWindow,
+      request
+    )
+  )
   createWindow()
+  localSearchRuntime = await startLocalSearchRuntime({
+    createWindow: createLocalSearchWindow
+  })
   runtime = new HarnessRuntime({
     dshEntryPath: dshEntryPath(),
     nodeExecutablePath: bundledNodePath(),
     nodeEntryPath: harnessNodeEntryPath(),
     dshPatchPath: desktopResourcePath('dsh-desktop.patch.yml'),
-    dshHome: join(app.getPath('userData'), 'harness'),
+    bundledSkillDirectory: bundledSkillDirectory(),
+    bundledWebSearchEntry: bundledWebSearchEntry(),
+    bundledMarketInstallerEntry: bundledMarketInstallerEntry(),
+    bundledResearchTaskEntry: bundledResearchTaskEntry(),
+    localSearchUrl: localSearchRuntime.endpoint.url,
+    localSearchToken: localSearchRuntime.endpoint.token,
+    researchContext,
+    dshHome,
     logPath: join(app.getPath('logs'), 'harness.log'),
-    launchProcess: (executablePath, args, options) =>
-      process.platform === 'darwin'
-        ? launchDisclaimedUtilityProcess(utilityProcess, args, options, {
-            disclaim: !developmentBuild
-          })
-        : spawn(executablePath, args, options),
+    launchProcess: (executablePath, args, options) => spawn(executablePath, args, options),
     onChanged: (snapshot) => {
       if (snapshot.phase === 'ready' && snapshot.url) {
         void openHarness(snapshot.url).catch(showUnexpectedError)
@@ -1054,60 +1124,30 @@ async function bootstrap(): Promise<void> {
       }
     }
   })
-  registerHarnessHandlers()
-  mobileBridge = new LanMobileBridge({
-    harnessUrl: () => runtime.snapshot().url,
-    locale: harnessLocale,
-    brandLogoPaths: {
-      light: dshBrandLogoPath('light'),
-      dark: dshBrandLogoPath('dark')
-    },
-    appIconPath: desktopIconPath(),
-    cloudflaredCacheDir: join(app.getPath('userData'), 'bin'),
-    port: developmentBuild ? 43128 : 43127,
-    onReconnectRequested: () => {
-      void showMobilePairing().catch(showUnexpectedError)
+  registerHarnessHandlers(researchCanvasStorage)
+  ipcMain.handle('developer-mode:set-enabled', (event, enabled: unknown) => {
+    assertTrustedMainWindowEvent(event, mainWindow)
+    if (typeof enabled !== 'boolean') {
+      throw new Error('Developer mode state must be a boolean.')
     }
-  })
-  void mobileBridge.start().catch(showUnexpectedError)
-  ipcMain.handle('directory-picker:open', async (event) => {
-    if (
-      !mainWindow ||
-      mainWindow.isDestroyed() ||
-      event.sender !== mainWindow.webContents ||
-      event.senderFrame !== mainWindow.webContents.mainFrame
-    ) {
-      throw new Error('Directory picker requests are only allowed from the main Harness window')
-    }
-
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: harnessLocale() === 'zh' ? '选择工作区目录' : 'Select Workspace Directory',
-      properties: ['openDirectory']
-    })
-    return result.canceled ? null : result.filePaths[0] ?? null
-  })
-  ipcMain.handle('mobile:open-pairing', () => showMobilePairing())
-  ipcMain.handle('mobile:status', () => ({ connected: mobileBridge.snapshot().connected }))
-  ipcMain.handle('harness:show-log', () => {
-    shell.showItemInFolder(join(app.getPath('logs'), 'harness.log'))
+    setDeveloperModeEnabled(app.getPath('userData'), enabled)
+    return { ok: true }
   })
   ipcMain.removeHandler('harness:open-recovery')
   ipcMain.handle('harness:open-recovery', async (event, frontendErrorMessage?: unknown) => {
-    assertTrustedMainWindowEvent(event)
+    assertTrustedMainWindowEvent(event, mainWindow)
     const message = typeof frontendErrorMessage === 'string' ? frontendErrorMessage : undefined
-    if (message) appendRendererPluginFailureLog(message)
-    const logs = [...rendererPluginFailureLogs]
+    const logs = [
+      ...rendererPluginFailureLogs,
+      ...(message ? [`[stderr] ${message}`] : [])
+    ]
     appendRendererPluginRecoveryLog(logs)
-    if (failureRecoveryVisible) {
-      queuePendingFrontendPluginRecovery(message)
-      return { ok: true }
-    }
-    void showPluginRecovery({ message, logs, followRendererLogs: true })
+    void showPluginRecovery({ message, logs })
     return { ok: true }
   })
   ipcMain.removeHandler('recovery:action')
   ipcMain.handle('recovery:action', (event, action: unknown) => {
-    assertTrustedMainWindowEvent(event)
+    assertTrustedMainWindowEvent(event, mainWindow)
     if (typeof action === 'string' && PLUGIN_RECOVERY_ACTIONS.has(action as PluginRecoveryAction)) {
       resolvePluginRecoveryAction(action as PluginRecoveryAction)
       return { ok: true }
@@ -1116,7 +1156,7 @@ async function bootstrap(): Promise<void> {
   })
   ipcMain.removeHandler('harness:reset-plugins')
   ipcMain.handle('harness:reset-plugins', async (event, pluginName?: unknown) => {
-    assertTrustedMainWindowEvent(event)
+    assertTrustedMainWindowEvent(event, mainWindow)
     if (pluginName !== undefined && typeof pluginName !== 'string') {
       throw new Error('The failing plugin name must be a string.')
     }
@@ -1131,6 +1171,9 @@ async function bootstrap(): Promise<void> {
     startUpdateManager({
       prepareToInstall: async () => {
         await runtime.stop()
+        await localSearchRuntime?.stop()
+        disposeResearchContextHandlers?.()
+        await researchContextBridge?.stop()
         quitting = true
         stopUpdateManager()
       }
@@ -1150,8 +1193,11 @@ if (!singleInstance) {
       void openHarness(snapshot.url).catch(showUnexpectedError)
     }
   })
-  app.whenReady().then(bootstrap).catch((error: unknown) => {
+  app.whenReady().then(bootstrap).catch(async (error: unknown) => {
     showUnexpectedError(error)
+    await localSearchRuntime?.stop()
+    disposeResearchContextHandlers?.()
+    await researchContextBridge?.stop()
     app.quit()
   })
   app.on('activate', () => {
@@ -1169,7 +1215,9 @@ if (!singleInstance) {
     if (quitting || !runtime) return
     event.preventDefault()
     quitting = true
+    stopHarnessThemePreferenceSync()
     stopUpdateManager()
-    void Promise.all([runtime.stop(), mobileBridge?.stop()]).finally(() => app.quit())
+    disposeResearchContextHandlers?.()
+    void Promise.all([runtime.stop(), localSearchRuntime?.stop(), researchContextBridge?.stop()]).finally(() => app.quit())
   })
 }

@@ -7,7 +7,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; img-src 'self' file:; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
     />
-    <title>DSH Desktop</title>
+    <title>Sherlock</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -365,7 +365,6 @@
 
         <div class="decision-row">
           <div class="actions">
-            <button class="button" id="restart" type="button"></button>
             <button class="button primary" id="primary" type="button"></button>
           </div>
           <p class="safety">
@@ -398,7 +397,7 @@
       const model = JSON.parse(params.get('state') || '{}')
       document.documentElement.lang = model.locale === 'zh' ? 'zh-CN' : 'en'
       document.documentElement.dataset.theme = params.get('theme') || 'system'
-      document.title = model.badge || 'DSH Desktop'
+      document.title = model.badge || 'Sherlock'
 
       const setText = (id, value) => {
         const node = document.getElementById(id)
@@ -414,7 +413,6 @@
       setText('reason-detail', model.reasonDetail)
       setText('safety-note', model.safetyNote)
       setText('primary', model.primaryLabel)
-      setText('restart', model.restartLabel)
       setText('advanced-label', model.advancedLabel)
       setText('launch-directory-label', model.launchDirectoryLabel)
       setText('launch-directory', model.launchDirectory || '—')
@@ -459,18 +457,10 @@
         }
       }
       const primary = document.getElementById('primary')
-      const restart = document.getElementById('restart')
       primary.addEventListener('click', () => {
         primary.disabled = true
         primary.textContent = model.primaryBusyLabel
-        restart.disabled = true
         navigate(model.canUninstall ? 'uninstall' : 'show-log')
-      })
-      restart.addEventListener('click', () => {
-        restart.disabled = true
-        restart.textContent = model.restartBusyLabel
-        primary.disabled = true
-        navigate('restart')
       })
       document.getElementById('show-log').addEventListener('click', () => navigate('show-log'))
       document.getElementById('quit').addEventListener('click', () => navigate('quit'))

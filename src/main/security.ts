@@ -1,17 +1,48 @@
 import { shell, type BrowserWindow } from 'electron'
 import { canGrantWindowPermission, isTrustedAppUrl } from './security-policy'
 
-export function secureWindow(window: BrowserWindow): void {
+export function secureWindow(
+  window: BrowserWindow,
+  options: { allowsResearchFrameUrl?(url: string): boolean } = {}
+): void {
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (isTrustedAppUrl(url)) return { action: 'allow' }
-    if (url.startsWith('https://') || url.startsWith('http://')) void shell.openExternal(url)
+    if (isExternalUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
   })
 
   window.webContents.on('will-navigate', (event, url) => {
     if (isTrustedAppUrl(url)) return
     event.preventDefault()
-    if (url.startsWith('https://') || url.startsWith('http://')) void shell.openExternal(url)
+    if (isExternalUrl(url)) void shell.openExternal(url)
+  })
+
+  window.webContents.on('will-frame-navigate', (event) => {
+    // Offline generated documents cannot borrow another link's URL authorization.
+    // CSP blocks subresources; this guard also blocks a frame's own navigation.
+    if (/^about:srcdoc(?:[?#]|$)/i.test(event.frame?.url ?? '') || /^about:srcdoc(?:[?#]|$)/i.test(event.initiator?.url ?? '')) {
+      event.preventDefault()
+      return
+    }
+    if (event.isMainFrame) {
+      const initiator = event.initiator
+      const mainFrame = window.webContents.mainFrame
+      if (
+        !initiator ||
+        initiator.processId !== mainFrame.processId ||
+        initiator.routingId !== mainFrame.routingId
+      ) {
+        event.preventDefault()
+      }
+      return
+    }
+    if (isPreviewUrl(event.url)) return
+    try {
+      if (options.allowsResearchFrameUrl?.(event.url) === true) return
+    } catch {
+      // Fail closed when the authorization registry cannot decide.
+    }
+    event.preventDefault()
   })
 
   window.webContents.on('will-attach-webview', (event) => event.preventDefault())
@@ -30,4 +61,21 @@ export function secureWindow(window: BrowserWindow): void {
       )
     }
   )
+}
+
+function isPreviewUrl(rawUrl: string): boolean {
+  try {
+    return new URL(rawUrl).protocol === 'sherlock-preview:'
+  } catch {
+    return false
+  }
+}
+
+function isExternalUrl(rawUrl: string): boolean {
+  try {
+    const protocol = new URL(rawUrl).protocol
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
 }

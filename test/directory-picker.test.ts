@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
-import { patchPath } from './patch-path'
 
 describe('desktop Electron directory picker', () => {
   it('exposes a narrow preload bridge and handles it in the main process', async () => {
@@ -9,10 +8,8 @@ describe('desktop Electron directory picker', () => {
 
     expect(preload).toContain("contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker'")
     expect(preload).toContain("ipcRenderer.invoke('directory-picker:open')")
-    expect(main).toContain("ipcMain.handle('directory-picker:open'")
-    expect(main).toContain('event.senderFrame !== mainWindow.webContents.mainFrame')
-    expect(main).toContain('dialog.showOpenDialog(mainWindow')
-    expect(main).toContain("properties: ['openDirectory']")
+    expect(main).toContain('dialog.showOpenDialog(window')
+    expect(main).toContain("properties: ['openDirectory', 'createDirectory']")
     expect(main).toContain("app.commandLine.appendSwitch('lang', harnessLocale() === 'zh' ? 'zh-CN' : 'en-US')")
   })
 
@@ -26,27 +23,26 @@ describe('desktop Electron directory picker', () => {
     )
   })
 
-  it('keeps the stock picker composition: the seam comes from the stock auto row', async () => {
+  it('keeps only the client surface and removes the crashing Host worker', async () => {
     const desktopPatch = await readFile('build/dsh-desktop.patch.yml', 'utf8')
 
-    // No picker rows at all - the stock auto row mounts the native backend.
-    expect(desktopPatch).not.toMatch(/id:\s*directory-picker/)
-    expect(desktopPatch).not.toContain('dsh-client-ui-directory-picker-native')
+    expect(desktopPatch).toContain("name: '@deepseek-ai/dsh-client-ui-directory-picker-native'")
+    expect(desktopPatch).not.toContain("name: '@deepseek-ai/dsh-host-directory-picker-native'")
   })
 
   it('captures the client bridge as a reproducible dependency patch', async () => {
     const dependencyPatch = await readFile(
-      patchPath('@deepseek-ai/dsh-client-ui-directory-picker-native'),
+      'patches/@deepseek-ai+dsh-client-ui-directory-picker-native+0.1.0-rc.7.patch',
       'utf8'
     )
 
     expect(dependencyPatch).toContain('window.dshDesktopDirectoryPicker')
-    expect(dependencyPatch).toContain('DSH Desktop directory picker bridge is unavailable')
+    expect(dependencyPatch).toContain('Sherlock directory picker bridge is unavailable')
   })
 
   it('keeps the Host API proxy active when the legacy picker service is absent', async () => {
     const apiProxyPatch = await readFile(
-      patchPath('@deepseek-ai/dsh-host-apiproxy'),
+      'patches/@deepseek-ai+dsh-host-apiproxy+0.1.0-rc.7.patch',
       'utf8'
     )
 

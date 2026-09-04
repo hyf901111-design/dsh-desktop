@@ -1,0 +1,724 @@
+diff --git a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js
+index 11ee6c4..01cd376 100644
+--- a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js
+@@ -1,8 +1,8 @@
+ import { Service } from "@deepseek-ai/cordis";
+ import z from "@deepseek-ai/schemastery";
+ import { randomUUID } from "node:crypto";
+-import { mkdir, stat } from "node:fs/promises";
+-import { dirname, extname } from "node:path";
++import { lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
++import { dirname, extname, join, relative, resolve, sep } from "node:path";
+ import { installModelSelection } from "@deepseek-ai/dsh-agent";
+ import { AttachmentError } from "@deepseek-ai/dsh-attachment";
+ import { ReasoningEffortId, contentHasImage, createUserMessage, errorChain, freezeMessage } from "@deepseek-ai/dsh-llm";
+@@ -11,8 +11,8 @@ import { SessionQueryError } from "@deepseek-ai/dsh-session-query";
+ import { SubagentError } from "@deepseek-ai/dsh-subagent";
+ import { isUserInvocable } from "@deepseek-ai/dsh-skill";
+ import { WorkspaceId, WorkspaceMoveInvalidError, WorkspaceOrderInvalidError, WorkspaceUnknownSessionError, workspaceDomainState, workspaceRecord } from "@deepseek-ai/dsh-workspace";
+-import { InvalidPresetIdError, PresetExistsError, PresetMountError, PresetNotWritableError, UnknownPresetError, resolveSessionPreset } from "@deepseek-ai/dsh-agent-presets";
+-import { Zip, ZipDeflate } from "fflate";
++import { COMPOSITION_FILE, InvalidPresetIdError, PresetExistsError, PresetMountError, PresetNotWritableError, SETTINGS_NAMESPACE, UnknownPresetError, resolveSessionPreset, scanRoot, writableRoot } from "@deepseek-ai/dsh-agent-presets";
++import { Zip, ZipDeflate, strFromU8, strToU8, unzipSync, zipSync } from "fflate";
+ import { GoalError } from "@deepseek-ai/dsh-goal";
+ import { SettingsConflictError, settingsNamespace } from "@deepseek-ai/dsh-settings";
+ import { credentialRef } from "@deepseek-ai/dsh-credentials";
+@@ -23,6 +23,182 @@ import { DirectoryPickerError } from "@deepseek-ai/dsh-host-directory-picker";
+ import { API_REMOTE_FORWARDED_EVENTS, ApiRemoteSessionNotFound, ApiRemoteSubagentSessionOwnership, apiRemoteSubagentOwnershipError, createApiRemoteAgentResolver, hasApiRemoteSubagentOwner, inspectApiRemoteSession } from "@deepseek-ai/dsh-api-remotes";
+ import { release } from "node:os";
+ import { runNativeCommand } from "@deepseek-ai/dsh-native-command";
++//#region lib/types/session-model-selection.js
++const SESSION_MODEL_SELECTION_LIMIT = 256;
++const SESSION_MODEL_SELECTION_SETTINGS_NAMESPACE = settingsNamespace("session-model-selection");
++const SESSION_MODEL_SELECTION_SETTINGS_SCHEMA = z.object({
++	selections: z.array(z.object({
++		sessionId: z.string().required(),
++		provider: z.string().required(),
++		model: z.string().required(),
++		reasoningEffort: z.string()
++	})).max(SESSION_MODEL_SELECTION_LIMIT).default([])
++});
++function copyModelSelection(selection) {
++	return {
++		provider: selection.provider,
++		model: selection.model,
++		...selection.reasoningEffort === void 0 ? {} : { reasoningEffort: selection.reasoningEffort }
++	};
++}
++function copySessionModelSelection(selection) {
++	return {
++		sessionId: selection.sessionId,
++		...copyModelSelection(selection)
++	};
++}
++/** A serialized durable selection table with one bounded, lossless write chain. */
++function createBoundedSessionModelSelectionStore(options) {
++	const limit = options.limit ?? SESSION_MODEL_SELECTION_LIMIT;
++	if (!Number.isSafeInteger(limit) || limit <= 0) throw new Error("session model selection limit must be a positive finite integer");
++	let writes = Promise.resolve();
++	return {
++		get(sessionId) {
++			const found = options.load().find((entry) => entry.sessionId === sessionId);
++			return found === void 0 ? void 0 : copyModelSelection(found);
++		},
++		save(sessionId, selection) {
++			const write = writes.then(async () => {
++				const existing = options.load().filter((entry) => entry.sessionId !== sessionId).map(copySessionModelSelection);
++				const next = [...existing, {
++					sessionId,
++					...copyModelSelection(selection)
++				}].slice(-limit);
++				await options.persist(next);
++			});
++			writes = write.catch(() => void 0);
++			return write;
++		}
++	};
++}
++/** Resolve one conversation while migrating legacy request-only model state. */
++function resolveSessionModelSelection(options) {
++	const explicit = options.live ?? options.durable;
++	if (explicit !== void 0) return {
++		current: copyModelSelection(explicit),
++		routable: options.routeServed(explicit.provider)
++	};
++	if (options.request !== void 0 && options.routeServed(options.request.provider)) return {
++		current: copyModelSelection(options.request),
++		routable: true
++	};
++	if (options.routeServed(options.defaultSelection.provider)) return {
++		current: copyModelSelection(options.defaultSelection),
++		routable: true
++	};
++	return options.request === void 0 ? {
++		current: void 0,
++		routable: false
++	} : {
++		current: copyModelSelection(options.request),
++		routable: false
++	};
++}
++//#endregion
++//#region lib/types/preset-archive.js
++const PRESET_ARCHIVE_FORMAT = "dsh-preset";
++const PRESET_ARCHIVE_VERSION = 1;
++const PRESET_ARCHIVE_MIME = "application/vnd.dsh.preset+zip";
++const PRESET_ARCHIVE_MAX_COMPRESSED = 16 * 1024 * 1024;
++const PRESET_ARCHIVE_MAX_UNCOMPRESSED = 32 * 1024 * 1024;
++const PRESET_ARCHIVE_MAX_FILE = 12 * 1024 * 1024;
++const PRESET_ARCHIVE_MAX_FILES = 512;
++const PRESET_ARCHIVE_ID = /^[a-z0-9][a-z0-9-]*$/;
++const PRESET_ARCHIVE_IGNORED_FILES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"]);
++const PRESET_TEXT_EXTENSIONS = new Set([".json", ".jsonc", ".md", ".txt", ".yaml", ".yml", ".toml", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".sh", ".ps1", ".html", ".css"]);
++function presetArchiveFailure(message, status = 400) {
++	return Response.json({
++		ok: false,
++		error: message
++	}, { status });
++}
++function safePresetArchivePath(name) {
++	if (name === "" || name.includes("\0") || name.includes("\\") || name.startsWith("/") || /^[a-zA-Z]:/.test(name)) return false;
++	const segments = name.split("/");
++	return segments.every((segment) => segment !== "" && segment !== "." && segment !== "..");
++}
++function presetArchiveWarnings(files) {
++	let hasAbsolutePath = false;
++	let hasPossibleSecret = false;
++	for (const [name, data] of Object.entries(files)) {
++		if (!PRESET_TEXT_EXTENSIONS.has(extname(name).toLowerCase()) || data.length > 1024 * 1024 || data.includes(0)) continue;
++		const text = strFromU8(data);
++		if (/(?:^|[\s"'(:=])(?:\/Users\/|\/home\/)/m.test(text) || /[A-Za-z]:[\\/]/.test(text) || /\\\\[^\\\s]+[\\/]/.test(text)) hasAbsolutePath = true;
++		if (/(?:api[_-]?key|secret|token)\s*[:=]\s*["']?[^\s"']{12,}|\bsk-[A-Za-z0-9_-]{16,}/i.test(text)) hasPossibleSecret = true;
++	}
++	return [
++		...hasAbsolutePath ? ["absolute-paths"] : [],
++		...hasPossibleSecret ? ["possible-secrets"] : []
++	];
++}
++async function collectPresetArchiveFiles(root) {
++	const files = /* @__PURE__ */ Object.create(null);
++	let count = 0;
++	let total = 0;
++	async function visit(directory) {
++		for (const entry of await readdir(directory, { withFileTypes: true })) {
++			if (PRESET_ARCHIVE_IGNORED_FILES.has(entry.name)) continue;
++			const full = join(directory, entry.name);
++			const rel = relative(root, full).split("\\").join("/");
++			if (!safePresetArchivePath(rel)) throw new Error(`Preset contains an unsafe path: ${rel}`);
++			const info = await lstat(full);
++			if (info.isSymbolicLink()) throw new Error(`Preset contains a symbolic link, which cannot be exported safely: ${rel}`);
++			if (info.isDirectory()) {
++				await visit(full);
++				continue;
++			}
++			if (!info.isFile()) throw new Error(`Preset contains an unsupported filesystem entry: ${rel}`);
++			if (++count > PRESET_ARCHIVE_MAX_FILES) throw new Error(`Preset contains more than ${PRESET_ARCHIVE_MAX_FILES} files`);
++			if (info.size > PRESET_ARCHIVE_MAX_FILE) throw new Error(`Preset file is too large to export: ${rel}`);
++			total += info.size;
++			if (total > PRESET_ARCHIVE_MAX_UNCOMPRESSED) throw new Error("Preset is too large to export");
++			files[`preset/${rel}`] = new Uint8Array(await readFile(full));
++		}
++	}
++	await visit(root);
++	return files;
++}
++function parsePresetArchive(data) {
++	if (data.length > PRESET_ARCHIVE_MAX_COMPRESSED) throw new Error("Preset package is larger than 16 MB");
++	let count = 0;
++	let total = 0;
++	const archive = unzipSync(data, { filter(file) {
++		if (!safePresetArchivePath(file.name)) throw new Error(`Preset package contains an unsafe path: ${file.name}`);
++		if (++count > PRESET_ARCHIVE_MAX_FILES + 1) throw new Error(`Preset package contains more than ${PRESET_ARCHIVE_MAX_FILES} files`);
++		if (file.originalSize > PRESET_ARCHIVE_MAX_FILE) throw new Error(`Preset package contains an oversized file: ${file.name}`);
++		total += file.originalSize;
++		if (total > PRESET_ARCHIVE_MAX_UNCOMPRESSED) throw new Error("Expanded preset package is larger than 32 MB");
++		return true;
++	} });
++	const manifestBytes = archive["manifest.json"];
++	if (manifestBytes === void 0) throw new Error("Preset package has no manifest.json");
++	let manifest;
++	try {
++		manifest = JSON.parse(strFromU8(manifestBytes));
++	} catch {
++		throw new Error("Preset package manifest is not valid JSON");
++	}
++	if (typeof manifest !== "object" || manifest === null || manifest.format !== PRESET_ARCHIVE_FORMAT || manifest.version !== PRESET_ARCHIVE_VERSION || typeof manifest.id !== "string" || !PRESET_ARCHIVE_ID.test(manifest.id)) throw new Error("Preset package manifest is unsupported or invalid");
++	if (manifest.name !== void 0 && (typeof manifest.name !== "string" || manifest.name.length > 160)) throw new Error("Preset package manifest has an invalid name");
++	if (manifest.description !== void 0 && (typeof manifest.description !== "string" || manifest.description.length > 4e3)) throw new Error("Preset package manifest has an invalid description");
++	if (manifest.sourceDshVersion !== void 0 && (typeof manifest.sourceDshVersion !== "string" || manifest.sourceDshVersion.length > 64)) throw new Error("Preset package manifest has an invalid Sherlock version");
++	const files = /* @__PURE__ */ Object.create(null);
++	for (const [name, bytes] of Object.entries(archive)) {
++		if (name === "manifest.json") continue;
++		if (!name.startsWith("preset/") || name === "preset/") throw new Error(`Unexpected file outside the preset directory: ${name}`);
++		const rel = name.slice("preset/".length);
++		if (!safePresetArchivePath(rel)) throw new Error(`Preset package contains an unsafe path: ${rel}`);
++		if (PRESET_ARCHIVE_IGNORED_FILES.has(rel.split("/").at(-1))) continue;
++		files[rel] = bytes;
++	}
++	if (files[COMPOSITION_FILE] === void 0) throw new Error(`Preset package is missing ${COMPOSITION_FILE}`);
++	return {
++		manifest,
++		files,
++		warnings: presetArchiveWarnings(files)
++	};
++}
++//#endregion
+ //#region lib/types/session-export.js
+ /**
+ * Host-side session-log download: streams one ZIP archive whose files are the
+@@ -576,7 +752,7 @@ const sessionHistoryValueSchema = z$1.object({
+ const sessionModelsRequestSchema = z$1.object({ sessionId: sessionIdSchema });
+ /** session.models response value. */
+ const sessionModelsValueSchema = z$1.object({
+-	current: modelSelectionSchema,
++	current: modelSelectionSchema.nullable(),
+ 	routable: z$1.boolean(),
+ 	groups: z$1.array(modelProviderGroupSchema),
+ 	failures: z$1.array(modelCatalogFailureSchema)
+@@ -1666,6 +1842,25 @@ function changedWorkspaceView(workspaceId, value) {
+ 		updatedAt: record.updatedAt
+ 	};
+ }
++/** Remember the durable insertion point of every transient inbox message. */
++function rememberQueueAnchorSeqs(anchorSeqs, event) {
++	if (event.type !== "agent/inbox/spliced") return;
++	for (const message of event.data.inserted) anchorSeqs.set(message.id, event.seq);
++}
++/** Project both inbox lists, preserving the event position where each row entered. */
++function projectQueueItems(agent, splice, anchorSeqs = /* @__PURE__ */ new Map()) {
++	const project = (target) => {
++		const messages = target === "next-turn" ? agent.inbox.nextTurn : agent.inbox.nextStep;
++		return splice?.target === target ? messages.toSpliced(splice.start, splice.removedCount ?? 0, ...splice.inserted) : messages;
++	};
++	const item = (message, placement) => ({
++		id: message.id,
++		...anchorSeqs.has(message.id) ? { anchorSeq: anchorSeqs.get(message.id) } : {},
++		placement,
++		message
++	});
++	return [...project("next-turn").map((message) => item(message, "queued")), ...project("next-step").map((message) => item(message, message.source.kind === "user" ? "steering" : "context"))];
++}
+ /**
+ * Implement ApiProxy over a composed host context.
+ * @param ctx - a context with the Host spine and Workspace registry mounted.
+@@ -1675,6 +1870,21 @@ function changedWorkspaceView(workspaceId, value) {
+ function createApiProxy(ctx, defaults) {
+ 	const sessionExportCompressionLevel = defaults.sessionExportCompressionLevel ?? 6;
+ 	const coldBlankProbeMaxBytes = defaults.coldBlankProbeMaxBytes ?? 1024;
++	let sessionModelSelectionSettings;
++	const durableSessionSelections = createBoundedSessionModelSelectionStore({
++		load: () => sessionModelSelectionSettings?.get().selections ?? [],
++		persist: async (selections) => {
++			if (sessionModelSelectionSettings === void 0) throw new Error("durable session model selection storage is unavailable");
++			await sessionModelSelectionSettings.replace({ selections });
++		}
++	});
++	ctx.inject(["settings"], (settingsCtx) => {
++		const scope = settingsCtx.settings.register(SESSION_MODEL_SELECTION_SETTINGS_NAMESPACE, SESSION_MODEL_SELECTION_SETTINGS_SCHEMA);
++		sessionModelSelectionSettings = scope;
++		settingsCtx.effect(() => () => {
++			if (sessionModelSelectionSettings === scope) sessionModelSelectionSettings = void 0;
++		}, "api-proxy: session model selection settings");
++	});
+ 	/** The seed model each create/resume declares; re-read so it never goes stale. */
+ 	const agentOptions = () => {
+ 		const { provider, model } = defaults.defaultModelSelection();
+@@ -1692,6 +1902,8 @@ function createApiProxy(ctx, defaults) {
+ 	* not enforcement: the wire is reachable directly.
+ 	*/
+ 	const presetSwitches = /* @__PURE__ */ new Map();
++	/** Process-local insertion anchors survive transient queue baselines and reconnects. */
++	const queueAnchorSeqs = /* @__PURE__ */ new Map();
+ 	/** Client-chosen identity creation/resume, deduplicated across concurrent retries. */
+ 	const sessionCreations = /* @__PURE__ */ new Map();
+ 	/** Serializes path ownership and explicit title checks with Workspace mutations. */
+@@ -1709,12 +1921,13 @@ function createApiProxy(ctx, defaults) {
+ 	/**
+ 	* Install or return the session-local model selection that prompt assembly snapshots.
+ 	*
+-	* Precedence, resolved on EVERY read rather than seeded once: a selection
+-	* made in this process, else the session's own latest logged request/header,
+-	* else the live Agent default. Re-reading keeps the two tiers exact in both
+-	* directions: a session with a recorded request derives its selection from
+-	* its log, while a blank session (New Session reuses one rather than minting
+-	* another) reads any default saved after it was created. There is no create-time
++	* Precedence, resolved on EVERY read rather than seeded once: an explicit
++	* selection made in this process, else the durable session selection, else a
++	* still-routable latest request/header, else the live Agent default. An
++	* unavailable explicit selection stays blocked; only legacy request-only state
++	* falls forward when its provider has been retired. Re-reading keeps a blank
++	* session (New Session reuses one rather than minting another) synchronized
++	* with any default saved after it was created. There is no create-time
+ 	* per-session override tier on this wire — if one returns (a create-options
+ 	* contribution), it must fold in between the selection and the log.
+ 	*/
+@@ -1724,14 +1937,18 @@ function createApiProxy(ctx, defaults) {
+ 		let picked;
+ 		const selection = {
+ 			get current() {
+-				if (picked !== void 0) return picked;
+ 				const logged = agent.session.requestHeader()?.config;
+-				if (logged === void 0) return defaults.defaultModelSelection();
+-				return {
+-					provider: logged.provider,
+-					model: logged.model,
+-					...logged.reasoningEffort === void 0 ? {} : { reasoningEffort: logged.reasoningEffort }
+-				};
++				return resolveSessionModelSelection({
++					live: picked,
++					durable: durableSessionSelections.get(agent.session.id),
++					...logged === void 0 ? {} : { request: {
++						provider: logged.provider,
++						model: logged.model,
++						...logged.reasoningEffort === void 0 ? {} : { reasoningEffort: logged.reasoningEffort }
++					} },
++					defaultSelection: defaults.defaultModelSelection(),
++					routeServed
++				}).current;
+ 			},
+ 			set current(next) {
+ 				picked = next;
+@@ -1844,30 +2061,24 @@ function createApiProxy(ctx, defaults) {
+ 			stateVersion: 1
+ 		});
+ 	});
+-	/** Project both durable inbox lists, optionally including the splice currently being emitted. */
+-	const queueItems = (agent, splice) => {
+-		const project = (target) => {
+-			const messages = target === "next-turn" ? agent.inbox.nextTurn : agent.inbox.nextStep;
+-			return splice?.target === target ? messages.toSpliced(splice.start, splice.removedCount ?? 0, ...splice.inserted) : messages;
+-		};
+-		return [...project("next-turn").map((message) => ({
+-			id: message.id,
+-			placement: "queued",
+-			message
+-		})), ...project("next-step").map((message) => ({
+-			id: message.id,
+-			placement: message.source.kind === "user" ? "steering" : "context",
+-			message
+-		}))];
+-	};
+ 	ctx.on("session/event", (session, event) => {
+ 		if (event.type !== "agent/inbox/spliced") return;
+ 		const agent = ctx.agents.get(session.id);
+ 		if (agent?.session !== session) return;
++		let anchors = queueAnchorSeqs.get(session.id);
++		if (anchors === void 0) {
++			anchors = /* @__PURE__ */ new Map();
++			queueAnchorSeqs.set(session.id, anchors);
++		}
++		rememberQueueAnchorSeqs(anchors, event);
++		const items = projectQueueItems(agent, event.data, anchors);
++		const liveIds = new Set(items.map((item) => item.id));
++		for (const id of anchors.keys()) if (!liveIds.has(id)) anchors.delete(id);
++		if (anchors.size === 0) queueAnchorSeqs.delete(session.id);
+ 		broadcast({
+ 			type: "session/queue",
+ 			sessionId: session.id,
+-			items: queueItems(agent, event.data)
++			items
+ 		});
+ 	});
+ 	/** Remove a wait before settling it: synchronous deletion makes the first claimant win. */
+@@ -2295,6 +2506,11 @@ function createApiProxy(ctx, defaults) {
+ 		if ("error" in found) return { refused: err(request, found.error) };
+ 		const agent = found.agent;
+ 		const selection = selectionFor(agent).current;
++		if (selection === void 0) return { refused: err(request, {
++			code: "model-unavailable",
++			message: "no configured routable default or saved session model; select a model for this session",
++			details: {}
++		}) };
+ 		if (!routeServed(selection.provider)) return { refused: err(request, {
+ 			code: "model-unavailable",
+ 			message: `no adapter serves provider "${selection.provider}"; select a model for this session`,
+@@ -2608,9 +2824,9 @@ function createApiProxy(ctx, defaults) {
+ 				if ("error" in found) return err(request, found.error);
+ 				const current = selectionFor(found.agent).current;
+ 				const { groups, failures } = await buildModelCatalog(ctx);
+-				const routable = routeServed(current.provider);
++				const routable = current !== void 0 && routeServed(current.provider);
+ 				return ok(request, {
+-					current: { ...current },
++					current: current === void 0 ? null : { ...current },
+ 					routable,
+ 					groups,
+ 					failures
+@@ -2643,6 +2859,7 @@ function createApiProxy(ctx, defaults) {
+ 							model: resolved.model,
+ 							...resolved.reasoningEffort === void 0 ? {} : { reasoningEffort: resolved.reasoningEffort }
+ 						};
++						await durableSessionSelections.save(sessionId, selected);
+ 						selectionFor(found.agent).current = selected;
+ 						try {
+ 							await defaults.saveDefaultModelSelection?.(selected);
+@@ -3150,7 +3367,13 @@ function createApiProxy(ctx, defaults) {
+ 				}));
+ 			},
+ 			async pickDirectory(request, signal) {
+-				const capability = ctx.directoryPicker.capability();
++				const directoryPicker = ctx.get("directoryPicker");
++				if (!directoryPicker) return err(request, {
++					code: "directory-picker-unavailable",
++					message: "host.pickDirectory needs a composed directory picker",
++					details: { capability: "none" }
++				});
++				const capability = directoryPicker.capability();
+ 				if (capability.kind !== "native") return err(request, {
+ 					code: "directory-picker-unavailable",
+ 					message: `host.pickDirectory needs the native capability; the composed picker serves "${capability.kind}"`,
+@@ -3172,7 +3395,13 @@ function createApiProxy(ctx, defaults) {
+ 				}
+ 			},
+ 			async listDirectory(request, signal) {
+-				const capability = ctx.directoryPicker.capability();
++				const directoryPicker = ctx.get("directoryPicker");
++				if (!directoryPicker) return err(request, {
++					code: "directory-picker-unavailable",
++					message: "host.listDirectory needs a composed directory picker",
++					details: { capability: "none" }
++				});
++				const capability = directoryPicker.capability();
+ 				if (capability.kind !== "browse") return err(request, {
+ 					code: "directory-picker-unavailable",
+ 					message: `host.listDirectory needs the browse capability; the composed picker serves "${capability.kind}"`,
+@@ -3190,7 +3419,13 @@ function createApiProxy(ctx, defaults) {
+ 				}
+ 			},
+ 			async createDirectory(request) {
+-				const capability = ctx.directoryPicker.capability();
++				const directoryPicker = ctx.get("directoryPicker");
++				if (!directoryPicker) return err(request, {
++					code: "directory-picker-unavailable",
++					message: "host.createDirectory needs a composed directory picker",
++					details: { capability: "none" }
++				});
++				const capability = directoryPicker.capability();
+ 				if (capability.kind !== "browse") return err(request, {
+ 					code: "directory-picker-unavailable",
+ 					message: `host.createDirectory needs the browse capability; the composed picker serves "${capability.kind}"`,
+@@ -3244,6 +3479,127 @@ function createApiProxy(ctx, defaults) {
+ 			}
+ 		},
+ 		agentPresets: {
++			async exportArchive(agentPreset, signal) {
++				const presets = ctx.get("agentPresets");
++				if (presets === void 0) return presetArchiveFailure("This deployment has no agent presets.", 503);
++				try {
++					signal?.throwIfAborted();
++					const preset = await presets.resolve(agentPreset);
++					if (preset.trust !== "user") return presetArchiveFailure("Built-in presets cannot be exported. Duplicate this preset first, then export the custom copy.", 403);
++					if (preset.broken !== void 0) return presetArchiveFailure(`This preset cannot be exported because it failed to load: ${preset.broken}`);
++					const files = await collectPresetArchiveFiles(dirname(preset.path));
++					const manifest = {
++						format: PRESET_ARCHIVE_FORMAT,
++						version: PRESET_ARCHIVE_VERSION,
++						id: preset.id,
++						...preset.name === void 0 ? {} : { name: preset.name },
++						...preset.description === void 0 ? {} : { description: preset.description },
++						sourceDshVersion: "0.1.0-rc.7",
++						exportedAt: (/* @__PURE__ */ new Date()).toISOString()
++					};
++					const data = zipSync({
++						"manifest.json": strToU8(JSON.stringify(manifest, null, 2)),
++						...files
++					}, { level: 6 });
++					if (data.length > PRESET_ARCHIVE_MAX_COMPRESSED) return presetArchiveFailure("The compressed preset package is larger than 16 MB.", 413);
++					signal?.throwIfAborted();
++					return new Response(data, { headers: {
++						"content-type": PRESET_ARCHIVE_MIME,
++						"content-disposition": `attachment; filename="${preset.id}.dshpreset"`,
++						"cache-control": "no-store"
++					} });
++				} catch (error) {
++					if (signal?.aborted) return presetArchiveFailure("Preset export was cancelled.", 499);
++					return presetArchiveFailure(error instanceof Error ? error.message : String(error));
++				}
++			},
++			async importArchive(data, options, signal) {
++				const presets = ctx.get("agentPresets");
++				if (presets === void 0) return presetArchiveFailure("This deployment has no agent presets.", 503);
++				let parsed;
++				try {
++					parsed = parsePresetArchive(data);
++				} catch (error) {
++					return presetArchiveFailure(error instanceof Error ? error.message : String(error));
++				}
++				const agentPreset = options.agentPreset ?? parsed.manifest.id;
++				if (!PRESET_ARCHIVE_ID.test(agentPreset)) return presetArchiveFailure("Use lowercase letters, digits, and hyphens, starting with a letter or digit.");
++				let rows;
++				try {
++					rows = await presets.list();
++				} catch (error) {
++					return presetArchiveFailure(`Could not read the existing preset list: ${error instanceof Error ? error.message : String(error)}`, 500);
++				}
++				const conflict = rows.some((row) => row.id === agentPreset);
++				const warnings = [
++					...parsed.warnings,
++					...typeof parsed.manifest.sourceDshVersion === "string" && parsed.manifest.sourceDshVersion !== "0.1.0-rc.7" ? ["version-mismatch"] : []
++				];
++				const preview = {
++					ok: true,
++					agentPreset,
++					sourceAgentPreset: parsed.manifest.id,
++					...typeof parsed.manifest.name === "string" ? { name: parsed.manifest.name } : {},
++					...typeof parsed.manifest.description === "string" ? { description: parsed.manifest.description } : {},
++					...typeof parsed.manifest.sourceDshVersion === "string" ? { sourceDshVersion: parsed.manifest.sourceDshVersion } : {},
++					fileCount: Object.keys(parsed.files).length,
++					warnings,
++					conflict,
++					installed: false
++				};
++				if (!options.install) return Response.json(preview, { headers: { "cache-control": "no-store" } });
++				if (conflict) return presetArchiveFailure(`A preset named "${agentPreset}" already exists. Choose another identifier.`, 409);
++				let root;
++				try {
++					root = writableRoot(presets.roots);
++				} catch (error) {
++					return presetArchiveFailure(error instanceof Error ? error.message : String(error), 403);
++				}
++				const target = join(root, agentPreset);
++				let container;
++				try {
++					signal?.throwIfAborted();
++					await mkdir(root, { recursive: true });
++					try {
++						await stat(target);
++						return presetArchiveFailure(`A preset named "${agentPreset}" already exists. Choose another identifier.`, 409);
++					} catch (error) {
++						if (error?.code !== "ENOENT") throw error;
++					}
++					container = await mkdtemp(join(root, ".dshpreset-import-"));
++					const imported = join(container, agentPreset);
++					await mkdir(imported, { recursive: true });
++					for (const [name, bytes] of Object.entries(parsed.files)) {
++						signal?.throwIfAborted();
++						const destination = resolve(imported, name);
++						if (!destination.startsWith(`${resolve(imported)}${sep}`)) throw new Error(`Preset package contains an unsafe path: ${name}`);
++						await mkdir(dirname(destination), { recursive: true });
++						await writeFile(destination, bytes);
++					}
++					const scanned = await scanRoot({
++						path: container,
++						trust: "user"
++					});
++					const candidate = scanned.find((row) => row.id === agentPreset);
++					if (candidate === void 0) throw new Error("The imported package did not produce a preset.");
++					if (candidate.broken !== void 0) throw new Error(`The imported preset failed validation: ${candidate.broken}`);
++					await rename(imported, target);
++					return Response.json({
++						...preview,
++						conflict: false,
++						installed: true
++					}, { headers: { "cache-control": "no-store" } });
++				} catch (error) {
++					if (signal?.aborted) return presetArchiveFailure("Preset import was cancelled.", 499);
++					if (error?.code === "EEXIST" || error?.code === "ENOTEMPTY") return presetArchiveFailure(`A preset named "${agentPreset}" already exists. Choose another identifier.`, 409);
++					return presetArchiveFailure(error instanceof Error ? error.message : String(error));
++				} finally {
++					if (container !== void 0) await rm(container, {
++						recursive: true,
++						force: true
++					}).catch(() => {});
++				}
++			},
+ 			async list(request) {
+ 				const presets = ctx.get("agentPresets");
+ 				if (presets === void 0) return ok(request, {
+@@ -3572,7 +3928,7 @@ function createApiProxy(ctx, defaults) {
+ 					if (agent?.session === session && agent.inbox.hasPending) queue.push(frame({
+ 						type: "session/queue",
+ 						sessionId: session.id,
+-						items: queueItems(agent)
++						items: projectQueueItems(agent, void 0, queueAnchorSeqs.get(session.id))
+ 					}));
+ 				}
+ 				const jobs = ctx.get("jobs");
+@@ -4932,6 +5288,34 @@ function toFetchHandler(api) {
+ 			rpcId: RpcId(randomUUID()),
+ 			payload: {}
+ 		}, req.signal));
++		if (path === "/api/agent-preset.export" && (req.method === "GET" || req.method === "HEAD")) {
++			const agentPreset = url.searchParams.get("agentPreset");
++			if (agentPreset === null || !PRESET_ARCHIVE_ID.test(agentPreset)) return presetArchiveFailure("Missing or invalid agentPreset query parameter.");
++			const response = await api.agentPresets.exportArchive(agentPreset, req.signal);
++			if (req.method === "GET") return response;
++			await response.body?.cancel();
++			return new Response(null, {
++				status: response.status,
++				headers: response.headers
++			});
++		}
++		if (path === "/api/agent-preset.import" && req.method === "POST") {
++			const contentType = req.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
++			if (contentType !== PRESET_ARCHIVE_MIME && contentType !== "application/zip" && contentType !== "application/octet-stream") return presetArchiveFailure("Content type must be a Sherlock preset package.", 415);
++			const contentLength = Number(req.headers.get("content-length"));
++			if (Number.isFinite(contentLength) && contentLength > PRESET_ARCHIVE_MAX_COMPRESSED) return presetArchiveFailure("Preset package is larger than 16 MB.", 413);
++			let data;
++			try {
++				data = new Uint8Array(await req.arrayBuffer());
++			} catch {
++				return presetArchiveFailure("Could not read the preset package.");
++			}
++			if (data.length > PRESET_ARCHIVE_MAX_COMPRESSED) return presetArchiveFailure("Preset package is larger than 16 MB.", 413);
++			return api.agentPresets.importArchive(data, {
++				agentPreset: url.searchParams.get("agentPreset") ?? void 0,
++				install: url.searchParams.get("install") === "1"
++			}, req.signal);
++		}
+ 		if (path === "/api/session.export" && (req.method === "GET" || req.method === "HEAD")) {
+ 			const parsed = sessionLogQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+ 			if (!parsed.success) return new Response("missing or invalid sessionId query parameter", { status: 400 });
+@@ -5089,6 +5473,7 @@ const muxFrameSchema = z$1.discriminatedUnion("type", [
+ 		sessionId: sessionIdSchema,
+ 		items: z$1.array(z$1.object({
+ 			id: messageIdSchema$1,
++			anchorSeq: z$1.number().int().nonnegative().optional(),
+ 			placement: z$1.union([
+ 				z$1.literal("queued"),
+ 				z$1.literal("steering"),
+@@ -5531,7 +5916,6 @@ var ApiProxyService = class extends Service {
+ 		"agentDefaultModel",
+ 		"agents",
+ 		"attachments",
+-		"directoryPicker",
+ 		"llm",
+ 		"sessions",
+ 		"subagents",
+@@ -5584,4 +5968,4 @@ var ApiProxyService = class extends Service {
+ 	}
+ };
+ //#endregion
+-export { AbstractApiClient, ApiProxyService, ApiProxyService as default, InProcessApiClient, RpcId, createApiProxy, toFetchHandler };
++export { AbstractApiClient, ApiProxyService, ApiProxyService as default, InProcessApiClient, RpcId, createApiProxy, createBoundedSessionModelSelectionStore, projectQueueItems, rememberQueueAnchorSeqs, resolveSessionModelSelection, toFetchHandler };
+diff --git a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.d.ts b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.d.ts
+index 5b82d8d..92f8067 100644
+--- a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.d.ts
++++ b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.d.ts
+@@ -35,6 +35,8 @@ export type ToolEventView = {
+ export interface QueuedInboxItem {
+     /** Message identity used by inbox mutations. */
+     id: MessageId;
++    /** Durable event sequence where this transient row entered the inbox, when known. */
++    anchorSeq?: number;
+     /** Agent-resolved FIFO placement; queued and steering items render on different surfaces, context items stay invisible until claimed. */
+     placement: 'queued' | 'steering' | 'context';
+     /** Complete pending message; it is not durable until the Agent claims it. */
+diff --git a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.schema.js b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.schema.js
+index adcd82d..db313ba 100644
+--- a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.schema.js
++++ b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/events.schema.js
+@@ -46,6 +46,7 @@ export const muxFrameSchema = z.discriminatedUnion('type', [
+         sessionId: sessionIdSchema,
+         items: z.array(z.object({
+             id: messageIdSchema,
++            anchorSeq: z.number().int().nonnegative().optional(),
+             placement: z.union([z.literal('queued'), z.literal('steering'), z.literal('context')]),
+             message: messageSchema,
+         })),
+diff --git a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.d.ts b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.d.ts
+index 48132be..42a8940 100644
+--- a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.d.ts
++++ b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.d.ts
+@@ -145,7 +145,7 @@ export interface ModelCatalogFailure {
+ /** Detached model-directory snapshot for one session. */
+ export interface SessionModels {
+     /** Model selection for the session's next assembled step. */
+-    current: ModelSelection;
++    current: ModelSelection | null;
+     /**
+      * Whether an adapter currently serves `current.provider`, and therefore
+      * whether this session can start a turn at all. Deliberately NOT derivable
+diff --git a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.schema.js b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.schema.js
+index 026ffb3..7f88cee 100644
+--- a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.schema.js
++++ b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/api/sessions.schema.js
+@@ -191,7 +191,7 @@ export const sessionModelsRequestSchema = z.object({
+ });
+ /** session.models response value. */
+ export const sessionModelsValueSchema = z.object({
+-    current: modelSelectionSchema,
++    current: modelSelectionSchema.nullable(),
+     routable: z.boolean(),
+     groups: z.array(modelProviderGroupSchema),
+     failures: z.array(modelCatalogFailureSchema),
+diff --git a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/index.d.ts b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/index.d.ts
+index 6737e91..e3d8361 100644
+--- a/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/index.d.ts
++++ b/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types/index.d.ts
+@@ -13,6 +13,7 @@
+  */
+ import { Context, Service } from '@deepseek-ai/cordis';
+ import z from '@deepseek-ai/schemastery';
++import type { ModelSelection } from '@deepseek-ai/dsh-agent';
+ import type { ApiProxy } from './api/index.ts';
+ export type * from './api/index.ts';
+ export { RpcId } from './api/rpc.ts';
+@@ -21,6 +22,26 @@ export { AbstractApiClient, InProcessApiClient } from './fetch/client.ts';
+ export type { IApiClient } from './fetch/client.ts';
+ export { createApiProxy } from './api-proxy.ts';
+ export type { ApiProxyDefaults } from './api-proxy.ts';
++export interface DurableSessionModelSelection extends ModelSelection {
++    sessionId: string;
++}
++export interface BoundedSessionModelSelectionStoreOptions {
++    load(): readonly DurableSessionModelSelection[];
++    persist(next: readonly DurableSessionModelSelection[]): Promise<void>;
++    limit?: number;
++}
++export interface BoundedSessionModelSelectionStore {
++    get(sessionId: string): ModelSelection | undefined;
++    save(sessionId: string, selection: ModelSelection): Promise<void>;
++}
++export declare function createBoundedSessionModelSelectionStore(options: BoundedSessionModelSelectionStoreOptions): BoundedSessionModelSelectionStore;
++export declare function resolveSessionModelSelection(options: {
++    live?: ModelSelection;
++    durable?: ModelSelection;
++    request?: ModelSelection;
++    defaultSelection: ModelSelection;
++    routeServed(provider: string): boolean;
++}): { current: ModelSelection | undefined; routable: boolean };
+ declare module '@deepseek-ai/cordis' {
+     interface Context {
+         /** The host-side ApiProxy implementation (the transport-agnostic gateway face). */

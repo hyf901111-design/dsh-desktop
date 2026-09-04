@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest'
 const projectRoot = path.resolve(import.meta.dirname, '..')
 
 const releaseAssets = [
-  'dsh-desktop-mac-arm64.dmg',
-  'dsh-desktop-mac-x64.dmg',
-  'dsh-desktop-windows-x64-setup.exe'
+  'sherlock-mac-arm64.dmg',
+  'sherlock-mac-x64.dmg',
+  'sherlock-windows-x64-setup.exe'
 ]
 
 describe('GitHub release contract', () => {
@@ -30,22 +30,14 @@ describe('GitHub release contract', () => {
       packages: Record<string, { dev?: boolean; peer?: boolean }>
     }
 
-    // A lock location is a path, so nested installs read as
-    // `node_modules/<host>/node_modules/<name>`. Only the segment after the
-    // last `node_modules/` names the package: without that, a third-party peer
-    // that npm nested under a DSH package (rc.8 gives ui-trajectory its own
-    // React 19) reads as a DSH package and trips this guard.
-    const packageNameOf = (location: string): string =>
-      location.slice(location.lastIndexOf('node_modules/') + 'node_modules/'.length)
-
     const peerOnlyRuntimePackages = Object.entries(packageLock.packages)
       .filter(
         ([location, metadata]) =>
-          packageNameOf(location).startsWith('@deepseek-ai/') &&
+          location.startsWith('node_modules/@deepseek-ai/') &&
           metadata.peer === true &&
           metadata.dev !== true
       )
-      .map(([location]) => packageNameOf(location))
+      .map(([location]) => location.replace('node_modules/', ''))
 
     expect(peerOnlyRuntimePackages).toEqual([])
   })
@@ -63,7 +55,7 @@ describe('GitHub release contract', () => {
       }
     }
 
-    expect(packageJson.build.artifactName).toBe('dsh-desktop-${os}-${arch}.${ext}')
+    expect(packageJson.build.artifactName).toBe('sherlock-${os}-${arch}.${ext}')
     expect(packageJson.build.extraResources).toContainEqual({
       from: 'build/app-icon.png',
       to: 'icon.png'
@@ -73,6 +65,10 @@ describe('GitHub release contract', () => {
       to: 'splash.html'
     })
     expect(packageJson.build.extraResources).toContainEqual({
+      from: 'build/sherlock-logo.svg',
+      to: 'sherlock-logo.svg'
+    })
+    expect(packageJson.build.extraResources).not.toContainEqual({
       from: 'build/dsh-loader.gif',
       to: 'dsh-loader.gif'
     })
@@ -81,7 +77,7 @@ describe('GitHub release contract', () => {
       to: 'dsh-desktop.patch.yml'
     })
     expect(packageJson.build.nsis.artifactName).toBe(
-      'dsh-desktop-windows-${arch}-setup.${ext}'
+      'sherlock-windows-${arch}-setup.${ext}'
     )
     expect(packageJson.build.nsis.include).toBe('build/installer.nsh')
     expect(packageJson.build.win.target).toEqual([{ target: 'nsis', arch: ['x64'] }])
@@ -111,12 +107,31 @@ describe('GitHub release contract', () => {
 
     expect(main).toContain("desktopResourcePath('splash.html')")
     expect(main).toContain('await showSplash()')
-    expect(splash).toContain('Starting DSH Desktop')
-    expect(splash).toContain('src="dsh-loader.gif"')
+    expect(splash).toContain('Starting…')
+    expect(splash.match(/src="sherlock-logo\.svg"/g)).toHaveLength(2)
+    expect(splash).toContain('class="logo-sheen"')
+    expect(splash).toContain('class="keyhole-pulse"')
+    expect(splash).toContain('width: min(212px, 42vw)')
+    expect(splash).toContain('logo-sheen 5.6s')
+    expect(splash).toContain("document.documentElement.lang = 'zh-CN'")
+    expect(splash).not.toContain('mask: url(')
+    expect(splash).toContain('@media (prefers-reduced-motion: reduce)')
+    expect(splash).not.toContain('dsh-loader.gif')
+    expect(splash).not.toContain('class="title"')
     expect(splash).not.toContain('class="track"')
-    expect(patch).not.toMatch(/id:\s*directory-picker/)
+    expect(patch).toMatch(/id: directory-picker\r?\n  disabled: true/)
+    expect(patch).not.toContain('dsh-update-checker')
     expect(patch).not.toContain("name: '@deepseek-ai/dsh-host-directory-picker-native'")
-    expect(patch).not.toContain("name: '@deepseek-ai/dsh-client-ui-directory-picker-native'")
+    expect(patch).toContain("name: '@deepseek-ai/dsh-client-ui-directory-picker-native'")
+  })
+
+  it('does not ship the community plugin update checker', async () => {
+    const policy = JSON.parse(
+      await readFile(path.join(projectRoot, 'build', 'sherlock-bundled-plugins.json'), 'utf8')
+    ) as { plugins: string[]; bundles: string[] }
+
+    expect(policy.plugins).not.toContain('dsh-update-checker')
+    expect(policy.bundles).not.toContain('dsh-update-checker')
   })
 
   it('routes manual restarts through the active plugin recovery flow', async () => {
@@ -126,18 +141,6 @@ describe('GitHub release contract', () => {
     expect(main).toMatch(/case 'restart-harness':\s+await restartHarness\(\)/)
     expect(main).toContain('click: () => void restartHarness().catch(showUnexpectedError)')
     expect(main).toContain("} else if (action === 'restart') {")
-  })
-
-  it('replays frontend plugin failures that arrive during an active recovery', async () => {
-    const main = await readFile(path.join(projectRoot, 'src', 'main', 'index.ts'), 'utf8')
-
-    expect(main).toContain("resolvePluginRecoveryAction('refresh')")
-    expect(main).toContain('if (applyPendingFrontendEvidence()) continue')
-    expect(main).toMatch(
-      /if \(failureRecoveryVisible\) \{\s+queuePendingFrontendPluginRecovery\(message\)/
-    )
-    expect(main).toContain('queueMicrotask(() => {')
-    expect(main).toContain('logs: [...rendererPluginFailureLogs]')
   })
 
   it('publishes update metadata for installed desktop builds', async () => {
@@ -157,7 +160,7 @@ describe('GitHub release contract', () => {
 
     expect(packageJson.dependencies['electron-updater']).toBeTruthy()
     expect(packageJson.build.publish).toEqual([
-      { provider: 'generic', url: 'https://dshdesktop.com/updates/latest/' }
+      { provider: 'generic', url: 'https://updates.evanarts.com/latest/' }
     ])
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false)
     for (const asset of [
@@ -165,9 +168,9 @@ describe('GitHub release contract', () => {
       'latest-mac-x64.yml',
       'latest-mac.yml',
       'latest.yml',
-      'dsh-desktop-mac-arm64.zip.blockmap',
-      'dsh-desktop-mac-x64.zip.blockmap',
-      'dsh-desktop-windows-x64-setup.exe.blockmap'
+      'sherlock-mac-arm64.zip.blockmap',
+      'sherlock-mac-x64.zip.blockmap',
+      'sherlock-windows-x64-setup.exe.blockmap'
     ]) {
       expect(workflow).toContain(asset)
     }
@@ -182,14 +185,88 @@ describe('GitHub release contract', () => {
     for (const script of [
       'package:mac',
       'package:mac:arm64',
+      'package:mac:arm64:unsigned-ci',
       'package:mac:x64',
-      'package:win',
-      'package:dev:mac:arm64',
-      'package:dev:mac:x64',
-      'package:dev:win'
+      'package:mac:x64:unsigned-ci',
+      'package:win'
     ]) {
       expect(packageJson.scripts[script]).toContain('--publish never')
     }
+    expect(packageJson.scripts['package:mac:arm64:unsigned-ci']).toContain('--skip-signature')
+    expect(packageJson.scripts['package:mac:x64:unsigned-ci']).toContain('--skip-signature')
+  })
+
+  it('builds a legacy updater bridge and an Apple-notarized public installer', async () => {
+    const buildAndRun = await readFile(
+      path.join(projectRoot, 'script', 'build_and_run.sh'),
+      'utf8'
+    )
+
+    const [legacyBridgeBuilder, legacyBridgeSource, notarizedConfig] = await Promise.all([
+      readFile(path.join(projectRoot, 'scripts', 'build-legacy-migration-bridge.mjs'), 'utf8'),
+      readFile(path.join(projectRoot, 'scripts', 'macos', 'legacy-migration-bridge.swift'), 'utf8'),
+      readFile(path.join(projectRoot, 'electron-builder.notarized.cjs'), 'utf8')
+    ])
+
+    expect(buildAndRun).toContain("security find-identity -v -p codesigning")
+    expect(buildAndRun).toContain('Sherlock Desktop Update Signing')
+    expect(buildAndRun).toContain('Developer ID Application')
+    expect(buildAndRun).toContain('8B8FCCFB659D94D5C9A9CE2B735EB0FAE457CC7B')
+    expect(buildAndRun).toContain('DDFBC7F4DA5EC49721E454BB06329C6D1E8A7B9F')
+    expect(buildAndRun).toContain('notarytool submit')
+    expect(buildAndRun).toContain('stapler staple')
+    expect(buildAndRun).toContain('spctl --assess')
+    expect(buildAndRun).toContain('dist-notarized/sherlock-mac-arm64.dmg')
+    expect(buildAndRun).toContain('scripts/refresh-mac-update-metadata.mjs')
+    expect(buildAndRun).toContain('scripts/build-legacy-migration-bridge.mjs')
+    expect(buildAndRun.indexOf('package:mac:notarized:arm64')).toBeLessThan(
+      buildAndRun.indexOf('scripts/build-legacy-migration-bridge.mjs')
+    )
+    expect(legacyBridgeBuilder).toContain("bundleIdentifier: 'io.dsh.desktop'")
+    expect(legacyBridgeBuilder).toContain("embeddedBundleIdentifier: 'com.evanarts.sherlock'")
+    expect(legacyBridgeBuilder).toContain('Sherlock Desktop Update Signing')
+    expect(legacyBridgeBuilder).toContain('buildBlockMap')
+    expect(legacyBridgeBuilder).toContain('sherlock-mac-arm64-legacy.zip')
+    expect(legacyBridgeBuilder).toContain('Squirrel.framework')
+    expect(legacyBridgeBuilder).toContain('Mantle.framework')
+    expect(legacyBridgeBuilder).toContain('ReactiveObjC.framework')
+    expect(legacyBridgeSource).toContain('Contents/Resources/Sherlock.app')
+    expect(legacyBridgeSource).toContain('com.evanarts.sherlock')
+    expect(legacyBridgeSource).toContain('io.dsh.desktop')
+    expect(legacyBridgeSource).toContain('moveItem')
+    expect(legacyBridgeSource).toContain('/usr/bin/open')
+    expect(legacyBridgeSource).toContain('"-na"')
+    expect(notarizedConfig).toContain("appId: 'com.evanarts.sherlock'")
+    expect(notarizedConfig).toContain("dshDesktopChannel: 'notarized'")
+    expect(notarizedConfig).toContain("from: 'build/sherlock-plugin-profile'")
+    expect(notarizedConfig).toContain("to: 'sherlock-plugin-profile'")
+    expect(notarizedConfig).toContain('https://updates.evanarts.com/notarized/latest/')
+    expect(notarizedConfig).toContain('notarize: true')
+    expect(notarizedConfig).toMatch(/dmg:\s*\{[\s\S]*sign:\s*true/)
+    expect(notarizedConfig).toContain("from: 'build/sherlock-plugin-profile'")
+    expect(notarizedConfig).toContain("to: 'sherlock-plugin-profile'")
+
+    expect(legacyBridgeBuilder).toMatch(/'--identifier',[\s\S]*'io\.dsh\.desktop'/)
+    expect(legacyBridgeBuilder).toMatch(/'\/usr\/bin\/codesign',[\s\S]*'--verify'/)
+  })
+
+  it('prepares the same embedded plugin profile for local formal and release packages', async () => {
+    const packageJson = JSON.parse(
+      await readFile(path.join(projectRoot, 'package.json'), 'utf8')
+    ) as { scripts: Record<string, string> }
+    const main = await readFile(path.join(projectRoot, 'src', 'main', 'index.ts'), 'utf8')
+
+    expect(packageJson.scripts['prepare:bundled-plugin-profile']).toContain(
+      'prepare-bundled-plugin-profile.mjs'
+    )
+    expect(packageJson.scripts['package:formal:dir']).toContain(
+      'npm run prepare:bundled-plugin-profile'
+    )
+    expect(packageJson.scripts['package:mac:notarized:arm64']).toContain(
+      'npm run prepare:bundled-plugin-profile'
+    )
+    expect(main).toContain('installBundledPluginProfile({')
+    expect(main).toContain("join(process.resourcesPath, 'sherlock-plugin-profile')")
   })
 
   it('packages an isolated development channel from the current workspace', async () => {
@@ -204,25 +281,20 @@ describe('GitHub release contract', () => {
 
     expect(packageJson.scripts['package:dev:dir']).toContain('npm run build')
     expect(packageJson.scripts['package:dev:dir']).toContain('electron-builder.dev.cjs')
-    expect(packageJson.scripts['package:dev:mac:arm64']).toContain('verify-target.mjs darwin arm64')
-    expect(packageJson.scripts['package:dev:mac:arm64']).toContain('electron-builder.dev.cjs')
-    expect(packageJson.scripts['package:dev:mac:x64']).toContain('verify-target.mjs darwin x64')
-    expect(packageJson.scripts['package:dev:mac:x64']).toContain('electron-builder.dev.cjs')
     expect(packageJson.scripts['package:dev:win']).toContain('verify-target.mjs win32 x64')
     expect(packageJson.scripts['package:dev:win']).toContain('electron-builder.dev.cjs')
     expect(packageJson.scripts['package:dev:win']).toContain('--publish never')
     expect(developmentConfig).toContain("appId: 'io.dsh.desktop.dev'")
-    expect(developmentConfig).toContain("productName: 'DSH Desktop Dev'")
+    expect(developmentConfig).toContain("productName: 'Sherlock Dev'")
     expect(developmentConfig).toContain("output: 'dist-dev'")
     expect(developmentConfig).toContain("dshDesktopChannel: 'development'")
     expect(developmentConfig).toContain(
-      "artifactName: 'dsh-desktop-dev-${os}-${arch}.${ext}'"
+      "artifactName: 'sherlock-dev-windows-${arch}-setup.${ext}'"
     )
-    expect(developmentConfig).toContain(
-      "artifactName: 'dsh-desktop-dev-windows-${arch}-setup.${ext}'"
-    )
-    expect(main).toContain("app.setPath('userData', join(app.getPath('appData'), 'dsh-desktop-dev'))")
-    expect(main).toContain("app.setPath('userData', join(app.getPath('appData'), 'dsh-desktop'))")
+    expect(main).toContain('resolveDesktopIdentity(')
+    expect(main).toContain("app.commandLine.getSwitchValue('sherlock-user-data-dir')")
+    expect(main).toContain("app.commandLine.getSwitchValue('sherlock-app-data-dir')")
+    expect(main).toContain("app.setPath('userData', identity.userData)")
     expect(main).toContain('if (!developmentBuild)')
   })
 
@@ -237,7 +309,7 @@ describe('GitHub release contract', () => {
     expect(workflow).toContain('runs-on: windows-2022')
     expect(workflow).toContain('npm run package:dev:win')
     expect(workflow).toContain('Smoke test packaged Windows Harness')
-    expect(workflow).toContain("$executable = 'dist-dev\\win-unpacked\\DSH Desktop Dev.exe'")
+    expect(workflow).toContain("$executable = 'dist-dev\\win-unpacked\\Sherlock Dev.exe'")
     expect(workflow).toContain('Packaged Windows Harness smoke test passed.')
     expect(workflow).toContain("Invoke-HarnessRpc 'workspace.create'")
     expect(workflow).toContain("Invoke-HarnessRpc 'session.create'")
@@ -247,7 +319,7 @@ describe('GitHub release contract', () => {
     expect(workflow).toContain('gh release create $env:PRERELEASE_TAG')
     expect(workflow).toContain('--prerelease')
     expect(workflow).toContain('name: windows-x64-dev')
-    expect(workflow).toContain('dist-dev/dsh-desktop-dev-windows-x64-setup.exe')
+    expect(workflow).toContain('dist-dev/sherlock-dev-windows-x64-setup.exe')
     for (const asset of releaseAssets) expect(workflow).toContain(asset)
     expect(
       workflow.match(
@@ -256,35 +328,43 @@ describe('GitHub release contract', () => {
     ).toHaveLength(3)
   })
 
-  it('signs and notarizes both macOS architectures on tag releases', async () => {
+  it('signs both macOS architectures without Apple services and atomically publishes Cloudflare', async () => {
     const workflow = await readFile(
       path.join(projectRoot, '.github', 'workflows', 'release.yml'),
       'utf8'
     )
 
     for (const secret of [
-      'DESKTOP_CSC_LINK',
-      'DESKTOP_CSC_KEY_PASSWORD',
-      'DESKTOP_APPLE_API_KEY',
-      'DESKTOP_APPLE_API_KEY_ID',
-      'DESKTOP_APPLE_API_ISSUER',
-      'DESKTOP_APPLE_TEAM_ID'
+      'SHERLOCK_MACOS_CSC_LINK',
+      'SHERLOCK_MACOS_CSC_KEY_PASSWORD',
+      'CLOUDFLARE_API_TOKEN',
+      'CLOUDFLARE_ACCOUNT_ID'
     ]) {
       expect(workflow).toContain(`secrets.${secret}`)
     }
     expect(workflow.match(/Prepare macOS signing keychain/g)).toHaveLength(2)
-    expect(workflow.match(/xcrun stapler validate/g)).toHaveLength(4)
-    expect(workflow.match(/xcrun notarytool submit/g)).toHaveLength(2)
+    expect(workflow.match(/CSC_NAME: \$\{\{ steps\.signing_keychain\.outputs\.identity \}\}/g)).toHaveLength(2)
+    expect(workflow.match(/codesign --verify --deep --strict/g)).toHaveLength(2)
+    expect(workflow.match(/codesign --keychain .*--timestamp=none --force/g)).toHaveLength(2)
+    expect(workflow.match(/refresh-mac-update-metadata\.mjs/g)).toHaveLength(2)
     expect(workflow.match(/CSC_IDENTITY_AUTO_DISCOVERY: 'false'/g)).toHaveLength(2)
+    expect(workflow).toContain('npm run package:mac:arm64:unsigned-ci')
+    expect(workflow).toContain('npm run package:mac:x64:unsigned-ci')
+    expect(workflow).toContain('npm run release:cloudflare')
+    expect(workflow).toContain('--bucket sherlock-releases')
+    expect(workflow).toContain('https://updates.evanarts.com/latest/latest-mac.yml')
+    expect(workflow).toContain('Mirror release assets to ModelScope')
+    expect(workflow).not.toContain('notarytool')
+    expect(workflow).not.toContain('stapler')
+    expect(workflow).not.toContain('spctl --assess')
+    expect(workflow).not.toContain('DESKTOP_APPLE_')
+    expect(workflow).not.toContain('Developer ID Application')
     expect(workflow).not.toContain("CSC_LINK: ''")
     expect(workflow).toMatch(
-      /macos-apple-silicon:\r?\n\s+name: macOS Apple Silicon\r?\n(?:[\s\S]*?)runs-on: macos-15\r?\n\s+steps:/
+      /macos-apple-silicon:\r?\n    name: macOS Apple Silicon\r?\n    runs-on: macos-15\r?\n    steps:/
     )
     expect(workflow).toMatch(
-      /macos-intel:\r?\n\s+name: macOS Intel\r?\n(?:[\s\S]*?)runs-on: macos-15-intel\r?\n\s+steps:/
-    )
-    expect(workflow).toMatch(
-      /windows-x64:\r?\n\s+name: Windows x64\r?\n(?:[\s\S]*?)runs-on: windows-2022\r?\n\s+steps:/
+      /macos-intel:\r?\n    name: macOS Intel\r?\n    if: [^\r\n]+\r?\n    runs-on: macos-15-intel\r?\n    steps:/
     )
   })
 

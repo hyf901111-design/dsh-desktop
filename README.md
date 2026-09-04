@@ -1,6 +1,6 @@
 <h1 align="center">
   <img src="docs/images/readme-logo-black-v020.png" width="64" alt="DSH Desktop logo" valign="middle" />
-  DSH Desktop
+  Sherlock
 </h1>
 
 <p align="center">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh.md">简体中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.pt.md">Português</a>
+  <a href="README.md">English</a> · <a href="README.zh.md">简体中文</a>
 </p>
 
 <p align="center">
@@ -18,20 +18,22 @@
   <img alt="Windows" src="https://img.shields.io/badge/Windows-x64-171513.svg" />
 </p>
 
-![DSH Desktop overview with portable presets, model providers, and phone control](docs/images/dsh-desktop-hero-v020.png)
+![Sherlock overview with portable presets, model providers, and phone control](docs/images/dsh-desktop-hero-v020.png)
 
 <p align="center"><strong>Beyond official DeepSeek models, DSH Desktop supports mainstream third-party model providers—with more DSH-powered desktop experiences coming soon.</strong></p>
 
-DSH Desktop packages the local DeepSeek Harness web experience as a desktop application. It launches a local Harness instance automatically, manages a random loopback port, persists profiles, plugins, and sessions, and opens the full interface as soon as Harness is ready. Project workspaces are added and managed entirely in the Harness interface.
+Sherlock packages the local DeepSeek Harness web experience as a desktop application. It launches a local Harness instance automatically, manages a random loopback port, persists profiles, plugins, and sessions, and opens the full interface as soon as Harness is ready. Project workspaces are added and managed entirely in the Harness interface.
 
 > [!IMPORTANT]
-> DSH Desktop is currently an early preview and depends on the rapidly evolving `@deepseek-ai/dsh@0.1.1-rc.1`. macOS releases are code-signed and notarized by Apple; current installers are distributed through the official website.
+> Sherlock currently depends on the rapidly evolving `@deepseek-ai/dsh@0.1.0-rc.7`. Public macOS releases are signed with a Developer ID certificate and notarized by Apple. A stable legacy Sherlock signing identity is retained only inside the compatibility update bridge for existing 0.6.3 installations.
 
 ## Download
 
-Download DSH Desktop for macOS and Windows from the [official website](https://www.dshdesktop.com/#download).
+Download Sherlock for macOS and Windows from the [official website](https://www.dshdesktop.com/#download).
 
-Installed macOS and Windows builds check for updates automatically after startup and every six hours. Updates download in the background and prompt you to restart when they are ready. You can also choose **Check for Updates…** from the application menu.
+On macOS, open the DMG and drag Sherlock into Applications. The Developer ID signature and stapled Apple notarization ticket allow Gatekeeper to verify the download normally.
+
+Installed builds check for updates after startup and every six hours. When a release is available, a compact blue 28×28 rounded-rectangle download button appears at the lower-right of the sidebar. Click it to download; once ready, click again and confirm the restart to install. The button stays hidden when no update is available. You can also choose **Check for Updates…** from the application menu.
 
 ## Community
 
@@ -61,9 +63,9 @@ DeepSeek Harness already provides a complete agent runtime and Web UI. DSH Deskt
 - Gracefully terminates the Harness child process when the desktop app exits
 - Listens only on a random `127.0.0.1` port for each launch
 - Removes Node.js privileges from the renderer and enables `contextIsolation`, sandboxing, and navigation restrictions
-- Uses the DSH brand logo consistently in the desktop window and Harness sidebar
+- Uses the Sherlock brand consistently in the desktop window and Harness sidebar
 - Imports and exports complete custom Agent presets as portable [`.dshpreset` packages](docs/preset-packages.md), with conflict checks and a trust warning before installation
-- Includes a production DSH app icon in macOS ICNS and Windows ICO formats
+- Includes a production Sherlock app icon in macOS ICNS and Windows ICO formats
 
 ## Friends
 
@@ -147,15 +149,15 @@ build/                Application icon assets
 
 ## Current validation status
 
-- macOS Apple Silicon: development workflow, real Harness startup, DMG packaging, code signing, Apple notarization, and mounted artifact verified
+- macOS Apple Silicon: development workflow, real Harness startup, DMG packaging, and stable self-signed code-signing path provided
 - macOS Intel: packaging configuration and platform checks provided; runtime verification still requires an Intel Mac or runner
 - Windows x64: NSIS/Portable configuration and platform checks provided; runtime verification still requires a Windows runner
 - Windows ARM64: not currently supported
-- Automatic updates: not yet integrated
+- Automatic updates: Cloudflare feed and explicit sidebar download/install flow integrated
 
 ## Upstream version and patches
 
-The project currently pins `@deepseek-ai/dsh@0.1.1-rc.1`. The initial provider list and desktop preset-transfer surface are captured with [`patch-package`](https://github.com/ds300/patch-package) under [`patches/`](patches/) rather than relying on untracked changes in `node_modules`.
+The project currently pins `@deepseek-ai/dsh@0.1.0-rc.7`. The initial provider list and desktop preset-transfer surface are captured with [`patch-package`](https://github.com/ds300/patch-package) under [`patches/`](patches/) rather than relying on untracked changes in `node_modules`.
 
 When upgrading DSH:
 
