@@ -1,0 +1,9 @@
+name = "sherlock-stable-download"
+main = "../scripts/sherlock-stable-download-worker.mjs"
+compatibility_date = "2026-09-04"
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "updates.evanarts.com/download/sherlock-mac-arm64.dmg"
+zone_id = "6f467b786713bdf33ed46e8a89d780d9"

@@ -37,7 +37,7 @@
 
 - 5 个不可变资源全部上传至 `releases/v0.8.1/`，随后提升稳定 DMG 和旧版兼容、现有正式客户端两条 feed；临时上传 Worker `sherlock-release-upload-0563e867` 已删除。
 - 两条公开 feed 均为 0.8.1，内容与预备元数据逐字节一致；所有当前资源 HTTP 200，非元数据资源 Range 0–0 返回 206 / 1 字节。
-- 不可变资源缓存为一年 immutable，稳定 DMG 为 `no-store, no-cache`，两个 feed 为 `no-cache`。
+- 不可变资源缓存为一年 immutable，两个 feed 为 `no-cache`。最终复核发现 R2 对象虽已保存 `no-store`，Cloudflare 区域浏览器缓存规则仍会把稳定入口改写为四小时缓存；已部署仅匹配 `updates.evanarts.com/download/sherlock-mac-arm64.dmg` 的 `sherlock-stable-download` Worker，保留原始包体、Range、状态码和响应头，仅把稳定入口缓存恢复为 `no-store, no-cache, max-age=0, must-revalidate`。
 - 从稳定公开地址重新下载完整 DMG，全量 SHA-512 与正式包一致；DMG `hdiutil verify` 通过，挂载 App 为 `0.8.1 / com.evanarts.sherlock`，并启动到真实 Sherlock 主界面。
 - 根据用户本轮明确要求，未执行 0.6.3、0.8.0 等老版本客户端的真实自动升级验证；本记录不把网络、元数据或包体检查冒充升级验证。
 
@@ -51,6 +51,7 @@
 ## 源码同步边界
 
 - 发布记录与保留清单提交后，同步到既有 Fork 的 `codex/sherlock-cloudflare-updates` 发布分支；不推送版本标签，不合并上游 `main`。
+- 稳定下载 Worker 的源码、精确路由配置与回归测试一并进入该发布分支；线上 Worker 版本为 `18517e99-c9ce-4105-ba8b-c6e249541ba3`。
 - 构建产物、测试用户数据与 `/tmp` 证据目录不进入 Git。
 
 本轮详细本地证据：`/tmp/sherlock-formal-release.GhTam0/`。
