@@ -150,14 +150,15 @@ describe('Sherlock About settings', () => {
 
     expect(zh.productName).toBe('Sherlock')
     expect(zh.version).toBe('9.8.7')
-    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
-    expect(en.releaseNotes[0]).toMatchObject({ version: '0.8.0', date: '2026-09-03' })
-    expect(zh.releaseNotes[0]?.items).toHaveLength(6)
-    expect(en.releaseNotes[0]?.items).toHaveLength(6)
+    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
+    expect(en.releaseNotes[0]).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
+    expect(zh.releaseNotes[0]?.items).toHaveLength(2)
+    expect(en.releaseNotes[0]?.items).toHaveLength(2)
     expect(zh.releaseNotes[0]?.items).toContain(
-      '修复首次配置模型后当前选项为空时模型列表加载失败，并避免显示原始数据校验错误'
+      '研究画布支持通过苹果触控板双指捏合与外扩缩放，并以手势中心为锚点；画布空白区及网页、PDF 等组件内部均可使用'
     )
-    expect(zh.releaseNotes[1]).toEqual({
+    expect(zh.releaseNotes[1]?.version).toBe('0.8.0')
+    expect(zh.releaseNotes[2]).toEqual({
       version: '0.7.9',
       date: '2026-09-03',
       items: [
@@ -174,11 +175,12 @@ describe('Sherlock About settings', () => {
         '复制粘贴提示上移并在完成后两秒消失；“基于所选创建”增加图标、精简输入弹层，点击外部或失焦时自动关闭'
       ]
     })
-    expect(zh.releaseNotes[2]?.version).toBe('0.7.8')
+    expect(zh.releaseNotes[3]?.version).toBe('0.7.8')
     expect(en.version).toBe('9.8.7')
-    expect(en.releaseNotes[1]?.version).toBe('0.7.9')
-    expect(en.releaseNotes[1]?.date).toBe('2026-09-03')
-    expect(en.releaseNotes[1]?.items).toEqual([
+    expect(en.releaseNotes[1]?.version).toBe('0.8.0')
+    expect(en.releaseNotes[2]?.version).toBe('0.7.9')
+    expect(en.releaseNotes[2]?.date).toBe('2026-09-03')
+    expect(en.releaseNotes[2]?.items).toEqual([
       'Research conversations now reference all material on the current canvas, including offscreen components, when nothing is selected or explicitly referenced',
       'Allocate context by question relevance: start with a compact catalog and key evidence, then search and read additional material on demand within bounded context budgets',
       'Added a current-canvas context indicator and source directory with a per-message opt-out; explicit references take priority and failed sends preserve the draft',
@@ -191,7 +193,7 @@ describe('Sherlock About settings', () => {
       'Fixed canvas clipboard shortcut focus: paste over non-editable canvas areas and keep shortcuts working after context-menu actions without intercepting editors or embedded pages',
       'Moved clipboard feedback above the toolbar with a two-second dismissal; added a Create from Selection icon and a simplified popover that closes on outside click or focus loss'
     ])
-    expect(en.releaseNotes[2]?.version).toBe('0.7.8')
+    expect(en.releaseNotes[3]?.version).toBe('0.7.8')
 
     const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
     const lockfile = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'))
