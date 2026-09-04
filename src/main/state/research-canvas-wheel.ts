@@ -22,6 +22,7 @@ const MAX_REGION_SIZE = 32_768
 const MAX_WHEEL_DELTA = 4_096
 const MAX_RETIRED_OWNER_IDS = 64
 const COMMAND_MODIFIERS = new Set(['meta', 'command', 'cmd'])
+const CANVAS_ZOOM_MODIFIERS = new Set([...COMMAND_MODIFIERS, 'control', 'ctrl'])
 const COMMAND_KEYS = new Set(['meta', 'command', 'cmd', 'metaleft', 'metaright'])
 
 type ActiveRegion = Extract<ResearchCanvasWheelRegionUpdate, { active: true }>
@@ -83,10 +84,10 @@ function parseRegionUpdate(value: unknown): ResearchCanvasWheelRegionUpdate | nu
   }
 }
 
-function commandWheel(mouse: MouseInputEvent): mouse is MouseWheelInputEvent {
+function canvasZoomWheel(mouse: MouseInputEvent): mouse is MouseWheelInputEvent {
   return mouse.type === 'mouseWheel' &&
     Array.isArray(mouse.modifiers) &&
-    mouse.modifiers.some((modifier) => COMMAND_MODIFIERS.has(modifier))
+    mouse.modifiers.some((modifier) => CANVAS_ZOOM_MODIFIERS.has(modifier))
 }
 
 function commandKey(input: Input): boolean {
@@ -114,7 +115,7 @@ export class ResearchCanvasWheelRouter {
     mouse: MouseInputEvent
   ): void => {
     const region = this.activeRegion
-    if (region === null || !commandWheel(mouse)) return
+    if (region === null || !canvasZoomWheel(mouse)) return
     const { x, y, deltaX, deltaY } = mouse
     if (
       !boundedFinite(x, MAX_REGION_COORDINATE) ||
