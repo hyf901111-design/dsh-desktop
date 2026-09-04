@@ -5,6 +5,9 @@ dist-dev/
 dist-legacy/
 dist-notarized/
 dist-release/
+/dist-internal/
+/output/
+/dist-local-*/
 release-assets/
 release-cloudflare/
 .playwright-cli/
