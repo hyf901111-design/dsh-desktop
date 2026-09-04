@@ -4,6 +4,7 @@ import path from 'node:path'
 import { verifyBundledSkillParity } from './bundled-skill-parity.mjs'
 
 const args = process.argv.slice(2)
+const skipSignature = args.includes('--skip-signature')
 
 function readOption(name) {
   const index = args.indexOf(name)
@@ -120,10 +121,17 @@ try {
     })
 
     verifyRuntime(runtimeNode, runtimeRoot)
-    verifySignature(appPath)
+    if (skipSignature) {
+      console.log('signature: skipped (unsigned CI package)')
+    } else {
+      verifySignature(appPath)
+    }
     console.log(`bundled skill: ${bundledSkill.slug} ${bundledSkill.version} (source parity)`)
     console.log(`package: verified (${appPath})`)
   } else {
+    if (skipSignature) {
+      throw new Error('--skip-signature requires --app')
+    }
     if (!runtimeRootOption || !runtimeNodeOption) {
       throw new Error('provide --app or both --runtime-root and --runtime-node')
     }
