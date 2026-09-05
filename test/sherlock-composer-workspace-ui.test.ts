@@ -12560,7 +12560,7 @@ describe('Research voice toolbar', () => {
       emit: (event: Record<string, unknown>) => listener({ sessionId: 'voice-session', ...event }) }
   }
 
-  it('transcribes real levels and creates exactly one executing container for the final instruction', async () => {
+  it('shows live audio feedback and creates exactly one executing container for the final instruction', async () => {
     const mounted = await mountVoice()
     try {
       const { host, bridge, emit, generate, workspace } = mounted
@@ -12573,10 +12573,13 @@ describe('Research voice toolbar', () => {
         emit({ type: 'partial', requestId, text: '创建一个倒计时' })
         emit({ type: 'level', requestId, level: 0.8 })
       })
-      expect(host.querySelector('[data-research-voice-transcript]')?.textContent).toBe('创建一个倒计时')
+      expect(button!.textContent).toBe('语音')
+      expect(host.querySelector('[data-research-voice-feedback] [role="status"]')?.textContent).toContain('创建一个倒计时')
       expect(host.querySelector('[data-research-voice-wave]')?.getAttribute('data-level')).toBe('0.8')
       await act(async () => { (host.querySelector('[data-research-voice-finish]') as HappyDOMHTMLElement).click() })
       expect(bridge.stop).toHaveBeenCalledWith({ sessionId: 'voice-session', requestId })
+      expect(host.querySelector('[data-research-voice-feedback]')?.textContent).toContain('识别中')
+      expect(host.querySelector('[data-research-voice-finish]')?.hasAttribute('disabled')).toBe(true)
       await act(async () => {
         emit({ type: 'final', requestId, text: '创建一个倒计时' })
         emit({ type: 'final', requestId, text: '创建一个倒计时' })
@@ -12647,36 +12650,55 @@ describe('Research voice toolbar', () => {
     } finally { await mounted.cleanup() }
   })
 
-  it('explains the pending microphone and speech permission request', async () => {
+  it('keeps pending microphone permission visible and prevents premature completion', async () => {
     const mounted = await mountVoice()
     try {
       await act(async () => { mounted.emit({ type: 'toggle' }) })
       expect(mounted.host.querySelector('[data-research-voice-feedback]')?.textContent)
-        .toContain('请允许麦克风与语音识别权限')
+        .toContain('等待麦克风权限')
+      expect(mounted.host.querySelector('[data-research-voice-finish]')?.hasAttribute('disabled')).toBe(true)
+      expect(mounted.host.querySelector('[data-research-voice-cancel]')?.hasAttribute('disabled')).toBe(false)
     } finally { await mounted.cleanup() }
   })
 
-  it('keeps transcript reading and scrolling separate from canvas selection and pan', async () => {
+  it('keeps the compact recording controls separate from canvas selection and pan', async () => {
     const mounted = await mountVoice()
     try {
-      const { emit, bridge, workspace, browserWindow, host, canvas } = mounted
+      const { emit, bridge, workspace, browserWindow, host, canvas, generate } = mounted
       await act(async () => { workspace.createContainerDraft(); emit({ type: 'toggle' }) })
       const requestId = bridge.start.mock.calls[0]![0].requestId
-      await act(async () => { emit({ type: 'partial', requestId, text: '较长的语音指令'.repeat(50) }) })
+      await act(async () => {
+        emit({ type: 'state', requestId, state: 'listening' })
+        emit({ type: 'partial', requestId, text: '创建一个倒计时' })
+      })
       const before = workspace.getSnapshot()
-      const transcript = host.querySelector('[data-research-voice-transcript]') as HappyDOMHTMLElement
+      const feedback = host.querySelector('[data-research-voice-feedback]') as HappyDOMHTMLElement
+      const wave = feedback.querySelector('[data-research-voice-wave]') as HappyDOMHTMLElement
+      const cancel = feedback.querySelector('[data-research-voice-cancel]') as HappyDOMHTMLElement
+      const finish = feedback.querySelector('[data-research-voice-finish]') as HappyDOMHTMLElement
+      expect(feedback.querySelectorAll('button')).toHaveLength(2)
+      expect(cancel.getAttribute('aria-label')).toMatch(/取消/)
+      expect(finish.getAttribute('aria-label')).toMatch(/完成|结束/)
       const wheel = new browserWindow.WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 100 })
       await act(async () => {
-        transcript.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 91 }))
-        transcript.dispatchEvent(wheel)
+        cancel.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 91 }))
+        wave.dispatchEvent(wheel)
         ;(canvas as HappyDOMHTMLElement).focus()
         browserWindow.document.dispatchEvent(new browserWindow.KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
-        transcript.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 92 }))
+        finish.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 92 }))
       })
       expect(workspace.getSnapshot().selection).toEqual(before.selection)
       expect(workspace.getSnapshot().viewport).toEqual(before.viewport)
       expect(wheel.defaultPrevented).toBe(false)
       expect(canvas.getAttribute('data-research-operation')).toBeNull()
+      await act(async () => {
+        cancel.click()
+        emit({ type: 'final', requestId, text: '不得创建' })
+      })
+      expect(bridge.cancel).toHaveBeenCalledWith({ sessionId: 'voice-session', requestId })
+      expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+      expect(generate).not.toHaveBeenCalled()
+      expect(workspace.getSnapshot().artifacts).toHaveLength(1)
     } finally { await mounted.cleanup() }
   })
 
@@ -12688,11 +12710,17 @@ describe('Research voice toolbar', () => {
       const requestId = bridge.start.mock.calls[0]![0].requestId
       await act(async () => { emit({ type: 'error', requestId, code: 'permission-denied', message: '请允许麦克风访问' }) })
       expect(host.querySelector('[role="alert"]')?.textContent).toContain('请允许麦克风访问')
-      await act(async () => { (host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement).click() })
+      const retry = host.querySelector('[role="alert"] button[aria-label*="重"]') as HappyDOMHTMLElement
+      expect(retry).not.toBeNull()
+      await act(async () => { retry.click() })
       const secondId = bridge.start.mock.calls[1]![0].requestId
       await act(async () => { emit({ type: 'final', requestId: secondId, text: '  ' }) })
       expect(generate).not.toHaveBeenCalled()
       expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(0)
+      const close = host.querySelector('[role="alert"] button[aria-label*="关闭"]') as HappyDOMHTMLElement
+      expect(close).not.toBeNull()
+      await act(async () => { close.click() })
+      expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
     } finally { await mounted.cleanup() }
   })
 })
