@@ -12176,6 +12176,21 @@ describe('Sherlock workspace and composer controls', () => {
     )
   })
 
+  it('renders an empty Trajectory with the docked composer instead of the Chat hero', async () => {
+    const mounted = await mountConversationRoot('trajectory')
+    try {
+      await act(async () => {
+        mounted.session.update({ composerPhase: 'blank', blank: true })
+      })
+      expect(mounted.host.querySelector('[data-phase]')?.getAttribute('data-phase')).toBe('active')
+      expect(mounted.host.querySelector('[data-test-trajectory-view]')).not.toBeNull()
+      expect(mounted.browserWindow.document.querySelector('[data-test-composer-bar]')
+        ?.classList.contains('uV2eYG_hero')).toBe(false)
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('keeps a blank Research session in the full canvas layout with a docked composer', async () => {
     const mounted = await mountConversationRoot('research')
     try {

@@ -277,7 +277,7 @@ describe('Sherlock sidebar new-session actions', () => {
     ])
   })
 
-  it('renders the requested Research view on the new session first frame', async () => {
+  it.each([false, true])('keeps new Research tabs switchable with persisted components: %s', async (persisted) => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     installBrowserGlobals(browserWindow)
     browserWindow.sessionStorage.setItem(
@@ -299,7 +299,7 @@ describe('Sherlock sidebar new-session actions', () => {
     browserWindow.document.body.appendChild(host)
     const root = createRoot(host)
     const state = {
-      view: null,
+      view: null as string | null,
       draft: '',
       selection: null,
       inspect: null,
@@ -313,10 +313,10 @@ describe('Sherlock sidebar new-session actions', () => {
     const views = {
       subscribe: () => () => {},
       version: () => 1,
-      list: () => [{ id: 'chat', label: '对话' }, { id: 'research', label: '研究' }]
+      list: () => [{ id: 'chat', label: '对话' }, { id: 'research', label: '研究' }, { id: 'trajectory', label: '轨迹' }]
     }
     const actions = {
-      setView: vi.fn(), setDraft: vi.fn(), setInspect: vi.fn()
+      setView: vi.fn((view: string) => { state.view = view }), setDraft: vi.fn(), setInspect: vi.fn()
     }
     const renderSlot = (_name: string, _props?: unknown, options?: { only: string }) => {
       if (options?.only === undefined) return null
@@ -324,9 +324,7 @@ describe('Sherlock sidebar new-session actions', () => {
       return createElement('div', { 'data-rendered-view': options.only })
     }
 
-    try {
-      await act(async () => {
-        root.render(createElement(react.Fragment as unknown as string, null,
+    const render = () => root.render(createElement(react.Fragment as unknown as string, null,
           createElement(ConversationSessionHeader, {
             sessionId: 'session-new-research',
             useSession,
@@ -358,7 +356,8 @@ describe('Sherlock sidebar new-session actions', () => {
             releaseResearchWorkspace: vi.fn()
           })
         ))
-      })
+    try {
+      await act(async () => { render() })
 
       expect(renderedViews.at(-1)).toBe('research')
       expect(host.querySelector('[data-rendered-view="research"]')).not.toBeNull()
@@ -367,13 +366,20 @@ describe('Sherlock sidebar new-session actions', () => {
       expect(host.querySelector('[data-conversation-view-id="research"]')
         ?.getAttribute('aria-selected')).toBe('true')
 
-      await act(async () => {
-        ;(host.querySelector('[data-conversation-view-id="chat"]') as HTMLElement | null)?.click()
-      })
-      expect(actions.setView).toHaveBeenLastCalledWith('chat')
-      expect(browserWindow.sessionStorage.getItem(
-        'sherlock.conversation.initial-research-session.v1'
-      )).toBeNull()
+      if (persisted) browserWindow.localStorage.setItem(
+        'sherlock.research.session-engaged.v1:session-new-research', '1'
+      )
+      for (const target of ['trajectory', 'chat', 'research', 'chat', 'trajectory', 'research']) {
+        await act(async () => {
+          ;(host.querySelector(`[data-conversation-view-id="${target}"]`) as HTMLElement | null)?.click()
+          render()
+        })
+        expect(actions.setView).toHaveBeenLastCalledWith(target)
+        expect(host.querySelector(`[data-conversation-view-id="${target}"]`)
+          ?.getAttribute('aria-selected')).toBe('true')
+        expect(host.querySelector('header')?.getAttribute('aria-hidden')).toBeNull()
+        if (target !== 'chat') expect(host.querySelector(`[data-rendered-view="${target}"]`)).not.toBeNull()
+      }
     } finally {
       await act(async () => { root.unmount() })
     }
