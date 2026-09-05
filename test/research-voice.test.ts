@@ -26,6 +26,7 @@ function setup(platform: NodeJS.Platform = 'darwin') {
   let mainWindow = window
   let callback!: (event: ResearchVoiceNativeEvent) => void
   let currentRequest = ''
+  let loadFailure: Error | undefined
   const calls: Array<[string, ...unknown[]]> = []
   const native = {
     init: (cb: typeof callback) => { callback = cb; calls.push(['init']) },
@@ -35,7 +36,7 @@ function setup(platform: NodeJS.Platform = 'darwin') {
     cancel: (requestId: string) => { calls.push(['cancel', requestId]) },
     dispose: () => { calls.push(['dispose']) }
   }
-  const controller = new ResearchVoiceController({ getMainWindow: () => mainWindow, platform, loadNative: () => native })
+  const controller = new ResearchVoiceController({ getMainWindow: () => mainWindow, platform, loadNative: () => { if (loadFailure) throw loadFailure; return native } })
   controller.attachWindow(window)
   const handlers = new Map<string, (...args: any[]) => any>()
   const disposeHandlers = registerResearchVoiceHandlers({
@@ -47,7 +48,7 @@ function setup(platform: NodeJS.Platform = 'darwin') {
   const invoke = (name: string, value: unknown, frame = window.webContents.mainFrame) => handlers.get(`research:voice:${name}`)!({ sender: window.webContents, senderFrame: frame }, value)
   const emit = (event: Record<string, unknown>) => callback({ requestId: currentRequest, ...event } as ResearchVoiceNativeEvent)
   const replaceWindow = () => { mainWindow = new FakeWindow(); controller.attachWindow(mainWindow); return mainWindow }
-  return { window, calls, native, controller, handlers, invoke, emit, replaceWindow, request: () => currentRequest }
+  return { window, calls, native, controller, handlers, invoke, emit, replaceWindow, failLoad: (error: Error) => { loadFailure = error }, request: () => currentRequest }
 }
 const active = { sessionId: 'research-a', active: true }
 const request = { sessionId: 'research-a', requestId: 'recording-a' }
@@ -67,6 +68,36 @@ describe('research voice permission and ownership boundaries', () => {
     expect(f.invoke('start', { ...request, requestId: 'another' })).toMatchObject({ ok: false })
     f.emit({ type: 'toggle' })
     expect(f.window.delivered.filter((event) => event.type === 'toggle')).toHaveLength(1)
+  })
+
+  it('captures Electron main-frame identity from prototype getters so a real window can start voice recognition', () => {
+    const f = setup()
+    f.window.webContents.mainFrame = Object.create({
+      get processId() { return 41 },
+      get routingId() { return 57 }
+    })
+    expect(f.invoke('set-active', active)).toEqual({ ok: true })
+    expect(f.invoke('start', request)).toEqual({ ok: true })
+    f.emit({ type: 'final', text: '来自真实窗口的语音指令' })
+    expect(f.window.delivered.at(-1)).toMatchObject({ type: 'final', text: '来自真实窗口的语音指令' })
+  })
+
+  it('distinguishes native load and initialization failures without including local paths or stacks', () => {
+    const load = setup()
+    load.failLoad(Object.assign(new Error("Cannot find module '/private/native/research-voice.node'\nRequire stack:\n- /private/app/index.js"), { code: 'MODULE_NOT_FOUND' }))
+    const loadResult = load.invoke('set-active', active)
+    expect(loadResult).toMatchObject({ ok: false })
+    expect(loadResult.error).toContain('加载')
+    expect(loadResult.error).toContain('MODULE_NOT_FOUND')
+    expect(loadResult.error).not.toMatch(/\/private|Require stack/)
+    // Starting after a failed registration must preserve the actual diagnostic.
+    expect(load.invoke('start', request).error).toBe(loadResult.error)
+    const init = setup()
+    init.native.init = () => { throw new Error('event monitor unavailable') }
+    const initResult = init.invoke('set-active', active)
+    expect(initResult).toMatchObject({ ok: false })
+    expect(initResult.error).toContain('初始化')
+    expect(initResult.error).toContain('event monitor unavailable')
   })
 
   it('registers a research view mounted before focus and arms Fn only when that window is foreground', () => {

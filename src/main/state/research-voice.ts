@@ -41,8 +41,21 @@ type ActiveResearch = {
   frame: { processId: number; routingId: number }
 }
 type Capture = ResearchVoiceRequest & { nativeRequestId: string; active: ActiveResearch; state: ResearchVoiceState }
-const unavailable = (): ResearchVoiceResult => ({ ok: false, error: '此设备暂时无法使用语音识别，请在 macOS 版 Sherlock 中重试。' })
+const unavailable = (diagnostic?: string): ResearchVoiceResult => ({ ok: false, error: diagnostic || '此设备暂时无法使用语音识别，请在 macOS 版 Sherlock 中重试。' })
 const invalid = (): ResearchVoiceResult => ({ ok: false, error: '语音请求已失效，请返回当前研究重新开始。' })
+
+// Loading/initialization happens before microphone access; preserve the useful
+// failure reason while omitting filesystem paths and require-stack details.
+function nativeFailureDiagnostic(stage: 'load' | 'init', error: unknown): string {
+  const detail = error instanceof Error ? error.message.split(/\r?\n/, 1)[0] || '未知错误' : '未知错误'
+  const message = detail
+    .replace(/(['"])(?:\/|[A-Za-z]:\\)[^'"\r\n]*\1/g, '[本地路径]')
+    .replace(/\/[^\s()[\]{}'",;:]+/g, '[本地路径]')
+    .slice(0, 240)
+  const rawCode = (error as { code?: unknown } | null)?.code
+  const code = typeof rawCode === 'string' && /^[A-Z0-9_-]{1,64}$/.test(rawCode) ? `${rawCode}：` : ''
+  return `语音模块${stage === 'load' ? '加载' : '初始化'}失败：${code}${message || '未知错误'}。`
+}
 
 function validId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 256 && value.trim() === value && !/[\u0000-\u001f]/.test(value)
@@ -61,6 +74,7 @@ function requestPayload(value: unknown, active = false): boolean {
 export class ResearchVoiceController {
   private native?: ResearchVoiceNative
   private unavailable = false
+  private nativeFailure?: string
   private disposed = false
   private active?: ActiveResearch
   private capture?: Capture
@@ -111,9 +125,10 @@ export class ResearchVoiceController {
     this.attachWindow(window)
     if (this.active?.sessionId !== value.sessionId || !this.currentActive(this.active)) {
       this.revokeActive()
-      this.active = { sessionId: value.sessionId, window, frame: { ...window.webContents.mainFrame } }
+      const frame = window.webContents.mainFrame
+      this.active = { sessionId: value.sessionId, window, frame: { processId: frame.processId, routingId: frame.routingId } }
     }
-    if (!this.ensureNative()) { this.active = undefined; return unavailable() }
+    if (!this.ensureNative()) { this.active = undefined; return unavailable(this.nativeFailure) }
     this.updateShortcut()
     return { ok: true }
   }
@@ -121,10 +136,11 @@ export class ResearchVoiceController {
   start(value: unknown): ResearchVoiceResult {
     if (!requestPayload(value) || this.disposed) return invalid()
     if ((this.options.platform ?? process.platform) !== 'darwin') return unavailable()
+    if (this.nativeFailure) return unavailable(this.nativeFailure)
     const active = this.active
     if (!this.currentActive(active, true) || active.sessionId !== value.sessionId || this.capture) return invalid()
     const native = this.ensureNative()
-    if (!native) return unavailable()
+    if (!native) return unavailable(this.nativeFailure)
     // A private native ID prevents late callbacks from matching a reused renderer ID.
     const capture: Capture = { ...value, nativeRequestId: randomUUID(), active, state: 'authorizing' }
     this.capture = capture
@@ -174,6 +190,7 @@ export class ResearchVoiceController {
     if (this.disposed || this.unavailable || (this.options.platform ?? process.platform) !== 'darwin') return undefined
     if (this.native) return this.native
     let native: ResearchVoiceNative | undefined
+    let stage: 'load' | 'init' = 'load'
     try {
       const root = this.options.isPackaged
         ? this.options.resourcesPath || process.resourcesPath
@@ -181,11 +198,13 @@ export class ResearchVoiceController {
       const load = this.options.loadNative || createRequire(import.meta.url)
       native = load(join(root, 'native', 'research-voice.node')) as ResearchVoiceNative
       if (!['init', 'setEnabled', 'start', 'stop', 'cancel', 'dispose'].every((key) => typeof native?.[key as keyof ResearchVoiceNative] === 'function')) throw new Error('Invalid native module')
+      stage = 'init'
       native.init((event) => this.receive(event))
       this.native = native
       return native
-    } catch {
+    } catch (error) {
       try { native?.dispose() } catch { /* No native diagnostic contains user input. */ }
+      this.nativeFailure = nativeFailureDiagnostic(stage, error)
       this.unavailable = true
       return undefined
     }

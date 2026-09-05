@@ -12615,6 +12615,16 @@ describe('Research voice toolbar', () => {
     expect(bridge.setActive).toHaveBeenLastCalledWith({ sessionId: 'voice-session', active: false })
   })
 
+  it('reports native activation failure without starting an invalid recording request', async () => {
+    const mounted = await mountVoice()
+    try {
+      mounted.bridge.setActive.mockImplementation(async () => ({ ok: false, error: '原生语音模块不可用' }))
+      await act(async () => { (mounted.host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement).click() })
+      expect(mounted.bridge.start).not.toHaveBeenCalled()
+      expect(mounted.host.querySelector('[role="alert"]')?.textContent).toContain('原生语音模块不可用')
+    } finally { await mounted.cleanup() }
+  })
+
   it('keeps transcript reading and scrolling separate from canvas selection and pan', async () => {
     const mounted = await mountVoice()
     try {
