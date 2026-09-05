@@ -2911,10 +2911,11 @@ describe('Research canvas file drops', () => {
   it('keeps host and canvas HTML parser, static evidence, and sandbox documents equivalent', async () => {
     const client = await loadConversationClient()
     const host = await import('../packages/dsh-research-task-runtime/html-artifact.js')
-    for (const html of ['<h1>活动 &amp; 地点</h1><script>secret</script>', '<head><style>private</style></head><p>&#x4E2D;文</p>', '<p>safe</p><script>unclosed', '<main>' + '"'.repeat(150_000) + '</main>', '文'.repeat(66_667)]) {
+    for (const html of ['<h1>活动 &amp; 地点</h1><script>secret</script>', '<head><style>private</style></head><p>&#x4E2D;文</p>', '<meta name="sherlock-theme" content="light"><p>固定浅色</p>', '<p>safe</p><script>unclosed', '<main>' + '"'.repeat(150_000) + '</main>', '文'.repeat(66_667)]) {
       const spec = { version: 1, type: 'html', title: '一致性', html }
       expect(client.parseResearchContainerSpec(spec)).toEqual(host.parseResearchHtmlArtifact(spec))
       expect(client.buildResearchHtmlPreview(html, spec.title) === host.buildResearchHtmlPreview(html, spec.title)).toBe(true)
+      expect(client.buildResearchHtmlPreview(html, spec.title, 'dark') === host.buildResearchHtmlPreview(html, spec.title, 'dark')).toBe(true)
       if (host.parseResearchHtmlArtifact(spec)) {
         const node = { id: 'html', title: spec.title, kind: 'generated-container', generationStatus: 'completed', containerSpec: spec }
         expect(client.researchGenerationSources({ files: [], artifacts: [node] }, ['html'], true)?.[0]?.text).toBe(host.researchHtmlText(html) || spec.title)

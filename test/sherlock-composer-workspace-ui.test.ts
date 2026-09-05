@@ -9468,8 +9468,8 @@ describe('Sherlock workspace and composer controls', () => {
     })
     expect(svg).toContain('<svg')
     expect(svg).toContain('收入趋势')
-    expect(svg).toContain('rgb(0,80,150)')
-    expect(svg).toContain('STHeiti_YFD')
+    expect(svg).toContain('#007cff')
+    expect(svg).toContain('system-ui')
     expect(svg).not.toMatch(/script|foreignObject|var\(--/)
   })
 
@@ -12721,6 +12721,63 @@ describe('Research voice toolbar', () => {
       expect(close).not.toBeNull()
       await act(async () => { close.click() })
       expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+})
+
+describe('generated component theme', () => {
+  it('sends resolved app theme without replacing the live HTML frame or its document', async () => {
+    const mounted = await mountResearchCanvas({ sessionId: 'component-theme', artifacts: [{
+      id: 'html-theme', kind: 'generated-container', messageId: 'html-theme', title: '主题页', excerpt: '主题页', x: 100, y: 100,
+      generationStatus: 'completed', containerPrompt: '生成主题页', refreshMinutes: 0,
+      containerSpec: { version: 1, type: 'html', title: '主题页', html: '<button>保留计数</button>' }
+    }] })
+    try {
+      const frame = mounted.host.querySelector('[data-research-html-artifact]') as any
+      expect(frame).not.toBeNull()
+      const originalSrc = frame.getAttribute('srcdoc')
+      const postMessage = vi.fn()
+      Object.defineProperty(frame, 'contentWindow', { configurable: true, value: { postMessage } })
+      await act(async () => { frame.dispatchEvent(new mounted.browserWindow.Event('load')) })
+      expect(postMessage).toHaveBeenLastCalledWith({ type: 'sherlock-theme', colorScheme: 'light' }, '*')
+      await act(async () => {
+        mounted.browserWindow.document.body.setAttribute('data-ds-dark-theme', '')
+        await new Promise(resolve => setTimeout(resolve, 10))
+      })
+      expect(postMessage).toHaveBeenLastCalledWith({ type: 'sherlock-theme', colorScheme: 'dark' }, '*')
+      expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame)
+      expect(frame.getAttribute('srcdoc')).toBe(originalSrc)
+      await act(async () => {
+        mounted.browserWindow.document.body.removeAttribute('data-ds-dark-theme')
+        await new Promise(resolve => setTimeout(resolve, 10))
+      })
+      expect(postMessage).toHaveBeenLastCalledWith({ type: 'sherlock-theme', colorScheme: 'light' }, '*')
+      expect(frame.getAttribute('srcdoc')).toBe(originalSrc)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('uses theme tokens in native chart marks and literal theme colors in exported SVG', async () => {
+    const spec = { version: 1, type: 'chart', title: '趋势', variant: 'line', labels: ['一', '二'], series: [{ name: '收入', values: [1, 2] }] }
+    const mounted = await mountResearchCanvas({ sessionId: 'native-component-theme', artifacts: [{
+      id: 'chart-theme', kind: 'generated-container', messageId: 'chart-theme', title: '趋势', excerpt: '趋势', x: 100, y: 100,
+      generationStatus: 'completed', containerPrompt: '生成图表', refreshMinutes: 0, containerSpec: spec
+    }] })
+    try {
+      expect(mounted.host.querySelector('[data-research-container-chart] polyline')?.getAttribute('stroke')).toBe('var(--sherlock-chart-1)')
+      const content = mounted.host.querySelector('.rScV5Q_containerContent') as any
+      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-bg')).toBe('#f7f8fa')
+      await act(async () => { mounted.browserWindow.document.body.setAttribute('data-ds-dark-theme', '') })
+      // Happy DOM caches ancestor selectors on existing nodes after body changes.
+      // A fresh CSS probe verifies the resolved dark rule independently of that cache.
+      const darkProbe = content.cloneNode(false)
+      content.parentElement.appendChild(darkProbe)
+      expect(mounted.browserWindow.getComputedStyle(darkProbe).getPropertyValue('--sherlock-bg')).toBe('#070a0e')
+      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-font-sans')).toContain('system-ui')
+      const build = mounted.client.buildResearchContainerChartSvg as any
+      expect(build(spec, 'light')).toContain('#007cff')
+      expect(build(spec, 'dark')).toContain('#00a1ff')
+      expect(build(spec, 'dark')).toContain('#070a0e')
+      expect(build(spec, 'dark')).not.toMatch(/var\(--|script/)
     } finally { await mounted.cleanup() }
   })
 })

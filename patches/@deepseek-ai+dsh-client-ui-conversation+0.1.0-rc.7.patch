@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..85dfa19 100644
+index 1dd0e89..52d2e8d 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -2795,7 +2795,7 @@ index 1dd0e89..85dfa19 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8549,6377 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8549,6522 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -3127,15 +3127,132 @@ index 1dd0e89..85dfa19 100644
 +				.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
 +				.replace(/[^\S\n]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, 120000);
 +		}
-+		function buildResearchHtmlPreview(html, title = "交互网页") {
-+			if (parseResearchContainerSpec({ version: 1, type: "html", title, html }) === null) return '<!doctype html><meta charset="utf-8"><p>HTML 页面格式无效，请重试。</p>';
-+			const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><meta http-equiv="x-dns-prefetch-control" content="off">`;
-+			const escape = (value) => String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-+			const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});</script>`;
-+			const inner = `<!doctype html><html><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1">${lockedRuntime}</head><body>${html}</body></html>`;
-+			const serialized = JSON.stringify(inner).replace(/</g, "\\u003c");
-+			return `<!doctype html><html><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title><style>html,body{margin:0;width:100%;height:100%;overflow:hidden}iframe{display:block;border:0;width:100%;height:100%;background:white}iframe[hidden]{display:none}p{padding:24px;font:14px system-ui}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 Sherlock 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escape(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>if(typeof trustedTypes==='object'&&typeof trustedTypes.isHTML==='function'){const frame=document.getElementById('preview');frame.srcdoc=${serialized};frame.hidden=false;document.getElementById('notice').hidden=true;}</script></body></html>`;
-+		}
++// RESEARCH_COMPONENT_THEME_START — keep this host-free block in client parity.
++const RESEARCH_COMPONENT_PALETTES = Object.freeze({
++  light: Object.freeze({
++    bg: '#f7f8fa', surface: '#ffffff', 'surface-muted': '#edeff2', text: '#000000', muted: '#62666d',
++    border: 'rgba(0,0,0,.10)', accent: '#007cff', 'accent-soft': '#e6f3ff',
++    'chart-1': '#007cff', 'chart-2': '#00a5c8', 'chart-3': '#657a94', 'chart-4': '#16a085', 'chart-5': '#8673d9', 'chart-6': '#d99a20'
++  }),
++  dark: Object.freeze({
++    bg: '#070a0e', surface: '#111820', 'surface-muted': '#17242f', text: '#ffffff', muted: '#a5aab1',
++    border: 'rgba(255,255,255,.12)', accent: '#00a1ff', 'accent-soft': '#002e58',
++    'chart-1': '#00a1ff', 'chart-2': '#47c8e5', 'chart-3': '#92a7bf', 'chart-4': '#45c5a5', 'chart-5': '#a495ef', 'chart-6': '#edbb55'
++  })
++})
++const researchComponentPaletteCss = (palette) => Object.entries(palette).map(([key, value]) => `--sherlock-${key}:${value}`).join(';')
++// Equal selector specificity lets a user's later :root custom palette override
++// either mode. Theme updates change the attribute, never the user's CSS rules.
++const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};--sherlock-font-sans:system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:12px}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
++
++// First-paint hint only: literal meta attributes outside inert/raw-text content.
++// The inner DOM is authoritative after parsing; no artifact DOM or code runs here.
++function researchHtmlFixedTheme(html) {
++  const source = html.replace(/<!--[\s\S]*?(?:-->|$)/g, '')
++    .replace(/<(script|style|template|textarea|title|xmp|noscript)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi, '')
++    .replace(/<plaintext\b[\s\S]*$/i, '')
++  for (const match of source.matchAll(/<meta\b[^>]*>/gi)) {
++    const attributes = {}
++    for (const attribute of match[0].matchAll(/([a-z][a-z0-9:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi)) {
++      const name = attribute[1].toLowerCase()
++      if (!Object.hasOwn(attributes, name)) attributes[name] = (attribute[2] ?? attribute[3] ?? attribute[4]).toLowerCase().trim()
++    }
++    if (attributes.name === 'sherlock-theme') return attributes.content === 'light' || attributes.content === 'dark' ? attributes.content : null
++  }
++  return null
++}
++
++// Static runtime source stays identical across bundlers and is injected before artifact
++// scripts. Its sole host capability is receiving a two-field color-scheme value.
++const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerThemeRuntime(fixedTheme) {
++  let hostTheme = document.documentElement.getAttribute('data-sherlock-theme') === 'dark' ? 'dark' : 'light'
++  let activeTheme
++  const apply = () => {
++    const colorScheme = fixedTheme || hostTheme
++    if (activeTheme === colorScheme) return
++    activeTheme = colorScheme
++    document.documentElement.setAttribute('data-sherlock-theme', colorScheme)
++    document.documentElement.style.colorScheme = colorScheme
++    window.dispatchEvent(new CustomEvent('sherlock-theme-change', { detail: { colorScheme } }))
++  }
++  const receive = (event) => {
++    const data = event.data
++    if (event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
++        !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
++        data.colorScheme !== 'light' && data.colorScheme !== 'dark') return
++    hostTheme = data.colorScheme
++    apply()
++  }
++  addEventListener('message', receive)
++  document.addEventListener('DOMContentLoaded', () => {
++    const declaration = Array.from(document.querySelectorAll('meta[name]')).find((meta) => meta.getAttribute('name')?.trim().toLowerCase() === 'sherlock-theme')
++    const value = declaration?.getAttribute('content')?.trim().toLowerCase()
++    fixedTheme = value === 'light' || value === 'dark' ? value : null
++    apply()
++  }, { once: true })
++  apply()
++}`
++
++// Only trusted code runs in the outer document. It never receives or forwards
++// artifact data. Opaque sandbox origins require '*'; contentWindow and parent
++// identity checks keep the message confined to this exact parent/child pair.
++const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterThemeRuntime(inner, initialTheme, fixedTheme) {
++  const root = document.documentElement
++  const frame = document.getElementById('preview')
++  const standalone = window === parent
++  const media = standalone && typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null
++  let colorScheme = media ? media.matches ? 'dark' : 'light' : initialTheme
++  const publish = () => {
++    root.setAttribute('data-sherlock-theme', fixedTheme || colorScheme)
++    root.style.colorScheme = fixedTheme || colorScheme
++    frame.contentWindow?.postMessage({ type: 'sherlock-theme', colorScheme }, '*')
++  }
++  addEventListener('message', (event) => {
++    const data = event.data
++    if (standalone || event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
++        !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
++        data.colorScheme !== 'light' && data.colorScheme !== 'dark') return
++    colorScheme = data.colorScheme
++    publish()
++  })
++  media?.addEventListener('change', () => { colorScheme = media.matches ? 'dark' : 'light'; publish() })
++  // Retain the latest value until the inner listener exists, without replacing
++  // its srcdoc or disturbing timers, input, selection, focus, or scroll state.
++  frame.addEventListener('load', publish)
++  if (typeof trustedTypes === 'object' && typeof trustedTypes.isHTML === 'function') {
++    // This anchored prefix belongs to our wrapper, before all untrusted HTML.
++    // Resolve the export's OS theme before mounting its first inner document.
++    frame.srcdoc = inner.replace(/^(<!doctype html><html data-sherlock-theme=")(?:light|dark)(")/, '$1' + (fixedTheme || colorScheme) + '$2')
++    frame.hidden = false
++    document.getElementById('notice').hidden = true
++  }
++  publish()
++}`
++
++const HTML_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'"
++const escapeAttribute = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
++
++// The trusted outer document's frame-src policy also constrains navigation of
++// the untrusted inner srcdoc. Each iframe has its own opaque sandbox origin.
++// The same wrapper is exported, never a bare executable artifact document.
++function buildResearchHtmlPreview(html, title = '交互网页', initialTheme = 'light') {
++  if (parseResearchContainerSpec({ version: 1, type: 'html', title, html }) === null) return '<!doctype html><meta charset="utf-8"><p>HTML 页面格式无效，请重试。</p>'
++  const theme = initialTheme === 'dark' ? 'dark' : 'light'
++  const fixedTheme = researchHtmlFixedTheme(html)
++  const policy = `<meta http-equiv="Content-Security-Policy" content="${HTML_CSP}"><meta name="referrer" content="no-referrer"><meta http-equiv="x-dns-prefetch-control" content="off">`
++  // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
++  // points before any artifact code; Trusted Types and the parser's frame ban
++  // prevent string-created documents/scripts from obtaining a fresh realm.
++  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});</script>`
++  const baseStyle = `${RESEARCH_COMPONENT_THEME_CSS}:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans)}:where(body){margin:0}`
++  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style>${lockedRuntime}</head><body>${html}</body></html>`
++  const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
++  const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)});`
++  return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 Sherlock 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`
++}
++// RESEARCH_COMPONENT_THEME_END
++
++
 +		function researchContainerOutputError(raw) {
 +			try {
 +				const value = typeof raw === "string" ? JSON.parse(stripResearchContainerFence(raw)) : raw;
@@ -7287,7 +7404,7 @@ index 1dd0e89..85dfa19 100644
 +				})]
 +			});
 +		}
-+		const RESEARCH_CONTAINER_CHART_COLORS = ["rgb(0,80,150)", "rgb(0,120,180)", "rgb(30,185,225)", "rgb(255,200,25)", "rgb(150,150,150)", "rgb(60,60,60)"];
++		const RESEARCH_CONTAINER_CHART_COLORS = Array.from({ length: 6 }, (_, index) => `var(--sherlock-chart-${index + 1})`);
 +		function researchCanvasExportFileName(value, extension) {
 +			let decoded = String(value ?? "组件");
 +			try {
@@ -7319,9 +7436,11 @@ index 1dd0e89..85dfa19 100644
 +			if (typeof node.excerpt === "string" && node.excerpt.trim() !== "") lines.push("", node.excerpt.trim());
 +			return `${lines.join("\n")}\n`;
 +		}
-+		function buildResearchContainerChartSvg(rawSpec) {
++		function buildResearchContainerChartSvg(rawSpec, colorScheme = "light") {
 +			const spec = parseResearchContainerSpec(rawSpec);
 +			if (spec === null || spec.type !== "chart") return null;
++			const palette = RESEARCH_COMPONENT_PALETTES[colorScheme === "dark" ? "dark" : "light"];
++			const colors = Array.from({ length: 6 }, (_, index) => palette[`chart-${index + 1}`]);
 +			const values = spec.series.flatMap((series) => series.values);
 +			const minimum = Math.min(0, ...values);
 +			const maximum = Math.max(0, ...values);
@@ -7335,21 +7454,21 @@ index 1dd0e89..85dfa19 100644
 +			const step = width / spec.labels.length;
 +			const grid = Array.from({ length: 5 }, (_, index) => {
 +				const lineY = top + index * height / 4;
-+				return `<line x1="${left}" x2="${left + width}" y1="${lineY}" y2="${lineY}" stroke="rgb(220,224,228)" stroke-width="1"/>`;
++				return `<line x1="${left}" x2="${left + width}" y1="${lineY}" y2="${lineY}" stroke="${palette.border}" stroke-width="1"/>`;
 +			}).join("");
 +			const marks = spec.variant === "bar" ? spec.series.flatMap((series, seriesIndex) => series.values.map((value, index) => {
 +				const groupWidth = Math.max(4, step * .7);
 +				const barWidth = Math.max(3, groupWidth / spec.series.length - 3);
 +				const valueY = y(value);
-+				return `<rect x="${left + index * step + (step - groupWidth) / 2 + seriesIndex * (groupWidth / spec.series.length)}" y="${Math.min(baseline, valueY)}" width="${barWidth}" height="${Math.max(1, Math.abs(baseline - valueY))}" fill="${RESEARCH_CONTAINER_CHART_COLORS[seriesIndex % RESEARCH_CONTAINER_CHART_COLORS.length]}"/>`;
++				return `<rect x="${left + index * step + (step - groupWidth) / 2 + seriesIndex * (groupWidth / spec.series.length)}" y="${Math.min(baseline, valueY)}" width="${barWidth}" height="${Math.max(1, Math.abs(baseline - valueY))}" fill="${colors[seriesIndex % colors.length]}"/>`;
 +			})).join("") : spec.series.flatMap((series, seriesIndex) => {
-+				const color = RESEARCH_CONTAINER_CHART_COLORS[seriesIndex % RESEARCH_CONTAINER_CHART_COLORS.length];
++				const color = colors[seriesIndex % colors.length];
 +				const points = series.values.map((value, index) => `${left + (index + .5) * step},${y(value)}`).join(" ");
 +				return [`<polyline points="${points}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`, ...series.values.map((value, index) => `<circle cx="${left + (index + .5) * step}" cy="${y(value)}" r="3.5" fill="${color}"/>`)];
 +			}).join("");
-+			const labels = spec.labels.map((label, index) => `<text x="${left + (index + .5) * step}" y="310" text-anchor="middle" fill="rgb(60,60,60)" font-family="STHeiti_YFD,STHeiti SC,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(label)}</text>`).join("");
-+			const legend = spec.series.map((series, index) => `<g transform="translate(${54 + index * 96},330)"><rect width="10" height="10" fill="${RESEARCH_CONTAINER_CHART_COLORS[index % RESEARCH_CONTAINER_CHART_COLORS.length]}"/><text x="16" y="9" fill="rgb(60,60,60)" font-family="STHeiti_YFD,STHeiti SC,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(series.name)}</text></g>`).join("");
-+			return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="356" viewBox="0 0 640 356"><rect width="100%" height="100%" fill="#ffffff"/><text x="32" y="32" fill="rgb(0,80,150)" font-family="STHeiti_YFD,STHeiti SC,PingFang SC,sans-serif" font-size="18" font-weight="700">${escapeResearchExportXml(spec.title)}</text>${grid}<line x1="${left}" x2="${left + width}" y1="${baseline}" y2="${baseline}" stroke="rgb(120,125,130)" stroke-width="1.2"/>${marks}${labels}${legend}</svg>`;
++			const labels = spec.labels.map((label, index) => `<text x="${left + (index + .5) * step}" y="310" text-anchor="middle" fill="${palette.muted}" font-family="system-ui,-apple-system,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(label)}</text>`).join("");
++			const legend = spec.series.map((series, index) => `<g transform="translate(${54 + index * 96},330)"><rect width="10" height="10" fill="${colors[index % colors.length]}"/><text x="16" y="9" fill="${palette.muted}" font-family="system-ui,-apple-system,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(series.name)}</text></g>`).join("");
++			return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="356" viewBox="0 0 640 356"><rect width="100%" height="100%" fill="${palette.bg}"/><text x="32" y="32" fill="${palette.text}" font-family="system-ui,-apple-system,PingFang SC,sans-serif" font-size="18" font-weight="700">${escapeResearchExportXml(spec.title)}</text>${grid}<line x1="${left}" x2="${left + width}" y1="${baseline}" y2="${baseline}" stroke="${palette.muted}" stroke-width="1.2"/>${marks}${labels}${legend}</svg>`;
 +		}
 +		function researchCanvasExportDescriptor(node, sessionId) {
 +			if (typeof node !== "object" || node === null || typeof node.id !== "string") return null;
@@ -7370,8 +7489,8 @@ index 1dd0e89..85dfa19 100644
 +				const spec = node.generationStatus === "completed" ? parseResearchContainerSpec(node.containerSpec) : null;
 +				if (spec === null) return { kind: "text", format: "txt", suggestedName: researchCanvasExportFileName(title, "txt"), content: researchGenerationText(node) };
 +				if (spec.type === "web") return { kind: "webloc", suggestedName: researchCanvasExportFileName(spec.title, "webloc"), url: spec.url };
-+				if (spec.type === "html") return { kind: "text", format: "html", suggestedName: researchCanvasExportFileName(spec.title, "html"), content: buildResearchHtmlPreview(spec.html, spec.title) };
-+				if (spec.type === "chart") return { kind: "text", format: "svg", suggestedName: researchCanvasExportFileName(spec.title, "svg"), content: buildResearchContainerChartSvg(spec) };
++				if (spec.type === "html") return { kind: "text", format: "html", suggestedName: researchCanvasExportFileName(spec.title, "html"), content: buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme()) };
++				if (spec.type === "chart") return { kind: "text", format: "svg", suggestedName: researchCanvasExportFileName(spec.title, "svg"), content: buildResearchContainerChartSvg(spec, readResearchComponentTheme()) };
 +				if (spec.type === "table") return { kind: "text", format: "csv", suggestedName: researchCanvasExportFileName(spec.title, "csv"), content: researchContainerTableCsv(spec) };
 +				if (spec.type === "kpi") return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.items.map((item) => `- ${item.label}：${item.value}${item.change === void 0 ? "" : `（${item.change}）`}`).join("\n")}\n` };
 +				return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.content.trim()}\n` };
@@ -7569,13 +7688,36 @@ index 1dd0e89..85dfa19 100644
 +				})]
 +			});
 +		}
++		function readResearchComponentTheme(owner = typeof document === "undefined" ? null : document) {
++			return owner?.body?.hasAttribute("data-ds-dark-theme") ? "dark" : "light";
++		}
++		function ResearchHtmlArtifact({ spec }) {
++			const frameRef = (0, react.useRef)(null);
++			// Theme changes travel through the existing frame. Rebuilding srcDoc
++			// would erase the user's input, filters, timers and other page state.
++			const srcDoc = (0, react.useMemo)(() => buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme()), [spec.html, spec.title]);
++			const sendTheme = () => {
++				const frame = frameRef.current;
++				frame?.contentWindow?.postMessage({ type: "sherlock-theme", colorScheme: readResearchComponentTheme(frame.ownerDocument) }, "*");
++			};
++			(0, react.useLayoutEffect)(() => {
++				const owner = frameRef.current?.ownerDocument;
++				const Observer = owner?.defaultView?.MutationObserver;
++				if (!owner?.body || !Observer) return;
++				const observer = new Observer(sendTheme);
++				observer.observe(owner.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
++				sendTheme();
++				return () => observer.disconnect();
++			}, [srcDoc]);
++			return (0, react_jsx_runtime.jsx)("iframe", { ref: frameRef, "data-research-html-artifact": "", className: "rScV5Q_webFrame", title: spec.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }, "aria-label": `${spec.title}（离线交互网页）` });
++		}
 +		function ResearchContainerContent({ node, sessionId, visible }) {
 +			const spec = node.containerSpec;
-+			if (spec.type === "html") return (0, react_jsx_runtime.jsx)("iframe", { "data-research-html-artifact": "", className: "rScV5Q_webFrame", title: spec.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc: buildResearchHtmlPreview(spec.html, spec.title), style: { flex: 1, minWidth: 0, minHeight: 0 }, "aria-label": `${spec.title}（离线交互网页）` });
++			if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec });
 +			if (spec.type === "mind-map") return (0, react_jsx_runtime.jsx)(ResearchMindMap, { nodeId: node.id, text: spec.content });
 +			if (spec.type === "web") return (0, react_jsx_runtime.jsx)(ResearchCanvasWebFrame, { node: { ...node, url: spec.url }, sessionId, visible });
 +			if (spec.type === "chart") return (0, react_jsx_runtime.jsx)(ResearchContainerChart, { spec });
-+			if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerTableScroll", children: (0, react_jsx_runtime.jsxs)("table", { "data-research-container-table": "", children: [(0, react_jsx_runtime.jsx)("thead", { children: (0, react_jsx_runtime.jsx)("tr", { children: spec.columns.map((column, index) => (0, react_jsx_runtime.jsx)("th", { children: column }, index)) }) }), (0, react_jsx_runtime.jsx)("tbody", { children: spec.rows.map((row, rowIndex) => (0, react_jsx_runtime.jsx)("tr", { children: row.map((cell, cellIndex) => (0, react_jsx_runtime.jsx)("td", { children: String(cell) }, cellIndex)) }, rowIndex)) })] }) });
++			if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerTableScroll", children: (0, react_jsx_runtime.jsxs)("table", { "data-research-container-table": "", children: [(0, react_jsx_runtime.jsx)("thead", { children: (0, react_jsx_runtime.jsx)("tr", { children: spec.columns.map((column, index) => (0, react_jsx_runtime.jsx)("th", { children: column }, index)) }) }), (0, react_jsx_runtime.jsx)("tbody", { children: spec.rows.map((row, rowIndex) => (0, react_jsx_runtime.jsx)("tr", { children: row.map((cell, cellIndex) => (0, react_jsx_runtime.jsx)("td", { "data-numeric": typeof cell === "number" ? "true" : void 0, children: String(cell) }, cellIndex)) }, rowIndex)) })] }) });
 +			if (spec.type === "kpi") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerKpis", "data-research-container-kpi": "", children: spec.items.map((item, index) => (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", { children: item.label }), (0, react_jsx_runtime.jsx)("strong", { children: String(item.value) }), item.change === void 0 ? null : (0, react_jsx_runtime.jsx)("em", { children: String(item.change) })] }, index)) });
 +			return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerMarkdown", "data-research-container-markdown": "", children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text: spec.content, streaming: false }) });
 +		}
@@ -7793,6 +7935,9 @@ index 1dd0e89..85dfa19 100644
 +			tag.textContent += ".rScV5Q_globalToolbar{z-index:40;pointer-events:auto;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);height:38px;padding:3px;display:flex;align-items:center;gap:2px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 94%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_globalToolbar>button,.rScV5Q_globalToolSlot>button{height:32px;padding:0 11px;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_globalToolbar button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_globalToolbar button:disabled{opacity:.45;cursor:default}.rScV5Q_globalToolbar svg{width:16px;height:16px;flex:none}.rScV5Q_globalToolSlot{position:relative}.rScV5Q_linkPopover{box-sizing:border-box;position:absolute;left:0;bottom:calc(100% + 10px);width:360px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_linkPopover>label{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12)}.rScV5Q_linkPopover>div{display:flex;gap:8px}.rScV5Q_linkPopover input{box-sizing:border-box;min-width:0;flex:1;height:34px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:var(--dsw-font-xs-13)}.rScV5Q_linkPopover input:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent)}.rScV5Q_linkPopover button{height:34px;padding:0 12px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_linkError{color:var(--dsw-alias-state-danger-primary);font:var(--dsw-font-xxs-12)}.rScV5Q_root[data-dragging=true] .rScV5Q_globalToolbar{display:none}";
 +			tag.textContent += "[data-research-web-link] .rScV5Q_artifactBody,[data-research-generated-container] .rScV5Q_artifactBody{padding:0;gap:0;height:100%}[data-research-web-link] .rScV5Q_artifactMeta,[data-research-generated-container] .rScV5Q_artifactMeta{box-sizing:border-box;flex:none;min-height:24px;padding:5px 10px;color:var(--dsw-alias-label-caption);border-top:1px solid var(--dsw-alias-border-l2)}.rScV5Q_webFrameShell{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}.rScV5Q_webFrameControls{box-sizing:border-box;flex:none;height:32px;padding:0 9px;display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-tertiary);border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_webFrameControls>span{min-width:0;margin-right:auto;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_webFrameControls button,.rScV5Q_webFrameControls a{padding:3px 6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_webFrameControls button:hover,.rScV5Q_webFrameControls a:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_webFrameViewport{box-sizing:border-box;min-width:0;min-height:0;flex:1;overflow:hidden;background:#fff}.rScV5Q_webFrame{box-sizing:border-box;display:block;width:100%;height:100%;min-height:0;border:0;background:#fff}.rScV5Q_previewPlaceholder button,.rScV5Q_previewPlaceholder a{height:30px;padding:0 11px;display:inline-flex;align-items:center;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_containerDraft{box-sizing:border-box;min-height:0;flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerDraft{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerDraft textarea{box-sizing:border-box;min-height:120px;flex:1;resize:none;padding:12px 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-13);line-height:1.55}.rScV5Q_containerDraft textarea:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 16%,transparent)}.rScV5Q_containerDraftFooter{display:flex;align-items:center;gap:12px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerDraftFooter span{min-width:0;margin-right:auto}.rScV5Q_containerDraftFooter button{height:30px;padding:0 13px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_containerDraftFooter button:disabled{opacity:.45;cursor:default}";
 +			tag.textContent += ".rScV5Q_generatedContainer{box-sizing:border-box;min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generatedContainer{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerControls{box-sizing:border-box;flex:none;min-height:36px;padding:4px 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_containerControls>span{margin-right:auto;padding-left:3px;color:var(--dsw-alias-label-tertiary)}.rScV5Q_containerControls button,.rScV5Q_containerControls select{height:26px;padding:0 7px;border:1px solid transparent;border-radius:6px;color:var(--dsw-alias-label-secondary);background:transparent;font:inherit;cursor:pointer}.rScV5Q_containerControls button:hover:not(:disabled),.rScV5Q_containerControls select:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerControls button:disabled,.rScV5Q_containerControls select:disabled{opacity:.45;cursor:default}.rScV5Q_containerControls select{border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerControls select{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerNotice{box-sizing:border-box;flex:none;min-height:28px;padding:6px 11px;color:var(--dsw-alias-state-business-primary);background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent);font:var(--dsw-font-xxs-12)}.rScV5Q_containerNotice[data-state=error]{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);border-bottom-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 18%,transparent)}.rScV5Q_containerContent{min-width:0;min-height:0;flex:1;display:flex;overflow:auto}.rScV5Q_containerContent>.rScV5Q_webFrameShell{flex:1}.rScV5Q_containerChart{box-sizing:border-box;min-width:0;min-height:0;width:100%;padding:14px 16px 10px;display:flex;flex-direction:column;justify-content:center}.rScV5Q_containerChart svg{display:block;width:100%;min-height:0;max-height:320px;overflow:visible}.rScV5Q_chartGrid{stroke:var(--dsw-alias-border-l2);stroke-width:1}.rScV5Q_chartAxis{stroke:var(--dsw-alias-label-tertiary);stroke-width:1.2}.rScV5Q_chartLabel{fill:var(--dsw-alias-label-secondary);font:12px STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_chartLegend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_chartLegend span{display:inline-flex;align-items:center;gap:5px}.rScV5Q_chartLegend i{width:9px;height:9px}.rScV5Q_containerTableScroll{box-sizing:border-box;width:100%;padding:14px;overflow:auto}.rScV5Q_containerTableScroll table{width:100%;border-collapse:collapse;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-13)}.rScV5Q_containerTableScroll th,.rScV5Q_containerTableScroll td{padding:9px 10px;border:1px solid var(--dsw-alias-border-l2);text-align:left;vertical-align:top}.rScV5Q_containerTableScroll th{white-space:nowrap;background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-strong-13)}.rScV5Q_containerTableScroll tr:nth-child(even) td{background:color-mix(in srgb,var(--dsw-alias-bg-base) 65%,transparent)}.rScV5Q_containerKpis{box-sizing:border-box;width:100%;padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-content:center}.rScV5Q_containerKpis>div{box-sizing:border-box;min-height:96px;padding:14px;display:flex;flex-direction:column;justify-content:center;gap:5px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}.rScV5Q_containerKpis span{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerKpis strong{color:var(--dsw-alias-label-primary);font:var(--dsw-font-xl-strong-24);font-variant-numeric:tabular-nums}.rScV5Q_containerKpis em{color:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);font-style:normal}.rScV5Q_containerMarkdown{box-sizing:border-box;width:100%;padding:18px 20px;overflow:auto;color:var(--dsw-alias-label-primary);user-select:text}";
++				// RESEARCH_NATIVE_THEME_STYLE
++				tag.textContent += RESEARCH_COMPONENT_THEME_CSS.replaceAll(':root:where([data-sherlock-theme="dark"])', 'body[data-ds-dark-theme] .rScV5Q_containerContent').replaceAll(':root', '.rScV5Q_containerContent');
++				tag.textContent += ".rScV5Q_containerContent{background:var(--sherlock-bg);color:var(--sherlock-text);font:13px/1.5 var(--sherlock-font-sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}.rScV5Q_containerChart{padding:20px 22px 14px}.rScV5Q_chartGrid{stroke:var(--sherlock-border)}.rScV5Q_chartAxis{stroke:var(--sherlock-muted);stroke-width:1}.rScV5Q_chartLabel{fill:var(--sherlock-muted);font:12px var(--sherlock-font-sans)}.rScV5Q_chartLegend{color:var(--sherlock-muted);font:12px var(--sherlock-font-sans)}.rScV5Q_chartLegend i{border-radius:3px}.rScV5Q_containerTableScroll{padding:18px 22px}.rScV5Q_containerTableScroll table{color:var(--sherlock-text);font:13px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerTableScroll th,.rScV5Q_containerTableScroll td{padding:11px 10px;border:0;border-bottom:1px solid var(--sherlock-border)}.rScV5Q_containerTableScroll th{background:transparent;color:var(--sherlock-muted);font:600 12px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerTableScroll tr:nth-child(even) td{background:transparent}.rScV5Q_containerTableScroll td[data-numeric=true]{text-align:right;font-variant-numeric:tabular-nums}.rScV5Q_containerKpis{padding:20px;gap:14px}.rScV5Q_containerKpis>div{border:1px solid var(--sherlock-border);border-radius:var(--sherlock-radius);background:var(--sherlock-surface);padding:18px}.rScV5Q_containerKpis span{color:var(--sherlock-muted);font:12px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerKpis strong{color:var(--sherlock-text);font:750 28px/1.2 var(--sherlock-font-sans);font-variant-numeric:tabular-nums;letter-spacing:-.02em}.rScV5Q_containerKpis em{color:var(--sherlock-accent);font:12px/1.5 var(--sherlock-font-mono)}.rScV5Q_containerMarkdown{color:var(--sherlock-text);padding:20px 24px}.rScV5Q_containerMarkdown a{color:var(--sherlock-accent)}.rScV5Q_containerContent .rScV5Q_mindMap{background:var(--sherlock-bg);font-family:var(--sherlock-font-sans)}.rScV5Q_containerContent .rScV5Q_mindMapNode{border:1px solid var(--sherlock-border);border-radius:var(--sherlock-radius);background:var(--sherlock-surface);color:var(--sherlock-text);font-family:var(--sherlock-font-sans)}.rScV5Q_containerContent .rScV5Q_mindMapNode[data-research-mind-map-depth=\"0\"]{background:var(--sherlock-accent-soft);color:var(--sherlock-accent)}.rScV5Q_containerContent .rScV5Q_mindMapRoot:after,.rScV5Q_containerContent .rScV5Q_mindMapChildren:after,.rScV5Q_containerContent .rScV5Q_mindMapBranch:before,.rScV5Q_containerContent .rScV5Q_mindMapBranch:after{background:var(--sherlock-border)}";
 +				tag.textContent += ".rScV5Q_mindMapRoot{position:relative}.rScV5Q_mindMapRoot:after{content:\"\";position:absolute;left:100%;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapRoot+.rScV5Q_mindMapChildren:after{display:none}";
 +				tag.textContent += ".rScV5Q_contextDownloadGroup{position:relative}.rScV5Q_contextDownloadFormats{box-sizing:border-box;z-index:32;min-width:92px;padding:4px;position:absolute;left:calc(100% + 6px);top:-4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:9px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_contextDownloadFormats button{justify-content:flex-start;gap:6px}.rScV5Q_downloadFeedback{box-sizing:border-box;z-index:28;pointer-events:auto;min-height:32px;max-width:240px;padding:7px 9px;display:flex;align-items:center;gap:8px;position:absolute;transform:translate(-50%,0);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:var(--dsw-shadow-lv2);font:var(--dsw-font-xxs-12)}.rScV5Q_downloadFeedback[data-state=error]{color:var(--dsw-alias-state-error-primary);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 45%,var(--dsw-alias-border-l2))}.rScV5Q_downloadFeedback span{min-width:0;overflow-wrap:anywhere}.rScV5Q_downloadFeedback button{flex:none;height:24px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;cursor:pointer}.rScV5Q_downloadFeedback button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_downloadFeedback button:disabled{opacity:.45;cursor:default}";
 +				tag.textContent += ".rScV5Q_linkPopover button,.rScV5Q_containerDraftFooter button{height:34px;padding:0 14px;border:0;border-radius:8px;color:#fff;background:#0f1115;box-shadow:0 1px 2px rgba(0,0,0,.12);font:var(--dsw-font-xs-strong-13);cursor:pointer;transition:background-color .12s ease,color .12s ease,transform .08s ease}.rScV5Q_linkPopover button:hover:not(:disabled),.rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#23262b}.rScV5Q_linkPopover button:active:not(:disabled),.rScV5Q_containerDraftFooter button:active:not(:disabled){background:#050607;transform:translateY(1px)}.rScV5Q_linkPopover button:focus-visible,.rScV5Q_containerDraftFooter button:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-label-primary) 55%,transparent);outline-offset:2px}.rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{color:#8a9099;background:#d7dae0;cursor:default}.rScV5Q_linkPopover button:disabled{opacity:1}body[data-ds-dark-theme] .rScV5Q_linkPopover button,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button{color:#202124;background:#f5f5f5}body[data-ds-dark-theme] .rScV5Q_linkPopover button:hover:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#fff}body[data-ds-dark-theme] .rScV5Q_linkPopover button:active:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:active:not(:disabled){background:#dedede}body[data-ds-dark-theme] .rScV5Q_linkPopover button:disabled,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:disabled{color:#969ca5;background:#454950}";
@@ -9205,7 +9350,7 @@ index 1dd0e89..85dfa19 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +14928,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15073,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9224,7 +9369,7 @@ index 1dd0e89..85dfa19 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +14967,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15112,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -9584,7 +9729,7 @@ index 1dd0e89..85dfa19 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15328,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15473,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -9756,7 +9901,7 @@ index 1dd0e89..85dfa19 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +15498,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +15643,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -9768,7 +9913,7 @@ index 1dd0e89..85dfa19 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +15508,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +15653,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -9776,7 +9921,7 @@ index 1dd0e89..85dfa19 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +15540,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +15685,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -9786,7 +9931,7 @@ index 1dd0e89..85dfa19 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +15559,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +15704,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -9891,7 +10036,7 @@ index 1dd0e89..85dfa19 100644
  				})]
  			});
  		}
-@@ -6951,6 +15641,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +15786,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -9923,7 +10068,7 @@ index 1dd0e89..85dfa19 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +15695,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +15840,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -9944,7 +10089,7 @@ index 1dd0e89..85dfa19 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +15717,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +15862,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -9968,7 +10113,7 @@ index 1dd0e89..85dfa19 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +15774,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +15919,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -9986,7 +10131,7 @@ index 1dd0e89..85dfa19 100644
  				})] })
  			});
  		}
-@@ -7053,14 +15784,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +15929,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -10065,7 +10210,7 @@ index 1dd0e89..85dfa19 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +15864,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16009,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -10082,7 +10227,7 @@ index 1dd0e89..85dfa19 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +15887,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16032,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -10091,7 +10236,7 @@ index 1dd0e89..85dfa19 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +15940,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16085,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -10109,7 +10254,7 @@ index 1dd0e89..85dfa19 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +15976,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16121,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -10117,7 +10262,7 @@ index 1dd0e89..85dfa19 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +16868,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17013,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -10148,7 +10293,7 @@ index 1dd0e89..85dfa19 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +16913,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17058,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -10173,7 +10318,7 @@ index 1dd0e89..85dfa19 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +17867,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18012,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -10182,7 +10327,7 @@ index 1dd0e89..85dfa19 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +17957,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18102,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10224,7 +10369,7 @@ index 1dd0e89..85dfa19 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +18166,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +18311,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10241,7 +10386,7 @@ index 1dd0e89..85dfa19 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18336,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18481,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10251,7 +10396,7 @@ index 1dd0e89..85dfa19 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +18378,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18523,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10266,7 +10411,7 @@ index 1dd0e89..85dfa19 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +18396,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18541,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10279,7 +10424,7 @@ index 1dd0e89..85dfa19 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +18445,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +18590,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10293,7 +10438,7 @@ index 1dd0e89..85dfa19 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +18483,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +18628,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10303,7 +10448,7 @@ index 1dd0e89..85dfa19 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +18615,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +18760,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10318,7 +10463,7 @@ index 1dd0e89..85dfa19 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +18631,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +18776,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10327,7 +10472,7 @@ index 1dd0e89..85dfa19 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +18655,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +18800,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -10336,7 +10481,7 @@ index 1dd0e89..85dfa19 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +18681,145 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +18826,145 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
