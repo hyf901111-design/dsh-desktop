@@ -7118,6 +7118,67 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('organizes completed HTML and data components without shrinking fitted or manual sizes', async () => {
+    const storage = new MemoryStorage()
+    const componentCases = [
+      { type: 'html', width: 1200, height: 1600, spec: { html: '<main>完整长页面</main>' } },
+      { type: 'kpi', width: 640, height: 980, spec: { items: [{ label: '收入', value: '12 亿' }] } },
+      { type: 'table', width: 720, height: 1440, spec: { columns: ['收入'], rows: [[12]] } },
+      { type: 'chart', width: 1100, height: 920, spec: { variant: 'line', labels: ['一月'], series: [{ name: '收入', values: [12] }] } }
+    ]
+    const artifacts = componentCases.flatMap(({ type, width, height, spec }) =>
+      ['auto', 'manual'].map((sizeMode) => ({
+        id: `${type}-${sizeMode}`, kind: 'generated-container', messageId: `${type}-${sizeMode}`,
+        title: type, excerpt: type, generationStatus: 'completed', containerPrompt: type,
+        generationLastSeq: 1, sourceNodeIds: [], refreshMinutes: 0,
+        containerSpec: { version: 1, type, title: type, ...spec },
+        x: -1200, y: -900, width, height, sizeMode
+      }))
+    )
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-organize-fitted-components', storage, artifacts
+    })
+    try {
+      const { browserWindow, canvas, host, workspace } = mounted
+      await act(async () => {
+        workspace.setCanvasSize({ width: 1600, height: 1000 })
+        canvas.dispatchEvent(new browserWindow.MouseEvent('contextmenu', {
+          bubbles: true, cancelable: true, clientX: 460, clientY: 320
+        }))
+      })
+      await act(async () => { click(browserWindow, host.querySelector('[data-research-context-arrange]')) })
+
+      const after = workspace.getSnapshot()
+      expect(after.artifacts.find((node) => node.id === 'html-auto'))
+        .toMatchObject({ width: 1200, height: 1600, sizeMode: 'auto' })
+      for (const { type, width, height } of componentCases) {
+        for (const sizeMode of ['auto', 'manual']) {
+          expect(after.artifacts.find((node) => node.id === `${type}-${sizeMode}`))
+            .toMatchObject({ width, height, sizeMode })
+        }
+      }
+      const rectangles = after.artifacts.map((node) => ({
+        left: Number(node.x) - Number(node.width) / 2,
+        right: Number(node.x) + Number(node.width) / 2,
+        top: Number(node.y) - Number(node.height) / 2,
+        bottom: Number(node.y) + Number(node.height) / 2
+      }))
+      for (const [index, first] of rectangles.entries()) {
+        for (const second of rectangles.slice(index + 1)) {
+          expect(first.right + 24 <= second.left || second.right + 24 <= first.left
+            || first.bottom + 24 <= second.top || second.bottom + 24 <= first.top).toBe(true)
+        }
+      }
+      const persisted = JSON.parse(
+        storage.getItem('sherlock.research.canvas.artifacts.v1:session-organize-fitted-components') ?? '[]'
+      ) as Array<Record<string, unknown>>
+      expect(persisted.map(({ id, width, height, sizeMode }) => ({ id, width, height, sizeMode })))
+        .toEqual(artifacts.map(({ id, width, height, sizeMode }) => ({ id, width, height, sizeMode })))
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('renames generic files and artifacts inline with Enter, Escape, and blur', async () => {
     const storage = new MemoryStorage()
     const mounted = await mountResearchCanvas({

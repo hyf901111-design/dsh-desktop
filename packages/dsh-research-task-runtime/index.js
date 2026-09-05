@@ -224,7 +224,7 @@ function containerSearchPlan(prompt) {
   for (const [index, clause] of clauses.entries()) {
     if (index > 0 && /^(?:包含|包括|支持|提供|采用|颜色|配色|使用|用|单位)/u.test(clause.trim())) continue
     const candidate = clause.trim()
-      .replace(/^(?:(?:请|帮我|为我|给我|帮忙|麻烦|我要|我想要|我想|我需要|生成(?!式)|创建|制作|做|搭建|设计|建立|绘制|展示|显示|一个|一张|一份|一套|关于|有关|的)\s*)+/u, '')
+      .replace(/^(?:(?:请|帮我|为我|给我|帮忙|麻烦|我要|我想要|我想|我需要|查找|查询|搜索|检索|生成(?!式)|创建|制作|做|搭建|设计|建立|绘制|展示|显示|一个|一张|一份|一套|关于|有关|的)\s*)+/u, '')
       .replace(/数据监控(?:面板|页面)?|监控(?:面板|页面)|数据面板|仪表盘|看板|面板|页面|可视化|(?:柱状|折线|面积|交互)?图表|走势图|工具/gu, ' ')
       .replace(/(?:实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|行情|报价|价格|点位|涨跌幅?|成交(?:量|额)?|市值|汇率|利率|天气|新闻|热度|排名|数据|净值|的)/gu, ' ')
       .replace(/\b(?:generate|create|build|make|a|an|the|dashboard|panel|page|chart|monitor|monitoring|live|latest|current|today|data|price|quote|tracking)\b/giu, ' ')
@@ -233,6 +233,10 @@ function containerSearchPlan(prompt) {
     if (candidate) subjects.push(candidate.slice(0, 240))
   }
   subject = subjects.find((candidate) => explicitCodes.some((code) => candidate.includes(code)) && !/^代码/u.test(candidate)) ?? subjects[0] ?? ''
+  // A security code identifies the object; trailing prose describes the
+  // requested data or delivery, and remains in the original child prompt.
+  const subjectCodeEnds = explicitCodes.filter((code) => subject.includes(code)).map((code) => subject.lastIndexOf(code) + code.length)
+  if (subjectCodeEnds.length > 0) subject = subject.slice(0, Math.max(...subjectCodeEnds)).replace(/[（()）]/gu, ' ').replace(/\s+/gu, ' ').trim()
   for (const code of explicitCodes) if (!subject.includes(code)) subject += ` ${code}`
   if (!subject || !/[\p{L}]/u.test(subject) && !/^\d{4,6}$/u.test(subject)) throw new ResearchTaskError('CONTAINER_DATA_SUBJECT_REQUIRED', '请在需求中写明要监控的数据对象，例如 ETF 名称或代码。')
   const terms = [subject.replace(/\s+/gu, '').toLowerCase()]

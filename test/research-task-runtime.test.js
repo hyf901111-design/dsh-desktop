@@ -1056,7 +1056,7 @@ describe('Research task Subagent adapter', () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '沪深300ETF（510300）单位净值1.25，2026-09-04。', sources: [] })
     const handle = await fixture.start('查找沪深300ETF（510300）最近一次可核实的单位净值和日期，生成一个简洁的指标组件，注明来源，不要估算或编造。')
-    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: expect.stringMatching(/510300.*净值/u), maxResults: 5 }, expect.any(AbortSignal))
+    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: '沪深300ETF 510300 最新净值', maxResults: 5 }, expect.any(AbortSignal))
     expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] })
     expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('2026-09-04')
     await handle.dispose()
