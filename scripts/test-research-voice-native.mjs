@@ -168,6 +168,34 @@ test('Fn requires two completed isolated taps while the research window is activ
   assert.equal(events.filter((event) => event.type === 'toggle').length, 0)
 })
 
+test('releasing Fn before Shift clears the chord and allows the next isolated double tap', async () => {
+  native.setEnabled(true)
+  const fn = (down, modifiers, time) => native.__testFn(down, modifiers, false, time, true)
+  fn(true, false, 1) // Fn down.
+  fn(true, true, 1.05) // Shift down while Fn remains held.
+  fn(false, true, 1.1) // Fn up while Shift remains held.
+  // Shift up is not a Fn event and is ignored by the real local monitor.
+  fn(true, false, 1.3); fn(false, false, 1.4)
+  fn(true, false, 1.55); fn(false, false, 1.65)
+  await flush()
+  assert.deepEqual(events, [{ type: 'toggle' }])
+})
+
+test('a modifier event while Fn is held does not masquerade as a Fn release', async () => {
+  native.setEnabled(true)
+  const fn = (down, modifiers, time) => native.__testFn(down, modifiers, false, time, true)
+  fn(true, false, 1)
+  fn(true, true, 1.05) // Shift down: monitor forwards the existing fnDown state.
+  // Releasing Shift produces no call while Fn is still held.
+  fn(false, false, 1.1) // Release Fn: this chord must not count as a tap.
+  fn(true, false, 1.2); fn(false, false, 1.3)
+  await flush()
+  assert.equal(events.length, 0)
+  fn(true, false, 1.4); fn(false, false, 1.5)
+  await flush()
+  assert.deepEqual(events, [{ type: 'toggle' }])
+})
+
 test('native lifecycle does not keep a Node process alive', () => {
   const source = `const n = require(${JSON.stringify(binary)}); n.init(() => {}); n.setEnabled(true); n.dispose(); n.dispose()`
   execFileSync(process.execPath, ['-e', source], { timeout: 5000 })

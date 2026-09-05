@@ -428,6 +428,11 @@ static void DeliverEvent(napi_env env, napi_value callback, void *, void *data) 
 
 - (BOOL)handleFn:(BOOL)down modifiers:(BOOL)modifiers keyDown:(BOOL)keyDown time:(double)time active:(BOOL)active {
   if (_disposed || !_enabled || !active) { [self resetFn]; return NO; }
+  // A Fn release can arrive with Shift/Command/etc. still held. Clear the
+  // chord before the modifier early return so it cannot poison the next tap.
+  // Non-Fn modifier events pass the existing fnDown value from the monitor,
+  // so they cannot enter this release branch while Fn remains held.
+  if (!keyDown && !down && _fnDown && modifiers) { [self resetFn]; return NO; }
   if (keyDown || modifiers) {
     if (_fnDown || down) _fnChord = YES;
     _fnLastTapAt = 0;
