@@ -37,6 +37,14 @@ export function buildSearchUrl(engine: SearchEngineId, query: string): string {
   return url.href
 }
 
+export function buildSearchUrls(engine: SearchEngineId, query: string): string[] {
+  const primary = buildSearchUrl(engine, query)
+  if (engine !== 'bing') return [primary]
+  const regional = new URL(primary)
+  regional.hostname = 'cn.bing.com'
+  return [primary, regional.href]
+}
+
 export function isAllowedSearchLocation(engine: SearchEngineId, url: string): boolean {
   if (!URL.canParse(url)) return false
   const parsed = new URL(url)

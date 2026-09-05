@@ -375,7 +375,7 @@ export async function searchLocalBrowser(
   } catch (error) {
     if (aborted(signal, error)) throw abortWebError(signal, error)
     throw new WebError(
-      'Sherlock local browser search could not be reached.',
+      '暂时无法连接本地搜索服务，请稍后重试。',
       'WEB_LOCAL_SEARCH_UNAVAILABLE',
       { cause: error }
     )
@@ -386,7 +386,7 @@ export async function searchLocalBrowser(
   } catch (error) {
     if (aborted(signal, error)) throw abortWebError(signal, error)
     throw new WebError(
-      'Sherlock local browser search returned an unreadable response.',
+      '本地搜索服务返回的内容无法读取，请稍后重试。',
       'WEB_LOCAL_SEARCH_FAILED',
       { cause: error }
     )
@@ -395,20 +395,26 @@ export async function searchLocalBrowser(
     throw new WebError(
       isRecord(parsed) && nonEmptyString(parsed.error)
         ? parsed.error
-        : 'Sherlock local browser search failed.',
+        : '本地搜索暂未完成，请稍后重试。',
       'WEB_LOCAL_SEARCH_FAILED',
       { status: response.status }
     )
   }
+  if (!isRecord(parsed) || !Array.isArray(parsed.sources)) {
+    throw new WebError('本地搜索服务返回的结果格式无法读取，请稍后重试。', 'WEB_LOCAL_SEARCH_FAILED')
+  }
   const sources = localSources(parsed)
-  if (sources.length === 0) {
+  const content = nonEmptyString(parsed.content)
+  const noResults = parsed.status === 'no_results' && parsed.sources.length === 0
+  if (sources.length === 0 && !content && !noResults) {
     throw new WebError(
-      'Sherlock local browser search returned no usable sources.',
+      '本地搜索暂未返回可引用来源，请调整关键词或稍后重试。',
       'WEB_LOCAL_SEARCH_FAILED'
     )
   }
   return {
-    ...(nonEmptyString(parsed.content) ? { content: parsed.content } : {}),
+    ...(noResults ? { status: 'no_results' } : {}),
+    ...(content ? { content } : noResults ? { content: '未找到与当前关键词匹配的可引用来源，不能据此推断实时数据。' } : {}),
     sources,
     truncated: parsed.truncated === true
   }
@@ -417,6 +423,7 @@ export async function searchLocalBrowser(
 function boundedResult(result, maxResults) {
   const limit = Number.isInteger(maxResults) && maxResults > 0 ? maxResults : 5
   return {
+    ...(result.status === 'no_results' && result.sources.length === 0 ? { status: 'no_results' } : {}),
     ...(nonEmptyString(result.content) ? { content: result.content } : {}),
     sources: result.sources.slice(0, limit),
     truncated: result.truncated === true || result.sources.length > limit

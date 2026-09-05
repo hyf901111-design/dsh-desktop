@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..59d63a1 100644
+index 1dd0e89..dc42a05 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -1519,7 +1519,7 @@ index 1dd0e89..59d63a1 100644
  			"callRow": "Md3f7G_callRow",
  			"hint": "Md3f7G_hint",
  			"root": "Md3f7G_root",
-@@ -5228,11 +6137,19 @@ window.__ModuleLoader__.load({
+@@ -5228,16 +6137,45 @@ window.__ModuleLoader__.load({
  			"older": "Md3f7G_older",
  			"flowItem": "Md3f7G_flowItem",
  			"toBottomSlot": "Md3f7G_toBottomSlot",
@@ -1540,8 +1540,48 @@ index 1dd0e89..59d63a1 100644
  		//#endregion
  		//#region lib/types/client/chat/ChatNodeSeat.js
  		/** Subscribe and dispatch one stable Context key without observing sibling Nodes. */
-@@ -5278,34 +6195,174 @@ window.__ModuleLoader__.load({
- 				})
+-		const ChatNodeSeat = (0, react.memo)(function ChatNodeSeat({ nodeKey, selectedCallId, cwd, openFile, inspectCall, forkAt, loadImage, fileMentions, useSession, renderSlot, t }) {
++		function researchTaskInputSummary(node, identity) {
++			if (node?.kind !== 'user' || identity?.mode !== 'one-shot' || identity.label !== '画布生成任务') return null;
++			const text = Array.isArray(node.data?.content) ? node.data.content.filter((block) => block?.type === 'text' && typeof block.text === 'string').map((block) => block.text).join('\n') : '';
++			const requested = text.match(/(?:^|\n)用户需求：([^\n]+)/)?.[1]?.trim();
++			return requested ? requested.slice(0, 240) : '根据所选资料生成画布内容';
++		}
++		function researchTaskInputIdentity(subagent, catalog, sessionId) {
++			const address = subagent?.address;
++			if (address?.mode !== 'one-shot' || address.childSessionId !== sessionId || typeof address.parentSessionId !== 'string' || catalog?.state !== 'ready' || !Array.isArray(catalog.entries)) return null;
++			return catalog.entries.find((entry) => entry?.kind === 'child' && entry.id === address.childSessionId && entry.mode === address.mode && entry.label === '画布生成任务') ?? null;
++		}
++		function ResearchTaskInputRecord({ summary, children }) {
++			return (0, react_jsx_runtime.jsxs)('div', { 'data-research-task-input': '', style: { border: '1px solid var(--dsw-alias-border-l2)', padding: '16px 18px', color: 'var(--dsw-alias-label-primary)', fontSize: 14, lineHeight: 1.6 }, children: [
++				(0, react_jsx_runtime.jsx)('div', { style: { marginBottom: 8, overflowWrap: 'anywhere' }, children: summary }),
++				(0, react_jsx_runtime.jsxs)('details', { 'data-research-task-input-details': '', children: [
++					(0, react_jsx_runtime.jsx)('summary', { style: { cursor: 'pointer', color: 'var(--dsw-alias-label-secondary)', fontSize: 12 }, children: '生成需求与参考资料' }),
++					(0, react_jsx_runtime.jsx)('div', { style: { marginTop: 12 }, children })
++				] })
++			] });
++		}
++		const ChatNodeSeat = (0, react.memo)(function ChatNodeSeat({ nodeKey, selectedCallId, cwd, openFile, inspectCall, forkAt, loadImage, fileMentions, useSession, researchTaskIdentity, renderSlot, t }) {
+ 			const node = useSession((snapshot) => snapshot.chat.nodes.get(nodeKey));
++			const taskSummary = researchTaskInputSummary(node, researchTaskIdentity);
+ 			const routedNode = node;
+ 			const owner = (0, react.useMemo)(() => node === void 0 ? null : {
+ 				selectedCallId,
+@@ -5267,7 +6205,7 @@ window.__ModuleLoader__.load({
+ 				"data-chat-anchor-key": routedNode.key,
+ 				"data-chat-flow-key": routedNode.key,
+ 				"data-chat-flow-kind": routedNode.kind,
+-				children: renderSlot("conversation.chat.node", routedOwner, {
++				children: taskSummary === null ? renderSlot("conversation.chat.node", routedOwner, {
+ 					entryKey: routedNode.kind,
+ 					hookContext: nodeKey,
+ 					fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+@@ -5275,32 +6213,172 @@ window.__ModuleLoader__.load({
+ 						payload: routedNode.data,
+ 						truncatedLabel: (total) => t("json.truncated", { total })
+ 					})
+-				})
++				}) : (0, react_jsx_runtime.jsx)(ResearchTaskInputRecord, { summary: taskSummary, children: renderSlot("conversation.chat.node", routedOwner, { entryKey: routedNode.kind, hookContext: nodeKey }) })
  			});
  		});
 -		//#endregion
@@ -1573,11 +1613,6 @@ index 1dd0e89..59d63a1 100644
 -			if (typeof document.elementsFromPoint === "function" && visibleBottom > viewport.top) {
 -				const content = list.getBoundingClientRect();
 -				const left = Math.max(viewport.left, content.left);
--				const right = Math.min(viewport.right, content.right);
--				const x = left + Math.max(0, right - left) / 2;
--				const height = visibleBottom - viewport.top;
--				const points = [
--					1,
 +		/** One turn-level status row whose disclosure owns all process detail. */
 +		const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {
 +			const [expanded, setExpanded] = (0, react.useState)(false);
@@ -1734,15 +1769,10 @@ index 1dd0e89..59d63a1 100644
 +			if (typeof document.elementsFromPoint === "function" && visibleBottom > viewport.top) {
 +				const content = list.getBoundingClientRect();
 +				const left = Math.max(viewport.left, content.left);
-+				const right = Math.min(viewport.right, content.right);
-+				const x = left + Math.max(0, right - left) / 2;
-+				const height = visibleBottom - viewport.top;
-+				const points = [
-+					1,
- 					Math.min(32, height / 3),
- 					height / 2,
- 					Math.max(1, height - 1)
-@@ -5332,35 +6389,537 @@ window.__ModuleLoader__.load({
+ 				const right = Math.min(viewport.right, content.right);
+ 				const x = left + Math.max(0, right - left) / 2;
+ 				const height = visibleBottom - viewport.top;
+@@ -5332,35 +6410,537 @@ window.__ModuleLoader__.load({
  				scrollTop: scrollport.scrollTop
  			};
  		}
@@ -2304,7 +2334,19 @@ index 1dd0e89..59d63a1 100644
  				})]
  			});
  		}
-@@ -5381,11 +6940,58 @@ window.__ModuleLoader__.load({
+@@ -5374,6 +6954,11 @@ window.__ModuleLoader__.load({
+ 			const timeline = useSession((s) => s.chat.timeline);
+ 			const inbox = useSession((s) => s.queue);
+ 			const cwd = useSessions((s) => s.byId[sessionId]?.cwd);
++			const subagent = useSession((s) => s.subagent);
++			// The session domain refreshes the parent catalog on selection/reconnect.
++			// Until that host metadata arrives, keep the original input fully visible.
++			const parentCatalog = useSessions((s) => subagent?.address?.parentSessionId === void 0 ? void 0 : s.subagentsByParent?.[subagent.address.parentSessionId]);
++			const researchTaskIdentity = (0, react.useMemo)(() => researchTaskInputIdentity(subagent, parentCatalog, sessionId), [subagent, parentCatalog, sessionId]);
+ 			const running = useSession((s) => s.running);
+ 			const openState = useSession((s) => s.openState);
+ 			const openError = useSession((s) => s.openError);
+@@ -5381,11 +6966,60 @@ window.__ModuleLoader__.load({
  			const loadingOlder = useSession((s) => s.loadingOlder);
  			const selectedCallId = useStore((s) => s.selection?.callId);
  			const pendingSteering = (0, react.useMemo)(() => inbox.filter((item) => item.placement === "steering"), [inbox]);
@@ -2318,9 +2360,9 @@ index 1dd0e89..59d63a1 100644
 +					rest: []
 +				};
 +				const text = parseResearchPrompt(content.text).text.replace(/\s+/g, " ").trim();
-+				const preview = (text || (content.images.length > 0 ? document.documentElement.lang.startsWith("zh") ? "图片 Query" : "Image query" : document.documentElement.lang.startsWith("zh") ? "无文本 Query" : "Query without text")).slice(0, 240);
++				const preview = (researchTaskInputSummary(node, researchTaskIdentity) ?? (text || (content.images.length > 0 ? document.documentElement.lang.startsWith("zh") ? "图片 Query" : "Image query" : document.documentElement.lang.startsWith("zh") ? "无文本 Query" : "Query without text"))).slice(0, 240);
 +				return [{ key, preview }];
-+			}), [order, nodeStore]);
++			}), [order, nodeStore, researchTaskIdentity]);
 +			const runningTurn = (0, react.useMemo)(() => running ? runningTurnInfo(timeline) : null, [running, timeline]);
 +			const runningTurnNumber = (0, react.useMemo)(() => {
 +				if (!running) return null;
@@ -2334,6 +2376,7 @@ index 1dd0e89..59d63a1 100644
 +			const compactFlow = (0, react.useMemo)(() => compactConversationFlow(order, nodeStore, runningTurnNumber), [order, nodeStore, runningTurnNumber]);
 +			const seatProps = (0, react.useMemo)(() => ({
 +				useSession,
++				researchTaskIdentity,
 +				selectedCallId,
 +				cwd,
 +				openFile,
@@ -2345,6 +2388,7 @@ index 1dd0e89..59d63a1 100644
 +				t
 +			}), [
 +				useSession,
++				researchTaskIdentity,
 +				selectedCallId,
 +				cwd,
 +				openFile,
@@ -2364,7 +2408,7 @@ index 1dd0e89..59d63a1 100644
  			/** Last position delivered or written on the main thread. */
  			const observedTopRef = (0, react.useRef)(0);
  			/** Paging anchor: semantic row/position at click, updated by reader scrolls
-@@ -5394,7 +7000,9 @@ window.__ModuleLoader__.load({
+@@ -5394,7 +7028,9 @@ window.__ModuleLoader__.load({
  			const firstSeqRef = (0, react.useRef)(null);
  			const openedRef = (0, react.useRef)(false);
  			const lastKeyRef = (0, react.useRef)(null);
@@ -2374,7 +2418,7 @@ index 1dd0e89..59d63a1 100644
  			/** Flow tip signature — follow-scroll only when this moves, never on a
  			*  scroll-driven at-bottom chrome re-render (which would snap inertial
  			*  scrolls the rest of the way to the floor). */
-@@ -5402,26 +7010,37 @@ window.__ModuleLoader__.load({
+@@ -5402,26 +7038,37 @@ window.__ModuleLoader__.load({
  			const firstKey = order[0];
  			const firstSeq = firstKey === void 0 ? null : nodeStore.get(firstKey)?.anchorSeq ?? null;
  			const lastKey = order.at(-1) ?? null;
@@ -2416,7 +2460,7 @@ index 1dd0e89..59d63a1 100644
  					else {
  						el.scrollTop = saved.scrollTop;
  						const row = anchorElement(local, saved.anchorKey);
-@@ -5436,6 +7055,7 @@ window.__ModuleLoader__.load({
+@@ -5436,6 +7083,7 @@ window.__ModuleLoader__.load({
  					}
  					firstSeqRef.current = firstSeq;
  					lastKeyRef.current = lastKey;
@@ -2424,7 +2468,7 @@ index 1dd0e89..59d63a1 100644
  					lastSteeringIdRef.current = lastSteeringId;
  					followSigRef.current = followSig;
  					return;
-@@ -5449,18 +7069,26 @@ window.__ModuleLoader__.load({
+@@ -5449,18 +7097,26 @@ window.__ModuleLoader__.load({
  					firstSeqRef.current = firstSeq;
  					/* v8 ignore next -- ?? arm: a prepend adds nodes, so the flow list here is never empty. */
  					lastKeyRef.current = lastKey;
@@ -2453,7 +2497,7 @@ index 1dd0e89..59d63a1 100644
  			});
  			const onScrollRef = (0, react.useRef)(() => {});
  			onScrollRef.current = () => {
-@@ -5468,6 +7096,7 @@ window.__ModuleLoader__.load({
+@@ -5468,6 +7124,7 @@ window.__ModuleLoader__.load({
  				/* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
  				if (local === null) return;
  				const el = scrollerOf(local);
@@ -2461,7 +2505,7 @@ index 1dd0e89..59d63a1 100644
  				const floor = Math.max(0, el.scrollHeight - el.clientHeight);
  				const movedByReader = Math.abs(el.scrollTop - Math.min(observedTopRef.current, floor)) > .5;
  				const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;
-@@ -5487,6 +7116,10 @@ window.__ModuleLoader__.load({
+@@ -5487,6 +7144,10 @@ window.__ModuleLoader__.load({
  				else if (position !== null) chatScroll.save(position);
  				observedTopRef.current = el.scrollTop;
  			};
@@ -2472,7 +2516,7 @@ index 1dd0e89..59d63a1 100644
  			(0, react.useEffect)(() => {
  				const local = listRef.current;
  				/* v8 ignore next -- ref-null guard: effect runs after the list node commits. */
-@@ -5514,11 +7147,13 @@ window.__ModuleLoader__.load({
+@@ -5514,11 +7175,13 @@ window.__ModuleLoader__.load({
  				const column = columnRef.current;
  				const local = listRef.current;
  				if (column === null || local === null || typeof ResizeObserver === "undefined") return;
@@ -2487,7 +2531,7 @@ index 1dd0e89..59d63a1 100644
  				if (composer !== null) observer.observe(composer);
  				return () => {
  					observer.disconnect();
-@@ -5540,9 +7175,29 @@ window.__ModuleLoader__.load({
+@@ -5540,9 +7203,29 @@ window.__ModuleLoader__.load({
  				}
  				loadOlder();
  			};
@@ -2518,7 +2562,7 @@ index 1dd0e89..59d63a1 100644
  					ref: listRef,
  					className: ChatView_module_css_default.scroll,
  					children: [(0, react_jsx_runtime.jsxs)("div", {
-@@ -5570,22 +7225,21 @@ window.__ModuleLoader__.load({
+@@ -5570,22 +7253,21 @@ window.__ModuleLoader__.load({
  									children: loadingOlder ? t("loading") : t("chat.loadOlder")
  								})
  							}),
@@ -2556,7 +2600,7 @@ index 1dd0e89..59d63a1 100644
  							}),
  							pendingSteering.map((item) => (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
  								content: item.content,
-@@ -5607,7 +7261,7 @@ window.__ModuleLoader__.load({
+@@ -5607,7 +7289,7 @@ window.__ModuleLoader__.load({
  							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
  						})
  					})]
@@ -2565,7 +2609,7 @@ index 1dd0e89..59d63a1 100644
  			});
  		}
  		//#endregion
-@@ -5816,6 +7470,33 @@ window.__ModuleLoader__.load({
+@@ -5816,6 +7498,33 @@ window.__ModuleLoader__.load({
  		/** Simplified Chinese dictionary (the key-set source of truth). */
  		const zh = {
  			"view.chat": "对话",
@@ -2599,7 +2643,7 @@ index 1dd0e89..59d63a1 100644
  			"hint.plan": PLAN_NEXT_ACTION_ZH,
  			"hint.goal": "输入目标，智能体将持续执行",
  			"hint.goal.active": "当前目标进行中。可输入 edit 修改 / pause 暂停 / resume 继续 / clear 清除",
-@@ -5870,12 +7551,15 @@ window.__ModuleLoader__.load({
+@@ -5870,12 +7579,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "仅在智能体运行时生效；Cmd/Ctrl+Enter 使用另一行为",
  			"settings.enter.queue": "排队发送",
  			"settings.enter.steer": "插话发送",
@@ -2619,7 +2663,7 @@ index 1dd0e89..59d63a1 100644
  			"hero.preview": "预览版",
  			"hero.chooseWorkspace": "选择工作区",
  			"session.hierarchy": "会话层级",
-@@ -5896,6 +7580,46 @@ window.__ModuleLoader__.load({
+@@ -5896,6 +7608,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "历史加载失败：{message}（{code}）",
  			"chat.loadOlder": "加载更早",
  			"chat.toBottom": "回到底部",
@@ -2666,7 +2710,7 @@ index 1dd0e89..59d63a1 100644
  			"message.extraBlock": "附加内容块",
  			"message.contextInjection": "上下文注入",
  			"message.contextRecall": "跨会话召回",
-@@ -5981,6 +7705,33 @@ window.__ModuleLoader__.load({
+@@ -5981,6 +7733,33 @@ window.__ModuleLoader__.load({
  		/** English dictionary, checked complete against the zh key set. */
  		const en = {
  			"view.chat": "Chat",
@@ -2700,7 +2744,7 @@ index 1dd0e89..59d63a1 100644
  			"hint.plan": PLAN_NEXT_ACTION_EN,
  			"hint.goal": "describe the objective for a long-running task",
  			"hint.goal.active": "goal active — edit / pause / resume / clear",
-@@ -6035,12 +7786,15 @@ window.__ModuleLoader__.load({
+@@ -6035,12 +7814,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "Busy only; Cmd/Ctrl+Enter uses the other behavior",
  			"settings.enter.queue": "Queue",
  			"settings.enter.steer": "Steer",
@@ -2717,7 +2761,7 @@ index 1dd0e89..59d63a1 100644
  			"hero.preview": "Preview",
  			"hero.chooseWorkspace": "Choose workspace",
  			"session.hierarchy": "Session hierarchy",
-@@ -6061,6 +7815,46 @@ window.__ModuleLoader__.load({
+@@ -6061,6 +7843,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "Failed to load history: {message} ({code})",
  			"chat.loadOlder": "Load earlier",
  			"chat.toBottom": "Back to bottom",
@@ -2764,7 +2808,7 @@ index 1dd0e89..59d63a1 100644
  			"message.extraBlock": "Extra content block",
  			"message.contextInjection": "Context injection",
  			"message.contextRecall": "Session recall",
-@@ -6383,7 +8177,11 @@ window.__ModuleLoader__.load({
+@@ -6383,7 +8205,11 @@ window.__ModuleLoader__.load({
  		*/
  		function QueueDock({ useSession, updateQueue, notify, t }) {
  			const inbox = useSession((s) => s.queue);
@@ -2777,7 +2821,7 @@ index 1dd0e89..59d63a1 100644
  			const running = useSession((s) => s.running);
  			const queueMutable = useSession((s) => s.subagent === null);
  			const [editing, setEditing] = (0, react.useState)(null);
-@@ -6532,7 +8330,7 @@ window.__ModuleLoader__.load({
+@@ -6532,7 +8358,7 @@ window.__ModuleLoader__.load({
  												type: "button",
  												className: QueueDock_module_css_default.action,
  												"aria-label": t("queue.edit"),
@@ -2786,7 +2830,7 @@ index 1dd0e89..59d63a1 100644
  												disabled: busy !== null || row.text === null,
  												onClick: () => {
  													if (row.text !== null) setEditing({
-@@ -6627,7 +8425,7 @@ window.__ModuleLoader__.load({
+@@ -6627,7 +8453,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$7;
@@ -2795,7 +2839,7 @@ index 1dd0e89..59d63a1 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8549,6557 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8577,6707 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -3216,17 +3260,102 @@ index 1dd0e89..59d63a1 100644
 +    apply()
 +  }
 +  addEventListener('message', receive)
++  const startContentMeasurement = () => {
++    if (typeof parent.postMessage !== 'function') return
++    let stopped = false
++    let reports = 0
++    let previous = ''
++    let pending
++    let observer
++    const measure = () => {
++      if (stopped || reports >= 6 || !document.body) return
++      const viewportWidth = document.documentElement.clientWidth
++      const viewportHeight = document.documentElement.clientHeight
++      if (!(viewportWidth > 0 && viewportHeight > 0)) return
++      let right = 0
++      let bottom = 0
++      const visible = (element) => {
++        if (!element || element.closest('script,style,template,noscript,[hidden]')) return false
++        const style = getComputedStyle(element)
++        return style.display !== 'none' && style.visibility !== 'hidden' && style.position !== 'fixed'
++      }
++      const include = (bounds, element, borderBox = false) => {
++        if (!bounds || !Number.isFinite(bounds.right) || !Number.isFinite(bounds.bottom) || !(bounds.width > 0 && bounds.height > 0)) return
++        let trailingWidth = 0
++        let trailingHeight = 0
++        let depth = 0
++        // Include the last panel's trailing insets, not its viewport-derived
++        // box height. Otherwise a 40px card padding can remain clipped even
++        // though all of its text or SVG bounds fit inside the resized frame.
++        for (let ancestor = element; ancestor && depth++ < 24; ancestor = ancestor.parentElement) {
++          const style = getComputedStyle(ancestor)
++          const pixels = (value) => Math.max(0, parseFloat(value) || 0)
++          trailingWidth += pixels(style.marginRight)
++          trailingHeight += pixels(style.marginBottom)
++          if (ancestor !== element || !borderBox) {
++            trailingWidth += pixels(style.paddingRight) + pixels(style.borderRightWidth)
++            trailingHeight += pixels(style.paddingBottom) + pixels(style.borderBottomWidth)
++          }
++        }
++        right = Math.max(right, bounds.right + (window.scrollX || 0) + trailingWidth)
++        bottom = Math.max(bottom, bounds.bottom + (window.scrollY || 0) + trailingHeight)
++      }
++      // Text ranges and replaced media describe real content, unlike body or a
++      // min-height:100vh shell whose box grows whenever its iframe grows.
++      let visited = 0
++      const walker = document.createTreeWalker(document.body, 4)
++      for (let text = walker.nextNode(); text && visited < 4000; text = walker.nextNode()) {
++        visited++
++        if (!text.textContent.trim() || !visible(text.parentElement)) continue
++        const range = document.createRange()
++        range.selectNodeContents(text)
++        const hasTextBounds = typeof range.getBoundingClientRect === 'function'
++        include(hasTextBounds ? range.getBoundingClientRect() : text.parentElement.getBoundingClientRect(), text.parentElement, !hasTextBounds)
++      }
++      for (const element of Array.from(document.body.querySelectorAll('svg,canvas,img,video,audio,table,input,textarea,select,button,[role="img"]')).slice(0, 1000)) {
++        if (visible(element)) include(element.getBoundingClientRect(), element, true)
++      }
++      const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
++      const height = Math.min(2400, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
++      const key = width + ':' + height
++      if (key === previous) return
++      previous = key
++      reports++
++      parent.postMessage({ type: 'sherlock-content-size', width, height }, '*')
++    }
++    const schedule = () => {
++      if (stopped || reports >= 6 || pending !== undefined) return
++      if (typeof setTimeout !== 'function') { measure(); return }
++      pending = setTimeout(() => { pending = undefined; measure() }, 180)
++    }
++    if (typeof ResizeObserver === 'function') {
++      observer = new ResizeObserver(schedule)
++      observer.observe(document.body)
++    }
++    addEventListener('resize', schedule)
++    document.addEventListener('load', schedule, true)
++    document.fonts?.ready?.then(schedule).catch(() => {})
++    measure()
++    if (typeof setTimeout === 'function') setTimeout(() => {
++      stopped = true
++      if (pending !== undefined) clearTimeout(pending)
++      observer?.disconnect()
++      removeEventListener('resize', schedule)
++      document.removeEventListener('load', schedule, true)
++    }, 8000)
++  }
 +  document.addEventListener('DOMContentLoaded', () => {
 +    const declaration = Array.from(document.querySelectorAll('meta[name]')).find((meta) => meta.getAttribute('name')?.trim().toLowerCase() === 'sherlock-theme')
 +    const value = declaration?.getAttribute('content')?.trim().toLowerCase()
 +    fixedTheme = value === 'light' || value === 'dark' ? value : null
 +    apply()
++    startContentMeasurement()
 +  }, { once: true })
 +  apply()
 +}`
 +
-+// Only trusted code runs in the outer document. It never receives or forwards
-+// artifact data. Opaque sandbox origins require '*'; contentWindow and parent
++// Only trusted code runs in the outer document. The only artifact output it
++// forwards is a bounded pair of layout dimensions, never HTML or page content. Opaque sandbox origins require '*'; contentWindow and parent
 +// identity checks keep the message confined to this exact parent/child pair.
 +const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterThemeRuntime(inner, initialTheme, fixedTheme) {
 +  const root = document.documentElement
@@ -3234,6 +3363,8 @@ index 1dd0e89..59d63a1 100644
 +  const standalone = window === parent
 +  const media = standalone && typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null
 +  let colorScheme = media ? media.matches ? 'dark' : 'light' : initialTheme
++  let sizeReports = 0
++  let previousSize = ''
 +  const publish = () => {
 +    root.setAttribute('data-sherlock-theme', fixedTheme || colorScheme)
 +    root.style.colorScheme = fixedTheme || colorScheme
@@ -3241,6 +3372,18 @@ index 1dd0e89..59d63a1 100644
 +  }
 +  addEventListener('message', (event) => {
 +    const data = event.data
++    if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
++        Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
++        data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&
++        data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 2400) {
++      const key = data.width + ':' + data.height
++      if (sizeReports < 6 && key !== previousSize) {
++        previousSize = key
++        sizeReports++
++        parent.postMessage({ type: 'sherlock-content-size', width: data.width, height: data.height }, '*')
++      }
++      return
++    }
 +    if (standalone || event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
 +        !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
 +        data.colorScheme !== 'light' && data.colorScheme !== 'dark') return
@@ -4942,7 +5085,7 @@ index 1dd0e89..59d63a1 100644
 +			if (geometry === null) return node;
 +			const next = { ...node, ...geometry };
 +			// Selection outputs grow down/right from their visible title, not out of view.
-+			if (node.sizeMode !== "manual" && (node.kind === "generated-mind-map" || node.kind === "generated-summary" || node.creationMode === "selection")) {
++			if (node.sizeMode !== "manual" && (node.kind === "generated-mind-map" || node.kind === "generated-summary" || node.kind === "generated-container" || node.creationMode === "selection")) {
 +				const before = normalizeResearchCanvasNodeGeometry(node);
 +				const after = normalizeResearchCanvasNodeGeometry(next);
 +				next.x = node.x + (after.width - before.width) / 2;
@@ -4950,16 +5093,10 @@ index 1dd0e89..59d63a1 100644
 +			}
 +			return next;
 +		}
-+		function researchGenerationAutoGeometry(node, process = node) {
++		function researchGenerationAutoGeometry(node) {
 +			if (node?.sizeMode === "manual") return null;
-+			const events = Array.isArray(process?.generationEvents) ? process.generationEvents : Array.isArray(process?.events) ? process.events : [];
-+			const partial = typeof process?.generationPartialText === "string" ? process.generationPartialText : typeof process?.partialText === "string" ? process.partialText : "";
-+			const rows = Math.min(8, events.filter((event) => event?.type === "tool-started" || event?.type === "tool-finished").length);
-+			const visibleLength = Math.min(RESEARCH_GENERATION_MAX_PARTIAL_TEXT, partial.length);
-+			const width = Math.min(640, Math.max(480, 480 + Math.ceil(Math.max(0, visibleLength - 320) / 20)));
-+			const estimatedLines = Math.min(14, Math.ceil(visibleLength / Math.max(24, Math.floor((width - 40) / 14))));
-+			const height = Math.min(560, Math.max(280, 280 + rows * 24 + estimatedLines * 20));
-+			return { width, height };
++			// A stable progress surface must not grow with hidden code or tool logs.
++			return { width: 480, height: 300 };
 +		}
 +		function researchGenerationFinalGeometry(node, text) {
 +			if (node?.sizeMode === "manual") return null;
@@ -4975,8 +5112,8 @@ index 1dd0e89..59d63a1 100644
 +			if (spec.type === "web") return { width: 720, height: 480 };
 +			if (spec.type === "html") return { width: 960, height: 680 };
 +			if (spec.type === "chart") return { width: 720, height: 500 };
-+			if (spec.type === "table") return { width: 720, height: 480 };
-+			if (spec.type === "kpi") return { width: 640, height: 420 };
++			if (spec.type === "table") return { width: 720, height: Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(480, 132 + (spec.rows.length + 1) * 42)) };
++			if (spec.type === "kpi") return { width: 640, height: Math.max(420, 112 + Math.ceil(spec.items.length / 3) * 120) };
 +			return { width: 560, height: 400 };
 +		}
 +		function researchContainerRefreshDue(node, state) {
@@ -5167,6 +5304,7 @@ index 1dd0e89..59d63a1 100644
 +			let orphanRevocationIds = loadResearchCanvasRevocationOutbox(storage, sessionId);
 +			let orphanRevocationsDurable = orphanRevocationIds.length === 0 || saveResearchCanvasRevocationOutbox(storage, sessionId, orphanRevocationIds);
 +			let snapshot = researchWorkspaceSnapshot({ files, artifacts, selection: loadResearchCanvasSelection(storage, sessionId, files, artifacts), viewport: { scale: 1, x: 0, y: 0 }, canvasSize: { width: 0, height: 0 }, pendingMessageJump: null, unavailableSourceMessageIds: [] });
++			const htmlFitStates = new Map();
 +			const listeners = /* @__PURE__ */ new Set();
 +			const pendingNodeRevocations = /* @__PURE__ */ new Set();
 +			let assistantActionsActive = false;
@@ -5956,6 +6094,27 @@ index 1dd0e89..59d63a1 100644
 +							if (pendingHistoryTransaction === null) pendingHistoryTransaction = historyState();
 +							update({ files: files2, artifacts: artifacts2 }, false);
 +						}
++					},
++					fitHtmlContent(nodeId, expectedHtml, dimensions) {
++						const index = snapshot.artifacts.findIndex((node) => node.id === nodeId);
++						const node = snapshot.artifacts[index];
++						if (typeof expectedHtml !== "string" || node?.containerSpec?.html !== expectedHtml) return false;
++						const geometry = researchHtmlAutoGeometry(node, dimensions);
++						if (geometry === null) return false;
++						const now = Date.now();
++						let budget = htmlFitStates.get(nodeId);
++						if (!budget || budget.html !== expectedHtml || budget.completedAt !== node.generationCompletedAt) {
++							budget = { html: expectedHtml, completedAt: node.generationCompletedAt, startedAt: now, growths: 0 };
++							if (htmlFitStates.size >= RESEARCH_CANVAS_MAX_ARTIFACTS_PER_SESSION) htmlFitStates.delete(htmlFitStates.keys().next().value);
++							htmlFitStates.set(nodeId, budget);
++						}
++						if (budget.growths >= 3 || now - budget.startedAt > 8000) return false;
++						budget.growths++;
++						const artifacts = snapshot.artifacts.slice();
++						const next = { ...node, ...geometry };
++						artifacts[index] = { ...next, ...researchCanvasPersistedGeometry(next) };
++						update({ artifacts }, true);
++						return true;
 +					},
 +					updateNodeGeometry(nodeId, geometry, persist = true) {
 +						let changed = false;
@@ -7160,32 +7319,38 @@ index 1dd0e89..59d63a1 100644
 +				})]
 +			});
 +		}
-+		function ResearchGenerationProcess({ node, onCancel }) {
++		function researchGenerationPresentation(node) {
 +			const events = Array.isArray(node.generationEvents) ? node.generationEvents : [];
-+			const toolRows = events.filter((event) => event.type === 'tool-started').slice(-4);
-+			const latestTool = toolRows.at(-1)?.tool;
-+			const phase = node.generationStatus === 'queued' ? '排队中' : latestTool === void 0 ? '正在生成内容' : `正在${latestTool}`;
++			if (node.generationStatus === 'queued' && !events.some((event) => ['tool-started', 'tool-finished', 'sources-ready', 'assistant-delta'].includes(event?.type))) return { stage: 'queued', title: '等待开始', detail: '任务开始后，进展会显示在这里', step: 0 };
++			const latest = events.filter((event) => ['started', 'sources-ready', 'assistant-delta', 'tool-started', 'tool-finished'].includes(event?.type)).at(-1);
++			const lastTool = events.filter((event) => event?.type === 'tool-started').at(-1)?.tool ?? '';
++			const research = /网页|搜索|检索/.test(lastTool);
++			if (latest?.type === 'tool-finished' && latest.failed) return { stage: 'recovering', title: research ? '正在调整检索' : '正在调整生成', detail: '这一步没有完成，正在重新整理后续处理', step: 1 };
++			if (latest?.type === 'tool-started') return { stage: research ? 'researching' : 'organizing', title: research ? '正在查找资料' : '正在整理资料', detail: research ? '查找相关数据与来源' : '读取材料，梳理内容之间的关系', step: 1 };
++			if (latest?.type === 'assistant-delta' || latest === undefined && typeof node.generationPartialText === 'string' && node.generationPartialText.length > 0) return { stage: 'building', title: '正在绘制组件', detail: '把内容组织到组件中', step: 2 };
++			if (latest?.type === 'sources-ready' || latest?.type === 'tool-finished') return { stage: 'organizing', title: '正在整理资料', detail: '梳理已获得的信息，准备组件内容', step: 1 };
++			return { stage: 'planning', title: '正在整理需求', detail: '理解要展示的内容，准备呈现方式', step: 0 };
++		}
++		function ResearchGenerationProcess({ node, onCancel }) {
++			const presentation = researchGenerationPresentation(node);
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				className: "rScV5Q_generationProcess",
 +				"data-research-generation-process": "",
-+				children: [(0, react_jsx_runtime.jsx)("div", {
-+					className: "rScV5Q_generationPhase",
-+					children: phase
-+				}), toolRows.length === 0 ? null : (0, react_jsx_runtime.jsx)("div", {
-+					className: "rScV5Q_generationTools",
-+					children: toolRows.map((event) => (0, react_jsx_runtime.jsx)("span", { children: event.tool }, event.seq))
-+				}), typeof node.generationPartialText !== 'string' || node.generationPartialText === '' ? null : (0, react_jsx_runtime.jsx)("div", {
-+					className: "rScV5Q_generationDraft",
-+					children: node.generationPartialText
++				"data-research-generation-stage": presentation.stage,
++				"aria-busy": true,
++				children: [(0, react_jsx_runtime.jsxs)("div", {
++					className: "rScV5Q_generationVisual", "data-research-generation-visual": "", "aria-hidden": "true",
++					children: [(0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_generationScan" }), [28, 49, 36, 64, 45, 56, 72].map((height, index) => (0, react_jsx_runtime.jsx)("i", { style: { height: `${height}%`, animationDelay: `${index * 90}ms` } }, index))]
++				}), (0, react_jsx_runtime.jsxs)("div", {
++					className: "rScV5Q_generationCopy", role: "status", "aria-live": "polite", "aria-atomic": true,
++					children: [(0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_generationPhase", children: presentation.title }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_generationDetail", children: presentation.detail })]
++				}), (0, react_jsx_runtime.jsx)("div", {
++					className: "rScV5Q_generationSteps", "aria-hidden": true,
++					children: ['理解', '整理', '生成'].map((label, index) => (0, react_jsx_runtime.jsx)("span", { "data-active": index === presentation.step, children: label }, label))
 +				}), typeof onCancel !== 'function' || typeof node.generationTaskId !== 'string' ? null : (0, react_jsx_runtime.jsx)("button", {
-+					type: "button",
-+					"data-research-generation-cancel": "",
++					type: "button", "data-research-generation-cancel": "", "aria-label": "停止生成",
 +					onPointerDown: (event) => event.stopPropagation(),
-+					onClick: (event) => {
-+						event.preventDefault();
-+						event.stopPropagation();
-+						onCancel(node);
-+					},
++					onClick: (event) => { event.preventDefault(); event.stopPropagation(); onCancel(node); },
 +					children: "停止"
 +				})]
 +			});
@@ -7429,7 +7594,7 @@ index 1dd0e89..59d63a1 100644
 +					}
 +				}), (0, react_jsx_runtime.jsxs)("div", {
 +					className: "rScV5Q_containerDraftFooter",
-+					children: [(0, react_jsx_runtime.jsx)("span", { children: "按需求生成交付物；交互网页使用离线沙盒预览" }), (0, react_jsx_runtime.jsx)("button", {
++					children: [(0, react_jsx_runtime.jsx)("button", {
 +						type: "button",
 +						"data-research-container-submit": "",
 +						disabled: prompt.trim() === "",
@@ -7726,29 +7891,54 @@ index 1dd0e89..59d63a1 100644
 +		function readResearchComponentTheme(owner = typeof document === "undefined" ? null : document) {
 +			return owner?.body?.hasAttribute("data-ds-dark-theme") ? "dark" : "light";
 +		}
-+		function ResearchHtmlArtifact({ spec }) {
++		function researchHtmlAutoGeometry(node, dimensions) {
++			if (node?.kind !== "generated-container" || node.generationStatus !== "completed" || node.containerSpec?.type !== "html" || node.sizeMode === "manual" || !dimensions || typeof dimensions !== "object" || Array.isArray(dimensions) || Object.keys(dimensions).length !== 2 || !Object.hasOwn(dimensions, "width") || !Object.hasOwn(dimensions, "height") || !Number.isInteger(dimensions.width) || !Number.isInteger(dimensions.height) || dimensions.width < 1 || dimensions.height < 1 || dimensions.width > 2400 || dimensions.height > 2400) return null;
++			const before = normalizeResearchCanvasNodeGeometry(node);
++			const width = Math.max(before.width, dimensions.width);
++			const height = Math.max(before.height, dimensions.height);
++			return width <= before.width + 2 && height <= before.height + 2 ? null : { width, height, sizeMode: "auto", x: node.x + (width - before.width) / 2, y: node.y + (height - before.height) / 2 };
++		}
++		function ResearchHtmlArtifact({ spec, node, onSize }) {
 +			const frameRef = (0, react.useRef)(null);
-+			// Theme changes travel through the existing frame. Rebuilding srcDoc
-+			// would erase the user's input, filters, timers and other page state.
++			const fittingRef = (0, react.useRef)({ node, onSize });
++			fittingRef.current = { node, onSize };
++			// Theme and sizing use the existing frame; neither reloads user state.
 +			const srcDoc = (0, react.useMemo)(() => buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme()), [spec.html, spec.title]);
 +			const sendTheme = () => {
 +				const frame = frameRef.current;
 +				frame?.contentWindow?.postMessage({ type: "sherlock-theme", colorScheme: readResearchComponentTheme(frame.ownerDocument) }, "*");
 +			};
 +			(0, react.useLayoutEffect)(() => {
-+				const owner = frameRef.current?.ownerDocument;
-+				const Observer = owner?.defaultView?.MutationObserver;
-+				if (!owner?.body || !Observer) return;
-+				const observer = new Observer(sendTheme);
-+				observer.observe(owner.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
++				const frame = frameRef.current;
++				const owner = frame?.ownerDocument;
++				const view = owner?.defaultView;
++				if (!frame || !view) return;
++				const startedAt = Date.now();
++				let growths = 0;
++				const receiveSize = (event) => {
++					const data = event.data;
++					const current = fittingRef.current;
++					if (event.source !== frame.contentWindow || !data || typeof data !== "object" || Array.isArray(data) || Object.keys(data).length !== 3 || !Object.hasOwn(data, "type") || !Object.hasOwn(data, "width") || !Object.hasOwn(data, "height") || data.type !== "sherlock-content-size" || !Number.isInteger(data.width) || !Number.isInteger(data.height) || data.width < 1 || data.height < 1 || data.width > 2400 || data.height > 2400 || growths >= 3 || Date.now() - startedAt > 8000 || current.node?.sizeMode === "manual" || current.node?.containerSpec?.html !== spec.html) return;
++					const card = frame.closest("[data-research-node-id]");
++					if (card?.getAttribute("data-node-resizing") === "true" || card?.getAttribute("data-node-dragging") === "true") return;
++					const horizontalChrome = card?.offsetWidth > 0 && frame.clientWidth > 0 ? Math.max(0, card.offsetWidth - frame.clientWidth) : 2;
++					const verticalChrome = card?.offsetHeight > 0 && frame.clientHeight > 0 ? Math.max(0, card.offsetHeight - frame.clientHeight) : RESEARCH_CANVAS_TITLE_HEIGHT + 38;
++					const dimensions = { width: Math.min(2400, Math.ceil(data.width + horizontalChrome)), height: Math.min(2400, Math.ceil(data.height + verticalChrome)) };
++					if (researchHtmlAutoGeometry(current.node, dimensions) === null) return;
++					if (current.onSize?.(current.node, dimensions) !== false) growths++;
++				};
++				view.addEventListener("message", receiveSize);
++				const Observer = view.MutationObserver;
++				const observer = owner.body && Observer ? new Observer(sendTheme) : null;
++				observer?.observe(owner.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
 +				sendTheme();
-+				return () => observer.disconnect();
++				return () => { observer?.disconnect(); view.removeEventListener("message", receiveSize); };
 +			}, [srcDoc]);
 +			return (0, react_jsx_runtime.jsx)("iframe", { ref: frameRef, "data-research-html-artifact": "", className: "rScV5Q_webFrame", title: spec.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }, "aria-label": `${spec.title}（离线交互网页）` });
 +		}
-+		function ResearchContainerContent({ node, sessionId, visible }) {
++		function ResearchContainerContent({ node, sessionId, visible, onHtmlSize }) {
 +			const spec = node.containerSpec;
-+			if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec });
++			if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, onSize: onHtmlSize });
 +			if (spec.type === "mind-map") return (0, react_jsx_runtime.jsx)(ResearchMindMap, { nodeId: node.id, text: spec.content });
 +			if (spec.type === "web") return (0, react_jsx_runtime.jsx)(ResearchCanvasWebFrame, { node: { ...node, url: spec.url }, sessionId, visible });
 +			if (spec.type === "chart") return (0, react_jsx_runtime.jsx)(ResearchContainerChart, { spec });
@@ -7756,7 +7946,7 @@ index 1dd0e89..59d63a1 100644
 +			if (spec.type === "kpi") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerKpis", "data-research-container-kpi": "", children: spec.items.map((item, index) => (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", { children: item.label }), (0, react_jsx_runtime.jsx)("strong", { children: String(item.value) }), item.change === void 0 ? null : (0, react_jsx_runtime.jsx)("em", { children: String(item.change) })] }, index)) });
 +			return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerMarkdown", "data-research-container-markdown": "", children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text: spec.content, streaming: false }) });
 +		}
-+		function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onSetRefresh }) {
++		function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onSetRefresh, onHtmlSize }) {
 +			const rootRef = (0, react.useRef)(null);
 +			const refreshRef = (0, react.useRef)(onGenerate);
 +			const [editingPrompt, setEditingPrompt] = (0, react.useState)(false);
@@ -7804,10 +7994,10 @@ index 1dd0e89..59d63a1 100644
 +						onChange: (event) => onSetRefresh?.(node, Number(event.currentTarget.value)),
 +						children: [(0, react_jsx_runtime.jsx)("option", { value: 0, children: "不自动刷新" }), (0, react_jsx_runtime.jsx)("option", { value: 1, children: "每 1 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 5, children: "每 5 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 15, children: "每 15 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 30, children: "每 30 分钟" })]
 +					})]
-+				}), activeGeneration ? (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-research-container-refreshing": "", children: "正在刷新，当前内容继续可用" }) : node.refreshError === void 0 ? null : (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-state": "error", children: node.refreshError }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerContent", children: (0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible }) })]
++				}), activeGeneration ? (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-research-container-refreshing": "", children: "正在刷新，当前内容继续可用" }) : node.refreshError === void 0 ? null : (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-state": "error", children: node.refreshError }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerContent", children: (0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, onHtmlSize }) })]
 +			});
 +		}
-+		function ResearchCanvasArtifactCard({ node, sessionId, visible = true, selected = false, dragging = false, resizing = false, editing = false, editingContent = false, sourceUnavailable = false, onRenameCommit, onRenameCancel, onContentEdit, onContentCommit, onContentCancel, onMindMapNodeCommit, onOpenContextMenu, onActivate, onAutoHeight, onWebInspection, onRetryGeneration, onCancelGeneration, onSubmitContainer, onSetContainerRefresh, retryDisabled = false }) {
++		function ResearchCanvasArtifactCard({ node, sessionId, visible = true, selected = false, dragging = false, resizing = false, editing = false, editingContent = false, sourceUnavailable = false, onRenameCommit, onRenameCancel, onContentEdit, onContentCommit, onContentCancel, onMindMapNodeCommit, onOpenContextMenu, onActivate, onAutoHeight, onWebInspection, onRetryGeneration, onCancelGeneration, onSubmitContainer, onSetContainerRefresh, onHtmlSize, retryDisabled = false }) {
 +			const activate = () => onActivate?.(node);
 +			const contentRef = (0, react.useRef)(null);
 +			(0, react.useLayoutEffect)(() => {
@@ -7837,6 +8027,7 @@ index 1dd0e89..59d63a1 100644
 +				"data-research-generated-mind-map": node.kind === "generated-mind-map" && node.generationStatus === 'completed' ? "" : void 0,
 +				"data-research-web-link": node.kind === "web-link" ? "" : void 0,
 +				"data-research-generated-container": node.kind === "generated-container" ? "" : void 0,
++				"data-research-auto-sizing": node.kind === "generated-container" && node.sizeMode !== "manual" && !dragging && !resizing ? "true" : void 0,
 +				titleText: node.title,
 +				title: editing ? (0, react_jsx_runtime.jsx)(ResearchCanvasInlineTitleEditor, {
 +					nodeId: node.id,
@@ -7886,7 +8077,8 @@ index 1dd0e89..59d63a1 100644
 +						sessionId,
 +						visible,
 +						onGenerate: onSubmitContainer,
-+						onSetRefresh: onSetContainerRefresh
++						onSetRefresh: onSetContainerRefresh,
++						onHtmlSize
 +					}) : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? (0, react_jsx_runtime.jsx)(ResearchGenerationProcess, {
 +						node,
 +						onCancel: onCancelGeneration
@@ -7966,7 +8158,8 @@ index 1dd0e89..59d63a1 100644
 +			tag.textContent += ".rScV5Q_selectionActions{box-sizing:border-box;z-index:24;pointer-events:auto;position:absolute;transform:translate(-50%,-100%);height:42px;padding:5px;display:flex;align-items:center;gap:2px;overflow:visible;white-space:nowrap;color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 96%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:13px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_selectionActions button{height:30px;padding:0 10px;border:0;border-radius:8px;color:inherit;background:transparent;font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_selectionActions button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_selectionActions button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}.rScV5Q_selectionActions button:disabled{opacity:.45;cursor:default}.rScV5Q_mindMapControl{position:relative}.rScV5Q_mindMapMenu{z-index:32;box-sizing:border-box;width:258px;padding:5px;position:absolute;left:0;top:35px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:10px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_mindMapMenu button{box-sizing:border-box;width:100%;height:auto;min-height:46px;padding:7px 9px;display:flex;align-items:flex-start;flex-direction:column;gap:2px;text-align:left}.rScV5Q_mindMapMenu strong{font:var(--dsw-font-xs-strong-13)}.rScV5Q_mindMapMenu span{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}body[data-ds-dark-theme] .rScV5Q_selectionActions,body[data-ds-dark-theme] .rScV5Q_mindMapMenu{background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 96%,transparent)}";
 +			tag.textContent += "[data-research-generated-mind-map][data-selected=true]{border-color:rgb(0,80,150);outline:2px solid rgba(0,80,150,.24);outline-offset:1px}[data-research-generated-mind-map]>.rScV5Q_previewBody{background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactBody{height:100%;min-height:100%;padding:0;background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactMeta{display:none}.rScV5Q_mindMap{box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;padding:32px 40px;display:flex;align-items:safe center;justify-content:safe center;gap:40px;overflow:auto;background:#fff;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_mindMapNode{box-sizing:border-box;flex:none;display:flex;align-items:center;justify-content:center;width:200px;min-height:54px;max-width:200px;padding:9px 14px;border:0;border-radius:0;box-shadow:none;background:rgb(30,185,225);color:#fff;text-align:center;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif;font-size:14px;font-weight:700;line-height:1.35;white-space:normal;word-break:normal;overflow-wrap:break-word}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"phrase\"]{text-align:center;text-wrap:balance}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"sentence\"]{justify-content:flex-start;text-align:left;text-wrap:pretty}.rScV5Q_mindMapRoot{width:224px;min-height:60px;max-width:224px}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"0\"]{background:rgb(0,80,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"1\"]{background:rgb(0,120,180)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"2\"]{background:rgb(30,185,225)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"3\"]{background:rgb(179,235,255);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"4\"]{background:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"5\"]{background:rgb(150,150,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"6\"]{background:rgb(193,198,200);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"7\"]{background:rgb(204,204,204);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"8\"]{background:rgb(255,200,25);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"9\"]{background:rgb(255,215,30);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"12\"]{background:rgb(255,230,30);color:rgb(60,60,60)}.rScV5Q_mindMapChildren{flex:none;position:relative;display:flex;flex-direction:column;justify-content:center;gap:16px}.rScV5Q_mindMapChildren:after{content:\"\";position:absolute;left:-40px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch{flex:none;position:relative;display:flex;align-items:center;gap:40px}.rScV5Q_mindMapBranch:before{content:\"\";position:absolute;left:-20px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:after{content:\"\";position:absolute;left:-20px;top:-8px;bottom:-8px;width:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:first-child:after{top:50%}.rScV5Q_mindMapBranch:last-child:after{bottom:50%}.rScV5Q_mindMapBranch:only-child:after{display:none}";
 +			tag.textContent += ".rScV5Q_mindMapNodeEditor{margin:0;resize:none;overflow:hidden;outline:2px solid rgba(255,255,255,.9);outline-offset:-3px;white-space:pre-wrap;user-select:text;cursor:text;caret-color:currentColor}.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"3\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"6\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"7\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"8\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"9\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"12\"]{outline-color:rgba(0,80,150,.72)}";
-+			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;min-height:100%;padding:18px 20px;display:flex;flex-direction:column;gap:12px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationPhase{font:var(--dsw-font-sm-strong-14)}.rScV5Q_generationTools{display:flex;flex-direction:column;gap:5px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_generationTools span:before{content:\"✓\";margin-right:6px;color:var(--dsw-alias-state-business-primary)}.rScV5Q_generationDraft{max-height:300px;padding:10px 12px;overflow:auto;border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary);white-space:pre-wrap;overflow-wrap:anywhere;font:var(--dsw-font-xs-13);line-height:1.55}.rScV5Q_generationProcess>button{align-self:flex-start;height:28px;padding:0 11px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);cursor:pointer}.rScV5Q_generationFailure{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xs-13)}.rScV5Q_generationFailure button{height:30px;padding:0 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_generationFailure button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationFailure button:disabled{opacity:.45;cursor:default}";
++			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationVisual{position:relative;width:154px;height:54px;display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:9px 16px;border-bottom:1px solid var(--dsw-alias-border-l2);overflow:hidden}.rScV5Q_generationVisual i{width:8px;background:var(--dsw-alias-label-tertiary);opacity:.25;transform-origin:bottom;animation:rScV5Q_generationPulse 2.4s ease-in-out infinite}.rScV5Q_generationScan{z-index:1;position:absolute;inset:0;background:linear-gradient(90deg,transparent, color-mix(in srgb,var(--dsw-alias-label-primary) 12%,transparent),transparent);transform:translateX(-110%);animation:rScV5Q_generationScan 2.8s ease-in-out infinite}.rScV5Q_generationCopy{text-align:center}.rScV5Q_generationPhase{font-size:16px;font-weight:600;line-height:1.5;letter-spacing:.02em}.rScV5Q_generationDetail{margin-top:5px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5}.rScV5Q_generationSteps{display:flex;align-items:center;gap:14px;color:var(--dsw-alias-label-tertiary);font-size:11px;letter-spacing:.08em}.rScV5Q_generationSteps span{display:flex;align-items:center;gap:6px}.rScV5Q_generationSteps span:before{content:\"\";width:3px;height:3px;background:currentColor;opacity:.35}.rScV5Q_generationSteps span[data-active=true]{color:var(--dsw-alias-label-primary)}.rScV5Q_generationSteps span[data-active=true]:before{opacity:1}.rScV5Q_generationProcess>button{height:26px;padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;background:transparent;color:var(--dsw-alias-label-secondary);font-size:11px;cursor:pointer}.rScV5Q_generationProcess>button:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerDraftFooter{justify-content:flex-end}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:width 350ms cubic-bezier(.22,1,.36,1),height 350ms cubic-bezier(.22,1,.36,1),left 350ms cubic-bezier(.22,1,.36,1),top 350ms cubic-bezier(.22,1,.36,1)}@keyframes rScV5Q_generationPulse{0%,100%{opacity:.2;transform:scaleY(.72)}50%{opacity:.65;transform:scaleY(1)}}@keyframes rScV5Q_generationScan{0%{transform:translateX(-110%)}80%,100%{transform:translateX(110%)}}@media(prefers-reduced-motion:reduce){.rScV5Q_generationVisual i,.rScV5Q_generationScan{animation:none}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:none}}";
++			tag.textContent += ".rScV5Q_generationFailure{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xs-13)}.rScV5Q_generationFailure button{height:30px;padding:0 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_generationFailure button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationFailure button:disabled{opacity:.45;cursor:default}";
 +			tag.textContent += ".rScV5Q_globalToolbar{z-index:40;pointer-events:auto;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);height:38px;padding:3px;display:flex;align-items:center;gap:2px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 94%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_globalToolbar>button,.rScV5Q_globalToolSlot>button{height:32px;padding:0 11px;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_globalToolbar button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_globalToolbar button:disabled{opacity:.45;cursor:default}.rScV5Q_globalToolbar svg{width:16px;height:16px;flex:none}.rScV5Q_globalToolSlot{position:relative}.rScV5Q_linkPopover{box-sizing:border-box;position:absolute;left:0;bottom:calc(100% + 10px);width:360px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_linkPopover>label{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12)}.rScV5Q_linkPopover>div{display:flex;gap:8px}.rScV5Q_linkPopover input{box-sizing:border-box;min-width:0;flex:1;height:34px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:var(--dsw-font-xs-13)}.rScV5Q_linkPopover input:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent)}.rScV5Q_linkPopover button{height:34px;padding:0 12px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_linkError{color:var(--dsw-alias-state-danger-primary);font:var(--dsw-font-xxs-12)}.rScV5Q_root[data-dragging=true] .rScV5Q_globalToolbar{display:none}";
 +			tag.textContent += "[data-research-web-link] .rScV5Q_artifactBody,[data-research-generated-container] .rScV5Q_artifactBody{padding:0;gap:0;height:100%}[data-research-web-link] .rScV5Q_artifactMeta,[data-research-generated-container] .rScV5Q_artifactMeta{box-sizing:border-box;flex:none;min-height:24px;padding:5px 10px;color:var(--dsw-alias-label-caption);border-top:1px solid var(--dsw-alias-border-l2)}.rScV5Q_webFrameShell{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}.rScV5Q_webFrameControls{box-sizing:border-box;flex:none;height:32px;padding:0 9px;display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-tertiary);border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_webFrameControls>span{min-width:0;margin-right:auto;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_webFrameControls button,.rScV5Q_webFrameControls a{padding:3px 6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_webFrameControls button:hover,.rScV5Q_webFrameControls a:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_webFrameViewport{box-sizing:border-box;min-width:0;min-height:0;flex:1;overflow:hidden;background:#fff}.rScV5Q_webFrame{box-sizing:border-box;display:block;width:100%;height:100%;min-height:0;border:0;background:#fff}.rScV5Q_previewPlaceholder button,.rScV5Q_previewPlaceholder a{height:30px;padding:0 11px;display:inline-flex;align-items:center;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_containerDraft{box-sizing:border-box;min-height:0;flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerDraft{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerDraft textarea{box-sizing:border-box;min-height:120px;flex:1;resize:none;padding:12px 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-13);line-height:1.55}.rScV5Q_containerDraft textarea:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 16%,transparent)}.rScV5Q_containerDraftFooter{display:flex;align-items:center;gap:12px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerDraftFooter span{min-width:0;margin-right:auto}.rScV5Q_containerDraftFooter button{height:30px;padding:0 13px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_containerDraftFooter button:disabled{opacity:.45;cursor:default}";
 +			tag.textContent += ".rScV5Q_generatedContainer{box-sizing:border-box;min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generatedContainer{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerControls{box-sizing:border-box;flex:none;min-height:36px;padding:4px 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_containerControls>span{margin-right:auto;padding-left:3px;color:var(--dsw-alias-label-tertiary)}.rScV5Q_containerControls button,.rScV5Q_containerControls select{height:26px;padding:0 7px;border:1px solid transparent;border-radius:6px;color:var(--dsw-alias-label-secondary);background:transparent;font:inherit;cursor:pointer}.rScV5Q_containerControls button:hover:not(:disabled),.rScV5Q_containerControls select:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerControls button:disabled,.rScV5Q_containerControls select:disabled{opacity:.45;cursor:default}.rScV5Q_containerControls select{border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerControls select{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerNotice{box-sizing:border-box;flex:none;min-height:28px;padding:6px 11px;color:var(--dsw-alias-state-business-primary);background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent);font:var(--dsw-font-xxs-12)}.rScV5Q_containerNotice[data-state=error]{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);border-bottom-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 18%,transparent)}.rScV5Q_containerContent{min-width:0;min-height:0;flex:1;display:flex;overflow:auto}.rScV5Q_containerContent>.rScV5Q_webFrameShell{flex:1}.rScV5Q_containerChart{box-sizing:border-box;min-width:0;min-height:0;width:100%;padding:14px 16px 10px;display:flex;flex-direction:column;justify-content:center}.rScV5Q_containerChart svg{display:block;width:100%;min-height:0;max-height:320px;overflow:visible}.rScV5Q_chartGrid{stroke:var(--dsw-alias-border-l2);stroke-width:1}.rScV5Q_chartAxis{stroke:var(--dsw-alias-label-tertiary);stroke-width:1.2}.rScV5Q_chartLabel{fill:var(--dsw-alias-label-secondary);font:12px STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_chartLegend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_chartLegend span{display:inline-flex;align-items:center;gap:5px}.rScV5Q_chartLegend i{width:9px;height:9px}.rScV5Q_containerTableScroll{box-sizing:border-box;width:100%;padding:14px;overflow:auto}.rScV5Q_containerTableScroll table{width:100%;border-collapse:collapse;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-13)}.rScV5Q_containerTableScroll th,.rScV5Q_containerTableScroll td{padding:9px 10px;border:1px solid var(--dsw-alias-border-l2);text-align:left;vertical-align:top}.rScV5Q_containerTableScroll th{white-space:nowrap;background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-strong-13)}.rScV5Q_containerTableScroll tr:nth-child(even) td{background:color-mix(in srgb,var(--dsw-alias-bg-base) 65%,transparent)}.rScV5Q_containerKpis{box-sizing:border-box;width:100%;padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-content:center}.rScV5Q_containerKpis>div{box-sizing:border-box;min-height:96px;padding:14px;display:flex;flex-direction:column;justify-content:center;gap:5px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}.rScV5Q_containerKpis span{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerKpis strong{color:var(--dsw-alias-label-primary);font:var(--dsw-font-xl-strong-24);font-variant-numeric:tabular-nums}.rScV5Q_containerKpis em{color:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);font-style:normal}.rScV5Q_containerMarkdown{box-sizing:border-box;width:100%;padding:18px 20px;overflow:auto;color:var(--dsw-alias-label-primary);user-select:text}";
@@ -9082,6 +9275,7 @@ index 1dd0e89..59d63a1 100644
 +							setContextMenu({ nodeId: node.id, left: event.clientX - bounds.left, top: event.clientY - bounds.top });
 +						},
 +						onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),
++						onHtmlSize: (artifact, dimensions) => workspace.fitHtmlContent(artifact.id, artifact.containerSpec?.html, dimensions),
 +						onWebInspection: (expectedUrl, inspection) => workspace.applyWebLinkInspection(node.id, expectedUrl, inspection),
 +						onActivate: activateArtifact,
 +						onCancelGeneration: () => workspace.cancelGeneration(node.id),
@@ -9385,7 +9579,7 @@ index 1dd0e89..59d63a1 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +15108,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15286,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9404,7 +9598,7 @@ index 1dd0e89..59d63a1 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15147,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15325,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -9764,7 +9958,7 @@ index 1dd0e89..59d63a1 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15508,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15686,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -9936,7 +10130,7 @@ index 1dd0e89..59d63a1 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +15678,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +15856,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -9948,7 +10142,7 @@ index 1dd0e89..59d63a1 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +15688,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +15866,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -9956,7 +10150,7 @@ index 1dd0e89..59d63a1 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +15720,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +15898,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -9966,7 +10160,7 @@ index 1dd0e89..59d63a1 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +15739,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +15917,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10071,7 +10265,7 @@ index 1dd0e89..59d63a1 100644
  				})]
  			});
  		}
-@@ -6951,6 +15821,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +15999,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10103,7 +10297,7 @@ index 1dd0e89..59d63a1 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +15875,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16053,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10124,7 +10318,7 @@ index 1dd0e89..59d63a1 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +15897,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16075,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10148,7 +10342,7 @@ index 1dd0e89..59d63a1 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +15954,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16132,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -10166,7 +10360,7 @@ index 1dd0e89..59d63a1 100644
  				})] })
  			});
  		}
-@@ -7053,14 +15964,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16142,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -10245,7 +10439,7 @@ index 1dd0e89..59d63a1 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16044,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16222,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -10262,7 +10456,7 @@ index 1dd0e89..59d63a1 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16067,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16245,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -10271,7 +10465,7 @@ index 1dd0e89..59d63a1 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16120,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16298,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -10289,7 +10483,7 @@ index 1dd0e89..59d63a1 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16156,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16334,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -10297,7 +10491,7 @@ index 1dd0e89..59d63a1 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17048,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17226,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -10328,7 +10522,7 @@ index 1dd0e89..59d63a1 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17093,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17271,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -10353,7 +10547,7 @@ index 1dd0e89..59d63a1 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18047,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18225,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -10362,7 +10556,7 @@ index 1dd0e89..59d63a1 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18137,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18315,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10404,7 +10598,7 @@ index 1dd0e89..59d63a1 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +18346,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +18524,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10421,7 +10615,7 @@ index 1dd0e89..59d63a1 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18516,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18694,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10431,7 +10625,7 @@ index 1dd0e89..59d63a1 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +18558,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18736,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10446,7 +10640,7 @@ index 1dd0e89..59d63a1 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +18576,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18754,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10459,7 +10653,7 @@ index 1dd0e89..59d63a1 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +18625,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +18803,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10473,7 +10667,7 @@ index 1dd0e89..59d63a1 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +18663,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +18841,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10483,7 +10677,7 @@ index 1dd0e89..59d63a1 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +18795,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +18973,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10498,7 +10692,7 @@ index 1dd0e89..59d63a1 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +18811,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +18989,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10507,7 +10701,7 @@ index 1dd0e89..59d63a1 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +18835,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19013,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -10516,7 +10710,7 @@ index 1dd0e89..59d63a1 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +18861,145 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19039,149 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -10547,6 +10741,9 @@ index 1dd0e89..59d63a1 100644
 +		exports.ResearchCanvasArtifactCard = ResearchCanvasArtifactCard;
 +		exports.ResearchCanvasFileCard = ResearchCanvasFileCard;
 +		exports.TurnTailNodeView = TurnTailNodeView;
++		exports.researchGenerationPresentation = researchGenerationPresentation;
++		exports.researchTaskInputSummary = researchTaskInputSummary;
++		exports.ResearchTaskInputRecord = ResearchTaskInputRecord;
 +		exports.UserStyleBubble = UserStyleBubble;
 +		exports.compactionDefinition = compactionDefinition;
 +		exports.compactConversationFlow = compactConversationFlow;
@@ -10600,6 +10797,7 @@ index 1dd0e89..59d63a1 100644
 +		exports.parseResearchMindMap = parseResearchMindMap;
 +		exports.parseResearchContainerSpec = parseResearchContainerSpec;
 +		exports.buildResearchHtmlPreview = buildResearchHtmlPreview;
++		exports.researchHtmlAutoGeometry = researchHtmlAutoGeometry;
 +		exports.researchCanvasExportDescriptor = researchCanvasExportDescriptor;
 +		exports.researchCanvasExportFileName = researchCanvasExportFileName;
 +		exports.buildResearchContainerChartSvg = buildResearchContainerChartSvg;

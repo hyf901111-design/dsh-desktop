@@ -115,17 +115,102 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     apply()
   }
   addEventListener('message', receive)
+  const startContentMeasurement = () => {
+    if (typeof parent.postMessage !== 'function') return
+    let stopped = false
+    let reports = 0
+    let previous = ''
+    let pending
+    let observer
+    const measure = () => {
+      if (stopped || reports >= 6 || !document.body) return
+      const viewportWidth = document.documentElement.clientWidth
+      const viewportHeight = document.documentElement.clientHeight
+      if (!(viewportWidth > 0 && viewportHeight > 0)) return
+      let right = 0
+      let bottom = 0
+      const visible = (element) => {
+        if (!element || element.closest('script,style,template,noscript,[hidden]')) return false
+        const style = getComputedStyle(element)
+        return style.display !== 'none' && style.visibility !== 'hidden' && style.position !== 'fixed'
+      }
+      const include = (bounds, element, borderBox = false) => {
+        if (!bounds || !Number.isFinite(bounds.right) || !Number.isFinite(bounds.bottom) || !(bounds.width > 0 && bounds.height > 0)) return
+        let trailingWidth = 0
+        let trailingHeight = 0
+        let depth = 0
+        // Include the last panel's trailing insets, not its viewport-derived
+        // box height. Otherwise a 40px card padding can remain clipped even
+        // though all of its text or SVG bounds fit inside the resized frame.
+        for (let ancestor = element; ancestor && depth++ < 24; ancestor = ancestor.parentElement) {
+          const style = getComputedStyle(ancestor)
+          const pixels = (value) => Math.max(0, parseFloat(value) || 0)
+          trailingWidth += pixels(style.marginRight)
+          trailingHeight += pixels(style.marginBottom)
+          if (ancestor !== element || !borderBox) {
+            trailingWidth += pixels(style.paddingRight) + pixels(style.borderRightWidth)
+            trailingHeight += pixels(style.paddingBottom) + pixels(style.borderBottomWidth)
+          }
+        }
+        right = Math.max(right, bounds.right + (window.scrollX || 0) + trailingWidth)
+        bottom = Math.max(bottom, bounds.bottom + (window.scrollY || 0) + trailingHeight)
+      }
+      // Text ranges and replaced media describe real content, unlike body or a
+      // min-height:100vh shell whose box grows whenever its iframe grows.
+      let visited = 0
+      const walker = document.createTreeWalker(document.body, 4)
+      for (let text = walker.nextNode(); text && visited < 4000; text = walker.nextNode()) {
+        visited++
+        if (!text.textContent.trim() || !visible(text.parentElement)) continue
+        const range = document.createRange()
+        range.selectNodeContents(text)
+        const hasTextBounds = typeof range.getBoundingClientRect === 'function'
+        include(hasTextBounds ? range.getBoundingClientRect() : text.parentElement.getBoundingClientRect(), text.parentElement, !hasTextBounds)
+      }
+      for (const element of Array.from(document.body.querySelectorAll('svg,canvas,img,video,audio,table,input,textarea,select,button,[role="img"]')).slice(0, 1000)) {
+        if (visible(element)) include(element.getBoundingClientRect(), element, true)
+      }
+      const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
+      const height = Math.min(2400, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
+      const key = width + ':' + height
+      if (key === previous) return
+      previous = key
+      reports++
+      parent.postMessage({ type: 'sherlock-content-size', width, height }, '*')
+    }
+    const schedule = () => {
+      if (stopped || reports >= 6 || pending !== undefined) return
+      if (typeof setTimeout !== 'function') { measure(); return }
+      pending = setTimeout(() => { pending = undefined; measure() }, 180)
+    }
+    if (typeof ResizeObserver === 'function') {
+      observer = new ResizeObserver(schedule)
+      observer.observe(document.body)
+    }
+    addEventListener('resize', schedule)
+    document.addEventListener('load', schedule, true)
+    document.fonts?.ready?.then(schedule).catch(() => {})
+    measure()
+    if (typeof setTimeout === 'function') setTimeout(() => {
+      stopped = true
+      if (pending !== undefined) clearTimeout(pending)
+      observer?.disconnect()
+      removeEventListener('resize', schedule)
+      document.removeEventListener('load', schedule, true)
+    }, 8000)
+  }
   document.addEventListener('DOMContentLoaded', () => {
     const declaration = Array.from(document.querySelectorAll('meta[name]')).find((meta) => meta.getAttribute('name')?.trim().toLowerCase() === 'sherlock-theme')
     const value = declaration?.getAttribute('content')?.trim().toLowerCase()
     fixedTheme = value === 'light' || value === 'dark' ? value : null
     apply()
+    startContentMeasurement()
   }, { once: true })
   apply()
 }`
 
-// Only trusted code runs in the outer document. It never receives or forwards
-// artifact data. Opaque sandbox origins require '*'; contentWindow and parent
+// Only trusted code runs in the outer document. The only artifact output it
+// forwards is a bounded pair of layout dimensions, never HTML or page content. Opaque sandbox origins require '*'; contentWindow and parent
 // identity checks keep the message confined to this exact parent/child pair.
 const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterThemeRuntime(inner, initialTheme, fixedTheme) {
   const root = document.documentElement
@@ -133,6 +218,8 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   const standalone = window === parent
   const media = standalone && typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null
   let colorScheme = media ? media.matches ? 'dark' : 'light' : initialTheme
+  let sizeReports = 0
+  let previousSize = ''
   const publish = () => {
     root.setAttribute('data-sherlock-theme', fixedTheme || colorScheme)
     root.style.colorScheme = fixedTheme || colorScheme
@@ -140,6 +227,18 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   }
   addEventListener('message', (event) => {
     const data = event.data
+    if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
+        Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
+        data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&
+        data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 2400) {
+      const key = data.width + ':' + data.height
+      if (sizeReports < 6 && key !== previousSize) {
+        previousSize = key
+        sizeReports++
+        parent.postMessage({ type: 'sherlock-content-size', width: data.width, height: data.height }, '*')
+      }
+      return
+    }
     if (standalone || event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
         !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
         data.colorScheme !== 'light' && data.colorScheme !== 'dark') return

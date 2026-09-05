@@ -4,7 +4,7 @@ import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { buildResearchHtmlPreview, parseResearchHtmlArtifact } from '../packages/dsh-research-task-runtime/html-artifact.js'
 
-function runtime(html, { standalone = false, systemDark = false } = {}) {
+function runtime(html, { standalone = false, systemDark = false, configure } = {}) {
   const window = new Window({ settings: { disableJavaScriptEvaluation: true } })
   window.document.write(html)
   // Happy DOM currently drops @layer rules entirely. Unwrap only our reserved
@@ -20,19 +20,21 @@ function runtime(html, { standalone = false, systemDark = false } = {}) {
     Object.defineProperty(frame, 'srcdoc', { get: () => childHtml, set: (value) => { childHtml = value } })
     Object.defineProperty(frame, 'contentWindow', { value: { postMessage: (data, origin) => messages.push({ data, origin }) } })
   }
-  const parent = standalone ? window : {}
+  const parentMessages = []
+  const parent = standalone ? window : { postMessage: (data, origin) => parentMessages.push({ data, origin }) }
+  configure?.(window)
   const media = { matches: systemDark, addEventListener: vi.fn(), removeEventListener: vi.fn() }
   const context = vm.createContext({
     window, document: window.document, parent,
     trustedTypes: { isHTML: () => true }, matchMedia: () => media,
-    CustomEvent: window.CustomEvent,
+    CustomEvent: window.CustomEvent, getComputedStyle: window.getComputedStyle.bind(window),
     addEventListener: window.addEventListener.bind(window),
     removeEventListener: window.removeEventListener.bind(window)
   })
   for (const script of window.document.querySelectorAll('script')) vm.runInContext(script.textContent, context)
   const send = (data, source = parent) => window.dispatchEvent(new window.MessageEvent('message', { data, source }))
   const parsed = () => window.document.dispatchEvent(new window.Event('DOMContentLoaded'))
-  return { window, context, parent, media, frame, messages, send, parsed, childHtml: () => childHtml }
+  return { window, context, parent, media, frame, messages, parentMessages, send, parsed, childHtml: () => childHtml }
 }
 
 const themeMessage = (colorScheme) => ({ type: 'sherlock-theme', colorScheme })
@@ -205,5 +207,39 @@ describe('offline HTML component theme runtime', () => {
     const inner = runtime(outer.childHtml())
     expect(vm.runInContext('RTCPeerConnection', inner.context)).toBeUndefined()
     expect(vm.runInContext('Object.getOwnPropertyDescriptor(globalThis,"RTCPeerConnection").configurable', inner.context)).toBe(false)
+  })
+
+  it('reports actual overflowing text/media bounds, without growing a viewport-sized empty shell', () => {
+    const setup = (window) => {
+      Object.defineProperty(window.document.documentElement, 'clientWidth', { value: 960 })
+      Object.defineProperty(window.document.documentElement, 'clientHeight', { value: 600 })
+      const chart = window.document.querySelector('svg')
+      if (chart) chart.getBoundingClientRect = () => ({ left: 20, right: 1180, top: 20, bottom: 1230, width: 1160, height: 1210 })
+      const label = window.document.querySelector('p')
+      if (label) label.getBoundingClientRect = () => ({ left: 20, right: 120, top: 20, bottom: 40, width: 100, height: 20 })
+    }
+    const overflow = runtime(runtime(buildResearchHtmlPreview('<svg width="1160" height="1210"></svg>')).childHtml(), { configure: setup })
+    overflow.parsed()
+    expect(overflow.parentMessages.at(-1)).toEqual({ data: { type: 'sherlock-content-size', width: 1196, height: 1246 }, origin: '*' })
+    const emptyShell = runtime(runtime(buildResearchHtmlPreview('<main style="min-height:100vh;padding:20px"><p>少量文字</p></main>')).childHtml(), { configure: setup })
+    emptyShell.parsed()
+    expect(emptyShell.parentMessages.at(-1)?.data).toEqual({ type: 'sherlock-content-size', width: 960, height: 600 })
+    const padded = runtime(runtime(buildResearchHtmlPreview('<main style="padding:40px;border:3px solid #999;margin:24px"><svg width="1160" height="1210"></svg></main>')).childHtml(), { configure: setup })
+    padded.parsed()
+    expect(padded.parentMessages.at(-1)?.data).toEqual({ type: 'sherlock-content-size', width: 1263, height: 1313 })
+  })
+
+  it('forwards only bounded content dimensions from its own inner frame, keeping theme messages separate', () => {
+    const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'))
+    const size = { type: 'sherlock-content-size', width: 1200, height: 1400 }
+    for (const data of [size, { ...size, height: Infinity }, { ...size, width: -1 }, { ...size, width: 2401 }, { ...size, height: 1.5 }, { ...size, html: '<script>' }]) outer.send(data, {})
+    for (const data of [{ ...size, height: Infinity }, { ...size, width: -1 }, { ...size, width: 2401 }, { ...size, height: 1.5 }, { ...size, html: '<script>' }]) outer.send(data, outer.frame.contentWindow)
+    expect(outer.parentMessages).toHaveLength(0)
+    outer.send(size, outer.frame.contentWindow)
+    expect(outer.parentMessages).toEqual([{ data: size, origin: '*' }])
+    outer.send(themeMessage('dark'), outer.frame.contentWindow)
+    expect(outer.parentMessages).toHaveLength(1)
+    for (let height = 1500; height < 1520; height++) outer.send({ ...size, height }, outer.frame.contentWindow)
+    expect(outer.parentMessages.length).toBeLessThanOrEqual(6)
   })
 })

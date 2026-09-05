@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Window } from 'happy-dom'
 import {
   BrowserSearchController,
   browserSearchWindowOptions,
@@ -193,6 +194,123 @@ describe('BrowserSearchController', () => {
       'https://html.duckduckgo.com/html/?q=stalled+first+engine',
       'https://www.bing.com/search?q=stalled+first+engine'
     ])
+  })
+
+  it('retries the allowed regional Bing entry when the global entry cannot connect', async () => {
+    const window = new FakeSearchWindow()
+    const load = window.loadURL.bind(window)
+    window.loadURL = async (url) => {
+      if (new URL(url).hostname === 'www.bing.com') {
+        window.loaded.push(url)
+        throw new Error('net::ERR_CONNECTION_TIMED_OUT')
+      }
+      await load(url)
+    }
+    window.results.set('bing', [{ title: 'ETF', url: 'https://example.cn/510300' }])
+    const controller = new BrowserSearchController({ createWindow: () => window })
+
+    await expect(controller.search('沪深300ETF 510300', 5)).resolves.toMatchObject({
+      sources: [{ title: 'ETF', url: 'https://example.cn/510300' }]
+    })
+    expect(window.loaded.map((url) => new URL(url).hostname)).toEqual(['www.bing.com', 'cn.bing.com'])
+    expect(new URL(window.loaded[1]!).searchParams.get('q')).toBe('沪深300ETF 510300')
+  })
+
+  it('waits briefly for rendered results instead of treating the first empty DOM as failure', async () => {
+    const window = new FakeSearchWindow()
+    let waits = 0
+    const controller = new BrowserSearchController({
+      createWindow: () => window,
+      sleep: async () => {
+        waits += 1
+        window.results.set('bing', [{ title: '已加载', url: 'https://example.cn/loaded' }])
+      }
+    })
+
+    await expect(controller.search('基金净值', 5)).resolves.toMatchObject({
+      sources: [{ title: '已加载', url: 'https://example.cn/loaded' }]
+    })
+    expect(waits).toBe(1)
+    expect(window.loaded).toHaveLength(1)
+  })
+
+  it('reports an explicit no-results page as no_results without inventing a source', async () => {
+    const window = new FakeSearchWindow()
+    const execute = window.webContents.executeJavaScript
+    window.webContents.executeJavaScript = async (script) => script.includes('document.body?.innerText')
+      ? { url: window.currentUrl, title: '搜索', text: '没有找到相关结果', noResults: true }
+      : execute(script)
+    const controller = new BrowserSearchController({ createWindow: () => window })
+
+    await expect(controller.search('不存在的搜索词', 5)).resolves.toMatchObject({
+      status: 'no_results', sources: [], truncated: false, content: expect.stringContaining('未找到')
+    })
+    expect(window.loaded).toHaveLength(2)
+  })
+
+  it('recognizes actual engine no-results markup but not a result snippet saying no results', async () => {
+    const window = new FakeSearchWindow()
+    const page = new Window({ url: 'https://www.bing.com/search?q=test' })
+    let noResults = true
+    const load = window.loadURL.bind(window)
+    window.loadURL = async (url) => {
+      await load(url)
+      page.document.body.innerHTML = noResults
+        ? '<ol id="b_results"><li class="b_no">没有找到相关结果</li></ol>'
+        : '<ol id="b_results"><li class="b_algo"><h2><a href="https://example.com/report">报告</a></h2><div class="b_caption"><p>No results is the reported status.</p></div></li></ol>'
+    }
+    window.webContents.executeJavaScript = async (script) => page.eval(script)
+    const controller = new BrowserSearchController({ createWindow: () => window })
+    try {
+      await expect(controller.search('test', 5)).resolves.toMatchObject({ status: 'no_results', sources: [] })
+      noResults = false
+      await expect(controller.search('报告', 5)).resolves.toMatchObject({ sources: [{ url: 'https://example.com/report' }] })
+    } finally {
+      await page.happyDOM.close()
+    }
+  })
+
+  it('keeps connection failures distinct from a successful empty search', async () => {
+    const window = new FakeSearchWindow()
+    window.loadURL = async (url) => { window.loaded.push(url); throw new Error('net::ERR_CERT_COMMON_NAME_INVALID') }
+    const controller = new BrowserSearchController({ createWindow: () => window })
+
+    await expect(controller.search('基金净值', 5)).rejects.toThrow('搜索引擎暂时无法连接')
+    expect(window.loaded).toHaveLength(3)
+  })
+
+  it('bounds an unrecognized empty page instead of returning a fabricated no-results state', async () => {
+    const window = new FakeSearchWindow()
+    let waits = 0
+    const controller = new BrowserSearchController({ createWindow: () => window, sleep: async () => { waits += 1 } })
+
+    await expect(controller.search('基金净值', 5)).rejects.toThrow('未能读取搜索结果')
+    expect(window.loaded).toHaveLength(3)
+    expect(waits).toBeLessThanOrEqual(9)
+  })
+
+  it('does not accept stale results from a different query after navigation', async () => {
+    const window = new FakeSearchWindow()
+    window.loadURL = async (url) => {
+      window.loaded.push(url)
+      window.currentUrl = 'https://www.bing.com/search?q=old-query'
+    }
+    window.results.set('bing', [{ title: '旧数据', url: 'https://example.com/stale' }])
+    const controller = new BrowserSearchController({ createWindow: () => window })
+
+    await expect(controller.search('新查询', 5)).rejects.toThrow('未能读取搜索结果')
+  })
+
+  it('bounds a stalled extraction script and keeps the search queue usable', async () => {
+    const window = new FakeSearchWindow()
+    const execute = window.webContents.executeJavaScript
+    window.webContents.executeJavaScript = async () => new Promise(() => undefined)
+    const controller = new BrowserSearchController({ createWindow: () => window, scriptTimeoutMs: 5 })
+
+    await expect(controller.search('查询', 5)).rejects.toThrow('未能读取搜索结果')
+    window.webContents.executeJavaScript = execute
+    window.results.set('bing', [{ url: 'https://example.cn/recovered' }])
+    await expect(controller.search('恢复', 5)).resolves.toMatchObject({ sources: [{ url: 'https://example.cn/recovered' }] })
   })
 
   it('shows the isolated window only while human verification is required', async () => {
