@@ -68,6 +68,7 @@ import {
   type LocalSearchRuntime
 } from './search/local-search-runtime'
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { ResearchVoiceController, registerResearchVoiceHandlers } from './state/research-voice'
 import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import {
@@ -133,6 +134,13 @@ let pluginRecoveryResetTimer: ReturnType<typeof setTimeout> | undefined
 let harnessThemePreferenceSyncTimer: ReturnType<typeof setInterval> | undefined
 let researchFilePreviewRegistry: ResearchFilePreviewRegistry | undefined
 let researchCanvasWheelRouter: ResearchCanvasWheelRouter | undefined
+const researchVoiceController = new ResearchVoiceController({
+  getMainWindow: () => mainWindow,
+  isPackaged: app.isPackaged,
+  resourcesPath: process.resourcesPath,
+  appPath: app.getAppPath(),
+  locale: 'zh-CN'
+})
 const researchLinkFrameRegistry = new ResearchLinkFrameRegistry()
 
 function cancelPluginRecoverySessionReset(): void {
@@ -543,6 +551,7 @@ function createWindow(): BrowserWindow {
     resolvePluginRecoveryAction('quit')
   })
   mainWindow = window
+  researchVoiceController.attachWindow(window)
   return window
 }
 
@@ -729,6 +738,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
       revealFile: (target) => shell.showItemInFolder(target)
     })
   })
+  registerResearchVoiceHandlers({ ipcMain, getMainWindow: () => mainWindow, controller: researchVoiceController })
   registerResearchCanvasWheelIpc({
     ipcMain,
     getMainWindow: () => mainWindow,
@@ -1212,6 +1222,7 @@ if (!singleInstance) {
     if (process.platform !== 'darwin') app.quit()
   })
   app.on('before-quit', (event) => {
+    researchVoiceController.dispose()
     if (quitting || !runtime) return
     event.preventDefault()
     quitting = true

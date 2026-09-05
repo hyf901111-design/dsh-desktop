@@ -10,6 +10,14 @@ import {
 } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 
+type TestResearchVoiceBridge = {
+  setActive(value: { sessionId: string; active: boolean }): Promise<{ ok: boolean; error?: string }>
+  start(value: { sessionId: string; requestId: string }): Promise<{ ok: boolean; error?: string }>
+  stop(value: { sessionId: string; requestId: string }): Promise<{ ok: boolean; error?: string }>
+  cancel(value: { sessionId: string; requestId: string }): Promise<{ ok: boolean; error?: string }>
+  subscribe(listener: (event: Record<string, unknown>) => void): () => void
+}
+
 type ClientBundle = Record<string, unknown>
 type ComponentType<Props> = (props: Props) => unknown
 type ReactNode = unknown
@@ -73,6 +81,7 @@ async function loadClientBundle(
   packageName: string,
   dshDesktop?: {
     showItemInFolder?(path: string): Promise<{ ok: boolean }>
+    researchVoice?: TestResearchVoiceBridge
     getPathForFile?(file: File): string
     researchCanvasStorage?: {
       getItem(key: string): string | null
@@ -937,6 +946,7 @@ async function mountResearchCanvas(options: {
     setItem(key: string, value: string): void
   }
   dshDesktop?: {
+    researchVoice?: TestResearchVoiceBridge
     getPathForFile?(file: File): string
     researchCanvasWheel?: {
       setRegion(value: Record<string, unknown>): boolean
@@ -12528,5 +12538,120 @@ describe('Sherlock workspace and composer controls', () => {
     )
 
     expect(next).toEqual({ scale: 1.25, x: -14, y: -60 })
+  })
+})
+
+describe('Research voice toolbar', () => {
+  async function mountVoice() {
+    let listener = (_event: Record<string, unknown>) => {}
+    const bridge = {
+      setActive: vi.fn(async () => ({ ok: true })),
+      start: vi.fn(async (_value: { sessionId: string; requestId: string }) => ({ ok: true })),
+      stop: vi.fn(async () => ({ ok: true })),
+      cancel: vi.fn(async () => ({ ok: true })),
+      subscribe: vi.fn((next: typeof listener) => { listener = next; return vi.fn() })
+    }
+    const generate = vi.fn(async () => ({ ok: true }))
+    const mounted = await mountResearchCanvas({
+      sessionId: 'voice-session', dshDesktop: { researchVoice: bridge },
+      selectionGeneration: { generate }
+    })
+    return { ...mounted, bridge, generate,
+      emit: (event: Record<string, unknown>) => listener({ sessionId: 'voice-session', ...event }) }
+  }
+
+  it('transcribes real levels and creates exactly one executing container for the final instruction', async () => {
+    const mounted = await mountVoice()
+    try {
+      const { host, bridge, emit, generate, workspace } = mounted
+      const button = host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement | null
+      expect(button).not.toBeNull()
+      await act(async () => { button!.click() })
+      const requestId = bridge.start.mock.calls[0]![0].requestId
+      await act(async () => {
+        emit({ type: 'state', requestId, state: 'listening' })
+        emit({ type: 'partial', requestId, text: '创建一个倒计时' })
+        emit({ type: 'level', requestId, level: 0.8 })
+      })
+      expect(host.querySelector('[data-research-voice-transcript]')?.textContent).toBe('创建一个倒计时')
+      expect(host.querySelector('[data-research-voice-wave]')?.getAttribute('data-level')).toBe('0.8')
+      await act(async () => { (host.querySelector('[data-research-voice-finish]') as HappyDOMHTMLElement).click() })
+      expect(bridge.stop).toHaveBeenCalledWith({ sessionId: 'voice-session', requestId })
+      await act(async () => {
+        emit({ type: 'final', requestId, text: '创建一个倒计时' })
+        emit({ type: 'final', requestId, text: '创建一个倒计时' })
+      })
+      expect(generate).toHaveBeenCalledTimes(1)
+      expect(generate).toHaveBeenCalledWith(expect.objectContaining({
+        kind: 'container', sessionId: 'voice-session', prompt: '创建一个倒计时'
+      }))
+      expect(workspace.getSnapshot().artifacts).toHaveLength(1)
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({
+        kind: 'generated-container', containerPrompt: '创建一个倒计时', generationStatus: 'queued'
+      })
+    } finally { await mounted.cleanup() }
+  })
+
+  it('cancels with Escape and rejects cancelled, other-session and post-unmount results', async () => {
+    const mounted = await mountVoice()
+    const { bridge, emit, host, browserWindow, generate } = mounted
+    await act(async () => { emit({ type: 'toggle' }) })
+    const requestId = bridge.start.mock.calls[0]![0].requestId
+    await act(async () => {
+      emit({ type: 'state', requestId, state: 'listening' })
+      browserWindow.document.dispatchEvent(new browserWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      emit({ type: 'final', requestId, text: '不得创建' })
+    })
+    expect(bridge.cancel).toHaveBeenCalledWith({ sessionId: 'voice-session', requestId })
+    expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+    expect(generate).not.toHaveBeenCalled()
+    await act(async () => { emit({ type: 'toggle' }) })
+    const secondId = bridge.start.mock.calls[1]![0].requestId
+    await act(async () => { emit({ type: 'final', sessionId: 'other', requestId: secondId, text: '不得创建' }) })
+    expect(generate).not.toHaveBeenCalled()
+    await mounted.cleanup()
+    await act(async () => { emit({ type: 'final', requestId: secondId, text: '不得创建' }) })
+    expect(generate).not.toHaveBeenCalled()
+    expect(bridge.setActive).toHaveBeenLastCalledWith({ sessionId: 'voice-session', active: false })
+  })
+
+  it('keeps transcript reading and scrolling separate from canvas selection and pan', async () => {
+    const mounted = await mountVoice()
+    try {
+      const { emit, bridge, workspace, browserWindow, host, canvas } = mounted
+      await act(async () => { workspace.createContainerDraft(); emit({ type: 'toggle' }) })
+      const requestId = bridge.start.mock.calls[0]![0].requestId
+      await act(async () => { emit({ type: 'partial', requestId, text: '较长的语音指令'.repeat(50) }) })
+      const before = workspace.getSnapshot()
+      const transcript = host.querySelector('[data-research-voice-transcript]') as HappyDOMHTMLElement
+      const wheel = new browserWindow.WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 100 })
+      await act(async () => {
+        transcript.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 91 }))
+        transcript.dispatchEvent(wheel)
+        ;(canvas as HappyDOMHTMLElement).focus()
+        browserWindow.document.dispatchEvent(new browserWindow.KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+        transcript.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 92 }))
+      })
+      expect(workspace.getSnapshot().selection).toEqual(before.selection)
+      expect(workspace.getSnapshot().viewport).toEqual(before.viewport)
+      expect(wheel.defaultPrevented).toBe(false)
+      expect(canvas.getAttribute('data-research-operation')).toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+
+  it('shows permission errors and leaves empty recognition without a canvas component', async () => {
+    const mounted = await mountVoice()
+    try {
+      const { bridge, emit, host, generate } = mounted
+      await act(async () => { emit({ type: 'toggle' }) })
+      const requestId = bridge.start.mock.calls[0]![0].requestId
+      await act(async () => { emit({ type: 'error', requestId, code: 'permission-denied', message: '请允许麦克风访问' }) })
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain('请允许麦克风访问')
+      await act(async () => { (host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement).click() })
+      const secondId = bridge.start.mock.calls[1]![0].requestId
+      await act(async () => { emit({ type: 'final', requestId: secondId, text: '  ' }) })
+      expect(generate).not.toHaveBeenCalled()
+      expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(0)
+    } finally { await mounted.cleanup() }
   })
 })

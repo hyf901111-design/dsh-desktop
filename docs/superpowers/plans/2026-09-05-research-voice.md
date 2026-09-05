@@ -1,0 +1,54 @@
+# Research Voice Implementation Plan
+
+> **For agentic workers:** Use superpowers:subagent-driven-development. Follow task ownership below; integration and local commits belong to the primary agent.
+
+**Goal:** 将研究语音指令转成自动执行的画布组件。
+**Architecture:** Node-API 原生录音与 Fn → 可信主进程 IPC → preload → 研究工具栏 → 现有容器执行。
+**Tech Stack:** Objective-C++, Node-API, Apple Speech, AVAudioEngine, Electron, TypeScript, React, Vitest.
+**Spec:** docs/superpowers/specs/2026-09-05-research-voice-design.md
+
+## Global Constraints
+
+- 仅前台研究模式启用；开始时才申请权限；只设备端识别，不保存原始音频。
+- final 每请求只执行一次；取消/卸载/会话切换使旧回调失效。
+- 中文本地提交；聚焦检查；本地签名测试构建，跳过公证，不对外发布。
+
+## Task 1: 原生捕获
+
+Files: scripts/macos/research-voice.mm, scripts/build-research-voice.mjs, test/research-voice-native.test.ts.
+Interface: init(callback), setEnabled(bool), start(requestId,locale), stop(requestId), cancel(requestId), dispose(). Events: toggle; or requestId + state/partial/level/final/error/cancelled.
+
+- [x] 先编写不请求权限的构建/导出/lifecycle验证。
+- [x] 实现 AppKit Fn、Speech 权限、设备端识别、RMS、静音截止与过期任务清理。
+- [x] 编译 Node-API bundle，验证加载和销毁。
+
+## Task 2: 可信录音会话
+
+Files: src/shared/research-voice.ts, src/main/state/research-voice.ts, src/preload/research-voice.ts, test/research-voice.test.ts.
+Interface: renderer bridge setActive({sessionId,active}), start/stop/cancel({sessionId,requestId}), subscribe(callback). Responses {ok,error?}; all events carry sessionId.
+
+- [x] 测试跨窗口/子框架拒绝、陈旧请求拒绝、final去重、会话退出取消。
+- [x] 实现主进程所有权及原生事件校验，preload订阅清理。
+- [x] 跑 focused bridge tests。
+
+## Task 3: 工具栏与容器
+
+Files: conversation client patch, test/sherlock-composer-workspace-ui.test.ts.
+
+- [x] 测试开始/结束/取消、partial/level、final去重及卸载不执行。
+- [x] 添加 ResearchVoiceControl，绝对定位波纹条并显示真实转写。
+- [x] 非空final调用 createContainerDraft → startContainerGeneration；保留指令与现有任务权限。
+- [x] 重建 patch-package 并跑直接相关 UI 测试。
+
+## Task 4: 打包和验收
+
+Files: package.json, main/preload入口, build/macos语音权限、原生资源规则。
+
+- [x] 加入 build/native资源和 Info.plist 隐私说明、音频 entitlement。
+- [ ] 聚焦测试、typecheck、原生编译；独立审阅取消/权限/重入风险。
+- [ ] 创建中文本地提交，运行 ./script/build_and_run.sh --verify 和完整包检查。
+- [ ] 验证真实工具栏、权限、Fn/录音与组件执行；明确未能获得真实音频的验证边界，保持应用打开。
+
+## 验证记录
+
+275 项相关 Vitest 通过；10 项原生无权限测试通过；TypeScript 检查通过。Electron 43.4.0 加载生产原生模块成功，arm64/x64 编译成功。审阅发现识别条原生画布手势冲突，已以失败用例复现并修复，验证文字滚动、框选与 Space 平移隔离。
