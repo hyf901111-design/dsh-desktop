@@ -211,7 +211,7 @@ function containerNeedsWebData(prompt) {
   const illustrative = /演示数据|示例数据|示意数据|模拟数据|虚构数据|样例数据|\b(?:sample|demo|mock|synthetic|illustrative)\s+data\b/iu.test(value)
   const supplied = /(?:以下|这些|给定|提供|上述|下列).{0,12}(?:数据|数值)|数据(?:如下|为|是|：|:)|(?:收入|成本|销量|收益率|价格|净值)[：:\s]*[-+]?\d+(?:[、,，]\s*[-+]?\d+){1,}/u.test(value)
   if ((illustrative || supplied) && !explicitFresh) return false
-  return /实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|推特|微博|社交媒体|社媒|行情|报价|价格|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|\b(?:live|latest|current|today|now|price|quote|market|twitter|tweet|social|monitor)\b/iu.test(value)
+  return /实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|推特|微博|社交媒体|社媒|行情|报价|价格|净值|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|\b(?:live|latest|current|today|now|price|quote|market|twitter|tweet|social|monitor)\b/iu.test(value)
 }
 
 // Search for the data subject, not the user's UI construction instruction.
