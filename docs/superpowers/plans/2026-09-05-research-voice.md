@@ -15,7 +15,7 @@
 
 ## Task 1: 原生捕获
 
-Files: scripts/macos/research-voice.mm, scripts/build-research-voice.mjs, test/research-voice-native.test.ts.
+Files: scripts/macos/research-voice.mm, scripts/build-research-voice.mjs, scripts/test-research-voice-native.mjs.
 Interface: init(callback), setEnabled(bool), start(requestId,locale), stop(requestId), cancel(requestId), dispose(). Events: toggle; or requestId + state/partial/level/final/error/cancelled.
 
 - [x] 先编写不请求权限的构建/导出/lifecycle验证。
@@ -45,10 +45,16 @@ Files: conversation client patch, test/sherlock-composer-workspace-ui.test.ts.
 Files: package.json, main/preload入口, build/macos语音权限、原生资源规则。
 
 - [x] 加入 build/native资源和 Info.plist 隐私说明、音频 entitlement。
-- [ ] 聚焦测试、typecheck、原生编译；独立审阅取消/权限/重入风险。
-- [ ] 创建中文本地提交，运行 ./script/build_and_run.sh --verify 和完整包检查。
+- [x] 聚焦测试、typecheck、原生编译；独立审阅取消/权限/重入风险。
+- [x] 创建中文本地提交，运行 ./script/build_and_run.sh --verify 和完整包检查。
 - [ ] 验证真实工具栏、权限、Fn/录音与组件执行；明确未能获得真实音频的验证边界，保持应用打开。
 
 ## 验证记录
 
-275 项相关 Vitest 通过；10 项原生无权限测试通过；TypeScript 检查通过。Electron 43.4.0 加载生产原生模块成功，arm64/x64 编译成功。审阅发现识别条原生画布手势冲突，已以失败用例复现并修复，验证文字滚动、框选与 Space 平移隔离。
+281 项相关 Vitest 通过；12 项原生无权限测试通过；TypeScript 检查通过。Electron 43.4.0 加载生产原生模块成功，arm64/x64 编译成功。审阅发现识别条原生画布手势冲突，已以失败用例复现并修复，验证文字滚动、框选与 Space 平移隔离。
+
+真实 Electron 验收发现 WebFrameMain 标识来自原型 getter，展开对象会丢失标识，已改为显式读取并补回归测试。签名包已展示完整主界面、原有工作区和会话，以及新增语音入口。真实界面确认空轨迹可进入，创建容器后仍可切换对话、轨迹，再返回研究时容器保留。
+
+真实麦克风请求已到达 macOS TCC 并进入 AUTHREQ_PROMPTING；麦克风 entitlement 和两项权限说明已检查。系统权限窗口被控制工具禁止操作，已请用户手动允许。真实音量/转写/最终指令生成组件仍待用户授权后验收，不能以模拟事件测试代替。工具不支持 Fn 键输入（keyNotFound），实体键盘双击 Fn 及系统听写冲突仍待人工验收。原生测试已覆盖 Fn 双击、组合键和失焦复位。
+
+最终审阅补充：激活未完成时再次点击语音或收到 Fn toggle，直接取消请求，避免发送无效 start/stop；IPC 仅传 sessionId/requestId。权限等待文案明确提示用户允许麦克风与语音识别。授权流程因长时间失焦取消后，用户允许权限可重新点击语音开始。

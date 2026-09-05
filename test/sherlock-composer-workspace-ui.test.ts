@@ -12625,6 +12625,37 @@ describe('Research voice toolbar', () => {
     } finally { await mounted.cleanup() }
   })
 
+  it.each(['toolbar', 'fn'])('cancels before activation completes when ended by %s', async (source) => {
+    const mounted = await mountVoice()
+    try {
+      const { bridge, emit, host, generate, workspace } = mounted
+      const activation = deferred<{ ok: boolean }>()
+      bridge.setActive.mockImplementationOnce(() => activation.promise)
+      const button = host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement
+      await act(async () => { button.click() })
+      expect(bridge.start).not.toHaveBeenCalled()
+      await act(async () => {
+        if (source === 'toolbar') button.click()
+        else emit({ type: 'toggle' })
+        activation.resolve({ ok: true })
+      })
+      expect(bridge.start).not.toHaveBeenCalled()
+      expect(bridge.stop).not.toHaveBeenCalled()
+      expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+      expect(generate).not.toHaveBeenCalled()
+      expect(workspace.getSnapshot().artifacts).toHaveLength(0)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('explains the pending microphone and speech permission request', async () => {
+    const mounted = await mountVoice()
+    try {
+      await act(async () => { mounted.emit({ type: 'toggle' }) })
+      expect(mounted.host.querySelector('[data-research-voice-feedback]')?.textContent)
+        .toContain('请允许麦克风与语音识别权限')
+    } finally { await mounted.cleanup() }
+  })
+
   it('keeps transcript reading and scrolling separate from canvas selection and pan', async () => {
     const mounted = await mountVoice()
     try {
