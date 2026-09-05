@@ -1066,6 +1066,25 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it('keeps a later explicit ETF code in the subject query and rejects a different ETF', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.web.search.mockResolvedValue({ content: '纳指ETF最新净值1.25。', sources: [{ title: '纳指ETF最新净值', url: 'https://example.com/nasdaq', snippet: '纳指ETF最新净值1.25' }] })
+    await expect(fixture.start('生成ETF数据监控面板，监控沪深300ETF 510300 最新净值')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: '沪深300ETF 510300 最新净值', maxResults: 5 }, expect.any(AbortSignal))
+    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+  })
+
+  it('requires the specific uncoded ETF object rather than a matching fund manager alone', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.web.search.mockResolvedValue({ content: '华夏纳斯达克ETF最新净值1.25。', sources: [{ title: '华夏纳斯达克ETF最新净值', url: 'https://example.com/nasdaq', snippet: '华夏ETF最新净值1.25' }] })
+    await expect(fixture.start('监控华夏沪深300ETF最新净值')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    fixture.ctx.web.search.mockResolvedValue({ content: '华夏沪深300ETF净值1.26。', sources: [{ title: '华夏基金 · 沪深300ETF最新净值', url: 'https://example.com/csi300etf', snippet: '净值1.26' }] })
+    const handle = await fixture.start('监控华夏沪深300ETF最新净值')
+    expect(fixture.ctx.subagents.start).toHaveBeenCalledTimes(1)
+    await handle.dispose()
+  })
+
   it('keeps child events emitted while the adapter is still starting', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const result = Promise.withResolvers()

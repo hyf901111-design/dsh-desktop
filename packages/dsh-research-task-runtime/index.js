@@ -218,6 +218,8 @@ function containerNeedsWebData(prompt) {
 // Keep the original prompt untouched for generation and recoveries.
 function containerSearchPlan(prompt) {
   const clauses = String(prompt ?? '').split(/[，,。；;！？!?\n]/u)
+  const explicitCodes = [...String(prompt ?? '').matchAll(/(?:代码(?:为|是|[:：])?\s*|(?:ETF|基金|股票|证券|监控|追踪|跟踪|查询|查找)[\s（(]*)(\d{4,6})(?!\d|年|月|日)/giu)].map((match) => match[1])
+  const subjects = []
   let subject = ''
   for (const [index, clause] of clauses.entries()) {
     if (index > 0 && /^(?:包含|包括|支持|提供|采用|颜色|配色|使用|用|单位)/u.test(clause.trim())) continue
@@ -228,28 +230,33 @@ function containerSearchPlan(prompt) {
       .replace(/\b(?:generate|create|build|make|a|an|the|dashboard|panel|page|chart|monitor|monitoring|live|latest|current|today|data|price|quote|tracking)\b/giu, ' ')
       .replace(/\betf\b/giu, 'ETF').replace(/\s+/gu, ' ').trim()
       .replace(/^[一二三四五六七八九十两\d]+(?:个|张|份|套)\s*/u, '')
-    if (candidate) { subject = candidate.slice(0, 240); break }
+    if (candidate) subjects.push(candidate.slice(0, 240))
   }
+  subject = subjects.find((candidate) => explicitCodes.some((code) => candidate.includes(code)) && !/^代码/u.test(candidate)) ?? subjects[0] ?? ''
+  for (const code of explicitCodes) if (!subject.includes(code)) subject += ` ${code}`
   if (!subject || !/[\p{L}]/u.test(subject) && !/^\d{4,6}$/u.test(subject)) throw new ResearchTaskError('CONTAINER_DATA_SUBJECT_REQUIRED', '请在需求中写明要监控的数据对象，例如 ETF 名称或代码。')
   const terms = [subject.replace(/\s+/gu, '').toLowerCase()]
   const socialSubject = subject.replace(/(?:推特|微博|社交媒体|社媒|twitter|x平台)(?:账号)?$/iu, '').trim().toLowerCase()
   if (socialSubject.length > 1) terms.push(socialSubject.replace(/\s+/gu, ''))
   const ignored = new Set(['生成', '创建', '制作', '设计', '面板', '图表', '工具', '数据', '最新', '内容', '系统', '分析', '展示', '实时', '自动', '动态', '推特', '微博', '社交媒体', '社媒', 'twitter', 'social', 'stock', 'stocks'])
+  const objectTerms = []
   for (const part of new Intl.Segmenter('zh', { granularity: 'word' }).segment(subject)) {
     const word = part.segment.toLowerCase()
-    if (part.isWordLike && word.length > 1 && /\p{L}/u.test(word) && !ignored.has(word)) terms.push(word)
+    if (part.isWordLike && word.length > 1 && /\p{L}/u.test(word) && !ignored.has(word)) { terms.push(word); objectTerms.push(word) }
   }
   for (const aliases of [['etf', '交易所交易基金', '交易型开放式指数基金'], ['比特币', 'bitcoin', 'btc'], ['黄金', 'gold', 'xau'], ['沪深300', 'csi300'], ['生成式ai', 'generativeai']]) {
     if (aliases.some((alias) => terms.includes(alias))) terms.push(...aliases)
   }
   const fields = [...new Set(String(prompt ?? '').match(/涨跌幅|成交量|成交额|行情|净值|报价|价格|市值|汇率|利率|点位|今开|最高|最低/gu) ?? [])].slice(0, 8)
-  const codes = [...new Set(subject.match(/(?<!\d)\d{4,6}(?!\d|年|月|日)/gu) ?? [])]
-  return { query: `${subject} 最新${fields.length > 0 ? fields.join(' ') : '数据'}`, terms: [...new Set(terms)], codes }
+  const codes = [...new Set([...explicitCodes, ...(subject.match(/(?<!\d)\d{4,6}(?!\d|年|月|日)/gu) ?? [])])]
+  const requiredTerms = /ETF|基金|股票|证券|指数/iu.test(subject) && objectTerms.length > 1 ? [...new Set(objectTerms)] : []
+  return { query: `${subject} 最新${fields.length > 0 ? fields.join(' ') : '数据'}`, terms: [...new Set(terms)], codes, requiredTerms }
 }
 
-function containerEvidenceMatches(value, terms, codes = []) {
+function containerEvidenceMatches(value, terms, codes = [], requiredTerms = []) {
   const normalized = String(value ?? '').toLowerCase().replace(/\s+/gu, '')
-  if (codes.length > 0 && !codes.some((code) => new RegExp(`(?:^|\\D)${code}(?:\\D|$)`, 'u').test(normalized))) return false
+  if (codes.length > 0) return codes.some((code) => new RegExp(`(?:^|\\D)${code}(?:\\D|$)`, 'u').test(normalized))
+  if (requiredTerms.length > 0) return requiredTerms.every((term) => normalized.includes(term))
   return terms.some((term) => normalized.includes(term))
 }
 
@@ -1073,11 +1080,11 @@ export function createSubagentAdapter(ctx) {
           .filter((source) => source.url !== undefined)
           .slice(0, MAX_CONTAINER_WEB_RESULTS)
         : []
-      const sources = candidates.filter((source) => containerEvidenceMatches(`${source.title}\n${source.snippet}\n${source.url}`, plan.terms, plan.codes))
+      const sources = candidates.filter((source) => containerEvidenceMatches(`${source.title}\n${source.snippet}\n${source.url}`, plan.terms, plan.codes, plan.requiredTerms))
       // A synthesis that mixes rejected sources may repeat their unrelated
       // claims. Use only the retained source excerpts in that case.
       const content = sources.length === candidates.length ? evidenceText(result?.content) : ''
-      if (sources.length === 0 && (candidates.length > 0 || !containerEvidenceMatches(content, plan.terms, plan.codes))) throw unavailableContainerData()
+      if (sources.length === 0 && (candidates.length > 0 || !containerEvidenceMatches(content, plan.terms, plan.codes, plan.requiredTerms))) throw unavailableContainerData()
       const fetched = await Promise.all(
         sources
           .slice(0, MAX_CONTAINER_FETCH_RESULTS)
@@ -1087,7 +1094,7 @@ export function createSubagentAdapter(ctx) {
         fetched.filter(Boolean).map((item) => [item.url, item.content])
       )
       const sections = []
-      if (content.length > 0 && containerEvidenceMatches(content, plan.terms, plan.codes)) sections.push(`搜索摘要：\n${content}`)
+      if (content.length > 0 && containerEvidenceMatches(content, plan.terms, plan.codes, plan.requiredTerms)) sections.push(`搜索摘要：\n${content}`)
       for (const [index, source] of sources.entries()) {
         const parts = [
           `来源 ${index + 1}：${source.title || source.url}`,
