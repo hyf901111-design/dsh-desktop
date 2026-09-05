@@ -27,22 +27,54 @@ export function researchHtmlText(html) {
 }
 
 // RESEARCH_COMPONENT_THEME_START — keep this host-free block in client parity.
+// Approved prototypes/bklit-theme-preview/src/style.css: Monochrome uses stone
+// in light mode and zinc in dark mode. Additional series retain a neutral ramp.
 export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
   light: Object.freeze({
-    bg: '#f7f8fa', surface: '#ffffff', 'surface-muted': '#edeff2', text: '#000000', muted: '#62666d',
-    border: 'rgba(0,0,0,.10)', accent: '#007cff', 'accent-soft': '#e6f3ff',
-    'chart-1': '#007cff', 'chart-2': '#00a5c8', 'chart-3': '#657a94', 'chart-4': '#16a085', 'chart-5': '#8673d9', 'chart-6': '#d99a20'
+    bg: 'oklch(.97 0 0)', surface: '#fff', 'surface-muted': '#f5f5f5', text: '#0a0b0c', muted: '#737373',
+    border: 'oklch(.92 0 0)', accent: '#0a0b0c', 'accent-soft': '#7373730f',
+    'chart-1': 'oklch(37.4% .01 67.558)', 'chart-2': 'oklch(55.3% .013 58.071)',
+    'chart-3': '#737373', 'chart-4': '#a8a29e', 'chart-5': '#d6d3d1', 'chart-6': '#292524',
+    'chart-background': 'oklch(.915 0 0)', 'chart-foreground': 'oklch(.145 .004 285)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
+    'chart-label': 'oklch(.45 .01 260)', 'chart-grid': 'oklch(.917 0 0)', 'chart-crosshair': 'oklch(.677 0 72.411)',
+    'tooltip-bg': 'oklch(.999998 .0000253939 112.713)', 'tooltip-text': 'oklch(.147999 .0039982 228.752)',
+    'tooltip-muted': 'oklch(.564 0 78.958)', 'tooltip-border': 'oklch(.92 0 0)',
+    'chart-marker-background': '#f5f5f5', 'chart-marker-border': '#dedede', 'chart-marker-foreground': '#444',
+    'chart-marker-badge-background': '#171717', 'chart-marker-badge-foreground': '#fff',
+    'chart-segment-background': '#7373730f', 'chart-segment-line': '#73737340'
   }),
   dark: Object.freeze({
-    bg: '#070a0e', surface: '#111820', 'surface-muted': '#17242f', text: '#ffffff', muted: '#a5aab1',
-    border: 'rgba(255,255,255,.12)', accent: '#00a1ff', 'accent-soft': '#002e58',
-    'chart-1': '#00a1ff', 'chart-2': '#47c8e5', 'chart-3': '#92a7bf', 'chart-4': '#45c5a5', 'chart-5': '#a495ef', 'chart-6': '#edbb55'
+    bg: 'oklch(.14 .0047 263.79)', surface: 'oklch(.17 .0065 271.01)', 'surface-muted': '#27272a', text: '#f9fafb', muted: '#9095a2',
+    border: 'oklch(.56 .0195 267.65 / .2)', accent: '#f9fafb', 'accent-soft': '#ffffff0f',
+    'chart-1': 'oklch(27.4% .006 286.033)', 'chart-2': 'oklch(44.2% .017 285.786)',
+    'chart-3': '#71717a', 'chart-4': '#a1a1aa', 'chart-5': '#d4d4d8', 'chart-6': '#f4f4f5',
+    'chart-background': 'oklch(.145 0 0)', 'chart-foreground': 'oklch(.45 0 0)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
+    'chart-label': 'oklch(.75 .01 260)', 'chart-grid': 'oklch(.6 .0124 243.77 / .25)', 'chart-crosshair': 'oklch(.72 .0158 281.84)',
+    'tooltip-bg': 'oklch(.21 .0058 285.9)', 'tooltip-text': 'oklch(.987 .002 197.1)',
+    'tooltip-muted': 'oklch(.62 .0218 270.07)', 'tooltip-border': 'oklch(.56 .0195 267.65 / .2)',
+    'chart-marker-background': '#27272a', 'chart-marker-border': '#3f3f46', 'chart-marker-foreground': '#d4d4d8',
+    'chart-marker-badge-background': '#fafafa', 'chart-marker-badge-foreground': '#18181b',
+    'chart-segment-background': '#ffffff0f', 'chart-segment-line': '#ffffff40'
   })
 })
+const RESEARCH_COMPONENT_CHART_ALIASES = Object.freeze({
+  'chart-line-primary': 'chart-1', 'chart-line-secondary': 'chart-2',
+  'chart-background': 'chart-background', 'chart-foreground': 'chart-foreground', 'chart-foreground-muted': 'chart-foreground-muted',
+  'chart-label': 'chart-label', 'chart-grid': 'chart-grid', 'chart-crosshair': 'chart-crosshair',
+  'chart-tooltip-background': 'tooltip-bg', 'chart-tooltip-foreground': 'tooltip-text', 'chart-tooltip-muted': 'tooltip-muted', 'chart-tooltip-border': 'tooltip-border',
+  'chart-indicator-color': 'chart-1', 'chart-indicator-secondary-color': 'chart-2',
+  'chart-marker-background': 'chart-marker-background', 'chart-marker-border': 'chart-marker-border', 'chart-marker-foreground': 'chart-marker-foreground',
+  'chart-marker-badge-background': 'chart-marker-badge-background', 'chart-marker-badge-foreground': 'chart-marker-badge-foreground',
+  'chart-segment-background': 'chart-segment-background', 'chart-segment-line': 'chart-segment-line', 'chart-brush-border': 'border'
+})
 const researchComponentPaletteCss = (palette) => Object.entries(palette).map(([key, value]) => `--sherlock-${key}:${value}`).join(';')
+const researchComponentChartAliasCss = Object.entries(RESEARCH_COMPONENT_CHART_ALIASES).map(([key, semantic]) => `--${key}:var(--sherlock-${semantic})`).join(';')
 // Equal selector specificity lets a user's later :root custom palette override
 // either mode. Theme updates change the attribute, never the user's CSS rules.
-export const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};--sherlock-font-sans:system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:12px}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
+export const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};${researchComponentChartAliasCss};--sherlock-font-sans:Arial,"Helvetica Neue","PingFang SC",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:0px;--sherlock-shadow:none}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
+// Zero specificity is paired with the earliest cascade layer at injection, so
+// both layered and unlayered user styles retain priority over these defaults.
+const RESEARCH_COMPONENT_BASE_CSS = `:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans);font-synthesis:none}:where(body){margin:0}:where(*){box-sizing:border-box}:where(button,select,input,textarea,table,.research-card,.card,.panel,.kpi-card,[data-sherlock-card],[role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border-radius:var(--sherlock-radius);box-shadow:var(--sherlock-shadow)}:where(button,select,input,textarea){font:inherit;color:inherit;border:1px solid var(--sherlock-border);background:transparent}:where(button,select){cursor:pointer}:where(button){padding:6px 12px}:where(button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible){outline:2px solid var(--sherlock-muted);outline-offset:3px}:where(.research-card,.card,.panel,.kpi-card,[data-sherlock-card]){border:1px solid var(--sherlock-border);background:var(--sherlock-surface)}:where([role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border:1px solid var(--sherlock-tooltip-border);background:var(--sherlock-tooltip-bg);color:var(--sherlock-tooltip-text);font-size:12px;padding:13px 14px}:where(table){width:100%;border-collapse:collapse;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}:where(caption){text-align:left;padding-bottom:16px;color:var(--sherlock-muted)}:where(th){color:var(--sherlock-muted);font-weight:400}:where(th,td){padding:10px 8px;border-bottom:1px solid var(--sherlock-border)}:where(th:first-child,td:first-child){text-align:left}`
 
 // First-paint hint only: literal meta attributes outside inert/raw-text content.
 // The inner DOM is authoritative after parsing; no artifact DOM or code runs here.
@@ -143,7 +175,10 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
   const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});</script>`
-  const baseStyle = `${RESEARCH_COMPONENT_THEME_CSS}:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans)}:where(body){margin:0}`
+  // An unlayered :where() rule still outranks every user-authored normal layer.
+  // Declare all defaults first in their own layer, including theme variables.
+  // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
+  const baseStyle = `@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
   const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style>${lockedRuntime}</head><body>${html}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
   const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)});`

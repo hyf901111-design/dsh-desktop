@@ -9468,8 +9468,8 @@ describe('Sherlock workspace and composer controls', () => {
     })
     expect(svg).toContain('<svg')
     expect(svg).toContain('收入趋势')
-    expect(svg).toContain('#007cff')
-    expect(svg).toContain('system-ui')
+    expect(svg).toContain('oklch(37.4% .01 67.558)')
+    expect(svg).toContain('font-family="Arial,Helvetica Neue,PingFang SC,sans-serif"')
     expect(svg).not.toMatch(/script|foreignObject|var\(--/)
   })
 
@@ -12726,6 +12726,23 @@ describe('Research voice toolbar', () => {
 })
 
 describe('generated component theme', () => {
+  it('keeps a single-point line chart visible on the canvas and in its SVG export', async () => {
+    const spec = { version: 1, type: 'chart', title: '单月收入', variant: 'line', labels: ['一月'], series: [{ name: '收入', values: [12] }] }
+    const mounted = await mountResearchCanvas({ sessionId: 'single-point-theme', artifacts: [{
+      id: 'single-point', kind: 'generated-container', messageId: 'single-point', title: '单月收入', excerpt: '单月收入', x: 100, y: 100,
+      generationStatus: 'completed', containerPrompt: '生成单月收入图表', refreshMinutes: 0, containerSpec: spec
+    }] })
+    try {
+      const point = mounted.host.querySelector('[data-research-container-chart] circle')
+      expect(point).not.toBeNull()
+      expect(point?.getAttribute('fill')).toBe('var(--sherlock-chart-1)')
+      expect(Number(point?.getAttribute('r'))).toBeGreaterThan(0)
+      const svg = (mounted.client.buildResearchContainerChartSvg as any)(spec, 'dark')
+      expect(svg).toContain('<circle')
+      expect(svg).toContain('oklch(27.4% .006 286.033)')
+    } finally { await mounted.cleanup() }
+  })
+
   it('sends resolved app theme without replacing the live HTML frame or its document', async () => {
     const mounted = await mountResearchCanvas({ sessionId: 'component-theme', artifacts: [{
       id: 'html-theme', kind: 'generated-container', messageId: 'html-theme', title: '主题页', excerpt: '主题页', x: 100, y: 100,
@@ -12764,20 +12781,26 @@ describe('generated component theme', () => {
     }] })
     try {
       expect(mounted.host.querySelector('[data-research-container-chart] polyline')?.getAttribute('stroke')).toBe('var(--sherlock-chart-1)')
+      expect(mounted.host.querySelector('[data-research-container-chart] polyline')?.getAttribute('stroke-width')).toBe('2')
+      expect(mounted.host.querySelectorAll('[data-research-container-chart] circle')).toHaveLength(0)
+      expect(mounted.host.querySelector('.rScV5Q_chartGrid')?.getAttribute('stroke-dasharray')).toBe('4 4')
       const content = mounted.host.querySelector('.rScV5Q_containerContent') as any
-      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-bg')).toBe('#f7f8fa')
+      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-bg')).toBe('oklch(.97 0 0)')
       await act(async () => { mounted.browserWindow.document.body.setAttribute('data-ds-dark-theme', '') })
       // Happy DOM caches ancestor selectors on existing nodes after body changes.
       // A fresh CSS probe verifies the resolved dark rule independently of that cache.
       const darkProbe = content.cloneNode(false)
       content.parentElement.appendChild(darkProbe)
-      expect(mounted.browserWindow.getComputedStyle(darkProbe).getPropertyValue('--sherlock-bg')).toBe('#070a0e')
-      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-font-sans')).toContain('system-ui')
+      expect(mounted.browserWindow.getComputedStyle(darkProbe).getPropertyValue('--sherlock-bg')).toBe('oklch(.14 .0047 263.79)')
+      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-font-sans')).toContain('Arial')
       const build = mounted.client.buildResearchContainerChartSvg as any
-      expect(build(spec, 'light')).toContain('#007cff')
-      expect(build(spec, 'dark')).toContain('#00a1ff')
-      expect(build(spec, 'dark')).toContain('#070a0e')
+      expect(build(spec, 'light')).toContain('oklch(37.4% .01 67.558)')
+      expect(build(spec, 'dark')).toContain('oklch(27.4% .006 286.033)')
+      expect(build(spec, 'dark')).toContain('oklch(.17 .0065 271.01)')
       expect(build(spec, 'dark')).not.toMatch(/var\(--|script/)
+      expect(build(spec, 'light')).toContain('stroke-dasharray="4 4"')
+      expect(build(spec, 'light')).toContain('stroke-width="2"')
+      expect(build(spec, 'light')).not.toContain('<circle')
     } finally { await mounted.cleanup() }
   })
 })
