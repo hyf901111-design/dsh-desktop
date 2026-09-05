@@ -47,6 +47,7 @@ class FakeSearchWindow implements BrowserSearchWindow {
   }
 
   async loadURL(url: string): Promise<void> {
+    if (this.destroyed) throw new Error('Object has been destroyed')
     this.loaded.push(url)
     this.currentUrl = url
     this.activeLoads += 1
@@ -249,18 +250,20 @@ describe('BrowserSearchController', () => {
   })
 
   it('recognizes actual engine no-results markup but not a result snippet saying no results', async () => {
-    const window = new FakeSearchWindow()
     const page = new Window({ url: 'https://www.bing.com/search?q=test' })
     let noResults = true
-    const load = window.loadURL.bind(window)
-    window.loadURL = async (url) => {
-      await load(url)
-      page.document.body.innerHTML = noResults
-        ? '<ol id="b_results"><li class="b_no">没有找到相关结果</li></ol>'
-        : '<ol id="b_results"><li class="b_algo"><h2><a href="https://example.com/report">报告</a></h2><div class="b_caption"><p>No results is the reported status.</p></div></li></ol>'
-    }
-    window.webContents.executeJavaScript = async (script) => page.eval(script)
-    const controller = new BrowserSearchController({ createWindow: () => window })
+    const controller = new BrowserSearchController({ createWindow: () => {
+      const window = new FakeSearchWindow()
+      const load = window.loadURL.bind(window)
+      window.loadURL = async (url) => {
+        await load(url)
+        page.document.body.innerHTML = noResults
+          ? '<ol id="b_results"><li class="b_no">没有找到相关结果</li></ol>'
+          : '<ol id="b_results"><li class="b_algo"><h2><a href="https://example.com/report">报告</a></h2><div class="b_caption"><p>No results is the reported status.</p></div></li></ol>'
+      }
+      window.webContents.executeJavaScript = async (script) => page.eval(script)
+      return window
+    } })
     try {
       await expect(controller.search('test', 5)).resolves.toMatchObject({ status: 'no_results', sources: [] })
       noResults = false
@@ -277,6 +280,7 @@ describe('BrowserSearchController', () => {
 
     await expect(controller.search('基金净值', 5)).rejects.toThrow('搜索引擎暂时无法连接')
     expect(window.loaded).toHaveLength(3)
+    expect(window.destroyed).toBe(true)
   })
 
   it('bounds an unrecognized empty page instead of returning a fabricated no-results state', async () => {
@@ -303,13 +307,14 @@ describe('BrowserSearchController', () => {
 
   it('bounds a stalled extraction script and keeps the search queue usable', async () => {
     const window = new FakeSearchWindow()
-    const execute = window.webContents.executeJavaScript
+    const replacement = new FakeSearchWindow()
+    replacement.results.set('bing', [{ url: 'https://example.cn/recovered' }])
+    const windows = [window, replacement]
     window.webContents.executeJavaScript = async () => new Promise(() => undefined)
-    const controller = new BrowserSearchController({ createWindow: () => window, scriptTimeoutMs: 5 })
+    const controller = new BrowserSearchController({ createWindow: () => windows.shift()!, scriptTimeoutMs: 5 })
 
     await expect(controller.search('查询', 5)).rejects.toThrow('未能读取搜索结果')
-    window.webContents.executeJavaScript = execute
-    window.results.set('bing', [{ url: 'https://example.cn/recovered' }])
+    expect(window.destroyed).toBe(true)
     await expect(controller.search('恢复', 5)).resolves.toMatchObject({ sources: [{ url: 'https://example.cn/recovered' }] })
   })
 
@@ -359,26 +364,105 @@ describe('BrowserSearchController', () => {
 
   it('serializes concurrent searches through one browser session', async () => {
     const window = new FakeSearchWindow()
+    const replacement = new FakeSearchWindow()
     let releaseFirst!: () => void
     window.loadBarrier = new Promise<void>((resolve) => {
       releaseFirst = resolve
     })
-    window.results.set('duckduckgo', [
+    for (const frame of [window, replacement]) frame.results.set('duckduckgo', [
       { title: 'Result', url: 'https://example.com/result', snippet: 'summary' }
     ])
-    const controller = new BrowserSearchController({ createWindow: () => window })
+    const windows = [window, replacement]
+    const controller = new BrowserSearchController({ createWindow: () => {
+      if (windows.length === 1) expect(window.destroyed).toBe(true)
+      return windows.shift()!
+    } })
 
     const first = controller.search('first query', 5)
     const second = controller.search('second query', 5)
     await Promise.resolve()
+    expect(replacement.loaded).toEqual([])
     releaseFirst()
     await Promise.all([first, second])
 
     expect(window.maxActiveLoads).toBe(1)
-    expect(window.loaded).toEqual([
+    expect([...window.loaded, ...replacement.loaded]).toEqual([
       'https://html.duckduckgo.com/html/?q=first+query',
       'https://html.duckduckgo.com/html/?q=second+query'
     ])
+  })
+
+  it('destroys a cancelled navigation before allowing the queued query to start', async () => {
+    const window = new FakeSearchWindow()
+    window.loadBarrier = new Promise(() => undefined)
+    const replacement = new FakeSearchWindow()
+    replacement.results.set('bing', [{ url: 'https://example.cn/next' }])
+    const windows = [window, replacement]
+    const controller = new BrowserSearchController({ createWindow: () => windows.shift()! })
+    const abort = new AbortController()
+    const first = controller.search('取消', 5, abort.signal)
+    const rejected = expect(first).rejects.toMatchObject({ name: 'AbortError' })
+    const next = controller.search('继续', 5)
+    await Promise.resolve()
+    expect(window.loaded).toHaveLength(1)
+    abort.abort()
+    await rejected
+    await expect(next).resolves.toMatchObject({ sources: [{ url: 'https://example.cn/next' }] })
+    expect(window.stopped).toBe(true)
+    expect(window.destroyed).toBe(true)
+    expect(replacement.destroyed).toBe(true)
+  })
+
+  it('isolates back-to-back searches from a completed page that keeps navigating', async () => {
+    const windows: FakeSearchWindow[] = []
+    const partitions: Array<string | undefined> = []
+    const controller = new BrowserSearchController({
+      createWindow: (options) => {
+        partitions.push(options.webPreferences?.partition)
+        const window = new FakeSearchWindow()
+        const load = window.loadURL.bind(window)
+        const execute = window.webContents.executeJavaScript
+        let oldPageNavigating = false
+        window.loadURL = async (url) => {
+          if (oldPageNavigating) throw Object.assign(new Error('net::ERR_ABORTED'), { code: 'ERR_ABORTED', url })
+          await load(url)
+        }
+        window.results.set('bing', [{ title: '510300 净值', url: 'https://example.cn/510300' }])
+        window.webContents.executeJavaScript = async (script) => {
+          const result = await execute(script)
+          // Completing our extraction does not stop timers/navigation belonging
+          // to the result document. Those still abort a later load in this frame.
+          if (!script.includes('document.body?.innerText')) queueMicrotask(() => { oldPageNavigating = true })
+          return result
+        }
+        windows.push(window)
+        return window
+      }
+    })
+
+    const results = await Promise.all([
+      controller.search('沪深300ETF 510300 最新净值', 5),
+      controller.search('沪深300ETF 510300 最新净值', 5),
+      controller.search('沪深300ETF 510300 最新净值', 5)
+    ])
+
+    expect(results.map((result) => result.sources[0]?.url)).toEqual(Array(3).fill('https://example.cn/510300'))
+    expect(windows).toHaveLength(3)
+    expect(windows.every((window) => window.destroyed)).toBe(true)
+    expect(new Set(partitions)).toEqual(new Set(['sherlock-web-search']))
+  })
+
+  it('does not accumulate session download listeners when creating replacement windows', () => {
+    let listeners = 0
+    const searchSession = {
+      setPermissionRequestHandler: () => undefined,
+      setPermissionCheckHandler: () => undefined,
+      on: () => { listeners += 1 }
+    }
+    const window = { webContents: { setWindowOpenHandler: () => undefined, setAudioMuted: () => undefined } }
+    configureBrowserSearchSecurity(window, searchSession)
+    configureBrowserSearchSecurity(window, searchSession)
+    expect(listeners).toBe(1)
   })
 
   it('destroys its isolated window when disposed', () => {

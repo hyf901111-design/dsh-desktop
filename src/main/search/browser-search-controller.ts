@@ -65,6 +65,8 @@ export function browserSearchWindowOptions(): BrowserWindowConstructorOptions {
   }
 }
 
+const securedSearchSessions = new WeakSet<object>()
+
 export function configureBrowserSearchSecurity(
   window: {
     webContents: {
@@ -84,13 +86,18 @@ export function configureBrowserSearchSecurity(
     on(event: 'will-download', handler: (event: { preventDefault(): void }) => void): void
   }
 ): void {
-  searchSession.setPermissionRequestHandler((_webContents, _permission, decide) => {
-    decide(false)
-  })
-  searchSession.setPermissionCheckHandler(() => false)
-  searchSession.on('will-download', (event) => {
-    event.preventDefault()
-  })
+  // Replacement windows use the same in-memory session. Register its download
+  // listener once; the per-window protections still apply to every new frame.
+  if (!securedSearchSessions.has(searchSession)) {
+    searchSession.setPermissionRequestHandler((_webContents, _permission, decide) => {
+      decide(false)
+    })
+    searchSession.setPermissionCheckHandler(() => false)
+    searchSession.on('will-download', (event) => {
+      event.preventDefault()
+    })
+    securedSearchSessions.add(searchSession)
+  }
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.setAudioMuted(true)
 }
@@ -109,7 +116,16 @@ export class BrowserSearchController {
     maxResults: number,
     signal?: AbortSignal
   ): Promise<BrowserSearchResult> {
-    const operation = this.tail.then(() => this.runSearch(query, maxResults, signal))
+    const operation = this.tail.then(async () => {
+      try {
+        return await this.runSearch(query, maxResults, signal)
+      } finally {
+        // Serializing our promises does not stop scripts/redirects in a loaded
+        // search page. Retire that renderer before the next request can start.
+        // The next window keeps the same partition and verification cookies.
+        this.destroyWindow()
+      }
+    })
     this.tail = operation.then(
       () => undefined,
       () => undefined
@@ -119,6 +135,10 @@ export class BrowserSearchController {
 
   dispose(): void {
     this.disposed = true
+    this.destroyWindow()
+  }
+
+  private destroyWindow(): void {
     if (!this.window.isDestroyed()) {
       this.window.webContents.stop()
       this.window.destroy()
