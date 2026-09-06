@@ -17,7 +17,7 @@ import {
 const NOW = '2026-09-06T09:00:00.000Z'
 const AS_OF = '2026-09-05'
 const HASH = 'a'.repeat(64)
-const PRIVATE_TERMS = ['secretvendor']
+const PRIVATE_TERMS = ['secretvendor', '盈米']
 
 function publicResult(task, funds, overrides = {}) {
   const subjects = funds.map((fund_code, index) => ({
@@ -265,6 +265,7 @@ describe('private fund data boundary', () => {
 
   it.each([
     'secretvendor 返回了该字段',
+    '盈米返回了该字段',
     '详情见 https://private.invalid/fund',
     '底层工具调用成功',
     '建议买入并继续加仓',

@@ -268,7 +268,7 @@ function publicSafetyCheck(value, privateTerms) {
   const terms = [...new Set((privateTerms ?? [])
     .filter((entry) => typeof entry === 'string')
     .map((entry) => entry.trim().toLocaleLowerCase())
-    .filter((entry) => entry.length >= 3))]
+    .filter((entry) => [...entry].length >= 2))]
   const visit = (entry) => {
     if (typeof entry === 'string') {
       if (PUBLIC_SAFETY_PATTERNS.some((pattern) => pattern.test(entry))) invalidData()

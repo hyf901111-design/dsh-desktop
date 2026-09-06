@@ -1,4 +1,5 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import {
   CLAIM_STATUSES,
   FUND_RESEARCH_TASKS,
@@ -7,10 +8,10 @@ import {
   toPublicFundResearchError,
   validateResearchRequest
 } from './contract.js'
-import { createProviderFromEnvironment } from './provider.js'
+import { createYingmiFundProvider } from './yingmi-provider.js'
 
 export const name = 'sherlock-fund-research-runtime'
-export const inject = ['tools']
+export const inject = ['credentials', 'tools']
 export const source = 'bundled-sherlock'
 
 const string = { type: 'string' }
@@ -140,9 +141,20 @@ export function createFundResearchTool(provider) {
   })
 }
 
-export function registerFundResearchRuntime(ctx, {
-  provider = createProviderFromEnvironment()
-} = {}) {
+function createCredentialBackedProvider(ctx) {
+  return createYingmiFundProvider({
+    resolveCredential: async () => {
+      const credentials = typeof ctx.get === 'function' ? ctx.get('credentials') : ctx.credentials
+      const hit = credentials
+        ? await credentials.resolve(credentialRef('YINGMI_API_KEY'))
+        : undefined
+      return typeof hit?.value === 'string' ? hit.value : undefined
+    }
+  })
+}
+
+export function registerFundResearchRuntime(ctx, options = {}) {
+  const provider = options.provider ?? createCredentialBackedProvider(ctx)
   const dispose = ctx.tools.register(createFundResearchTool(provider))
   let disposed = false
   return {
@@ -168,3 +180,5 @@ export {
   createProviderFromEnvironment,
   createUnavailableProvider
 } from './provider.js'
+export { createYingmiFundProvider } from './yingmi-provider.js'
+export { createYingmiMcpClient } from './yingmi-mcp.js'

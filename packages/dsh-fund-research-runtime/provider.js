@@ -22,7 +22,7 @@ function normalizePrivateTerms(value) {
   const terms = [...new Set(value
     .filter((entry) => typeof entry === 'string')
     .map((entry) => entry.trim())
-    .filter((entry) => entry.length >= 3))]
+    .filter((entry) => [...entry].length >= 2))]
   if (terms.length === 0) throw new TypeError('At least one private fund data term is required.')
   return Object.freeze(terms)
 }
