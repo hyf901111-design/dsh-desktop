@@ -113,6 +113,8 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
 export async function installDownloadedUpdate(): Promise<void> {
   if (status.phase !== 'downloaded' || installing) return
   installing = true
+  // An explicit install must surface native failures even after a background check.
+  status = { ...status, manual: true }
 
   try {
     // Keep the app usable while Squirrel prepares the update or requests authorization.

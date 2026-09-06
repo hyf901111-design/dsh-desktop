@@ -130,7 +130,7 @@ describe('desktop update manager', () => {
   it('allows another install attempt after the native installer reports an error', async () => {
     const quitAndInstall = vi.spyOn(fakes.autoUpdater, 'quitAndInstall').mockClear()
     fakes.autoUpdater.emit('error', new Error('Installation authorization cancelled'))
-    expect(getUpdateStatus().phase).toBe('error')
+    expect(getUpdateStatus()).toMatchObject({ phase: 'error', manual: true })
     fakes.autoUpdater.emit('update-downloaded', { version: '0.6.0' })
     expect(quitAndInstall).not.toHaveBeenCalled()
     await installDownloadedUpdate()
