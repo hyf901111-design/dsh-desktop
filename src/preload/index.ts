@@ -19,6 +19,7 @@ import {
   createResearchPreviewBridge,
   safePathForFile
 } from './research-file-path'
+import { createResearchVoiceBridge } from './research-voice'
 import { createResearchCanvasWheelBridge } from './research-canvas-wheel'
 import { createResearchLinkFrameBridge } from './research-link-frame'
 import { createResearchContextBridge } from './research-context'
@@ -175,6 +176,7 @@ contextBridge.exposeInMainWorld(
       setItem: (key: string, value: string): boolean =>
         ipcRenderer.sendSync('research:canvas-storage:set', key, value) === true
     }),
+    researchVoice: createResearchVoiceBridge(ipcRenderer),
     researchCanvasWheel: createResearchCanvasWheelBridge(ipcRenderer),
     researchContext: createResearchContextBridge(
       (channel, value) => ipcRenderer.invoke(channel, value)

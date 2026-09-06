@@ -10,6 +10,14 @@ import {
 } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 
+type TestResearchVoiceBridge = {
+  setActive(value: { sessionId: string; active: boolean }): Promise<{ ok: boolean; error?: string }>
+  start(value: { sessionId: string; requestId: string }): Promise<{ ok: boolean; error?: string }>
+  stop(value: { sessionId: string; requestId: string }): Promise<{ ok: boolean; error?: string }>
+  cancel(value: { sessionId: string; requestId: string }): Promise<{ ok: boolean; error?: string }>
+  subscribe(listener: (event: Record<string, unknown>) => void): () => void
+}
+
 type ClientBundle = Record<string, unknown>
 type ComponentType<Props> = (props: Props) => unknown
 type ReactNode = unknown
@@ -73,6 +81,7 @@ async function loadClientBundle(
   packageName: string,
   dshDesktop?: {
     showItemInFolder?(path: string): Promise<{ ok: boolean }>
+    researchVoice?: TestResearchVoiceBridge
     getPathForFile?(file: File): string
     researchCanvasStorage?: {
       getItem(key: string): string | null
@@ -161,6 +170,7 @@ async function loadClientBundle(
   })
 
   runInNewContext(source, {
+    Date: globalThis.Date,
     AbortController: globalThis.AbortController,
     TextDecoder: globalThis.TextDecoder,
     TextEncoder: globalThis.TextEncoder,
@@ -937,6 +947,7 @@ async function mountResearchCanvas(options: {
     setItem(key: string, value: string): void
   }
   dshDesktop?: {
+    researchVoice?: TestResearchVoiceBridge
     getPathForFile?(file: File): string
     researchCanvasWheel?: {
       setRegion(value: Record<string, unknown>): boolean
@@ -7108,6 +7119,67 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('organizes completed HTML and data components without shrinking fitted or manual sizes', async () => {
+    const storage = new MemoryStorage()
+    const componentCases = [
+      { type: 'html', width: 1200, height: 1600, spec: { html: '<main>完整长页面</main>' } },
+      { type: 'kpi', width: 640, height: 980, spec: { items: [{ label: '收入', value: '12 亿' }] } },
+      { type: 'table', width: 720, height: 1440, spec: { columns: ['收入'], rows: [[12]] } },
+      { type: 'chart', width: 1100, height: 920, spec: { variant: 'line', labels: ['一月'], series: [{ name: '收入', values: [12] }] } }
+    ]
+    const artifacts = componentCases.flatMap(({ type, width, height, spec }) =>
+      ['auto', 'manual'].map((sizeMode) => ({
+        id: `${type}-${sizeMode}`, kind: 'generated-container', messageId: `${type}-${sizeMode}`,
+        title: type, excerpt: type, generationStatus: 'completed', containerPrompt: type,
+        generationLastSeq: 1, sourceNodeIds: [], refreshMinutes: 0,
+        containerSpec: { version: 1, type, title: type, ...spec },
+        x: -1200, y: -900, width, height, sizeMode
+      }))
+    )
+    const mounted = await mountResearchCanvas({
+      sessionId: 'session-organize-fitted-components', storage, artifacts
+    })
+    try {
+      const { browserWindow, canvas, host, workspace } = mounted
+      await act(async () => {
+        workspace.setCanvasSize({ width: 1600, height: 1000 })
+        canvas.dispatchEvent(new browserWindow.MouseEvent('contextmenu', {
+          bubbles: true, cancelable: true, clientX: 460, clientY: 320
+        }))
+      })
+      await act(async () => { click(browserWindow, host.querySelector('[data-research-context-arrange]')) })
+
+      const after = workspace.getSnapshot()
+      expect(after.artifacts.find((node) => node.id === 'html-auto'))
+        .toMatchObject({ width: 1200, height: 1600, sizeMode: 'auto' })
+      for (const { type, width, height } of componentCases) {
+        for (const sizeMode of ['auto', 'manual']) {
+          expect(after.artifacts.find((node) => node.id === `${type}-${sizeMode}`))
+            .toMatchObject({ width, height, sizeMode })
+        }
+      }
+      const rectangles = after.artifacts.map((node) => ({
+        left: Number(node.x) - Number(node.width) / 2,
+        right: Number(node.x) + Number(node.width) / 2,
+        top: Number(node.y) - Number(node.height) / 2,
+        bottom: Number(node.y) + Number(node.height) / 2
+      }))
+      for (const [index, first] of rectangles.entries()) {
+        for (const second of rectangles.slice(index + 1)) {
+          expect(first.right + 24 <= second.left || second.right + 24 <= first.left
+            || first.bottom + 24 <= second.top || second.bottom + 24 <= first.top).toBe(true)
+        }
+      }
+      const persisted = JSON.parse(
+        storage.getItem('sherlock.research.canvas.artifacts.v1:session-organize-fitted-components') ?? '[]'
+      ) as Array<Record<string, unknown>>
+      expect(persisted.map(({ id, width, height, sizeMode }) => ({ id, width, height, sizeMode })))
+        .toEqual(artifacts.map(({ id, width, height, sizeMode }) => ({ id, width, height, sizeMode })))
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('renames generic files and artifacts inline with Enter, Escape, and blur', async () => {
     const storage = new MemoryStorage()
     const mounted = await mountResearchCanvas({
@@ -8319,6 +8391,150 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('shows honest queued, research and recovery stages without raw tool arguments or generated code', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    expect(client.researchGenerationPresentation).toBeTypeOf('function')
+    if (typeof client.researchGenerationPresentation !== 'function') return
+    const present = client.researchGenerationPresentation
+    expect(present({ generationStatus: 'queued' })).toMatchObject({ stage: 'queued', title: '等待开始' })
+    expect(present({ generationStatus: 'queued', generationEvents: [{ type: 'tool-started', tool: '检索网页' }] })).toMatchObject({ stage: 'researching', title: '正在查找资料' })
+    expect(present({ generationStatus: 'running', generationEvents: [] })).toMatchObject({ stage: 'planning', title: '正在整理需求' })
+    expect(present({ generationStatus: 'running', generationEvents: [{ type: 'tool-started', tool: '检索网页' }] })).toMatchObject({ stage: 'researching', title: '正在查找资料' })
+    expect(present({ generationStatus: 'running', generationEvents: [{ type: 'tool-started', tool: '检索网页' }, { type: 'tool-finished', failed: true }] })).toMatchObject({ stage: 'recovering', title: '正在调整检索' })
+    const result = present({ generationStatus: 'running', generationEvents: [{ type: 'assistant-delta', text: '<script>secret</script>' }], generationPartialText: '<script>secret</script>' })
+    expect(result).toMatchObject({ stage: 'building', title: '正在绘制组件' })
+    expect(JSON.stringify(result)).not.toContain('secret')
+  })
+
+  it('collapses only host-identified canvas subagent instructions and preserves their full record', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    expect(client.researchTaskInputSummary).toBeTypeOf('function')
+    expect(client.ResearchTaskInputRecord).toBeTypeOf('function')
+    if (typeof client.researchTaskInputSummary !== 'function' || typeof client.ResearchTaskInputRecord !== 'function') return
+    const content = [{ type: 'text', text: '内部交付规则\n用户需求：生成 ETF 监控面板\n\n主机已获取以下网页证据：来源全文' }]
+    const node = { kind: 'user', data: { content } }
+    const identity = { mode: 'one-shot', label: '画布生成任务' }
+    expect(client.researchTaskInputSummary(node, null)).toBeNull()
+    expect(client.researchTaskInputSummary(node, { mode: 'one-shot', label: '其他任务' })).toBeNull()
+    expect(client.researchTaskInputSummary({ ...node, kind: 'steering' }, identity)).toBeNull()
+    expect(client.researchTaskInputSummary(node, identity)).toBe('生成 ETF 监控面板')
+    const markup = renderToStaticMarkup(createElement(client.ResearchTaskInputRecord, {
+      summary: '生成 ETF 监控面板', children: createElement('div', null, '来源全文与内部交付规则')
+    }))
+    expect(markup).toContain('生成需求与参考资料')
+    expect(markup).toContain('生成 ETF 监控面板')
+    expect(markup).toContain('来源全文与内部交付规则')
+    expect(markup).not.toMatch(/<details[^>]*\sopen(?:=|>)/)
+  })
+
+  it('turns real generation events into bounded terminal rows without exposing code or tool arguments', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    expect(client.researchGenerationLog).toBeTypeOf('function')
+    if (typeof client.researchGenerationLog !== 'function') return
+    const rows = client.researchGenerationLog({
+      generationStatus: 'running',
+      generationEvents: [
+        { seq: 1, type: 'started' },
+        { seq: 2, type: 'tool-started', tool: '检索网页', input: 'private query' },
+        { seq: 3, type: 'tool-finished' },
+        { seq: 4, type: 'assistant-delta', text: '<style>secret</style><table><svg><button>' }
+      ]
+    }) as Array<{ id: string; text: string }>
+    expect(rows.map(row => row.text)).toEqual(expect.arrayContaining([
+      '开始整理生成需求', '检索相关数据与来源', '检索响应已返回',
+      '编排页面布局与配色', '生成数据表格', '绘制图表与数据图形', '制作页面交互控件'
+    ]))
+    expect(JSON.stringify(rows)).not.toMatch(/secret|private|<style>|<table>/)
+    expect(new Set(rows.map(row => row.id)).size).toBe(rows.length)
+    const waiting = client.researchGenerationLog({ generationStatus: 'queued', generationEvents: [] })
+    expect(JSON.stringify(waiting)).not.toMatch(/检索|图表|配色|完成/)
+    const failed = client.researchGenerationLog({ generationStatus: 'running', generationEvents: [
+      { seq: 1, type: 'tool-started', tool: '检索网页' }, { seq: 2, type: 'tool-finished', failed: true }
+    ] })
+    expect(JSON.stringify(failed)).toContain('检索未完成，调整后续处理')
+    expect(JSON.stringify(failed)).not.toContain('检索响应已返回')
+  })
+
+  it('reveals terminal progress row by row and stops its activity timers after unmount', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    vi.useFakeTimers()
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow,
+      transformSource: source => source.replace('\t\texports.apply = apply;', '\t\texports.apply = apply;\n\t\texports.__testGenerationProcess = ResearchGenerationProcess;')
+    })
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    const onCancel = vi.fn()
+    try {
+      const node = { generationTaskId: 'terminal-task', generationStatus: 'running', generationEvents: [
+        { seq: 1, type: 'started' }, { seq: 2, type: 'tool-started', tool: '检索网页' }, { seq: 3, type: 'tool-finished' }
+      ] }
+      await act(async () => { root.render(createElement(client.__testGenerationProcess, { node, onCancel })) })
+      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(1)
+      for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(260) })
+      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(4)
+      expect(host.querySelector('[data-research-generation-visual]')?.getAttribute('aria-hidden')).toBe('true')
+      expect(host.querySelector('[role="status"]')?.textContent).toBe('正在整理资料')
+      const building = { ...node, generationLastSeq: 4, generationEvents: [...node.generationEvents, { seq: 4, type: 'assistant-delta', text: '<main><style>private-code' }] }
+      await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: building, onCancel })) })
+      expect(host.textContent).toContain('组件内容持续生成')
+      await act(async () => { await vi.advanceTimersByTimeAsync(1800) })
+      const stagnantRows = host.querySelectorAll('.rScV5Q_generationStamp').length
+      expect(stagnantRows).toBe(1)
+      await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: { ...building, generationLastSeq: 20 }, onCancel })) })
+      expect(host.querySelectorAll('.rScV5Q_generationStamp')).toHaveLength(2)
+      expect(host.textContent).not.toContain('private-code')
+      const stop = host.querySelector('[data-research-generation-cancel]')
+      if (stop === null) throw new Error('Missing stop button')
+      await act(async () => { click(browserWindow, stop) })
+      expect(onCancel).toHaveBeenCalledWith(expect.objectContaining({ generationLastSeq: 20 }))
+      await act(async () => { root.unmount() })
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      await act(async () => { root.unmount() })
+      vi.useRealTimers(); host.remove(); restoreGlobals()
+    }
+  })
+
+  it('uses the real addressed-session catalog and updates folded input when historical metadata arrives', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow,
+      transformSource: (source) => source.replace('function QueryRail({', 'function OriginalQueryRail({').replace('\t\texports.apply = apply;', '\t\texports.apply = apply;\n\t\texports.__testChatView = ChatView;\n\t\tfunction QueryRail() { return null; }'),
+      modules: { '@deepseek-ai/dsh-client-ui-primitives': new Proxy({}, { get: () => () => null }) }
+    })
+    const content = '内部交付规则\n用户需求：生成 ETF 监控面板\n\n主机已获取以下网页证据：来源全文'
+    const address = { mode: 'one-shot', parentSessionId: 'parent', childSessionId: 'child' }
+    const session = createSelectorStore({ chat: { order: ['u'], nodes: new Map([['u', { kind: 'user', key: 'u', data: { content: [{ type: 'text', text: content }] } }]]), timeline: { turns: new Map() } }, subagent: { address, parentAvailable: true } as Record<string, unknown> | null, queue: [], running: false, openState: 'open', openError: null, hasMore: false, loadingOlder: false })
+    const catalogs = createSelectorStore({ byId: {}, subagentsByParent: {} as Record<string, unknown> })
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    try {
+      await act(async () => { root.render(createElement(client.__testChatView as any, {
+        useSession: session.useSelector, useSessions: catalogs.useSelector, useStore: (select: any) => select({}),
+        renderSlot: (_name: string, props: any) => createElement('div', { 'data-original-input': '' }, props.node.data.content[0].text),
+        sessionId: 'child', chatScroll: { read: () => null, save: () => undefined }, t: (key: string) => key
+      })) })
+      expect(host.querySelector('[data-research-task-input]')).toBeNull()
+      expect(host.querySelector('[data-original-input]')?.textContent).toBe(content)
+      const trusted = { state: 'ready', entries: [{ kind: 'child', id: 'child', mode: 'one-shot', label: '画布生成任务' }], parentAvailable: true }
+      await act(async () => { catalogs.update({ subagentsByParent: { parent: trusted } }) })
+      expect(host.querySelector('[data-research-task-input]')).not.toBeNull()
+      expect(host.querySelector('[data-research-task-input-details]')?.hasAttribute('open')).toBe(false)
+      expect(host.querySelector('[data-original-input]')?.textContent).toBe(content)
+      expect(host.querySelector('[data-research-task-input] > div')?.textContent).toBe('生成 ETF 监控面板')
+      await act(async () => { catalogs.update({ subagentsByParent: { parent: { ...trusted, entries: [{ ...trusted.entries[0], id: 'other-child' }] } } }) })
+      expect(host.querySelector('[data-research-task-input]')).toBeNull()
+      await act(async () => { catalogs.update({ subagentsByParent: { parent: trusted } }); session.update({ subagent: null }) })
+      expect(host.querySelector('[data-research-task-input]')).toBeNull()
+      expect(host.querySelector('[data-original-input]')?.textContent).toBe(content)
+    } finally { await act(async () => { root.unmount() }); host.remove(); restoreGlobals() }
+  })
+
   it('renders generation progress in the destination component and removes it after completion', async () => {
     const mounted = await mountResearchCanvas({
       sessionId: 'session-generation-process',
@@ -8341,7 +8557,7 @@ describe('Sherlock workspace and composer controls', () => {
             { taskId: 'task-process', canvasNodeId: target.id, seq: 1, type: 'queued' },
             { taskId: 'task-process', canvasNodeId: target.id, seq: 2, type: 'started' },
             { taskId: 'task-process', canvasNodeId: target.id, seq: 3, type: 'tool-started', tool: '读取文件' },
-            { taskId: 'task-process', canvasNodeId: target.id, seq: 4, type: 'assistant-delta', text: '正在归纳关键关系' }
+            { taskId: 'task-process', canvasNodeId: target.id, seq: 4, type: 'assistant-delta', text: '{"version":1,"type":"html","html":"<style>.secret{color:red}</style>' }
           ]
         })
       })
@@ -8351,9 +8567,11 @@ describe('Sherlock workspace and composer controls', () => {
       expect(runningCard?.getAttribute('data-research-generation-state')).toBe('running')
       expect(runningCard?.querySelector('[data-research-node-title]')?.textContent).toBe('思维导图')
       expect(runningCard?.querySelector('[data-research-generation-process]')?.textContent)
-        .toContain('正在读取文件')
+        .toContain('正在绘制组件')
       expect(runningCard?.querySelector('[data-research-generation-process]')?.textContent)
-        .toContain('正在归纳关键关系')
+        .not.toMatch(/version|secret|style|color:red/)
+      expect(runningCard?.querySelector('[data-research-generation-stage="building"]')).not.toBeNull()
+      expect(runningCard?.querySelector('[data-research-generation-visual]')?.getAttribute('aria-hidden')).toBe('true')
       expect(runningCard?.querySelector('[data-research-generation-cancel]')?.textContent).toBe('停止')
       expect(runningCard?.hasAttribute('data-research-generated-mind-map')).toBe(false)
 
@@ -8408,7 +8626,7 @@ describe('Sherlock workspace and composer controls', () => {
       })),
       generationPartialText: '内容'.repeat(6000)
     }
-    expect(client.researchGenerationAutoGeometry(active)).toEqual({ width: 640, height: 560 })
+    expect(client.researchGenerationAutoGeometry(active)).toEqual({ width: 480, height: 300 })
     expect(client.researchGenerationAutoGeometry({ ...active, sizeMode: 'manual' })).toBeNull()
     expect(client.researchGenerationFinalGeometry(active, '# 简要导图')).toEqual({
       width: 840, height: 700
@@ -9458,8 +9676,8 @@ describe('Sherlock workspace and composer controls', () => {
     })
     expect(svg).toContain('<svg')
     expect(svg).toContain('收入趋势')
-    expect(svg).toContain('rgb(0,80,150)')
-    expect(svg).toContain('STHeiti_YFD')
+    expect(svg).toContain('oklch(37.4% .01 67.558)')
+    expect(svg).toContain('font-family="Arial,Helvetica Neue,PingFang SC,sans-serif"')
     expect(svg).not.toMatch(/script|foreignObject|var\(--/)
   })
 
@@ -9883,6 +10101,7 @@ describe('Sherlock workspace and composer controls', () => {
     try {
       const { browserWindow, host, workspace } = mounted
       expect(host.querySelector('[data-research-container-kpi]')?.textContent).toContain('12 亿')
+      await act(async () => { click(browserWindow, host.querySelector('[data-research-container-more]')) })
       await act(async () => {
         click(browserWindow, host.querySelector('[data-research-container-refresh]'))
         await Promise.resolve()
@@ -9901,15 +10120,11 @@ describe('Sherlock workspace and composer controls', () => {
       expect(host.querySelector('[data-research-container-kpi]')?.textContent).toContain('12 亿')
       expect(host.querySelector('[data-research-container-refreshing]')).not.toBeNull()
 
-      const interval = host.querySelector('[data-research-container-refresh-interval]') as HTMLSelectElement | null
+      await act(async () => { click(browserWindow, host.querySelector('[data-research-container-more]')) })
+      const interval = host.querySelector('[data-research-container-refresh-minutes="5"]')
       expect(interval).not.toBeNull()
       if (interval !== null) {
-        Object.getOwnPropertyDescriptor(
-          browserWindow.HTMLSelectElement.prototype, 'value'
-        )?.set?.call(interval, '5')
-        await act(async () => {
-          interval.dispatchEvent(new browserWindow.Event('change', { bubbles: true }) as unknown as Event)
-        })
+        await act(async () => { click(browserWindow, interval) })
         expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ refreshMinutes: 5 })
       }
     } finally {
@@ -12176,6 +12391,21 @@ describe('Sherlock workspace and composer controls', () => {
     )
   })
 
+  it('renders an empty Trajectory with the docked composer instead of the Chat hero', async () => {
+    const mounted = await mountConversationRoot('trajectory')
+    try {
+      await act(async () => {
+        mounted.session.update({ composerPhase: 'blank', blank: true })
+      })
+      expect(mounted.host.querySelector('[data-phase]')?.getAttribute('data-phase')).toBe('active')
+      expect(mounted.host.querySelector('[data-test-trajectory-view]')).not.toBeNull()
+      expect(mounted.browserWindow.document.querySelector('[data-test-composer-bar]')
+        ?.classList.contains('uV2eYG_hero')).toBe(false)
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('keeps a blank Research session in the full canvas layout with a docked composer', async () => {
     const mounted = await mountConversationRoot('research')
     try {
@@ -12513,5 +12743,326 @@ describe('Sherlock workspace and composer controls', () => {
     )
 
     expect(next).toEqual({ scale: 1.25, x: -14, y: -60 })
+  })
+})
+
+describe('Research voice toolbar', () => {
+  async function mountVoice() {
+    let listener = (_event: Record<string, unknown>) => {}
+    const bridge = {
+      setActive: vi.fn(async () => ({ ok: true })),
+      start: vi.fn(async (_value: { sessionId: string; requestId: string }) => ({ ok: true })),
+      stop: vi.fn(async () => ({ ok: true })),
+      cancel: vi.fn(async () => ({ ok: true })),
+      subscribe: vi.fn((next: typeof listener) => { listener = next; return vi.fn() })
+    }
+    const generate = vi.fn(async () => ({ ok: true }))
+    const mounted = await mountResearchCanvas({
+      sessionId: 'voice-session', dshDesktop: { researchVoice: bridge },
+      selectionGeneration: { generate }
+    })
+    return { ...mounted, bridge, generate,
+      emit: (event: Record<string, unknown>) => listener({ sessionId: 'voice-session', ...event }) }
+  }
+
+  it('shows live audio feedback and creates exactly one executing container for the final instruction', async () => {
+    const mounted = await mountVoice()
+    try {
+      const { host, bridge, emit, generate, workspace } = mounted
+      const button = host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement | null
+      expect(button).not.toBeNull()
+      await act(async () => { button!.click() })
+      const requestId = bridge.start.mock.calls[0]![0].requestId
+      await act(async () => {
+        emit({ type: 'state', requestId, state: 'listening' })
+        emit({ type: 'partial', requestId, text: '创建一个倒计时' })
+        emit({ type: 'level', requestId, level: 0.8 })
+      })
+      expect(button!.textContent).toBe('语音')
+      expect(host.querySelector('[data-research-voice-feedback] [role="status"]')?.textContent).toContain('创建一个倒计时')
+      expect(host.querySelector('[data-research-voice-wave]')?.getAttribute('data-level')).toBe('0.8')
+      await act(async () => { (host.querySelector('[data-research-voice-finish]') as HappyDOMHTMLElement).click() })
+      expect(bridge.stop).toHaveBeenCalledWith({ sessionId: 'voice-session', requestId })
+      expect(host.querySelector('[data-research-voice-feedback]')?.textContent).toContain('识别中')
+      expect(host.querySelector('[data-research-voice-finish]')?.hasAttribute('disabled')).toBe(true)
+      await act(async () => {
+        emit({ type: 'final', requestId, text: '创建一个倒计时' })
+        emit({ type: 'final', requestId, text: '创建一个倒计时' })
+      })
+      expect(generate).toHaveBeenCalledTimes(1)
+      expect(generate).toHaveBeenCalledWith(expect.objectContaining({
+        kind: 'container', sessionId: 'voice-session', prompt: '创建一个倒计时'
+      }))
+      expect(workspace.getSnapshot().artifacts).toHaveLength(1)
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({
+        kind: 'generated-container', containerPrompt: '创建一个倒计时', generationStatus: 'queued'
+      })
+    } finally { await mounted.cleanup() }
+  })
+
+  it('cancels with Escape and rejects cancelled, other-session and post-unmount results', async () => {
+    const mounted = await mountVoice()
+    const { bridge, emit, host, browserWindow, generate } = mounted
+    await act(async () => { emit({ type: 'toggle' }) })
+    const requestId = bridge.start.mock.calls[0]![0].requestId
+    await act(async () => {
+      emit({ type: 'state', requestId, state: 'listening' })
+      browserWindow.document.dispatchEvent(new browserWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      emit({ type: 'final', requestId, text: '不得创建' })
+    })
+    expect(bridge.cancel).toHaveBeenCalledWith({ sessionId: 'voice-session', requestId })
+    expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+    expect(generate).not.toHaveBeenCalled()
+    await act(async () => { emit({ type: 'toggle' }) })
+    const secondId = bridge.start.mock.calls[1]![0].requestId
+    await act(async () => { emit({ type: 'final', sessionId: 'other', requestId: secondId, text: '不得创建' }) })
+    expect(generate).not.toHaveBeenCalled()
+    await mounted.cleanup()
+    await act(async () => { emit({ type: 'final', requestId: secondId, text: '不得创建' }) })
+    expect(generate).not.toHaveBeenCalled()
+    expect(bridge.setActive).toHaveBeenLastCalledWith({ sessionId: 'voice-session', active: false })
+  })
+
+  it('reports native activation failure without starting an invalid recording request', async () => {
+    const mounted = await mountVoice()
+    try {
+      mounted.bridge.setActive.mockImplementation(async () => ({ ok: false, error: '原生语音模块不可用' }))
+      await act(async () => { (mounted.host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement).click() })
+      expect(mounted.bridge.start).not.toHaveBeenCalled()
+      expect(mounted.host.querySelector('[role="alert"]')?.textContent).toContain('原生语音模块不可用')
+    } finally { await mounted.cleanup() }
+  })
+
+  it.each(['toolbar', 'fn'])('cancels before activation completes when ended by %s', async (source) => {
+    const mounted = await mountVoice()
+    try {
+      const { bridge, emit, host, generate, workspace } = mounted
+      const activation = deferred<{ ok: boolean }>()
+      bridge.setActive.mockImplementationOnce(() => activation.promise)
+      const button = host.querySelector('[data-research-global-voice]') as HappyDOMHTMLElement
+      await act(async () => { button.click() })
+      expect(bridge.start).not.toHaveBeenCalled()
+      await act(async () => {
+        if (source === 'toolbar') button.click()
+        else emit({ type: 'toggle' })
+        activation.resolve({ ok: true })
+      })
+      expect(bridge.start).not.toHaveBeenCalled()
+      expect(bridge.stop).not.toHaveBeenCalled()
+      expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+      expect(generate).not.toHaveBeenCalled()
+      expect(workspace.getSnapshot().artifacts).toHaveLength(0)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('keeps pending microphone permission visible and prevents premature completion', async () => {
+    const mounted = await mountVoice()
+    try {
+      await act(async () => { mounted.emit({ type: 'toggle' }) })
+      expect(mounted.host.querySelector('[data-research-voice-feedback]')?.textContent)
+        .toContain('等待麦克风权限')
+      expect(mounted.host.querySelector('[data-research-voice-finish]')?.hasAttribute('disabled')).toBe(true)
+      expect(mounted.host.querySelector('[data-research-voice-cancel]')?.hasAttribute('disabled')).toBe(false)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('keeps the compact recording controls separate from canvas selection and pan', async () => {
+    const mounted = await mountVoice()
+    try {
+      const { emit, bridge, workspace, browserWindow, host, canvas, generate } = mounted
+      await act(async () => { workspace.createContainerDraft(); emit({ type: 'toggle' }) })
+      const requestId = bridge.start.mock.calls[0]![0].requestId
+      await act(async () => {
+        emit({ type: 'state', requestId, state: 'listening' })
+        emit({ type: 'partial', requestId, text: '创建一个倒计时' })
+      })
+      const before = workspace.getSnapshot()
+      const feedback = host.querySelector('[data-research-voice-feedback]') as HappyDOMHTMLElement
+      const wave = feedback.querySelector('[data-research-voice-wave]') as HappyDOMHTMLElement
+      const cancel = feedback.querySelector('[data-research-voice-cancel]') as HappyDOMHTMLElement
+      const finish = feedback.querySelector('[data-research-voice-finish]') as HappyDOMHTMLElement
+      expect(feedback.querySelectorAll('button')).toHaveLength(2)
+      expect(cancel.getAttribute('aria-label')).toMatch(/取消/)
+      expect(finish.getAttribute('aria-label')).toMatch(/完成|结束/)
+      const wheel = new browserWindow.WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 100 })
+      await act(async () => {
+        cancel.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 91 }))
+        wave.dispatchEvent(wheel)
+        ;(canvas as HappyDOMHTMLElement).focus()
+        browserWindow.document.dispatchEvent(new browserWindow.KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+        finish.dispatchEvent(pointer(browserWindow, 'pointerdown', { x: 380, y: 420, pointerId: 92 }))
+      })
+      expect(workspace.getSnapshot().selection).toEqual(before.selection)
+      expect(workspace.getSnapshot().viewport).toEqual(before.viewport)
+      expect(wheel.defaultPrevented).toBe(false)
+      expect(canvas.getAttribute('data-research-operation')).toBeNull()
+      await act(async () => {
+        cancel.click()
+        emit({ type: 'final', requestId, text: '不得创建' })
+      })
+      expect(bridge.cancel).toHaveBeenCalledWith({ sessionId: 'voice-session', requestId })
+      expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+      expect(generate).not.toHaveBeenCalled()
+      expect(workspace.getSnapshot().artifacts).toHaveLength(1)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('shows permission errors and leaves empty recognition without a canvas component', async () => {
+    const mounted = await mountVoice()
+    try {
+      const { bridge, emit, host, generate } = mounted
+      await act(async () => { emit({ type: 'toggle' }) })
+      const requestId = bridge.start.mock.calls[0]![0].requestId
+      await act(async () => { emit({ type: 'error', requestId, code: 'permission-denied', message: '请允许麦克风访问' }) })
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain('请允许麦克风访问')
+      const retry = host.querySelector('[role="alert"] button[aria-label*="重"]') as HappyDOMHTMLElement
+      expect(retry).not.toBeNull()
+      await act(async () => { retry.click() })
+      const secondId = bridge.start.mock.calls[1]![0].requestId
+      await act(async () => { emit({ type: 'final', requestId: secondId, text: '  ' }) })
+      expect(generate).not.toHaveBeenCalled()
+      expect(mounted.workspace.getSnapshot().artifacts).toHaveLength(0)
+      const close = host.querySelector('[role="alert"] button[aria-label*="关闭"]') as HappyDOMHTMLElement
+      expect(close).not.toBeNull()
+      await act(async () => { close.click() })
+      expect(host.querySelector('[data-research-voice-feedback]')).toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+})
+
+describe('generated component theme', () => {
+  it('smoothly fits a generated HTML frame from its own bounded measurements without reloading or moving its top-left corner', async () => {
+    const html = '<main><h1>长图表</h1><svg width="1200" height="1200"></svg><p>最后一行</p></main>'
+    const mounted = await mountResearchCanvas({ sessionId: 'html-autofit', artifacts: [{
+      id: 'html-auto', kind: 'generated-container', messageId: 'html-auto', title: '长图表', excerpt: '长图表', x: 500, y: 400, width: 960, height: 680, sizeMode: 'auto',
+      generationStatus: 'completed', containerPrompt: '生成长图表', refreshMinutes: 0,
+      containerSpec: { version: 1, type: 'html', title: '长图表', html }
+    }] })
+    try {
+      const frame = mounted.host.querySelector('[data-research-html-artifact]') as any
+      const originalSrc = frame.getAttribute('srcdoc')
+      const ownWindow = { postMessage: vi.fn() }
+      Object.defineProperty(frame, 'contentWindow', { configurable: true, value: ownWindow })
+      const card = mounted.host.querySelector('[data-research-artifact-card="html-auto"]') as any
+      expect(card.getAttribute('data-research-auto-sizing')).toBe('true')
+      const send = async (data: Record<string, unknown>, source: unknown = ownWindow) => {
+        await act(async () => { mounted.browserWindow.dispatchEvent(new mounted.browserWindow.MessageEvent('message', { data, source: source as any })) })
+      }
+      await send({ type: 'sherlock-content-size', width: 1200, height: 1300 }, mounted.browserWindow)
+      await send({ type: 'sherlock-content-size', width: 1200, height: 1300, html: 'untrusted' })
+      await send({ type: 'sherlock-content-size', width: 9000, height: 1300 })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 960, height: 680 })
+      await send({ type: 'sherlock-content-size', width: 1200, height: 1300 })
+      const fitted = mounted.workspace.getSnapshot().artifacts[0] as any
+      expect(fitted).toMatchObject({ width: 1202, height: 1338, sizeMode: 'auto' })
+      expect(fitted.x - fitted.width / 2).toBe(20)
+      expect(fitted.y - fitted.height / 2).toBe(60)
+      expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame)
+      expect(frame.getAttribute('srcdoc')).toBe(originalSrc)
+      await send({ type: 'sherlock-content-size', width: 1300, height: 1400 })
+      await send({ type: 'sherlock-content-size', width: 1400, height: 1500 })
+      const settled = mounted.workspace.getSnapshot().artifacts[0]
+      await send({ type: 'sherlock-content-size', width: 1500, height: 1600 })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toEqual(settled)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('respects manual sizing, stale HTML and finite auto-fit budgets in persisted canvas state', async () => {
+    const html = '<main>内容</main>'
+    const mounted = await mountResearchCanvas({ sessionId: 'html-autofit-guards', artifacts: [{
+      id: 'html-guard', kind: 'generated-container', messageId: 'html-guard', title: '尺寸', excerpt: '尺寸', x: 500, y: 400, width: 960, height: 680, sizeMode: 'auto',
+      generationStatus: 'completed', containerPrompt: '生成页面', refreshMinutes: 0,
+      containerSpec: { version: 1, type: 'html', title: '尺寸', html }
+    }] })
+    try {
+      const workspace = mounted.workspace as any
+      const fit = (source: string, width: number, height: number) => workspace.fitHtmlContent('html-guard', source, { width, height })
+      expect(fit('<main>旧页面</main>', 1200, 1300)).toBe(false)
+      expect(fit(html, 800, 600)).toBe(false)
+      expect(fit(html, Infinity, 1300)).toBe(false)
+      await act(async () => { expect(fit(html, 1100, 1200)).toBe(true) })
+      await act(async () => { workspace.updateNodeGeometry('html-guard', { width: 700, height: 500, sizeMode: 'manual' }) })
+      expect(fit(html, 1500, 1500)).toBe(false)
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 700, height: 500, sizeMode: 'manual' })
+      expect(mounted.host.querySelector('[data-research-artifact-card="html-guard"]')?.hasAttribute('data-research-auto-sizing')).toBe(false)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('keeps a single-point line chart visible on the canvas and in its SVG export', async () => {
+    const spec = { version: 1, type: 'chart', title: '单月收入', variant: 'line', labels: ['一月'], series: [{ name: '收入', values: [12] }] }
+    const mounted = await mountResearchCanvas({ sessionId: 'single-point-theme', artifacts: [{
+      id: 'single-point', kind: 'generated-container', messageId: 'single-point', title: '单月收入', excerpt: '单月收入', x: 100, y: 100,
+      generationStatus: 'completed', containerPrompt: '生成单月收入图表', refreshMinutes: 0, containerSpec: spec
+    }] })
+    try {
+      const point = mounted.host.querySelector('[data-research-container-chart] circle')
+      expect(point).not.toBeNull()
+      expect(point?.getAttribute('fill')).toBe('var(--sherlock-chart-1)')
+      expect(Number(point?.getAttribute('r'))).toBeGreaterThan(0)
+      const svg = (mounted.client.buildResearchContainerChartSvg as any)(spec, 'dark')
+      expect(svg).toContain('<circle')
+      expect(svg).toContain('oklch(27.4% .006 286.033)')
+    } finally { await mounted.cleanup() }
+  })
+
+  it('sends resolved app theme without replacing the live HTML frame or its document', async () => {
+    const mounted = await mountResearchCanvas({ sessionId: 'component-theme', artifacts: [{
+      id: 'html-theme', kind: 'generated-container', messageId: 'html-theme', title: '主题页', excerpt: '主题页', x: 100, y: 100,
+      generationStatus: 'completed', containerPrompt: '生成主题页', refreshMinutes: 0,
+      containerSpec: { version: 1, type: 'html', title: '主题页', html: '<button>保留计数</button>' }
+    }] })
+    try {
+      const frame = mounted.host.querySelector('[data-research-html-artifact]') as any
+      expect(frame).not.toBeNull()
+      const originalSrc = frame.getAttribute('srcdoc')
+      const postMessage = vi.fn()
+      Object.defineProperty(frame, 'contentWindow', { configurable: true, value: { postMessage } })
+      await act(async () => { frame.dispatchEvent(new mounted.browserWindow.Event('load')) })
+      expect(postMessage).toHaveBeenLastCalledWith({ type: 'sherlock-theme', colorScheme: 'light' }, '*')
+      await act(async () => {
+        mounted.browserWindow.document.body.setAttribute('data-ds-dark-theme', '')
+        await new Promise(resolve => setTimeout(resolve, 10))
+      })
+      expect(postMessage).toHaveBeenLastCalledWith({ type: 'sherlock-theme', colorScheme: 'dark' }, '*')
+      expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame)
+      expect(frame.getAttribute('srcdoc')).toBe(originalSrc)
+      await act(async () => {
+        mounted.browserWindow.document.body.removeAttribute('data-ds-dark-theme')
+        await new Promise(resolve => setTimeout(resolve, 10))
+      })
+      expect(postMessage).toHaveBeenLastCalledWith({ type: 'sherlock-theme', colorScheme: 'light' }, '*')
+      expect(frame.getAttribute('srcdoc')).toBe(originalSrc)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('uses theme tokens in native chart marks and literal theme colors in exported SVG', async () => {
+    const spec = { version: 1, type: 'chart', title: '趋势', variant: 'line', labels: ['一', '二'], series: [{ name: '收入', values: [1, 2] }] }
+    const mounted = await mountResearchCanvas({ sessionId: 'native-component-theme', artifacts: [{
+      id: 'chart-theme', kind: 'generated-container', messageId: 'chart-theme', title: '趋势', excerpt: '趋势', x: 100, y: 100,
+      generationStatus: 'completed', containerPrompt: '生成图表', refreshMinutes: 0, containerSpec: spec
+    }] })
+    try {
+      expect(mounted.host.querySelector('[data-research-container-chart] polyline')?.getAttribute('stroke')).toBe('var(--sherlock-chart-1)')
+      expect(mounted.host.querySelector('[data-research-container-chart] polyline')?.getAttribute('stroke-width')).toBe('2')
+      expect(mounted.host.querySelectorAll('[data-research-container-chart] circle')).toHaveLength(0)
+      expect(mounted.host.querySelector('.rScV5Q_chartGrid')?.getAttribute('stroke-dasharray')).toBe('4 4')
+      const content = mounted.host.querySelector('.rScV5Q_containerContent') as any
+      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-bg')).toBe('oklch(.97 0 0)')
+      await act(async () => { mounted.browserWindow.document.body.setAttribute('data-ds-dark-theme', '') })
+      // Happy DOM caches ancestor selectors on existing nodes after body changes.
+      // A fresh CSS probe verifies the resolved dark rule independently of that cache.
+      const darkProbe = content.cloneNode(false)
+      content.parentElement.appendChild(darkProbe)
+      expect(mounted.browserWindow.getComputedStyle(darkProbe).getPropertyValue('--sherlock-bg')).toBe('oklch(.14 .0047 263.79)')
+      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-font-sans')).toContain('Arial')
+      const build = mounted.client.buildResearchContainerChartSvg as any
+      expect(build(spec, 'light')).toContain('oklch(37.4% .01 67.558)')
+      expect(build(spec, 'dark')).toContain('oklch(27.4% .006 286.033)')
+      expect(build(spec, 'dark')).toContain('oklch(.17 .0065 271.01)')
+      expect(build(spec, 'dark')).not.toMatch(/var\(--|script/)
+      expect(build(spec, 'light')).toContain('stroke-dasharray="4 4"')
+      expect(build(spec, 'light')).toContain('stroke-width="2"')
+      expect(build(spec, 'light')).not.toContain('<circle')
+    } finally { await mounted.cleanup() }
   })
 })

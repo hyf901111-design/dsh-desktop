@@ -25,3 +25,5 @@ build/sherlock-plugin-profile/
 .coaligne/
 .coaligneignore
 .worktrees/
+
+build/native/

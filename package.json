@@ -26,8 +26,8 @@
   ],
   "scripts": {
     "postinstall": "patch-package && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && install-electron --no",
-    "dev": "electron-vite dev",
-    "build": "node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
+    "dev": "npm run build:native:voice && electron-vite dev",
+    "build": "npm run build:native:voice && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json",
@@ -45,14 +45,17 @@
     "package:dev:win": "node scripts/verify-target.mjs win32 x64 && npm run build && electron-builder --win --x64 --publish never --config electron-builder.dev.cjs",
     "package:mac": "npm run build && electron-builder --mac --publish never && npm run verify:package:mac -- --app auto",
     "package:mac:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/Sherlock.app\"",
+    "package:mac:arm64:unsigned-ci": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/Sherlock.app\" --skip-signature",
     "package:mac:x64": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/Sherlock.app\"",
+    "package:mac:x64:unsigned-ci": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/Sherlock.app\" --skip-signature",
     "package:mac:notarized:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run prepare:bundled-plugin-profile && npm run build && electron-builder --mac --arm64 --publish never --config electron-builder.notarized.cjs && npm run verify:package:mac -- --app \"dist-notarized/mac-arm64/Sherlock.app\"",
     "verify:package:mac": "node scripts/verify-packaged-macos.mjs",
     "release:cloudflare": "node scripts/publish-cloudflare-release.mjs",
     "release:cloudflare:prune-oldest": "node scripts/prune-oldest-cloudflare-release.mjs",
     "package:win": "node scripts/verify-target.mjs win32 x64 && npm run build && electron-builder --win --x64 --publish never",
     "sync:plugins:to-dev": "node scripts/sync-plugin-profile.mjs formal-to-dev",
-    "sync:plugins:to-formal": "node scripts/sync-plugin-profile.mjs dev-to-formal"
+    "sync:plugins:to-formal": "node scripts/sync-plugin-profile.mjs dev-to-formal",
+    "build:native:voice": "node scripts/build-research-voice.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis-plugin-group": "1.0.1",
@@ -159,6 +162,13 @@
       {
         "from": "skills",
         "to": "sherlock-skills"
+      },
+      {
+        "from": "build/native",
+        "to": "native",
+        "filter": [
+          "research-voice.node"
+        ]
       }
     ],
     "publish": [
@@ -176,7 +186,12 @@
       "target": [
         "dmg",
         "zip"
-      ]
+      ],
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Sherlock 需要使用麦克风，将你的语音指令转为研究画布组件。",
+        "NSSpeechRecognitionUsageDescription": "Sherlock 使用语音识别将你的指令转成文字，并在研究画布中执行。"
+      },
+      "entitlements": "build/entitlements.mac.plist"
     },
     "dmg": {
       "format": "UDBZ"

@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..296683b 100644
+index 1dd0e89..80f6bac 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -1519,7 +1519,7 @@ index 1dd0e89..296683b 100644
  			"callRow": "Md3f7G_callRow",
  			"hint": "Md3f7G_hint",
  			"root": "Md3f7G_root",
-@@ -5228,11 +6137,19 @@ window.__ModuleLoader__.load({
+@@ -5228,16 +6137,45 @@ window.__ModuleLoader__.load({
  			"older": "Md3f7G_older",
  			"flowItem": "Md3f7G_flowItem",
  			"toBottomSlot": "Md3f7G_toBottomSlot",
@@ -1540,8 +1540,48 @@ index 1dd0e89..296683b 100644
  		//#endregion
  		//#region lib/types/client/chat/ChatNodeSeat.js
  		/** Subscribe and dispatch one stable Context key without observing sibling Nodes. */
-@@ -5278,34 +6195,174 @@ window.__ModuleLoader__.load({
- 				})
+-		const ChatNodeSeat = (0, react.memo)(function ChatNodeSeat({ nodeKey, selectedCallId, cwd, openFile, inspectCall, forkAt, loadImage, fileMentions, useSession, renderSlot, t }) {
++		function researchTaskInputSummary(node, identity) {
++			if (node?.kind !== 'user' || identity?.mode !== 'one-shot' || identity.label !== '画布生成任务') return null;
++			const text = Array.isArray(node.data?.content) ? node.data.content.filter((block) => block?.type === 'text' && typeof block.text === 'string').map((block) => block.text).join('\n') : '';
++			const requested = text.match(/(?:^|\n)用户需求：([^\n]+)/)?.[1]?.trim();
++			return requested ? requested.slice(0, 240) : '根据所选资料生成画布内容';
++		}
++		function researchTaskInputIdentity(subagent, catalog, sessionId) {
++			const address = subagent?.address;
++			if (address?.mode !== 'one-shot' || address.childSessionId !== sessionId || typeof address.parentSessionId !== 'string' || catalog?.state !== 'ready' || !Array.isArray(catalog.entries)) return null;
++			return catalog.entries.find((entry) => entry?.kind === 'child' && entry.id === address.childSessionId && entry.mode === address.mode && entry.label === '画布生成任务') ?? null;
++		}
++		function ResearchTaskInputRecord({ summary, children }) {
++			return (0, react_jsx_runtime.jsxs)('div', { 'data-research-task-input': '', style: { border: '1px solid var(--dsw-alias-border-l2)', padding: '16px 18px', color: 'var(--dsw-alias-label-primary)', fontSize: 14, lineHeight: 1.6 }, children: [
++				(0, react_jsx_runtime.jsx)('div', { style: { marginBottom: 8, overflowWrap: 'anywhere' }, children: summary }),
++				(0, react_jsx_runtime.jsxs)('details', { 'data-research-task-input-details': '', children: [
++					(0, react_jsx_runtime.jsx)('summary', { style: { cursor: 'pointer', color: 'var(--dsw-alias-label-secondary)', fontSize: 12 }, children: '生成需求与参考资料' }),
++					(0, react_jsx_runtime.jsx)('div', { style: { marginTop: 12 }, children })
++				] })
++			] });
++		}
++		const ChatNodeSeat = (0, react.memo)(function ChatNodeSeat({ nodeKey, selectedCallId, cwd, openFile, inspectCall, forkAt, loadImage, fileMentions, useSession, researchTaskIdentity, renderSlot, t }) {
+ 			const node = useSession((snapshot) => snapshot.chat.nodes.get(nodeKey));
++			const taskSummary = researchTaskInputSummary(node, researchTaskIdentity);
+ 			const routedNode = node;
+ 			const owner = (0, react.useMemo)(() => node === void 0 ? null : {
+ 				selectedCallId,
+@@ -5267,7 +6205,7 @@ window.__ModuleLoader__.load({
+ 				"data-chat-anchor-key": routedNode.key,
+ 				"data-chat-flow-key": routedNode.key,
+ 				"data-chat-flow-kind": routedNode.kind,
+-				children: renderSlot("conversation.chat.node", routedOwner, {
++				children: taskSummary === null ? renderSlot("conversation.chat.node", routedOwner, {
+ 					entryKey: routedNode.kind,
+ 					hookContext: nodeKey,
+ 					fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
+@@ -5275,32 +6213,172 @@ window.__ModuleLoader__.load({
+ 						payload: routedNode.data,
+ 						truncatedLabel: (total) => t("json.truncated", { total })
+ 					})
+-				})
++				}) : (0, react_jsx_runtime.jsx)(ResearchTaskInputRecord, { summary: taskSummary, children: renderSlot("conversation.chat.node", routedOwner, { entryKey: routedNode.kind, hookContext: nodeKey }) })
  			});
  		});
 -		//#endregion
@@ -1573,11 +1613,6 @@ index 1dd0e89..296683b 100644
 -			if (typeof document.elementsFromPoint === "function" && visibleBottom > viewport.top) {
 -				const content = list.getBoundingClientRect();
 -				const left = Math.max(viewport.left, content.left);
--				const right = Math.min(viewport.right, content.right);
--				const x = left + Math.max(0, right - left) / 2;
--				const height = visibleBottom - viewport.top;
--				const points = [
--					1,
 +		/** One turn-level status row whose disclosure owns all process detail. */
 +		const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {
 +			const [expanded, setExpanded] = (0, react.useState)(false);
@@ -1734,15 +1769,10 @@ index 1dd0e89..296683b 100644
 +			if (typeof document.elementsFromPoint === "function" && visibleBottom > viewport.top) {
 +				const content = list.getBoundingClientRect();
 +				const left = Math.max(viewport.left, content.left);
-+				const right = Math.min(viewport.right, content.right);
-+				const x = left + Math.max(0, right - left) / 2;
-+				const height = visibleBottom - viewport.top;
-+				const points = [
-+					1,
- 					Math.min(32, height / 3),
- 					height / 2,
- 					Math.max(1, height - 1)
-@@ -5332,35 +6389,537 @@ window.__ModuleLoader__.load({
+ 				const right = Math.min(viewport.right, content.right);
+ 				const x = left + Math.max(0, right - left) / 2;
+ 				const height = visibleBottom - viewport.top;
+@@ -5332,35 +6410,537 @@ window.__ModuleLoader__.load({
  				scrollTop: scrollport.scrollTop
  			};
  		}
@@ -2304,7 +2334,19 @@ index 1dd0e89..296683b 100644
  				})]
  			});
  		}
-@@ -5381,11 +6940,58 @@ window.__ModuleLoader__.load({
+@@ -5374,6 +6954,11 @@ window.__ModuleLoader__.load({
+ 			const timeline = useSession((s) => s.chat.timeline);
+ 			const inbox = useSession((s) => s.queue);
+ 			const cwd = useSessions((s) => s.byId[sessionId]?.cwd);
++			const subagent = useSession((s) => s.subagent);
++			// The session domain refreshes the parent catalog on selection/reconnect.
++			// Until that host metadata arrives, keep the original input fully visible.
++			const parentCatalog = useSessions((s) => subagent?.address?.parentSessionId === void 0 ? void 0 : s.subagentsByParent?.[subagent.address.parentSessionId]);
++			const researchTaskIdentity = (0, react.useMemo)(() => researchTaskInputIdentity(subagent, parentCatalog, sessionId), [subagent, parentCatalog, sessionId]);
+ 			const running = useSession((s) => s.running);
+ 			const openState = useSession((s) => s.openState);
+ 			const openError = useSession((s) => s.openError);
+@@ -5381,11 +6966,60 @@ window.__ModuleLoader__.load({
  			const loadingOlder = useSession((s) => s.loadingOlder);
  			const selectedCallId = useStore((s) => s.selection?.callId);
  			const pendingSteering = (0, react.useMemo)(() => inbox.filter((item) => item.placement === "steering"), [inbox]);
@@ -2318,9 +2360,9 @@ index 1dd0e89..296683b 100644
 +					rest: []
 +				};
 +				const text = parseResearchPrompt(content.text).text.replace(/\s+/g, " ").trim();
-+				const preview = (text || (content.images.length > 0 ? document.documentElement.lang.startsWith("zh") ? "图片 Query" : "Image query" : document.documentElement.lang.startsWith("zh") ? "无文本 Query" : "Query without text")).slice(0, 240);
++				const preview = (researchTaskInputSummary(node, researchTaskIdentity) ?? (text || (content.images.length > 0 ? document.documentElement.lang.startsWith("zh") ? "图片 Query" : "Image query" : document.documentElement.lang.startsWith("zh") ? "无文本 Query" : "Query without text"))).slice(0, 240);
 +				return [{ key, preview }];
-+			}), [order, nodeStore]);
++			}), [order, nodeStore, researchTaskIdentity]);
 +			const runningTurn = (0, react.useMemo)(() => running ? runningTurnInfo(timeline) : null, [running, timeline]);
 +			const runningTurnNumber = (0, react.useMemo)(() => {
 +				if (!running) return null;
@@ -2334,6 +2376,7 @@ index 1dd0e89..296683b 100644
 +			const compactFlow = (0, react.useMemo)(() => compactConversationFlow(order, nodeStore, runningTurnNumber), [order, nodeStore, runningTurnNumber]);
 +			const seatProps = (0, react.useMemo)(() => ({
 +				useSession,
++				researchTaskIdentity,
 +				selectedCallId,
 +				cwd,
 +				openFile,
@@ -2345,6 +2388,7 @@ index 1dd0e89..296683b 100644
 +				t
 +			}), [
 +				useSession,
++				researchTaskIdentity,
 +				selectedCallId,
 +				cwd,
 +				openFile,
@@ -2364,7 +2408,7 @@ index 1dd0e89..296683b 100644
  			/** Last position delivered or written on the main thread. */
  			const observedTopRef = (0, react.useRef)(0);
  			/** Paging anchor: semantic row/position at click, updated by reader scrolls
-@@ -5394,7 +7000,9 @@ window.__ModuleLoader__.load({
+@@ -5394,7 +7028,9 @@ window.__ModuleLoader__.load({
  			const firstSeqRef = (0, react.useRef)(null);
  			const openedRef = (0, react.useRef)(false);
  			const lastKeyRef = (0, react.useRef)(null);
@@ -2374,7 +2418,7 @@ index 1dd0e89..296683b 100644
  			/** Flow tip signature — follow-scroll only when this moves, never on a
  			*  scroll-driven at-bottom chrome re-render (which would snap inertial
  			*  scrolls the rest of the way to the floor). */
-@@ -5402,26 +7010,37 @@ window.__ModuleLoader__.load({
+@@ -5402,26 +7038,37 @@ window.__ModuleLoader__.load({
  			const firstKey = order[0];
  			const firstSeq = firstKey === void 0 ? null : nodeStore.get(firstKey)?.anchorSeq ?? null;
  			const lastKey = order.at(-1) ?? null;
@@ -2416,7 +2460,7 @@ index 1dd0e89..296683b 100644
  					else {
  						el.scrollTop = saved.scrollTop;
  						const row = anchorElement(local, saved.anchorKey);
-@@ -5436,6 +7055,7 @@ window.__ModuleLoader__.load({
+@@ -5436,6 +7083,7 @@ window.__ModuleLoader__.load({
  					}
  					firstSeqRef.current = firstSeq;
  					lastKeyRef.current = lastKey;
@@ -2424,7 +2468,7 @@ index 1dd0e89..296683b 100644
  					lastSteeringIdRef.current = lastSteeringId;
  					followSigRef.current = followSig;
  					return;
-@@ -5449,18 +7069,26 @@ window.__ModuleLoader__.load({
+@@ -5449,18 +7097,26 @@ window.__ModuleLoader__.load({
  					firstSeqRef.current = firstSeq;
  					/* v8 ignore next -- ?? arm: a prepend adds nodes, so the flow list here is never empty. */
  					lastKeyRef.current = lastKey;
@@ -2453,7 +2497,7 @@ index 1dd0e89..296683b 100644
  			});
  			const onScrollRef = (0, react.useRef)(() => {});
  			onScrollRef.current = () => {
-@@ -5468,6 +7096,7 @@ window.__ModuleLoader__.load({
+@@ -5468,6 +7124,7 @@ window.__ModuleLoader__.load({
  				/* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
  				if (local === null) return;
  				const el = scrollerOf(local);
@@ -2461,7 +2505,7 @@ index 1dd0e89..296683b 100644
  				const floor = Math.max(0, el.scrollHeight - el.clientHeight);
  				const movedByReader = Math.abs(el.scrollTop - Math.min(observedTopRef.current, floor)) > .5;
  				const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;
-@@ -5487,6 +7116,10 @@ window.__ModuleLoader__.load({
+@@ -5487,6 +7144,10 @@ window.__ModuleLoader__.load({
  				else if (position !== null) chatScroll.save(position);
  				observedTopRef.current = el.scrollTop;
  			};
@@ -2472,7 +2516,7 @@ index 1dd0e89..296683b 100644
  			(0, react.useEffect)(() => {
  				const local = listRef.current;
  				/* v8 ignore next -- ref-null guard: effect runs after the list node commits. */
-@@ -5514,11 +7147,13 @@ window.__ModuleLoader__.load({
+@@ -5514,11 +7175,13 @@ window.__ModuleLoader__.load({
  				const column = columnRef.current;
  				const local = listRef.current;
  				if (column === null || local === null || typeof ResizeObserver === "undefined") return;
@@ -2487,7 +2531,7 @@ index 1dd0e89..296683b 100644
  				if (composer !== null) observer.observe(composer);
  				return () => {
  					observer.disconnect();
-@@ -5540,9 +7175,29 @@ window.__ModuleLoader__.load({
+@@ -5540,9 +7203,29 @@ window.__ModuleLoader__.load({
  				}
  				loadOlder();
  			};
@@ -2518,7 +2562,7 @@ index 1dd0e89..296683b 100644
  					ref: listRef,
  					className: ChatView_module_css_default.scroll,
  					children: [(0, react_jsx_runtime.jsxs)("div", {
-@@ -5570,22 +7225,21 @@ window.__ModuleLoader__.load({
+@@ -5570,22 +7253,21 @@ window.__ModuleLoader__.load({
  									children: loadingOlder ? t("loading") : t("chat.loadOlder")
  								})
  							}),
@@ -2556,7 +2600,7 @@ index 1dd0e89..296683b 100644
  							}),
  							pendingSteering.map((item) => (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
  								content: item.content,
-@@ -5607,7 +7261,7 @@ window.__ModuleLoader__.load({
+@@ -5607,7 +7289,7 @@ window.__ModuleLoader__.load({
  							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
  						})
  					})]
@@ -2565,7 +2609,7 @@ index 1dd0e89..296683b 100644
  			});
  		}
  		//#endregion
-@@ -5816,6 +7470,33 @@ window.__ModuleLoader__.load({
+@@ -5816,6 +7498,33 @@ window.__ModuleLoader__.load({
  		/** Simplified Chinese dictionary (the key-set source of truth). */
  		const zh = {
  			"view.chat": "对话",
@@ -2599,7 +2643,7 @@ index 1dd0e89..296683b 100644
  			"hint.plan": PLAN_NEXT_ACTION_ZH,
  			"hint.goal": "输入目标，智能体将持续执行",
  			"hint.goal.active": "当前目标进行中。可输入 edit 修改 / pause 暂停 / resume 继续 / clear 清除",
-@@ -5870,12 +7551,15 @@ window.__ModuleLoader__.load({
+@@ -5870,12 +7579,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "仅在智能体运行时生效；Cmd/Ctrl+Enter 使用另一行为",
  			"settings.enter.queue": "排队发送",
  			"settings.enter.steer": "插话发送",
@@ -2619,7 +2663,7 @@ index 1dd0e89..296683b 100644
  			"hero.preview": "预览版",
  			"hero.chooseWorkspace": "选择工作区",
  			"session.hierarchy": "会话层级",
-@@ -5896,6 +7580,46 @@ window.__ModuleLoader__.load({
+@@ -5896,6 +7608,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "历史加载失败：{message}（{code}）",
  			"chat.loadOlder": "加载更早",
  			"chat.toBottom": "回到底部",
@@ -2666,7 +2710,7 @@ index 1dd0e89..296683b 100644
  			"message.extraBlock": "附加内容块",
  			"message.contextInjection": "上下文注入",
  			"message.contextRecall": "跨会话召回",
-@@ -5981,6 +7705,33 @@ window.__ModuleLoader__.load({
+@@ -5981,6 +7733,33 @@ window.__ModuleLoader__.load({
  		/** English dictionary, checked complete against the zh key set. */
  		const en = {
  			"view.chat": "Chat",
@@ -2700,7 +2744,7 @@ index 1dd0e89..296683b 100644
  			"hint.plan": PLAN_NEXT_ACTION_EN,
  			"hint.goal": "describe the objective for a long-running task",
  			"hint.goal.active": "goal active — edit / pause / resume / clear",
-@@ -6035,12 +7786,15 @@ window.__ModuleLoader__.load({
+@@ -6035,12 +7814,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "Busy only; Cmd/Ctrl+Enter uses the other behavior",
  			"settings.enter.queue": "Queue",
  			"settings.enter.steer": "Steer",
@@ -2717,7 +2761,7 @@ index 1dd0e89..296683b 100644
  			"hero.preview": "Preview",
  			"hero.chooseWorkspace": "Choose workspace",
  			"session.hierarchy": "Session hierarchy",
-@@ -6061,6 +7815,46 @@ window.__ModuleLoader__.load({
+@@ -6061,6 +7843,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "Failed to load history: {message} ({code})",
  			"chat.loadOlder": "Load earlier",
  			"chat.toBottom": "Back to bottom",
@@ -2764,7 +2808,7 @@ index 1dd0e89..296683b 100644
  			"message.extraBlock": "Extra content block",
  			"message.contextInjection": "Context injection",
  			"message.contextRecall": "Session recall",
-@@ -6383,7 +8177,11 @@ window.__ModuleLoader__.load({
+@@ -6383,7 +8205,11 @@ window.__ModuleLoader__.load({
  		*/
  		function QueueDock({ useSession, updateQueue, notify, t }) {
  			const inbox = useSession((s) => s.queue);
@@ -2777,7 +2821,7 @@ index 1dd0e89..296683b 100644
  			const running = useSession((s) => s.running);
  			const queueMutable = useSession((s) => s.subagent === null);
  			const [editing, setEditing] = (0, react.useState)(null);
-@@ -6532,7 +8330,7 @@ window.__ModuleLoader__.load({
+@@ -6532,7 +8358,7 @@ window.__ModuleLoader__.load({
  												type: "button",
  												className: QueueDock_module_css_default.action,
  												"aria-label": t("queue.edit"),
@@ -2786,7 +2830,7 @@ index 1dd0e89..296683b 100644
  												disabled: busy !== null || row.text === null,
  												onClick: () => {
  													if (row.text !== null) setEditing({
-@@ -6627,7 +8425,7 @@ window.__ModuleLoader__.load({
+@@ -6627,7 +8453,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$7;
@@ -2795,7 +2839,7 @@ index 1dd0e89..296683b 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8549,6256 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8577,6881 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -3127,15 +3171,266 @@ index 1dd0e89..296683b 100644
 +				.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
 +				.replace(/[^\S\n]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, 120000);
 +		}
-+		function buildResearchHtmlPreview(html, title = "交互网页") {
-+			if (parseResearchContainerSpec({ version: 1, type: "html", title, html }) === null) return '<!doctype html><meta charset="utf-8"><p>HTML 页面格式无效，请重试。</p>';
-+			const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><meta http-equiv="x-dns-prefetch-control" content="off">`;
-+			const escape = (value) => String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-+			const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});</script>`;
-+			const inner = `<!doctype html><html><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1">${lockedRuntime}</head><body>${html}</body></html>`;
-+			const serialized = JSON.stringify(inner).replace(/</g, "\\u003c");
-+			return `<!doctype html><html><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title><style>html,body{margin:0;width:100%;height:100%;overflow:hidden}iframe{display:block;border:0;width:100%;height:100%;background:white}iframe[hidden]{display:none}p{padding:24px;font:14px system-ui}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 Sherlock 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escape(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>if(typeof trustedTypes==='object'&&typeof trustedTypes.isHTML==='function'){const frame=document.getElementById('preview');frame.srcdoc=${serialized};frame.hidden=false;document.getElementById('notice').hidden=true;}</script></body></html>`;
-+		}
++// RESEARCH_COMPONENT_THEME_START — keep this host-free block in client parity.
++// Approved prototypes/bklit-theme-preview/src/style.css: Monochrome uses stone
++// in light mode and zinc in dark mode. Additional series retain a neutral ramp.
++const RESEARCH_COMPONENT_PALETTES = Object.freeze({
++  light: Object.freeze({
++    bg: 'oklch(.97 0 0)', surface: '#fff', 'surface-muted': '#f5f5f5', text: '#0a0b0c', muted: '#737373',
++    border: 'oklch(.92 0 0)', accent: '#0a0b0c', 'accent-soft': '#7373730f',
++    'chart-1': 'oklch(37.4% .01 67.558)', 'chart-2': 'oklch(55.3% .013 58.071)',
++    'chart-3': '#737373', 'chart-4': '#a8a29e', 'chart-5': '#d6d3d1', 'chart-6': '#292524',
++    'chart-background': 'oklch(.915 0 0)', 'chart-foreground': 'oklch(.145 .004 285)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
++    'chart-label': 'oklch(.45 .01 260)', 'chart-grid': 'oklch(.917 0 0)', 'chart-crosshair': 'oklch(.677 0 72.411)',
++    'tooltip-bg': 'oklch(.999998 .0000253939 112.713)', 'tooltip-text': 'oklch(.147999 .0039982 228.752)',
++    'tooltip-muted': 'oklch(.564 0 78.958)', 'tooltip-border': 'oklch(.92 0 0)',
++    'chart-marker-background': '#f5f5f5', 'chart-marker-border': '#dedede', 'chart-marker-foreground': '#444',
++    'chart-marker-badge-background': '#171717', 'chart-marker-badge-foreground': '#fff',
++    'chart-segment-background': '#7373730f', 'chart-segment-line': '#73737340'
++  }),
++  dark: Object.freeze({
++    bg: 'oklch(.14 .0047 263.79)', surface: 'oklch(.17 .0065 271.01)', 'surface-muted': '#27272a', text: '#f9fafb', muted: '#9095a2',
++    border: 'oklch(.56 .0195 267.65 / .2)', accent: '#f9fafb', 'accent-soft': '#ffffff0f',
++    'chart-1': 'oklch(27.4% .006 286.033)', 'chart-2': 'oklch(44.2% .017 285.786)',
++    'chart-3': '#71717a', 'chart-4': '#a1a1aa', 'chart-5': '#d4d4d8', 'chart-6': '#f4f4f5',
++    'chart-background': 'oklch(.145 0 0)', 'chart-foreground': 'oklch(.45 0 0)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
++    'chart-label': 'oklch(.75 .01 260)', 'chart-grid': 'oklch(.6 .0124 243.77 / .25)', 'chart-crosshair': 'oklch(.72 .0158 281.84)',
++    'tooltip-bg': 'oklch(.21 .0058 285.9)', 'tooltip-text': 'oklch(.987 .002 197.1)',
++    'tooltip-muted': 'oklch(.62 .0218 270.07)', 'tooltip-border': 'oklch(.56 .0195 267.65 / .2)',
++    'chart-marker-background': '#27272a', 'chart-marker-border': '#3f3f46', 'chart-marker-foreground': '#d4d4d8',
++    'chart-marker-badge-background': '#fafafa', 'chart-marker-badge-foreground': '#18181b',
++    'chart-segment-background': '#ffffff0f', 'chart-segment-line': '#ffffff40'
++  })
++})
++const RESEARCH_COMPONENT_CHART_ALIASES = Object.freeze({
++  'chart-line-primary': 'chart-1', 'chart-line-secondary': 'chart-2',
++  'chart-background': 'chart-background', 'chart-foreground': 'chart-foreground', 'chart-foreground-muted': 'chart-foreground-muted',
++  'chart-label': 'chart-label', 'chart-grid': 'chart-grid', 'chart-crosshair': 'chart-crosshair',
++  'chart-tooltip-background': 'tooltip-bg', 'chart-tooltip-foreground': 'tooltip-text', 'chart-tooltip-muted': 'tooltip-muted', 'chart-tooltip-border': 'tooltip-border',
++  'chart-indicator-color': 'chart-1', 'chart-indicator-secondary-color': 'chart-2',
++  'chart-marker-background': 'chart-marker-background', 'chart-marker-border': 'chart-marker-border', 'chart-marker-foreground': 'chart-marker-foreground',
++  'chart-marker-badge-background': 'chart-marker-badge-background', 'chart-marker-badge-foreground': 'chart-marker-badge-foreground',
++  'chart-segment-background': 'chart-segment-background', 'chart-segment-line': 'chart-segment-line', 'chart-brush-border': 'border'
++})
++const researchComponentPaletteCss = (palette) => Object.entries(palette).map(([key, value]) => `--sherlock-${key}:${value}`).join(';')
++const researchComponentChartAliasCss = Object.entries(RESEARCH_COMPONENT_CHART_ALIASES).map(([key, semantic]) => `--${key}:var(--sherlock-${semantic})`).join(';')
++// Equal selector specificity lets a user's later :root custom palette override
++// either mode. Theme updates change the attribute, never the user's CSS rules.
++const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};${researchComponentChartAliasCss};--sherlock-font-sans:Arial,"Helvetica Neue","PingFang SC",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:0px;--sherlock-shadow:none}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
++// Zero specificity is paired with the earliest cascade layer at injection, so
++// both layered and unlayered user styles retain priority over these defaults.
++const RESEARCH_COMPONENT_BASE_CSS = `:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans);font-synthesis:none}:where(body){margin:0}:where(*){box-sizing:border-box}:where(button,select,input,textarea,table,.research-card,.card,.panel,.kpi-card,[data-sherlock-card],[role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border-radius:var(--sherlock-radius);box-shadow:var(--sherlock-shadow)}:where(button,select,input,textarea){font:inherit;color:inherit;border:1px solid var(--sherlock-border);background:transparent}:where(button,select){cursor:pointer}:where(button){padding:6px 12px}:where(button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible){outline:2px solid var(--sherlock-muted);outline-offset:3px}:where(.research-card,.card,.panel,.kpi-card,[data-sherlock-card]){border:1px solid var(--sherlock-border);background:var(--sherlock-surface)}:where([role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border:1px solid var(--sherlock-tooltip-border);background:var(--sherlock-tooltip-bg);color:var(--sherlock-tooltip-text);font-size:12px;padding:13px 14px}:where(table){width:100%;border-collapse:collapse;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}:where(caption){text-align:left;padding-bottom:16px;color:var(--sherlock-muted)}:where(th){color:var(--sherlock-muted);font-weight:400}:where(th,td){padding:10px 8px;border-bottom:1px solid var(--sherlock-border)}:where(th:first-child,td:first-child){text-align:left}`
++
++// First-paint hint only: literal meta attributes outside inert/raw-text content.
++// The inner DOM is authoritative after parsing; no artifact DOM or code runs here.
++function researchHtmlFixedTheme(html) {
++  const source = html.replace(/<!--[\s\S]*?(?:-->|$)/g, '')
++    .replace(/<(script|style|template|textarea|title|xmp|noscript)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi, '')
++    .replace(/<plaintext\b[\s\S]*$/i, '')
++  for (const match of source.matchAll(/<meta\b[^>]*>/gi)) {
++    const attributes = {}
++    for (const attribute of match[0].matchAll(/([a-z][a-z0-9:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi)) {
++      const name = attribute[1].toLowerCase()
++      if (!Object.hasOwn(attributes, name)) attributes[name] = (attribute[2] ?? attribute[3] ?? attribute[4]).toLowerCase().trim()
++    }
++    if (attributes.name === 'sherlock-theme') return attributes.content === 'light' || attributes.content === 'dark' ? attributes.content : null
++  }
++  return null
++}
++
++// Static runtime source stays identical across bundlers and is injected before artifact
++// scripts. Its sole host capability is receiving a two-field color-scheme value.
++const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerThemeRuntime(fixedTheme) {
++  let hostTheme = document.documentElement.getAttribute('data-sherlock-theme') === 'dark' ? 'dark' : 'light'
++  let activeTheme
++  const apply = () => {
++    const colorScheme = fixedTheme || hostTheme
++    if (activeTheme === colorScheme) return
++    activeTheme = colorScheme
++    document.documentElement.setAttribute('data-sherlock-theme', colorScheme)
++    document.documentElement.style.colorScheme = colorScheme
++    window.dispatchEvent(new CustomEvent('sherlock-theme-change', { detail: { colorScheme } }))
++  }
++  const receive = (event) => {
++    const data = event.data
++    if (event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
++        !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
++        data.colorScheme !== 'light' && data.colorScheme !== 'dark') return
++    hostTheme = data.colorScheme
++    apply()
++  }
++  addEventListener('message', receive)
++  const startContentMeasurement = () => {
++    if (typeof parent.postMessage !== 'function') return
++    let stopped = false
++    let reports = 0
++    let previous = ''
++    let pending
++    let observer
++    const measure = () => {
++      if (stopped || reports >= 6 || !document.body) return
++      const viewportWidth = document.documentElement.clientWidth
++      const viewportHeight = document.documentElement.clientHeight
++      if (!(viewportWidth > 0 && viewportHeight > 0)) return
++      let right = 0
++      let bottom = 0
++      const visible = (element) => {
++        if (!element || element.closest('script,style,template,noscript,[hidden]')) return false
++        const style = getComputedStyle(element)
++        return style.display !== 'none' && style.visibility !== 'hidden' && style.position !== 'fixed'
++      }
++      const include = (bounds, element, borderBox = false) => {
++        if (!bounds || !Number.isFinite(bounds.right) || !Number.isFinite(bounds.bottom) || !(bounds.width > 0 && bounds.height > 0)) return
++        let trailingWidth = 0
++        let trailingHeight = 0
++        let depth = 0
++        // Include the last panel's trailing insets, not its viewport-derived
++        // box height. Otherwise a 40px card padding can remain clipped even
++        // though all of its text or SVG bounds fit inside the resized frame.
++        for (let ancestor = element; ancestor && depth++ < 24; ancestor = ancestor.parentElement) {
++          const style = getComputedStyle(ancestor)
++          const pixels = (value) => Math.max(0, parseFloat(value) || 0)
++          trailingWidth += pixels(style.marginRight)
++          trailingHeight += pixels(style.marginBottom)
++          if (ancestor !== element || !borderBox) {
++            trailingWidth += pixels(style.paddingRight) + pixels(style.borderRightWidth)
++            trailingHeight += pixels(style.paddingBottom) + pixels(style.borderBottomWidth)
++          }
++        }
++        right = Math.max(right, bounds.right + (window.scrollX || 0) + trailingWidth)
++        bottom = Math.max(bottom, bounds.bottom + (window.scrollY || 0) + trailingHeight)
++      }
++      // Text ranges and replaced media describe real content, unlike body or a
++      // min-height:100vh shell whose box grows whenever its iframe grows.
++      let visited = 0
++      const walker = document.createTreeWalker(document.body, 4)
++      for (let text = walker.nextNode(); text && visited < 4000; text = walker.nextNode()) {
++        visited++
++        if (!text.textContent.trim() || !visible(text.parentElement)) continue
++        const range = document.createRange()
++        range.selectNodeContents(text)
++        const hasTextBounds = typeof range.getBoundingClientRect === 'function'
++        include(hasTextBounds ? range.getBoundingClientRect() : text.parentElement.getBoundingClientRect(), text.parentElement, !hasTextBounds)
++      }
++      for (const element of Array.from(document.body.querySelectorAll('svg,canvas,img,video,audio,table,input,textarea,select,button,[role="img"]')).slice(0, 1000)) {
++        if (visible(element)) include(element.getBoundingClientRect(), element, true)
++      }
++      const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
++      const height = Math.min(2400, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
++      const key = width + ':' + height
++      if (key === previous) return
++      previous = key
++      reports++
++      parent.postMessage({ type: 'sherlock-content-size', width, height }, '*')
++    }
++    const schedule = () => {
++      if (stopped || reports >= 6 || pending !== undefined) return
++      if (typeof setTimeout !== 'function') { measure(); return }
++      pending = setTimeout(() => { pending = undefined; measure() }, 180)
++    }
++    if (typeof ResizeObserver === 'function') {
++      observer = new ResizeObserver(schedule)
++      observer.observe(document.body)
++    }
++    addEventListener('resize', schedule)
++    document.addEventListener('load', schedule, true)
++    document.fonts?.ready?.then(schedule).catch(() => {})
++    measure()
++    if (typeof setTimeout === 'function') setTimeout(() => {
++      stopped = true
++      if (pending !== undefined) clearTimeout(pending)
++      observer?.disconnect()
++      removeEventListener('resize', schedule)
++      document.removeEventListener('load', schedule, true)
++    }, 8000)
++  }
++  document.addEventListener('DOMContentLoaded', () => {
++    const declaration = Array.from(document.querySelectorAll('meta[name]')).find((meta) => meta.getAttribute('name')?.trim().toLowerCase() === 'sherlock-theme')
++    const value = declaration?.getAttribute('content')?.trim().toLowerCase()
++    fixedTheme = value === 'light' || value === 'dark' ? value : null
++    apply()
++    startContentMeasurement()
++  }, { once: true })
++  apply()
++}`
++
++// Only trusted code runs in the outer document. The only artifact output it
++// forwards is a bounded pair of layout dimensions, never HTML or page content. Opaque sandbox origins require '*'; contentWindow and parent
++// identity checks keep the message confined to this exact parent/child pair.
++const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterThemeRuntime(inner, initialTheme, fixedTheme) {
++  const root = document.documentElement
++  const frame = document.getElementById('preview')
++  const standalone = window === parent
++  const media = standalone && typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null
++  let colorScheme = media ? media.matches ? 'dark' : 'light' : initialTheme
++  let sizeReports = 0
++  let previousSize = ''
++  const publish = () => {
++    root.setAttribute('data-sherlock-theme', fixedTheme || colorScheme)
++    root.style.colorScheme = fixedTheme || colorScheme
++    frame.contentWindow?.postMessage({ type: 'sherlock-theme', colorScheme }, '*')
++  }
++  addEventListener('message', (event) => {
++    const data = event.data
++    if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
++        Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
++        data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&
++        data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 2400) {
++      const key = data.width + ':' + data.height
++      if (sizeReports < 6 && key !== previousSize) {
++        previousSize = key
++        sizeReports++
++        parent.postMessage({ type: 'sherlock-content-size', width: data.width, height: data.height }, '*')
++      }
++      return
++    }
++    if (standalone || event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
++        !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
++        data.colorScheme !== 'light' && data.colorScheme !== 'dark') return
++    colorScheme = data.colorScheme
++    publish()
++  })
++  media?.addEventListener('change', () => { colorScheme = media.matches ? 'dark' : 'light'; publish() })
++  // Retain the latest value until the inner listener exists, without replacing
++  // its srcdoc or disturbing timers, input, selection, focus, or scroll state.
++  frame.addEventListener('load', publish)
++  if (typeof trustedTypes === 'object' && typeof trustedTypes.isHTML === 'function') {
++    // This anchored prefix belongs to our wrapper, before all untrusted HTML.
++    // Resolve the export's OS theme before mounting its first inner document.
++    frame.srcdoc = inner.replace(/^(<!doctype html><html data-sherlock-theme=")(?:light|dark)(")/, '$1' + (fixedTheme || colorScheme) + '$2')
++    frame.hidden = false
++    document.getElementById('notice').hidden = true
++  }
++  publish()
++}`
++
++const HTML_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'"
++const escapeAttribute = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
++
++// The trusted outer document's frame-src policy also constrains navigation of
++// the untrusted inner srcdoc. Each iframe has its own opaque sandbox origin.
++// The same wrapper is exported, never a bare executable artifact document.
++function buildResearchHtmlPreview(html, title = '交互网页', initialTheme = 'light') {
++  if (parseResearchContainerSpec({ version: 1, type: 'html', title, html }) === null) return '<!doctype html><meta charset="utf-8"><p>HTML 页面格式无效，请重试。</p>'
++  const theme = initialTheme === 'dark' ? 'dark' : 'light'
++  const fixedTheme = researchHtmlFixedTheme(html)
++  const policy = `<meta http-equiv="Content-Security-Policy" content="${HTML_CSP}"><meta name="referrer" content="no-referrer"><meta http-equiv="x-dns-prefetch-control" content="off">`
++  // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
++  // points before any artifact code; Trusted Types and the parser's frame ban
++  // prevent string-created documents/scripts from obtaining a fresh realm.
++  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});</script>`
++  // An unlayered :where() rule still outranks every user-authored normal layer.
++  // Declare all defaults first in their own layer, including theme variables.
++  // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
++  const baseStyle = `@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
++  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style>${lockedRuntime}</head><body>${html}</body></html>`
++  const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
++  const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)});`
++  return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 Sherlock 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`
++}
++// RESEARCH_COMPONENT_THEME_END
++
++
 +		function researchContainerOutputError(raw) {
 +			try {
 +				const value = typeof raw === "string" ? JSON.parse(stripResearchContainerFence(raw)) : raw;
@@ -4621,6 +4916,7 @@ index 1dd0e89..296683b 100644
 +				if (node.kind === "web-link") return { width: 600, height: 400, sizeMode: "manual", resizable: true };
 +				if (node.kind === "generated-container") {
 +					const type = node?.containerSpec?.type;
++					if (node.generationStatus === "completed" && ["html", "kpi", "table", "chart"].includes(type)) return current;
 +					if (type === "kpi") return { width: 520, height: 340, sizeMode: "manual", resizable: true };
 +					if (type === "html") return { width: 960, height: 680, sizeMode: "manual", resizable: true };
 +					if (type === "markdown") return researchCanvasOrganizeTextGeometry(node, {
@@ -4790,7 +5086,7 @@ index 1dd0e89..296683b 100644
 +			if (geometry === null) return node;
 +			const next = { ...node, ...geometry };
 +			// Selection outputs grow down/right from their visible title, not out of view.
-+			if (node.sizeMode !== "manual" && (node.kind === "generated-mind-map" || node.kind === "generated-summary" || node.creationMode === "selection")) {
++			if (node.sizeMode !== "manual" && (node.kind === "generated-mind-map" || node.kind === "generated-summary" || node.kind === "generated-container" || node.creationMode === "selection")) {
 +				const before = normalizeResearchCanvasNodeGeometry(node);
 +				const after = normalizeResearchCanvasNodeGeometry(next);
 +				next.x = node.x + (after.width - before.width) / 2;
@@ -4798,16 +5094,10 @@ index 1dd0e89..296683b 100644
 +			}
 +			return next;
 +		}
-+		function researchGenerationAutoGeometry(node, process = node) {
++		function researchGenerationAutoGeometry(node) {
 +			if (node?.sizeMode === "manual") return null;
-+			const events = Array.isArray(process?.generationEvents) ? process.generationEvents : Array.isArray(process?.events) ? process.events : [];
-+			const partial = typeof process?.generationPartialText === "string" ? process.generationPartialText : typeof process?.partialText === "string" ? process.partialText : "";
-+			const rows = Math.min(8, events.filter((event) => event?.type === "tool-started" || event?.type === "tool-finished").length);
-+			const visibleLength = Math.min(RESEARCH_GENERATION_MAX_PARTIAL_TEXT, partial.length);
-+			const width = Math.min(640, Math.max(480, 480 + Math.ceil(Math.max(0, visibleLength - 320) / 20)));
-+			const estimatedLines = Math.min(14, Math.ceil(visibleLength / Math.max(24, Math.floor((width - 40) / 14))));
-+			const height = Math.min(560, Math.max(280, 280 + rows * 24 + estimatedLines * 20));
-+			return { width, height };
++			// A stable progress surface must not grow with hidden code or tool logs.
++			return { width: 480, height: 300 };
 +		}
 +		function researchGenerationFinalGeometry(node, text) {
 +			if (node?.sizeMode === "manual") return null;
@@ -4823,8 +5113,8 @@ index 1dd0e89..296683b 100644
 +			if (spec.type === "web") return { width: 720, height: 480 };
 +			if (spec.type === "html") return { width: 960, height: 680 };
 +			if (spec.type === "chart") return { width: 720, height: 500 };
-+			if (spec.type === "table") return { width: 720, height: 480 };
-+			if (spec.type === "kpi") return { width: 640, height: 420 };
++			if (spec.type === "table") return { width: 720, height: Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(480, 132 + (spec.rows.length + 1) * 42)) };
++			if (spec.type === "kpi") return { width: 640, height: Math.max(420, 112 + Math.ceil(spec.items.length / 3) * 120) };
 +			return { width: 560, height: 400 };
 +		}
 +		function researchContainerRefreshDue(node, state) {
@@ -5006,7 +5296,29 @@ index 1dd0e89..296683b 100644
 +				seen.add(event.seq);
 +				events.push(event);
 +			}
-+			return events.sort((a, b) => a.seq - b.seq).slice(-RESEARCH_GENERATION_MAX_EVENTS);
++			return events.sort((a, b) => a.seq - b.seq);
++		}
++		function retainedResearchGenerationEvents(events) {
++			const compact = [];
++			let consecutiveDeltas = 0;
++			for (const event of events) {
++				if (event.type === "assistant-delta") {
++					if (consecutiveDeltas === 8) compact.splice(compact.length - consecutiveDeltas, 1);
++					else consecutiveDeltas++;
++				} else consecutiveDeltas = 0;
++				compact.push(event);
++			}
++			if (compact.length <= RESEARCH_GENERATION_MAX_EVENTS) return compact;
++			const keep = new Set([
++				compact.find((event) => event.type === "queued"),
++				compact.find((event) => event.type === "started"),
++				compact.findLast((event) => event.type === "assistant-delta")
++			].filter(Boolean));
++			for (let index = compact.length - 1; index >= 0 && keep.size < RESEARCH_GENERATION_MAX_EVENTS; index--) {
++				if (compact[index].type !== "assistant-delta") keep.add(compact[index]);
++			}
++			for (let index = compact.length - 1; index >= 0 && keep.size < RESEARCH_GENERATION_MAX_EVENTS; index--) keep.add(compact[index]);
++			return compact.filter((event) => keep.has(event));
 +		}
 +		function createResearchWorkspaceSession(storage, sessionId) {
 +			const files = loadResearchCanvasFiles(storage, sessionId);
@@ -5015,6 +5327,7 @@ index 1dd0e89..296683b 100644
 +			let orphanRevocationIds = loadResearchCanvasRevocationOutbox(storage, sessionId);
 +			let orphanRevocationsDurable = orphanRevocationIds.length === 0 || saveResearchCanvasRevocationOutbox(storage, sessionId, orphanRevocationIds);
 +			let snapshot = researchWorkspaceSnapshot({ files, artifacts, selection: loadResearchCanvasSelection(storage, sessionId, files, artifacts), viewport: { scale: 1, x: 0, y: 0 }, canvasSize: { width: 0, height: 0 }, pendingMessageJump: null, unavailableSourceMessageIds: [] });
++			const htmlFitStates = new Map();
 +			const listeners = /* @__PURE__ */ new Set();
 +			const pendingNodeRevocations = /* @__PURE__ */ new Set();
 +			let assistantActionsActive = false;
@@ -5508,7 +5821,7 @@ index 1dd0e89..296683b 100644
 +						generationTaskId: taskId,
 +						...(childSessionId === null ? {} : { generationChildSessionId: childSessionId }),
 +						generationLastSeq: lastSeq,
-+						generationEvents: events,
++						generationEvents: retainedResearchGenerationEvents(events),
 +						...(partialText === '' ? {} : { generationPartialText: partialText }),
 +						...(Number.isFinite(receipt.startedAt) ? { generationStartedAt: receipt.startedAt } : {})
 +					};
@@ -5531,7 +5844,7 @@ index 1dd0e89..296683b 100644
 +					if (inspection?.childSessionId !== void 0 && childSessionId === null) return false;
 +					let next;
 +					if (RESEARCH_ACTIVE_GENERATION_STATUSES.has(state)) {
-+						const combinedEvents = [...(Array.isArray(current.generationEvents) ? current.generationEvents : []), ...events].slice(-RESEARCH_GENERATION_MAX_EVENTS);
++						const combinedEvents = retainedResearchGenerationEvents([...(Array.isArray(current.generationEvents) ? current.generationEvents : []), ...events]);
 +						const delta = events.filter((event) => event.type === 'assistant-delta').map((event) => event.text).join('');
 +						const partialText = `${current.generationPartialText ?? ''}${delta}`.slice(-RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
 +						const { generationError: _error, ...active } = current;
@@ -5805,6 +6118,27 @@ index 1dd0e89..296683b 100644
 +							update({ files: files2, artifacts: artifacts2 }, false);
 +						}
 +					},
++					fitHtmlContent(nodeId, expectedHtml, dimensions) {
++						const index = snapshot.artifacts.findIndex((node) => node.id === nodeId);
++						const node = snapshot.artifacts[index];
++						if (typeof expectedHtml !== "string" || node?.containerSpec?.html !== expectedHtml) return false;
++						const geometry = researchHtmlAutoGeometry(node, dimensions);
++						if (geometry === null) return false;
++						const now = Date.now();
++						let budget = htmlFitStates.get(nodeId);
++						if (!budget || budget.html !== expectedHtml || budget.completedAt !== node.generationCompletedAt) {
++							budget = { html: expectedHtml, completedAt: node.generationCompletedAt, startedAt: now, growths: 0 };
++							if (htmlFitStates.size >= RESEARCH_CANVAS_MAX_ARTIFACTS_PER_SESSION) htmlFitStates.delete(htmlFitStates.keys().next().value);
++							htmlFitStates.set(nodeId, budget);
++						}
++						if (budget.growths >= 3 || now - budget.startedAt > 8000) return false;
++						budget.growths++;
++						const artifacts = snapshot.artifacts.slice();
++						const next = { ...node, ...geometry };
++						artifacts[index] = { ...next, ...researchCanvasPersistedGeometry(next) };
++						update({ artifacts }, true);
++						return true;
++					},
 +					updateNodeGeometry(nodeId, geometry, persist = true) {
 +						let changed = false;
 +						const apply = (node) => {
@@ -6009,7 +6343,7 @@ index 1dd0e89..296683b 100644
 +				"aria-label": `调整组件${corner.toUpperCase()}角大小`
 +			}, corner));
 +		}
-+		function ResearchCanvasRichNodeFrame({ node, selected, dragging, resizing, title, titleText, children, ...props }) {
++		function ResearchCanvasRichNodeFrame({ node, selected, dragging, resizing, title, titleText, titleActions, children, ...props }) {
 +			const geometry = normalizeResearchCanvasNodeGeometry(node);
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				...props,
@@ -6034,7 +6368,8 @@ index 1dd0e89..296683b 100644
 +					className: "rScV5Q_nodeTitle",
 +					"data-research-node-title": "",
 +					"data-research-node-move-handle": "",
-+					children: title
++					"data-research-node-title-actions": titleActions ? "" : void 0,
++					children: titleActions ? [(0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_nodeTitleText", children: title }, "title"), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_nodeTitleActions", children: titleActions }, "actions")] : title
 +				}), (0, react_jsx_runtime.jsxs)("div", {
 +					className: "rScV5Q_previewBody",
 +					style: { overflowY: node.sizeMode === "manual" ? "auto" : void 0 },
@@ -7008,33 +7343,108 @@ index 1dd0e89..296683b 100644
 +				})]
 +			});
 +		}
-+		function ResearchGenerationProcess({ node, onCancel }) {
++		function researchGenerationPresentation(node) {
 +			const events = Array.isArray(node.generationEvents) ? node.generationEvents : [];
-+			const toolRows = events.filter((event) => event.type === 'tool-started').slice(-4);
-+			const latestTool = toolRows.at(-1)?.tool;
-+			const phase = node.generationStatus === 'queued' ? '排队中' : latestTool === void 0 ? '正在生成内容' : `正在${latestTool}`;
++			if (node.generationStatus === 'queued' && !events.some((event) => ['tool-started', 'tool-finished', 'sources-ready', 'assistant-delta'].includes(event?.type))) return { stage: 'queued', title: '等待开始', detail: '任务开始后，进展会显示在这里', step: 0 };
++			const latest = events.filter((event) => ['started', 'sources-ready', 'assistant-delta', 'tool-started', 'tool-finished'].includes(event?.type)).at(-1);
++			const lastTool = events.filter((event) => event?.type === 'tool-started').at(-1)?.tool ?? '';
++			const research = /网页|搜索|检索/.test(lastTool);
++			if (latest?.type === 'tool-finished' && latest.failed) return { stage: 'recovering', title: research ? '正在调整检索' : '正在调整生成', detail: '这一步没有完成，正在重新整理后续处理', step: 1 };
++			if (latest?.type === 'tool-started') return { stage: research ? 'researching' : 'organizing', title: research ? '正在查找资料' : '正在整理资料', detail: research ? '查找相关数据与来源' : '读取材料，梳理内容之间的关系', step: 1 };
++			if (latest?.type === 'assistant-delta' || latest === undefined && typeof node.generationPartialText === 'string' && node.generationPartialText.length > 0) return { stage: 'building', title: '正在绘制组件', detail: '把内容组织到组件中', step: 2 };
++			if (latest?.type === 'sources-ready' || latest?.type === 'tool-finished') return { stage: 'organizing', title: '正在整理资料', detail: '梳理已获得的信息，准备组件内容', step: 1 };
++			return { stage: 'planning', title: '正在整理需求', detail: '理解要展示的内容，准备呈现方式', step: 0 };
++		}
++		function researchGenerationLog(node) {
++			const events = Array.isArray(node.generationEvents) ? node.generationEvents : [];
++			const rows = [{ id: 'received', text: '已接收生成需求' }];
++			const append = (id, text) => { if (rows.at(-1)?.text !== text && !rows.some((row) => row.id === id)) rows.push({ id, text }); };
++			let lastTool = '';
++			let content = '';
++			for (const [index, event] of events.entries()) {
++				const id = `event-${event?.seq ?? index}`;
++				if (event?.type === 'started') append(id, '开始整理生成需求');
++				if (event?.type === 'sources-ready') append(id, '所选资料已就绪');
++				if (event?.type === 'tool-started') {
++					lastTool = typeof event.tool === 'string' ? event.tool : '';
++					append(id, /搜索|检索/.test(lastTool) ? '检索相关数据与来源' : /读|文件|网页/.test(lastTool) ? '读取资料，整理可用信息' : '处理组件生成步骤');
++				}
++				if (event?.type === 'tool-finished') append(id, event.failed ? /搜索|检索/.test(lastTool) ? '检索未完成，调整后续处理' : '处理未完成，调整后续步骤' : /搜索|检索/.test(lastTool) ? '检索响应已返回' : '资料处理已返回');
++				if (event?.type === 'assistant-delta') {
++					append('content-start', '开始组织组件内容');
++					if (typeof event.text === 'string') content = `${content}${event.text}`.slice(-RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
++				}
++			}
++			if (typeof node.generationPartialText === 'string') content = node.generationPartialText.slice(-RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
++			// Only structural markers become fixed public copy; generated text and arguments never enter the log.
++			const markers = [
++				['layout', /<(?:html|body|main)\b/i, '建立页面内容结构'],
++				['style', /<style\b/i, '编排页面布局与配色'],
++				['table', /<table\b/i, '生成数据表格'],
++				['chart', /<(?:svg|canvas)\b/i, '绘制图表与数据图形'],
++				['controls', /<(?:input|button|select|textarea)\b/i, '制作页面交互控件'],
++				['interaction', /<script\b/i, '连接页面交互'],
++				['received-page', /<\/html\s*>/i, '页面内容已接收，准备呈现']
++			].map(([id, pattern, text]) => ({ id: `content-${id}`, text, index: content.search(pattern) })).filter((row) => row.index >= 0).sort((a, b) => a.index - b.index);
++			for (const row of markers) append(row.id, row.text);
++			return rows.slice(-14);
++		}
++		function ResearchGenerationProcess({ node, onCancel }) {
++			const presentation = researchGenerationPresentation(node);
++			const rows = (0, react.useMemo)(() => researchGenerationLog(node), [node.generationEvents, node.generationPartialText]);
++			const [revealed, setRevealed] = (0, react.useState)(1);
++			const [clock, setClock] = (0, react.useState)(() => Date.now());
++			const [activityRows, setActivityRows] = (0, react.useState)([]);
++			const activity = (0, react.useRef)({ seq: 0, at: 0 });
++			const started = (0, react.useRef)(node.generationStartedAt ?? Date.now());
++			(0, react.useEffect)(() => { setRevealed(1); started.current = node.generationStartedAt ?? Date.now(); }, [node.generationTaskId]);
++			(0, react.useEffect)(() => { setActivityRows([]); activity.current = { seq: 0, at: 0 }; }, [node.generationTaskId, presentation.stage]);
++			(0, react.useEffect)(() => {
++				const seq = node.generationLastSeq ?? 0;
++				if (presentation.stage !== 'building' || seq <= activity.current.seq || clock - activity.current.at < 1200) return;
++				activity.current = { seq, at: clock };
++				const seconds = Math.max(0, Math.floor((clock - started.current) / 1000));
++				const stamp = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
++				setActivityRows((previous) => [...previous.slice(-2), { id: `stream-${seq}`, text: '组件内容持续生成', stamp }]);
++			}, [clock, node.generationLastSeq, presentation.stage]);
++			(0, react.useEffect)(() => {
++				if (revealed >= rows.length) return;
++				const timer = setTimeout(() => setRevealed((value) => value + 1), 240);
++				return () => clearTimeout(timer);
++			}, [revealed, rows.length]);
++			(0, react.useEffect)(() => {
++				let timer;
++				const tick = () => { setClock(Date.now()); timer = setTimeout(tick, document.hidden ? 1000 : 160); };
++				timer = setTimeout(tick, 160);
++				return () => clearTimeout(timer);
++			}, []);
++			const elapsed = Math.max(0, Math.floor((clock - started.current) / 1000));
++			const time = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
++			const visible = [...rows.slice(0, revealed).slice(-(5 - activityRows.length)), ...activityRows];
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				className: "rScV5Q_generationProcess",
-+				"data-research-generation-process": "",
-+				children: [(0, react_jsx_runtime.jsx)("div", {
-+					className: "rScV5Q_generationPhase",
-+					children: phase
-+				}), toolRows.length === 0 ? null : (0, react_jsx_runtime.jsx)("div", {
-+					className: "rScV5Q_generationTools",
-+					children: toolRows.map((event) => (0, react_jsx_runtime.jsx)("span", { children: event.tool }, event.seq))
-+				}), typeof node.generationPartialText !== 'string' || node.generationPartialText === '' ? null : (0, react_jsx_runtime.jsx)("div", {
-+					className: "rScV5Q_generationDraft",
-+					children: node.generationPartialText
-+				}), typeof onCancel !== 'function' || typeof node.generationTaskId !== 'string' ? null : (0, react_jsx_runtime.jsx)("button", {
-+					type: "button",
-+					"data-research-generation-cancel": "",
-+					onPointerDown: (event) => event.stopPropagation(),
-+					onClick: (event) => {
-+						event.preventDefault();
-+						event.stopPropagation();
-+						onCancel(node);
-+					},
-+					children: "停止"
++				"data-research-generation-process": "", "data-research-generation-stage": presentation.stage, "aria-busy": true,
++				children: [(0, react_jsx_runtime.jsxs)('div', {
++					className: 'rScV5Q_generationHeader', 'aria-hidden': true,
++					children: [(0, react_jsx_runtime.jsx)('span', { children: '生成进程' }), (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-elapsed': '', children: time })]
++				}), (0, react_jsx_runtime.jsxs)('div', {
++					className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,
++					children: [(0, react_jsx_runtime.jsx)('div', { className: 'rScV5Q_generationLog', children: visible.map((row) => (0, react_jsx_runtime.jsxs)('div', {
++						className: 'rScV5Q_generationLogRow', 'data-research-generation-row': '',
++						children: [(0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationPrompt', children: '›' }), row.stamp ? (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationStamp', children: row.stamp }) : null, (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationLogText', children: row.text })]
++					}, row.id)) }), (0, react_jsx_runtime.jsxs)('div', {
++						className: 'rScV5Q_generationCurrent', children: [
++							(0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationSpinner', children: '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[Math.floor(clock / 160) % 10] }),
++							(0, react_jsx_runtime.jsx)('span', { children: presentation.title }), (0, react_jsx_runtime.jsx)('i', { className: 'rScV5Q_generationCursor' })]
++					})]
++				}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement', role: 'status', 'aria-live': 'polite', 'aria-atomic': true, children: presentation.title }),
++				(0, react_jsx_runtime.jsxs)('div', { className: 'rScV5Q_generationFooter', children: [
++					(0, react_jsx_runtime.jsx)('span', { children: presentation.detail }),
++					typeof onCancel !== 'function' || typeof node.generationTaskId !== 'string' ? null : (0, react_jsx_runtime.jsx)('button', {
++						type: 'button', 'data-research-generation-cancel': '', 'aria-label': '停止生成',
++						onPointerDown: (event) => event.stopPropagation(),
++						onClick: (event) => { event.preventDefault(); event.stopPropagation(); onCancel(node); }, children: '停止'
++					})]
 +				})]
 +			});
 +		}
@@ -7247,7 +7657,7 @@ index 1dd0e89..296683b 100644
 +		function ResearchCanvasWebFrame(props) {
 +			return isResearchWechatArticleUrl(props.node.url) ? (0, react_jsx_runtime.jsx)(ResearchCanvasWechatReader, props) : (0, react_jsx_runtime.jsx)(ResearchCanvasStandardWebFrame, props);
 +		}
-+		function ResearchContainerDraft({ node, onSubmit }) {
++		function ResearchContainerDraft({ node, onSubmit, onCancel }) {
 +			const inputRef = (0, react.useRef)(null);
 +			const [prompt, setPrompt] = (0, react.useState)(node.containerPrompt ?? "");
 +			(0, react.useLayoutEffect)(() => {
@@ -7270,6 +7680,11 @@ index 1dd0e89..296683b 100644
 +					onInput: (event) => setPrompt(event.currentTarget.value),
 +					onKeyDown: (event) => {
 +						event.stopPropagation();
++						if (event.key === "Escape" && onCancel) {
++							event.preventDefault();
++							onCancel();
++							return;
++						}
 +						if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
 +							event.preventDefault();
 +							submit();
@@ -7277,17 +7692,17 @@ index 1dd0e89..296683b 100644
 +					}
 +				}), (0, react_jsx_runtime.jsxs)("div", {
 +					className: "rScV5Q_containerDraftFooter",
-+					children: [(0, react_jsx_runtime.jsx)("span", { children: "按需求生成交付物；交互网页使用离线沙盒预览" }), (0, react_jsx_runtime.jsx)("button", {
++					children: [onCancel ? (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-container-cancel": "", onClick: onCancel, children: "取消" }) : null, (0, react_jsx_runtime.jsx)("button", {
 +						type: "button",
 +						"data-research-container-submit": "",
 +						disabled: prompt.trim() === "",
 +						onClick: submit,
-+						children: "创建"
++						children: onCancel ? "更新组件" : "创建"
 +					})]
 +				})]
 +			});
 +		}
-+		const RESEARCH_CONTAINER_CHART_COLORS = ["rgb(0,80,150)", "rgb(0,120,180)", "rgb(30,185,225)", "rgb(255,200,25)", "rgb(150,150,150)", "rgb(60,60,60)"];
++		const RESEARCH_CONTAINER_CHART_COLORS = Array.from({ length: 6 }, (_, index) => `var(--sherlock-chart-${index + 1})`);
 +		function researchCanvasExportFileName(value, extension) {
 +			let decoded = String(value ?? "组件");
 +			try {
@@ -7319,9 +7734,11 @@ index 1dd0e89..296683b 100644
 +			if (typeof node.excerpt === "string" && node.excerpt.trim() !== "") lines.push("", node.excerpt.trim());
 +			return `${lines.join("\n")}\n`;
 +		}
-+		function buildResearchContainerChartSvg(rawSpec) {
++		function buildResearchContainerChartSvg(rawSpec, colorScheme = "light") {
 +			const spec = parseResearchContainerSpec(rawSpec);
 +			if (spec === null || spec.type !== "chart") return null;
++			const palette = RESEARCH_COMPONENT_PALETTES[colorScheme === "dark" ? "dark" : "light"];
++			const colors = Array.from({ length: 6 }, (_, index) => palette[`chart-${index + 1}`]);
 +			const values = spec.series.flatMap((series) => series.values);
 +			const minimum = Math.min(0, ...values);
 +			const maximum = Math.max(0, ...values);
@@ -7335,21 +7752,21 @@ index 1dd0e89..296683b 100644
 +			const step = width / spec.labels.length;
 +			const grid = Array.from({ length: 5 }, (_, index) => {
 +				const lineY = top + index * height / 4;
-+				return `<line x1="${left}" x2="${left + width}" y1="${lineY}" y2="${lineY}" stroke="rgb(220,224,228)" stroke-width="1"/>`;
++				return `<line x1="${left}" x2="${left + width}" y1="${lineY}" y2="${lineY}" stroke="${palette['chart-grid'] ?? palette.border}" stroke-width="1" stroke-dasharray="4 4"/>`;
 +			}).join("");
 +			const marks = spec.variant === "bar" ? spec.series.flatMap((series, seriesIndex) => series.values.map((value, index) => {
 +				const groupWidth = Math.max(4, step * .7);
 +				const barWidth = Math.max(3, groupWidth / spec.series.length - 3);
 +				const valueY = y(value);
-+				return `<rect x="${left + index * step + (step - groupWidth) / 2 + seriesIndex * (groupWidth / spec.series.length)}" y="${Math.min(baseline, valueY)}" width="${barWidth}" height="${Math.max(1, Math.abs(baseline - valueY))}" fill="${RESEARCH_CONTAINER_CHART_COLORS[seriesIndex % RESEARCH_CONTAINER_CHART_COLORS.length]}"/>`;
++				return `<rect x="${left + index * step + (step - groupWidth) / 2 + seriesIndex * (groupWidth / spec.series.length)}" y="${Math.min(baseline, valueY)}" width="${barWidth}" height="${Math.max(1, Math.abs(baseline - valueY))}" fill="${colors[seriesIndex % colors.length]}"/>`;
 +			})).join("") : spec.series.flatMap((series, seriesIndex) => {
-+				const color = RESEARCH_CONTAINER_CHART_COLORS[seriesIndex % RESEARCH_CONTAINER_CHART_COLORS.length];
++				const color = colors[seriesIndex % colors.length];
 +				const points = series.values.map((value, index) => `${left + (index + .5) * step},${y(value)}`).join(" ");
-+				return [`<polyline points="${points}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`, ...series.values.map((value, index) => `<circle cx="${left + (index + .5) * step}" cy="${y(value)}" r="3.5" fill="${color}"/>`)];
++				return [`<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`, ...(series.values.length === 1 ? [`<circle cx="${left + .5 * step}" cy="${y(series.values[0])}" r="3.5" fill="${color}"/>`] : [])];
 +			}).join("");
-+			const labels = spec.labels.map((label, index) => `<text x="${left + (index + .5) * step}" y="310" text-anchor="middle" fill="rgb(60,60,60)" font-family="STHeiti_YFD,STHeiti SC,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(label)}</text>`).join("");
-+			const legend = spec.series.map((series, index) => `<g transform="translate(${54 + index * 96},330)"><rect width="10" height="10" fill="${RESEARCH_CONTAINER_CHART_COLORS[index % RESEARCH_CONTAINER_CHART_COLORS.length]}"/><text x="16" y="9" fill="rgb(60,60,60)" font-family="STHeiti_YFD,STHeiti SC,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(series.name)}</text></g>`).join("");
-+			return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="356" viewBox="0 0 640 356"><rect width="100%" height="100%" fill="#ffffff"/><text x="32" y="32" fill="rgb(0,80,150)" font-family="STHeiti_YFD,STHeiti SC,PingFang SC,sans-serif" font-size="18" font-weight="700">${escapeResearchExportXml(spec.title)}</text>${grid}<line x1="${left}" x2="${left + width}" y1="${baseline}" y2="${baseline}" stroke="rgb(120,125,130)" stroke-width="1.2"/>${marks}${labels}${legend}</svg>`;
++			const labels = spec.labels.map((label, index) => `<text x="${left + (index + .5) * step}" y="310" text-anchor="middle" fill="${palette['chart-label'] ?? palette.muted}" font-family="Arial,Helvetica Neue,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(label)}</text>`).join("");
++			const legend = spec.series.map((series, index) => `<g transform="translate(${54 + index * 96},330)"><rect width="10" height="2" y="4" fill="${colors[index % colors.length]}"/><text x="16" y="9" fill="${palette['chart-label'] ?? palette.muted}" font-family="Arial,Helvetica Neue,PingFang SC,sans-serif" font-size="12">${escapeResearchExportXml(series.name)}</text></g>`).join("");
++			return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="356" viewBox="0 0 640 356"><rect width="100%" height="100%" fill="${palette.surface}"/><text x="32" y="32" fill="${palette.text}" font-family="Arial,Helvetica Neue,PingFang SC,sans-serif" font-size="18" font-weight="600">${escapeResearchExportXml(spec.title)}</text>${grid}<line x1="${left}" x2="${left + width}" y1="${baseline}" y2="${baseline}" stroke="${palette['chart-grid'] ?? palette.border}" stroke-width="1" stroke-dasharray="4 4"/>${marks}${labels}${legend}</svg>`;
 +		}
 +		function researchCanvasExportDescriptor(node, sessionId) {
 +			if (typeof node !== "object" || node === null || typeof node.id !== "string") return null;
@@ -7370,8 +7787,8 @@ index 1dd0e89..296683b 100644
 +				const spec = node.generationStatus === "completed" ? parseResearchContainerSpec(node.containerSpec) : null;
 +				if (spec === null) return { kind: "text", format: "txt", suggestedName: researchCanvasExportFileName(title, "txt"), content: researchGenerationText(node) };
 +				if (spec.type === "web") return { kind: "webloc", suggestedName: researchCanvasExportFileName(spec.title, "webloc"), url: spec.url };
-+				if (spec.type === "html") return { kind: "text", format: "html", suggestedName: researchCanvasExportFileName(spec.title, "html"), content: buildResearchHtmlPreview(spec.html, spec.title) };
-+				if (spec.type === "chart") return { kind: "text", format: "svg", suggestedName: researchCanvasExportFileName(spec.title, "svg"), content: buildResearchContainerChartSvg(spec) };
++				if (spec.type === "html") return { kind: "text", format: "html", suggestedName: researchCanvasExportFileName(spec.title, "html"), content: buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme()) };
++				if (spec.type === "chart") return { kind: "text", format: "svg", suggestedName: researchCanvasExportFileName(spec.title, "svg"), content: buildResearchContainerChartSvg(spec, readResearchComponentTheme()) };
 +				if (spec.type === "table") return { kind: "text", format: "csv", suggestedName: researchCanvasExportFileName(spec.title, "csv"), content: researchContainerTableCsv(spec) };
 +				if (spec.type === "kpi") return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.items.map((item) => `- ${item.label}：${item.value}${item.change === void 0 ? "" : `（${item.change}）`}`).join("\n")}\n` };
 +				return { kind: "text", format: "md", suggestedName: researchCanvasExportFileName(spec.title, "md"), content: `# ${spec.title}\n\n${spec.content.trim()}\n` };
@@ -7546,7 +7963,7 @@ index 1dd0e89..296683b 100644
 +					"aria-label": spec.title,
 +					children: [Array.from({ length: 5 }, (_, index) => {
 +						const lineY = top + index * height / 4;
-+						return (0, react_jsx_runtime.jsx)("line", { x1: left, x2: left + width, y1: lineY, y2: lineY, className: "rScV5Q_chartGrid" }, `grid-${index}`);
++						return (0, react_jsx_runtime.jsx)("line", { x1: left, x2: left + width, y1: lineY, y2: lineY, className: "rScV5Q_chartGrid", strokeDasharray: "4 4" }, `grid-${index}`);
 +					}), (0, react_jsx_runtime.jsx)("line", { x1: left, x2: left + width, y1: baseline, y2: baseline, className: "rScV5Q_chartAxis" }), spec.variant === "bar" ? spec.series.flatMap((series, seriesIndex) => series.values.map((value, index) => {
 +						const groupWidth = Math.max(4, step * .7);
 +						const barWidth = Math.max(3, groupWidth / spec.series.length - 3);
@@ -7561,7 +7978,7 @@ index 1dd0e89..296683b 100644
 +					})) : spec.series.flatMap((series, seriesIndex) => {
 +						const points = series.values.map((value, index) => `${left + (index + .5) * step},${y(value)}`).join(" ");
 +						const color = RESEARCH_CONTAINER_CHART_COLORS[seriesIndex % RESEARCH_CONTAINER_CHART_COLORS.length];
-+						return [(0, react_jsx_runtime.jsx)("polyline", { points, fill: "none", stroke: color, strokeWidth: 3, strokeLinejoin: "round", strokeLinecap: "round" }, `line-${seriesIndex}`), ...series.values.map((value, index) => (0, react_jsx_runtime.jsx)("circle", { cx: left + (index + .5) * step, cy: y(value), r: 3.5, fill: color }, `point-${seriesIndex}-${index}`))];
++						return [(0, react_jsx_runtime.jsx)("polyline", { points, fill: "none", stroke: color, strokeWidth: 2, strokeLinejoin: "round", strokeLinecap: "round" }, `line-${seriesIndex}`), ...(series.values.length === 1 ? [(0, react_jsx_runtime.jsx)("circle", { cx: left + .5 * step, cy: y(series.values[0]), r: 3.5, fill: color }, `point-${seriesIndex}`)] : [])];
 +					}), spec.labels.map((label, index) => (0, react_jsx_runtime.jsx)("text", { x: left + (index + .5) * step, y: 274, textAnchor: "middle", className: "rScV5Q_chartLabel", children: label }, `label-${index}`))]
 +				}), (0, react_jsx_runtime.jsx)("div", {
 +					className: "rScV5Q_chartLegend",
@@ -7569,23 +7986,144 @@ index 1dd0e89..296683b 100644
 +				})]
 +			});
 +		}
-+		function ResearchContainerContent({ node, sessionId, visible }) {
++		function readResearchComponentTheme(owner = typeof document === "undefined" ? null : document) {
++			return owner?.body?.hasAttribute("data-ds-dark-theme") ? "dark" : "light";
++		}
++		function researchHtmlAutoGeometry(node, dimensions) {
++			if (node?.kind !== "generated-container" || node.generationStatus !== "completed" || node.containerSpec?.type !== "html" || node.sizeMode === "manual" || !dimensions || typeof dimensions !== "object" || Array.isArray(dimensions) || Object.keys(dimensions).length !== 2 || !Object.hasOwn(dimensions, "width") || !Object.hasOwn(dimensions, "height") || !Number.isInteger(dimensions.width) || !Number.isInteger(dimensions.height) || dimensions.width < 1 || dimensions.height < 1 || dimensions.width > 2400 || dimensions.height > 2400) return null;
++			const before = normalizeResearchCanvasNodeGeometry(node);
++			const width = Math.max(before.width, dimensions.width);
++			const height = Math.max(before.height, dimensions.height);
++			return width <= before.width + 2 && height <= before.height + 2 ? null : { width, height, sizeMode: "auto", x: node.x + (width - before.width) / 2, y: node.y + (height - before.height) / 2 };
++		}
++		function ResearchHtmlArtifact({ spec, node, onSize }) {
++			const frameRef = (0, react.useRef)(null);
++			const fittingRef = (0, react.useRef)({ node, onSize });
++			fittingRef.current = { node, onSize };
++			// Theme and sizing use the existing frame; neither reloads user state.
++			const srcDoc = (0, react.useMemo)(() => buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme()), [spec.html, spec.title]);
++			const sendTheme = () => {
++				const frame = frameRef.current;
++				frame?.contentWindow?.postMessage({ type: "sherlock-theme", colorScheme: readResearchComponentTheme(frame.ownerDocument) }, "*");
++			};
++			(0, react.useLayoutEffect)(() => {
++				const frame = frameRef.current;
++				const owner = frame?.ownerDocument;
++				const view = owner?.defaultView;
++				if (!frame || !view) return;
++				const startedAt = Date.now();
++				let growths = 0;
++				const receiveSize = (event) => {
++					const data = event.data;
++					const current = fittingRef.current;
++					if (event.source !== frame.contentWindow || !data || typeof data !== "object" || Array.isArray(data) || Object.keys(data).length !== 3 || !Object.hasOwn(data, "type") || !Object.hasOwn(data, "width") || !Object.hasOwn(data, "height") || data.type !== "sherlock-content-size" || !Number.isInteger(data.width) || !Number.isInteger(data.height) || data.width < 1 || data.height < 1 || data.width > 2400 || data.height > 2400 || growths >= 3 || Date.now() - startedAt > 8000 || current.node?.sizeMode === "manual" || current.node?.containerSpec?.html !== spec.html) return;
++					const card = frame.closest("[data-research-node-id]");
++					if (card?.getAttribute("data-node-resizing") === "true" || card?.getAttribute("data-node-dragging") === "true") return;
++					const horizontalChrome = card?.offsetWidth > 0 && frame.clientWidth > 0 ? Math.max(0, card.offsetWidth - frame.clientWidth) : 2;
++					const verticalChrome = card?.offsetHeight > 0 && frame.clientHeight > 0 ? Math.max(0, card.offsetHeight - frame.clientHeight) : RESEARCH_CANVAS_TITLE_HEIGHT + 2;
++					const dimensions = { width: Math.min(2400, Math.ceil(data.width + horizontalChrome)), height: Math.min(2400, Math.ceil(data.height + verticalChrome)) };
++					if (researchHtmlAutoGeometry(current.node, dimensions) === null) return;
++					if (current.onSize?.(current.node, dimensions) !== false) growths++;
++				};
++				view.addEventListener("message", receiveSize);
++				const Observer = view.MutationObserver;
++				const observer = owner.body && Observer ? new Observer(sendTheme) : null;
++				observer?.observe(owner.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
++				sendTheme();
++				return () => { observer?.disconnect(); view.removeEventListener("message", receiveSize); };
++			}, [srcDoc]);
++			return (0, react_jsx_runtime.jsx)("iframe", { ref: frameRef, "data-research-html-artifact": "", className: "rScV5Q_webFrame", title: spec.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }, "aria-label": `${spec.title}（离线交互网页）` });
++		}
++		function ResearchContainerContent({ node, sessionId, visible, onHtmlSize }) {
 +			const spec = node.containerSpec;
-+			if (spec.type === "html") return (0, react_jsx_runtime.jsx)("iframe", { "data-research-html-artifact": "", className: "rScV5Q_webFrame", title: spec.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc: buildResearchHtmlPreview(spec.html, spec.title), style: { flex: 1, minWidth: 0, minHeight: 0 }, "aria-label": `${spec.title}（离线交互网页）` });
++			if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, onSize: onHtmlSize });
 +			if (spec.type === "mind-map") return (0, react_jsx_runtime.jsx)(ResearchMindMap, { nodeId: node.id, text: spec.content });
 +			if (spec.type === "web") return (0, react_jsx_runtime.jsx)(ResearchCanvasWebFrame, { node: { ...node, url: spec.url }, sessionId, visible });
 +			if (spec.type === "chart") return (0, react_jsx_runtime.jsx)(ResearchContainerChart, { spec });
-+			if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerTableScroll", children: (0, react_jsx_runtime.jsxs)("table", { "data-research-container-table": "", children: [(0, react_jsx_runtime.jsx)("thead", { children: (0, react_jsx_runtime.jsx)("tr", { children: spec.columns.map((column, index) => (0, react_jsx_runtime.jsx)("th", { children: column }, index)) }) }), (0, react_jsx_runtime.jsx)("tbody", { children: spec.rows.map((row, rowIndex) => (0, react_jsx_runtime.jsx)("tr", { children: row.map((cell, cellIndex) => (0, react_jsx_runtime.jsx)("td", { children: String(cell) }, cellIndex)) }, rowIndex)) })] }) });
++			if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerTableScroll", children: (0, react_jsx_runtime.jsxs)("table", { "data-research-container-table": "", children: [(0, react_jsx_runtime.jsx)("thead", { children: (0, react_jsx_runtime.jsx)("tr", { children: spec.columns.map((column, index) => (0, react_jsx_runtime.jsx)("th", { children: column }, index)) }) }), (0, react_jsx_runtime.jsx)("tbody", { children: spec.rows.map((row, rowIndex) => (0, react_jsx_runtime.jsx)("tr", { children: row.map((cell, cellIndex) => (0, react_jsx_runtime.jsx)("td", { "data-numeric": typeof cell === "number" ? "true" : void 0, children: String(cell) }, cellIndex)) }, rowIndex)) })] }) });
 +			if (spec.type === "kpi") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerKpis", "data-research-container-kpi": "", children: spec.items.map((item, index) => (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", { children: item.label }), (0, react_jsx_runtime.jsx)("strong", { children: String(item.value) }), item.change === void 0 ? null : (0, react_jsx_runtime.jsx)("em", { children: String(item.change) })] }, index)) });
 +			return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerMarkdown", "data-research-container-markdown": "", children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text: spec.content, streaming: false }) });
 +		}
-+		function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onSetRefresh }) {
++		function ResearchContainerMenu({ node, editingPrompt, onEdit, onRefresh, onSetRefresh }) {
++			const rootRef = (0, react.useRef)(null);
++			const triggerRef = (0, react.useRef)(null);
++			const initialFocus = (0, react.useRef)(0);
++			const [open, setOpen] = (0, react.useState)(false);
++			const [showProvenance, setShowProvenance] = (0, react.useState)(false);
++			const menuId = (0, react.useId)();
++			const activeGeneration = RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus);
++			const selectionCreated = node.creationMode === "selection";
++			const disabled = activeGeneration || editingPrompt;
++			const items = () => Array.from(rootRef.current?.querySelectorAll('[role="menuitem"]:not(:disabled),[role="menuitemradio"]:not(:disabled)') ?? []);
++			const close = (restoreFocus = true) => {
++				setOpen(false);
++				setShowProvenance(false);
++				if (restoreFocus) triggerRef.current?.focus({ preventScroll: true });
++			};
++			(0, react.useLayoutEffect)(() => {
++				if (!open) return;
++				const available = items();
++				available[initialFocus.current < 0 ? available.length - 1 : 0]?.focus({ preventScroll: true });
++			}, [open]);
++			(0, react.useEffect)(() => {
++				if (!open) return;
++				const owner = rootRef.current?.ownerDocument;
++				const outside = (event) => { if (!rootRef.current?.contains(event.target)) close(false); };
++				const blur = () => close(false);
++				owner?.addEventListener("pointerdown", outside, true);
++				owner?.addEventListener("focusin", outside);
++				owner?.defaultView?.addEventListener("blur", blur);
++				return () => {
++					owner?.removeEventListener("pointerdown", outside, true);
++					owner?.removeEventListener("focusin", outside);
++					owner?.defaultView?.removeEventListener("blur", blur);
++				};
++			}, [open]);
++			const choose = (action) => { close(); action?.(); };
++			return (0, react_jsx_runtime.jsxs)("div", {
++				ref: rootRef, className: "rScV5Q_containerMenu", "data-research-preview-interactive": "",
++				onPointerDown: (event) => event.stopPropagation(), onClick: (event) => event.stopPropagation(), onDoubleClick: (event) => event.stopPropagation(),
++				onKeyDown: (event) => {
++					event.stopPropagation();
++					if (!open) return;
++					if (event.key === "Escape") { event.preventDefault(); close(); return; }
++					if (event.key === "Tab") { close(false); return; }
++					if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
++					event.preventDefault();
++					const available = items();
++					const index = available.indexOf(event.target);
++					const next = event.key === "Home" ? 0 : event.key === "End" ? available.length - 1 : (index + (event.key === "ArrowDown" ? 1 : -1) + available.length) % available.length;
++					available[next]?.focus({ preventScroll: true });
++				},
++				children: [(0, react_jsx_runtime.jsx)("button", {
++					ref: triggerRef, type: "button", className: "rScV5Q_containerMenuTrigger", "data-research-container-more": "",
++					"aria-label": "更多", "aria-haspopup": "menu", "aria-expanded": open, "aria-controls": open ? menuId : void 0,
++					onClick: () => { initialFocus.current = 0; if (open) close(); else setOpen(true); },
++					onKeyDown: (event) => {
++						if (!["Enter", " ", "ArrowDown", "ArrowUp"].includes(event.key)) return;
++						event.preventDefault(); event.stopPropagation();
++						initialFocus.current = event.key === "ArrowUp" ? -1 : 0;
++						if (open && (event.key === "Enter" || event.key === " ")) close(); else setOpen(true);
++					},
++					children: "···"
++				}), open ? (0, react_jsx_runtime.jsxs)("div", {
++					id: menuId, role: "menu", "aria-label": "组件操作", className: "rScV5Q_containerMenuPopup",
++					children: selectionCreated ? [(0, react_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", onClick: () => setShowProvenance(!showProvenance), children: "查看创建来源" }), showProvenance ? (0, react_jsx_runtime.jsxs)("div", { "data-research-create-provenance": "", className: "rScV5Q_containerMenuProvenance", children: [(0, react_jsx_runtime.jsx)("div", { children: `基于 ${node.sourceNodeIds.length} 项资料创建` }), (0, react_jsx_runtime.jsx)("div", { children: node.containerPrompt }), (0, react_jsx_runtime.jsx)("div", { children: (node.generationSources ?? []).map((source) => source.title).join("、") })] }) : null] : [
++						(0, react_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", "data-research-container-edit": "", disabled, onClick: () => choose(onEdit), children: "编辑需求" }),
++						(0, react_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", "data-research-container-refresh": "", disabled, onClick: () => choose(() => onRefresh?.(node, node.containerPrompt)), children: "刷新" }),
++						(0, react_jsx_runtime.jsx)("div", { role: "separator" }),
++						(0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerMenuLabel", children: "自动刷新" }),
++						...[0, 1, 5, 15, 30].map((minutes) => (0, react_jsx_runtime.jsxs)("button", { type: "button", role: "menuitemradio", "aria-checked": node.refreshMinutes === minutes, "data-research-container-refresh-minutes": minutes, disabled: editingPrompt, onClick: () => choose(() => onSetRefresh?.(node, minutes)), children: [(0, react_jsx_runtime.jsx)("span", { "aria-hidden": true, children: node.refreshMinutes === minutes ? "✓" : "" }), minutes === 0 ? "不自动刷新" : `每 ${minutes} 分钟`] }, minutes))
++					]
++				}) : null]
++			});
++		}
++		function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onHtmlSize, editingPrompt, onCancelEdit, onSubmitEdit }) {
 +			const rootRef = (0, react.useRef)(null);
 +			const refreshRef = (0, react.useRef)(onGenerate);
-+			const [editingPrompt, setEditingPrompt] = (0, react.useState)(false);
 +			refreshRef.current = onGenerate;
 +			(0, react.useEffect)(() => {
-+				if (node.creationMode === 'selection' || node.refreshMinutes === 0 || node.generationStatus !== "completed") return;
++				if (editingPrompt || node.creationMode === 'selection' || node.refreshMinutes === 0 || node.generationStatus !== "completed") return;
 +				let timer;
 +				let active = true;
 +				const schedule = () => {
@@ -7610,29 +8148,28 @@ index 1dd0e89..296683b 100644
 +					if (timer !== void 0) clearTimeout(timer);
 +					document.removeEventListener("visibilitychange", onVisibility);
 +				};
-+			}, [node.id, node.generationStatus, node.refreshMinutes, node.lastSuccessfulAt, visible]);
-+			if (editingPrompt) return (0, react_jsx_runtime.jsx)(ResearchContainerDraft, { node, onSubmit: (target, prompt) => { setEditingPrompt(false); onGenerate?.(target, prompt); } });
++			}, [node.id, node.generationStatus, node.refreshMinutes, node.lastSuccessfulAt, visible, editingPrompt]);
 +			const activeGeneration = RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus);
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				ref: rootRef,
 +				className: "rScV5Q_generatedContainer",
 +				"data-research-container-type": node.containerSpec.type,
-+				children: [(0, react_jsx_runtime.jsxs)("div", {
-+					className: "rScV5Q_containerControls",
-+					children: node.creationMode === 'selection' ? [(0, react_jsx_runtime.jsxs)('details', { 'data-research-create-provenance': '', children: [(0, react_jsx_runtime.jsx)('summary', { children: `基于 ${node.sourceNodeIds.length} 项资料创建` }), (0, react_jsx_runtime.jsx)('div', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }, children: node.containerPrompt }), (0, react_jsx_runtime.jsx)('div', { children: (node.generationSources ?? []).map((source) => source.title).join('、') })] })] : [(0, react_jsx_runtime.jsx)("span", { children: node.containerSpec.type === "web" ? "网页" : node.containerSpec.type === "chart" ? "图表" : node.containerSpec.type === "table" ? "表格" : node.containerSpec.type === "kpi" ? "指标" : "内容" }), (0, react_jsx_runtime.jsx)("button", { type: "button", onClick: () => setEditingPrompt(true), disabled: activeGeneration, children: "编辑需求" }), (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-container-refresh": "", onClick: () => onGenerate?.(node, node.containerPrompt), disabled: activeGeneration, children: "刷新" }), (0, react_jsx_runtime.jsxs)("select", {
-+						"data-research-container-refresh-interval": "",
-+						"aria-label": "自动刷新间隔",
-+						value: node.refreshMinutes,
-+						disabled: activeGeneration,
-+						onChange: (event) => onSetRefresh?.(node, Number(event.currentTarget.value)),
-+						children: [(0, react_jsx_runtime.jsx)("option", { value: 0, children: "不自动刷新" }), (0, react_jsx_runtime.jsx)("option", { value: 1, children: "每 1 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 5, children: "每 5 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 15, children: "每 15 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 30, children: "每 30 分钟" })]
-+					})]
-+				}), activeGeneration ? (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-research-container-refreshing": "", children: "正在刷新，当前内容继续可用" }) : node.refreshError === void 0 ? null : (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-state": "error", children: node.refreshError }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerContent", children: (0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible }) })]
++				children: [activeGeneration ? (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-research-container-refreshing": "", children: "正在刷新，当前内容继续可用" }) : node.refreshError === void 0 ? null : (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-state": "error", children: node.refreshError }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerContent", inert: editingPrompt ? true : void 0, "aria-hidden": editingPrompt ? true : void 0, children: (0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, onHtmlSize }) }), editingPrompt ? (0, react_jsx_runtime.jsx)("div", {
++					className: "rScV5Q_containerPromptOverlay", role: "dialog", "aria-label": "编辑需求",
++					onPointerDown: (event) => event.stopPropagation(), onClick: (event) => event.stopPropagation(), onDoubleClick: (event) => event.stopPropagation(),
++					onKeyDown: (event) => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); onCancelEdit?.(); } },
++					children: (0, react_jsx_runtime.jsx)(ResearchContainerDraft, { node, onSubmit: onSubmitEdit, onCancel: onCancelEdit })
++				}) : null]
 +			});
 +		}
-+		function ResearchCanvasArtifactCard({ node, sessionId, visible = true, selected = false, dragging = false, resizing = false, editing = false, editingContent = false, sourceUnavailable = false, onRenameCommit, onRenameCancel, onContentEdit, onContentCommit, onContentCancel, onMindMapNodeCommit, onOpenContextMenu, onActivate, onAutoHeight, onWebInspection, onRetryGeneration, onCancelGeneration, onSubmitContainer, onSetContainerRefresh, retryDisabled = false }) {
++		function ResearchCanvasArtifactCard({ node, sessionId, visible = true, selected = false, dragging = false, resizing = false, editing = false, editingContent = false, sourceUnavailable = false, onRenameCommit, onRenameCancel, onContentEdit, onContentCommit, onContentCancel, onMindMapNodeCommit, onOpenContextMenu, onActivate, onAutoHeight, onWebInspection, onRetryGeneration, onCancelGeneration, onSubmitContainer, onSetContainerRefresh, onHtmlSize, retryDisabled = false }) {
 +			const activate = () => onActivate?.(node);
 +			const contentRef = (0, react.useRef)(null);
++			const [editingContainerPrompt, setEditingContainerPrompt] = (0, react.useState)(false);
++			const cancelContainerEdit = () => {
++				setEditingContainerPrompt(false);
++				contentRef.current?.closest('[data-research-artifact-card]')?.querySelector('[data-research-container-more]')?.focus({ preventScroll: true });
++			};
 +			(0, react.useLayoutEffect)(() => {
 +				if (node.sizeMode === "manual" || node.kind === "web-link" || node.kind === "generated-container" || RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || node.kind === 'generated-mind-map' && node.generationStatus === 'completed' || contentRef.current === null || typeof ResizeObserver === "undefined") return;
 +				const content = contentRef.current;
@@ -7660,7 +8197,9 @@ index 1dd0e89..296683b 100644
 +				"data-research-generated-mind-map": node.kind === "generated-mind-map" && node.generationStatus === 'completed' ? "" : void 0,
 +				"data-research-web-link": node.kind === "web-link" ? "" : void 0,
 +				"data-research-generated-container": node.kind === "generated-container" ? "" : void 0,
++				"data-research-auto-sizing": node.kind === "generated-container" && node.sizeMode !== "manual" && !dragging && !resizing ? "true" : void 0,
 +				titleText: node.title,
++				titleActions: node.kind === "generated-container" && node.containerSpec !== void 0 ? (0, react_jsx_runtime.jsx)(ResearchContainerMenu, { node, editingPrompt: editingContainerPrompt, onEdit: () => setEditingContainerPrompt(true), onRefresh: onSubmitContainer, onSetRefresh: onSetContainerRefresh }) : void 0,
 +				title: editing ? (0, react_jsx_runtime.jsx)(ResearchCanvasInlineTitleEditor, {
 +					nodeId: node.id,
 +					value: node.title,
@@ -7709,7 +8248,10 @@ index 1dd0e89..296683b 100644
 +						sessionId,
 +						visible,
 +						onGenerate: onSubmitContainer,
-+						onSetRefresh: onSetContainerRefresh
++						onHtmlSize,
++						editingPrompt: editingContainerPrompt,
++						onCancelEdit: cancelContainerEdit,
++						onSubmitEdit: (target, prompt) => { setEditingContainerPrompt(false); onSubmitContainer?.(target, prompt); }
 +					}) : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? (0, react_jsx_runtime.jsx)(ResearchGenerationProcess, {
 +						node,
 +						onCancel: onCancelGeneration
@@ -7739,7 +8281,7 @@ index 1dd0e89..296683b 100644
 +					}) : (0, react_jsx_runtime.jsx)("span", {
 +						className: "rScV5Q_artifactExcerpt",
 +						children: node.excerpt
-+					}), (0, react_jsx_runtime.jsxs)("span", {
++					}), node.kind === "generated-container" ? null : (0, react_jsx_runtime.jsxs)("span", {
 +					className: "rScV5Q_artifactMeta",
 +					children: node.kind === "pasted-text" ? ["文字 · 可编辑"] : [node.kind === "assistant-excerpt" ? "助手摘录" : node.kind === "generated-mind-map" ? "思维导图" : node.kind === "generated-summary" ? "总结提炼" : node.kind === "web-link" ? "链接" : node.kind === "generated-container" ? "智能容器" : "助手回复", sourceUnavailable ? " · 来源消息不可用" : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? " · 处理中" : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? " · 可重试" : node.kind === "web-link" || node.kind === "generated-container" ? "" : " · 来源消息"]
 +				})]
@@ -7789,19 +8331,137 @@ index 1dd0e89..296683b 100644
 +			tag.textContent += ".rScV5Q_selectionActions{box-sizing:border-box;z-index:24;pointer-events:auto;position:absolute;transform:translate(-50%,-100%);height:42px;padding:5px;display:flex;align-items:center;gap:2px;overflow:visible;white-space:nowrap;color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 96%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:13px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_selectionActions button{height:30px;padding:0 10px;border:0;border-radius:8px;color:inherit;background:transparent;font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_selectionActions button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_selectionActions button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}.rScV5Q_selectionActions button:disabled{opacity:.45;cursor:default}.rScV5Q_mindMapControl{position:relative}.rScV5Q_mindMapMenu{z-index:32;box-sizing:border-box;width:258px;padding:5px;position:absolute;left:0;top:35px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:10px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_mindMapMenu button{box-sizing:border-box;width:100%;height:auto;min-height:46px;padding:7px 9px;display:flex;align-items:flex-start;flex-direction:column;gap:2px;text-align:left}.rScV5Q_mindMapMenu strong{font:var(--dsw-font-xs-strong-13)}.rScV5Q_mindMapMenu span{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}body[data-ds-dark-theme] .rScV5Q_selectionActions,body[data-ds-dark-theme] .rScV5Q_mindMapMenu{background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 96%,transparent)}";
 +			tag.textContent += "[data-research-generated-mind-map][data-selected=true]{border-color:rgb(0,80,150);outline:2px solid rgba(0,80,150,.24);outline-offset:1px}[data-research-generated-mind-map]>.rScV5Q_previewBody{background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactBody{height:100%;min-height:100%;padding:0;background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactMeta{display:none}.rScV5Q_mindMap{box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;padding:32px 40px;display:flex;align-items:safe center;justify-content:safe center;gap:40px;overflow:auto;background:#fff;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_mindMapNode{box-sizing:border-box;flex:none;display:flex;align-items:center;justify-content:center;width:200px;min-height:54px;max-width:200px;padding:9px 14px;border:0;border-radius:0;box-shadow:none;background:rgb(30,185,225);color:#fff;text-align:center;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif;font-size:14px;font-weight:700;line-height:1.35;white-space:normal;word-break:normal;overflow-wrap:break-word}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"phrase\"]{text-align:center;text-wrap:balance}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"sentence\"]{justify-content:flex-start;text-align:left;text-wrap:pretty}.rScV5Q_mindMapRoot{width:224px;min-height:60px;max-width:224px}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"0\"]{background:rgb(0,80,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"1\"]{background:rgb(0,120,180)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"2\"]{background:rgb(30,185,225)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"3\"]{background:rgb(179,235,255);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"4\"]{background:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"5\"]{background:rgb(150,150,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"6\"]{background:rgb(193,198,200);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"7\"]{background:rgb(204,204,204);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"8\"]{background:rgb(255,200,25);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"9\"]{background:rgb(255,215,30);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"12\"]{background:rgb(255,230,30);color:rgb(60,60,60)}.rScV5Q_mindMapChildren{flex:none;position:relative;display:flex;flex-direction:column;justify-content:center;gap:16px}.rScV5Q_mindMapChildren:after{content:\"\";position:absolute;left:-40px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch{flex:none;position:relative;display:flex;align-items:center;gap:40px}.rScV5Q_mindMapBranch:before{content:\"\";position:absolute;left:-20px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:after{content:\"\";position:absolute;left:-20px;top:-8px;bottom:-8px;width:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:first-child:after{top:50%}.rScV5Q_mindMapBranch:last-child:after{bottom:50%}.rScV5Q_mindMapBranch:only-child:after{display:none}";
 +			tag.textContent += ".rScV5Q_mindMapNodeEditor{margin:0;resize:none;overflow:hidden;outline:2px solid rgba(255,255,255,.9);outline-offset:-3px;white-space:pre-wrap;user-select:text;cursor:text;caret-color:currentColor}.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"3\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"6\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"7\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"8\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"9\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"12\"]{outline-color:rgba(0,80,150,.72)}";
-+			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;min-height:100%;padding:18px 20px;display:flex;flex-direction:column;gap:12px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationPhase{font:var(--dsw-font-sm-strong-14)}.rScV5Q_generationTools{display:flex;flex-direction:column;gap:5px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_generationTools span:before{content:\"✓\";margin-right:6px;color:var(--dsw-alias-state-business-primary)}.rScV5Q_generationDraft{max-height:300px;padding:10px 12px;overflow:auto;border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary);white-space:pre-wrap;overflow-wrap:anywhere;font:var(--dsw-font-xs-13);line-height:1.55}.rScV5Q_generationProcess>button{align-self:flex-start;height:28px;padding:0 11px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);cursor:pointer}.rScV5Q_generationFailure{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xs-13)}.rScV5Q_generationFailure button{height:30px;padding:0 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_generationFailure button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationFailure button:disabled{opacity:.45;cursor:default}";
++			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;height:100%;min-height:100%;padding:18px 20px;display:flex;flex-direction:column;align-items:stretch;gap:12px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:left;overflow:hidden}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:10px;line-height:16px;color:var(--dsw-alias-label-tertiary);letter-spacing:.08em;font-variant-numeric:tabular-nums}.rScV5Q_generationTerminal{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;overflow:hidden;font-size:12px;line-height:20px;letter-spacing:.015em}.rScV5Q_generationLog{display:flex;flex-direction:column;gap:4px;overflow:hidden}.rScV5Q_generationLogRow{display:flex;align-items:baseline;gap:10px;flex:none;color:var(--dsw-alias-label-secondary);animation:rScV5Q_generationRowIn .24s ease-out both}.rScV5Q_generationLogRow:not(:last-child){opacity:.7}.rScV5Q_generationPrompt{color:var(--dsw-alias-label-tertiary);flex:none;width:10px}.rScV5Q_generationLogText{display:inline-block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;animation:rScV5Q_generationType .6s steps(20,end) both}.rScV5Q_generationStamp{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px;font-variant-numeric:tabular-nums}.rScV5Q_generationCurrent{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--dsw-alias-label-primary)}.rScV5Q_generationSpinner{display:inline-block;width:10px;flex:none;font-size:14px;line-height:20px}.rScV5Q_generationCursor{display:inline-block;width:5px;height:13px;background:currentColor;opacity:.75;animation:rScV5Q_generationBlink .8s steps(2,end) infinite}.rScV5Q_generationFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:26px;border-top:1px solid var(--dsw-alias-border-l2);padding-top:9px;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:16px}.rScV5Q_generationFooter>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rScV5Q_generationFooter>button{height:24px;flex:none;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;background:transparent;color:var(--dsw-alias-label-secondary);font-size:11px;cursor:pointer}.rScV5Q_generationFooter>button:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationAnnouncement{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.rScV5Q_containerDraftFooter{justify-content:flex-end}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:width 350ms cubic-bezier(.22,1,.36,1),height 350ms cubic-bezier(.22,1,.36,1),left 350ms cubic-bezier(.22,1,.36,1),top 350ms cubic-bezier(.22,1,.36,1)}@keyframes rScV5Q_generationRowIn{from{transform:translateY(5px)}to{transform:translateY(0)}}@keyframes rScV5Q_generationType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes rScV5Q_generationBlink{50%{opacity:0}}@media(prefers-reduced-motion:reduce){.rScV5Q_generationLogRow,.rScV5Q_generationLogText,.rScV5Q_generationCursor{animation:none}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:none}}";
++			tag.textContent += ".rScV5Q_generationFailure{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xs-13)}.rScV5Q_generationFailure button{height:30px;padding:0 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_generationFailure button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationFailure button:disabled{opacity:.45;cursor:default}";
 +			tag.textContent += ".rScV5Q_globalToolbar{z-index:40;pointer-events:auto;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);height:38px;padding:3px;display:flex;align-items:center;gap:2px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 94%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_globalToolbar>button,.rScV5Q_globalToolSlot>button{height:32px;padding:0 11px;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_globalToolbar button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_globalToolbar button:disabled{opacity:.45;cursor:default}.rScV5Q_globalToolbar svg{width:16px;height:16px;flex:none}.rScV5Q_globalToolSlot{position:relative}.rScV5Q_linkPopover{box-sizing:border-box;position:absolute;left:0;bottom:calc(100% + 10px);width:360px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_linkPopover>label{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12)}.rScV5Q_linkPopover>div{display:flex;gap:8px}.rScV5Q_linkPopover input{box-sizing:border-box;min-width:0;flex:1;height:34px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:var(--dsw-font-xs-13)}.rScV5Q_linkPopover input:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent)}.rScV5Q_linkPopover button{height:34px;padding:0 12px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_linkError{color:var(--dsw-alias-state-danger-primary);font:var(--dsw-font-xxs-12)}.rScV5Q_root[data-dragging=true] .rScV5Q_globalToolbar{display:none}";
 +			tag.textContent += "[data-research-web-link] .rScV5Q_artifactBody,[data-research-generated-container] .rScV5Q_artifactBody{padding:0;gap:0;height:100%}[data-research-web-link] .rScV5Q_artifactMeta,[data-research-generated-container] .rScV5Q_artifactMeta{box-sizing:border-box;flex:none;min-height:24px;padding:5px 10px;color:var(--dsw-alias-label-caption);border-top:1px solid var(--dsw-alias-border-l2)}.rScV5Q_webFrameShell{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}.rScV5Q_webFrameControls{box-sizing:border-box;flex:none;height:32px;padding:0 9px;display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-tertiary);border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_webFrameControls>span{min-width:0;margin-right:auto;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_webFrameControls button,.rScV5Q_webFrameControls a{padding:3px 6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_webFrameControls button:hover,.rScV5Q_webFrameControls a:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_webFrameViewport{box-sizing:border-box;min-width:0;min-height:0;flex:1;overflow:hidden;background:#fff}.rScV5Q_webFrame{box-sizing:border-box;display:block;width:100%;height:100%;min-height:0;border:0;background:#fff}.rScV5Q_previewPlaceholder button,.rScV5Q_previewPlaceholder a{height:30px;padding:0 11px;display:inline-flex;align-items:center;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_containerDraft{box-sizing:border-box;min-height:0;flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerDraft{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerDraft textarea{box-sizing:border-box;min-height:120px;flex:1;resize:none;padding:12px 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-13);line-height:1.55}.rScV5Q_containerDraft textarea:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 16%,transparent)}.rScV5Q_containerDraftFooter{display:flex;align-items:center;gap:12px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerDraftFooter span{min-width:0;margin-right:auto}.rScV5Q_containerDraftFooter button{height:30px;padding:0 13px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_containerDraftFooter button:disabled{opacity:.45;cursor:default}";
 +			tag.textContent += ".rScV5Q_generatedContainer{box-sizing:border-box;min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generatedContainer{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerControls{box-sizing:border-box;flex:none;min-height:36px;padding:4px 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_containerControls>span{margin-right:auto;padding-left:3px;color:var(--dsw-alias-label-tertiary)}.rScV5Q_containerControls button,.rScV5Q_containerControls select{height:26px;padding:0 7px;border:1px solid transparent;border-radius:6px;color:var(--dsw-alias-label-secondary);background:transparent;font:inherit;cursor:pointer}.rScV5Q_containerControls button:hover:not(:disabled),.rScV5Q_containerControls select:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerControls button:disabled,.rScV5Q_containerControls select:disabled{opacity:.45;cursor:default}.rScV5Q_containerControls select{border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerControls select{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerNotice{box-sizing:border-box;flex:none;min-height:28px;padding:6px 11px;color:var(--dsw-alias-state-business-primary);background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent);font:var(--dsw-font-xxs-12)}.rScV5Q_containerNotice[data-state=error]{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);border-bottom-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 18%,transparent)}.rScV5Q_containerContent{min-width:0;min-height:0;flex:1;display:flex;overflow:auto}.rScV5Q_containerContent>.rScV5Q_webFrameShell{flex:1}.rScV5Q_containerChart{box-sizing:border-box;min-width:0;min-height:0;width:100%;padding:14px 16px 10px;display:flex;flex-direction:column;justify-content:center}.rScV5Q_containerChart svg{display:block;width:100%;min-height:0;max-height:320px;overflow:visible}.rScV5Q_chartGrid{stroke:var(--dsw-alias-border-l2);stroke-width:1}.rScV5Q_chartAxis{stroke:var(--dsw-alias-label-tertiary);stroke-width:1.2}.rScV5Q_chartLabel{fill:var(--dsw-alias-label-secondary);font:12px STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_chartLegend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_chartLegend span{display:inline-flex;align-items:center;gap:5px}.rScV5Q_chartLegend i{width:9px;height:9px}.rScV5Q_containerTableScroll{box-sizing:border-box;width:100%;padding:14px;overflow:auto}.rScV5Q_containerTableScroll table{width:100%;border-collapse:collapse;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-13)}.rScV5Q_containerTableScroll th,.rScV5Q_containerTableScroll td{padding:9px 10px;border:1px solid var(--dsw-alias-border-l2);text-align:left;vertical-align:top}.rScV5Q_containerTableScroll th{white-space:nowrap;background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-strong-13)}.rScV5Q_containerTableScroll tr:nth-child(even) td{background:color-mix(in srgb,var(--dsw-alias-bg-base) 65%,transparent)}.rScV5Q_containerKpis{box-sizing:border-box;width:100%;padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-content:center}.rScV5Q_containerKpis>div{box-sizing:border-box;min-height:96px;padding:14px;display:flex;flex-direction:column;justify-content:center;gap:5px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}.rScV5Q_containerKpis span{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerKpis strong{color:var(--dsw-alias-label-primary);font:var(--dsw-font-xl-strong-24);font-variant-numeric:tabular-nums}.rScV5Q_containerKpis em{color:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);font-style:normal}.rScV5Q_containerMarkdown{box-sizing:border-box;width:100%;padding:18px 20px;overflow:auto;color:var(--dsw-alias-label-primary);user-select:text}";
++				// RESEARCH_NATIVE_THEME_STYLE
++				tag.textContent += RESEARCH_COMPONENT_THEME_CSS.replaceAll(':root:where([data-sherlock-theme="dark"])', 'body[data-ds-dark-theme] .rScV5Q_containerContent').replaceAll(':root', '.rScV5Q_containerContent');
++				tag.textContent += ".rScV5Q_containerContent{background:var(--sherlock-bg);color:var(--sherlock-text);font:13px/1.5 var(--sherlock-font-sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}.rScV5Q_containerChart{padding:28px 24px 24px;background:var(--sherlock-surface)}.rScV5Q_chartGrid{stroke:var(--sherlock-chart-grid);stroke-dasharray:4 4}.rScV5Q_chartAxis{stroke:var(--sherlock-chart-grid);stroke-width:1;stroke-dasharray:4 4}.rScV5Q_chartLabel{fill:var(--sherlock-chart-label);font:12px var(--sherlock-font-sans)}.rScV5Q_chartLegend{justify-content:flex-start;padding:18px 0 0 5%;color:var(--sherlock-chart-label);font:12px var(--sherlock-font-sans)}.rScV5Q_chartLegend i{width:10px;height:2px;border-radius:0}.rScV5Q_containerControls button,.rScV5Q_containerControls select{border-radius:0}.rScV5Q_containerTableScroll{padding:18px 22px}.rScV5Q_containerTableScroll table{color:var(--sherlock-text);font:13px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerTableScroll th,.rScV5Q_containerTableScroll td{padding:11px 10px;border:0;border-bottom:1px solid var(--sherlock-border)}.rScV5Q_containerTableScroll th{background:transparent;color:var(--sherlock-muted);font:600 12px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerTableScroll tr:nth-child(even) td{background:transparent}.rScV5Q_containerTableScroll td[data-numeric=true]{text-align:right;font-variant-numeric:tabular-nums}.rScV5Q_containerKpis{padding:20px;gap:14px}.rScV5Q_containerKpis>div{border:1px solid var(--sherlock-border);border-radius:var(--sherlock-radius);background:var(--sherlock-surface);padding:18px}.rScV5Q_containerKpis span{color:var(--sherlock-muted);font:12px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerKpis strong{color:var(--sherlock-text);font:750 28px/1.2 var(--sherlock-font-sans);font-variant-numeric:tabular-nums;letter-spacing:-.02em}.rScV5Q_containerKpis em{color:var(--sherlock-accent);font:12px/1.5 var(--sherlock-font-mono)}.rScV5Q_containerMarkdown{color:var(--sherlock-text);padding:20px 24px}.rScV5Q_containerMarkdown a{color:var(--sherlock-accent)}.rScV5Q_containerContent .rScV5Q_mindMap{background:var(--sherlock-bg);font-family:var(--sherlock-font-sans)}.rScV5Q_containerContent .rScV5Q_mindMapNode{border:1px solid var(--sherlock-border);border-radius:var(--sherlock-radius);background:var(--sherlock-surface);color:var(--sherlock-text);font-family:var(--sherlock-font-sans)}.rScV5Q_containerContent .rScV5Q_mindMapNode[data-research-mind-map-depth=\"0\"]{background:var(--sherlock-accent-soft);color:var(--sherlock-accent)}.rScV5Q_containerContent .rScV5Q_mindMapRoot:after,.rScV5Q_containerContent .rScV5Q_mindMapChildren:after,.rScV5Q_containerContent .rScV5Q_mindMapBranch:before,.rScV5Q_containerContent .rScV5Q_mindMapBranch:after{background:var(--sherlock-border)}";
 +				tag.textContent += ".rScV5Q_mindMapRoot{position:relative}.rScV5Q_mindMapRoot:after{content:\"\";position:absolute;left:100%;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapRoot+.rScV5Q_mindMapChildren:after{display:none}";
 +				tag.textContent += ".rScV5Q_contextDownloadGroup{position:relative}.rScV5Q_contextDownloadFormats{box-sizing:border-box;z-index:32;min-width:92px;padding:4px;position:absolute;left:calc(100% + 6px);top:-4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:9px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_contextDownloadFormats button{justify-content:flex-start;gap:6px}.rScV5Q_downloadFeedback{box-sizing:border-box;z-index:28;pointer-events:auto;min-height:32px;max-width:240px;padding:7px 9px;display:flex;align-items:center;gap:8px;position:absolute;transform:translate(-50%,0);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:var(--dsw-shadow-lv2);font:var(--dsw-font-xxs-12)}.rScV5Q_downloadFeedback[data-state=error]{color:var(--dsw-alias-state-error-primary);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 45%,var(--dsw-alias-border-l2))}.rScV5Q_downloadFeedback span{min-width:0;overflow-wrap:anywhere}.rScV5Q_downloadFeedback button{flex:none;height:24px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;cursor:pointer}.rScV5Q_downloadFeedback button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_downloadFeedback button:disabled{opacity:.45;cursor:default}";
 +				tag.textContent += ".rScV5Q_linkPopover button,.rScV5Q_containerDraftFooter button{height:34px;padding:0 14px;border:0;border-radius:8px;color:#fff;background:#0f1115;box-shadow:0 1px 2px rgba(0,0,0,.12);font:var(--dsw-font-xs-strong-13);cursor:pointer;transition:background-color .12s ease,color .12s ease,transform .08s ease}.rScV5Q_linkPopover button:hover:not(:disabled),.rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#23262b}.rScV5Q_linkPopover button:active:not(:disabled),.rScV5Q_containerDraftFooter button:active:not(:disabled){background:#050607;transform:translateY(1px)}.rScV5Q_linkPopover button:focus-visible,.rScV5Q_containerDraftFooter button:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-label-primary) 55%,transparent);outline-offset:2px}.rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{color:#8a9099;background:#d7dae0;cursor:default}.rScV5Q_linkPopover button:disabled{opacity:1}body[data-ds-dark-theme] .rScV5Q_linkPopover button,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button{color:#202124;background:#f5f5f5}body[data-ds-dark-theme] .rScV5Q_linkPopover button:hover:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#fff}body[data-ds-dark-theme] .rScV5Q_linkPopover button:active:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:active:not(:disabled){background:#dedede}body[data-ds-dark-theme] .rScV5Q_linkPopover button:disabled,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:disabled{color:#969ca5;background:#454950}";
 +				tag.textContent += ".rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{opacity:1;box-shadow:none}";
++				tag.textContent += ".rScV5Q_nodeTitle[data-research-node-title-actions]{position:relative;gap:8px;overflow:visible;padding-right:6px}.rScV5Q_nodeTitleText{flex:1;min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_nodeTitleActions{flex:none;display:flex;align-items:center}.rScV5Q_containerMenu{position:relative;cursor:default;font-size:12px;font-weight:400}.rScV5Q_containerMenuTrigger{width:30px;height:26px;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent;color:var(--dsw-alias-label-secondary);font-size:20px;line-height:20px;letter-spacing:1px;cursor:pointer}.rScV5Q_containerMenuTrigger:hover,.rScV5Q_containerMenuTrigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.rScV5Q_containerMenuTrigger:focus-visible,.rScV5Q_containerMenuPopup button:focus-visible{outline:1px solid var(--dsw-alias-label-primary);outline-offset:-1px}.rScV5Q_richNode:has(.rScV5Q_containerMenuPopup){z-index:1000001!important}.rScV5Q_containerMenuPopup{box-sizing:border-box;position:absolute;z-index:50;right:0;top:calc(100% + 6px);width:184px;max-height:min(440px,calc(100vh - 100px));overflow:auto;padding:4px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;box-shadow:none;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);white-space:normal;line-height:1.4;cursor:default}.rScV5Q_containerMenuPopup button{box-sizing:border-box;display:flex;align-items:center;gap:7px;width:100%;min-height:30px;padding:6px 9px;text-align:left;border:0;border-radius:0;box-shadow:none;background:transparent;color:inherit;font:inherit;cursor:pointer}.rScV5Q_containerMenuPopup button:hover:not(:disabled),.rScV5Q_containerMenuPopup button:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerMenuPopup button:disabled{opacity:.45;cursor:default}.rScV5Q_containerMenuPopup button[role=menuitemradio]>span{width:12px;flex:none}.rScV5Q_containerMenuPopup [role=separator]{margin:5px 4px;border-top:1px solid var(--dsw-alias-border-l2)}.rScV5Q_containerMenuLabel{padding:4px 9px;color:var(--dsw-alias-label-tertiary);font-size:11px}.rScV5Q_containerMenuProvenance{padding:8px 9px;max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.6}.rScV5Q_generatedContainer{position:relative}.rScV5Q_containerPromptOverlay{box-sizing:border-box;position:absolute;inset:0;z-index:3;display:flex;align-items:flex-start;overflow:auto;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerPromptOverlay{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerPromptOverlay .rScV5Q_containerDraft{height:280px;max-height:100%;min-height:220px}.rScV5Q_containerPromptOverlay textarea,.rScV5Q_containerPromptOverlay button{border-radius:0;box-shadow:none}.rScV5Q_containerPromptOverlay [data-research-container-cancel]{background:transparent;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l2)}.rScV5Q_containerPromptOverlay [data-research-container-cancel]:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}";
 +				document.head.appendChild(tag);
 +		}
 +		const ResearchCanvas_module_css_default = { root: "rScV5Q_root" };
 +		const defaultResearchWorkspaces = new ResearchWorkspaceRegistry();
 +		/** Theme-aware infinite dotted canvas. The resident conversation shell continues to own the composer. */
++		const researchVoiceCss = ".rScV5Q_voiceFeedback{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);width:252px;max-width:calc(100vw - 48px);height:44px;box-sizing:border-box;padding:5px;display:flex;align-items:center;gap:8px;border:1px solid var(--dsw-alias-border-l2);border-radius:24px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);box-shadow:0 3px 12px #0002;cursor:auto}.rScV5Q_voiceFeedback[data-state=error]{width:320px;height:auto;min-height:44px;border-radius:18px}.rScV5Q_voiceCenter{flex:1;min-width:0;display:flex;justify-content:center;align-items:center}.rScV5Q_voiceLabel{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary);white-space:nowrap}.rScV5Q_voiceError{font-size:12px;line-height:18px;overflow-wrap:anywhere;white-space:normal}.rScV5Q_voiceWave{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;flex:1;color:var(--dsw-alias-label-primary)}.rScV5Q_voiceWave>span{display:block;flex:none;width:2px;border-radius:2px;background:currentColor;transition:height .09s ease-out}.rScV5Q_voiceFeedback>button{display:flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.rScV5Q_voiceFeedback>button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.rScV5Q_voiceFeedback>button[data-research-voice-finish]{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-2)}.rScV5Q_voiceFeedback>button[data-research-voice-finish]:hover:not(:disabled){background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-2);opacity:.85}.rScV5Q_voiceFeedback>button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.rScV5Q_globalToolbar>button[data-research-global-voice][aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_voiceAccessible{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(prefers-reduced-motion:reduce){.rScV5Q_voiceWave>span{transition:none}}";
++		function ResearchVoiceControl({ sessionId, disabled, onCommand }) {
++			const bridge = window.dshDesktop?.researchVoice;
++			(0, react.useEffect)(() => {
++				if (document.querySelector('style[data-sherlock-research-voice]')) return;
++				const style = document.createElement("style"); style.setAttribute("data-sherlock-research-voice", ""); style.textContent = researchVoiceCss; document.head.appendChild(style);
++			}, []);
++			const [status, setStatus] = (0, react.useState)(null);
++			const [text, setText] = (0, react.useState)("");
++			const [levels, setLevels] = (0, react.useState)(() => Array(28).fill(0));
++			const [error, setError] = (0, react.useState)(null);
++			const requestRef = (0, react.useRef)(null);
++			const actionsRef = (0, react.useRef)({});
++			const commandRef = (0, react.useRef)(onCommand);
++			commandRef.current = onCommand;
++			const cancel = () => {
++				const request = requestRef.current;
++				requestRef.current = null;
++				setStatus(null); setError(null); setText("");
++				if (request?.started) Promise.resolve(bridge?.cancel({ sessionId, requestId: request.requestId })).catch(() => {});
++			};
++			const finish = () => {
++				const request = requestRef.current;
++				if (!request || request.finishing) return;
++				if (!request.started) { cancel(); return; }
++				request.finishing = true;
++				setStatus("transcribing");
++				Promise.resolve(bridge.stop({ sessionId, requestId: request.requestId })).then((result) => {
++					if (requestRef.current !== request || result?.ok === true) return;
++					requestRef.current = null; setStatus(null); setError(result?.error || "语音识别未能完成，请重试。");
++				}).catch(() => {
++					if (requestRef.current !== request) return;
++					requestRef.current = null; setStatus(null); setError("语音识别未能完成，请重试。");
++				});
++			};
++			const toggle = () => {
++				if (disabled) return;
++				if (requestRef.current) { finish(); return; }
++				if (!bridge) { setError("当前客户端暂不支持语音，请使用 macOS 本地客户端。"); return; }
++				const request = { sessionId, requestId: `voice-${Date.now()}-${Math.random().toString(36).slice(2)}` };
++				requestRef.current = request;
++				setError(null); setText(""); setLevels(Array(28).fill(0)); setStatus("authorizing");
++				Promise.resolve(bridge.setActive({ sessionId, active: true })).then((activation) => {
++					if (requestRef.current !== request || activation?.ok !== true) return activation;
++					request.started = true;
++					return bridge.start({ sessionId, requestId: request.requestId });
++				}).then((result) => {
++					if (requestRef.current !== request || result?.ok === true) return;
++					requestRef.current = null; setStatus(null); setError(result?.error || "无法开始录音，请重试。");
++				}).catch(() => {
++					if (requestRef.current !== request) return;
++					requestRef.current = null; setStatus(null); setError("无法开始录音，请重试。");
++				});
++			};
++			actionsRef.current = { toggle, cancel };
++			(0, react.useEffect)(() => {
++				if (!bridge || disabled) return;
++				let mounted = true;
++				const unsubscribe = bridge.subscribe((event) => {
++					if (!mounted || event?.sessionId !== sessionId) return;
++					if (event.type === "toggle") { actionsRef.current.toggle(); return; }
++					const request = requestRef.current;
++					if (!request || event.requestId !== request.requestId) return;
++					if (event.type === "state") setStatus(event.state);
++					else if (event.type === "partial") setText(event.text);
++					else if (event.type === "level") setLevels((current) => [...current.slice(1), Math.max(0, Math.min(1, Number(event.level) || 0))]);
++					else if (event.type === "cancelled") { requestRef.current = null; setStatus(null); setText(""); }
++					else if (event.type === "error") { requestRef.current = null; setStatus(null); setError(event.message || "语音识别失败，请重试。"); }
++					else if (event.type === "final") {
++						requestRef.current = null; setStatus(null);
++						const prompt = typeof event.text === "string" ? event.text.trim() : "";
++						if (!prompt) { setError("没有识别到语音，请再试一次。"); return; }
++						if (prompt.length > RESEARCH_CONTAINER_MAX_PROMPT) { setError("指令太长，请分成几次录入。"); return; }
++						Promise.resolve().then(() => mounted && commandRef.current(prompt)).catch((failure) => {
++							if (mounted) setError(failure?.message || "无法创建语音组件，请重试。");
++						});
++					}
++				});
++				Promise.resolve(bridge.setActive({ sessionId, active: true })).catch(() => {});
++				const onKey = (event) => {
++					if (event.key !== "Escape" || !requestRef.current) return;
++					event.preventDefault(); event.stopPropagation(); actionsRef.current.cancel();
++				};
++				document.addEventListener("keydown", onKey, true);
++				return () => {
++					mounted = false;
++					const request = requestRef.current;
++					requestRef.current = null;
++						if (request?.started) Promise.resolve(bridge.cancel({ sessionId, requestId: request.requestId })).catch(() => {});
++					unsubscribe(); document.removeEventListener("keydown", onKey, true);
++					Promise.resolve(bridge.setActive({ sessionId, active: false })).catch(() => {});
++				};
++			}, [bridge, disabled, sessionId]);
++			const recording = status !== null;
++			const icon = (path) => (0, react_jsx_runtime.jsx)("svg", { viewBox: "0 0 18 18", "aria-hidden": true, children: (0, react_jsx_runtime.jsx)("path", { d: path, fill: "none", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round" }) });
++			const stateLabel = status === "authorizing" ? "等待麦克风权限" : status === "transcribing" ? "识别中…" : "正在聆听";
++			return (0, react_jsx_runtime.jsxs)(react.Fragment, { children: [
++				(0, react_jsx_runtime.jsxs)("button", {
++					type: "button", "data-research-global-voice": "", "aria-label": recording ? "结束语音并执行" : "语音", "aria-pressed": recording,
++					title: "语音 · 双击 Fn 开始或结束", disabled: disabled || status === "transcribing", onClick: toggle,
++					children: [icon("M6.5 5a2.5 2.5 0 0 1 5 0v4a2.5 2.5 0 0 1-5 0V5ZM4.5 8.5V9a4.5 4.5 0 0 0 9 0v-.5M9 13.5V16M6.5 16h5"), (0, react_jsx_runtime.jsx)("span", { children: "语音" })]
++				}), !recording && !error ? null : (0, react_jsx_runtime.jsxs)("div", {
++					className: "rScV5Q_voiceFeedback", "data-research-voice-feedback": "", "data-research-preview-interactive": "", "data-state": error ? "error" : status, role: error ? "alert" : "region", "aria-label": "语音识别",
++					onPointerDown: (event) => event.stopPropagation(),
++					children: [
++						(0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-voice-cancel": "", "aria-label": recording ? "取消录音" : "关闭", title: recording ? "取消录音（Esc）" : "关闭", onClick: cancel, children: icon("M5 5l8 8M13 5l-8 8") }),
++						(0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_voiceCenter", children: error ? (0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_voiceError", children: error }) : status !== "listening" ? (0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_voiceLabel", title: status === "authorizing" ? "请在系统提示中允许麦克风与语音识别权限" : undefined, children: stateLabel }) : (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_voiceWave", "data-research-voice-wave": "", "data-level": levels[levels.length - 1], "aria-hidden": true, children: levels.map((level, index) => (0, react_jsx_runtime.jsx)("span", { style: { height: `${3 + level * 21}px`, opacity: 0.35 + level * 0.65 } }, index)) }) }),
++						(0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-voice-finish": "", "aria-label": recording ? "完成语音输入" : "重新录音", title: recording ? "完成语音输入（双击 Fn）" : "重新录音", disabled: status === "transcribing" || status === "authorizing", onClick: recording ? finish : toggle, children: icon(recording ? "M4 9l3.5 3.5L14 5.5" : "M14 6V2.5M14 6h-3.5M14 6a5.5 5.5 0 1 0 .5 5") }),
++						!recording ? null : (0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_voiceAccessible", role: "status", children: text || stateLabel })
++					]
++				})
++			] });
++		}
 +		function ResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {
 +			const rootRef = (0, react.useRef)(null);
 +			const nativeWheelOwnerRef = (0, react.useRef)(null);
@@ -8367,7 +9027,7 @@ index 1dd0e89..296683b 100644
 +				const onPointerDown = (event) => {
 +					if (event.button !== 0) return;
 +					// This native listener runs before React's bubbling popover handler.
-+					if (event.target?.closest?.('[data-research-create-popover]')) return;
++					if (event.target?.closest?.('[data-research-create-popover],[data-research-voice-feedback]')) return;
 +					if (spacePressedRef.current) {
 +						setContextMenu(null);
 +						setMindMapMenuOpen(false);
@@ -8789,6 +9449,7 @@ index 1dd0e89..296683b 100644
 +							setContextMenu({ nodeId: node.id, left: event.clientX - bounds.left, top: event.clientY - bounds.top });
 +						},
 +						onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),
++						onHtmlSize: (artifact, dimensions) => workspace.fitHtmlContent(artifact.id, artifact.containerSpec?.html, dimensions),
 +						onWebInspection: (expectedUrl, inspection) => workspace.applyWebLinkInspection(node.id, expectedUrl, inspection),
 +						onActivate: activateArtifact,
 +						onCancelGeneration: () => workspace.cancelGeneration(node.id),
@@ -8929,7 +9590,15 @@ index 1dd0e89..296683b 100644
 +							workspace.createContainerDraft();
 +						},
 +						children: [(0, react_jsx_runtime.jsx)("svg", { viewBox: "0 0 18 18", "aria-hidden": true, children: (0, react_jsx_runtime.jsx)("path", { d: "M3 3h12v12H3zM6 7.5h6M6 10.5h4", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }) }), (0, react_jsx_runtime.jsx)("span", { children: "容器" })]
-+					})]
++					}), (0, react_jsx_runtime.jsx)(ResearchVoiceControl, {
++						sessionId,
++						disabled: selectionGeneration === void 0 || selectionGeneration.disabled === true,
++						onCommand: async (prompt) => {
++							const node = workspace.createContainerDraft();
++							if (node === null) throw new Error("画布暂时无法添加组件，请整理后重试。");
++							await startContainerGeneration(node, prompt);
++						}
++					}, sessionId)]
 +				}), downloadFeedback === null || downloadFeedbackNode === null ? null : (0, react_jsx_runtime.jsxs)("div", {
 +					className: "rScV5Q_downloadFeedback",
 +					"data-research-download-feedback": downloadFeedback.nodeId,
@@ -9084,7 +9753,7 @@ index 1dd0e89..296683b 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +14807,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15460,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9103,7 +9772,7 @@ index 1dd0e89..296683b 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +14846,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15499,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -9463,7 +10132,7 @@ index 1dd0e89..296683b 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15207,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15860,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -9635,19 +10304,19 @@ index 1dd0e89..296683b 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +15377,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +16030,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
 -			const settling = sessionId !== void 0 && composerPhase === "blank" && openState === "loading" && summaryBlank !== true;
 -			const hero = sessionId === void 0 || composerPhase === "blank" && (openState === "open" || summaryBlank === true);
 +			const settling = !research && sessionId !== void 0 && composerPhase === "blank" && openState === "loading" && summaryBlank !== true;
-+			const hero = !research && (sessionId === void 0 || composerPhase === "blank" && (openState === "open" || summaryBlank === true));
++			const hero = (activeView == null || activeView === "chat") && (sessionId === void 0 || composerPhase === "blank" && (openState === "open" || summaryBlank === true));
 +			const researchEmpty = research && sessionId !== void 0 && composerPhase === "blank" && (session?.blank === true || summaryBlank === true) && (session?.chat?.order?.length ?? 0) === 0;
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +15387,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16040,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -9655,7 +10324,7 @@ index 1dd0e89..296683b 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +15419,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16072,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -9665,7 +10334,7 @@ index 1dd0e89..296683b 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +15438,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16091,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -9770,10 +10439,12 @@ index 1dd0e89..296683b 100644
  				})]
  			});
  		}
-@@ -6951,6 +15520,29 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16173,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
++		// Explicit navigation wins over canvas-only session recovery during this client lifetime.
++		const explicitResearchViewSessions = new Set();
 +		const INITIAL_RESEARCH_SESSION_KEY = "sherlock.conversation.initial-research-session.v1";
 +		const INITIAL_RESEARCH_SESSION_EVENT = "sherlock:conversation-initial-research";
 +		const INITIAL_CHAT_SESSION_EVENT = "sherlock:conversation-initial-chat";
@@ -9800,7 +10471,7 @@ index 1dd0e89..296683b 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +15572,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16227,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -9821,7 +10492,7 @@ index 1dd0e89..296683b 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +15594,18 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16249,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -9829,20 +10500,23 @@ index 1dd0e89..296683b 100644
 +			const storedView = useStore((s) => s.view);
 +			const initialResearchRequested = isInitialResearchSession(sessionId);
 +			const blank = useSession((s) => s.blank);
-+			const persistedResearchRequested = blank && isPersistedResearchSession(sessionId);
++			const persistedResearchRequested = blank && !explicitResearchViewSessions.has(sessionId) && isPersistedResearchSession(sessionId);
 +			const active = resolveActiveView(tabs, initialResearchRequested || persistedResearchRequested ? "research" : storedView);
 +			const selectView = (0, react.useCallback)((viewId) => {
++				explicitResearchViewSessions.add(sessionId);
 +				if (viewId !== "research") clearInitialResearchSession(sessionId);
 +				actions.setView(viewId);
 +			}, [actions, sessionId]);
  			const ancestry = useSessions((s) => deriveAncestry(s, sessionId), equalBreadcrumbs);
  			const composerPhase = useSession((s) => s.composerPhase);
 -			const hideChrome = useSession((s) => s.blank) && composerPhase === "blank";
-+			const hideChrome = blank && composerPhase === "blank" && active?.id !== "research";
++			const researchNavigation = (0, react.useRef)(null);
++			if (active?.id === "research" || isPersistedResearchSession(sessionId)) researchNavigation.current = sessionId;
++			const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +15648,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16306,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -9860,7 +10534,7 @@ index 1dd0e89..296683b 100644
  				})] })
  			});
  		}
-@@ -7053,14 +15658,74 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16316,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -9868,12 +10542,12 @@ index 1dd0e89..296683b 100644
 +		function ConversationSession({ sessionId, useSession, useInput, inputActions, useStore, actions, renderSlot, views, bindDraftMirror, releaseSessionImages, releaseResearchWorkspace, onResearchPresentation }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
 -			const active = resolveActiveView(views.list(), useStore((s) => s.view));
-+			const storedView = useStore((s) => s.view ?? "chat");
++			const storedView = useStore((s) => s.view);
 +			const initialResearchRequested = isInitialResearchSession(sessionId);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const blank = useSession((s) => s.blank);
-+			const persistedResearchRequested = blank && isPersistedResearchSession(sessionId);
-+			const view = initialResearchRequested || persistedResearchRequested ? "research" : storedView;
++			const persistedResearchRequested = blank && !explicitResearchViewSessions.has(sessionId) && isPersistedResearchSession(sessionId);
++			const view = initialResearchRequested || persistedResearchRequested ? "research" : storedView ?? "chat";
 +			const active = resolveActiveView(views.list(), view);
  			const inputState = useInput((s) => s);
  			const storedDraft = useStore((s) => s.draft);
@@ -9891,11 +10565,13 @@ index 1dd0e89..296683b 100644
 +			(0, react.useLayoutEffect)(() => {
 +				const activateResearch = (event) => {
 +					if (event.detail?.sessionId !== sessionId) return;
++					explicitResearchViewSessions.delete(sessionId);
 +					if (!blank) clearInitialResearchSession(sessionId);
 +					actions.setView("research");
 +				};
 +				const activateChat = (event) => {
 +					if (event.detail?.sessionId !== sessionId) return;
++					explicitResearchViewSessions.add(sessionId);
 +					clearInitialResearchSession(sessionId);
 +					actions.setView("chat");
 +				};
@@ -9937,7 +10613,7 @@ index 1dd0e89..296683b 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +15736,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16396,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -9945,7 +10621,7 @@ index 1dd0e89..296683b 100644
 +			(0, react.useEffect)(() => () => {
 +				releaseResearchWorkspace(sessionId);
 +			}, [releaseResearchWorkspace, sessionId]);
-+			if (blank && composerPhase === "blank" && active?.id !== "research") return null;
++			if (blank && composerPhase === "blank" && active?.id === "chat") return null;
  			return (0, react_jsx_runtime.jsx)("div", {
  				className: ConversationRoot_module_css_default.viewArea,
  				children: active !== void 0 && renderSlot("conversation.view", {
@@ -9954,7 +10630,7 @@ index 1dd0e89..296683b 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +15759,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16419,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -9963,7 +10639,7 @@ index 1dd0e89..296683b 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +15812,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16472,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -9981,7 +10657,7 @@ index 1dd0e89..296683b 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +15848,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16508,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -9989,7 +10665,7 @@ index 1dd0e89..296683b 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +16740,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17400,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -10020,7 +10696,7 @@ index 1dd0e89..296683b 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +16785,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17445,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -10045,7 +10721,7 @@ index 1dd0e89..296683b 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +17739,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18399,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -10054,7 +10730,7 @@ index 1dd0e89..296683b 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +17829,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18489,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10096,7 +10772,7 @@ index 1dd0e89..296683b 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +18038,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +18698,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10113,7 +10789,7 @@ index 1dd0e89..296683b 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18208,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18868,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10123,7 +10799,7 @@ index 1dd0e89..296683b 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +18250,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18910,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10138,7 +10814,7 @@ index 1dd0e89..296683b 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +18268,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18928,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10151,7 +10827,7 @@ index 1dd0e89..296683b 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +18317,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +18977,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10165,7 +10841,7 @@ index 1dd0e89..296683b 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +18355,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +19015,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10175,7 +10851,7 @@ index 1dd0e89..296683b 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +18487,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +19147,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10190,7 +10866,7 @@ index 1dd0e89..296683b 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +18503,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +19163,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10199,7 +10875,7 @@ index 1dd0e89..296683b 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +18527,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19187,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -10208,7 +10884,7 @@ index 1dd0e89..296683b 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +18553,145 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19213,150 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -10239,6 +10915,10 @@ index 1dd0e89..296683b 100644
 +		exports.ResearchCanvasArtifactCard = ResearchCanvasArtifactCard;
 +		exports.ResearchCanvasFileCard = ResearchCanvasFileCard;
 +		exports.TurnTailNodeView = TurnTailNodeView;
++		exports.researchGenerationPresentation = researchGenerationPresentation;
++		exports.researchGenerationLog = researchGenerationLog;
++		exports.researchTaskInputSummary = researchTaskInputSummary;
++		exports.ResearchTaskInputRecord = ResearchTaskInputRecord;
 +		exports.UserStyleBubble = UserStyleBubble;
 +		exports.compactionDefinition = compactionDefinition;
 +		exports.compactConversationFlow = compactConversationFlow;
@@ -10292,6 +10972,7 @@ index 1dd0e89..296683b 100644
 +		exports.parseResearchMindMap = parseResearchMindMap;
 +		exports.parseResearchContainerSpec = parseResearchContainerSpec;
 +		exports.buildResearchHtmlPreview = buildResearchHtmlPreview;
++		exports.researchHtmlAutoGeometry = researchHtmlAutoGeometry;
 +		exports.researchCanvasExportDescriptor = researchCanvasExportDescriptor;
 +		exports.researchCanvasExportFileName = researchCanvasExportFileName;
 +		exports.buildResearchContainerChartSvg = buildResearchContainerChartSvg;

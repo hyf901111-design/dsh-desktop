@@ -314,6 +314,40 @@ describe('current-session model web search', () => {
     expect(localCalls).toBe(1)
   })
 
+  it('preserves an explicit local no_results status as readable evidence absence', async () => {
+    const localURL = await listen((_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ status: 'no_results', content: '未找到可引用来源，不能推断实时价格。', sources: [], truncated: false }))
+    })
+    await expect(searchLocalBrowser({ query: '不存在的基金', maxResults: 5 }, undefined, {
+      url: localURL, token: 'local-only-token'
+    })).resolves.toEqual({ status: 'no_results', content: '未找到可引用来源，不能推断实时价格。', sources: [], truncated: false })
+  })
+
+  it('preserves existing nonempty local summaries while rejecting an unexplained empty response', async () => {
+    let content = '检索服务返回的有效摘要'
+    const localURL = await listen((_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ content, sources: [], truncated: false }))
+    })
+    const endpoint = { url: localURL, token: 'local-only-token' }
+    await expect(searchLocalBrowser({ query: '摘要', maxResults: 5 }, undefined, endpoint)).resolves.toMatchObject({ content })
+    content = ''
+    await expect(searchLocalBrowser({ query: '摘要', maxResults: 5 }, undefined, endpoint)).rejects.toMatchObject({ code: 'WEB_LOCAL_SEARCH_FAILED' })
+  })
+
+  it('does not classify a malformed bridge response as an empty search', async () => {
+    let body = null
+    const localURL = await listen((_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify(body))
+    })
+    const endpoint = { url: localURL, token: 'local-only-token' }
+    await expect(searchLocalBrowser({ query: '查询', maxResults: 5 }, undefined, endpoint)).rejects.toMatchObject({ code: 'WEB_LOCAL_SEARCH_FAILED' })
+    body = { status: 'no_results' }
+    await expect(searchLocalBrowser({ query: '查询', maxResults: 5 }, undefined, endpoint)).rejects.toMatchObject({ code: 'WEB_LOCAL_SEARCH_FAILED' })
+  })
+
   it('uses local search for an unknown provider profile instead of demanding an API route', async () => {
     const { ctx, credentialRefs } = fakeContext({
       provider: 'custom-model',
