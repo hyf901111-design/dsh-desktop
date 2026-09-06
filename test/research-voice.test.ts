@@ -8,11 +8,15 @@ class FakeWindow extends EventEmitter {
   focused = true
   destroyed = false
   delivered: ResearchVoiceEvent[] = []
-  webContents = Object.assign(new EventEmitter(), {
+  private contents = Object.assign(new EventEmitter(), {
     mainFrame: { processId: 1, routingId: 2 },
     isDestroyed: () => this.destroyed,
     send: (_channel: string, event: ResearchVoiceEvent) => this.delivered.push(event)
   })
+  get webContents() {
+    if (this.destroyed) throw new TypeError('Object has been destroyed')
+    return this.contents
+  }
   isFocused() { return this.focused }
   isDestroyed() { return this.destroyed }
   blur() { this.focused = false; this.emit('blur') }
@@ -141,6 +145,25 @@ describe('research voice permission and ownership boundaries', () => {
     f.emit({ type: 'final', text: '新窗口指令' })
     expect(replacement.delivered.filter((e) => e.type === 'final')).toEqual([{ ...request, type: 'final', text: '新窗口指令' }])
     expect(f.window.delivered.filter((e) => e.type === 'final')).toHaveLength(0)
+  })
+
+  it.each(['dispose', 'replace'] as const)('safely handles %s after Electron destroys the attached window', (action) => {
+    const f = setup()
+    f.invoke('set-active', active)
+    f.invoke('start', request)
+    const contents = f.window.webContents
+    const nativeId = f.request()
+    f.window.destroyed = true
+    f.window.emit('closed')
+    expect(() => {
+      if (action === 'replace') f.replaceWindow()
+      f.controller.dispose()
+      f.controller.dispose()
+    }).not.toThrow()
+    expect(f.calls.filter(([name]) => name === 'cancel')).toEqual([['cancel', nativeId]])
+    expect(f.calls.filter(([name]) => name === 'dispose')).toHaveLength(1)
+    expect(contents.listenerCount('did-start-navigation')).toBe(0)
+    expect(contents.listenerCount('render-process-gone')).toBe(0)
   })
 
   it('rejects iframe IPC and malformed payloads before native permission or recording', () => {

@@ -89,6 +89,9 @@ export class ResearchVoiceController {
     this.revokeActive()
     this.detachWindow?.()
     this.attachedWindow = window
+    // BrowserWindow.webContents throws after the native window is destroyed.
+    // Retain the emitter while alive so quit/replacement can remove listeners.
+    const webContents = window.webContents
     const focus = () => { this.clearBlurTimer(); this.updateShortcut() }
     const blur = () => {
       this.updateShortcut()
@@ -102,14 +105,14 @@ export class ResearchVoiceController {
     window.on('focus', focus)
     window.on('blur', blur)
     window.on('closed', revoke)
-    window.webContents.on('did-start-navigation', navigation)
-    window.webContents.on('render-process-gone', revoke)
+    webContents.on('did-start-navigation', navigation)
+    webContents.on('render-process-gone', revoke)
     this.detachWindow = () => {
       window.removeListener('focus', focus)
       window.removeListener('blur', blur)
       window.removeListener('closed', revoke)
-      window.webContents.removeListener('did-start-navigation', navigation)
-      window.webContents.removeListener('render-process-gone', revoke)
+      webContents.removeListener('did-start-navigation', navigation)
+      webContents.removeListener('render-process-gone', revoke)
     }
   }
 
