@@ -904,7 +904,11 @@ describe('Research task Subagent adapter', () => {
     const ctx = sessionEventContext(parent, child, run)
     ctx.agents.withInitiator = vi.fn((_parent, operation) => operation())
     ctx.web = { search: vi.fn(), fetch: vi.fn() }
-    return { ctx, start: async (query, onProgress) => (await runtimeModule()).createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt: '产品固定 JSON 提示词', signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress }) }
+    return { ctx, start: async (query, onProgress) => {
+      const runtime = await runtimeModule()
+      const prompt = runtime.buildResearchTaskPrompt({ ...containerRequest(), prompt: query })
+      return runtime.createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt, signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress })
+    } }
   }
 
   it('reports real host lookup progress before the child prompt is created', async () => {
@@ -990,6 +994,63 @@ describe('Research task Subagent adapter', () => {
     await expect(fixture.start('生成一个ETF的数据监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
     expect(fixture.ctx.web.fetch).not.toHaveBeenCalled()
     expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+  })
+
+  it('rejects the actual mainstream dictionary results for a cryptocurrency monitoring request', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.web.search.mockResolvedValue({ sources: [
+      { title: '主流（汉语词语）_百度百科', url: 'https://baike.baidu.com/item/%E4%B8%BB%E6%B5%81/135047', snippet: '事物发展的主要或本质方面，区分主流和支流。' },
+      { title: '主流（主流）_百度百科', url: 'https://baike.baidu.com/item/%E4%B8%BB%E6%B5%81/20314220', snippet: '涵盖所有领域知识的中文知识性百科全书。' },
+      { title: '主流 - 搜索 词典', url: 'https://global.bing.com/dict/search?q=主流', snippet: '主流的释义，拼音，main stream; main trend。' }
+    ] })
+    await expect(fixture.start('生成一个主流加密货币监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    expect(fixture.ctx.web.fetch).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['生成一个主流加密货币监控面板', '加密货币', '主流语言发展报告', '主流语言使用人数'],
+    ['生成一个主流编程语言监控面板', '编程语言', '语言使用人数排名', '语言调查统计'],
+    ['生成一个新能源汽车监控面板', '新能源汽车', '能源供应监测', '能源供给报告'],
+    ['生成一个热门开源大模型监控面板', '开源大模型', '三维模型下载排名', '三维模型下载量'],
+    ['生成一个人工智能监控面板', '人工智能', '智能家电销售排名', '智能家电销售额']
+  ])('preserves the complete monitoring object and rejects a single matching word: %s', async (query, subject, unrelatedTitle, unrelatedSnippet) => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.web.search.mockResolvedValue({ content: `混合摘要：${unrelatedTitle}。${subject}最新统计。`, sources: [
+      { title: unrelatedTitle, url: 'https://example.com/unrelated', snippet: unrelatedSnippet },
+      { title: `${subject}最新统计`, url: 'https://example.com/data', snippet: `${subject}数据时间2026-09-06` }
+    ] })
+    fixture.ctx.web.fetch.mockResolvedValue({ body: { content: `${subject}统计正文。` } })
+    const handle = await fixture.start(query)
+    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: `${subject} 最新数据`, maxResults: 5 }, expect.any(AbortSignal))
+    expect(fixture.ctx.web.fetch.mock.calls.map(([request]) => request.url)).toEqual(['https://example.com/data'])
+    const childPrompt = fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+    expect(childPrompt).toContain(`用户需求：${query}`)
+    expect(childPrompt).toContain(`${subject}统计正文`)
+    expect(childPrompt).not.toContain(unrelatedTitle)
+    expect(childPrompt).not.toContain('https://example.com/unrelated')
+    await handle.dispose()
+  })
+
+  it('rejects word-definition evidence even when it repeats the whole monitoring subject', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.web.search.mockResolvedValue({ content: '加密货币的意思与拼音，词语释义。', sources: [{ title: '加密货币的意思 - 词典', url: 'https://example.com/definition', snippet: '加密货币的词语释义与拼音。' }] })
+    await expect(fixture.start('生成一个加密货币监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    fixture.ctx.web.search.mockResolvedValue({ content: '加密货币的意思与拼音，词语释义。', sources: [] })
+    await expect(fixture.start('生成一个加密货币监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+  })
+
+  it('keeps relevant monitoring evidence whose snippet mentions a data dictionary', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.web.search.mockResolvedValue({ sources: [
+      { title: '加密货币市场统计', url: 'https://example.com/crypto-data', snippet: '加密货币总市值统计，字段口径详见数据字典（data dictionary）。' }
+    ] })
+    fixture.ctx.web.fetch.mockResolvedValue({ body: { content: '加密货币数据时间2026-09-06，字段口径详见数据字典。' } })
+    const handle = await fixture.start('生成一个主流加密货币监控面板')
+    expect(fixture.ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/crypto-data' }, expect.any(AbortSignal))
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('字段口径详见数据字典')
+    await handle.dispose()
   })
 
   it('preserves a real generative-AI subject without treating the word generation alone as relevant evidence', async () => {

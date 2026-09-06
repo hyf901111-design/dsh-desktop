@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..355b914 100644
+index 1dd0e89..07c60e4 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -2839,7 +2839,7 @@ index 1dd0e89..355b914 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8577,6708 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8577,6848 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -6321,7 +6321,7 @@ index 1dd0e89..355b914 100644
 +				"aria-label": `调整组件${corner.toUpperCase()}角大小`
 +			}, corner));
 +		}
-+		function ResearchCanvasRichNodeFrame({ node, selected, dragging, resizing, title, titleText, children, ...props }) {
++		function ResearchCanvasRichNodeFrame({ node, selected, dragging, resizing, title, titleText, titleActions, children, ...props }) {
 +			const geometry = normalizeResearchCanvasNodeGeometry(node);
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				...props,
@@ -6346,7 +6346,8 @@ index 1dd0e89..355b914 100644
 +					className: "rScV5Q_nodeTitle",
 +					"data-research-node-title": "",
 +					"data-research-node-move-handle": "",
-+					children: title
++					"data-research-node-title-actions": titleActions ? "" : void 0,
++					children: titleActions ? [(0, react_jsx_runtime.jsx)("span", { className: "rScV5Q_nodeTitleText", children: title }, "title"), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_nodeTitleActions", children: titleActions }, "actions")] : title
 +				}), (0, react_jsx_runtime.jsxs)("div", {
 +					className: "rScV5Q_previewBody",
 +					style: { overflowY: node.sizeMode === "manual" ? "auto" : void 0 },
@@ -7332,27 +7333,85 @@ index 1dd0e89..355b914 100644
 +			if (latest?.type === 'sources-ready' || latest?.type === 'tool-finished') return { stage: 'organizing', title: '正在整理资料', detail: '梳理已获得的信息，准备组件内容', step: 1 };
 +			return { stage: 'planning', title: '正在整理需求', detail: '理解要展示的内容，准备呈现方式', step: 0 };
 +		}
++		function researchGenerationLog(node) {
++			const events = Array.isArray(node.generationEvents) ? node.generationEvents : [];
++			const rows = [{ id: 'received', text: '已接收生成需求' }];
++			const append = (id, text) => { if (rows.at(-1)?.text !== text && !rows.some((row) => row.id === id)) rows.push({ id, text }); };
++			let lastTool = '';
++			let content = '';
++			for (const [index, event] of events.entries()) {
++				const id = `event-${event?.seq ?? index}`;
++				if (event?.type === 'started') append(id, '开始整理生成需求');
++				if (event?.type === 'sources-ready') append(id, '所选资料已就绪');
++				if (event?.type === 'tool-started') {
++					lastTool = typeof event.tool === 'string' ? event.tool : '';
++					append(id, /搜索|检索/.test(lastTool) ? '检索相关数据与来源' : /读|文件|网页/.test(lastTool) ? '读取资料，整理可用信息' : '处理组件生成步骤');
++				}
++				if (event?.type === 'tool-finished') append(id, event.failed ? /搜索|检索/.test(lastTool) ? '检索未完成，调整后续处理' : '处理未完成，调整后续步骤' : /搜索|检索/.test(lastTool) ? '检索响应已返回' : '资料处理已返回');
++				if (event?.type === 'assistant-delta') {
++					append('content-start', '开始组织组件内容');
++					if (typeof event.text === 'string') content = `${content}${event.text}`.slice(-RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
++				}
++			}
++			if (typeof node.generationPartialText === 'string') content = node.generationPartialText.slice(-RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
++			// Only structural markers become fixed public copy; generated text and arguments never enter the log.
++			const markers = [
++				['layout', /<(?:html|body|main)\b/i, '建立页面内容结构'],
++				['style', /<style\b/i, '编排页面布局与配色'],
++				['table', /<table\b/i, '生成数据表格'],
++				['chart', /<(?:svg|canvas)\b/i, '绘制图表与数据图形'],
++				['controls', /<(?:input|button|select|textarea)\b/i, '制作页面交互控件'],
++				['interaction', /<script\b/i, '连接页面交互'],
++				['received-page', /<\/html\s*>/i, '页面内容已接收，准备呈现']
++			].map(([id, pattern, text]) => ({ id: `content-${id}`, text, index: content.search(pattern) })).filter((row) => row.index >= 0).sort((a, b) => a.index - b.index);
++			for (const row of markers) append(row.id, row.text);
++			return rows.slice(-14);
++		}
 +		function ResearchGenerationProcess({ node, onCancel }) {
 +			const presentation = researchGenerationPresentation(node);
++			const rows = (0, react.useMemo)(() => researchGenerationLog(node), [node.generationEvents, node.generationPartialText]);
++			const [revealed, setRevealed] = (0, react.useState)(1);
++			const [clock, setClock] = (0, react.useState)(() => Date.now());
++			const started = (0, react.useRef)(node.generationStartedAt ?? Date.now());
++			(0, react.useEffect)(() => { setRevealed(1); started.current = node.generationStartedAt ?? Date.now(); }, [node.generationTaskId]);
++			(0, react.useEffect)(() => {
++				if (revealed >= rows.length) return;
++				const timer = setTimeout(() => setRevealed((value) => value + 1), 240);
++				return () => clearTimeout(timer);
++			}, [revealed, rows.length]);
++			(0, react.useEffect)(() => {
++				let timer;
++				const tick = () => { setClock(Date.now()); timer = setTimeout(tick, document.hidden ? 1000 : 160); };
++				timer = setTimeout(tick, 160);
++				return () => clearTimeout(timer);
++			}, []);
++			const elapsed = Math.max(0, Math.floor((clock - started.current) / 1000));
++			const time = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
++			const visible = rows.slice(0, revealed).slice(-5);
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				className: "rScV5Q_generationProcess",
-+				"data-research-generation-process": "",
-+				"data-research-generation-stage": presentation.stage,
-+				"aria-busy": true,
-+				children: [(0, react_jsx_runtime.jsxs)("div", {
-+					className: "rScV5Q_generationVisual", "data-research-generation-visual": "", "aria-hidden": "true",
-+					children: [(0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_generationScan" }), [28, 49, 36, 64, 45, 56, 72].map((height, index) => (0, react_jsx_runtime.jsx)("i", { style: { height: `${height}%`, animationDelay: `${index * 90}ms` } }, index))]
-+				}), (0, react_jsx_runtime.jsxs)("div", {
-+					className: "rScV5Q_generationCopy", role: "status", "aria-live": "polite", "aria-atomic": true,
-+					children: [(0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_generationPhase", children: presentation.title }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_generationDetail", children: presentation.detail })]
-+				}), (0, react_jsx_runtime.jsx)("div", {
-+					className: "rScV5Q_generationSteps", "aria-hidden": true,
-+					children: ['理解', '整理', '生成'].map((label, index) => (0, react_jsx_runtime.jsx)("span", { "data-active": index === presentation.step, children: label }, label))
-+				}), typeof onCancel !== 'function' || typeof node.generationTaskId !== 'string' ? null : (0, react_jsx_runtime.jsx)("button", {
-+					type: "button", "data-research-generation-cancel": "", "aria-label": "停止生成",
-+					onPointerDown: (event) => event.stopPropagation(),
-+					onClick: (event) => { event.preventDefault(); event.stopPropagation(); onCancel(node); },
-+					children: "停止"
++				"data-research-generation-process": "", "data-research-generation-stage": presentation.stage, "aria-busy": true,
++				children: [(0, react_jsx_runtime.jsxs)('div', {
++					className: 'rScV5Q_generationHeader', 'aria-hidden': true,
++					children: [(0, react_jsx_runtime.jsx)('span', { children: '生成进程' }), (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-elapsed': '', children: time })]
++				}), (0, react_jsx_runtime.jsxs)('div', {
++					className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,
++					children: [(0, react_jsx_runtime.jsx)('div', { className: 'rScV5Q_generationLog', children: visible.map((row) => (0, react_jsx_runtime.jsxs)('div', {
++						className: 'rScV5Q_generationLogRow', 'data-research-generation-row': '',
++						children: [(0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationPrompt', children: '›' }), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationLogText', children: row.text })]
++					}, row.id)) }), (0, react_jsx_runtime.jsxs)('div', {
++						className: 'rScV5Q_generationCurrent', children: [
++							(0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationSpinner', children: '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[Math.floor(clock / 160) % 10] }),
++							(0, react_jsx_runtime.jsx)('span', { children: presentation.title }), (0, react_jsx_runtime.jsx)('i', { className: 'rScV5Q_generationCursor' })]
++					})]
++				}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement', role: 'status', 'aria-live': 'polite', 'aria-atomic': true, children: presentation.title }),
++				(0, react_jsx_runtime.jsxs)('div', { className: 'rScV5Q_generationFooter', children: [
++					(0, react_jsx_runtime.jsx)('span', { children: presentation.detail }),
++					typeof onCancel !== 'function' || typeof node.generationTaskId !== 'string' ? null : (0, react_jsx_runtime.jsx)('button', {
++						type: 'button', 'data-research-generation-cancel': '', 'aria-label': '停止生成',
++						onPointerDown: (event) => event.stopPropagation(),
++						onClick: (event) => { event.preventDefault(); event.stopPropagation(); onCancel(node); }, children: '停止'
++					})]
 +				})]
 +			});
 +		}
@@ -7565,7 +7624,7 @@ index 1dd0e89..355b914 100644
 +		function ResearchCanvasWebFrame(props) {
 +			return isResearchWechatArticleUrl(props.node.url) ? (0, react_jsx_runtime.jsx)(ResearchCanvasWechatReader, props) : (0, react_jsx_runtime.jsx)(ResearchCanvasStandardWebFrame, props);
 +		}
-+		function ResearchContainerDraft({ node, onSubmit }) {
++		function ResearchContainerDraft({ node, onSubmit, onCancel }) {
 +			const inputRef = (0, react.useRef)(null);
 +			const [prompt, setPrompt] = (0, react.useState)(node.containerPrompt ?? "");
 +			(0, react.useLayoutEffect)(() => {
@@ -7588,6 +7647,11 @@ index 1dd0e89..355b914 100644
 +					onInput: (event) => setPrompt(event.currentTarget.value),
 +					onKeyDown: (event) => {
 +						event.stopPropagation();
++						if (event.key === "Escape" && onCancel) {
++							event.preventDefault();
++							onCancel();
++							return;
++						}
 +						if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
 +							event.preventDefault();
 +							submit();
@@ -7595,12 +7659,12 @@ index 1dd0e89..355b914 100644
 +					}
 +				}), (0, react_jsx_runtime.jsxs)("div", {
 +					className: "rScV5Q_containerDraftFooter",
-+					children: [(0, react_jsx_runtime.jsx)("button", {
++					children: [onCancel ? (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-container-cancel": "", onClick: onCancel, children: "取消" }) : null, (0, react_jsx_runtime.jsx)("button", {
 +						type: "button",
 +						"data-research-container-submit": "",
 +						disabled: prompt.trim() === "",
 +						onClick: submit,
-+						children: "创建"
++						children: onCancel ? "更新组件" : "创建"
 +					})]
 +				})]
 +			});
@@ -7923,7 +7987,7 @@ index 1dd0e89..355b914 100644
 +					const card = frame.closest("[data-research-node-id]");
 +					if (card?.getAttribute("data-node-resizing") === "true" || card?.getAttribute("data-node-dragging") === "true") return;
 +					const horizontalChrome = card?.offsetWidth > 0 && frame.clientWidth > 0 ? Math.max(0, card.offsetWidth - frame.clientWidth) : 2;
-+					const verticalChrome = card?.offsetHeight > 0 && frame.clientHeight > 0 ? Math.max(0, card.offsetHeight - frame.clientHeight) : RESEARCH_CANVAS_TITLE_HEIGHT + 38;
++					const verticalChrome = card?.offsetHeight > 0 && frame.clientHeight > 0 ? Math.max(0, card.offsetHeight - frame.clientHeight) : RESEARCH_CANVAS_TITLE_HEIGHT + 2;
 +					const dimensions = { width: Math.min(2400, Math.ceil(data.width + horizontalChrome)), height: Math.min(2400, Math.ceil(data.height + verticalChrome)) };
 +					if (researchHtmlAutoGeometry(current.node, dimensions) === null) return;
 +					if (current.onSize?.(current.node, dimensions) !== false) growths++;
@@ -7947,13 +8011,86 @@ index 1dd0e89..355b914 100644
 +			if (spec.type === "kpi") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerKpis", "data-research-container-kpi": "", children: spec.items.map((item, index) => (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", { children: item.label }), (0, react_jsx_runtime.jsx)("strong", { children: String(item.value) }), item.change === void 0 ? null : (0, react_jsx_runtime.jsx)("em", { children: String(item.change) })] }, index)) });
 +			return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerMarkdown", "data-research-container-markdown": "", children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text: spec.content, streaming: false }) });
 +		}
-+		function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onSetRefresh, onHtmlSize }) {
++		function ResearchContainerMenu({ node, editingPrompt, onEdit, onRefresh, onSetRefresh }) {
++			const rootRef = (0, react.useRef)(null);
++			const triggerRef = (0, react.useRef)(null);
++			const initialFocus = (0, react.useRef)(0);
++			const [open, setOpen] = (0, react.useState)(false);
++			const [showProvenance, setShowProvenance] = (0, react.useState)(false);
++			const menuId = (0, react.useId)();
++			const activeGeneration = RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus);
++			const selectionCreated = node.creationMode === "selection";
++			const disabled = activeGeneration || editingPrompt;
++			const items = () => Array.from(rootRef.current?.querySelectorAll('[role="menuitem"]:not(:disabled),[role="menuitemradio"]:not(:disabled)') ?? []);
++			const close = (restoreFocus = true) => {
++				setOpen(false);
++				setShowProvenance(false);
++				if (restoreFocus) triggerRef.current?.focus({ preventScroll: true });
++			};
++			(0, react.useLayoutEffect)(() => {
++				if (!open) return;
++				const available = items();
++				available[initialFocus.current < 0 ? available.length - 1 : 0]?.focus({ preventScroll: true });
++			}, [open]);
++			(0, react.useEffect)(() => {
++				if (!open) return;
++				const owner = rootRef.current?.ownerDocument;
++				const outside = (event) => { if (!rootRef.current?.contains(event.target)) close(false); };
++				const blur = () => close(false);
++				owner?.addEventListener("pointerdown", outside, true);
++				owner?.addEventListener("focusin", outside);
++				owner?.defaultView?.addEventListener("blur", blur);
++				return () => {
++					owner?.removeEventListener("pointerdown", outside, true);
++					owner?.removeEventListener("focusin", outside);
++					owner?.defaultView?.removeEventListener("blur", blur);
++				};
++			}, [open]);
++			const choose = (action) => { close(); action?.(); };
++			return (0, react_jsx_runtime.jsxs)("div", {
++				ref: rootRef, className: "rScV5Q_containerMenu", "data-research-preview-interactive": "",
++				onPointerDown: (event) => event.stopPropagation(), onClick: (event) => event.stopPropagation(), onDoubleClick: (event) => event.stopPropagation(),
++				onKeyDown: (event) => {
++					event.stopPropagation();
++					if (!open) return;
++					if (event.key === "Escape") { event.preventDefault(); close(); return; }
++					if (event.key === "Tab") { close(false); return; }
++					if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
++					event.preventDefault();
++					const available = items();
++					const index = available.indexOf(event.target);
++					const next = event.key === "Home" ? 0 : event.key === "End" ? available.length - 1 : (index + (event.key === "ArrowDown" ? 1 : -1) + available.length) % available.length;
++					available[next]?.focus({ preventScroll: true });
++				},
++				children: [(0, react_jsx_runtime.jsx)("button", {
++					ref: triggerRef, type: "button", className: "rScV5Q_containerMenuTrigger", "data-research-container-more": "",
++					"aria-label": "更多", "aria-haspopup": "menu", "aria-expanded": open, "aria-controls": open ? menuId : void 0,
++					onClick: () => { initialFocus.current = 0; if (open) close(); else setOpen(true); },
++					onKeyDown: (event) => {
++						if (!["Enter", " ", "ArrowDown", "ArrowUp"].includes(event.key)) return;
++						event.preventDefault(); event.stopPropagation();
++						initialFocus.current = event.key === "ArrowUp" ? -1 : 0;
++						if (open && (event.key === "Enter" || event.key === " ")) close(); else setOpen(true);
++					},
++					children: "···"
++				}), open ? (0, react_jsx_runtime.jsxs)("div", {
++					id: menuId, role: "menu", "aria-label": "组件操作", className: "rScV5Q_containerMenuPopup",
++					children: selectionCreated ? [(0, react_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", onClick: () => setShowProvenance(!showProvenance), children: "查看创建来源" }), showProvenance ? (0, react_jsx_runtime.jsxs)("div", { "data-research-create-provenance": "", className: "rScV5Q_containerMenuProvenance", children: [(0, react_jsx_runtime.jsx)("div", { children: `基于 ${node.sourceNodeIds.length} 项资料创建` }), (0, react_jsx_runtime.jsx)("div", { children: node.containerPrompt }), (0, react_jsx_runtime.jsx)("div", { children: (node.generationSources ?? []).map((source) => source.title).join("、") })] }) : null] : [
++						(0, react_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", "data-research-container-edit": "", disabled, onClick: () => choose(onEdit), children: "编辑需求" }),
++						(0, react_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", "data-research-container-refresh": "", disabled, onClick: () => choose(() => onRefresh?.(node, node.containerPrompt)), children: "刷新" }),
++						(0, react_jsx_runtime.jsx)("div", { role: "separator" }),
++						(0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerMenuLabel", children: "自动刷新" }),
++						...[0, 1, 5, 15, 30].map((minutes) => (0, react_jsx_runtime.jsxs)("button", { type: "button", role: "menuitemradio", "aria-checked": node.refreshMinutes === minutes, "data-research-container-refresh-minutes": minutes, disabled: editingPrompt, onClick: () => choose(() => onSetRefresh?.(node, minutes)), children: [(0, react_jsx_runtime.jsx)("span", { "aria-hidden": true, children: node.refreshMinutes === minutes ? "✓" : "" }), minutes === 0 ? "不自动刷新" : `每 ${minutes} 分钟`] }, minutes))
++					]
++				}) : null]
++			});
++		}
++		function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onHtmlSize, editingPrompt, onCancelEdit, onSubmitEdit }) {
 +			const rootRef = (0, react.useRef)(null);
 +			const refreshRef = (0, react.useRef)(onGenerate);
-+			const [editingPrompt, setEditingPrompt] = (0, react.useState)(false);
 +			refreshRef.current = onGenerate;
 +			(0, react.useEffect)(() => {
-+				if (node.creationMode === 'selection' || node.refreshMinutes === 0 || node.generationStatus !== "completed") return;
++				if (editingPrompt || node.creationMode === 'selection' || node.refreshMinutes === 0 || node.generationStatus !== "completed") return;
 +				let timer;
 +				let active = true;
 +				const schedule = () => {
@@ -7978,29 +8115,28 @@ index 1dd0e89..355b914 100644
 +					if (timer !== void 0) clearTimeout(timer);
 +					document.removeEventListener("visibilitychange", onVisibility);
 +				};
-+			}, [node.id, node.generationStatus, node.refreshMinutes, node.lastSuccessfulAt, visible]);
-+			if (editingPrompt) return (0, react_jsx_runtime.jsx)(ResearchContainerDraft, { node, onSubmit: (target, prompt) => { setEditingPrompt(false); onGenerate?.(target, prompt); } });
++			}, [node.id, node.generationStatus, node.refreshMinutes, node.lastSuccessfulAt, visible, editingPrompt]);
 +			const activeGeneration = RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus);
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				ref: rootRef,
 +				className: "rScV5Q_generatedContainer",
 +				"data-research-container-type": node.containerSpec.type,
-+				children: [(0, react_jsx_runtime.jsxs)("div", {
-+					className: "rScV5Q_containerControls",
-+					children: node.creationMode === 'selection' ? [(0, react_jsx_runtime.jsxs)('details', { 'data-research-create-provenance': '', children: [(0, react_jsx_runtime.jsx)('summary', { children: `基于 ${node.sourceNodeIds.length} 项资料创建` }), (0, react_jsx_runtime.jsx)('div', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }, children: node.containerPrompt }), (0, react_jsx_runtime.jsx)('div', { children: (node.generationSources ?? []).map((source) => source.title).join('、') })] })] : [(0, react_jsx_runtime.jsx)("span", { children: node.containerSpec.type === "web" ? "网页" : node.containerSpec.type === "chart" ? "图表" : node.containerSpec.type === "table" ? "表格" : node.containerSpec.type === "kpi" ? "指标" : "内容" }), (0, react_jsx_runtime.jsx)("button", { type: "button", onClick: () => setEditingPrompt(true), disabled: activeGeneration, children: "编辑需求" }), (0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-container-refresh": "", onClick: () => onGenerate?.(node, node.containerPrompt), disabled: activeGeneration, children: "刷新" }), (0, react_jsx_runtime.jsxs)("select", {
-+						"data-research-container-refresh-interval": "",
-+						"aria-label": "自动刷新间隔",
-+						value: node.refreshMinutes,
-+						disabled: activeGeneration,
-+						onChange: (event) => onSetRefresh?.(node, Number(event.currentTarget.value)),
-+						children: [(0, react_jsx_runtime.jsx)("option", { value: 0, children: "不自动刷新" }), (0, react_jsx_runtime.jsx)("option", { value: 1, children: "每 1 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 5, children: "每 5 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 15, children: "每 15 分钟" }), (0, react_jsx_runtime.jsx)("option", { value: 30, children: "每 30 分钟" })]
-+					})]
-+				}), activeGeneration ? (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-research-container-refreshing": "", children: "正在刷新，当前内容继续可用" }) : node.refreshError === void 0 ? null : (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-state": "error", children: node.refreshError }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerContent", children: (0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, onHtmlSize }) })]
++				children: [activeGeneration ? (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-research-container-refreshing": "", children: "正在刷新，当前内容继续可用" }) : node.refreshError === void 0 ? null : (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice", "data-state": "error", children: node.refreshError }), (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerContent", inert: editingPrompt ? true : void 0, "aria-hidden": editingPrompt ? true : void 0, children: (0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, onHtmlSize }) }), editingPrompt ? (0, react_jsx_runtime.jsx)("div", {
++					className: "rScV5Q_containerPromptOverlay", role: "dialog", "aria-label": "编辑需求",
++					onPointerDown: (event) => event.stopPropagation(), onClick: (event) => event.stopPropagation(), onDoubleClick: (event) => event.stopPropagation(),
++					onKeyDown: (event) => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); onCancelEdit?.(); } },
++					children: (0, react_jsx_runtime.jsx)(ResearchContainerDraft, { node, onSubmit: onSubmitEdit, onCancel: onCancelEdit })
++				}) : null]
 +			});
 +		}
 +		function ResearchCanvasArtifactCard({ node, sessionId, visible = true, selected = false, dragging = false, resizing = false, editing = false, editingContent = false, sourceUnavailable = false, onRenameCommit, onRenameCancel, onContentEdit, onContentCommit, onContentCancel, onMindMapNodeCommit, onOpenContextMenu, onActivate, onAutoHeight, onWebInspection, onRetryGeneration, onCancelGeneration, onSubmitContainer, onSetContainerRefresh, onHtmlSize, retryDisabled = false }) {
 +			const activate = () => onActivate?.(node);
 +			const contentRef = (0, react.useRef)(null);
++			const [editingContainerPrompt, setEditingContainerPrompt] = (0, react.useState)(false);
++			const cancelContainerEdit = () => {
++				setEditingContainerPrompt(false);
++				contentRef.current?.closest('[data-research-artifact-card]')?.querySelector('[data-research-container-more]')?.focus({ preventScroll: true });
++			};
 +			(0, react.useLayoutEffect)(() => {
 +				if (node.sizeMode === "manual" || node.kind === "web-link" || node.kind === "generated-container" || RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || node.kind === 'generated-mind-map' && node.generationStatus === 'completed' || contentRef.current === null || typeof ResizeObserver === "undefined") return;
 +				const content = contentRef.current;
@@ -8030,6 +8166,7 @@ index 1dd0e89..355b914 100644
 +				"data-research-generated-container": node.kind === "generated-container" ? "" : void 0,
 +				"data-research-auto-sizing": node.kind === "generated-container" && node.sizeMode !== "manual" && !dragging && !resizing ? "true" : void 0,
 +				titleText: node.title,
++				titleActions: node.kind === "generated-container" && node.containerSpec !== void 0 ? (0, react_jsx_runtime.jsx)(ResearchContainerMenu, { node, editingPrompt: editingContainerPrompt, onEdit: () => setEditingContainerPrompt(true), onRefresh: onSubmitContainer, onSetRefresh: onSetContainerRefresh }) : void 0,
 +				title: editing ? (0, react_jsx_runtime.jsx)(ResearchCanvasInlineTitleEditor, {
 +					nodeId: node.id,
 +					value: node.title,
@@ -8078,8 +8215,10 @@ index 1dd0e89..355b914 100644
 +						sessionId,
 +						visible,
 +						onGenerate: onSubmitContainer,
-+						onSetRefresh: onSetContainerRefresh,
-+						onHtmlSize
++						onHtmlSize,
++						editingPrompt: editingContainerPrompt,
++						onCancelEdit: cancelContainerEdit,
++						onSubmitEdit: (target, prompt) => { setEditingContainerPrompt(false); onSubmitContainer?.(target, prompt); }
 +					}) : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? (0, react_jsx_runtime.jsx)(ResearchGenerationProcess, {
 +						node,
 +						onCancel: onCancelGeneration
@@ -8109,7 +8248,7 @@ index 1dd0e89..355b914 100644
 +					}) : (0, react_jsx_runtime.jsx)("span", {
 +						className: "rScV5Q_artifactExcerpt",
 +						children: node.excerpt
-+					}), (0, react_jsx_runtime.jsxs)("span", {
++					}), node.kind === "generated-container" ? null : (0, react_jsx_runtime.jsxs)("span", {
 +					className: "rScV5Q_artifactMeta",
 +					children: node.kind === "pasted-text" ? ["文字 · 可编辑"] : [node.kind === "assistant-excerpt" ? "助手摘录" : node.kind === "generated-mind-map" ? "思维导图" : node.kind === "generated-summary" ? "总结提炼" : node.kind === "web-link" ? "链接" : node.kind === "generated-container" ? "智能容器" : "助手回复", sourceUnavailable ? " · 来源消息不可用" : RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) ? " · 处理中" : ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? " · 可重试" : node.kind === "web-link" || node.kind === "generated-container" ? "" : " · 来源消息"]
 +				})]
@@ -8159,7 +8298,7 @@ index 1dd0e89..355b914 100644
 +			tag.textContent += ".rScV5Q_selectionActions{box-sizing:border-box;z-index:24;pointer-events:auto;position:absolute;transform:translate(-50%,-100%);height:42px;padding:5px;display:flex;align-items:center;gap:2px;overflow:visible;white-space:nowrap;color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 96%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:13px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_selectionActions button{height:30px;padding:0 10px;border:0;border-radius:8px;color:inherit;background:transparent;font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_selectionActions button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_selectionActions button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}.rScV5Q_selectionActions button:disabled{opacity:.45;cursor:default}.rScV5Q_mindMapControl{position:relative}.rScV5Q_mindMapMenu{z-index:32;box-sizing:border-box;width:258px;padding:5px;position:absolute;left:0;top:35px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:10px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_mindMapMenu button{box-sizing:border-box;width:100%;height:auto;min-height:46px;padding:7px 9px;display:flex;align-items:flex-start;flex-direction:column;gap:2px;text-align:left}.rScV5Q_mindMapMenu strong{font:var(--dsw-font-xs-strong-13)}.rScV5Q_mindMapMenu span{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}body[data-ds-dark-theme] .rScV5Q_selectionActions,body[data-ds-dark-theme] .rScV5Q_mindMapMenu{background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 96%,transparent)}";
 +			tag.textContent += "[data-research-generated-mind-map][data-selected=true]{border-color:rgb(0,80,150);outline:2px solid rgba(0,80,150,.24);outline-offset:1px}[data-research-generated-mind-map]>.rScV5Q_previewBody{background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactBody{height:100%;min-height:100%;padding:0;background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactMeta{display:none}.rScV5Q_mindMap{box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;padding:32px 40px;display:flex;align-items:safe center;justify-content:safe center;gap:40px;overflow:auto;background:#fff;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_mindMapNode{box-sizing:border-box;flex:none;display:flex;align-items:center;justify-content:center;width:200px;min-height:54px;max-width:200px;padding:9px 14px;border:0;border-radius:0;box-shadow:none;background:rgb(30,185,225);color:#fff;text-align:center;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif;font-size:14px;font-weight:700;line-height:1.35;white-space:normal;word-break:normal;overflow-wrap:break-word}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"phrase\"]{text-align:center;text-wrap:balance}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"sentence\"]{justify-content:flex-start;text-align:left;text-wrap:pretty}.rScV5Q_mindMapRoot{width:224px;min-height:60px;max-width:224px}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"0\"]{background:rgb(0,80,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"1\"]{background:rgb(0,120,180)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"2\"]{background:rgb(30,185,225)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"3\"]{background:rgb(179,235,255);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"4\"]{background:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"5\"]{background:rgb(150,150,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"6\"]{background:rgb(193,198,200);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"7\"]{background:rgb(204,204,204);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"8\"]{background:rgb(255,200,25);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"9\"]{background:rgb(255,215,30);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"12\"]{background:rgb(255,230,30);color:rgb(60,60,60)}.rScV5Q_mindMapChildren{flex:none;position:relative;display:flex;flex-direction:column;justify-content:center;gap:16px}.rScV5Q_mindMapChildren:after{content:\"\";position:absolute;left:-40px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch{flex:none;position:relative;display:flex;align-items:center;gap:40px}.rScV5Q_mindMapBranch:before{content:\"\";position:absolute;left:-20px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:after{content:\"\";position:absolute;left:-20px;top:-8px;bottom:-8px;width:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:first-child:after{top:50%}.rScV5Q_mindMapBranch:last-child:after{bottom:50%}.rScV5Q_mindMapBranch:only-child:after{display:none}";
 +			tag.textContent += ".rScV5Q_mindMapNodeEditor{margin:0;resize:none;overflow:hidden;outline:2px solid rgba(255,255,255,.9);outline-offset:-3px;white-space:pre-wrap;user-select:text;cursor:text;caret-color:currentColor}.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"3\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"6\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"7\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"8\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"9\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"12\"]{outline-color:rgba(0,80,150,.72)}";
-+			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationVisual{position:relative;width:154px;height:54px;display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:9px 16px;border-bottom:1px solid var(--dsw-alias-border-l2);overflow:hidden}.rScV5Q_generationVisual i{width:8px;background:var(--dsw-alias-label-tertiary);opacity:.25;transform-origin:bottom;animation:rScV5Q_generationPulse 2.4s ease-in-out infinite}.rScV5Q_generationScan{z-index:1;position:absolute;inset:0;background:linear-gradient(90deg,transparent, color-mix(in srgb,var(--dsw-alias-label-primary) 12%,transparent),transparent);transform:translateX(-110%);animation:rScV5Q_generationScan 2.8s ease-in-out infinite}.rScV5Q_generationCopy{text-align:center}.rScV5Q_generationPhase{font-size:16px;font-weight:600;line-height:1.5;letter-spacing:.02em}.rScV5Q_generationDetail{margin-top:5px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5}.rScV5Q_generationSteps{display:flex;align-items:center;gap:14px;color:var(--dsw-alias-label-tertiary);font-size:11px;letter-spacing:.08em}.rScV5Q_generationSteps span{display:flex;align-items:center;gap:6px}.rScV5Q_generationSteps span:before{content:\"\";width:3px;height:3px;background:currentColor;opacity:.35}.rScV5Q_generationSteps span[data-active=true]{color:var(--dsw-alias-label-primary)}.rScV5Q_generationSteps span[data-active=true]:before{opacity:1}.rScV5Q_generationProcess>button{height:26px;padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;background:transparent;color:var(--dsw-alias-label-secondary);font-size:11px;cursor:pointer}.rScV5Q_generationProcess>button:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerDraftFooter{justify-content:flex-end}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:width 350ms cubic-bezier(.22,1,.36,1),height 350ms cubic-bezier(.22,1,.36,1),left 350ms cubic-bezier(.22,1,.36,1),top 350ms cubic-bezier(.22,1,.36,1)}@keyframes rScV5Q_generationPulse{0%,100%{opacity:.2;transform:scaleY(.72)}50%{opacity:.65;transform:scaleY(1)}}@keyframes rScV5Q_generationScan{0%{transform:translateX(-110%)}80%,100%{transform:translateX(110%)}}@media(prefers-reduced-motion:reduce){.rScV5Q_generationVisual i,.rScV5Q_generationScan{animation:none}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:none}}";
++			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;height:100%;min-height:100%;padding:18px 20px;display:flex;flex-direction:column;align-items:stretch;gap:12px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:left;overflow:hidden}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:10px;line-height:16px;color:var(--dsw-alias-label-tertiary);letter-spacing:.08em;font-variant-numeric:tabular-nums}.rScV5Q_generationTerminal{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;overflow:hidden;font-size:12px;line-height:20px;letter-spacing:.015em}.rScV5Q_generationLog{display:flex;flex-direction:column;gap:4px;overflow:hidden}.rScV5Q_generationLogRow{display:flex;align-items:baseline;gap:10px;flex:none;color:var(--dsw-alias-label-secondary);animation:rScV5Q_generationRowIn .24s ease-out both}.rScV5Q_generationLogRow:not(:last-child){opacity:.7}.rScV5Q_generationPrompt{color:var(--dsw-alias-label-tertiary);flex:none;width:10px}.rScV5Q_generationLogText{display:inline-block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;animation:rScV5Q_generationType .6s steps(20,end) both}.rScV5Q_generationCurrent{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--dsw-alias-label-primary)}.rScV5Q_generationSpinner{display:inline-block;width:10px;flex:none;font-size:14px;line-height:20px}.rScV5Q_generationCursor{display:inline-block;width:5px;height:13px;background:currentColor;opacity:.75;animation:rScV5Q_generationBlink .8s steps(2,end) infinite}.rScV5Q_generationFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:26px;border-top:1px solid var(--dsw-alias-border-l2);padding-top:9px;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:16px}.rScV5Q_generationFooter>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rScV5Q_generationFooter>button{height:24px;flex:none;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;background:transparent;color:var(--dsw-alias-label-secondary);font-size:11px;cursor:pointer}.rScV5Q_generationFooter>button:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationAnnouncement{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.rScV5Q_containerDraftFooter{justify-content:flex-end}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:width 350ms cubic-bezier(.22,1,.36,1),height 350ms cubic-bezier(.22,1,.36,1),left 350ms cubic-bezier(.22,1,.36,1),top 350ms cubic-bezier(.22,1,.36,1)}@keyframes rScV5Q_generationRowIn{from{transform:translateY(5px)}to{transform:translateY(0)}}@keyframes rScV5Q_generationType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes rScV5Q_generationBlink{50%{opacity:0}}@media(prefers-reduced-motion:reduce){.rScV5Q_generationLogRow,.rScV5Q_generationLogText,.rScV5Q_generationCursor{animation:none}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:none}}";
 +			tag.textContent += ".rScV5Q_generationFailure{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xs-13)}.rScV5Q_generationFailure button{height:30px;padding:0 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_generationFailure button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationFailure button:disabled{opacity:.45;cursor:default}";
 +			tag.textContent += ".rScV5Q_globalToolbar{z-index:40;pointer-events:auto;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);height:38px;padding:3px;display:flex;align-items:center;gap:2px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 94%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_globalToolbar>button,.rScV5Q_globalToolSlot>button{height:32px;padding:0 11px;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_globalToolbar button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_globalToolbar button:disabled{opacity:.45;cursor:default}.rScV5Q_globalToolbar svg{width:16px;height:16px;flex:none}.rScV5Q_globalToolSlot{position:relative}.rScV5Q_linkPopover{box-sizing:border-box;position:absolute;left:0;bottom:calc(100% + 10px);width:360px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_linkPopover>label{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12)}.rScV5Q_linkPopover>div{display:flex;gap:8px}.rScV5Q_linkPopover input{box-sizing:border-box;min-width:0;flex:1;height:34px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:var(--dsw-font-xs-13)}.rScV5Q_linkPopover input:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent)}.rScV5Q_linkPopover button{height:34px;padding:0 12px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_linkError{color:var(--dsw-alias-state-danger-primary);font:var(--dsw-font-xxs-12)}.rScV5Q_root[data-dragging=true] .rScV5Q_globalToolbar{display:none}";
 +			tag.textContent += "[data-research-web-link] .rScV5Q_artifactBody,[data-research-generated-container] .rScV5Q_artifactBody{padding:0;gap:0;height:100%}[data-research-web-link] .rScV5Q_artifactMeta,[data-research-generated-container] .rScV5Q_artifactMeta{box-sizing:border-box;flex:none;min-height:24px;padding:5px 10px;color:var(--dsw-alias-label-caption);border-top:1px solid var(--dsw-alias-border-l2)}.rScV5Q_webFrameShell{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}.rScV5Q_webFrameControls{box-sizing:border-box;flex:none;height:32px;padding:0 9px;display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-tertiary);border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_webFrameControls>span{min-width:0;margin-right:auto;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_webFrameControls button,.rScV5Q_webFrameControls a{padding:3px 6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_webFrameControls button:hover,.rScV5Q_webFrameControls a:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_webFrameViewport{box-sizing:border-box;min-width:0;min-height:0;flex:1;overflow:hidden;background:#fff}.rScV5Q_webFrame{box-sizing:border-box;display:block;width:100%;height:100%;min-height:0;border:0;background:#fff}.rScV5Q_previewPlaceholder button,.rScV5Q_previewPlaceholder a{height:30px;padding:0 11px;display:inline-flex;align-items:center;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_containerDraft{box-sizing:border-box;min-height:0;flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerDraft{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerDraft textarea{box-sizing:border-box;min-height:120px;flex:1;resize:none;padding:12px 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-13);line-height:1.55}.rScV5Q_containerDraft textarea:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 16%,transparent)}.rScV5Q_containerDraftFooter{display:flex;align-items:center;gap:12px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerDraftFooter span{min-width:0;margin-right:auto}.rScV5Q_containerDraftFooter button{height:30px;padding:0 13px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_containerDraftFooter button:disabled{opacity:.45;cursor:default}";
@@ -8171,6 +8310,7 @@ index 1dd0e89..355b914 100644
 +				tag.textContent += ".rScV5Q_contextDownloadGroup{position:relative}.rScV5Q_contextDownloadFormats{box-sizing:border-box;z-index:32;min-width:92px;padding:4px;position:absolute;left:calc(100% + 6px);top:-4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:9px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_contextDownloadFormats button{justify-content:flex-start;gap:6px}.rScV5Q_downloadFeedback{box-sizing:border-box;z-index:28;pointer-events:auto;min-height:32px;max-width:240px;padding:7px 9px;display:flex;align-items:center;gap:8px;position:absolute;transform:translate(-50%,0);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:var(--dsw-shadow-lv2);font:var(--dsw-font-xxs-12)}.rScV5Q_downloadFeedback[data-state=error]{color:var(--dsw-alias-state-error-primary);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 45%,var(--dsw-alias-border-l2))}.rScV5Q_downloadFeedback span{min-width:0;overflow-wrap:anywhere}.rScV5Q_downloadFeedback button{flex:none;height:24px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;cursor:pointer}.rScV5Q_downloadFeedback button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_downloadFeedback button:disabled{opacity:.45;cursor:default}";
 +				tag.textContent += ".rScV5Q_linkPopover button,.rScV5Q_containerDraftFooter button{height:34px;padding:0 14px;border:0;border-radius:8px;color:#fff;background:#0f1115;box-shadow:0 1px 2px rgba(0,0,0,.12);font:var(--dsw-font-xs-strong-13);cursor:pointer;transition:background-color .12s ease,color .12s ease,transform .08s ease}.rScV5Q_linkPopover button:hover:not(:disabled),.rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#23262b}.rScV5Q_linkPopover button:active:not(:disabled),.rScV5Q_containerDraftFooter button:active:not(:disabled){background:#050607;transform:translateY(1px)}.rScV5Q_linkPopover button:focus-visible,.rScV5Q_containerDraftFooter button:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-label-primary) 55%,transparent);outline-offset:2px}.rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{color:#8a9099;background:#d7dae0;cursor:default}.rScV5Q_linkPopover button:disabled{opacity:1}body[data-ds-dark-theme] .rScV5Q_linkPopover button,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button{color:#202124;background:#f5f5f5}body[data-ds-dark-theme] .rScV5Q_linkPopover button:hover:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#fff}body[data-ds-dark-theme] .rScV5Q_linkPopover button:active:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:active:not(:disabled){background:#dedede}body[data-ds-dark-theme] .rScV5Q_linkPopover button:disabled,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:disabled{color:#969ca5;background:#454950}";
 +				tag.textContent += ".rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{opacity:1;box-shadow:none}";
++				tag.textContent += ".rScV5Q_nodeTitle[data-research-node-title-actions]{position:relative;gap:8px;overflow:visible;padding-right:6px}.rScV5Q_nodeTitleText{flex:1;min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_nodeTitleActions{flex:none;display:flex;align-items:center}.rScV5Q_containerMenu{position:relative;cursor:default;font-size:12px;font-weight:400}.rScV5Q_containerMenuTrigger{width:30px;height:26px;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent;color:var(--dsw-alias-label-secondary);font-size:20px;line-height:20px;letter-spacing:1px;cursor:pointer}.rScV5Q_containerMenuTrigger:hover,.rScV5Q_containerMenuTrigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.rScV5Q_containerMenuTrigger:focus-visible,.rScV5Q_containerMenuPopup button:focus-visible{outline:1px solid var(--dsw-alias-label-primary);outline-offset:-1px}.rScV5Q_richNode:has(.rScV5Q_containerMenuPopup){z-index:1000001!important}.rScV5Q_containerMenuPopup{box-sizing:border-box;position:absolute;z-index:50;right:0;top:calc(100% + 6px);width:184px;max-height:min(440px,calc(100vh - 100px));overflow:auto;padding:4px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;box-shadow:none;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);white-space:normal;line-height:1.4;cursor:default}.rScV5Q_containerMenuPopup button{box-sizing:border-box;display:flex;align-items:center;gap:7px;width:100%;min-height:30px;padding:6px 9px;text-align:left;border:0;border-radius:0;box-shadow:none;background:transparent;color:inherit;font:inherit;cursor:pointer}.rScV5Q_containerMenuPopup button:hover:not(:disabled),.rScV5Q_containerMenuPopup button:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_containerMenuPopup button:disabled{opacity:.45;cursor:default}.rScV5Q_containerMenuPopup button[role=menuitemradio]>span{width:12px;flex:none}.rScV5Q_containerMenuPopup [role=separator]{margin:5px 4px;border-top:1px solid var(--dsw-alias-border-l2)}.rScV5Q_containerMenuLabel{padding:4px 9px;color:var(--dsw-alias-label-tertiary);font-size:11px}.rScV5Q_containerMenuProvenance{padding:8px 9px;max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.6}.rScV5Q_generatedContainer{position:relative}.rScV5Q_containerPromptOverlay{box-sizing:border-box;position:absolute;inset:0;z-index:3;display:flex;align-items:flex-start;overflow:auto;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerPromptOverlay{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerPromptOverlay .rScV5Q_containerDraft{height:280px;max-height:100%;min-height:220px}.rScV5Q_containerPromptOverlay textarea,.rScV5Q_containerPromptOverlay button{border-radius:0;box-shadow:none}.rScV5Q_containerPromptOverlay [data-research-container-cancel]{background:transparent;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l2)}.rScV5Q_containerPromptOverlay [data-research-container-cancel]:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}";
 +				document.head.appendChild(tag);
 +		}
 +		const ResearchCanvas_module_css_default = { root: "rScV5Q_root" };
@@ -9580,7 +9720,7 @@ index 1dd0e89..355b914 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +15287,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15427,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9599,7 +9739,7 @@ index 1dd0e89..355b914 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15326,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15466,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -9959,7 +10099,7 @@ index 1dd0e89..355b914 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15687,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15827,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -10131,7 +10271,7 @@ index 1dd0e89..355b914 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +15857,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +15997,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -10143,7 +10283,7 @@ index 1dd0e89..355b914 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +15867,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16007,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -10151,7 +10291,7 @@ index 1dd0e89..355b914 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +15899,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16039,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -10161,7 +10301,7 @@ index 1dd0e89..355b914 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +15918,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16058,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10266,7 +10406,7 @@ index 1dd0e89..355b914 100644
  				})]
  			});
  		}
-@@ -6951,6 +16000,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16140,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10298,7 +10438,7 @@ index 1dd0e89..355b914 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +16054,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16194,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10319,7 +10459,7 @@ index 1dd0e89..355b914 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +16076,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16216,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10343,7 +10483,7 @@ index 1dd0e89..355b914 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +16133,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16273,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -10361,7 +10501,7 @@ index 1dd0e89..355b914 100644
  				})] })
  			});
  		}
-@@ -7053,14 +16143,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16283,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -10440,7 +10580,7 @@ index 1dd0e89..355b914 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16223,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16363,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -10457,7 +10597,7 @@ index 1dd0e89..355b914 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16246,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16386,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -10466,7 +10606,7 @@ index 1dd0e89..355b914 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16299,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16439,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -10484,7 +10624,7 @@ index 1dd0e89..355b914 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16335,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16475,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -10492,7 +10632,7 @@ index 1dd0e89..355b914 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17227,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17367,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -10523,7 +10663,7 @@ index 1dd0e89..355b914 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17272,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17412,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -10548,7 +10688,7 @@ index 1dd0e89..355b914 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18226,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18366,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -10557,7 +10697,7 @@ index 1dd0e89..355b914 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18316,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18456,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10599,7 +10739,7 @@ index 1dd0e89..355b914 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +18525,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +18665,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10616,7 +10756,7 @@ index 1dd0e89..355b914 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18695,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18835,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10626,7 +10766,7 @@ index 1dd0e89..355b914 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +18737,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18877,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10641,7 +10781,7 @@ index 1dd0e89..355b914 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +18755,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18895,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10654,7 +10794,7 @@ index 1dd0e89..355b914 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +18804,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +18944,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10668,7 +10808,7 @@ index 1dd0e89..355b914 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +18842,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +18982,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10678,7 +10818,7 @@ index 1dd0e89..355b914 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +18974,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +19114,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10693,7 +10833,7 @@ index 1dd0e89..355b914 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +18990,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +19130,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10702,7 +10842,7 @@ index 1dd0e89..355b914 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +19014,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19154,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -10711,7 +10851,7 @@ index 1dd0e89..355b914 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +19040,149 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19180,150 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -10743,6 +10883,7 @@ index 1dd0e89..355b914 100644
 +		exports.ResearchCanvasFileCard = ResearchCanvasFileCard;
 +		exports.TurnTailNodeView = TurnTailNodeView;
 +		exports.researchGenerationPresentation = researchGenerationPresentation;
++		exports.researchGenerationLog = researchGenerationLog;
 +		exports.researchTaskInputSummary = researchTaskInputSummary;
 +		exports.ResearchTaskInputRecord = ResearchTaskInputRecord;
 +		exports.UserStyleBubble = UserStyleBubble;

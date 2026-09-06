@@ -8426,6 +8426,68 @@ describe('Sherlock workspace and composer controls', () => {
     expect(markup).not.toMatch(/<details[^>]*\sopen(?:=|>)/)
   })
 
+  it('turns real generation events into bounded terminal rows without exposing code or tool arguments', async () => {
+    const client = await loadClientBundle('dsh-client-ui-conversation')
+    expect(client.researchGenerationLog).toBeTypeOf('function')
+    if (typeof client.researchGenerationLog !== 'function') return
+    const rows = client.researchGenerationLog({
+      generationStatus: 'running',
+      generationEvents: [
+        { seq: 1, type: 'started' },
+        { seq: 2, type: 'tool-started', tool: '检索网页', input: 'private query' },
+        { seq: 3, type: 'tool-finished' },
+        { seq: 4, type: 'assistant-delta', text: '<style>secret</style><table><svg><button>' }
+      ]
+    }) as Array<{ id: string; text: string }>
+    expect(rows.map(row => row.text)).toEqual(expect.arrayContaining([
+      '开始整理生成需求', '检索相关数据与来源', '检索响应已返回',
+      '编排页面布局与配色', '生成数据表格', '绘制图表与数据图形', '制作页面交互控件'
+    ]))
+    expect(JSON.stringify(rows)).not.toMatch(/secret|private|<style>|<table>/)
+    expect(new Set(rows.map(row => row.id)).size).toBe(rows.length)
+    const waiting = client.researchGenerationLog({ generationStatus: 'queued', generationEvents: [] })
+    expect(JSON.stringify(waiting)).not.toMatch(/检索|图表|配色|完成/)
+    const failed = client.researchGenerationLog({ generationStatus: 'running', generationEvents: [
+      { seq: 1, type: 'tool-started', tool: '检索网页' }, { seq: 2, type: 'tool-finished', failed: true }
+    ] })
+    expect(JSON.stringify(failed)).toContain('检索未完成，调整后续处理')
+    expect(JSON.stringify(failed)).not.toContain('检索响应已返回')
+  })
+
+  it('reveals terminal progress row by row and stops its activity timers after unmount', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    vi.useFakeTimers()
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow,
+      transformSource: source => source.replace('\t\texports.apply = apply;', '\t\texports.apply = apply;\n\t\texports.__testGenerationProcess = ResearchGenerationProcess;')
+    })
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    const onCancel = vi.fn()
+    try {
+      const node = { generationTaskId: 'terminal-task', generationStatus: 'running', generationEvents: [
+        { seq: 1, type: 'started' }, { seq: 2, type: 'tool-started', tool: '检索网页' }, { seq: 3, type: 'tool-finished' }
+      ] }
+      await act(async () => { root.render(createElement(client.__testGenerationProcess, { node, onCancel })) })
+      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(1)
+      for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(260) })
+      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(4)
+      expect(host.querySelector('[data-research-generation-visual]')?.getAttribute('aria-hidden')).toBe('true')
+      expect(host.querySelector('[role="status"]')?.textContent).toBe('正在整理资料')
+      const stop = host.querySelector('[data-research-generation-cancel]')
+      if (stop === null) throw new Error('Missing stop button')
+      await act(async () => { click(browserWindow, stop) })
+      expect(onCancel).toHaveBeenCalledWith(node)
+      await act(async () => { root.unmount() })
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      await act(async () => { root.unmount() })
+      vi.useRealTimers(); host.remove(); restoreGlobals()
+    }
+  })
+
   it('uses the real addressed-session catalog and updates folded input when historical metadata arrives', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     const restoreGlobals = installBrowserGlobals(browserWindow)
@@ -10029,6 +10091,7 @@ describe('Sherlock workspace and composer controls', () => {
     try {
       const { browserWindow, host, workspace } = mounted
       expect(host.querySelector('[data-research-container-kpi]')?.textContent).toContain('12 亿')
+      await act(async () => { click(browserWindow, host.querySelector('[data-research-container-more]')) })
       await act(async () => {
         click(browserWindow, host.querySelector('[data-research-container-refresh]'))
         await Promise.resolve()
@@ -10047,15 +10110,11 @@ describe('Sherlock workspace and composer controls', () => {
       expect(host.querySelector('[data-research-container-kpi]')?.textContent).toContain('12 亿')
       expect(host.querySelector('[data-research-container-refreshing]')).not.toBeNull()
 
-      const interval = host.querySelector('[data-research-container-refresh-interval]') as HTMLSelectElement | null
+      await act(async () => { click(browserWindow, host.querySelector('[data-research-container-more]')) })
+      const interval = host.querySelector('[data-research-container-refresh-minutes="5"]')
       expect(interval).not.toBeNull()
       if (interval !== null) {
-        Object.getOwnPropertyDescriptor(
-          browserWindow.HTMLSelectElement.prototype, 'value'
-        )?.set?.call(interval, '5')
-        await act(async () => {
-          interval.dispatchEvent(new browserWindow.Event('change', { bubbles: true }) as unknown as Event)
-        })
+        await act(async () => { click(browserWindow, interval) })
         expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ refreshMinutes: 5 })
       }
     } finally {
@@ -12885,7 +12944,7 @@ describe('generated component theme', () => {
       expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 960, height: 680 })
       await send({ type: 'sherlock-content-size', width: 1200, height: 1300 })
       const fitted = mounted.workspace.getSnapshot().artifacts[0] as any
-      expect(fitted).toMatchObject({ width: 1202, height: 1374, sizeMode: 'auto' })
+      expect(fitted).toMatchObject({ width: 1202, height: 1338, sizeMode: 'auto' })
       expect(fitted.x - fitted.width / 2).toBe(20)
       expect(fitted.y - fitted.height / 2).toBe(60)
       expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame)

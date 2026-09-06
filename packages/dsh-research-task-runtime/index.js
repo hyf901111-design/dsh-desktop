@@ -230,6 +230,7 @@ function containerSearchPlan(prompt) {
       .replace(/\b(?:generate|create|build|make|a|an|the|dashboard|panel|page|chart|monitor|monitoring|live|latest|current|today|data|price|quote|tracking)\b/giu, ' ')
       .replace(/\betf\b/giu, 'ETF').replace(/\s+/gu, ' ').trim()
       .replace(/^[一二三四五六七八九十两\d]+(?:个|张|份|套)\s*/u, '')
+      .replace(/^(?:主流|主要|热门|常见)(?:的)?\s*(?=\S)/u, '')
     if (candidate) subjects.push(candidate.slice(0, 240))
   }
   subject = subjects.find((candidate) => explicitCodes.some((code) => candidate.includes(code)) && !/^代码/u.test(candidate)) ?? subjects[0] ?? ''
@@ -246,22 +247,30 @@ function containerSearchPlan(prompt) {
   const objectTerms = []
   for (const part of new Intl.Segmenter('zh', { granularity: 'word' }).segment(subject)) {
     const word = part.segment.toLowerCase()
-    if (part.isWordLike && word.length > 1 && /\p{L}/u.test(word) && !ignored.has(word)) { terms.push(word); objectTerms.push(word) }
+    // Segments are joint constraints, never independent evidence matches.
+    // Single characters also matter in compounds such as 开源大模型.
+    if (part.isWordLike && /[\p{L}\p{N}]/u.test(word) && !ignored.has(word)) objectTerms.push(word)
   }
   for (const aliases of [['etf', '交易所交易基金', '交易型开放式指数基金'], ['比特币', 'bitcoin', 'btc'], ['黄金', 'gold', 'xau'], ['沪深300', 'csi300'], ['生成式ai', 'generativeai']]) {
     if (aliases.some((alias) => terms.includes(alias))) terms.push(...aliases)
   }
   const fields = [...new Set(String(prompt ?? '').match(/涨跌幅|成交量|成交额|行情|净值|报价|价格|市值|汇率|利率|点位|今开|最高|最低/gu) ?? [])].slice(0, 8)
   const codes = [...new Set([...explicitCodes, ...(subject.match(/(?<!\d)\d{4,6}(?!\d|年|月|日)/gu) ?? [])])]
-  const requiredTerms = /ETF|基金|股票|证券|指数/iu.test(subject) && objectTerms.length > 1 ? [...new Set(objectTerms)] : []
+  const requiredTerms = objectTerms.length > 1 ? [...new Set(objectTerms)] : []
   return { query: `${subject} 最新${fields.length > 0 ? fields.join(' ') : '数据'}`, terms: [...new Set(terms)], codes, requiredTerms }
 }
 
-function containerEvidenceMatches(value, terms, codes = [], requiredTerms = []) {
+function containerEvidenceMatches(value, terms, codes = [], requiredTerms = [], sourceTitle = '') {
   const normalized = String(value ?? '').toLowerCase().replace(/\s+/gu, '')
+  const definition = /汉语词语|词语释义|词典条目|拼音|近义词|反义词|是什么意思|的意思|dictionaryentry/iu
+  const dictionary = /词典|字典|\bdictionary\b/iu
+  // A report may reference a data dictionary without being a word definition.
+  // Broad dictionary labels apply to the source title, not its whole excerpt.
+  if ((definition.test(normalized) || dictionary.test(sourceTitle)) && !terms.some((term) => definition.test(term) || dictionary.test(term))) return false
   if (codes.length > 0) return codes.some((code) => new RegExp(`(?:^|\\D)${code}(?:\\D|$)`, 'u').test(normalized))
+  if (terms.some((term) => normalized.includes(term))) return true
   if (requiredTerms.length > 0) return requiredTerms.every((term) => normalized.includes(term))
-  return terms.some((term) => normalized.includes(term))
+  return false
 }
 
 function containsContainerPlaceholder(value) {
@@ -1084,7 +1093,7 @@ export function createSubagentAdapter(ctx) {
           .filter((source) => source.url !== undefined)
           .slice(0, MAX_CONTAINER_WEB_RESULTS)
         : []
-      const sources = candidates.filter((source) => containerEvidenceMatches(`${source.title}\n${source.snippet}\n${source.url}`, plan.terms, plan.codes, plan.requiredTerms))
+      const sources = candidates.filter((source) => containerEvidenceMatches(`${source.title}\n${source.snippet}\n${source.url}`, plan.terms, plan.codes, plan.requiredTerms, source.title))
       // A synthesis that mixes rejected sources may repeat their unrelated
       // claims. Use only the retained source excerpts in that case.
       const content = sources.length === candidates.length ? evidenceText(result?.content) : ''
