@@ -18,6 +18,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.8.3',
+      date: '2026-09-06',
+      items: ['修复研究窗口关闭后退出或安装更新时出现主进程错误弹窗、导致更新无法完成的问题']
+    },
+    {
       version: '0.8.2',
       date: '2026-09-06',
       items: [
@@ -171,6 +176,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.8.3',
+      date: '2026-09-06',
+      items: ['Fixed a main-process error when quitting or installing an update after closing a Research window, which could prevent the update from completing']
+    },
     {
       version: '0.8.2',
       date: '2026-09-06',
