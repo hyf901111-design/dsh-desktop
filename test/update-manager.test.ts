@@ -13,7 +13,7 @@ const fakes = vi.hoisted(() => {
       return this
     }
 
-    private emit(event: string, value: unknown): void {
+    emit(event: string, value: unknown): void {
       for (const listener of this.listeners.get(event) ?? []) listener(value)
     }
 
@@ -63,6 +63,7 @@ import {
   checkForUpdates,
   downloadAvailableUpdate,
   getUpdateStatus,
+  installDownloadedUpdate,
   registerUpdateHandlers,
   startUpdateManager,
   stopUpdateManager
@@ -104,8 +105,7 @@ describe('desktop update manager', () => {
   it('discovers without downloading and downloads only after the explicit action', async () => {
     const download = vi.spyOn(fakes.autoUpdater, 'downloadUpdate')
     const quitAndInstall = vi.spyOn(fakes.autoUpdater, 'quitAndInstall')
-    const prepareToInstall = vi.fn(async () => {})
-    startUpdateManager({ prepareToInstall })
+    startUpdateManager()
 
     await checkForUpdates()
     expect(getUpdateStatus()).toMatchObject({
@@ -121,9 +121,20 @@ describe('desktop update manager', () => {
       phase: 'downloaded',
       availableVersion: '0.6.0'
     })
-    await vi.waitFor(() => {
-      expect(prepareToInstall).toHaveBeenCalledOnce()
-      expect(quitAndInstall).toHaveBeenCalledWith(false, true)
-    })
+    expect(quitAndInstall).not.toHaveBeenCalled()
+    await installDownloadedUpdate()
+    expect(quitAndInstall).toHaveBeenCalledWith(false, true)
+    await installDownloadedUpdate()
+    expect(quitAndInstall).toHaveBeenCalledOnce()
   })
+  it('allows another install attempt after the native installer reports an error', async () => {
+    const quitAndInstall = vi.spyOn(fakes.autoUpdater, 'quitAndInstall').mockClear()
+    fakes.autoUpdater.emit('error', new Error('Installation authorization cancelled'))
+    expect(getUpdateStatus()).toMatchObject({ phase: 'error', manual: true })
+    fakes.autoUpdater.emit('update-downloaded', { version: '0.6.0' })
+    expect(quitAndInstall).not.toHaveBeenCalled()
+    await installDownloadedUpdate()
+    expect(quitAndInstall).toHaveBeenCalledOnce()
+  })
+
 })

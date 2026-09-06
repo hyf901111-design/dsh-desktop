@@ -17,7 +17,7 @@ export function updateAction(status: UpdateStatus): UpdateAction {
     return { kind: 'progress', percent: status.percent ?? 0 }
   }
   if (status.phase === 'downloaded') {
-    return { kind: 'progress', percent: 100 }
+    return { kind: 'install', version: status.availableVersion ?? status.currentVersion }
   }
   if (status.manual && status.phase === 'error') {
     return { kind: 'retry', message: status.message ?? '' }
@@ -46,7 +46,7 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
     case 'checking':
       return zh ? '正在检查更新…' : 'Checking for updates…'
     case 'available':
-      return zh ? `发现新版本${version}，正在准备下载…` : `Update${version} is available. Preparing download…`
+      return zh ? `发现新版本${version}，可下载更新` : `Update${version} is available to download.`
     case 'downloading': {
       const percent = Math.round(status.percent ?? 0)
       return zh ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`

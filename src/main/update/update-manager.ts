@@ -22,7 +22,6 @@ const { autoUpdater } = electronUpdater
 const TRANSIENT_STATUS_MS = 8_000
 
 let status = initialUpdateStatus(app.getVersion())
-let prepareToInstall: (() => Promise<void>) | undefined
 let startupTimer: NodeJS.Timeout | undefined
 let intervalTimer: NodeJS.Timeout | undefined
 let resetTimer: NodeJS.Timeout | undefined
@@ -57,8 +56,7 @@ export function registerUpdateHandlers(getMainWindow: () => TrustedWindow | unde
   })
 }
 
-export function startUpdateManager(options: { prepareToInstall: () => Promise<void> }): void {
-  prepareToInstall = options.prepareToInstall
+export function startUpdateManager(): void {
   if (started) return
   started = true
 
@@ -115,9 +113,12 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
 export async function installDownloadedUpdate(): Promise<void> {
   if (status.phase !== 'downloaded' || installing) return
   installing = true
+  // An explicit install must surface native failures even after a background check.
+  status = { ...status, manual: true }
 
   try {
-    await prepareToInstall?.()
+    // Keep the app usable while Squirrel prepares the update or requests authorization.
+    // The normal before-quit handler stops services once native installation is ready.
     autoUpdater.quitAndInstall(false, true)
   } catch (error) {
     installing = false
@@ -174,9 +175,9 @@ function configureUpdater(): void {
   })
   autoUpdater.on('update-downloaded', (info) => {
     transition({ type: 'downloaded', version: info.version })
-    void installDownloadedUpdate()
   })
   autoUpdater.on('error', (error) => {
+    installing = false
     transition({ type: 'error', message: errorMessage(error) })
     if (status.manual) scheduleReset()
   })

@@ -1178,16 +1178,7 @@ async function bootstrap(): Promise<void> {
   installMenu()
   await launchHarness()
   if (!developmentBuild) {
-    startUpdateManager({
-      prepareToInstall: async () => {
-        await runtime.stop()
-        await localSearchRuntime?.stop()
-        disposeResearchContextHandlers?.()
-        await researchContextBridge?.stop()
-        quitting = true
-        stopUpdateManager()
-      }
-    })
+    startUpdateManager()
   }
 }
 

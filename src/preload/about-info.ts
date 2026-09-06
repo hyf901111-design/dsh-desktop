@@ -12,11 +12,15 @@ export type SherlockAboutInfo = {
   releaseNotes: SherlockReleaseNote[]
 }
 
-type UpdateVersionReader = () => Promise<{ currentVersion: string }>
 type ManualUpdateChecker = () => Promise<UpdateStatus>
 
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
+    {
+      version: '0.8.4',
+      date: '2026-09-06',
+      items: ["下载完成后可选择重启并安装，安装器准备期间保持客户端可用，避免提前中断当前界面", "设置关于页新增下载更新与重启安装按钮，实时显示下载进度；安装失败后可重新尝试", "优化收起侧栏的升级入口：保持紧凑图标与悬停提示，避免按钮溢出或遮挡设置"]
+    },
     {
       version: '0.8.3',
       date: '2026-09-06',
@@ -176,6 +180,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.8.4',
+      date: '2026-09-06',
+      items: ["Choose when to restart and install after downloading; keep the app usable while the installer prepares the update", "Added download and restart actions in About with live download progress and retry support after installation failures", "Keep the collapsed sidebar update button compact with hover hints, without overflowing or covering Settings"]
+    },
     {
       version: '0.8.3',
       date: '2026-09-06',
@@ -351,18 +360,29 @@ export function buildSherlockAboutInfo(
 }
 
 export function createSherlockAboutBridge(
-  readUpdateStatus: UpdateVersionReader,
+  readUpdateStatus: () => Promise<UpdateStatus>,
   checkForUpdates: ManualUpdateChecker,
-  locale: SherlockAboutLocale
+  locale: SherlockAboutLocale,
+  actions: {
+    downloadUpdate(): Promise<UpdateStatus>
+    installUpdate(): Promise<void>
+    onUpdateStatusChanged(listener: (status: UpdateStatus) => void): () => void
+  }
 ): {
   getInfo(): Promise<SherlockAboutInfo>
   checkForUpdates(): Promise<UpdateStatus>
+  getUpdateStatus(): Promise<UpdateStatus>
+  downloadUpdate(): Promise<UpdateStatus>
+  installUpdate(): Promise<void>
+  onUpdateStatusChanged(listener: (status: UpdateStatus) => void): () => void
 } {
   return Object.freeze({
     async getInfo(): Promise<SherlockAboutInfo> {
       const status = await readUpdateStatus()
       return buildSherlockAboutInfo(status.currentVersion, locale)
     },
+    getUpdateStatus: readUpdateStatus,
+    ...actions,
     checkForUpdates(): Promise<UpdateStatus> {
       return checkForUpdates()
     }

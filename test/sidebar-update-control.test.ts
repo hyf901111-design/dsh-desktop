@@ -144,7 +144,7 @@ describe('Sherlock sidebar update control', () => {
     expect(styles).not.toContain('conic-gradient')
   })
 
-  it('keeps the completed progress ring visible while automatic restart begins', () => {
+  it('offers restart after download and waits for confirmation', () => {
     const document = fixture()
     const callbacks = actions()
     const control = new SidebarUpdateControl(document, 'zh', callbacks)
@@ -160,16 +160,17 @@ describe('Sherlock sidebar update control', () => {
     const button = document.querySelector<HTMLButtonElement>(
       '#sherlock-sidebar-update-button'
     )!
-    expect(button.dataset.action).toBe('progress')
-    expect(button.disabled).toBe(true)
-    expect(button.getAttribute('aria-valuenow')).toBe('100')
-    expect(
-      button.querySelector('.sherlock-update-ring-value')?.getAttribute('stroke-dashoffset')
-    ).toBe('0')
+    expect(button.dataset.action).toBe('install')
+    expect(button.disabled).toBe(false)
     button.click()
     const panel = document.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
-    expect(panel.hidden).toBe(true)
+    expect(panel.hidden).toBe(false)
     expect(callbacks.install).not.toHaveBeenCalled()
+    panel.querySelector<HTMLButtonElement>('[data-update-later]')!.click()
+    expect(panel.hidden).toBe(true)
+    button.click()
+    panel.querySelector<HTMLButtonElement>('[data-update-confirm]')!.click()
+    expect(callbacks.install).toHaveBeenCalledOnce()
   })
 
   it('remounts after Harness replaces the sidebar footer', () => {

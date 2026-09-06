@@ -90,6 +90,7 @@ export class SidebarUpdateControl {
     button.removeAttribute('aria-valuemax')
     button.removeAttribute('aria-valuenow')
     button.style.removeProperty('--sherlock-update-progress')
+    button.removeAttribute('title')
     panel.hidden = true
     panel.replaceChildren()
 
@@ -106,6 +107,7 @@ export class SidebarUpdateControl {
             ? `下载 Sherlock ${action.version} 更新`
             : `Download Sherlock ${action.version} update`
         )
+        button.title = button.getAttribute('aria-label') ?? ''
         button.innerHTML = `${downloadIcon}<span class="sherlock-sidebar-update-label">${
           this.locale === 'zh' ? '下载更新' : 'Download'
         }</span>`
@@ -134,6 +136,7 @@ export class SidebarUpdateControl {
             ? `安装 Sherlock ${action.version} 更新`
             : `Install Sherlock ${action.version} update`
         )
+        button.title = button.getAttribute('aria-label') ?? ''
         button.innerHTML = downloadIcon
         this.renderInstallPanel(status)
         return
@@ -175,7 +178,7 @@ export class SidebarUpdateControl {
     confirm.textContent = this.locale === 'zh' ? '重新启动并安装' : 'Restart and install'
     confirm.addEventListener('click', () => {
       confirm.disabled = true
-      confirm.textContent = this.locale === 'zh' ? '正在重启…' : 'Restarting…'
+      confirm.textContent = this.locale === 'zh' ? '正在准备安装…' : 'Preparing installation…'
       this.invoke(this.callbacks.install)
     })
 
@@ -286,6 +289,24 @@ const styles = `
   }
   #${BUTTON_ID}[data-action="download"]:hover svg { display: none; }
   #${BUTTON_ID}[data-action="download"]:hover .sherlock-sidebar-update-label { display: inline; }
+  [data-sidebar-collapsed="true"] [${UPDATE_FOOTER_ATTRIBUTE}]:has(#${BUTTON_ID}:not([hidden])) {
+    flex-direction: column;
+    height: auto;
+    gap: 8px;
+  }
+  [data-sidebar-collapsed="true"] #${BUTTON_ID} {
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+    flex-shrink: 0;
+    order: -1;
+  }
+  [data-sidebar-collapsed="true"] #${BUTTON_ID}:hover:not(:disabled) { transform: none; }
+  [data-sidebar-collapsed="true"] #${BUTTON_ID}[data-action="download"]:hover:not(:disabled) { width: 28px; }
+  [data-sidebar-collapsed="true"] #${BUTTON_ID}[data-action="download"]:hover svg { display: block; }
+  [data-sidebar-collapsed="true"] #${BUTTON_ID}[data-action="download"]:hover .sherlock-sidebar-update-label { display: none; }
+  [data-sidebar-collapsed="true"] #${PANEL_ID} { left: 0; right: auto; bottom: 76px; }
   #${BUTTON_ID} [data-update-progress-ring] {
     width: 17px;
     height: 17px;
