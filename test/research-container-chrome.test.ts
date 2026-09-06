@@ -209,3 +209,75 @@ describe('Research container chrome', () => {
     } finally { await mounted.cleanup() }
   })
 })
+
+describe('Research generation event retention', () => {
+  it.each(['receipt', 'inspection', 'streamed inspections'])('retains structured history across 100 deltas from %s without losing text or sequence state', async (delivery) => {
+    let descriptor: any
+    runInNewContext(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'), {
+      window: { __ModuleLoader__: { load(value: any) { descriptor = value } } },
+      document: undefined, AbortController, TextEncoder, TextDecoder, setTimeout, clearTimeout
+    })
+    const client = descriptor.factory((id: string) => {
+      if (id === 'react') return React
+      if (id === 'react/jsx-runtime') return requireModule('react/jsx-runtime')
+      if (id === 'react-dom') return requireModule('react-dom')
+      return fallbackModule()
+    })
+    const stored = new Map([['sherlock.research.canvas.artifacts.v1:retention', JSON.stringify([{
+      id: 'html', kind: 'generated-container', messageId: 'html', title: '页面', excerpt: '准备中',
+      generationStatus: 'queued', generationLastSeq: 0, containerPrompt: '生成页面',
+      sourceNodeIds: [], refreshMinutes: 0, x: 0, y: 0, width: 480, height: 300, sizeMode: 'auto'
+    }])]])
+    const storage = { getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => stored.set(key, value) }
+    const workspace = new client.ResearchWorkspaceRegistry(storage).for('retention')
+    const identity = { taskId: 'task-html', canvasNodeId: 'html' }
+    const structured = [
+      { ...identity, seq: 1, type: 'queued' },
+      { ...identity, seq: 2, type: 'started' },
+      { ...identity, seq: 3, type: 'tool-started', tool: 'web_search' },
+      { ...identity, seq: 4, type: 'tool-finished', failed: false }
+    ]
+    const deltas = Array.from({ length: 100 }, (_, index) => ({ ...identity, seq: index + 5, type: 'assistant-delta', text: `[${index}]` }))
+    const receive = (events: any[], lastSeq: number) => ({ ...identity, state: 'running', lastSeq, events })
+    if (delivery === 'receipt') {
+      expect(workspace.attachGenerationTask('html', receive([...structured, ...deltas], 104))).toBe(true)
+    } else {
+      expect(workspace.attachGenerationTask('html', receive(structured, 4))).toBe(true)
+      const chunkSize = delivery === 'inspection' ? 100 : 10
+      for (let index = 0; index < deltas.length; index += chunkSize) {
+        const chunk = deltas.slice(index, index + chunkSize)
+        expect(workspace.applyGenerationInspection('html', receive(chunk, chunk.at(-1)!.seq))).toBe(true)
+      }
+    }
+    const running = workspace.getSnapshot().artifacts[0]
+    expect(running.generationEvents.filter((event: any) => event.type !== 'assistant-delta')).toEqual(structured)
+    expect(running.generationEvents.filter((event: any) => event.type === 'assistant-delta').length).toBeLessThanOrEqual(8)
+    expect(running.generationEvents.at(-1)).toMatchObject({ seq: 104, type: 'assistant-delta' })
+    expect(running.generationPartialText).toBe(deltas.map((event) => event.text).join(''))
+    expect(running.generationLastSeq).toBe(104)
+    expect(workspace.applyGenerationInspection('html', receive(deltas, 104))).toBe(false)
+    expect(workspace.getSnapshot().artifacts[0].generationPartialText).toBe(running.generationPartialText)
+    expect(workspace.applyGenerationInspection('html', receive([
+      deltas[0], { ...identity, taskId: 'wrong-task', seq: 105, type: 'assistant-delta', text: '错误' },
+      { ...identity, seq: 105, type: 'assistant-delta', text: '末尾' },
+      { ...identity, seq: 105, type: 'assistant-delta', text: '重复' }
+    ], 105))).toBe(true)
+    expect(workspace.getSnapshot().artifacts[0]).toMatchObject({
+      generationLastSeq: 105, generationPartialText: `${running.generationPartialText}末尾`
+    })
+    const manyTools = Array.from({ length: 100 }, (_, index) => index % 2 === 0
+      ? { ...identity, seq: index + 106, type: 'tool-started', tool: 'read_file' }
+      : { ...identity, seq: index + 106, type: 'tool-finished', failed: false })
+    expect(workspace.applyGenerationInspection('html', receive(manyTools, 205))).toBe(true)
+    const bounded = workspace.getSnapshot().artifacts[0]
+    expect(bounded.generationEvents.length).toBeLessThanOrEqual(80)
+    expect(bounded.generationEvents.slice(0, 2)).toEqual(structured.slice(0, 2))
+    expect(bounded.generationEvents.some((event: any) => event.seq === 105)).toBe(true)
+    expect(bounded.generationEvents.at(-1)).toMatchObject({ seq: 205, type: 'tool-finished' })
+    expect(bounded.generationPartialText).toBe(`${running.generationPartialText}末尾`)
+    const finalOutput = { version: 1, type: 'html', title: '完成页面', html: '<main>完整结果</main>' }
+    expect(workspace.applyGenerationInspection('html', { ...identity, state: 'completed', lastSeq: 206, events: [], finalOutput })).toBe(true)
+    expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ generationStatus: 'completed', generationLastSeq: 206, containerSpec: finalOutput })
+    expect(workspace.getSnapshot().artifacts[0]).not.toHaveProperty('generationPartialText')
+  })
+})

@@ -170,6 +170,7 @@ async function loadClientBundle(
   })
 
   runInNewContext(source, {
+    Date: globalThis.Date,
     AbortController: globalThis.AbortController,
     TextDecoder: globalThis.TextDecoder,
     TextEncoder: globalThis.TextEncoder,
@@ -8476,10 +8477,19 @@ describe('Sherlock workspace and composer controls', () => {
       expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(4)
       expect(host.querySelector('[data-research-generation-visual]')?.getAttribute('aria-hidden')).toBe('true')
       expect(host.querySelector('[role="status"]')?.textContent).toBe('正在整理资料')
+      const building = { ...node, generationLastSeq: 4, generationEvents: [...node.generationEvents, { seq: 4, type: 'assistant-delta', text: '<main><style>private-code' }] }
+      await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: building, onCancel })) })
+      expect(host.textContent).toContain('组件内容持续生成')
+      await act(async () => { await vi.advanceTimersByTimeAsync(1800) })
+      const stagnantRows = host.querySelectorAll('.rScV5Q_generationStamp').length
+      expect(stagnantRows).toBe(1)
+      await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: { ...building, generationLastSeq: 20 }, onCancel })) })
+      expect(host.querySelectorAll('.rScV5Q_generationStamp')).toHaveLength(2)
+      expect(host.textContent).not.toContain('private-code')
       const stop = host.querySelector('[data-research-generation-cancel]')
       if (stop === null) throw new Error('Missing stop button')
       await act(async () => { click(browserWindow, stop) })
-      expect(onCancel).toHaveBeenCalledWith(node)
+      expect(onCancel).toHaveBeenCalledWith(expect.objectContaining({ generationLastSeq: 20 }))
       await act(async () => { root.unmount() })
       expect(vi.getTimerCount()).toBe(0)
     } finally {
