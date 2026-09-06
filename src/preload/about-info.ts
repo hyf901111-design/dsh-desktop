@@ -18,6 +18,18 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.8.2',
+      date: '2026-09-06',
+      items: [
+        "研究画布新增语音指令：点击语音或连续按两下 Fn 开始录入，通过紧凑波形条结束或取消，识别后在新组件中执行需求",
+        "组件默认采用简约的单色直角图表风格，并随客户端深色、浅色主题切换；用户明确指定的样式优先",
+        "生成过程改为逐行动态状态展示，实时呈现资料搜集与内容制作进展，避免显示原始代码",
+        "组件生成后平滑适配内容尺寸；编辑需求、刷新与自动刷新统一收纳到顶栏更多菜单，编辑支持取消并保留原内容",
+        "改进实时资料检索、基金标的识别与来源相关性判断，减少无关词义结果，并修复连续搜索时的页面相互干扰",
+        "修复新研究添加组件后无法切换对话与轨迹的问题，空轨迹也可正常进入"
+      ]
+    },
+    {
       version: '0.8.1',
       date: '2026-09-04',
       items: [
@@ -159,6 +171,18 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.8.2',
+      date: '2026-09-06',
+      items: [
+        "Added voice commands to Research: click Voice or press Fn twice to dictate, finish or cancel from a compact waveform bar, and execute the request in a new component",
+        "Components default to a minimal monochrome chart style with square corners and follow the app theme; explicit user styling requests take priority",
+        "Generation now shows a live, line-by-line activity log for research and content creation without exposing raw code",
+        "Completed components smoothly resize to fit their content; editing, refresh, and automatic refresh live in the title-bar menu, with cancel preserving the original content",
+        "Improved live research, fund identification, and source relevance to reduce unrelated dictionary results and prevent interference between consecutive searches",
+        "Fixed switching to Chat and Trace after adding components to a new Research canvas, including empty traces"
+      ]
+    },
     {
       version: '0.8.1',
       date: '2026-09-04',
