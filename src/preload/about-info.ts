@@ -12,7 +12,6 @@ export type SherlockAboutInfo = {
   releaseNotes: SherlockReleaseNote[]
 }
 
-type UpdateVersionReader = () => Promise<{ currentVersion: string }>
 type ManualUpdateChecker = () => Promise<UpdateStatus>
 
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
@@ -351,18 +350,29 @@ export function buildSherlockAboutInfo(
 }
 
 export function createSherlockAboutBridge(
-  readUpdateStatus: UpdateVersionReader,
+  readUpdateStatus: () => Promise<UpdateStatus>,
   checkForUpdates: ManualUpdateChecker,
-  locale: SherlockAboutLocale
+  locale: SherlockAboutLocale,
+  actions: {
+    downloadUpdate(): Promise<UpdateStatus>
+    installUpdate(): Promise<void>
+    onUpdateStatusChanged(listener: (status: UpdateStatus) => void): () => void
+  }
 ): {
   getInfo(): Promise<SherlockAboutInfo>
   checkForUpdates(): Promise<UpdateStatus>
+  getUpdateStatus(): Promise<UpdateStatus>
+  downloadUpdate(): Promise<UpdateStatus>
+  installUpdate(): Promise<void>
+  onUpdateStatusChanged(listener: (status: UpdateStatus) => void): () => void
 } {
   return Object.freeze({
     async getInfo(): Promise<SherlockAboutInfo> {
       const status = await readUpdateStatus()
       return buildSherlockAboutInfo(status.currentVersion, locale)
     },
+    getUpdateStatus: readUpdateStatus,
+    ...actions,
     checkForUpdates(): Promise<UpdateStatus> {
       return checkForUpdates()
     }

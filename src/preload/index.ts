@@ -209,7 +209,16 @@ contextBridge.exposeInMainWorld(
   createSherlockAboutBridge(
     () => ipcRenderer.invoke('updates:status') as Promise<UpdateStatus>,
     () => ipcRenderer.invoke('updates:check') as Promise<UpdateStatus>,
-    locale
+    locale,
+    {
+      downloadUpdate: () => ipcRenderer.invoke('updates:download') as Promise<UpdateStatus>,
+      installUpdate: () => ipcRenderer.invoke('updates:install') as Promise<void>,
+      onUpdateStatusChanged: (listener) => {
+        const handler = (_event: Electron.IpcRendererEvent, status: UpdateStatus) => listener(status)
+        ipcRenderer.on('updates:status-changed', handler)
+        return () => ipcRenderer.removeListener('updates:status-changed', handler)
+      }
+    }
   )
 )
 

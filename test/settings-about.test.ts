@@ -1,7 +1,8 @@
 import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
-import { Window } from 'happy-dom'
+import { Window, type HTMLButtonElement as HappyButton } from 'happy-dom'
+import type { UpdateStatus } from '../src/shared/contracts'
 import { describe, expect, it, vi } from 'vitest'
 
 type ClientBundle = Record<string, unknown>
@@ -216,9 +217,10 @@ describe('Sherlock About settings', () => {
       manual: true
     }))
     const bridge = aboutModule.createSherlockAboutBridge(
-      async () => ({ currentVersion: '7.6.5' }),
+      async () => ({ currentVersion: '7.6.5', phase: 'idle', manual: false }),
       manualCheck,
-      'zh'
+      'zh',
+      { downloadUpdate: manualCheck, installUpdate: async () => {}, onUpdateStatusChanged: () => () => {} }
     )
     expect((await bridge.getInfo()).version).toBe('7.6.5')
     await expect(bridge.checkForUpdates()).resolves.toMatchObject({ phase: 'up-to-date' })
@@ -290,6 +292,48 @@ describe('Sherlock About settings', () => {
       await act(async () => root.unmount())
       restoreGlobals()
     }
+  })
+
+  it('shows a download action beside check and follows live download and restart state', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/settings/about' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    let listener: ((status: UpdateStatus) => void) | undefined
+    const available: UpdateStatus = { phase: 'available', currentVersion: '0.8.3', availableVersion: '0.8.4', manual: true }
+    const downloadUpdate = vi.fn(async () => ({ ...available, phase: 'downloaded' }))
+    const installUpdate = vi.fn(async () => {})
+    const unsubscribe = vi.fn()
+    const bundle = await loadSettingsBundle({ browserWindow, aboutBridge: {
+      getInfo: async () => ({ productName: 'Sherlock', version: '0.8.3', releaseNotes: [] }),
+      checkForUpdates: async () => available,
+      getUpdateStatus: async () => ({ ...available, phase: 'idle' }),
+      downloadUpdate,
+      installUpdate,
+      onUpdateStatusChanged: (callback: typeof listener) => { listener = callback; return unsubscribe }
+    } as AboutBridge })
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.append(host)
+    const root = createRoot(host)
+    try {
+      await act(async () => root.render(createElement(bundle.SherlockAboutSection, { t: (key: string) => key })))
+      await act(async () => host.querySelector<HappyButton>('[data-about-check-update]')!.click())
+      const download = host.querySelector<HappyButton>('[data-about-download-update]')
+      expect(download).not.toBeNull()
+      expect(download?.parentElement).toBe(host.querySelector('[data-about-check-update]')?.parentElement)
+      await act(async () => listener?.({ ...available, phase: 'downloading', percent: 42 }))
+      expect(host.textContent).toContain('about.downloading')
+      expect(host.querySelector('[data-about-download-update]')).toBeNull()
+      await act(async () => listener?.(available))
+      await act(async () => host.querySelector<HappyButton>('[data-about-download-update]')!.click())
+      expect(downloadUpdate).toHaveBeenCalledOnce()
+      expect(installUpdate).not.toHaveBeenCalled()
+      expect(host.querySelector('[data-about-install-update]')).not.toBeNull()
+      await act(async () => host.querySelector<HappyButton>('[data-about-install-update]')!.click())
+      expect(installUpdate).toHaveBeenCalledOnce()
+    } finally {
+      await act(async () => root.unmount())
+      restoreGlobals()
+    }
+    expect(unsubscribe).toHaveBeenCalledOnce()
   })
 
   it('registers About immediately after Models in the settings navigation', async () => {
