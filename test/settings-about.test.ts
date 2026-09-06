@@ -149,26 +149,28 @@ describe('Sherlock About settings', () => {
     const zh = aboutModule.buildSherlockAboutInfo('9.8.7', 'zh')
     const en = aboutModule.buildSherlockAboutInfo('9.8.7', 'en')
 
-    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.3', date: '2026-09-06' })
-    expect(en.releaseNotes[0]).toMatchObject({ version: '0.8.3', date: '2026-09-06' })
-    expect(zh.releaseNotes[0]?.items).toHaveLength(1)
-    expect(en.releaseNotes[0]?.items).toHaveLength(1)
-    expect(zh.releaseNotes[1]).toMatchObject({ version: '0.8.2', date: '2026-09-06' })
-    expect(en.releaseNotes[1]).toMatchObject({ version: '0.8.2', date: '2026-09-06' })
-    expect(zh.releaseNotes[1]?.items).toHaveLength(6)
-    expect(en.releaseNotes[1]?.items).toHaveLength(6)
-    expect(zh.releaseNotes[1]?.items.some((item) => item.includes('Fn'))).toBe(true)
+    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.4', date: '2026-09-06' })
+    expect(en.releaseNotes[0]?.items).toHaveLength(3)
+    expect(zh.releaseNotes[1]).toMatchObject({ version: '0.8.3', date: '2026-09-06' })
+    expect(en.releaseNotes[1]).toMatchObject({ version: '0.8.3', date: '2026-09-06' })
+    expect(zh.releaseNotes[1]?.items).toHaveLength(1)
+    expect(en.releaseNotes[1]?.items).toHaveLength(1)
+    expect(zh.releaseNotes[2]).toMatchObject({ version: '0.8.2', date: '2026-09-06' })
+    expect(en.releaseNotes[2]).toMatchObject({ version: '0.8.2', date: '2026-09-06' })
+    expect(zh.releaseNotes[2]?.items).toHaveLength(6)
+    expect(en.releaseNotes[2]?.items).toHaveLength(6)
+    expect(zh.releaseNotes[2]?.items.some((item) => item.includes('Fn'))).toBe(true)
     expect(zh.productName).toBe('Sherlock')
     expect(zh.version).toBe('9.8.7')
-    expect(zh.releaseNotes[2]).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
-    expect(en.releaseNotes[2]).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
-    expect(zh.releaseNotes[2]?.items).toHaveLength(2)
-    expect(en.releaseNotes[2]?.items).toHaveLength(2)
-    expect(zh.releaseNotes[2]?.items).toContain(
+    expect(zh.releaseNotes[3]).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
+    expect(en.releaseNotes[3]).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
+    expect(zh.releaseNotes[3]?.items).toHaveLength(2)
+    expect(en.releaseNotes[3]?.items).toHaveLength(2)
+    expect(zh.releaseNotes[3]?.items).toContain(
       '研究画布支持通过苹果触控板双指捏合与外扩缩放，提升手势灵敏度并以手势中心为锚点；画布空白区及网页、PDF 等组件内部均可使用'
     )
-    expect(zh.releaseNotes[3]?.version).toBe('0.8.0')
-    expect(zh.releaseNotes[4]).toEqual({
+    expect(zh.releaseNotes[4]?.version).toBe('0.8.0')
+    expect(zh.releaseNotes[5]).toEqual({
       version: '0.7.9',
       date: '2026-09-03',
       items: [
@@ -185,12 +187,12 @@ describe('Sherlock About settings', () => {
         '复制粘贴提示上移并在完成后两秒消失；“基于所选创建”增加图标、精简输入弹层，点击外部或失焦时自动关闭'
       ]
     })
-    expect(zh.releaseNotes[5]?.version).toBe('0.7.8')
+    expect(zh.releaseNotes[6]?.version).toBe('0.7.8')
     expect(en.version).toBe('9.8.7')
-    expect(en.releaseNotes[3]?.version).toBe('0.8.0')
-    expect(en.releaseNotes[4]?.version).toBe('0.7.9')
-    expect(en.releaseNotes[4]?.date).toBe('2026-09-03')
-    expect(en.releaseNotes[4]?.items).toEqual([
+    expect(en.releaseNotes[4]?.version).toBe('0.8.0')
+    expect(en.releaseNotes[5]?.version).toBe('0.7.9')
+    expect(en.releaseNotes[5]?.date).toBe('2026-09-03')
+    expect(en.releaseNotes[5]?.items).toEqual([
       'Research conversations now reference all material on the current canvas, including offscreen components, when nothing is selected or explicitly referenced',
       'Allocate context by question relevance: start with a compact catalog and key evidence, then search and read additional material on demand within bounded context budgets',
       'Added a current-canvas context indicator and source directory with a per-message opt-out; explicit references take priority and failed sends preserve the draft',
@@ -203,7 +205,7 @@ describe('Sherlock About settings', () => {
       'Fixed canvas clipboard shortcut focus: paste over non-editable canvas areas and keep shortcuts working after context-menu actions without intercepting editors or embedded pages',
       'Moved clipboard feedback above the toolbar with a two-second dismissal; added a Create from Selection icon and a simplified popover that closes on outside click or focus loss'
     ])
-    expect(en.releaseNotes[5]?.version).toBe('0.7.8')
+    expect(en.releaseNotes[6]?.version).toBe('0.7.8')
 
     const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
     const lockfile = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'))
