@@ -15,6 +15,7 @@ export interface HarnessRuntimeOptions {
   bundledWebSearchEntry: string
   bundledMarketInstallerEntry: string
   bundledResearchTaskEntry: string
+  bundledFundResearchEntry?: string
   localSearchUrl: string
   localSearchToken: string
   researchContext?: { url: string; token: string }
@@ -50,7 +51,8 @@ export function buildHarnessSpawnOptions(
   localSearch?: { url: string; token: string },
   bundledMarketInstallerEntry?: string,
   bundledResearchTaskEntry?: string,
-  researchContext?: { url: string; token: string }
+  researchContext?: { url: string; token: string },
+  bundledFundResearchEntry?: string
 ): SpawnOptionsWithoutStdio {
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...parentEnvironment } = environment
   const pathKey = platform === 'win32' ? 'Path' : 'PATH'
@@ -71,6 +73,9 @@ export function buildHarnessSpawnOptions(
         : {}),
       ...(bundledResearchTaskEntry
         ? { DSH_DESKTOP_RESEARCH_TASK_ENTRY: bundledResearchTaskEntry }
+        : {}),
+      ...(bundledFundResearchEntry
+        ? { DSH_DESKTOP_FUND_RESEARCH_ENTRY: bundledFundResearchEntry }
         : {}),
       ...(localSearch
         ? {
@@ -215,7 +220,8 @@ export class HarnessRuntime {
           },
           this.options.bundledMarketInstallerEntry,
           this.options.bundledResearchTaskEntry,
-          this.options.researchContext
+          this.options.researchContext,
+          this.options.bundledFundResearchEntry
         )
       )
     } catch (error) {

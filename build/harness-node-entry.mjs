@@ -20,6 +20,7 @@ process.stdout.write(`[harness-node] DSH_HOME=${process.env.DSH_HOME ?? ''}\n`)
 const bundledWebSearchEntry = process.env.DSH_DESKTOP_WEB_SEARCH_ENTRY
 const bundledMarketInstallerEntry = process.env.DSH_DESKTOP_MARKET_INSTALLER_ENTRY
 const bundledResearchTaskEntry = process.env.DSH_DESKTOP_RESEARCH_TASK_ENTRY
+const bundledFundResearchEntry = process.env.DSH_DESKTOP_FUND_RESEARCH_ENTRY
 const bundledPackageEntries = new Map([
   ...(bundledWebSearchEntry
     ? [['dsh-web-search-session-model', bundledWebSearchEntry]]
@@ -29,6 +30,9 @@ const bundledPackageEntries = new Map([
     : []),
   ...(bundledResearchTaskEntry
     ? [['dsh-research-task-runtime', bundledResearchTaskEntry]]
+    : []),
+  ...(bundledFundResearchEntry
+    ? [['dsh-fund-research-runtime', bundledFundResearchEntry]]
     : [])
 ])
 if (bundledPackageEntries.size > 0) {
@@ -48,6 +52,9 @@ if (bundledMarketInstallerEntry) {
 }
 if (bundledResearchTaskEntry) {
   process.stdout.write('[harness-node] bundled Research task runtime mapped\n')
+}
+if (bundledFundResearchEntry) {
+  process.stdout.write('[harness-node] bundled fund research runtime mapped\n')
 }
 
 if (!dshEntryPath) {

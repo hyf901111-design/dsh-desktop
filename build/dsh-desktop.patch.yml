@@ -39,6 +39,11 @@
     - id: sherlock-research-task-runtime
       name: dsh-research-task-runtime
 
+    # Fund research exposes one product-owned capability. Provider-specific
+    # tools, transport details and credentials stay behind its private adapter.
+    - id: sherlock-fund-research-runtime
+      name: dsh-fund-research-runtime
+
 # dsh-market normally offers to restart its own Node process after mutations.
 # The desktop shell has the real lifecycle authority, so keep that behavior off
 # whenever the optional plugin is present in the composed profile.

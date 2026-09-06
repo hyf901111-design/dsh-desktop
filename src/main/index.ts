@@ -408,6 +408,12 @@ function bundledResearchTaskEntry(): string {
   ).href
 }
 
+function bundledFundResearchEntry(): string {
+  return pathToFileURL(
+    join(app.getAppPath(), 'node_modules', 'dsh-fund-research-runtime', 'index.js')
+  ).href
+}
+
 function desktopIconPath(): string {
   return app.isPackaged
     ? join(process.resourcesPath, 'icon.png')
@@ -1120,6 +1126,7 @@ async function bootstrap(): Promise<void> {
     bundledWebSearchEntry: bundledWebSearchEntry(),
     bundledMarketInstallerEntry: bundledMarketInstallerEntry(),
     bundledResearchTaskEntry: bundledResearchTaskEntry(),
+    bundledFundResearchEntry: bundledFundResearchEntry(),
     localSearchUrl: localSearchRuntime.endpoint.url,
     localSearchToken: localSearchRuntime.endpoint.token,
     researchContext,
