@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260908-01",
+  "branch": "codex/integration/20260908-01",
+  "baseMainCommit": "598d956c62f19b713ceb67bab4c71457fc8702f7",
+  "expectedMainCommit": "598d956c62f19b713ceb67bab4c71457fc8702f7",
+  "createdAt": "2026-09-07T22:04:30.162Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "Build mode and component progress",
+        "branch": "codex/feat/build-mode-20260907",
+        "baseCommit": "598d956c62f19b713ceb67bab4c71457fc8702f7",
+        "tipCommit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
+        "commits": [
+          {
+            "commit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
+            "parents": [
+              "598d956c62f19b713ceb67bab4c71457fc8702f7"
+            ],
+            "subject": "功能：新增并发研究工作台构建模式并优化组件生成进展"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/verification/sherlock-build-mode-20260908.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-agent-presets+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-agent-preset+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/standard-agent-preset.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-workbench.test.js",
+              "test/standard-agent-preset.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "101 focused cases; 6 additional focused UI cases, typecheck and four patch checks passed",
+            "verifiedCommit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
+            "completedAt": "2026-09-07T16:16:53.927700+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Isolated browser with real Kimi: simple Q&A stays chat; 2 and 4 panels generate concurrently and switch to Research; whole-group viewport verified."
+        },
+        "acceptanceCriteria": [
+          "Public research progress and real build stages",
+          "Standard capabilities retained; simple Q&A does not create a workbench",
+          "Independent panels generated concurrently; automatic Research transition",
+          "Planned dimensions, aligned layout and whole-group viewport"
+        ],
+        "risks": [
+          "Native desktop search requires packaged validation; isolated web harness has no Electron bridge",
+          "Feature committed locally only; shared client and public feeds unchanged"
+        ],
+        "generatedAt": "2026-09-07T16:16:53.927700+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/research-workbench.test.js",
+        "test/standard-agent-preset.test.ts",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
