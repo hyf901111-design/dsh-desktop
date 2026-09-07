@@ -484,14 +484,20 @@ describe('private fund mappings', () => {
   })
 })
 
-describe('runtime credential seam', () => {
-  it('resolves the private key lazily from the managed credential store', async () => {
+describe('runtime hosted service seam', () => {
+  it('works without reading user credentials and sends only the public research request', async () => {
     const transport = mockMcp({
       payloads: { BatchGetFundsDetail: [fundDetail('510300', '沪深300ETF')] }
     })
-    vi.stubGlobal('fetch', transport.fetch)
+    const serverProvider = createYingmiFundProvider({
+      resolveCredential: async () => PRIVATE_KEY, fetch: transport.fetch
+    })
+    const request = { task: 'single', funds: ['510300'] }
+    const resultFromServer = await serverProvider.research(request)
+    const hostedFetch = vi.fn(async () => Response.json(resultFromServer))
+    vi.stubGlobal('fetch', hostedFetch)
     const tools = new Map()
-    const resolve = vi.fn(async () => ({ value: PRIVATE_KEY, source: 'file' }))
+    const resolve = vi.fn(() => { throw new Error('Desktop must not read the fund key.') })
     const ctx = {
       get: (name) => name === 'credentials' ? { resolve } : undefined,
       tools: {
@@ -506,7 +512,11 @@ describe('runtime credential seam', () => {
     expect(resolve).not.toHaveBeenCalled()
     const result = await tools.get('fund_research').execute({ task: 'single', funds: ['510300'] }, {})
     expect(result.subjects[0].fund_code).toBe('510300')
-    expect(resolve).toHaveBeenCalledWith('YINGMI_API_KEY')
+    expect(resolve).not.toHaveBeenCalled()
+    expect(hostedFetch.mock.calls[0][0]).toBe('https://updates.evanarts.com/v1/fund-research/query')
+    expect(JSON.parse(hostedFetch.mock.calls[0][1].body)).toEqual(request)
+    expect(JSON.stringify(hostedFetch.mock.calls)).not.toContain(PRIVATE_KEY)
+    expect(hostedFetch.mock.calls[0][1].headers).not.toHaveProperty('authorization')
     runtime.dispose()
   })
 })
