@@ -149,9 +149,9 @@ describe('Sherlock About settings', () => {
     const zh = aboutModule.buildSherlockAboutInfo('9.8.7', 'zh')
     const en = aboutModule.buildSherlockAboutInfo('9.8.7', 'en')
 
-    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.8', date: '2026-09-07' })
-    expect(en.releaseNotes[0]?.version).toBe('0.8.8')
-    expect(zh.releaseNotes[0]?.items.some((item) => item.includes('自动安装并重启'))).toBe(true)
+    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.8.9', date: '2026-09-07' })
+    expect(en.releaseNotes[0]?.version).toBe('0.8.9')
+    expect(zh.releaseNotes[0]?.items.some((item) => item.includes('整理画布'))).toBe(true)
     expect(zh.releaseNotes.find((note) => note.version === '0.8.4')).toMatchObject({ version: '0.8.4', date: '2026-09-06' })
     expect(en.releaseNotes.find((note) => note.version === '0.8.4')?.items).toHaveLength(3)
     expect(zh.releaseNotes.find((note) => note.version === '0.8.3')).toMatchObject({ version: '0.8.3', date: '2026-09-06' })

@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.8.9',
+      date: '2026-09-07',
+      items: ["修复研究容器因搜索权限判断不完整而反复返回空正文的问题", "生成完成后按实际内容自动扩展组件，长报告与 HTML 可完整展示", "整理画布按内容重新适配组件框尺寸，再排列位置，减少组件内滚动", "修复语音结束时空识别结果覆盖已有文字、导致生成失败的问题", "每个研究会话支持最多 10 个并发生成子任务，超出后有序排队", "精简组件生成范围，减少未要求的摘要、背景和 HTML 包装"]
+    },
+    {
       version: '0.8.8',
       date: '2026-09-07',
       items: ["修复已发现或下载的更新锁定旧版本的问题，下载与安装前重新检查最新版本", "下载完成后自动安装并重启，无需再次确认；更新目标变化时改用最新版本", "为系统安装准备和退出清理增加超时与失败提示，避免无反馈地等待", "解压校验阶段显示环形加载与明确说明，优化提示位置并修复遮挡设置菜单的问题", "精简账户菜单，移除顶部重复名称"]
@@ -200,6 +205,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.8.9',
+      date: '2026-09-07',
+      items: ["Fix empty research container output caused by incomplete search-tool availability checks", "Fit completed components to their actual content, including long reports and HTML", "Fit component frames to content before arranging the canvas to reduce internal scrolling", "Preserve recognized voice instructions when the speech service returns an empty final result", "Allow up to 10 concurrent generation tasks per research session, with additional tasks queued", "Keep generated components focused by avoiding unrequested summaries, background text and HTML wrappers"]
+    },
     {
       version: '0.8.8',
       date: '2026-09-07',
