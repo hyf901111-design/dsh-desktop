@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260907-01",
+  "branch": "codex/integration/20260907-01",
+  "baseMainCommit": "665a30962b7c3c59a75ce12b9e1a18df8123fe52",
+  "expectedMainCommit": "665a30962b7c3c59a75ce12b9e1a18df8123fe52",
+  "createdAt": "2026-09-07T02:12:43.175Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "基金研究免本地密钥生产服务",
+        "branch": "codex/feat/fund-data-handoff-20260907",
+        "baseCommit": "2a87c32cbfbdef72c2b0e52d614bc7ea7a06a9e4",
+        "tipCommit": "b221e4ea6298d4993000ab9e35daa344ff05aecf",
+        "commits": [
+          {
+            "commit": "ef193bf6d3eb2e473e89b19a5e1a441318d6cdf3",
+            "parents": [
+              "2a87c32cbfbdef72c2b0e52d614bc7ea7a06a9e4"
+            ],
+            "subject": "功能：基金研究改用免密钥公共服务并加入缓存限流"
+          },
+          {
+            "commit": "b221e4ea6298d4993000ab9e35daa344ff05aecf",
+            "parents": [
+              "ef193bf6d3eb2e473e89b19a5e1a441318d6cdf3"
+            ],
+            "subject": "修复：基金服务沿用原生产环境并禁止默认账号部署"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": ".gitignore"
+          },
+          {
+            "status": "A",
+            "path": "docs/sherlock-fund-data-service.md"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-fund-research-runtime/hosted-provider.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/deploy-fund-data-service.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/test-fund-data-worker.mjs"
+          },
+          {
+            "status": "A",
+            "path": "services/fund-data/coordinator.js"
+          },
+          {
+            "status": "A",
+            "path": "services/fund-data/http.js"
+          },
+          {
+            "status": "A",
+            "path": "services/fund-data/worker.js"
+          },
+          {
+            "status": "A",
+            "path": "services/fund-data/wrangler.jsonc"
+          },
+          {
+            "status": "A",
+            "path": "test/fund-data-deployment.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fund-data-service.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fund-research-yingmi.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "test:fund-service"
+            ],
+            "outcome": "passed",
+            "summary": "本机执行通过；基金83项及workerd合成联调、类型检查、Worker部署预演",
+            "verifiedCommit": "b221e4ea6298d4993000ab9e35daa344ff05aecf",
+            "completedAt": "2026-09-07T02:12:19.751Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "本机执行通过；基金83项及workerd合成联调、类型检查、Worker部署预演",
+            "verifiedCommit": "b221e4ea6298d4993000ab9e35daa344ff05aecf",
+            "completedAt": "2026-09-07T02:12:19.751Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "fund-service:check"
+            ],
+            "outcome": "passed",
+            "summary": "本机执行通过；基金83项及workerd合成联调、类型检查、Worker部署预演",
+            "verifiedCommit": "b221e4ea6298d4993000ab9e35daa344ff05aecf",
+            "completedAt": "2026-09-07T02:12:19.751Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能worktree不构建共享客户端；生产部署后在canonical main完成无Key客户端和真实GUI验证。"
+        },
+        "acceptanceCriteria": [
+          "基金工具默认使用既有生产域名服务",
+          "密钥仅存Worker Secret",
+          "四种研究任务和缓存限流通过聚焦验证"
+        ],
+        "risks": [
+          "真实供应商数据、客户端GUI与签名升级仍待后续验证"
+        ],
+        "generatedAt": "2026-09-07T02:12:19.751Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "test:fund-service"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "fund-service:check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
