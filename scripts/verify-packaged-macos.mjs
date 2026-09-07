@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import path from 'node:path'
+import { localDependencyProblems } from './ensure-local-dependencies.mjs'
 import { verifyBundledSkillParity } from './bundled-skill-parity.mjs'
 
 const args = process.argv.slice(2)
@@ -40,6 +41,9 @@ function verifyRuntime(runtimeNode, runtimeRoot) {
   if (!existsSync(path.join(runtimeRoot, 'package.json'))) {
     throw new Error(`runtime package root not found: ${runtimeRoot}`)
   }
+
+  const missing = localDependencyProblems(runtimeRoot, { packaged: true })
+  if (missing.length) throw new Error(`packaged local dependencies missing: ${missing.join(', ')}`)
 
   const probe = String.raw`
 const { createRequire } = require('node:module')

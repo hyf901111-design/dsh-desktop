@@ -23,6 +23,8 @@
 ./script/build_and_run.sh --verify
 ```
 
+构建和开发启动会先检查 `package.json` 中所有 `file:` 本地依赖。拉取新增插件后若安装链接缺失，会自动执行 npm ci 按锁文件恢复依赖并应用 postinstall 补丁（不修改锁文件），再次检查通过后才继续；依赖齐全时不重复安装。缺少源码或安装失败会立即停止，最终包检查也会拒绝缺少插件入口的应用。首次克隆仍需先运行 `npm ci`。
+
 该命令会停止旧的 Sherlock/Sherlock Dev 进程；仅在工作区内置 Node 缺失时自动执行 `npm rebuild node`；以 `com.evanarts.sherlock` 身份构建 `dist-notarized/mac-arm64/Sherlock.app`；显式禁用 Apple 公证；检查应用主程序、内置 Node 和深度签名后启动应用。
 
 4. 对最终产物运行完整的本地包检查：
