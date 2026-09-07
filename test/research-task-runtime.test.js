@@ -992,6 +992,34 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it.each([
+    '链上与衍生品市场数据：BTC/ETH 期货未平仓合约量、资金费率、MVRV 等关键指标。标注数据日期与来源。',
+    '财务数据：营收、利润与现金流，获取实际数值',
+    '临床数据：试验阶段、主要终点和审批动态',
+    '请提供衍生品市场数据和来源'
+  ])('does not treat a data heading as supplied values: %s', async query => {
+    const fixture = containerAdapterFixture();
+    const handle = await fixture.start(query);
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] });
+    await handle.dispose();
+  });
+
+  it('closes repetitive research within the same child and releases its restriction on disposal', async () => {
+    const fixture = containerAdapterFixture();
+    const lift = vi.fn();
+    fixture.ctx.child.ctx = { tools: { restrict: vi.fn(() => lift) } };
+    fixture.ctx.child.steer = vi.fn();
+    const handle = await fixture.start('链上数据：资金费率和未平仓量');
+    for (let i = 0; i < 8; i++) fixture.ctx.emit(fixture.ctx.child.session, { seq: i + 1, type: 'tool/call', data: { name: 'web_search', arguments: '{"query":"指标数据"}' } });
+    fixture.ctx.emit(fixture.ctx.child.session, { seq: 9, type: 'tool/result', data: {} });
+    fixture.ctx.emit(fixture.ctx.child.session, { seq: 10, type: 'tool/result', data: {} });
+    expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search'] });
+    expect(fixture.ctx.child.steer).toHaveBeenCalledTimes(1);
+    expect(fixture.ctx.child.steer.mock.calls[0][0].content[0].text).toContain('已经取得');
+    await handle.dispose();
+    expect(lift).toHaveBeenCalledTimes(1);
+  });
+
   it('does not remove search merely because a request has no freshness keyword', async () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('分析黄金的供需格局')

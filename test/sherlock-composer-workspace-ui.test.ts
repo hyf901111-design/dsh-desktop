@@ -13104,3 +13104,30 @@ describe('generated component theme', () => {
     } finally { await mounted.cleanup() }
   })
 })
+
+
+describe('Workbench staggered reveal and component task descriptions', () => {
+  it('reveals the second frame after 500ms while preserving its real progress and task description', async () => {
+    const browserWindow = new Window();
+    const restore = installBrowserGlobals(browserWindow);
+    vi.useFakeTimers();
+    let root: ReturnType<typeof createRoot> | undefined;
+    try {
+      const client = await loadClientBundle('dsh-client-ui-conversation', undefined, { document: browserWindow.document, window: browserWindow });
+      const Card = client.ResearchCanvasArtifactCard as ComponentType<Record<string, unknown>>;
+      const host = browserWindow.document.createElement('div');
+      browserWindow.document.body.appendChild(host);
+      root = createRoot(host);
+      const now = Date.now();
+      const node = { id: 'first', kind: 'generated-container', title: '链上数据', messageId: 'first', excerpt: '', containerPrompt: '链上研究', generationStatus: 'running', generationTaskId: 'task', generationEvents: [{ type: 'tool-started', tool: '搜索资料', detail: 'BTC 资金费率' }], width:720, height:600, x:360, y:300, containerSizePreset:'medium', sizeMode:'auto', workbenchRevealAt:now };
+      await act(async () => { root!.render(createElement('div', null, createElement(Card,{node}), createElement(Card,{node:{...node,id:'second',workbenchRevealAt:now+500}}))); });
+      expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(1);
+      expect(host.textContent).toContain('BTC 资金费率');
+      expect(host.querySelector('[data-research-generation-description]')?.textContent).toContain('链上数据');
+      await act(async () => { await vi.advanceTimersByTimeAsync(499); });
+      expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(2);
+    } finally { if (root) await act(async()=>root!.unmount()); vi.useRealTimers(); restore(); await browserWindow.happyDOM.close(); }
+  });
+});
