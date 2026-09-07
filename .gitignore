@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 out/
 dist/
 dist-dev/
@@ -22,6 +22,9 @@ build/sherlock-plugin-profile/
 .env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
+.wrangler/
 .coaligne/
 .coaligneignore
 .worktrees/

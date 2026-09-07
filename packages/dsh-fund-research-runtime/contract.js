@@ -176,6 +176,17 @@ export function cancelledError() {
   return safeError('FUND_RESEARCH_CANCELLED', '基金研究已取消。')
 }
 
+const SERVICE_MESSAGES = Object.freeze({
+  FUND_SERVICE_BUSY: '基金查询较多，请稍后再试。',
+  FUND_SERVICE_UNAVAILABLE: '基金数据服务暂时不可用，请稍后重试。',
+  FUND_TYPE_UNSUPPORTED: '暂不支持该基金类型。'
+})
+
+export function serviceError(code) {
+  return Object.hasOwn(SERVICE_MESSAGES, code)
+    ? safeError(code, SERVICE_MESSAGES[code]) : unavailableError()
+}
+
 function invalid(message) {
   throw safeError('INVALID_REQUEST', message)
 }
@@ -186,6 +197,9 @@ function invalidData() {
 
 export function toPublicFundResearchError(error, signal) {
   if (signal?.aborted || error?.code === 'FUND_RESEARCH_CANCELLED') return cancelledError()
+  if (error?.[SAFE_PUBLIC_ERROR] === true && Object.hasOwn(SERVICE_MESSAGES, error.code)) {
+    return serviceError(error.code)
+  }
   if (error?.code === 'INVALID_REQUEST' && error?.[SAFE_PUBLIC_ERROR] === true) {
     return safeError('INVALID_REQUEST', error.message)
   }
