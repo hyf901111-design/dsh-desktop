@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260907-04",
+  "branch": "codex/integration/20260907-04",
+  "baseMainCommit": "c9de89bc7bec2b2f587dfc99b56b27598e059ae2",
+  "expectedMainCommit": "c9de89bc7bec2b2f587dfc99b56b27598e059ae2",
+  "createdAt": "2026-09-07T05:53:31.309Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "云端密码运行时修复",
+        "branch": "codex/feat/accounts-cloud-runtime-20260907",
+        "baseCommit": "c9de89bc7bec2b2f587dfc99b56b27598e059ae2",
+        "tipCommit": "5099df48c15f009ca465d3c485cec43a3ca9e32d",
+        "commits": [
+          {
+            "commit": "b37a947a12a1c7408530852e5bb19bd3eac85631",
+            "parents": [
+              "c9de89bc7bec2b2f587dfc99b56b27598e059ae2"
+            ],
+            "subject": "修复云端密码哈希限制并采用带版本的 scrypt 存储"
+          },
+          {
+            "commit": "5099df48c15f009ca465d3c485cec43a3ca9e32d",
+            "parents": [
+              "b37a947a12a1c7408530852e5bb19bd3eac85631"
+            ],
+            "subject": "记录账户服务生产部署与真实客户端验收"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/sherlock-account-deployment-20260907.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/sherlock-accounts.md"
+          },
+          {
+            "status": "M",
+            "path": "services/accounts/auth.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/test-fund-data-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Real local workerd D1 invite transaction and session tests passed",
+            "verifiedCommit": "5099df48c15f009ca465d3c485cec43a3ca9e32d",
+            "completedAt": "2026-09-07T05:53:30.458998+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Real signed client login succeeded against production scrypt Worker; logged out. Real fund query and password session revocation passed."
+        },
+        "acceptanceCriteria": [
+          "Settings and personal models work without login",
+          "Hosted fund APIs require valid account sessions",
+          "Full-window settings preserve research state on return",
+          "Validate new packaged client and coordinated production cutover"
+        ],
+        "risks": [
+          "Usage events are not financial charges"
+        ],
+        "generatedAt": "2026-09-07T05:53:30.458998+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/account-service.test.ts",
+        "test/update-state.test.ts",
+        "test/update-manager.test.ts",
+        "test/settings-about.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
