@@ -236,3 +236,19 @@ test('holding Fn activates once and releasing sends finish, while chords and dis
   await flush()
   assert.deepEqual(events, [])
 })
+
+for (const failed of [false, true]) {
+  test(`empty terminal recognition preserves the usable partial (failed=${failed})`, async () => {
+    native.start('empty-terminal', 'zh-CN')
+    native.__testAuthorize('empty-terminal')
+    native.__testResult('empty-terminal', '生成三行测试表格', false, false)
+    native.stop('empty-terminal')
+    native.__testResult('empty-terminal', '  ', true, failed)
+    native.__testResult('empty-terminal', '迟到回调', true, false)
+    await flush()
+    assert.deepEqual(events.filter(event => event.type === 'final'), [
+      { type: 'final', requestId: 'empty-terminal', text: '生成三行测试表格' }
+    ])
+    assert.equal(events.some(event => event.type === 'error'), false)
+  })
+}
