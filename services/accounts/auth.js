@@ -1,5 +1,5 @@
 import {
-  pbkdf2Sync,
+  scryptSync,
   randomBytes,
   timingSafeEqual,
   createHash
@@ -16,14 +16,14 @@ const json = (body, status = 200) =>
   })
 export const authError = (code, status = 401) =>
   json({ error: { code } }, status)
+// OWASP scrypt profile: 32 MiB, N=2^15, r=8, p=3. Cloudflare caps PBKDF2 at 100k.
 const passwordHash = (password, salt = randomBytes(16).toString('hex')) =>
-  `${salt}:${pbkdf2Sync(password, salt, 600000, 32, 'sha256').toString('hex')}`
+  `scrypt-v1:${salt}:${scryptSync(password, salt, 32, { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 }).toString('hex')}`
 function verify(password, stored) {
-  const candidate = passwordHash(password, stored.split(':')[0])
-  return (
-    candidate.length === stored.length &&
+  const validFormat = /^scrypt-v1:[a-f0-9]{32}:[a-f0-9]{64}$/.test(stored)
+  const candidate = passwordHash(password, validFormat ? stored.split(':')[1] : '0'.repeat(32))
+  return validFormat && candidate.length === stored.length &&
     timingSafeEqual(Buffer.from(candidate), Buffer.from(stored))
-  )
 }
 export async function authenticate(request, env) {
   const token = request.headers
