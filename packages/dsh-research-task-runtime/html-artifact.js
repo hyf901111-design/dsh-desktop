@@ -171,7 +171,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
         if (visible(element)) include(element.getBoundingClientRect(), element, true)
       }
       const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
-      const height = Math.min(2400, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
+      const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
       const key = width + ':' + height
       if (key === previous) return
       previous = key
@@ -230,7 +230,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
         Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
         data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&
-        data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 2400) {
+        data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 12000) {
       const key = data.width + ':' + data.height
       if (sizeReports < 6 && key !== previousSize) {
         previousSize = key
