@@ -20,6 +20,10 @@
 10. 已安装 0.6.3 的用户长期走旧证书兼容 feed；新下载用户走 Developer ID 公证 feed。每次发布都必须维护两套签名 ZIP，除非未来另行实现并真实验证签名迁移安装器。
 11. R2 采用滚动版本保留：新版本全部公开验证成功后，只删除 `releases/v*` 中版本号最早的一个目录。禁止删除 `latest/`、`notarized/latest/`、`download/`、当前版本或一次删除多个旧版本；发布或公开验证失败时禁止清理旧版本。
 
+## 升级验证范围（用户要求，2026-09-07）
+
+发布只做差分更新校验，不再执行旧客户端全量下载、安装替换、重启升级测试。此规则替代旧版手册的全量升级验收门禁。保留签名、包完整性、公开更新源、Range、缓存和合成文件 SHA-512 检查；差分不可用时明确报告，不改跑全量升级测试。
+
 ## 1. 发布前检查
 
 在 `/Users/heyafeng/Documents/ChatGPT/dsh` 中：
@@ -57,7 +61,7 @@ unset sherlock_p12_password
 
 若导入后身份仍未被识别为有效代码签名身份，停止发布并修复证书信任；不能切换到另一张证书。
 
-- 保存线上旧元数据、稳定 DMG 别名和本地旧版 App，以便真实升级测试及异常回滚。必须在正式打包覆盖 `dist` 前执行：
+- 保存线上旧元数据、稳定 DMG 别名和已验证的旧版 ZIP/blockmap，以便差分校验及异常回滚。必须在正式打包覆盖 `dist` 前执行：
 
 ```bash
 sherlock_release_tmp="$(mktemp -d /tmp/sherlock-formal-release.XXXXXX)"
@@ -73,7 +77,7 @@ sherlock_release_tmp="$(mktemp -d /tmp/sherlock-formal-release.XXXXXX)"
   sherlock-releases/download/sherlock-mac-arm64.dmg \
   --remote \
   --file "$sherlock_release_tmp/previous-sherlock-mac-arm64.dmg"
-ditto /path/to/verified/Sherlock-0.6.3.app "$sherlock_release_tmp/Sherlock-previous.app"
+# 保留上一版已验证 ZIP 和 blockmap 作为差分基线，无需准备旧客户端运行夹具。
 ```
 
 ## 2. 版本与聚焦验证
@@ -201,15 +205,17 @@ open -na dist-legacy/mac-arm64/Sherlock.app --args \
 # 启动完成后确认 legacy-sentinel 已复制、new-settings 未被覆盖、迁移 marker 已生成。
 ```
 
-再使用打包前保存的旧正式版做真实自动升级验证，并使用隔离用户数据目录，不能拿用户的正式数据做试验：
+使用上一版已验证 ZIP 与本次构建的新 ZIP 进行真实公开差分校验（示例为 0.8.4 → 0.8.5）：
 
 ```bash
-mkdir -p "$sherlock_release_tmp/update-user-data"
-open -na "$sherlock_release_tmp/Sherlock-previous.app" --args \
-  --sherlock-user-data-dir="$sherlock_release_tmp/update-user-data"
+node scripts/verify-release-differential.mjs \
+  --from 0.8.4 --to 0.8.5 \
+  --old-file /path/to/verified-0.8.4.zip \
+  --new-file dist-release/sherlock-mac-arm64.zip \
+  --output "$sherlock_release_tmp/differential-0.8.5.zip"
 ```
 
-写入并记录一个数据哨兵，然后完成发现更新、点击下载、下载完成、确认重启、重新打开为新版本，并确认：版本已更新、Info.plist 已切到 `com.evanarts.sherlock`、同一路径数据哨兵未变化、更新按钮恢复隐藏。该步骤验证真实 updater；上一段单独验证默认 `dsh-desktop → sherlock-desktop` 迁移，禁止把两者混为同一证据。
+脚本从公开版本目录获取新旧 blockmap，调用实际 electron-updater 差分下载器，只允许单段 Range/206；复用旧包数据后验证合成 ZIP 与签名构建产物的 SHA-512 完全一致。报告实际传输量、复用量及请求数。若无可复用数据或校验失败，停止并报告，不发起全量回退。兼容通道可额外指定 `--channel legacy`，使用对应旧桥 ZIP 和新桥 ZIP；不再运行旧客户端全量升级。
 
 DSH 共存必须使用两个不同哨兵：DSH Desktop 保持 `dsh-desktop`，Sherlock 保持 `sherlock-desktop`，两个进程同时存在且互不改写对方哨兵。
 
@@ -236,11 +242,9 @@ open -na "$mount_point/Sherlock.app" --args \
 hdiutil detach "$mount_point"
 ```
 
-首次创建公证 feed 时，没有上一版公证 App，`notarized → new` 真实自动升级标记为不适用。从下一个版本开始必须同时保存上一版公证 App，并对 `/notarized/latest/` 再完成一次真实下载、重启安装和版本确认。
+每次发布均不执行全量升级验证，也不把差分合成成功表述为已经完成真实客户端安装重启。差分或公开资源校验失败应调查原因；本版本资源损坏或元数据错误时回滚公开入口。
 
-若没有旧版测试夹具，必须明确报告未完成，不能把网络检查冒充真实升级验证。真实升级或 Gatekeeper 验证失败属于发布失败，必须分别回滚两个公开元数据入口和稳定 DMG。
-
-若发布命令在写入稳定 DMG 后的任何阶段报错、提升后的公开元数据异常，或真实升级失败，立即恢复旧元数据和稳定 DMG 下载别名，再验证公开入口已回到旧版本；不可变版本资源可以保留：
+若发布命令在写入稳定 DMG 后的任何阶段报错、提升后的公开元数据异常，或本版本资源损坏，立即恢复旧元数据和稳定 DMG 下载别名，再验证公开入口已回到旧版本；不可变版本资源可以保留：
 
 ```bash
 ./node_modules/.bin/wrangler r2 object put \
@@ -270,7 +274,7 @@ hdiutil detach "$mount_point"
   sherlock-releases/notarized/latest/latest-mac.yml --remote
 ```
 
-全部公开元数据、不可变资源、真实旧版升级、迁移/共存和 Gatekeeper 检查均成功后，才执行滚动清理。先预演并确认 `deletedVersion` 是服务器中最早的版本，`deleteKeys` 全部严格位于同一个 `releases/v<deletedVersion>/` 下；再执行正式清理：
+全部适用的公开元数据、不可变资源、差分更新、签名及包完整性检查均成功后，才执行滚动清理。先预演并确认 `deletedVersion` 是服务器中最早的版本，`deleteKeys` 全部严格位于同一个 `releases/v<deletedVersion>/` 下；再执行正式清理：
 
 ```bash
 npm run release:cloudflare:prune-oldest -- \
@@ -311,4 +315,4 @@ git push https://github.com/hyf901111-design/dsh-desktop.git \
 
 ## 完成标准
 
-最终汇报分别列出：版本与提交、聚焦测试和类型检查、应用/DMG 签名、Cloudflare 元数据与 Range/缓存验证、真实旧版升级验证、R2 最早版本精确清理、GitHub Fork 推送。所有发布步骤成功且无待处理故障后才称为“正式版发布完成”。
+最终汇报分别列出：版本与提交、聚焦测试和类型检查、应用/DMG 签名、Cloudflare 元数据与 Range/缓存验证、差分更新校验（不做全量升级测试）、R2 最早版本精确清理、GitHub Fork 推送。所有发布步骤成功且无待处理故障后才称为“正式版发布完成”。
