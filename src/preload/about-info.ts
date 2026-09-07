@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.8.6',
+      date: '2026-09-07',
+      items: ['基金研究开箱即用，无需配置基金数据 API Key', '支持单基金概览、基金对比、持仓风格及近期变化查询，并展示数据日期和缺失项', '增加服务端缓存、并发与请求额度保护，繁忙或数据暂不可用时给出明确提示']
+    },
+    {
       version: '0.8.5',
       date: '2026-09-07',
       items: ["语音支持双按 Fn 开始、单按结束发送；长按 Fn 说话、松开发送", "修复语音创建组件后子代理未启动的问题，缩短前置检索等待，减少不必要的需求扩展", "丰富组件生成中的实时进度反馈，使用圆环加载状态并合并停止按钮，修正组件底部边角显示", "优化差分更新请求方式，减少因多段 Range 响应不兼容导致的全量下载回退；缓存或校验不可用时仍安全回退", "接入基金研究私有数据能力，并修复新增插件依赖缺失可能导致的客户端启动失败"]
@@ -185,6 +190,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.8.6',
+      date: '2026-09-07',
+      items: ['Fund research works without configuring a fund data API key', 'Research individual funds, comparisons, holdings styles, and recent changes with evidence dates and missing-data disclosures', 'Added server-side caching and request limits with clear busy and unavailable messages']
+    },
     {
       version: '0.8.5',
       date: '2026-09-07',
