@@ -97,6 +97,41 @@
         ],
         "risks": [],
         "generatedAt": "2026-09-07T11:57:00.342992+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4d513aaa6ad64e24f5bc6a882752d8c176d2191b",
+        "verificationCommit": "4d513aaa6ad64e24f5bc6a882752d8c176d2191b",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/research-html-theme.test.js",
+              "test/research-voice.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-task-runtime.test.js test/research-container-chrome.test.ts test/research-html-theme.test.js test/research-voice.test.ts",
+            "verifiedCommit": "4d513aaa6ad64e24f5bc6a882752d8c176d2191b",
+            "completedAt": "2026-09-07T11:57:34.572Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "4d513aaa6ad64e24f5bc6a882752d8c176d2191b",
+            "completedAt": "2026-09-07T11:57:34.572Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-07T11:57:34.572Z"
       }
     }
   ],
