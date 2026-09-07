@@ -89,6 +89,41 @@
           "Real microphone currently provides zero samples; live spoken input requested"
         ],
         "generatedAt": "2026-09-07T11:18:19.009Z"
+      },
+      "merged": {
+        "mergeCommit": "472176d1a93e5484a338cefd93271008872b46e8",
+        "verificationCommit": "472176d1a93e5484a338cefd93271008872b46e8",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/research-html-theme.test.js",
+              "test/research-voice.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-task-runtime.test.js test/research-container-chrome.test.ts test/research-html-theme.test.js test/research-voice.test.ts",
+            "verifiedCommit": "472176d1a93e5484a338cefd93271008872b46e8",
+            "completedAt": "2026-09-07T11:19:19.103Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "472176d1a93e5484a338cefd93271008872b46e8",
+            "completedAt": "2026-09-07T11:19:19.103Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-07T11:19:19.103Z"
       }
     }
   ],
