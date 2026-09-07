@@ -1,18 +1,21 @@
 diff --git a/node_modules/@deepseek-ai/dsh-agent-presets/lib/index.js b/node_modules/@deepseek-ai/dsh-agent-presets/lib/index.js
+index c49f172..a1e6687 100644
 --- a/node_modules/@deepseek-ai/dsh-agent-presets/lib/index.js
 +++ b/node_modules/@deepseek-ai/dsh-agent-presets/lib/index.js
-@@ -762,8 +762,8 @@ function resolveSessionPreset(session) {
+@@ -762,9 +762,9 @@ async function mountPreset(agentCtx, preset) {
+ function resolveSessionPreset(session) {
  	for (let index = session.events.length - 1; index >= 0; index -= 1) {
  		const event = session.events[index];
 -		if (event?.type === "agent-preset/selected") return event.data.agentPreset;
-+		if (event?.type === "agent-preset/selected") return event.data.agentPreset === void 0 ? void 0 : "standard";
++		if (event?.type === "agent-preset/selected") return event.data.agentPreset === void 0 ? void 0 : event.data.agentPreset === "build" ? "build" : "standard";
  	}
 -	return session.header.agentPreset;
-+	return session.header.agentPreset === void 0 ? void 0 : "standard";
++	return session.header.agentPreset === void 0 ? void 0 : session.header.agentPreset === "build" ? "build" : "standard";
  }
  //#endregion
  //#region lib/types/index.js
 diff --git a/node_modules/@deepseek-ai/dsh-agent-presets/lib/types/session.js b/node_modules/@deepseek-ai/dsh-agent-presets/lib/types/session.js
+index 1fba0cc..deba39a 100644
 --- a/node_modules/@deepseek-ai/dsh-agent-presets/lib/types/session.js
 +++ b/node_modules/@deepseek-ai/dsh-agent-presets/lib/types/session.js
 @@ -26,8 +26,8 @@ export function resolveSessionPreset(session) {
@@ -20,9 +23,10 @@ diff --git a/node_modules/@deepseek-ai/dsh-agent-presets/lib/types/session.js b/
          const event = session.events[index];
          if (event?.type === 'agent-preset/selected')
 -            return event.data.agentPreset;
-+            return event.data.agentPreset === undefined ? undefined : 'standard';
++            return event.data.agentPreset === undefined ? undefined : event.data.agentPreset === 'build' ? 'build' : 'standard';
      }
 -    return session.header.agentPreset;
-+    return session.header.agentPreset === undefined ? undefined : 'standard';
++    return session.header.agentPreset === undefined ? undefined : session.header.agentPreset === 'build' ? 'build' : 'standard';
  }
  //# sourceMappingURL=session.js.map
+\ No newline at end of file

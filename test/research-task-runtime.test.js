@@ -936,13 +936,13 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.web.fetch.mockResolvedValue({ body: { content: 'ETF成交额120亿元。' } })
     const onProgress = vi.fn()
     const pending = fixture.start('生成ETF数据监控面板', onProgress)
-    await eventually(() => expect(onProgress).toHaveBeenCalledWith({ type: 'tool-started', tool: '检索网页' }))
+    await eventually(() => expect(onProgress).toHaveBeenCalledWith({ type: 'tool-started', tool: '检索网页', detail: 'ETF 最新数据' }))
     expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
     search.resolve({ content: 'ETF成交额120亿元。', sources: [{ title: 'ETF数据', url: 'https://example.com/etf', snippet: '成交额120亿元' }] })
     const handle = await pending
     expect(onProgress.mock.calls.map(([event]) => event)).toEqual([
-      { type: 'tool-started', tool: '检索网页' }, { type: 'tool-finished', failed: false },
-      { type: 'tool-started', tool: '读取网页' }, { type: 'tool-finished', failed: false }
+      { type: 'tool-started', tool: '检索网页', detail: 'ETF 最新数据' }, { type: 'tool-finished', failed: false },
+      { type: 'tool-started', tool: '读取网页', detail: 'ETF数据' }, { type: 'tool-finished', failed: false }
     ])
     expect(JSON.stringify(onProgress.mock.calls)).not.toMatch(/120|example|query/)
     await handle.dispose()

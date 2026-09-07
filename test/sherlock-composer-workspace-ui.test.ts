@@ -8463,7 +8463,6 @@ describe('Sherlock workspace and composer controls', () => {
       ]
     }) as Array<{ id: string; text: string }>
     expect(rows.map(row => row.text)).toEqual(expect.arrayContaining([
-      '开始整理生成需求', '检索相关数据与来源', '检索响应已返回',
       '编排页面布局与配色', '生成数据表格', '绘制图表与数据图形', '制作页面交互控件'
     ]))
     expect(JSON.stringify(rows)).not.toMatch(/secret|private|<style>|<table>/)
@@ -8473,11 +8472,11 @@ describe('Sherlock workspace and composer controls', () => {
     const failed = client.researchGenerationLog({ generationStatus: 'running', generationEvents: [
       { seq: 1, type: 'tool-started', tool: '检索网页' }, { seq: 2, type: 'tool-finished', failed: true }
     ] })
-    expect(JSON.stringify(failed)).toContain('检索未完成，调整后续处理')
+    expect(JSON.stringify(failed)).toContain('本次资料获取未完成，正在调整检索')
     expect(JSON.stringify(failed)).not.toContain('检索响应已返回')
   })
 
-  it('reveals terminal progress row by row and stops its activity timers after unmount', async () => {
+  it('shows real progress immediately without simulated activity and stops timers after unmount', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     const restoreGlobals = installBrowserGlobals(browserWindow)
     vi.useFakeTimers()
@@ -8496,20 +8495,21 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { root.render(createElement(client.__testGenerationProcess, { node, onCancel })) })
       expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(1)
       for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(260) })
-      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(4)
+      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(1)
       expect(host.querySelector('[data-research-generation-visual]')?.getAttribute('aria-hidden')).toBe('true')
       expect(host.querySelector('[role="status"]')?.textContent).toBe('正在整理资料')
       const building = { ...node, generationLastSeq: 4, generationEvents: [...node.generationEvents, { seq: 4, type: 'assistant-delta', text: '<main><style>private-code' }] }
       await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: building, onCancel })) })
-      expect(host.textContent).toContain('正在接收新内容')
+      expect(host.textContent).toContain('编排页面布局与配色')
+      expect(host.textContent).not.toContain('正在接收新内容')
       expect(host.textContent).not.toContain('把内容组织到组件中')
       expect(host.querySelector('.rScV5Q_generationFooter [data-research-generation-cancel]')).not.toBeNull()
       expect(host.querySelector('.rScV5Q_generationFooter .rScV5Q_generationSpinner')?.textContent).toBe('')
       await act(async () => { await vi.advanceTimersByTimeAsync(1800) })
       const stagnantRows = host.querySelectorAll('.rScV5Q_generationStamp').length
-      expect(stagnantRows).toBe(1)
+      expect(stagnantRows).toBe(0)
       await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: { ...building, generationLastSeq: 20 }, onCancel })) })
-      expect(host.querySelectorAll('.rScV5Q_generationStamp')).toHaveLength(2)
+      expect(host.querySelectorAll('.rScV5Q_generationStamp')).toHaveLength(0)
       expect(host.textContent).not.toContain('private-code')
       const stop = host.querySelector('[data-research-generation-cancel]')
       if (stop === null) throw new Error('Missing stop button')
