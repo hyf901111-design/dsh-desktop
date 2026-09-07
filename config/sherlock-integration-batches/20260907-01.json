@@ -142,6 +142,49 @@
           "真实供应商数据、客户端GUI与签名升级仍待后续验证"
         ],
         "generatedAt": "2026-09-07T02:12:19.751Z"
+      },
+      "merged": {
+        "mergeCommit": "5d57375ffcd66cac479a107d4e8d693f4c743486",
+        "verificationCommit": "5d57375ffcd66cac479a107d4e8d693f4c743486",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "test:fund-service"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run test:fund-service",
+            "verifiedCommit": "5d57375ffcd66cac479a107d4e8d693f4c743486",
+            "completedAt": "2026-09-07T02:13:43.570Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "5d57375ffcd66cac479a107d4e8d693f4c743486",
+            "completedAt": "2026-09-07T02:13:43.570Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "fund-service:check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run fund-service:check",
+            "verifiedCommit": "5d57375ffcd66cac479a107d4e8d693f4c743486",
+            "completedAt": "2026-09-07T02:13:43.570Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-07T02:13:43.570Z"
       }
     }
   ],
