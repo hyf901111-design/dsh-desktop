@@ -2,20 +2,64 @@
   "name": "sherlock-fund-data",
   "main": "worker.js",
   "compatibility_date": "2026-08-27",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
-    { "pattern": "updates.evanarts.com/v1/fund-research/query", "zone_id": "6f467b786713bdf33ed46e8a89d780d9" },
-    { "pattern": "updates.evanarts.com/v1/fund-research/health", "zone_id": "6f467b786713bdf33ed46e8a89d780d9" }
+    {
+      "pattern": "updates.evanarts.com/v1/fund-research/query",
+      "zone_id": "6f467b786713bdf33ed46e8a89d780d9"
+    },
+    {
+      "pattern": "updates.evanarts.com/v1/fund-research/health",
+      "zone_id": "6f467b786713bdf33ed46e8a89d780d9"
+    },
+    {
+      "pattern": "updates.evanarts.com/v1/account/*",
+      "zone_id": "6f467b786713bdf33ed46e8a89d780d9"
+    }
   ],
-  "vars": { "DAILY_RESEARCH_LIMIT": "1000", "CACHE_TTL_SECONDS": "600" },
+  "vars": {
+    "DAILY_RESEARCH_LIMIT": "1000",
+    "CACHE_TTL_SECONDS": "600"
+  },
   "ratelimits": [
-    { "name": "FUND_REQUEST_LIMITER", "namespace_id": "2026090701", "simple": { "limit": 20, "period": 60 } }
+    {
+      "name": "FUND_REQUEST_LIMITER",
+      "namespace_id": "2026090701",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
   ],
   "durable_objects": {
-    "bindings": [{ "name": "FUND_COORDINATOR", "class_name": "FundResearchCoordinator" }]
+    "bindings": [
+      {
+        "name": "FUND_COORDINATOR",
+        "class_name": "FundResearchCoordinator"
+      }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["FundResearchCoordinator"] }],
-  "observability": { "enabled": false }
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "FundResearchCoordinator"
+      ]
+    }
+  ],
+  "observability": {
+    "enabled": false
+  },
+  "d1_databases": [
+    {
+      "binding": "ACCOUNTS_DB",
+      "database_name": "sherlock-accounts",
+      "database_id": "REPLACE_WITH_VERIFIED_PRODUCTION_D1_ID",
+      "migrations_dir": "../accounts/migrations"
+    }
+  ]
 }

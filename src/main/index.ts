@@ -1,3 +1,5 @@
+import { AccountService } from './account-service'
+import { registerTrustedMainWindowHandler } from './ipc-trust'
 import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
 import { isAbsolute, join, normalize, resolve } from 'node:path'
@@ -117,6 +119,7 @@ const PLUGIN_RECOVERY_ACTIONS = new Set<PluginRecoveryAction>([
   'quit'
 ])
 
+let accountService: AccountService | undefined
 let mainWindow: BrowserWindow | undefined
 let runtime: HarnessRuntime
 let localSearchRuntime: LocalSearchRuntime | undefined
@@ -1113,6 +1116,9 @@ async function bootstrap(): Promise<void> {
       request
     )
   )
+  accountService = new AccountService(join(app.getPath('userData'), 'accounts'))
+  const accountEndpoint = await accountService.start()
+  registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow
@@ -1127,6 +1133,7 @@ async function bootstrap(): Promise<void> {
     bundledMarketInstallerEntry: bundledMarketInstallerEntry(),
     bundledResearchTaskEntry: bundledResearchTaskEntry(),
     bundledFundResearchEntry: bundledFundResearchEntry(),
+    accountEndpoint,
     localSearchUrl: localSearchRuntime.endpoint.url,
     localSearchToken: localSearchRuntime.endpoint.token,
     researchContext,
@@ -1220,6 +1227,7 @@ if (!singleInstance) {
     if (process.platform !== 'darwin') app.quit()
   })
   app.on('before-quit', (event) => {
+    accountService?.stop()
     researchVoiceController.dispose()
     if (quitting || !runtime) return
     event.preventDefault()
