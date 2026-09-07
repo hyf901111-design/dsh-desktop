@@ -21,7 +21,7 @@ D1 保存用户、加盐 PBKDF2-SHA256（600000 次）的密码哈希、邀请�
 
 ## 管理与部署
 
-此提交未创建生产 D1、部署 Worker、修改更新源或发布客户端。配置中的 `REPLACE_WITH_VERIFIED_PRODUCTION_D1_ID` 是显式部署占位符，必须替换为已核实归属的生产数据库 ID，禁止原样部署。
+2026-09-07 已核验生产账户、域名和发布桶，创建 `sherlock-accounts` D1（`1a60b58b-7926-4287-b6ff-c6e84e12827d`）并应用迁移。配置绑定该数据库；Worker 部署与线上验收记录单独保留，不修改公开客户端更新源。
 
 1. 按既有部署工具核验 Sherlock 生产 Cloudflare Account ID、域名与 `sherlock-releases` 桶归属；不要使用当前 CLI 默认账户替代归属核验。
 2. 在该账户创建 `sherlock-accounts` D1，将真实 ID 填入 `services/fund-data/wrangler.jsonc`。
@@ -45,3 +45,7 @@ D1 保存用户、加盐 PBKDF2-SHA256（600000 次）的密码哈希、邀请�
 ## 关于页面下载大小
 
 更新器 progress 的 transferred / total 经主进程状态和 IPC 原样传递，关于页面在百分比旁显示已下载大小 / 本次下载总大小。按十进制 B、KB、MB、GB 显示；差分下载采用更新器本次传输量，不混入完整 ZIP 大小。未知总量或异常计数时只显示百分比，重试和状态重置清除旧计数。
+
+## 登录浮窗细化
+
+默认头像采用用户提供的 SVG，浮窗宽 360px、Logo 宽 136px，切换注册入口为居中文字。输入焦点使用浅灰色；关闭浏览器原生表单气泡，校验错误显示在对应输入框上方右侧。

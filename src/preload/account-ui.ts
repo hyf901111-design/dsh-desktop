@@ -1,4 +1,5 @@
 import sherlockLogo from '../../build/sherlock-logo.svg?raw'
+import accountAvatar from '../../build/sherlock-account-avatar.svg?raw'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   user?: Account | null
@@ -11,11 +12,20 @@ export function mountAccountUi(
 ) {
   const style = document.createElement('style')
   style.textContent = `
- .sherlock-auth-dialog{box-sizing:border-box;width:min(440px,calc(100vw - 40px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--dsw-alias-border-l2,#555);border-radius:20px;background:var(--dsw-alias-bg-layer-2,#191919);color:var(--dsw-alias-label-primary);box-shadow:0 24px 90px #0005;overflow:auto}
+ .sherlock-auth-dialog{box-sizing:border-box;width:min(360px,calc(100vw - 40px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--dsw-alias-border-l2,#555);border-radius:20px;background:var(--dsw-alias-bg-layer-2,#191919);color:var(--dsw-alias-label-primary);box-shadow:0 24px 90px #0005;overflow:auto}
  .sherlock-auth-dialog::backdrop{background:#0005}
- .sherlock-auth-dialog .VOzbGW_content{padding:0}.sherlock-auth-dialog .sherlock-account-page{padding:40px 32px 24px}
- .sherlock-auth-dialog .sherlock-account-page h1{font-size:20px;margin-top:28px}
- .sherlock-auth-logo{display:block;width:180px;height:auto;fill:currentColor}
+ .sherlock-auth-dialog .VOzbGW_content{padding:0}.sherlock-auth-dialog .sherlock-account-page{padding:28px 24px 20px}
+ .sherlock-auth-dialog .sherlock-account-page h1{font-size:18px;margin-top:20px}
+ .sherlock-auth-dialog .sherlock-account-page form{margin-top:20px;gap:14px}
+ .sherlock-auth-dialog .sherlock-account-page input{height:38px}
+ .sherlock-auth-dialog .sherlock-account-page button[type=submit]{padding:9px 12px}
+ .sherlock-auth-dialog .sherlock-auth-switch{display:block;width:100%;text-align:center;border:0;background:transparent;padding:4px 0;margin-top:14px;font-size:12px;color:var(--dsw-alias-label-secondary)}
+ .sherlock-account-page [role=status]:empty{display:none}
+ .sherlock-field-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+ .sherlock-field-heading .sherlock-field-error{font-size:11px;font-weight:400;color:var(--dsw-alias-label-secondary);text-align:right}
+ .sherlock-field-heading .sherlock-field-error:empty{display:none}
+ .sherlock-account-avatar svg{display:block;width:100%;height:100%}
+ .sherlock-auth-logo{display:block;width:136px;height:auto;fill:currentColor}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
  .VOzbGW_overlay{z-index:2000!important;background:var(--dsw-alias-bg-layer-2,#181818)}
@@ -32,7 +42,7 @@ export function mountAccountUi(
  .sherlock-account-button:hover,.sherlock-account-menu button:hover,.sherlock-account-nav:hover{background:var(--dsw-alias-interactive-bg-hover)}
  .sherlock-account-button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
  [data-dsh-sidebar-root][data-collapsed=true] .sherlock-account-button span{display:none}
- .sherlock-account-avatar{display:grid;place-items:center;background:#b85b12;color:white;border-radius:50%;width:23px;height:23px;flex:none;font:11px system-ui}
+ .sherlock-account-avatar{display:grid;place-items:center;background:transparent;color:var(--dsw-alias-label-primary);border-radius:50%;width:23px;height:23px;flex:none;font:11px system-ui}
  .sherlock-account-menu{position:fixed;z-index:3000;width:240px;padding:8px;border-radius:16px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);border:1px solid var(--dsw-alias-border-l2,#555);box-shadow:0 12px 40px #0003;font:13px system-ui}
  .sherlock-account-menu button{display:block;width:100%}.sherlock-account-menu strong{display:block;padding:12px;border-bottom:1px solid var(--dsw-alias-border-l2);margin-bottom:6px}
  .sherlock-account-nav{color:var(--dsw-alias-label-primary)}
@@ -44,7 +54,7 @@ export function mountAccountUi(
  .sherlock-account-page button{cursor:pointer;padding:10px 14px;border:1px solid var(--dsw-alias-border-l2,#777);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:inherit;font:inherit}
  .sherlock-account-page button[type=submit]{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-2);font-weight:500}.sherlock-account-page button:disabled{opacity:.5;cursor:wait}
  .sherlock-account-page [role=status]{min-height:24px;color:var(--dsw-alias-label-secondary)}
- .sherlock-account-page input:focus-visible,.sherlock-account-page button:focus-visible,.sherlock-account-nav:focus-visible,.sherlock-account-menu button:focus-visible,.sherlock-account-button:focus-visible{outline:2px solid #b87440;outline-offset:2px}
+ .sherlock-account-page input:focus-visible,.sherlock-account-page button:focus-visible,.sherlock-account-nav:focus-visible,.sherlock-account-menu button:focus-visible,.sherlock-account-button:focus-visible{outline:1px solid var(--dsw-alias-label-secondary,#aaa);outline-offset:1px}
  .sherlock-account-card{border:1px solid var(--dsw-alias-border-l2,#555);border-radius:14px;padding:20px;margin-top:20px}
  @media(max-width:720px){.VOzbGW_nav{width:180px!important}.sherlock-account-page{padding:24px}.VOzbGW_options{padding:20px!important}}
  `
@@ -86,7 +96,12 @@ export function mountAccountUi(
     trigger.replaceChildren()
     const avatar = document.createElement('i')
     avatar.className = 'sherlock-account-avatar'
-    avatar.textContent = user ? (Array.from(user.username)[0] ?? 'S') : '↗'
+    const avatarSvg = new DOMParser().parseFromString(
+      accountAvatar,
+      'image/svg+xml'
+    ).documentElement
+    avatarSvg.setAttribute('aria-hidden', 'true')
+    avatar.append(document.importNode(avatarSvg, true))
     const label = document.createElement('span')
     label.textContent = user?.username ?? '登录 Sherlock'
     trigger.append(avatar, label, document.createTextNode('⌃'))
@@ -197,6 +212,12 @@ export function mountAccountUi(
       )
     }
     const form = document.createElement('form')
+    form.noValidate = true
+    const fields: Array<{
+      input: HTMLInputElement
+      error: HTMLElement
+      label: string
+    }> = []
     const status = document.createElement('div')
     status.role = 'status'
     status.setAttribute('aria-live', 'polite')
@@ -207,12 +228,29 @@ export function mountAccountUi(
       autocomplete: string
     ) => {
       const l = document.createElement('label')
-      l.textContent = label
+      const heading = document.createElement('span')
+      heading.className = 'sherlock-field-heading'
+      const caption = document.createElement('span')
+      caption.textContent = label
+      const error = document.createElement('span')
+      error.className = 'sherlock-field-error'
+      error.id = `sherlock-field-error-${name}`
+      error.setAttribute('aria-live', 'polite')
+      heading.append(caption, error)
+      l.append(heading)
       const i = document.createElement('input')
       i.name = name
       i.type = type
       i.autocomplete = autocomplete as AutoFill
       i.required = true
+      i.setAttribute('aria-label', label)
+      i.setAttribute('aria-describedby', error.id)
+      i.addEventListener('input', () => {
+        error.textContent = ''
+        i.removeAttribute('aria-invalid')
+        status.textContent = ''
+      })
+      fields.push({ input: i, error, label })
       i.maxLength = type === 'password' ? 128 : name === 'username' ? 32 : 128
       if (type === 'password') i.minLength = 10
       l.append(i)
@@ -246,6 +284,34 @@ export function mountAccountUi(
     page.append(form)
     form.onsubmit = (event) => {
       event.preventDefault()
+      let firstInvalid: HTMLInputElement | undefined
+      for (const entry of fields) {
+        const value = entry.input.value
+        let message = !value ? `请输入${entry.label}` : ''
+        if (!message && entry.input.type === 'password' && value.length < 10)
+          message = '至少 10 位'
+        if (
+          !message &&
+          entry.input.name === 'username' &&
+          !/^[\p{L}\p{N}_-]{3,32}$/u.test(value)
+        )
+          message = '3–32 位文字、数字或 _ -'
+        if (
+          !message &&
+          entry.input.name === 'invite' &&
+          !/^[-a-zA-Z0-9]{16,128}$/.test(value)
+        )
+          message = '请检查邀请码'
+        entry.error.textContent = message
+        if (message) {
+          entry.input.setAttribute('aria-invalid', 'true')
+          firstInvalid ??= entry.input
+        } else entry.input.removeAttribute('aria-invalid')
+      }
+      if (firstInvalid) {
+        firstInvalid.focus()
+        return
+      }
       const input = Object.fromEntries(new FormData(form).entries())
       const action = user ? 'password' : register ? 'register' : 'login'
       submit.disabled = true
@@ -253,8 +319,23 @@ export function mountAccountUi(
       void invoke(action, input)
         .then((reply) => {
           if (reply.error) {
-            status.textContent =
-              errors[reply.error.code] ?? '操作未完成，请稍后重试。'
+            const target =
+              reply.error.code === 'INVALID_INVITE'
+                ? 'invite'
+                : reply.error.code === 'INVALID_CREDENTIALS'
+                  ? user
+                    ? 'currentPassword'
+                    : 'password'
+                  : undefined
+            const entry = fields.find((field) => field.input.name === target)
+            if (entry) {
+              status.textContent = ''
+              entry.error.textContent = errors[reply.error.code] ?? '请检查输入'
+              entry.input.setAttribute('aria-invalid', 'true')
+              entry.input.focus()
+            } else
+              status.textContent =
+                errors[reply.error.code] ?? '操作未完成，请稍后重试。'
             return
           }
           if (action === 'password') {
@@ -279,8 +360,10 @@ export function mountAccountUi(
     }
     if (!user)
       page.append(
-        button(register ? '已有账户，去登录' : '没有账户？使用邀请码注册', () =>
-          renderAccount(root, !register)
+        button(
+          register ? '已有账户，去登录' : '没有账户？使用邀请码注册',
+          () => renderAccount(root, !register),
+          'sherlock-auth-switch'
         )
       )
     else {
