@@ -9928,7 +9928,7 @@ describe('Sherlock workspace and composer controls', () => {
         '制作收入、利润和现金流三项核心指标'
       ) as Record<string, unknown>
       const generatedId = String(target.id)
-      fetchMock.mockImplementationOnce(async () => ({
+      fetchMock.mockImplementation(async () => ({
         ok: true,
         status: 202,
         async json() {
@@ -9961,8 +9961,14 @@ describe('Sherlock workspace and composer controls', () => {
         parentSessionId: session.sessionId,
         canvasNodeId: generatedId,
         kind: 'container',
-        prompt: '制作收入、利润和现金流三项核心指标'
+        prompt: expect.stringContaining('制作收入、利润和现金流三项核心指标')
       })
+      expect(payload.prompt).toContain('720×600');
+      expect(target.prompt).toBe('制作收入、利润和现金流三项核心指标');
+      mounted.workspace.failGeneration(generatedId, '模拟可重试错误');
+      const retry = mounted.workspace.retryGeneration(generatedId) as Record<string, unknown>;
+      expect(retry.prompt).toBe(target.prompt);
+      expect(await hub.generateResearchSelection(session, { sessionId: session.sessionId, kind: retry.kind, targetNodeId: generatedId, prompt: retry.prompt })).toMatchObject({ ok: true });
       expect(mounted.workspace.applyGenerationInspection(generatedId, {
         taskId: 'task-container', canvasNodeId: generatedId, state: 'completed',
         lastSeq: 3, completedAt: 1_000, events: [],
@@ -9980,8 +9986,8 @@ describe('Sherlock workspace and composer controls', () => {
         kind: 'generated-container',
         title: '核心经营指标',
         generationStatus: 'completed',
-        width: 640,
-        height: 420,
+        width: 720,
+        height: 600,
         lastSuccessfulAt: 1_000,
         containerSpec: {
           version: 1,

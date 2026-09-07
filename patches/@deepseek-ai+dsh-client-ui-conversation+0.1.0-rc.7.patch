@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..57a1e40 100644
+index 1dd0e89..d983f68 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -514,7 +514,7 @@ index 1dd0e89..57a1e40 100644
 +							parentSessionId: session.sessionId,
 +							canvasNodeId: targetNodeId,
 +							kind: 'container',
-+							prompt
++							prompt: researchComponentPrompt(target, prompt)
 +						});
 +						if (!workspace.attachGenerationTask(targetNodeId, result)) return { ok: false, error: '生成组件已失效' };
 +						return { ok: true, taskId: result.taskId };
@@ -5857,7 +5857,7 @@ index 1dd0e89..57a1e40 100644
 +						excerpt: "正在准备任务…"
 +					};
 +					commitUpdate({ artifacts: artifacts2, selection: { selectedNodeIds: [nodeId], orderedFileIds: [] } }, true);
-+					return { id: nodeId, kind: "container", prompt: researchComponentPrompt(artifacts2[index], prompt) };
++					return { id: nodeId, kind: "container", prompt };
 +				},
 +				setContainerRefresh(nodeId, value) {
 +					const index = snapshot.artifacts.findIndex((node) => node.id === nodeId && node.kind === "generated-container");
@@ -6057,7 +6057,7 @@ index 1dd0e89..57a1e40 100644
 +						excerpt: '正在准备任务…'
 +					};
 +					commitUpdate({ artifacts: artifacts2 }, true);
-+					return kind === 'container' ? { id: nodeId, kind, prompt: researchComponentPrompt(current, current.containerPrompt) } : { id: nodeId, kind, sourceNodeIds: [...current.sourceNodeIds], generationSources: current.generationSources, ...(kind === 'create' ? { prompt: current.containerPrompt } : {}), ...(kind === 'mind-map' ? { detail: researchMindMapDetail(current.generationDetail) } : {}) };
++					return kind === 'container' ? { id: nodeId, kind, prompt: current.containerPrompt } : { id: nodeId, kind, sourceNodeIds: [...current.sourceNodeIds], generationSources: current.generationSources, ...(kind === 'create' ? { prompt: current.containerPrompt } : {}), ...(kind === 'mind-map' ? { detail: researchMindMapDetail(current.generationDetail) } : {}) };
 +				},
 +				setGenerationCancelSink(sink) {
 +					generationCancelSink = typeof sink === 'function' ? sink : void 0;
