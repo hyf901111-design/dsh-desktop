@@ -37,4 +37,16 @@ describe('desktop model provider policy', () => {
       name: 'dsh-web-search-session-model'
     })
   })
+
+  it('mounts the product-owned fund research runtime without a generic MCP bridge', () => {
+    const desktop = loadOverlayPatches('dsh-desktop-test', 'build/dsh-desktop.patch.yml')
+    const inserted = desktop.flatMap((entry) => entry.insert ?? [])
+
+    expect(inserted.find((entry) => entry.id === 'sherlock-fund-research-runtime'))
+      .toMatchObject({
+        id: 'sherlock-fund-research-runtime',
+        name: 'dsh-fund-research-runtime'
+      })
+    expect(JSON.stringify(inserted)).not.toContain('dsh-mcp-client')
+  })
 })
