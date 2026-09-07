@@ -99,6 +99,40 @@
           "Feature committed locally only; shared client and public feeds unchanged"
         ],
         "generatedAt": "2026-09-07T16:16:53.927700+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
+        "verificationCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-workbench.test.js",
+              "test/standard-agent-preset.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-workbench.test.js test/standard-agent-preset.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
+            "completedAt": "2026-09-07T22:05:05.291Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
+            "completedAt": "2026-09-07T22:05:05.291Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-07T22:05:05.291Z"
       }
     }
   ],
