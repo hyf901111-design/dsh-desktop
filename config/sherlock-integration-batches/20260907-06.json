@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260907-06",
+  "branch": "codex/integration/20260907-06",
+  "baseMainCommit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+  "expectedMainCommit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+  "createdAt": "2026-09-07T11:18:33.912Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "十并发与长组件尺寸补充修复",
+        "branch": "codex/feat/research-ten-slots-20260907",
+        "baseCommit": "44978b1eacad50a8f2bee0533e2543cf526c992d",
+        "tipCommit": "f3d7882284448208951f470fc350cbbd0c9d1126",
+        "commits": [
+          {
+            "commit": "843b885b4e2afad40dab1cda5fbad7bbc4db7e80",
+            "parents": [
+              "44978b1eacad50a8f2bee0533e2543cf526c992d"
+            ],
+            "subject": "优化：画布生成支持十个并发子任务并验证排队取消"
+          },
+          {
+            "commit": "f3d7882284448208951f470fc350cbbd0c9d1126",
+            "parents": [
+              "843b885b4e2afad40dab1cda5fbad7bbc4db7e80"
+            ],
+            "subject": "修复：长报告与 HTML 组件突破旧高度上限并保留宽度约束"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/research-html-theme.test.js",
+              "test/research-voice.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "134 focused cases passed; 17 selected production UI tests and 14 native voice lifecycle cases also passed",
+            "verifiedCommit": "f3d7882284448208951f470fc350cbbd0c9d1126",
+            "completedAt": "2026-09-07T11:18:19.009Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Mounted native content at 3250px and HTML at 4200px pass; first packaged run exposed the old 2400px cap, final packaged verification follows"
+        },
+        "acceptanceCriteria": [
+          "Ten active tasks per research session; eleventh FIFO queued",
+          "Long native and HTML output fits beyond 2400px",
+          "Voice final dispatch and cancellation remain correct"
+        ],
+        "risks": [
+          "Real microphone currently provides zero samples; live spoken input requested"
+        ],
+        "generatedAt": "2026-09-07T11:18:19.009Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "test/research-container-chrome.test.ts",
+        "test/research-html-theme.test.js",
+        "test/research-voice.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
