@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260907-08",
+  "branch": "codex/integration/20260907-08",
+  "baseMainCommit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+  "expectedMainCommit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+  "createdAt": "2026-09-07T11:57:01.307Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "0.8.9 全部研究画布与语音修复",
+        "branch": "codex/feat/release089-complete-20260907",
+        "baseCommit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+        "tipCommit": "6ad03f342a14bcd1a3b5bfbc65919e2822214eaf",
+        "commits": [
+          {
+            "commit": "6ad03f342a14bcd1a3b5bfbc65919e2822214eaf",
+            "parents": [
+              "b71d73217b200b9fb95343ebb6bc2a760683b647"
+            ],
+            "subject": "集成：汇总 0.8.9 画布生成尺寸语音与并发修复"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "config/sherlock-integration-batches/20260907-06.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/verification/sherlock-research-generation-20260907.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "scripts/macos/research-voice.mm"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-voice-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/research-html-theme.test.js",
+              "test/research-voice.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "134 focused cases; real containers and voice confirmed; arrangement stable",
+            "verifiedCommit": "6ad03f342a14bcd1a3b5bfbc65919e2822214eaf",
+            "completedAt": "2026-09-07T11:57:00.342992+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Six real generated components; native mic final and table; no overlaps after arrange"
+        },
+        "acceptanceCriteria": [
+          "Usable report output",
+          "Content fitting arrangement",
+          "Voice final retained",
+          "Ten concurrent tasks"
+        ],
+        "risks": [],
+        "generatedAt": "2026-09-07T11:57:00.342992+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "test/research-container-chrome.test.ts",
+        "test/research-html-theme.test.js",
+        "test/research-voice.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
