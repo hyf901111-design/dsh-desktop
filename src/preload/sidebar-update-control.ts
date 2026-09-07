@@ -343,7 +343,8 @@ const styles = `
     position: absolute;
     right: 0;
     bottom: 60px;
-    z-index: 2147483646;
+    /* Below settings (2000) and the account menu (3000). */
+    z-index: 1500;
     width: 260px;
     padding: 13px;
     color: var(--dsw-alias-label-primary, #f3f4f6);
