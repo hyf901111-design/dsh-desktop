@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260907-03",
+  "branch": "codex/integration/20260907-03",
+  "baseMainCommit": "cc208cdc1bb6df814e069c3833fe49f34d8138a1",
+  "expectedMainCommit": "cc208cdc1bb6df814e069c3833fe49f34d8138a1",
+  "createdAt": "2026-09-07T05:42:52.364Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "账户浮窗细化与生产数据库",
+        "branch": "codex/feat/accounts-polish-20260907",
+        "baseCommit": "cc208cdc1bb6df814e069c3833fe49f34d8138a1",
+        "tipCommit": "7f655c00e85e03f9034e2039e8a029ebb5158487",
+        "commits": [
+          {
+            "commit": "7f655c00e85e03f9034e2039e8a029ebb5158487",
+            "parents": [
+              "cc208cdc1bb6df814e069c3833fe49f34d8138a1"
+            ],
+            "subject": "优化账户登录浮窗并接入生产账户数据库"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/sherlock-account-avatar.svg"
+          },
+          {
+            "status": "M",
+            "path": "docs/sherlock-accounts.md"
+          },
+          {
+            "status": "M",
+            "path": "services/accounts/migrations/0001_accounts.sql"
+          },
+          {
+            "status": "M",
+            "path": "services/fund-data/wrangler.jsonc"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/test-fund-data-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Real local workerd D1 invite transaction and session tests passed",
+            "verifiedCommit": "7f655c00e85e03f9034e2039e8a029ebb5158487",
+            "completedAt": "2026-09-07T05:42:51.959431+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Browser fixture verified 360px modal, supplied avatar, gray focus and inline field errors; production client pending"
+        },
+        "acceptanceCriteria": [
+          "Settings and personal models work without login",
+          "Hosted fund APIs require valid account sessions",
+          "Full-window settings preserve research state on return",
+          "Validate new packaged client and coordinated production cutover"
+        ],
+        "risks": [
+          "Worker deployment and packaged-client verification pending"
+        ],
+        "generatedAt": "2026-09-07T05:42:51.959431+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/account-service.test.ts",
+        "test/update-state.test.ts",
+        "test/update-manager.test.ts",
+        "test/settings-about.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
