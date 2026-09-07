@@ -25,7 +25,8 @@ export const MAX_BODY_BYTES = 384 * 1024
 const MAX_ID_LENGTH = 256
 const MAX_TITLE_LENGTH = 512
 const MAX_PATH_LENGTH = 8_192
-const MAX_CONTAINER_PROMPT = 8_000
+// Keep room for fixed-size instructions after the UI validates an 8,000-character user prompt.
+const MAX_CONTAINER_PROMPT = 9_000
 const MAX_EVENT_TEXT = 8_192
 const MAX_PUBLIC_EVENTS = 160
 const MAX_FINAL_OUTPUT = 240_000
@@ -179,7 +180,7 @@ export function validateResearchTaskStart(value) {
     parentSessionId,
     canvasNodeId,
     kind: request.kind,
-    ...(request.kind === 'create' ? { prompt: requiredString(request.prompt, MAX_CONTAINER_PROMPT, '创建需求无效') } : {}),
+    ...(request.kind === 'create' ? { prompt: requiredString(request.prompt, 8_000, '创建需求无效') } : {}),
     ...(detail === undefined ? {} : { detail }),
     sources
   })
@@ -540,7 +541,18 @@ export function publicProgressText(value) {
   const text = value.replace(/https?:\/\/\S+/gu, '[来源链接]').replace(/(?:Bearer\s+\S+|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+)/giu, '[已隐藏]').replace(/(?:\/Users\/|\/home\/)[^\s]+/gu, '[本地文件]').replace(/[\r\n\t]+/gu, ' ').trim().slice(0, 240)
   return text || undefined
 }
+const MODEL_FAILURE_MESSAGES = {
+  TRANSPORT: '模型连接中断，请稍后重试。',
+  TIMEOUT: '模型响应超时，请稍后重试。',
+  RATE_LIMIT: '模型服务暂时限流，请稍后重试。'
+}
+
 export function publicEventFromSessionEvent(event) {
+  if (event?.type === 'llm/retry') {
+    const code = event.data?.failure?.code
+    const text = code === 'TRANSPORT' ? '模型连接中断，正在自动重试。' : code === 'TIMEOUT' ? '模型响应超时，正在自动重试。' : code === 'RATE_LIMIT' ? '模型服务暂时限流，正在等待重试。' : undefined
+    return text ? { type: 'assistant-delta', text: `${text}\n` } : null
+  }
   if (event?.type === 'assistant/chunk' && event.data?.chunk?.type === 'text-delta') {
     const text = eventText(event.data.chunk.text)
     return text === undefined ? null : { type: 'assistant-delta', text }
@@ -862,6 +874,11 @@ export class ResearchTaskRuntime {
 
   onSessionEvent(task, sessionEvent) {
     if (task.state !== 'running') return
+    if (sessionEvent?.type === 'turn/start') delete task.modelFailureMessage
+    if (sessionEvent?.type === 'turn/end' && sessionEvent.data?.reason?.kind === 'error') {
+      const code = sessionEvent.data.reason.error?.code
+      task.modelFailureMessage = Object.hasOwn(MODEL_FAILURE_MESSAGES, code) ? MODEL_FAILURE_MESSAGES[code] : undefined
+    }
     const value = publicEventFromSessionEvent(sessionEvent)
     if (value === null) return
     this.appendEvent(task, value)
@@ -961,7 +978,7 @@ export class ResearchTaskRuntime {
               ? '任务未能生成内容，请重试。'
               : result?.stopReason === 'aborted'
                 ? '任务已取消，可重试。'
-                : '生成失败，请重试。'
+                : task.modelFailureMessage ?? '生成失败，请重试。'
         await this.finish(
           task,
           result?.stopReason === 'aborted' ? 'cancelled' : 'failed',
@@ -978,7 +995,7 @@ export class ResearchTaskRuntime {
               ? '任务已取消，可重试。'
               : error instanceof ResearchTaskError
                 ? error.message
-                : '生成失败，请重试。'
+                : task.modelFailureMessage ?? '生成失败，请重试。'
           }
         )
       }
