@@ -36,7 +36,7 @@ export function mountAccountUi(
  .VOzbGW_options{padding:20px max(32px,calc((100% - 800px)/2)) 60px!important}
  .VOzbGW_header{height:32px!important;padding:0 24px!important}.VOzbGW_close{display:none!important}
  .VOzbGW_panel[data-account-active] .VOzbGW_options,.VOzbGW_panel[data-account-active] .VOzbGW_header{display:none!important}
- .VOzbGW_panel[data-account-active] .VOzbGW_navCell[aria-current]{background:transparent!important}
+ .VOzbGW_panel[data-account-active] .VOzbGW_navCell:not([data-account-nav]).VOzbGW_active{background:transparent!important}
  .sherlock-account-button,.sherlock-account-menu button,.sherlock-account-nav{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer;text-align:left;border-radius:8px;padding:9px 12px}
  .sherlock-account-button{display:flex;width:100%;align-items:center;gap:10px;height:42px;margin:4px 0;color:var(--dsw-alias-label-primary)}
  .sherlock-account-button:hover,.sherlock-account-menu button:hover,.sherlock-account-nav:hover{background:var(--dsw-alias-interactive-bg-hover)}
@@ -46,15 +46,16 @@ export function mountAccountUi(
  .sherlock-account-menu{position:fixed;z-index:3000;width:240px;padding:8px;border-radius:16px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);border:1px solid var(--dsw-alias-border-l2,#555);box-shadow:0 12px 40px #0003;font:13px system-ui}
  .sherlock-account-menu button{display:block;width:100%}.sherlock-account-menu strong{display:block;padding:12px;border-bottom:1px solid var(--dsw-alias-border-l2);margin-bottom:6px}
  .sherlock-account-nav{color:var(--dsw-alias-label-primary)}
- .sherlock-account-nav[aria-current=page]{background:var(--dsw-specific-sidebar-nav-item-active,#ffffff14)}
+ [data-account-nav][aria-current=page]{background:var(--dsw-specific-sidebar-nav-item-active,#ffffff14)}
  .sherlock-account-page{overflow:auto;padding:30px max(32px,calc((100% - 760px)/2)) 60px;color:var(--dsw-alias-label-primary);font:14px/1.6 system-ui;flex:1}
  .sherlock-account-page h1{font-size:24px;font-weight:500;margin:0 0 8px}.sherlock-account-page h2{font-size:15px;font-weight:500;margin-top:32px}
  .sherlock-account-page p{color:var(--dsw-alias-label-secondary);margin:0 0 28px}.sherlock-account-page form{max-width:440px;display:grid;gap:18px;margin-top:28px}
+ .sherlock-account-page form[hidden]{display:none}.sherlock-account-security{display:flex;align-items:center;justify-content:space-between;gap:16px}.sherlock-account-security button{flex:none}
  .sherlock-account-page label{display:grid;gap:8px}.sherlock-account-page input{box-sizing:border-box;width:100%;height:42px;padding:0 12px;border:1px solid var(--dsw-alias-border-l2,#777);border-radius:8px;background:var(--dsw-alias-bg-layer-1,transparent);color:inherit;font:inherit}
  .sherlock-account-page button{cursor:pointer;padding:10px 14px;border:1px solid var(--dsw-alias-border-l2,#777);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:inherit;font:inherit}
  .sherlock-account-page button[type=submit]{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-2);font-weight:500}.sherlock-account-page button:disabled{opacity:.5;cursor:wait}
  .sherlock-account-page [role=status]{min-height:24px;color:var(--dsw-alias-label-secondary)}
- .sherlock-account-page input:focus-visible,.sherlock-account-page button:focus-visible,.sherlock-account-nav:focus-visible,.sherlock-account-menu button:focus-visible,.sherlock-account-button:focus-visible{outline:1px solid var(--dsw-alias-label-secondary,#aaa);outline-offset:1px}
+ .sherlock-account-page input:focus-visible,.sherlock-account-page button:focus-visible,.sherlock-account-nav:focus-visible,[data-account-nav]:focus-visible,.sherlock-account-menu button:focus-visible,.sherlock-account-button:focus-visible{outline:1px solid var(--dsw-alias-label-secondary,#aaa);outline-offset:1px}
  .sherlock-account-card{border:1px solid var(--dsw-alias-border-l2,#555);border-radius:14px;padding:20px;margin-top:20px}
  @media(max-width:720px){.VOzbGW_nav{width:180px!important}.sherlock-account-page{padding:24px}.VOzbGW_options{padding:20px!important}}
  `
@@ -257,16 +258,35 @@ export function mountAccountUi(
       form.append(l)
       return i
     }
+    let passwordToggle: HTMLButtonElement | undefined
     if (user) {
       const card = document.createElement('div')
       card.className = 'sherlock-account-card'
       card.textContent = user.username
       page.append(card)
-      const h = document.createElement('h2')
-      h.textContent = '修改密码'
-      page.append(h)
+      const security = document.createElement('div')
+      security.className = 'sherlock-account-card sherlock-account-security'
+      const label = document.createElement('span')
+      label.textContent = '账户密码'
+      form.hidden = true
+      form.id = 'sherlock-change-password'
+      form.setAttribute('aria-label', '修改密码')
+      passwordToggle = button(
+        '修改密码',
+        () => {
+          form.hidden = false
+          passwordToggle!.setAttribute('aria-expanded', 'true')
+          form.querySelector('input')?.focus()
+        },
+        ''
+      )
+      passwordToggle.setAttribute('aria-expanded', 'false')
+      passwordToggle.setAttribute('aria-controls', form.id)
+      security.append(label, passwordToggle)
+      page.append(security)
       field('currentPassword', '当前密码', 'password', 'current-password')
       field('password', '新密码', 'password', 'new-password')
+      field('confirmPassword', '确认新密码', 'password', 'new-password')
     } else {
       field('username', '用户名', 'text', 'username')
       field(
@@ -275,12 +295,33 @@ export function mountAccountUi(
         'password',
         register ? 'new-password' : 'current-password'
       )
-      if (register) field('invite', '邀请码', 'text', 'off')
+      if (register) {
+        field('confirmPassword', '确认密码', 'password', 'new-password')
+        field('invite', '邀请码', 'text', 'off')
+      }
     }
     const submit = document.createElement('button')
     submit.type = 'submit'
     submit.textContent = user ? '修改密码' : register ? '注册并登录' : '登录'
     form.append(submit, status)
+    if (user)
+      form.append(
+        button(
+          '取消',
+          () => {
+            form.reset()
+            form.hidden = true
+            status.textContent = ''
+            for (const entry of fields) {
+              entry.error.textContent = ''
+              entry.input.removeAttribute('aria-invalid')
+            }
+            passwordToggle!.setAttribute('aria-expanded', 'false')
+            passwordToggle!.focus()
+          },
+          ''
+        )
+      )
     page.append(form)
     form.onsubmit = (event) => {
       event.preventDefault()
@@ -302,6 +343,13 @@ export function mountAccountUi(
           !/^[-a-zA-Z0-9]{16,128}$/.test(value)
         )
           message = '请检查邀请码'
+        if (
+          !message &&
+          entry.input.name === 'confirmPassword' &&
+          value !==
+            fields.find((field) => field.input.name === 'password')?.input.value
+        )
+          message = '两次输入的密码不一致'
         entry.error.textContent = message
         if (message) {
           entry.input.setAttribute('aria-invalid', 'true')
@@ -313,6 +361,7 @@ export function mountAccountUi(
         return
       }
       const input = Object.fromEntries(new FormData(form).entries())
+      delete input.confirmPassword
       const action = user ? 'password' : register ? 'register' : 'login'
       submit.disabled = true
       status.textContent = '正在处理…'
@@ -390,7 +439,7 @@ export function mountAccountUi(
         })
     }
     root.querySelector('.VOzbGW_content')?.append(page)
-    page.querySelector('input')?.focus()
+    if (!user) page.querySelector('input')?.focus()
   }
   function reconcile() {
     const original =
@@ -457,9 +506,19 @@ export function mountAccountUi(
       trigger?.focus()
     })
     nav.prepend(back)
-    const account = button('账户信息', () => open(true))
+    const account = button('', () => open(true), 'VOzbGW_navCell')
     account.dataset.accountNav = ''
-    back.after(account)
+    const icon = new DOMParser().parseFromString(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="3"/><path d="M5.5 18c1.2-3 3.3-4.5 6.5-4.5s5.3 1.5 6.5 4.5"/></svg>',
+      'image/svg+xml'
+    ).documentElement
+    icon.setAttribute('class', 'VOzbGW_navIcon')
+    icon.setAttribute('aria-hidden', 'true')
+    const label = document.createElement('span')
+    label.className = 'VOzbGW_navLabel'
+    label.textContent = '账户信息'
+    account.append(document.importNode(icon, true), label)
+    nav.querySelector('.VOzbGW_navList')?.prepend(account)
     nav.addEventListener('click', (event) => {
       if ((event.target as Element).closest('[data-settings-section-id]'))
         showSettings(root)
