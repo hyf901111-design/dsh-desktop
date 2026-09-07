@@ -195,3 +195,15 @@ describe('Sherlock sidebar update control', () => {
     expect(button.dataset.action).toBe('download')
   })
 })
+
+it('shows installation preparation without requiring hover or another confirmation', () => {
+  const document = fixture()
+  const control = new SidebarUpdateControl(document, 'zh', { download: vi.fn(), install: vi.fn(), retry: vi.fn() })
+  control.render({ currentVersion: '0.8.6', availableVersion: '0.8.7', phase: 'installing', manual: true })
+  const panel = document.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
+  expect(panel.hidden).toBe(false)
+  expect(panel.textContent).toContain('系统正在解压并校验更新')
+  expect(panel.textContent).toContain('自动重启')
+  expect(panel.querySelector('button')).toBeNull()
+  expect(document.querySelector('button[data-action="progress"]')?.hasAttribute('disabled')).toBe(true)
+})

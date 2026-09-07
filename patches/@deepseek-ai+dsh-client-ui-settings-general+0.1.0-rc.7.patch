@@ -89,7 +89,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +				if (update.phase === "up-to-date") checkMessage = t("about.upToDate");
 +				else if (update.phase === "available") checkMessage = t("about.updateAvailable").replace("{version}", update.availableVersion ?? "");
 +				else if (update.phase === "downloading") { checkMessage = t("about.downloading").replace("{percent}", String(Math.round(update.percent ?? 0))); const bytes = (n) => { const units = ["B", "KB", "MB", "GB"]; const i = Math.min(3, Math.floor(Math.log10(Math.max(1, n)) / 3)); return (n / 1000 ** i).toFixed(i === 0 ? 0 : 1) + " " + units[i]; }; if (Number.isFinite(update.transferredBytes) && update.transferredBytes >= 0 && Number.isFinite(update.totalBytes) && update.totalBytes > 0) checkMessage += " · " + bytes(update.transferredBytes) + " / " + bytes(update.totalBytes); }
-+				else if (update.phase === "downloaded") checkMessage = t(actionState === "install" ? "about.restarting" : "about.ready");
++				else if (update.phase === "installing") checkMessage = t("about.preparingInstall"); else if (update.phase === "downloaded") checkMessage = t(actionState === "install" ? "about.restarting" : "about.ready");
 +				else if (update.phase === "error" || update.phase === "unsupported") checkMessage = t("about.checkFailed");
 +				else if (update.phase === "checking") checkMessage = t("about.checking");
 +			}
@@ -111,7 +111,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +							type: "button",
 +							className: "sherlock-about-check",
 +							"data-about-check-update": "true",
-+							disabled: checkState.status === "checking" || actionState !== null || checkState.update?.phase === "downloading",
++							disabled: checkState.status === "checking" || actionState !== null || ["downloading", "installing"].includes(checkState.update?.phase),
 +							onClick: () => void checkForUpdates(),
 +							children: checkState.status === "checking" ? t("about.checking") : t("about.check")
 +						}), checkState.update?.phase === "available" ? (0, react_jsx_runtime.jsx)("button", {
@@ -205,7 +205,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +			"about.checking": "正在检查更新…",
 +			"about.upToDate": "Sherlock 已是最新版本",
 +			"about.updateAvailable": "发现新版本 {version}",
-+			"about.downloading": "正在下载更新 {percent}%",
++			"about.preparingInstall": "系统正在解压并校验更新，完成后将自动重启…", "about.downloading": "正在下载更新 {percent}%",
 +			"about.restarting": "正在准备安装，完成后将重新启动…",
 +			"about.download": "下载更新",
 +			"about.install": "重启并安装",
@@ -231,7 +231,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +			"about.checking": "Checking for updates…",
 +			"about.upToDate": "Sherlock is up to date",
 +			"about.updateAvailable": "Version {version} is available",
-+			"about.downloading": "Downloading update {percent}%",
++			"about.preparingInstall": "Unpacking and verifying the update; Sherlock will restart automatically…", "about.downloading": "Downloading update {percent}%",
 +			"about.restarting": "Preparing installation. Sherlock will restart when ready…",
 +			"about.download": "Download update",
 +			"about.install": "Restart and install",

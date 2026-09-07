@@ -93,6 +93,7 @@ export class SidebarUpdateControl {
     button.removeAttribute('title')
     panel.hidden = true
     panel.replaceChildren()
+    panel.removeAttribute('role')
 
     switch (action.kind) {
       case 'hidden':
@@ -126,6 +127,17 @@ export class SidebarUpdateControl {
         )
         button.style.setProperty('--sherlock-update-progress', `${percent}%`)
         button.innerHTML = progressRing(percent)
+        if (status.phase === 'installing') {
+          button.removeAttribute('aria-valuenow')
+          button.title = updateMessage(status, this.locale)
+          panel.hidden = false
+          panel.setAttribute('role', 'status')
+          const message = this.document.createElement('p')
+          message.textContent = this.locale === 'zh'
+            ? '系统正在解压并校验更新，完成后将自动重启。请保持应用打开。'
+            : 'The system is unpacking and verifying the update. Sherlock will restart automatically; please keep it open.'
+          panel.append(message)
+        }
         return
       }
       case 'install':
