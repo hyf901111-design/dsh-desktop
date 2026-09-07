@@ -204,14 +204,21 @@ function containerPromptHasExplicitWebUrl(prompt) {
   return /https?:\/\/[^\s<>"'`]+/iu.test(prompt)
 }
 
-function containerNeedsWebData(prompt) {
+function containerAllowsWebSearch(prompt) {
   const value = String(prompt ?? '')
   if (/(?:不需要|无需|不用|不要|不必|禁止)(?:再|去|进行|额外|任何)?(?:联网|上网|搜索|检索|查找|查询|获取外部数据)|不联网|离线(?:页面|模式|运行)?|\b(?:do not|don't|no need to|without)\s+(?:search|searching|browse|browsing|internet|network)\b/iu.test(value)) return false
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
   const illustrative = /演示数据|示例数据|示意数据|模拟数据|虚构数据|样例数据|\b(?:sample|demo|mock|synthetic|illustrative)\s+data\b/iu.test(value)
   const supplied = /(?:以下|这些|给定|提供|上述|下列).{0,12}(?:数据|数值)|数据(?:如下|为|是|：|:)|(?:收入|成本|销量|收益率|价格|净值)[：:\s]*[-+]?\d+(?:[、,，]\s*[-+]?\d+){1,}/u.test(value)
   if ((illustrative || supplied) && !explicitFresh) return false
-  return /实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|推特|微博|社交媒体|社媒|行情|报价|价格|净值|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|\b(?:live|latest|current|today|now|price|quote|market|twitter|tweet|social|monitor)\b/iu.test(value)
+  if (/静态图形|\bstatic (?:graphic|shape)/iu.test(value)) return false
+  return true
+}
+
+function containerNeedsWebData(prompt) {
+  if (!containerAllowsWebSearch(prompt)) return false
+  const value = String(prompt ?? '')
+  return /最近|近期|近况|近[几数一二三四五六七八九十\d]+(?:天|周|月|年)|本周|本月|今年|recent(?:ly)?|up.to.date|实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|推特|微博|社交媒体|社媒|行情|报价|价格|净值|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|\b(?:live|latest|current|today|now|price|quote|market|twitter|tweet|social|monitor)\b/iu.test(value)
 }
 
 // Search for the data subject, not the user's UI construction instruction.
@@ -1172,7 +1179,8 @@ export function createSubagentAdapter(ctx) {
         prompt: [{ type: 'text', text: effectivePrompt }],
         maxDepth: 1,
         toolFilter: {
-          allow: needsWebData ? ['web_search'] : []
+          // Tool availability must not depend on a freshness keyword match.
+          allow: kind === 'container' && containerAllowsWebSearch(query ?? '') ? ['web_search'] : []
         },
         persona: RESEARCH_TASK_PERSONA
       })

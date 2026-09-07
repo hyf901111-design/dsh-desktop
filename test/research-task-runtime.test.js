@@ -987,6 +987,21 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it.each(['写一篇关于黄金最近的一个研究报告', '黄金近期研究报告', 'Gold research report from the last week'])('keeps search available for research wording: %s', async (query) => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start(query)
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] })
+    await handle.dispose()
+  })
+
+  it('does not remove search merely because a request has no freshness keyword', async () => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start('分析黄金的供需格局')
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] })
+    await handle.dispose()
+  })
+
   it('searches the ETF subject and excludes unrelated generation pages from fetching and child evidence', async () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '生成(汉语词语) 与即梦AI是热门搜索结果。ETF规模扩大。', sources: [
@@ -1244,7 +1259,7 @@ describe('Research task Subagent adapter', () => {
       parent,
       prompt: [{ type: 'text', text: '产品固定提示词' }],
       maxDepth: 1,
-      toolFilter: { allow: [] }
+      toolFilter: { allow: ['web_search'] }
     }))
     expect(ctx.subagents.start.mock.calls[0][1].persona).toContain('画布')
     expect(parent.session.events).toHaveLength(0)
