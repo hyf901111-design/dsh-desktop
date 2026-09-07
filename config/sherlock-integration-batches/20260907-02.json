@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260907-02",
+  "branch": "codex/integration/20260907-02",
+  "baseMainCommit": "f54e3707c882a02ec4c370435d42d3857ea581ff",
+  "expectedMainCommit": "f54e3707c882a02ec4c370435d42d3857ea581ff",
+  "createdAt": "2026-09-07T05:15:56.579Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "Sherlock accounts and full-window settings",
+        "branch": "codex/feat/accounts-20260907",
+        "baseCommit": "f54e3707c882a02ec4c370435d42d3857ea581ff",
+        "tipCommit": "b46b6ec53c1191669b3cde8792e0190239a3ef29",
+        "commits": [
+          {
+            "commit": "a7aed6b7233b9086b2b6808295d032b7d22cd7b4",
+            "parents": [
+              "f54e3707c882a02ec4c370435d42d3857ea581ff"
+            ],
+            "subject": "功能：增加邀请码账户体系与云端鉴权并改为全窗口设置页面"
+          },
+          {
+            "commit": "b46b6ec53c1191669b3cde8792e0190239a3ef29",
+            "parents": [
+              "a7aed6b7233b9086b2b6808295d032b7d22cd7b4"
+            ],
+            "subject": "调整：登录改为品牌浮窗并在关于页面显示更新下载大小"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/sherlock-accounts.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/sherlock-fund-data-service.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/hosted-provider.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-settings-general+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "A",
+            "path": "scripts/manage-sherlock-accounts.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-fund-data-worker.mjs"
+          },
+          {
+            "status": "A",
+            "path": "services/accounts/auth.js"
+          },
+          {
+            "status": "A",
+            "path": "services/accounts/migrations/0001_accounts.sql"
+          },
+          {
+            "status": "M",
+            "path": "services/fund-data/http.js"
+          },
+          {
+            "status": "M",
+            "path": "services/fund-data/wrangler.jsonc"
+          },
+          {
+            "status": "A",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-manager.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-state.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/assets.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/contracts.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/account-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fund-data-service.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-manager.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-state.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/update-state.test.ts",
+              "test/update-manager.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "14 focused update checks passed; typecheck and reverse patch verification passed. Earlier account backend evidence retained in previous handoff.",
+            "verifiedCommit": "b46b6ec53c1191669b3cde8792e0190239a3ef29",
+            "completedAt": "2026-09-07T05:13:19.950Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Browser fixture: branded login/register modal, no explanatory copy; full-window settings with no mask; About renders actual transfer counters. Synthetic account and update events, not installed-client verification."
+        },
+        "acceptanceCriteria": [
+          "Settings and personal models work without login",
+          "Hosted fund APIs require valid account sessions",
+          "Full-window settings preserve research state on return",
+          "Validate new packaged client and coordinated production cutover"
+        ],
+        "risks": [
+          "Production D1 ID is a placeholder; no cloud deployment performed",
+          "Feature worktree is not integrated into main; no shared app build",
+          "Old 0.8.6 clients cannot log in; do not switch production authentication before new clients are ready",
+          "Usage events are not financial charges"
+        ],
+        "generatedAt": "2026-09-07T05:13:19.950Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/account-service.test.ts",
+        "test/update-state.test.ts",
+        "test/update-manager.test.ts",
+        "test/settings-about.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
