@@ -12,3 +12,28 @@
 - 精简组件生成范围，减少未要求的摘要、背景和 HTML 包装。
 
 按用户要求跳过 Apple 公证与 stapling，保留双通道签名、包完整性与公开差分更新校验。
+
+## 发布验收
+
+- 正式构建来源：干净的本地 `main`，提交 `11eb2e699e68d8d78ccb56c87efd53ef822b8780`；GitHub 私有仓库 `awake-ai-lab/sherlock-desktop` 的 `hyf` 与 `main` 已同步该构建提交。
+- 发布相关聚焦检查 10 个文件、66 项通过；研究生成相关聚焦检查 134 项通过，TypeScript 类型检查通过。未运行全功能测试。
+- 标准 App 与 DMG 的 Developer ID 签名、包运行依赖和 DMG 完整性验证通过；兼容桥外层旧签名要求、内嵌标准 App、ShipIt 与所需 Framework 检查通过。
+- 按用户要求跳过 Apple 公证、stapling 与 Gatekeeper 公证验收。标准更新通道的路径名称不代表本次已经公证。
+- 已启动正式签名产物并核验真实主界面及“关于”页面，显示版本 0.8.9 和六项中文更新日志。
+- Cloudflare 已按不可变产物、稳定下载、双通道更新元数据的顺序发布。公开 8 个对象的状态、长度和缓存策略验证通过；二进制首尾 Range 请求为 206，Content-Range 及字节与本地产物一致，双通道元数据与准备文件一致。
+- 验证记录与日志目录：`/tmp/sherlock-release-0.8.9-20260907`。
+
+### 公开差分更新（0.8.8 → 0.8.9）
+
+使用实际 `electron-updater` 的 `GenericDifferentialDownloader` 和公开新旧 blockmap，仅允许单段 Range / HTTP 206，未使用全量下载回退，也未执行旧客户端完整安装或重启测试。
+
+| 通道 | 完整 ZIP 字节 | 实际下载字节 | 复用字节 | 请求数 | SHA-512 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 标准 | 405916424 | 103393993 | 302522431 | 756 | `6CVClCw2qMnJ6+ic087/+j8i/fTYPcaQ6YEekGh89ZcL6Za6IPLFmdZ7+T0KDUJCBfmn7Z+tuXGYHJtkvpPObA==` |
+| 兼容 | 452943449 | 151151519 | 301791930 | 720 | `OSwMR9HcIIvD16DyAm98QXNnT/Wji6bci4hpbBg2GFligZ65KpxWxQnjlo/S6PFvK5njadGxN3mVJJbdOpVKjA==` |
+
+两通道重建 ZIP 的 SHA-512 均与本地正式产物完全一致（`verified: true`）。标准通道首次校验因网络 `ETIMEDOUT` 中断，随后重新执行相同公开差分流程成功；保留首次失败和成功重试日志。
+
+### 保留策略
+
+双通道差分及公开文件检查通过后，仅删除最旧的 0.8.4 版本目录内五个对象；公开新查询请求均返回 404。保留 0.8.5–0.8.9，当前双通道更新元数据、稳定下载与 0.8.8 差分基线均保留。
