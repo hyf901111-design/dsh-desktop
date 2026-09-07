@@ -1,3 +1,4 @@
+import sherlockLogo from '../../build/sherlock-logo.svg?raw'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   user?: Account | null
@@ -10,6 +11,12 @@ export function mountAccountUi(
 ) {
   const style = document.createElement('style')
   style.textContent = `
+ .sherlock-auth-dialog{box-sizing:border-box;width:min(440px,calc(100vw - 40px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--dsw-alias-border-l2,#555);border-radius:20px;background:var(--dsw-alias-bg-layer-2,#191919);color:var(--dsw-alias-label-primary);box-shadow:0 24px 90px #0005;overflow:auto}
+ .sherlock-auth-dialog::backdrop{background:#0005}
+ .sherlock-auth-dialog .VOzbGW_content{padding:0}.sherlock-auth-dialog .sherlock-account-page{padding:40px 32px 24px}
+ .sherlock-auth-dialog .sherlock-account-page h1{font-size:20px;margin-top:28px}
+ .sherlock-auth-logo{display:block;width:180px;height:auto;fill:currentColor}
+ .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
  .VOzbGW_overlay{z-index:2000!important;background:var(--dsw-alias-bg-layer-2,#181818)}
  .VOzbGW_mask{display:none!important}
@@ -85,6 +92,31 @@ export function mountAccountUi(
     trigger.append(avatar, label, document.createTextNode('⌃'))
     trigger.setAttribute('aria-label', `${label.textContent}，打开账户菜单`)
   }
+  let authDialog: HTMLDialogElement | undefined
+  function showAuth(register = false) {
+    if (!authDialog?.isConnected) {
+      const dialog = document.createElement('dialog')
+      authDialog = dialog
+      dialog.className = 'sherlock-auth-dialog'
+      dialog.setAttribute('aria-label', '登录 Sherlock')
+      const content = document.createElement('div')
+      content.className = 'VOzbGW_content'
+      const close = button('×', () => dialog.close(), 'sherlock-auth-close')
+      close.setAttribute('aria-label', '关闭登录')
+      dialog.append(close, content)
+      dialog.addEventListener('close', () => {
+        dialog.remove()
+        if (authDialog === dialog) authDialog = undefined
+        trigger?.focus()
+      })
+      dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') event.stopPropagation()
+      })
+      document.body.append(dialog)
+      dialog.showModal()
+    }
+    renderAccount(authDialog, register)
+  }
   const panel = () => document.querySelector<HTMLElement>('.VOzbGW_panel')
   function open(account: boolean) {
     closeMenu()
@@ -104,6 +136,10 @@ export function mountAccountUi(
           }
         })
         .catch(() => {})
+    if (account && !user) {
+      showAuth()
+      return
+    }
     pendingAccount = account
     const existing = panel()
     if (existing) {
@@ -119,6 +155,16 @@ export function mountAccountUi(
     root.querySelector('[data-account-nav]')?.removeAttribute('aria-current')
   }
   function renderAccount(root: HTMLElement, register = false) {
+    if (!user && root !== authDialog) {
+      showSettings(root)
+      showAuth(register)
+      return
+    }
+    if (user && root === authDialog) {
+      authDialog.close()
+      if (panel()?.hasAttribute('data-account-active')) renderAccount(panel()!)
+      return
+    }
     root.setAttribute('data-account-active', 'true')
     root
       .querySelector('[data-account-nav]')
@@ -137,11 +183,19 @@ export function mountAccountUi(
         ? '注册 Sherlock'
         : '登录 Sherlock'
     page.append(title)
-    const desc = document.createElement('p')
-    desc.textContent = user
-      ? '管理你的 Sherlock 账户与云端能力。'
-      : '登录后即可使用基金研究等云端查数能力。自配模型和本地功能可直接使用。'
-    page.append(desc)
+    if (!user) {
+      const logo = new DOMParser().parseFromString(
+        sherlockLogo,
+        'image/svg+xml'
+      ).documentElement
+      logo.setAttribute('class', 'sherlock-auth-logo')
+      logo.setAttribute('fill', 'currentColor')
+      page.prepend(document.importNode(logo, true))
+      root.setAttribute(
+        'aria-label',
+        register ? '注册 Sherlock' : '登录 Sherlock'
+      )
+    }
     const form = document.createElement('form')
     const status = document.createElement('div')
     status.role = 'status'
@@ -207,7 +261,7 @@ export function mountAccountUi(
             user = null
             updateTrigger()
             renderAccount(root)
-            const notice = root.querySelector('[role=status]')
+            const notice = (authDialog ?? root).querySelector('[role=status]')
             if (notice) notice.textContent = '密码已修改，请重新登录。'
           } else {
             user = reply.user ?? null
@@ -393,6 +447,7 @@ export function mountAccountUi(
     })
     .catch(() => {})
   return () => {
+    authDialog?.close()
     observer.disconnect()
     closeMenu()
     style.remove()

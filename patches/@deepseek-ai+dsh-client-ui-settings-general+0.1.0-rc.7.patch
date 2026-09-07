@@ -87,7 +87,7 @@ index 6797c5c..fd619ff 100644
 +				const update = checkState.update;
 +				if (update.phase === "up-to-date") checkMessage = t("about.upToDate");
 +				else if (update.phase === "available") checkMessage = t("about.updateAvailable").replace("{version}", update.availableVersion ?? "");
-+				else if (update.phase === "downloading") checkMessage = t("about.downloading").replace("{percent}", String(Math.round(update.percent ?? 0)));
++				else if (update.phase === "downloading") { checkMessage = t("about.downloading").replace("{percent}", String(Math.round(update.percent ?? 0))); const bytes = (n) => { const units = ["B", "KB", "MB", "GB"]; const i = Math.min(3, Math.floor(Math.log10(Math.max(1, n)) / 3)); return (n / 1000 ** i).toFixed(i === 0 ? 0 : 1) + " " + units[i]; }; if (Number.isFinite(update.transferredBytes) && update.transferredBytes >= 0 && Number.isFinite(update.totalBytes) && update.totalBytes > 0) checkMessage += " · " + bytes(update.transferredBytes) + " / " + bytes(update.totalBytes); }
 +				else if (update.phase === "downloaded") checkMessage = t(actionState === "install" ? "about.restarting" : "about.ready");
 +				else if (update.phase === "error" || update.phase === "unsupported") checkMessage = t("about.checkFailed");
 +				else if (update.phase === "checking") checkMessage = t("about.checking");
