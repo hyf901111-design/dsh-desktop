@@ -352,7 +352,10 @@ static void DeliverEvent(napi_env env, napi_value callback, void *, void *data) 
 
 - (void)result:(SVVoiceSession *)session text:(NSString *)text final:(BOOL)final failed:(BOOL)failed {
   if (![self current:session] || [session.state isEqualToString:@"authorizing"]) return;
-  if (text && ![text isEqualToString:session.transcript]) {
+  // Speech may emit an empty terminal result after endAudio. It must not
+  // erase a usable partial transcript already shown to the user.
+  if ([text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet].length &&
+      ![text isEqualToString:session.transcript]) {
     session.transcript = text;
     if ([text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet].length) {
       session.heardSpeech = YES;
