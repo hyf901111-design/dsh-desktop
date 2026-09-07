@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..8695e97 100644
+index 1dd0e89..7ac9e75 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -2839,7 +2839,7 @@ index 1dd0e89..8695e97 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8577,6894 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8577,6934 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -2932,6 +2932,7 @@ index 1dd0e89..8695e97 100644
 +		const RESEARCH_CANVAS_REVOCATION_OUTBOX_RAW_LIMIT = RESEARCH_CANVAS_MAX_REVOCATION_OUTBOX * (RESEARCH_CANVAS_TEXT_LIMIT * 6 + 4);
 +		const RESEARCH_CANVAS_TITLE_HEIGHT = 36;
 +		const RESEARCH_CANVAS_MAX_NODE_SIZE = 2400;
++		const RESEARCH_CANVAS_MAX_GENERATED_HEIGHT = 12000;
 +		const RESEARCH_CANVAS_NODE_POLICIES = Object.freeze({
 +			generic: Object.freeze({ width: 220, height: 64, minWidth: 220, minHeight: 64, resizable: false }),
 +			assistant: Object.freeze({ width: 520, height: 300, minWidth: 360, minHeight: 120, resizable: true }),
@@ -3316,7 +3317,7 @@ index 1dd0e89..8695e97 100644
 +        if (visible(element)) include(element.getBoundingClientRect(), element, true)
 +      }
 +      const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
-+      const height = Math.min(2400, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
++      const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
 +      const key = width + ':' + height
 +      if (key === previous) return
 +      previous = key
@@ -3375,7 +3376,7 @@ index 1dd0e89..8695e97 100644
 +    if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
 +        Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
 +        data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&
-+        data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 2400) {
++        data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 12000) {
 +      const key = data.width + ':' + data.height
 +      if (sizeReports < 6 && key !== previousSize) {
 +        previousSize = key
@@ -4338,7 +4339,7 @@ index 1dd0e89..8695e97 100644
 +				return { width, height: width / aspectRatio + RESEARCH_CANVAS_TITLE_HEIGHT, sizeMode, aspectRatio, resizable: true };
 +			}
 +			const finiteHeight = Number.isFinite(node?.height) && node.height >= 0 ? node.height : policy.height;
-+			const height = Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(policy.minHeight, finiteHeight));
++			const height = Math.min(node?.kind === "generated-container" ? RESEARCH_CANVAS_MAX_GENERATED_HEIGHT : RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(policy.minHeight, finiteHeight));
 +			return { width, height, sizeMode, resizable: true };
 +		}
 +		function researchCanvasPersistedGeometry(node) {
@@ -4386,7 +4387,7 @@ index 1dd0e89..8695e97 100644
 +				height = width / geometry.aspectRatio + RESEARCH_CANVAS_TITLE_HEIGHT;
 +			} else {
 +				width = Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(policy.minWidth, geometry.width + sx * dx));
-+				height = Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(policy.minHeight, geometry.height + sy * dy));
++				height = Math.min(node?.kind === "generated-container" ? RESEARCH_CANVAS_MAX_GENERATED_HEIGHT : RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(policy.minHeight, geometry.height + sy * dy));
 +			}
 +			return {
 +				...node,
@@ -4900,7 +4901,7 @@ index 1dd0e89..8695e97 100644
 +					wideWidth: 560,
 +					wideAt: 900,
 +					minHeight: 240,
-+					maxHeight: 620,
++					maxHeight: RESEARCH_CANVAS_MAX_NODE_SIZE,
 +					baseHeight: 132,
 +					lineHeight: 20
 +				});
@@ -4909,7 +4910,7 @@ index 1dd0e89..8695e97 100644
 +					wideWidth: 540,
 +					wideAt: 720,
 +					minHeight: 220,
-+					maxHeight: 560,
++					maxHeight: node.kind === "generated-container" ? RESEARCH_CANVAS_MAX_GENERATED_HEIGHT : RESEARCH_CANVAS_MAX_NODE_SIZE,
 +					baseHeight: 112,
 +					lineHeight: 20
 +				});
@@ -4924,7 +4925,7 @@ index 1dd0e89..8695e97 100644
 +						wideWidth: 560,
 +						wideAt: 900,
 +						minHeight: 300,
-+						maxHeight: 560,
++						maxHeight: node.kind === "generated-container" ? RESEARCH_CANVAS_MAX_GENERATED_HEIGHT : RESEARCH_CANVAS_MAX_NODE_SIZE,
 +						baseHeight: 180,
 +						lineHeight: 18
 +					});
@@ -4942,13 +4943,39 @@ index 1dd0e89..8695e97 100644
 +			if (["pptx", "docx", "xlsx", "html"].includes(kind)) return { width: 420, height: 315, sizeMode: "manual", resizable: true };
 +			return { ...current, sizeMode: "manual" };
 +		}
-+		function researchCanvasOrganizedLayout(files, artifacts, canvasSize) {
++        function researchCanvasMeasureForArrange(root, nodes) {
++            const measured = new Map();
++            if (!root) return measured;
++            for (const node of nodes) {
++                if (RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || node.kind === "web-link" || ["html", "web", "mind-map"].includes(node.containerSpec?.type) || node.kind === "generated-mind-map") continue;
++                const card = Array.from(root.querySelectorAll('[data-research-artifact-card]')).find(element => element.getAttribute('data-research-artifact-card') === node.id);
++                const content = (card?.querySelector('.rScV5Q_containerContent') ?? card?.querySelector('[data-research-artifact-content]'));
++                if (!content || content.querySelector('iframe')) continue;
++                const before = normalizeResearchCanvasNodeGeometry(node);
++                const style = content.getAttribute('style');
++                try {
++                    let width = node.kind === 'generated-container' ? ({ markdown: 560, table: 720, chart: 720, kpi: 520 }[node.containerSpec?.type] ?? before.width) : before.width;
++                    content.style.width = `${width - 2}px`;
++                    content.style.height = 'auto'; content.style.minHeight = '0'; content.style.maxHeight = 'none';
++                    width = Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(width, content.scrollWidth + 2));
++                    content.style.width = `${width - 2}px`;
++                    const naturalHeight = Math.max(content.scrollHeight, content.firstElementChild?.scrollHeight || 0);
++                    if (!(naturalHeight > 0)) continue;
++                    const maxHeight = node.kind === 'generated-container' ? RESEARCH_CANVAS_MAX_GENERATED_HEIGHT : RESEARCH_CANVAS_MAX_NODE_SIZE;
++                    measured.set(node.id, { ...before, width, height: Math.min(maxHeight, Math.max(RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight, naturalHeight + RESEARCH_CANVAS_TITLE_HEIGHT + 2)), sizeMode: 'manual' });
++                } finally {
++                    if (style === null) content.removeAttribute('style'); else content.setAttribute('style', style);
++                }
++            }
++            return measured;
++        }
++		function researchCanvasOrganizedLayout(files, artifacts, canvasSize, measured = new Map()) {
 +			const nodes = [...files, ...artifacts].filter((node) => typeof node?.id === "string" && Number.isFinite(node.x) && Number.isFinite(node.y));
 +			const canvasWidth = Number.isFinite(canvasSize?.width) && canvasSize.width > RESEARCH_CANVAS_ORGANIZE_PADDING * 2 ? canvasSize.width : 1200;
 +			const canvasHeight = Number.isFinite(canvasSize?.height) && canvasSize.height > RESEARCH_CANVAS_ORGANIZE_PADDING * 2 ? canvasSize.height : 800;
 +			if (nodes.length === 0) return null;
 +			const order = new Map(RESEARCH_CANVAS_ORGANIZE_TYPE_ORDER.map((type, index) => [type, index]));
-+			const entries = nodes.map((node) => ({ node, type: researchCanvasOrganizeType(node), geometry: researchCanvasOrganizeGeometry(node) })).sort((a, b) => (order.get(a.type) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.type) ?? Number.MAX_SAFE_INTEGER) || a.node.y - b.node.y || a.node.x - b.node.x || a.node.id.localeCompare(b.node.id));
++			const entries = nodes.map((node) => ({ node, type: researchCanvasOrganizeType(node), geometry: measured.get(node.id) ?? researchCanvasOrganizeGeometry(node) })).sort((a, b) => (order.get(a.type) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.type) ?? Number.MAX_SAFE_INTEGER) || a.node.y - b.node.y || a.node.x - b.node.x || a.node.id.localeCompare(b.node.id));
 +			const totalArea = entries.reduce((sum, entry) => sum + entry.geometry.width * entry.geometry.height, 0);
 +			const viewportAspect = canvasWidth / canvasHeight;
 +			const maximumNodeWidth = Math.max(...entries.map((entry) => entry.geometry.width));
@@ -5113,7 +5140,7 @@ index 1dd0e89..8695e97 100644
 +			if (spec.type === "web") return { width: 720, height: 480 };
 +			if (spec.type === "html") return { width: 960, height: 680 };
 +			if (spec.type === "chart") return { width: 720, height: 500 };
-+			if (spec.type === "table") return { width: 720, height: Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE, Math.max(480, 132 + (spec.rows.length + 1) * 42)) };
++			if (spec.type === "table") return { width: 720, height: Math.min(RESEARCH_CANVAS_MAX_GENERATED_HEIGHT, Math.max(480, 132 + (spec.rows.length + 1) * 42)) };
 +			if (spec.type === "kpi") return { width: 640, height: Math.max(420, 112 + Math.ceil(spec.items.length / 3) * 120) };
 +			return { width: 560, height: 400 };
 +		}
@@ -5328,6 +5355,7 @@ index 1dd0e89..8695e97 100644
 +			let orphanRevocationsDurable = orphanRevocationIds.length === 0 || saveResearchCanvasRevocationOutbox(storage, sessionId, orphanRevocationIds);
 +			let snapshot = researchWorkspaceSnapshot({ files, artifacts, selection: loadResearchCanvasSelection(storage, sessionId, files, artifacts), viewport: { scale: 1, x: 0, y: 0 }, canvasSize: { width: 0, height: 0 }, pendingMessageJump: null, unavailableSourceMessageIds: [] });
 +			const htmlFitStates = new Map();
++			const htmlContentMeasurements = new Map();
 +			const listeners = /* @__PURE__ */ new Set();
 +			const pendingNodeRevocations = /* @__PURE__ */ new Set();
 +			let assistantActionsActive = false;
@@ -6025,8 +6053,14 @@ index 1dd0e89..8695e97 100644
 +					commitUpdate({ artifacts: artifacts2 }, true);
 +					return true;
 +				},
-+				organizeCanvas() {
-+					const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize);
++				organizeCanvas(measured = new Map()) {
++                    for (const node of snapshot.artifacts) {
++                        const cached = htmlContentMeasurements.get(node.id);
++                        if (cached && cached.html === node.containerSpec?.html && node.generationStatus === "completed") {
++                            measured.set(node.id, { ...normalizeResearchCanvasNodeGeometry(node), ...cached.dimensions, sizeMode: "manual" });
++                        }
++                    }
++                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
 +					if (organized === null) return false;
 +					commitUpdate(organized, true);
 +					return true;
@@ -6124,7 +6158,13 @@ index 1dd0e89..8695e97 100644
 +						const index = snapshot.artifacts.findIndex((node) => node.id === nodeId);
 +						const node = snapshot.artifacts[index];
 +						if (typeof expectedHtml !== "string" || node?.containerSpec?.html !== expectedHtml) return false;
-+						const geometry = researchHtmlAutoGeometry(node, dimensions);
++						// Cache only validated dimensions from the current trusted iframe, even
++                        // when a manual size prevents automatic growth. Arrange is an explicit fit.
++                        if (node?.kind === "generated-container" && node.generationStatus === "completed" && node.containerSpec?.type === "html" && dimensions && Object.keys(dimensions).length === 2 && Number.isInteger(dimensions.width) && Number.isInteger(dimensions.height) && dimensions.width > 0 && dimensions.width <= 2400 && dimensions.height > 0 && dimensions.height <= 12000) {
++                            if (htmlContentMeasurements.size >= RESEARCH_CANVAS_MAX_ARTIFACTS_PER_SESSION && !htmlContentMeasurements.has(nodeId)) htmlContentMeasurements.delete(htmlContentMeasurements.keys().next().value);
++                            htmlContentMeasurements.set(nodeId, { html: expectedHtml, dimensions: { width: dimensions.width, height: dimensions.height } });
++                        }
++                        const geometry = researchHtmlAutoGeometry(node, dimensions);
 +						if (geometry === null) return false;
 +						const now = Date.now();
 +						let budget = htmlFitStates.get(nodeId);
@@ -7998,7 +8038,7 @@ index 1dd0e89..8695e97 100644
 +			return owner?.body?.hasAttribute("data-ds-dark-theme") ? "dark" : "light";
 +		}
 +		function researchHtmlAutoGeometry(node, dimensions) {
-+			if (node?.kind !== "generated-container" || node.generationStatus !== "completed" || node.containerSpec?.type !== "html" || node.sizeMode === "manual" || !dimensions || typeof dimensions !== "object" || Array.isArray(dimensions) || Object.keys(dimensions).length !== 2 || !Object.hasOwn(dimensions, "width") || !Object.hasOwn(dimensions, "height") || !Number.isInteger(dimensions.width) || !Number.isInteger(dimensions.height) || dimensions.width < 1 || dimensions.height < 1 || dimensions.width > 2400 || dimensions.height > 2400) return null;
++			if (node?.kind !== "generated-container" || node.generationStatus !== "completed" || node.containerSpec?.type !== "html" || node.sizeMode === "manual" || !dimensions || typeof dimensions !== "object" || Array.isArray(dimensions) || Object.keys(dimensions).length !== 2 || !Object.hasOwn(dimensions, "width") || !Object.hasOwn(dimensions, "height") || !Number.isInteger(dimensions.width) || !Number.isInteger(dimensions.height) || dimensions.width < 1 || dimensions.height < 1 || dimensions.width > 2400 || dimensions.height > 12000) return null;
 +			const before = normalizeResearchCanvasNodeGeometry(node);
 +			const width = Math.max(before.width, dimensions.width);
 +			const height = Math.max(before.height, dimensions.height);
@@ -8024,12 +8064,12 @@ index 1dd0e89..8695e97 100644
 +				const receiveSize = (event) => {
 +					const data = event.data;
 +					const current = fittingRef.current;
-+					if (event.source !== frame.contentWindow || !data || typeof data !== "object" || Array.isArray(data) || Object.keys(data).length !== 3 || !Object.hasOwn(data, "type") || !Object.hasOwn(data, "width") || !Object.hasOwn(data, "height") || data.type !== "sherlock-content-size" || !Number.isInteger(data.width) || !Number.isInteger(data.height) || data.width < 1 || data.height < 1 || data.width > 2400 || data.height > 2400 || growths >= 3 || Date.now() - startedAt > 8000 || current.node?.sizeMode === "manual" || current.node?.containerSpec?.html !== spec.html) return;
++					if (event.source !== frame.contentWindow || !data || typeof data !== "object" || Array.isArray(data) || Object.keys(data).length !== 3 || !Object.hasOwn(data, "type") || !Object.hasOwn(data, "width") || !Object.hasOwn(data, "height") || data.type !== "sherlock-content-size" || !Number.isInteger(data.width) || !Number.isInteger(data.height) || data.width < 1 || data.height < 1 || data.width > 2400 || data.height > 12000 || growths >= 3 || Date.now() - startedAt > 8000 || current.node?.sizeMode === "manual" || current.node?.containerSpec?.html !== spec.html) return;
 +					const card = frame.closest("[data-research-node-id]");
 +					if (card?.getAttribute("data-node-resizing") === "true" || card?.getAttribute("data-node-dragging") === "true") return;
 +					const horizontalChrome = card?.offsetWidth > 0 && frame.clientWidth > 0 ? Math.max(0, card.offsetWidth - frame.clientWidth) : 2;
 +					const verticalChrome = card?.offsetHeight > 0 && frame.clientHeight > 0 ? Math.max(0, card.offsetHeight - frame.clientHeight) : RESEARCH_CANVAS_TITLE_HEIGHT + 2;
-+					const dimensions = { width: Math.min(2400, Math.ceil(data.width + horizontalChrome)), height: Math.min(2400, Math.ceil(data.height + verticalChrome)) };
++					const dimensions = { width: Math.min(2400, Math.ceil(data.width + horizontalChrome)), height: Math.min(12000, Math.ceil(data.height + verticalChrome)) };
 +					if (researchHtmlAutoGeometry(current.node, dimensions) === null) return;
 +					if (current.onSize?.(current.node, dimensions) !== false) growths++;
 +				};
@@ -8185,7 +8225,7 @@ index 1dd0e89..8695e97 100644
 +				const measure = () => {
 +					if (!active || !content.isConnected || !(content.scrollHeight > 0)) return;
 +					const minimum = node.kind === 'generated-summary' && node.generationStatus === 'completed' ? 280 : RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight;
-+					const maximum = node.kind === 'generated-summary' && node.generationStatus === 'completed' ? 640 : RESEARCH_CANVAS_MAX_NODE_SIZE;
++					const maximum = node.kind === "generated-container" ? RESEARCH_CANVAS_MAX_GENERATED_HEIGHT : node.kind === 'generated-summary' && node.generationStatus === 'completed' ? 640 : RESEARCH_CANVAS_MAX_NODE_SIZE;
 +					const measured = node.kind === "generated-container" ? content.querySelector(".rScV5Q_containerContent") : content;
 +					if (!measured) return;
 +					const height = Math.min(maximum, Math.max(minimum, Math.round(Math.max(measured.scrollHeight, node.kind === "generated-container" ? measured.firstElementChild?.scrollHeight || 0 : 0) + RESEARCH_CANVAS_TITLE_HEIGHT + (node.kind === "generated-container" ? 2 : 0))));
@@ -9644,7 +9684,7 @@ index 1dd0e89..8695e97 100644
 +						"data-research-context-arrange": "",
 +						disabled: canvasNodes.length === 0,
 +						onClick: () => {
-+							workspace.organizeCanvas();
++							workspace.organizeCanvas(researchCanvasMeasureForArrange(rootRef.current, canvasNodes));
 +							setContextMenu(null);
 +						},
 +						children: "整理画布"
@@ -9766,7 +9806,7 @@ index 1dd0e89..8695e97 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +15473,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15513,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9785,7 +9825,7 @@ index 1dd0e89..8695e97 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15512,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15552,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -10145,7 +10185,7 @@ index 1dd0e89..8695e97 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15873,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15913,167 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -10317,7 +10357,7 @@ index 1dd0e89..8695e97 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +16043,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +16083,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -10329,7 +10369,7 @@ index 1dd0e89..8695e97 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +16053,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16093,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -10337,7 +10377,7 @@ index 1dd0e89..8695e97 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +16085,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16125,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -10347,7 +10387,7 @@ index 1dd0e89..8695e97 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +16104,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16144,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10452,7 +10492,7 @@ index 1dd0e89..8695e97 100644
  				})]
  			});
  		}
-@@ -6951,6 +16186,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16226,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10484,7 +10524,7 @@ index 1dd0e89..8695e97 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +16240,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16280,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10505,7 +10545,7 @@ index 1dd0e89..8695e97 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +16262,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16302,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10529,7 +10569,7 @@ index 1dd0e89..8695e97 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +16319,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16359,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -10547,7 +10587,7 @@ index 1dd0e89..8695e97 100644
  				})] })
  			});
  		}
-@@ -7053,14 +16329,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16369,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -10626,7 +10666,7 @@ index 1dd0e89..8695e97 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16409,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16449,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -10643,7 +10683,7 @@ index 1dd0e89..8695e97 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16432,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16472,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -10652,7 +10692,7 @@ index 1dd0e89..8695e97 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16485,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16525,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -10670,7 +10710,7 @@ index 1dd0e89..8695e97 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16521,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16561,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -10678,7 +10718,7 @@ index 1dd0e89..8695e97 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17413,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17453,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -10709,7 +10749,7 @@ index 1dd0e89..8695e97 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17458,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17498,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -10734,7 +10774,7 @@ index 1dd0e89..8695e97 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18412,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18452,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -10743,7 +10783,7 @@ index 1dd0e89..8695e97 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18502,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18542,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10785,7 +10825,7 @@ index 1dd0e89..8695e97 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +18711,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +18751,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10802,7 +10842,7 @@ index 1dd0e89..8695e97 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18881,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18921,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10812,7 +10852,7 @@ index 1dd0e89..8695e97 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +18923,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +18963,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10827,7 +10867,7 @@ index 1dd0e89..8695e97 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +18941,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +18981,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10840,7 +10880,7 @@ index 1dd0e89..8695e97 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +18990,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +19030,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10854,7 +10894,7 @@ index 1dd0e89..8695e97 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +19028,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +19068,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10864,7 +10904,7 @@ index 1dd0e89..8695e97 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +19160,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +19200,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10879,7 +10919,7 @@ index 1dd0e89..8695e97 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +19176,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +19216,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10888,7 +10928,7 @@ index 1dd0e89..8695e97 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +19200,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19240,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -10897,7 +10937,7 @@ index 1dd0e89..8695e97 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +19226,150 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19266,150 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);

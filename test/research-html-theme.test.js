@@ -231,9 +231,9 @@ describe('offline HTML component theme runtime', () => {
 
   it('forwards only bounded content dimensions from its own inner frame, keeping theme messages separate', () => {
     const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'))
-    const size = { type: 'sherlock-content-size', width: 1200, height: 1400 }
-    for (const data of [size, { ...size, height: Infinity }, { ...size, width: -1 }, { ...size, width: 2401 }, { ...size, height: 1.5 }, { ...size, html: '<script>' }]) outer.send(data, {})
-    for (const data of [{ ...size, height: Infinity }, { ...size, width: -1 }, { ...size, width: 2401 }, { ...size, height: 1.5 }, { ...size, html: '<script>' }]) outer.send(data, outer.frame.contentWindow)
+    const size = { type: 'sherlock-content-size', width: 1200, height: 4200 }
+    for (const data of [size, { ...size, height: Infinity }, { ...size, height: 12001 }, { ...size, width: -1 }, { ...size, width: 2401 }, { ...size, height: 1.5 }, { ...size, html: '<script>' }]) outer.send(data, {})
+    for (const data of [{ ...size, height: Infinity }, { ...size, height: 12001 }, { ...size, width: -1 }, { ...size, width: 2401 }, { ...size, height: 1.5 }, { ...size, html: '<script>' }]) outer.send(data, outer.frame.contentWindow)
     expect(outer.parentMessages).toHaveLength(0)
     outer.send(size, outer.frame.contentWindow)
     expect(outer.parentMessages).toEqual([{ data: size, origin: '*' }])

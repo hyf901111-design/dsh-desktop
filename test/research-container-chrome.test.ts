@@ -292,12 +292,12 @@ describe('completed container content sizing', () => {
     const mounted = await mountContainer({ containerSpec: undefined, generationStatus: 'running', generationTaskId: 'task-native', generationLastSeq: 1, width: 640, height: 420, sizeMode: 'manual' })
     const prototype = mounted.browserWindow.HTMLElement.prototype
     const previous = Object.getOwnPropertyDescriptor(prototype, 'scrollHeight')
-    Object.defineProperty(prototype, 'scrollHeight', { configurable: true, get() { return 1050 } })
+    Object.defineProperty(prototype, 'scrollHeight', { configurable: true, get() { return 3250 } })
     try {
       await act(async () => {
         mounted.workspace.applyGenerationInspection('html', { taskId: 'task-native', canvasNodeId: 'html', state: 'completed', lastSeq: 2, finalOutput: JSON.stringify({ version: 1, type: 'markdown', title: '黄金报告', content: '# 黄金报告\n完整研究内容' }), events: [] })
       })
-      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'auto', height: 1088, generationStatus: 'completed' })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'auto', height: 3288, generationStatus: 'completed' })
       await act(async () => { mounted.workspace.updateNodeGeometry('html', { height: 500, sizeMode: 'manual' }) })
       expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'manual', height: 500 })
     } finally {
