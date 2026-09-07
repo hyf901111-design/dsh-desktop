@@ -71,6 +71,41 @@
           "Worker deployment and packaged-client verification pending"
         ],
         "generatedAt": "2026-09-07T05:42:51.959431+00:00"
+      },
+      "merged": {
+        "mergeCommit": "12dcf3c154a872bc09e51dd905cd55bb3ac6bc55",
+        "verificationCommit": "12dcf3c154a872bc09e51dd905cd55bb3ac6bc55",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/account-service.test.ts",
+              "test/update-state.test.ts",
+              "test/update-manager.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/account-service.test.ts test/update-state.test.ts test/update-manager.test.ts test/settings-about.test.ts",
+            "verifiedCommit": "12dcf3c154a872bc09e51dd905cd55bb3ac6bc55",
+            "completedAt": "2026-09-07T05:43:34.706Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "12dcf3c154a872bc09e51dd905cd55bb3ac6bc55",
+            "completedAt": "2026-09-07T05:43:34.706Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-07T05:43:34.706Z"
       }
     }
   ],
