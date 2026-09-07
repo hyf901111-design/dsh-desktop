@@ -10,6 +10,7 @@ export type UpdateStateEvent =
       totalBytes?: number
     }
   | { type: 'downloaded'; version: string }
+  | { type: 'install' }
   | { type: 'not-available' }
   | { type: 'error'; message: string }
   | { type: 'unsupported'; message: string }
@@ -43,6 +44,8 @@ export function reduceUpdateStatus(
       }
     case 'downloaded':
       return { ...base, phase: 'downloaded', availableVersion: event.version }
+    case 'install':
+      return { ...current, phase: 'installing' }
     case 'not-available':
       return { ...base, phase: 'up-to-date' }
     case 'error':

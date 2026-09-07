@@ -1,3 +1,4 @@
+vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async () => fake.updater.quitAndInstall(false, true) }))
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fake = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const fake = vi.hoisted(() => ({
   }
 }))
 vi.mock('electron', () => ({
+  autoUpdater: {},
   app: { getVersion: () => '0.8.3', isPackaged: true, isReady: () => false },
   BrowserWindow: { getAllWindows: () => [] }, ipcMain: { handle: vi.fn() },
   powerMonitor: { on: vi.fn(), removeListener: vi.fn() }
@@ -52,23 +54,23 @@ describe('update target freshness', () => {
     fake.latest = '0.8.7'
     await manager.downloadAvailableUpdate()
     expect(fake.target).toBe('0.8.7')
-    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'downloaded', availableVersion: '0.8.7' })
+    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'installing', availableVersion: '0.8.7' })
     expect(fake.updater.autoInstallOnAppQuit).toBe(false)
   })
   it('preserves a current downloaded archive without redownloading', async () => {
-    await manager.downloadAvailableUpdate()
+    fake.events.get('update-downloaded')?.({ version: '0.8.4' })
     await manager.checkForUpdates(true)
     expect(manager.getUpdateStatus().phase).toBe('downloaded')
     await manager.installDownloadedUpdate()
-    expect(fake.updater.downloadUpdate).toHaveBeenCalledTimes(1)
+    expect(fake.updater.downloadUpdate).not.toHaveBeenCalled()
     expect(fake.updater.quitAndInstall).toHaveBeenCalledTimes(1)
   })
   it('replaces an old downloaded release before allowing explicit installation', async () => {
-    await manager.downloadAvailableUpdate()
+    fake.events.get('update-downloaded')?.({ version: '0.8.4' })
     fake.latest = '0.8.7'
     await manager.installDownloadedUpdate()
-    expect(fake.updater.quitAndInstall).not.toHaveBeenCalled()
-    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'downloaded', availableVersion: '0.8.7' })
+    expect(fake.updater.quitAndInstall).toHaveBeenCalledTimes(1)
+    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'installing', availableVersion: '0.8.7' })
     await manager.installDownloadedUpdate()
     expect(fake.updater.quitAndInstall).toHaveBeenCalledTimes(1)
   })
@@ -79,12 +81,12 @@ describe('update target freshness', () => {
       return []
     })
     await manager.downloadAvailableUpdate()
-    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'available', availableVersion: '0.8.7' })
-    await manager.installDownloadedUpdate()
-    expect(fake.updater.quitAndInstall).not.toHaveBeenCalled()
+    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'installing', availableVersion: '0.8.7' })
+    expect(fake.updater.downloadUpdate).toHaveBeenCalledTimes(2)
+    expect(fake.updater.quitAndInstall).toHaveBeenCalledTimes(1)
   })
   it('does not install a cached archive when freshness cannot be verified', async () => {
-    await manager.downloadAvailableUpdate()
+    fake.events.get('update-downloaded')?.({ version: '0.8.4' })
     fake.updater.checkForUpdates.mockRejectedValueOnce(new Error('offline'))
     await manager.installDownloadedUpdate()
     expect(manager.getUpdateStatus().phase).toBe('error')

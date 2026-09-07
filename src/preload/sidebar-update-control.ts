@@ -122,7 +122,7 @@ export class SidebarUpdateControl {
         button.setAttribute('aria-valuenow', String(percent))
         button.setAttribute(
           'aria-label',
-          this.locale === 'zh' ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`
+          updateMessage(status, this.locale)
         )
         button.style.setProperty('--sherlock-update-progress', `${percent}%`)
         button.innerHTML = progressRing(percent)

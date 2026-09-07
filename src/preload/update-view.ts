@@ -13,6 +13,7 @@ export function updateAction(status: UpdateStatus): UpdateAction {
   if (status.phase === 'available' && status.availableVersion) {
     return { kind: 'download', version: status.availableVersion }
   }
+  if (status.phase === 'installing') return { kind: 'progress', percent: 100 }
   if (status.phase === 'downloading') {
     return { kind: 'progress', percent: status.percent ?? 0 }
   }
@@ -51,6 +52,8 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
       const percent = Math.round(status.percent ?? 0)
       return zh ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`
     }
+    case 'installing':
+      return zh ? '正在准备安装，完成后将自动重启…' : 'Preparing installation; Sherlock will restart automatically…'
     case 'downloaded':
       return zh ? `Sherlock${version} 已下载完成` : `Sherlock${version} is ready to install`
     case 'up-to-date':
@@ -58,7 +61,7 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
     case 'unsupported':
       return zh ? '当前版本不支持自动更新' : 'Automatic updates are unavailable in this build'
     case 'error':
-      return zh ? '无法检查或下载更新' : 'Unable to check for or download updates'
+      return status.message || (zh ? '更新失败，请重试' : 'Update failed. Please retry.')
     case 'idle':
       return ''
   }

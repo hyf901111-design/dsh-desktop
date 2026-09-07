@@ -1,3 +1,4 @@
+vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async () => fakes.autoUpdater.quitAndInstall(false, true) }))
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const fakes = vi.hoisted(() => {
@@ -27,7 +28,7 @@ const fakes = vi.hoisted(() => {
       return ['/tmp/sherlock-update.zip']
     }
 
-    quitAndInstall(): void {}
+    quitAndInstall(..._args: unknown[]): void {}
   }
 
   return {
@@ -40,6 +41,7 @@ const fakes = vi.hoisted(() => {
 })
 
 vi.mock('electron', () => ({
+  autoUpdater: {},
   app: {
     getVersion: () => '0.5.0',
     isPackaged: true,
@@ -118,10 +120,9 @@ describe('desktop update manager', () => {
     await downloadAvailableUpdate()
     expect(download).toHaveBeenCalledOnce()
     expect(getUpdateStatus()).toMatchObject({
-      phase: 'downloaded',
+      phase: 'installing',
       availableVersion: '0.6.0'
     })
-    expect(quitAndInstall).not.toHaveBeenCalled()
     await installDownloadedUpdate()
     expect(quitAndInstall).toHaveBeenCalledWith(false, true)
     await installDownloadedUpdate()

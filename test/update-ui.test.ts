@@ -61,3 +61,10 @@ describe('secure sidebar update wiring', () => {
     expect(sidebarControl).toContain('background: #1677ff')
   })
 })
+
+it('explains automatic restart while the native installer is preparing', () => {
+  const status: UpdateStatus = { currentVersion: '0.8.7', availableVersion: '0.8.8', phase: 'installing', manual: true }
+  expect(shouldShowUpdate(status)).toBe(true)
+  expect(updateMessage(status, 'zh')).toContain('自动重启')
+  expect(updateMessage({ ...status, phase: 'error', message: '安装器准备超时' }, 'zh')).toBe('安装器准备超时')
+})

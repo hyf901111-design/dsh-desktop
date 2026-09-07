@@ -1,3 +1,4 @@
+import { finishQuitCleanup } from './quit-cleanup'
 import { AccountService } from './account-service'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
 import { spawn } from 'node:child_process'
@@ -1235,6 +1236,10 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     stopUpdateManager()
     disposeResearchContextHandlers?.()
-    void Promise.all([runtime.stop(), localSearchRuntime?.stop(), researchContextBridge?.stop()]).finally(() => app.quit())
+    void finishQuitCleanup(
+      [() => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      () => app.quit(),
+      message => console.warn('[shutdown]', message)
+    )
   })
 }

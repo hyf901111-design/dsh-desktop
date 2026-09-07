@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
+import { app, autoUpdater as nativeUpdater, BrowserWindow, ipcMain, powerMonitor } from 'electron'
+import { prepareNativeMacInstall } from './native-install'
 import electronUpdater from 'electron-updater'
 import type { UpdateStatus } from '../../shared/contracts'
 import {
@@ -115,44 +116,44 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
 }
 
 export async function installDownloadedUpdate(): Promise<void> {
-  if (status.phase !== 'downloaded' || installing || installRequested || downloading) return
-  installRequested = true
-  try {
-    const latest = await checkForUpdates(true)
-    if (latest.phase === 'available') {
-      // A newer release superseded the cached archive. Prepare it and let the
-      // user confirm installation of that version after its final refresh.
-      await downloadAvailableUpdate()
-      return
-    }
-    if (latest.phase !== 'downloaded') return
-    installing = true
-    status = { ...status, manual: true }
-    autoUpdater.quitAndInstall(false, true)
-  } catch (error) {
-    installing = false
-    transition({ type: 'error', message: errorMessage(error) }, true)
-    scheduleReset()
-  } finally {
-    installRequested = false
-  }
+  if (status.phase !== 'downloaded') return
+  await completeUpdate()
 }
 
 export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
-  if (status.phase !== 'available' || downloading || installing) return getUpdateStatus()
-  downloading = true
+  if (status.phase !== 'available') return getUpdateStatus()
+  await completeUpdate()
+  return getUpdateStatus()
+}
+
+async function completeUpdate(): Promise<void> {
+  if (installing || installRequested || downloading) return
+  installRequested = true
   try {
-    const latest = await checkForUpdates(true)
-    if (latest.phase !== 'available') return getUpdateStatus()
-    await autoUpdater.downloadUpdate()
-    // A release can be published while the archive is downloading.
-    await checkForUpdates(true)
+    let downloads = 0
+    while (true) {
+      const latest = await checkForUpdates(true)
+      if (latest.phase === 'available') {
+        if (downloads++ >= 3) throw new Error('更新版本连续变化，请稍后重试。')
+        downloading = true
+        try { await autoUpdater.downloadUpdate() } finally { downloading = false }
+        // Refresh again after download: a newer release may have appeared.
+        continue
+      }
+      if (latest.phase !== 'downloaded') return
+      installing = true
+      transition({ type: 'install' }, true)
+      if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater)
+      else autoUpdater.quitAndInstall(false, true)
+      return
+    }
   } catch (error) {
+    installing = false
+    // Keep the actionable failure visible until the user retries.
     transition({ type: 'error', message: errorMessage(error) }, true)
   } finally {
-    downloading = false
+    installRequested = false
   }
-  return getUpdateStatus()
 }
 
 export function stopUpdateManager(): void {
@@ -167,7 +168,7 @@ export function stopUpdateManager(): void {
 
 function configureUpdater(): void {
   autoUpdater.autoDownload = false
-  // Do not hand an archive to Squirrel before the final explicit freshness check.
+  // Do not hand an archive to Squirrel before the final freshness check.
   autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowPrerelease = false
   autoUpdater.logger = {
