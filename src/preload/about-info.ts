@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.8.8',
+      date: '2026-09-07',
+      items: ["修复已发现或下载的更新锁定旧版本的问题，下载与安装前重新检查最新版本", "下载完成后自动安装并重启，无需再次确认；更新目标变化时改用最新版本", "为系统安装准备和退出清理增加超时与失败提示，避免无反馈地等待", "解压校验阶段显示环形加载与明确说明，优化提示位置并修复遮挡设置菜单的问题", "精简账户菜单，移除顶部重复名称"]
+    },
+    {
       version: '0.8.7',
       date: '2026-09-07',
       items: ["新增 Sherlock 账户体系，使用用户名、密码和邀请码注册，支持登录、退出及账户内修改密码", "基金研究等托管云端数据能力需要登录；用户自行配置的模型 API 不受影响", "设置改为全窗口左侧导航，登录与注册保留紧凑品牌浮窗；注册和修改密码增加二次密码确认", "优化账户图标、收起侧栏与更新入口布局，关于页面使用 Sherlock Logo", "更新下载同时显示百分比、已下载大小与文件总大小，保留下载后确认安装流程"]
@@ -195,6 +200,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.8.8',
+      date: '2026-09-07',
+      items: ["Recheck the latest version before downloading and installing to avoid installing an outdated cached update", "Automatically install and restart after downloading; refresh the package when a newer release becomes available", "Add timeouts and error feedback for native installation preparation and shutdown cleanup", "Show a loading indicator and clear preparation status, and prevent update notices from covering Settings menus", "Simplify the account menu by removing its duplicate heading"]
+    },
     {
       version: '0.8.7',
       date: '2026-09-07',
