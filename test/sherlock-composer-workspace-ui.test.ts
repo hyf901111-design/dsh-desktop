@@ -7013,7 +7013,7 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('arranges completed containers using real content height and trusted HTML dimensions after manual resizing', async () => {
+  it('arranges legacy native and HTML containers into aligned fixed presets without deleting long content', async () => {
     const html = '<main>Long HTML</main>'
     const mounted = await mountResearchCanvas({ sessionId: 'arrange-real-size', artifacts: [
       { id: 'long-native', kind: 'generated-container', messageId: 'native', title: 'Report', excerpt: 'Report', x: 100, y: 100, width: 560, height: 300, sizeMode: 'manual', generationStatus: 'completed', refreshMinutes: 0, containerPrompt: '报告', containerSpec: { version: 1, type: 'markdown', title: 'Report', content: 'Long report' } },
@@ -7027,8 +7027,9 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { canvas.dispatchEvent(new browserWindow.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 460, clientY: 320 })) })
       await act(async () => { click(browserWindow, host.querySelector('[data-research-context-arrange]') as HappyDOMElement | null) })
       const nodes = workspace.getSnapshot().artifacts
-      expect(nodes.find(node => node.id === 'long-native')).toMatchObject({ width: 560, height: 3238 })
-      expect(nodes.find(node => node.id === 'long-html')).toMatchObject({ width: 960, height: 3600 })
+      expect(nodes.find(node => node.id === 'long-native')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { content: 'Long report' } })
+      expect(nodes.find(node => node.id === 'long-html')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { html } })
+      expect(nodes[0].y).toBe(nodes[1].y)
       const [a, b] = nodes as any[]
       expect(Math.abs(a.x - b.x) >= (a.width + b.width) / 2 || Math.abs(a.y - b.y) >= (a.height + b.height) / 2).toBe(true)
       expect(content.getAttribute('style')).toBeNull()
