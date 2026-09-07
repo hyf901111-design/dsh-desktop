@@ -11,7 +11,7 @@ import { MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR, parseResearchHtmlAr
 export const name = 'sherlock-research-task-runtime'
 export const inject = ['agents', 'subagents', 'typert', 'web', 'webServer', 'tools']
 
-export const MAX_ACTIVE_PER_PARENT = 4
+export const MAX_ACTIVE_PER_PARENT = 10
 export const MAX_SOURCES = 24
 export const MAX_SOURCE_TEXT = 120_000
 export const MAX_TOTAL_SOURCE_BYTES = 320_000

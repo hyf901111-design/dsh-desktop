@@ -548,8 +548,8 @@ describe('Research task public event sanitization', () => {
   })
 })
 
-describe('Research task four-slot scheduling', () => {
-  it('shares the same four slots between selection and native container tasks', async () => {
+describe('Research task ten-slot scheduling', () => {
+  it('shares the same ten slots between selection and native container tasks', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches = deferredTaskAdapter()
     const runtime = new ResearchTaskRuntime({
@@ -563,25 +563,25 @@ describe('Research task four-slot scheduling', () => {
       runtime.start(containerRequest('container-1')),
       runtime.start(containerRequest('container-2')),
       runtime.start(summaryRequest('summary-2')),
-      runtime.start(containerRequest('container-3'))
+      ...Array.from({ length: 7 }, (_, index) => runtime.start(containerRequest(`container-extra-${index}`)))
     ])
-    await launches.waitForStarts(4)
+    await launches.waitForStarts(10)
 
     expect(new Set(launches.startedTaskIds())).toEqual(
-      new Set(['task-1', 'task-2', 'task-3', 'task-4'])
+      new Set(Array.from({ length: 10 }, (_, index) => `task-${index + 1}`))
     )
     expect(runtime.inspect({
-      parentSessionId: 'parent-1', taskId: receipts[4].taskId, afterSeq: 0
+      parentSessionId: 'parent-1', taskId: receipts[10].taskId, afterSeq: 0
     }).state).toBe('queued')
 
     launches.complete(receipts[0].taskId, '总结完成')
-    await launches.waitForStarts(5)
+    await launches.waitForStarts(11)
     expect(new Set(launches.startedTaskIds())).toEqual(
-      new Set(['task-1', 'task-2', 'task-3', 'task-4', 'task-5'])
+      new Set(Array.from({ length: 11 }, (_, index) => `task-${index + 1}`))
     )
   })
 
-  it('runs four tasks for one parent and admits the fifth in FIFO order', async () => {
+  it('runs ten tasks for one parent and admits the eleventh in FIFO order', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches = deferredTaskAdapter()
     const runtime = new ResearchTaskRuntime({
@@ -592,15 +592,15 @@ describe('Research task four-slot scheduling', () => {
     })
 
     const receipts = await Promise.all(
-      ['node-1', 'node-2', 'node-3', 'node-4', 'node-5']
+      Array.from({ length: 11 }, (_, index) => `node-${index + 1}`)
         .map((nodeId) => runtime.start(summaryRequest(nodeId)))
     )
-    await launches.waitForStarts(4)
+    await launches.waitForStarts(10)
 
-    expect(launches.startedTaskIds()).toEqual(['task-1', 'task-2', 'task-3', 'task-4'])
+    expect(launches.startedTaskIds()).toEqual(Array.from({ length: 10 }, (_, index) => `task-${index + 1}`))
     const queued = runtime.inspect({
       parentSessionId: 'parent-1',
-      taskId: receipts[4].taskId,
+      taskId: receipts[10].taskId,
       afterSeq: 0
     })
     expect(queued).toMatchObject({ state: 'queued' })
@@ -608,14 +608,12 @@ describe('Research task four-slot scheduling', () => {
 
     launches.complete(receipts[0].taskId, '任务一结果')
     await launches.waitForDisposed(receipts[0].taskId)
-    await launches.waitForStarts(5)
+    await launches.waitForStarts(11)
 
-    expect(launches.startedTaskIds()).toEqual([
-      'task-1', 'task-2', 'task-3', 'task-4', 'task-5'
-    ])
+    expect(launches.startedTaskIds()).toEqual(Array.from({ length: 11 }, (_, index) => `task-${index + 1}`))
   })
 
-  it('uses independent four-slot capacity for different parent sessions', async () => {
+  it('uses independent ten-slot capacity for different parent sessions', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches = deferredTaskAdapter()
     const runtime = new ResearchTaskRuntime({
@@ -625,14 +623,14 @@ describe('Research task four-slot scheduling', () => {
     })
 
     await Promise.all([
-      ...Array.from({ length: 4 }, (_, index) =>
+      ...Array.from({ length: 10 }, (_, index) =>
         runtime.start(summaryRequest(`a-${index}`, 'parent-a'))),
-      ...Array.from({ length: 4 }, (_, index) =>
+      ...Array.from({ length: 10 }, (_, index) =>
         runtime.start(summaryRequest(`b-${index}`, 'parent-b')))
     ])
 
-    await launches.waitForStarts(8)
-    expect(launches.startedTaskIds()).toHaveLength(8)
+    await launches.waitForStarts(20)
+    expect(launches.startedTaskIds()).toHaveLength(20)
   })
 
   it('routes out-of-order terminal output by task and canvas node identity', async () => {
@@ -716,18 +714,18 @@ describe('Research task cancellation and terminal cleanup', () => {
       createId: sequentialTaskIds()
     })
     const receipts = await Promise.all(
-      ['node-1', 'node-2', 'node-3', 'node-4', 'node-5']
+      Array.from({ length: 11 }, (_, index) => `node-${index + 1}`)
         .map((nodeId) => runtime.start(summaryRequest(nodeId)))
     )
-    await launches.waitForStarts(4)
+    await launches.waitForStarts(10)
 
-    await runtime.cancel({ parentSessionId: 'parent-1', taskId: receipts[4].taskId })
+    await runtime.cancel({ parentSessionId: 'parent-1', taskId: receipts[10].taskId })
     launches.complete(receipts[0].taskId, '完成')
     await launches.waitForDisposed(receipts[0].taskId)
 
-    expect(launches.startedTaskIds()).not.toContain(receipts[4].taskId)
+    expect(launches.startedTaskIds()).not.toContain(receipts[10].taskId)
     expect(runtime.inspect({
-      parentSessionId: 'parent-1', taskId: receipts[4].taskId, afterSeq: 0
+      parentSessionId: 'parent-1', taskId: receipts[10].taskId, afterSeq: 0
     })).toMatchObject({ state: 'cancelled', error: '任务已取消，可重试。' })
   })
 
