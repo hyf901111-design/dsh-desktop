@@ -1,11 +1,14 @@
 {
   "name": "sherlock-fund-data",
-  "account_id": "54389c3ac6d28713b36c466807493ada",
   "main": "worker.js",
   "compatibility_date": "2026-08-27",
   "compatibility_flags": ["nodejs_compat"],
-  "workers_dev": true,
+  "workers_dev": false,
   "preview_urls": false,
+  "routes": [
+    { "pattern": "updates.evanarts.com/v1/fund-research/query", "zone_id": "6f467b786713bdf33ed46e8a89d780d9" },
+    { "pattern": "updates.evanarts.com/v1/fund-research/health", "zone_id": "6f467b786713bdf33ed46e8a89d780d9" }
+  ],
   "vars": { "DAILY_RESEARCH_LIMIT": "1000", "CACHE_TTL_SECONDS": "600" },
   "ratelimits": [
     { "name": "FUND_REQUEST_LIMITER", "namespace_id": "2026090701", "simple": { "limit": 20, "period": 60 } }

@@ -513,7 +513,7 @@ describe('runtime hosted service seam', () => {
     const result = await tools.get('fund_research').execute({ task: 'single', funds: ['510300'] }, {})
     expect(result.subjects[0].fund_code).toBe('510300')
     expect(resolve).not.toHaveBeenCalled()
-    expect(hostedFetch.mock.calls[0][0]).toBe('https://sherlock-fund-data.nmchgx.workers.dev/v1/fund-research/query')
+    expect(hostedFetch.mock.calls[0][0]).toBe('https://updates.evanarts.com/v1/fund-research/query')
     expect(JSON.parse(hostedFetch.mock.calls[0][1].body)).toEqual(request)
     expect(JSON.stringify(hostedFetch.mock.calls)).not.toContain(PRIVATE_KEY)
     expect(hostedFetch.mock.calls[0][1].headers).not.toHaveProperty('authorization')

@@ -3,7 +3,7 @@ import {
   unavailableError, validateResearchRequest, serviceError
 } from './contract.js'
 
-export const FUND_SERVICE_ORIGIN = 'https://sherlock-fund-data.nmchgx.workers.dev'
+export const FUND_SERVICE_ORIGIN = 'https://updates.evanarts.com'
 export const FUND_SERVICE_PATH = '/v1/fund-research/query'
 const MAX_RESPONSE_BYTES = 64 * 1024
 
