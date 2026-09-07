@@ -1,3 +1,4 @@
+import { mountAccountUi } from './account-ui'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { UpdateStatus } from '../shared/contracts'
 import { developerModeEnabledFromArguments } from '../shared/developer-mode'
@@ -121,6 +122,7 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
 })
 
 function initializeUi(): void {
+  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input))
   mountDeveloperModeUi()
   if (process.platform === 'win32') {
     mountWindowsTitlebar({ document, ipcRenderer, locale })

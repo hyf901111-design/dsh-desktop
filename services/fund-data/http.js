@@ -1,3 +1,4 @@
+import { authenticate, authError, handleAccountRequest } from '../accounts/auth.js'
 import { validateResearchRequest } from '../../packages/dsh-fund-research-runtime/contract.js'
 
 export const QUERY_PATH = '/v1/fund-research/query'
@@ -40,31 +41,39 @@ export async function parseQuery(request) {
 
 export async function handleRequest(request, env) {
   const url = new URL(request.url)
+  if (!url.search && url.pathname.startsWith('/v1/account/')) return handleAccountRequest(request, env)
   if (url.search || ![QUERY_PATH, HEALTH_PATH].includes(url.pathname)) return failure(404, 'NOT_FOUND')
   if (url.pathname === HEALTH_PATH && request.method === 'GET') {
-    const ready = Boolean(env.YINGMI_API_KEY?.trim() && env.FUND_REQUEST_LIMITER && env.FUND_COORDINATOR)
+    const ready = Boolean(env.ACCOUNTS_DB && env.YINGMI_API_KEY?.trim() && env.FUND_REQUEST_LIMITER && env.FUND_COORDINATOR)
     return json({ status: ready ? 'ready' : 'unavailable' }, ready ? 200 : 503)
   }
   if (url.pathname !== QUERY_PATH || request.method !== 'POST') return failure(405, 'METHOD_NOT_ALLOWED')
   if (request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') {
     return failure(415, 'INVALID_CONTENT_TYPE')
   }
-  if (!env.YINGMI_API_KEY?.trim() || !env.FUND_REQUEST_LIMITER || !env.FUND_COORDINATOR) {
+  if (!env.ACCOUNTS_DB || !env.YINGMI_API_KEY?.trim() || !env.FUND_REQUEST_LIMITER || !env.FUND_COORDINATOR) {
     return failure(503, 'FUND_SERVICE_UNAVAILABLE', 60)
   }
+  let user
+  try { user = await authenticate(request, env) } catch { return failure(503, 'ACCOUNT_SERVICE_UNAVAILABLE') }
+  if (!user) return authError('LOGIN_REQUIRED')
   // CF-Connecting-IP is supplied by Cloudflare, never trust forwarded/client IDs.
   const ip = request.headers.get('cf-connecting-ip')
   if (!ip) return failure(503, 'FUND_SERVICE_UNAVAILABLE', 60)
   try {
-    const { success } = await env.FUND_REQUEST_LIMITER.limit({ key: ip })
+    const { success } = await env.FUND_REQUEST_LIMITER.limit({ key: `${user.id}:${ip}` })
     if (!success) return failure(429, 'FUND_SERVICE_BUSY', 60)
     let query
     try { query = await parseQuery(request) } catch { return failure(400, 'INVALID_REQUEST') }
     const coordinator = env.FUND_COORDINATOR.get(env.FUND_COORDINATOR.idFromName('fund-data-v1'))
     // Reconstruct the internal request so user headers, credentials and IP never reach storage/upstream.
-    return await coordinator.fetch(new Request('https://fund-internal/query', {
+    const usageId = crypto.randomUUID()
+    await env.ACCOUNTS_DB.prepare('INSERT INTO usage_events(id,user_id,capability,started_at) VALUES(?,?,?,?)').bind(usageId,user.id,'fund-research',Math.floor(Date.now()/1000)).run()
+    const response = await coordinator.fetch(new Request('https://fund-internal/query', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(query)
     }))
+    await env.ACCOUNTS_DB.prepare('UPDATE usage_events SET status=?,completed_at=? WHERE id=?').bind(response.status,Math.floor(Date.now()/1000),usageId).run()
+    return response
   } catch {
     return failure(503, 'FUND_SERVICE_UNAVAILABLE', 60)
   }

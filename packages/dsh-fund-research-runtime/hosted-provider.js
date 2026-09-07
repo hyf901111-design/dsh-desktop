@@ -11,8 +11,13 @@ export function createHostedFundProvider({
   endpoint = FUND_SERVICE_ORIGIN,
   fetch: request = globalThis.fetch,
   timeoutMs = 70_000,
+  bridge = process.env.SHERLOCK_ACCOUNT_BRIDGE ? JSON.parse(process.env.SHERLOCK_ACCOUNT_BRIDGE) : undefined,
   clock = () => new Date()
 } = {}) {
+  if (bridge) {
+    const local = new URL(bridge.url)
+    if (local.protocol !== 'http:' || local.hostname !== '127.0.0.1' || local.pathname !== '/fund-research' || local.username || local.password || local.search || local.hash || !/^[a-f0-9]{64}$/.test(bridge.token)) throw new TypeError('Invalid account bridge')
+  }
   const origin = new URL(endpoint)
   const local = origin.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname)
   if ((!local && origin.protocol !== 'https:') || origin.pathname !== '/' ||
@@ -37,11 +42,12 @@ export function createHostedFundProvider({
       let reader
       const run = (operation) => Promise.race([Promise.resolve().then(operation), stopped])
       try {
-        const response = await run(() => request(`${origin.origin}${FUND_SERVICE_PATH}`, {
+        const response = await run(() => request(bridge?.url ?? `${origin.origin}${FUND_SERVICE_PATH}`, {
           method: 'POST', redirect: 'error', cache: 'no-store', signal: controller.signal,
-          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          headers: { 'content-type': 'application/json', accept: 'application/json', ...(bridge ? { authorization: `Bearer ${bridge.token}` } : {}) },
           body: JSON.stringify(query)
         }))
+        if (response.status === 401) throw serviceError('LOGIN_REQUIRED')
         if (response.status === 429) throw serviceError('FUND_SERVICE_BUSY')
         if (response.status === 503) throw serviceError('FUND_SERVICE_UNAVAILABLE')
         if (response.status === 422) throw serviceError('FUND_TYPE_UNSUPPORTED')

@@ -28,6 +28,8 @@ export interface UpdateStatus {
   currentVersion: string
   availableVersion?: string
   percent?: number
+  transferredBytes?: number
+  totalBytes?: number
   message?: string
   manual: boolean
 }

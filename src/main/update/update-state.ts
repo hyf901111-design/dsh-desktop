@@ -3,7 +3,12 @@ import type { UpdateStatus } from '../../shared/contracts'
 export type UpdateStateEvent =
   | { type: 'check'; manual: boolean }
   | { type: 'available'; version: string }
-  | { type: 'progress'; percent: number }
+  | {
+      type: 'progress'
+      percent: number
+      transferredBytes?: number
+      totalBytes?: number
+    }
   | { type: 'downloaded'; version: string }
   | { type: 'not-available' }
   | { type: 'error'; message: string }
@@ -18,7 +23,10 @@ export function reduceUpdateStatus(
   current: UpdateStatus,
   event: UpdateStateEvent
 ): UpdateStatus {
-  const base = { currentVersion: current.currentVersion, manual: current.manual }
+  const base = {
+    currentVersion: current.currentVersion,
+    manual: current.manual
+  }
 
   switch (event.type) {
     case 'check':
@@ -26,7 +34,13 @@ export function reduceUpdateStatus(
     case 'available':
       return { ...base, phase: 'available', availableVersion: event.version }
     case 'progress':
-      return { ...current, phase: 'downloading', percent: clampPercent(event.percent) }
+      return {
+        ...current,
+        phase: 'downloading',
+        percent: clampPercent(event.percent),
+        transferredBytes: validBytes(event.transferredBytes),
+        totalBytes: validBytes(event.totalBytes)
+      }
     case 'downloaded':
       return { ...base, phase: 'downloaded', availableVersion: event.version }
     case 'not-available':
@@ -43,4 +57,10 @@ export function reduceUpdateStatus(
 function clampPercent(value: number): number {
   if (!Number.isFinite(value)) return 0
   return Math.round(Math.min(100, Math.max(0, value)) * 10) / 10
+}
+
+function validBytes(value: number | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : undefined
 }

@@ -127,6 +127,11 @@ describe('desktop update manager', () => {
     await installDownloadedUpdate()
     expect(quitAndInstall).toHaveBeenCalledOnce()
   })
+  it('forwards actual downloaded and total bytes from updater events', () => {
+    fakes.autoUpdater.emit('download-progress', {percent:44.4,transferred:44400000,total:100000000})
+    expect(getUpdateStatus()).toMatchObject({phase:'downloading',transferredBytes:44400000,totalBytes:100000000})
+  })
+
   it('allows another install attempt after the native installer reports an error', async () => {
     const quitAndInstall = vi.spyOn(fakes.autoUpdater, 'quitAndInstall').mockClear()
     fakes.autoUpdater.emit('error', new Error('Installation authorization cancelled'))

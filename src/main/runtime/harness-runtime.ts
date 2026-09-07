@@ -17,6 +17,7 @@ export interface HarnessRuntimeOptions {
   bundledResearchTaskEntry: string
   bundledFundResearchEntry?: string
   localSearchUrl: string
+  accountEndpoint?: { url: string; token: string }
   localSearchToken: string
   researchContext?: { url: string; token: string }
   dshHome: string
@@ -211,7 +212,7 @@ export class HarnessRuntime {
           launchDirectory,
           this.options.dshHome,
           process.platform,
-          process.env,
+          { ...process.env, SHERLOCK_ACCOUNT_BRIDGE: this.options.accountEndpoint ? JSON.stringify(this.options.accountEndpoint) : undefined },
           this.options.bundledSkillDirectory,
           this.options.bundledWebSearchEntry,
           {

@@ -39,11 +39,12 @@ function internalRequest(query = QUERY) {
 }
 function publicRequest(query = QUERY, headers = {}) {
   return new Request(`https://updates.evanarts.com${QUERY_PATH}`, {
-    method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '192.0.2.1', ...headers }, body: JSON.stringify(query)
+    method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '192.0.2.1', authorization: `Bearer ${'a'.repeat(64)}`, ...headers }, body: JSON.stringify(query)
   })
 }
 function bindings(coordinator = { fetch: vi.fn(async () => Response.json(normalized())) }) {
   return {
+    ACCOUNTS_DB: { prepare: () => ({ bind: () => ({ first: async () => ({ id: 'user-1' }), run: async () => ({success:true}) }) }) },
     YINGMI_API_KEY: 'server-only-fixture-key',
     FUND_REQUEST_LIMITER: { limit: vi.fn(async () => ({ success: true })) },
     FUND_COORDINATOR: { idFromName: vi.fn(x => x), get: vi.fn(() => coordinator) }
@@ -51,16 +52,16 @@ function bindings(coordinator = { fetch: vi.fn(async () => Response.json(normali
 }
 
 describe('public fund service boundary', () => {
-  it('works without client credentials and strips all client headers before the coordinator', async () => {
+  it('authenticates account credentials and strips all client headers before the coordinator', async () => {
     const coordinator = { fetch: vi.fn(async req => {
       expect(await req.json()).toEqual(QUERY)
       expect([...req.headers.keys()]).toEqual(['content-type'])
       return Response.json(normalized())
     }) }
     const env = bindings(coordinator)
-    const response = await handleRequest(publicRequest(QUERY, { authorization: 'Bearer user-key', 'x-forwarded-for': 'spoof' }), env)
+    const response = await handleRequest(publicRequest(QUERY, { authorization: `Bearer ${'a'.repeat(64)}`, 'x-forwarded-for': 'spoof' }), env)
     expect(response.status).toBe(200)
-    expect(env.FUND_REQUEST_LIMITER.limit).toHaveBeenCalledWith({ key: '192.0.2.1' })
+    expect(env.FUND_REQUEST_LIMITER.limit).toHaveBeenCalledWith({ key: 'user-1:192.0.2.1' })
     expect(await response.text()).not.toMatch(/server-only|user-key|192\.0\.2/)
   })
 
@@ -78,7 +79,7 @@ describe('public fund service boundary', () => {
 
   it('fails closed on missing secret, limiter, or trusted IP', async () => {
     const env = bindings()
-    for (const binding of ['YINGMI_API_KEY', 'FUND_REQUEST_LIMITER', 'FUND_COORDINATOR']) {
+    for (const binding of ['ACCOUNTS_DB', 'YINGMI_API_KEY', 'FUND_REQUEST_LIMITER', 'FUND_COORDINATOR']) {
       expect((await handleRequest(publicRequest(), { ...env, [binding]: undefined })).status).toBe(503)
     }
     const req = publicRequest(); req.headers.delete('cf-connecting-ip')
@@ -91,7 +92,7 @@ describe('public fund service boundary', () => {
     env.FUND_REQUEST_LIMITER.limit.mockResolvedValueOnce({ success: false })
     expect((await handleRequest(publicRequest(), env)).status).toBe(429)
     const req = new Request(`https://updates.evanarts.com${QUERY_PATH}`, {
-      method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '192.0.2.1' }, body: 'x'.repeat(4096)
+      method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '192.0.2.1', authorization: `Bearer ${'a'.repeat(64)}` }, body: 'x'.repeat(4096)
     })
     expect((await handleRequest(req, env)).status).toBe(400)
     expect(env.FUND_COORDINATOR.get).not.toHaveBeenCalled()
@@ -202,12 +203,12 @@ describe('desktop without a data key', () => {
     const streaming = createHostedFundProvider({ timeoutMs: 10, fetch: async () => new Response(new ReadableStream(), { headers: { 'content-type': 'application/json' } }) })
     await expect(streaming.research(QUERY)).rejects.toMatchObject({ code: 'FUND_DATA_UNAVAILABLE' })
   })
-  it('runs the entire desktop → public boundary → durable coordinator flow without client credentials', async () => {
+  it('runs the entire desktop → public boundary → durable coordinator flow with account authentication', async () => {
     const coordinator = new FundCoordinator(memoryState(), {}, { provider: { research: async q => normalized(q) }, clock: () => new Date(NOW) })
     const env = bindings(coordinator)
     const desktop = createHostedFundProvider({ clock: () => new Date(NOW), fetch: (url, init) => {
       expect(init.headers).not.toHaveProperty('authorization')
-      return handleRequest(new Request(url, { ...init, headers: { ...init.headers, 'cf-connecting-ip': '192.0.2.2' } }), env)
+      return handleRequest(new Request(url, { ...init, headers: { ...init.headers, 'cf-connecting-ip': '192.0.2.2', authorization: `Bearer ${'a'.repeat(64)}` } }), env)
     } })
     expect((await createFundResearchTool(desktop).execute(QUERY, {})).subjects[0].fund_code).toBe('510300')
   })

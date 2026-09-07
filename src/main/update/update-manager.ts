@@ -167,7 +167,7 @@ function configureUpdater(): void {
     transition({ type: 'available', version: info.version })
   )
   autoUpdater.on('download-progress', (progress) =>
-    transition({ type: 'progress', percent: progress.percent })
+    transition({ type: 'progress', percent: progress.percent, transferredBytes: progress.transferred, totalBytes: progress.total })
   )
   autoUpdater.on('update-not-available', () => {
     transition({ type: 'not-available' })

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { hash } from '../services/accounts/auth.js'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
@@ -20,6 +22,7 @@ for (const redirectUpstream of [false, true]) {
       modules: true, script: built.outputFiles[0].text,
       compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
       bindings: { YINGMI_API_KEY: fakeKey, DAILY_RESEARCH_LIMIT: '1', CACHE_TTL_SECONDS: '600' },
+      d1Databases: { ACCOUNTS_DB: 'test-accounts' },
       durableObjects: { FUND_COORDINATOR: { className: 'FundResearchCoordinator', useSQLite: true } },
       ratelimits: { FUND_REQUEST_LIMITER: { namespace_id: '2026090701', simple: { limit: 20, period: 60 } } },
       outboundService: async request => {
@@ -53,11 +56,25 @@ for (const redirectUpstream of [false, true]) {
   }))
   try {
     await mf.ready
+    const db=await mf.getD1Database('ACCOUNTS_DB')
+    const schema=readFileSync(new URL('../services/accounts/migrations/0001_accounts.sql',import.meta.url),'utf8')
+    await db.exec(schema.replaceAll('\n',' '))
+    const invite='synthetic-invite-20260907'
+    await db.prepare('INSERT INTO invites(hash,expires_at,max_uses) VALUES(?,?,1)').bind(hash(invite),Math.floor(Date.now()/1000)+3600).run()
+    const auth=async(action,body,token)=>mf.dispatchFetch(`https://fund.local/v1/account/${action}`,{method:body?'POST':'GET',headers:{'content-type':'application/json','cf-connecting-ip':'192.0.2.40',...(token?{authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})})
+    const anon=await mf.dispatchFetch('https://fund.local/v1/fund-research/query',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})
+    assert.equal(anon.status,401)
+    const registered=await auth('register',{username:'tester',password:'synthetic-password-123',invite})
+    assert.equal(registered.status,200,await registered.clone().text())
+    const {token,user}=await registered.json()
+    assert.equal((await auth('register',{username:'tester2',password:'synthetic-password-123',invite})).status,400)
+    assert.equal((await auth('login',{username:'tester',password:'incorrect-password'})).status,401)
+    assert.equal((await auth('me',null,token)).status,200)
     const provider = createHostedFundProvider({
       fetch: async (url, init) => {
         assert.equal(init.headers.authorization, undefined)
         assert.equal(init.headers['x-api-key'], undefined)
-        const response = await mf.dispatchFetch(url, { ...init, headers: { ...init.headers, 'cf-connecting-ip': '192.0.2.55' } })
+        const response = await mf.dispatchFetch(url, { ...init, headers: { ...init.headers, authorization: `Bearer ${token}`, 'cf-connecting-ip': '192.0.2.55' } })
         return response
       }
     })
@@ -83,6 +100,17 @@ for (const redirectUpstream of [false, true]) {
       console.log('Workers runtime: no-key desktop → Worker → SQLite coordinator → mocked data source passed.')
       console.log('Original timestamps, cache reuse, global budget, secret isolation: passed.')
     }
+    const usage=await (await auth('usage',null,token)).json()
+    assert.ok(usage.usage[0].requests>=1)
+    assert.equal((await auth('password',{currentPassword:'synthetic-password-123',password:'new-synthetic-password'},token)).status,200)
+    assert.equal((await auth('me',null,token)).status,401)
+    assert.equal((await auth('login',{username:'tester',password:'synthetic-password-123'})).status,401)
+    const login=await auth('login',{username:'tester',password:'new-synthetic-password'})
+    assert.equal(login.status,200)
+    const renewed=await login.json()
+    assert.equal((await auth('logout',{},renewed.token)).status,200)
+    assert.equal((await auth('me',null,renewed.token)).status,401)
+    console.log('Account registration, invite consumption, anonymous rejection, password/session revocation and usage: passed.')
   } finally {
     await mf.dispose()
   }

@@ -177,6 +177,7 @@ export function cancelledError() {
 }
 
 const SERVICE_MESSAGES = Object.freeze({
+  LOGIN_REQUIRED: '请在左下角登录 Sherlock 后使用基金研究。',
   FUND_SERVICE_BUSY: '基金查询较多，请稍后再试。',
   FUND_SERVICE_UNAVAILABLE: '基金数据服务暂时不可用，请稍后重试。',
   FUND_TYPE_UNSUPPORTED: '暂不支持该基金类型。'
