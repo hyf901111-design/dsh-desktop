@@ -16,8 +16,9 @@
 6. 先上传不可变版本资源，再更新公证 DMG 稳定下载别名，最后分别提升 `latest/latest-mac.yml` 与 `notarized/latest/latest-mac.yml`。发布脚本已按此顺序执行。
 7. 不丢弃、覆盖或顺手提交用户的无关改动；禁止 `git add -A`、强推和直接推送上游 `origin/main`。正式构建必须从干净的本地 `main` 提交执行，且不得遗漏其他本地分支中准备发布的提交。
 8. 当前正式渠道是 macOS Apple Silicon。没有同时构建 Intel/Windows 时，不宣称这两个平台已发布。
-9. 已安装 0.6.3 的用户长期走旧证书兼容 feed；新下载用户走 Developer ID 公证 feed。每次发布都必须维护两套签名 ZIP，除非未来另行实现并真实验证签名迁移安装器。
-10. R2 采用滚动版本保留：新版本全部公开验证成功后，只删除 `releases/v*` 中版本号最早的一个目录。禁止删除 `latest/`、`notarized/latest/`、`download/`、当前版本或一次删除多个旧版本；发布或公开验证失败时禁止清理旧版本。
+9. 两个 generic 更新通道及手工嵌入的 `app-update.yml` 必须设置 `useMultipleRangeRequest: false`，以单段 Range 传输差分数据，避免 CDN 多段响应格式差异导致全量回退。保留 updater 的旧包缓存和 SHA-512 校验；没有缓存、旧 blockmap 不可用或差分校验失败时，仍由更新器安全回退全量下载。此客户端配置只对安装了该配置的新客户端生效，不能追溯修改已发布客户端。
+10. 已安装 0.6.3 的用户长期走旧证书兼容 feed；新下载用户走 Developer ID 公证 feed。每次发布都必须维护两套签名 ZIP，除非未来另行实现并真实验证签名迁移安装器。
+11. R2 采用滚动版本保留：新版本全部公开验证成功后，只删除 `releases/v*` 中版本号最早的一个目录。禁止删除 `latest/`、`notarized/latest/`、`download/`、当前版本或一次删除多个旧版本；发布或公开验证失败时禁止清理旧版本。
 
 ## 1. 发布前检查
 

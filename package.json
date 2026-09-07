@@ -174,7 +174,8 @@
     "publish": [
       {
         "provider": "generic",
-        "url": "https://updates.evanarts.com/latest/"
+        "url": "https://updates.evanarts.com/latest/",
+        "useMultipleRangeRequest": false
       }
     ],
     "artifactName": "sherlock-${os}-${arch}.${ext}",

@@ -1,3 +1,4 @@
 provider: generic
 url: https://updates.evanarts.com/notarized/latest/
 updaterCacheDirName: sherlock-updater
+useMultipleRangeRequest: false

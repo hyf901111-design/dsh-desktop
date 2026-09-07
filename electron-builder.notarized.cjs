@@ -37,7 +37,9 @@ module.exports = {
   publish: [
     {
       provider: 'generic',
-      url: 'https://updates.evanarts.com/notarized/latest/'
+      url: 'https://updates.evanarts.com/notarized/latest/',
+      // CDN cache misses may not support multipart ranges; keep differential downloads single-range.
+      useMultipleRangeRequest: false
     }
   ]
 }

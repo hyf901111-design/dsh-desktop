@@ -160,7 +160,7 @@ describe('GitHub release contract', () => {
 
     expect(packageJson.dependencies['electron-updater']).toBeTruthy()
     expect(packageJson.build.publish).toEqual([
-      { provider: 'generic', url: 'https://updates.evanarts.com/latest/' }
+      { provider: 'generic', url: 'https://updates.evanarts.com/latest/', useMultipleRangeRequest: false }
     ])
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false)
     for (const asset of [
