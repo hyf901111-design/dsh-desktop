@@ -58,8 +58,9 @@
     {
       "binding": "ACCOUNTS_DB",
       "database_name": "sherlock-accounts",
-      "database_id": "REPLACE_WITH_VERIFIED_PRODUCTION_D1_ID",
+      "database_id": "1a60b58b-7926-4287-b6ff-c6e84e12827d",
       "migrations_dir": "../accounts/migrations"
     }
-  ]
+  ],
+  "account_id": "d5e49bcb8e44fb51208bd0023bb9ee01"
 }
