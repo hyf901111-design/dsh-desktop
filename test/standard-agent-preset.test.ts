@@ -91,6 +91,18 @@ describe('Sherlock standard agent preset policy', () => {
     expect(persona).toContain('final answer')
   })
 
+  it('keeps Build mode capabilities identical to Standard and preserves its selected identity', async () => {
+    const options = { customTags: [{ tag: 'tag:yaml.org,2002:js', resolve: (v: string) => v }] }
+    const readPreset = async (id: string) => parse(await readFile(`node_modules/@deepseek-ai/dsh/config/sherlock-agent-presets/${id}/agent.cordis.yml`, 'utf8'), options) as any[]
+    const standard = await readPreset('standard'), build = await readPreset('build')
+    expect(build.filter(p => p.id !== 'persona')).toEqual(standard.filter(p => p.id !== 'persona'))
+    const persona = build.find(p => p.id === 'persona').config.text
+    expect(persona).toContain('research_workbench_create')
+    expect(persona).toContain('For simple factual questions')
+    const { resolveSessionPreset } = await import('@deepseek-ai/dsh-agent-presets')
+    expect(resolveSessionPreset({ header: { version: 0, id: SessionId('build-test'), createdAt: 1, agentPreset: 'build' }, events: [] })).toBe('build')
+  })
+
   it('gives the single Standard-mode picker enough room and wraps its description', async () => {
     const source = await readFile(
       'node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js',
@@ -143,7 +155,7 @@ describe('Sherlock standard agent preset policy', () => {
     ).toBe('standard')
   })
 
-  it('composes only the shipped standard preset and excludes the user preset root', async () => {
+  it('composes the shipped standard and build presets and excludes the user preset root', async () => {
     const dshHome = await mkdtemp(path.join(tmpdir(), 'sherlock-preset-policy-'))
     try {
       const result = spawnSync(
@@ -188,7 +200,7 @@ describe('Sherlock standard agent preset policy', () => {
           trust: root.trust === 'system' ? 'system' : 'user'
         }))
       )
-      expect(discovered.map((preset) => preset.id)).toEqual(['standard'])
+      expect(discovered.map((preset) => preset.id)).toEqual(['standard', 'build'])
     } finally {
       await rm(dshHome, { recursive: true, force: true })
     }

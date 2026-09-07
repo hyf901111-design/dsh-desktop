@@ -1,3 +1,4 @@
+import { registerWorkbench } from './workbench.js'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -533,6 +534,11 @@ function eventText(value) {
   return value.slice(0, MAX_EVENT_TEXT)
 }
 
+export function publicProgressText(value) {
+  if (typeof value !== 'string') return undefined
+  const text = value.replace(/https?:\/\/\S+/gu, '[来源链接]').replace(/(?:Bearer\s+\S+|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+)/giu, '[已隐藏]').replace(/(?:\/Users\/|\/home\/)[^\s]+/gu, '[本地文件]').replace(/[\r\n\t]+/gu, ' ').trim().slice(0, 240)
+  return text || undefined
+}
 export function publicEventFromSessionEvent(event) {
   if (event?.type === 'assistant/chunk' && event.data?.chunk?.type === 'text-delta') {
     const text = eventText(event.data.chunk.text)
@@ -540,7 +546,11 @@ export function publicEventFromSessionEvent(event) {
   }
   if (event?.type === 'tool/call') {
     const tool = TOOL_LABELS.get(event.data?.name) ?? '处理资料'
-    return { type: 'tool-started', tool }
+    let detail
+    if (event.data?.name === 'web_search') {
+      try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText(args?.query) } catch {}
+    }
+    return { type: 'tool-started', tool, ...(detail ? { detail } : {}) }
   }
   if (event?.type === 'tool/result') {
     return { type: 'tool-finished', failed: event.data?.error !== undefined }
@@ -548,10 +558,10 @@ export function publicEventFromSessionEvent(event) {
   return null
 }
 
-// Host retrieval happens before a child exists. Only fixed public progress
-// labels cross this callback; query text, URLs and tool parameters never do.
+// Host retrieval happens before a child exists. Only bounded, sanitized search
+// topics and source titles cross this callback; raw tool arguments/results do not.
 function publicEventFromHostProgress(event) {
-  if (event?.type === 'tool-started' && ['检索网页', '读取网页'].includes(event.tool)) return { type: 'tool-started', tool: event.tool }
+  if (event?.type === 'tool-started' && ['检索网页', '读取网页'].includes(event.tool)) return { type: 'tool-started', tool: event.tool, ...(publicProgressText(event.detail) ? { detail: publicProgressText(event.detail) } : {}) }
   if (event?.type === 'tool-finished' && typeof event.failed === 'boolean') return { type: 'tool-finished', failed: event.failed }
   return null
 }
@@ -1057,8 +1067,8 @@ export function createSubagentAdapter(ctx) {
     return truncateUtf8(value.replace(/\u0000/gu, '').trim(), maxBytes).trim()
   }
 
-  const withEvidenceProgress = async (tool, operation, onProgress) => {
-    await onProgress?.({ type: 'tool-started', tool })
+  const withEvidenceProgress = async (tool, operation, onProgress, detail) => {
+    await onProgress?.({ type: 'tool-started', tool, detail })
     try {
       const result = await operation()
       await onProgress?.({ type: 'tool-finished', failed: false })
@@ -1073,7 +1083,7 @@ export function createSubagentAdapter(ctx) {
     const url = httpUrl(source?.url)
     if (url === undefined || typeof ctx.web?.fetch !== 'function') return undefined
     try {
-      const result = await withEvidenceProgress('读取网页', () => withParentInitiator(parent, () => ctx.web.fetch({ url }, signal)), onProgress)
+      const result = await withEvidenceProgress('读取网页', () => withParentInitiator(parent, () => ctx.web.fetch({ url }, signal)), onProgress, source.title)
       const content = evidenceText(result?.body?.content)
       if (content.length === 0) return undefined
       return { url, content }
@@ -1090,7 +1100,7 @@ export function createSubagentAdapter(ctx) {
         const found = await withParentInitiator(parent, () => ctx.web.search({ query: plan.query, maxResults: MAX_CONTAINER_WEB_RESULTS }, signal))
         if (found?.status === 'no_results') throw unavailableContainerData()
         return found
-      }, onProgress)
+      }, onProgress, plan.query)
       const candidates = Array.isArray(result?.sources)
         ? result.sources
           .map((source) => ({
@@ -1423,6 +1433,7 @@ export async function apply(ctx) {
     storage: new JsonResearchTaskStorage()
   })
   await runtime.restore()
+  const disposeWorkbench = await registerWorkbench(ctx, runtime, { filePath: join(dshHome(), 'sherlock-workbenches.json'), isTrustedRequest, readJsonBody })
   ctx.effect(() => {
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     let context
@@ -1433,6 +1444,7 @@ export async function apply(ctx) {
       throw error
     }
     return async () => {
+      await disposeWorkbench()
       await context.dispose()
       disposeRoutes()
       await runtime.dispose()

@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..7ac9e75 100644
+index 1dd0e89..6115008 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -2839,7 +2839,7 @@ index 1dd0e89..7ac9e75 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8577,6934 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8577,6969 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -4712,6 +4712,7 @@ index 1dd0e89..7ac9e75 100644
 +				messageId,
 +				title,
 +				excerpt,
++				...(typeof value.workbenchId === "string" && Number.isInteger(value.workbenchIndex) ? { workbenchId: value.workbenchId.slice(0, 100), workbenchIndex: value.workbenchIndex, workbenchColumns: value.workbenchColumns === 2 ? 2 : 3 } : {}),
 +				...(webLink ? { url, titleMode, ...(sourceText === null ? {} : { sourceText }) } : {}),
 +				x: value.x,
 +				y: value.y,
@@ -5111,7 +5112,7 @@ index 1dd0e89..7ac9e75 100644
 +		}
 +		function researchGenerationSizedNode(node, geometry) {
 +			if (geometry === null) return node;
-+			const next = { ...node, ...geometry };
++			const next = { ...node, ...geometry, ...(node.workbenchId && node.sizeMode !== "manual" ? { width: node.width } : {}) };
 +			// Selection outputs grow down/right from their visible title, not out of view.
 +			if (node.sizeMode !== "manual" && (node.kind === "generated-mind-map" || node.kind === "generated-summary" || node.kind === "generated-container" || node.creationMode === "selection")) {
 +				const before = normalizeResearchCanvasNodeGeometry(node);
@@ -5122,7 +5123,7 @@ index 1dd0e89..7ac9e75 100644
 +			return next;
 +		}
 +		function researchGenerationAutoGeometry(node) {
-+			if (node?.sizeMode === "manual") return null;
++			if (node?.sizeMode === "manual" || node?.workbenchId) return null;
 +			// A stable progress surface must not grow with hidden code or tool logs.
 +			return { width: 480, height: 300 };
 +		}
@@ -5180,6 +5181,16 @@ index 1dd0e89..7ac9e75 100644
 +				y: height / 2 - node.y * scale
 +			};
 +		}
++        function researchWorkbenchViewport(nodes, viewport, canvasSize) {
++            if (!nodes.length || !(canvasSize?.width > 0) || !(canvasSize?.height > 0)) return viewport;
++            const left = Math.min(...nodes.map(n => n.x - n.width / 2));
++            const right = Math.max(...nodes.map(n => n.x + n.width / 2));
++            const top = Math.min(...nodes.map(n => n.y - n.height / 2));
++            const bottom = Math.max(...nodes.map(n => n.y + n.height / 2));
++            const usableHeight = Math.max(100, canvasSize.height - 180);
++            const scale = Math.max(RESEARCH_CANVAS_MIN_SCALE, Math.min(1, Math.max(1, canvasSize.width - 64) / (right - left), Math.max(1, usableHeight - 64) / (bottom - top)));
++            return { scale, x: canvasSize.width / 2 - (left + right) / 2 * scale, y: usableHeight / 2 - (top + bottom) / 2 * scale };
++        }
 +		function researchCanvasReturnViewport(nodes, viewport, canvasSize) {
 +			const width = Number.isFinite(canvasSize?.width) && canvasSize.width > 0 ? canvasSize.width : 0;
 +			const height = Number.isFinite(canvasSize?.height) && canvasSize.height > 0 ? canvasSize.height : 0;
@@ -5308,7 +5319,7 @@ index 1dd0e89..7ac9e75 100644
 +			}
 +			if (value.type === "tool-started") {
 +				const tool = normalizeResearchArtifactText(value.tool, 64);
-+				return tool === null ? null : { ...base, type: value.type, tool };
++				return tool === null ? null : { ...base, type: value.type, tool, ...(typeof value.detail === "string" ? { detail: value.detail.slice(0, 240) } : {}) };
 +			}
 +			if (value.type === "tool-finished" && typeof value.failed === "boolean") return { ...base, type: value.type, failed: value.failed };
 +			return null;
@@ -5380,6 +5391,22 @@ index 1dd0e89..7ac9e75 100644
 +				return filesDurable;
 +			};
 +			const publish = (next, persist = false) => {
++                const changedGroups = new Set(next.artifacts.filter(n => n.workbenchId && n.sizeMode !== "manual" && snapshot.artifacts.some(old => old.id === n.id && (old.height !== n.height || old.width !== n.width))).map(n => n.workbenchId));
++                for (const id of changedGroups) {
++                    const group = next.artifacts.filter(n => n.workbenchId === id).sort((a, b) => a.workbenchIndex - b.workbenchIndex);
++                    const prior = snapshot.artifacts.filter(n => n.workbenchId === id);
++                    const left = Math.min(...prior.map(n => n.x - n.width / 2));
++                    let top = Math.min(...prior.map(n => n.y - n.height / 2));
++                    const columns = group[0].workbenchColumns;
++                    const positions = new Map();
++                    for (let i = 0; i < group.length; i += columns) {
++                        const row = group.slice(i, i + columns);
++                        let x = left;
++                        for (const n of row) { positions.set(n.id, { x: x + n.width / 2, y: top + n.height / 2 }); x += n.width + 32; }
++                        top += Math.max(...row.map(n => n.height)) + 32;
++                    }
++                    next = { ...next, artifacts: next.artifacts.map(n => positions.has(n.id) ? { ...n, ...positions.get(n.id) } : n) };
++                }
 +				snapshot = researchWorkspaceSnapshot(next);
 +				const filesDurable = persist ? persistSnapshot() : true;
 +				listeners.forEach((listener) => listener());
@@ -5715,6 +5742,28 @@ index 1dd0e89..7ac9e75 100644
 +					commitUpdate({ artifacts: artifacts2, selection: { selectedNodeIds: [id], orderedFileIds: [] } }, true);
 +					return artifact;
 +				},
++                applyWorkbench(plan) {
++                    if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 2 || plan.panels.length > 10) return false;
++                    const existing = new Set(snapshot.artifacts.map(n => n.id));
++                    if (plan.panels.every(p => existing.has(p.nodeId))) return true;
++                    const bottom = Math.max(0, ...[...snapshot.files, ...snapshot.artifacts].map(n => n.y + normalizeResearchCanvasNodeGeometry(n).height / 2)) + 48;
++                    const nodes = plan.panels.filter(p => !existing.has(p.nodeId)).map(p => canonicalResearchCanvasArtifactNode({
++                        id: p.nodeId, messageId: p.nodeId, kind: 'generated-container', title: p.title,
++                        excerpt: p.error ?? '正在准备任务…', containerPrompt: p.prompt, refreshMinutes: 0,
++                        generationStatus: p.taskId ? 'queued' : 'failed', generationLastSeq: 0,
++                        ...(p.taskId ? { generationTaskId: p.taskId } : { generationError: p.error ?? '任务未启动，请重试。' }),
++                        x: p.x + p.width / 2, y: bottom + p.y + p.height / 2, width: p.width, height: p.height, sizeMode: 'auto',
++                        workbenchId: plan.id, workbenchIndex: plan.panels.indexOf(p), workbenchColumns: plan.panels.length === 2 || plan.panels.length === 4 ? 2 : 3
++                    }));
++                    if (nodes.some(n => n === null)) return false;
++                    const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);
++                    if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');
++                    const selection = { selectedNodeIds: [], orderedFileIds: [] };
++                    persistClipboardBatch({ ...snapshot, artifacts, selection });
++                    commitUpdate({ artifacts, selection }, false);
++                    markResearchSessionEngaged(storage, sessionId, true);
++                    return true;
++                },
 +				createContainerDraft(placement = null) {
 +					const id = createResearchCanvasArtifactId();
 +					const cascade = snapshot.artifacts.filter((node) => node.kind === "web-link" || node.kind === "generated-container").length;
@@ -7393,32 +7442,37 @@ index 1dd0e89..7ac9e75 100644
 +			const research = /网页|搜索|检索/.test(lastTool);
 +			if (latest?.type === 'tool-finished' && latest.failed) return { stage: 'recovering', title: research ? '正在调整检索' : '正在调整生成', detail: '这一步没有完成，正在重新整理后续处理', step: 1 };
 +			if (latest?.type === 'tool-started') return { stage: research ? 'researching' : 'organizing', title: research ? '正在查找资料' : '正在整理资料', detail: research ? '查找相关数据与来源' : '读取材料，梳理内容之间的关系', step: 1 };
-+			if (latest?.type === 'assistant-delta' || latest === undefined && typeof node.generationPartialText === 'string' && node.generationPartialText.length > 0) return { stage: 'building', title: '正在绘制组件', detail: '', step: 2 };
++			if (latest?.type === 'assistant-delta' && /(?:\{\s*"(?:type|title)"|<html|<style|```)/i.test(node.generationPartialText ?? latest.text ?? '') || latest === undefined && typeof node.generationPartialText === 'string' && node.generationPartialText.length > 0) return { stage: 'building', title: '正在绘制组件', detail: '', step: 2 };
 +			if (latest?.type === 'sources-ready' || latest?.type === 'tool-finished') return { stage: 'organizing', title: '正在整理资料', detail: '梳理已获得的信息，准备组件内容', step: 1 };
++			if (latest?.type === 'assistant-delta') return { stage: 'researching', title: '正在研究与整理', detail: '', step: 1 };
 +			return { stage: 'planning', title: '正在整理需求', detail: '理解要展示的内容，准备呈现方式', step: 0 };
++		}
++		function researchPublicProgress(value) {
++			if (typeof value !== 'string') return '';
++			return value.replace(/https?:\/\/\S+/g, '[来源链接]').replace(/(?:Bearer\s+\S+|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+)/gi, '[已隐藏]').replace(/(?:\/Users\/|\/home\/)[^\s]+/g, '[本地文件]').replace(/\s+/g, ' ').trim().slice(0, 240);
 +		}
 +		function researchGenerationLog(node) {
 +			const events = Array.isArray(node.generationEvents) ? node.generationEvents : [];
-+			const rows = [{ id: 'received', text: '已接收生成需求' }];
-+			const append = (id, text) => { if (rows.at(-1)?.text !== text && !rows.some((row) => row.id === id)) rows.push({ id, text }); };
-+			let lastTool = '';
-+			let content = '';
++			const rows = [];
++			const append = (id, raw) => { const text = researchPublicProgress(raw); if (text && !rows.some(row => row.text === text)) rows.push({ id, text }); };
++			let content = '', segment = '';
++			const flush = (id) => {
++				// Only public assistant prose before an artifact enters this log. Reasoning events are never admitted.
++				const prose = segment.split(/(?:```|\{\s*"(?:type|title)"|<!doctype|<html)/i)[0];
++				for (const [i, line] of prose.split(/\n+/).entries()) if (line.trim() && !/^[\s{}\[\]"<>]/.test(line.trim())) append(`${id}-${i}`, line.replace(/^[#*\s]+/, ''));
++				segment = '';
++			};
 +			for (const [index, event] of events.entries()) {
 +				const id = `event-${event?.seq ?? index}`;
-+				if (event?.type === 'started') append(id, '开始整理生成需求');
-+				if (event?.type === 'sources-ready') append(id, '所选资料已就绪');
-+				if (event?.type === 'tool-started') {
-+					lastTool = typeof event.tool === 'string' ? event.tool : '';
-+					append(id, /搜索|检索/.test(lastTool) ? '检索相关数据与来源' : /读|文件|网页/.test(lastTool) ? '读取资料，整理可用信息' : '处理组件生成步骤');
-+				}
-+				if (event?.type === 'tool-finished') append(id, event.failed ? /搜索|检索/.test(lastTool) ? '检索未完成，调整后续处理' : '处理未完成，调整后续步骤' : /搜索|检索/.test(lastTool) ? '检索响应已返回' : '资料处理已返回');
-+				if (event?.type === 'assistant-delta') {
-+					append('content-start', '开始组织组件内容');
-+					if (typeof event.text === 'string') content = `${content}${event.text}`.slice(-RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
++				if (event?.type === 'assistant-delta') { segment += event.text ?? ''; content += event.text ?? ''; }
++				else {
++					flush(id);
++					if (event?.type === 'tool-started' && event.detail) append(id, `${event.tool}：${event.detail}`);
++					if (event?.type === 'tool-finished' && event.failed) append(id, '本次资料获取未完成，正在调整检索');
 +				}
 +			}
-+			if (typeof node.generationPartialText === 'string') content = node.generationPartialText.slice(-RESEARCH_GENERATION_MAX_PARTIAL_TEXT);
-+			// Only structural markers become fixed public copy; generated text and arguments never enter the log.
++			flush('latest');
++			if (typeof node.generationPartialText === 'string') content = node.generationPartialText;
 +			const markers = [
 +				['layout', /<(?:html|body|main)\b/i, '建立页面内容结构'],
 +				['style', /<style\b/i, '编排页面布局与配色'],
@@ -7434,33 +7488,14 @@ index 1dd0e89..7ac9e75 100644
 +				['received-page', /<\/html\s*>/i, '页面内容已接收，准备呈现']
 +			].map(([id, pattern, text]) => ({ id: `content-${id}`, text, index: content.search(pattern) })).filter((row) => row.index >= 0).sort((a, b) => a.index - b.index);
 +			for (const row of markers) append(row.id, row.text);
-+			return rows.slice(-14);
++			return rows.length ? rows.slice(-8) : [{ id: 'preparing', text: '正在分析需求，规划内容与资料来源' }];
 +		}
 +		function ResearchGenerationProcess({ node, onCancel }) {
 +			const presentation = researchGenerationPresentation(node);
 +			const rows = (0, react.useMemo)(() => researchGenerationLog(node), [node.generationEvents, node.generationPartialText]);
-+			const [revealed, setRevealed] = (0, react.useState)(1);
 +			const [clock, setClock] = (0, react.useState)(() => Date.now());
-+			const [activityRows, setActivityRows] = (0, react.useState)([]);
-+			const activity = (0, react.useRef)({ seq: 0, at: 0, count: 0 });
 +			const started = (0, react.useRef)(node.generationStartedAt ?? Date.now());
-+			(0, react.useEffect)(() => { setRevealed(1); started.current = node.generationStartedAt ?? Date.now(); }, [node.generationTaskId]);
-+			(0, react.useEffect)(() => { setActivityRows([]); activity.current = { seq: 0, at: 0, count: 0 }; }, [node.generationTaskId, presentation.stage]);
-+			(0, react.useEffect)(() => {
-+				const seq = node.generationLastSeq ?? 0;
-+				if (presentation.stage !== 'building' || seq <= activity.current.seq || clock - activity.current.at < 1200) return;
-+				const count = activity.current.count;
-+				activity.current = { seq, at: clock, count: count + 1 };
-+				const received = typeof node.generationPartialText === "string" ? node.generationPartialText.length : (node.generationEvents ?? []).reduce((total, event) => total + (event.type === "assistant-delta" && typeof event.text === "string" ? event.text.length : 0), 0);
-+				const seconds = Math.max(0, Math.floor((clock - started.current) / 1000));
-+				const stamp = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-+				setActivityRows((previous) => [...previous.slice(-2), { id: `stream-${seq}`, text: ['正在接收新内容', '组件内容持续生成', '新的内容片段已到达', '继续接收组件细节'][count % 4] + (received ? ` · 已接收 ${received.toLocaleString()} 字符` : ''), stamp }]);
-+			}, [clock, node.generationLastSeq, presentation.stage]);
-+			(0, react.useEffect)(() => {
-+				if (revealed >= rows.length) return;
-+				const timer = setTimeout(() => setRevealed((value) => value + 1), 240);
-+				return () => clearTimeout(timer);
-+			}, [revealed, rows.length]);
++			(0, react.useEffect)(() => { started.current = node.generationStartedAt ?? Date.now(); }, [node.generationTaskId]);
 +			(0, react.useEffect)(() => {
 +				let timer;
 +				const tick = () => { setClock(Date.now()); timer = setTimeout(tick, document.hidden ? 1000 : 160); };
@@ -7469,13 +7504,13 @@ index 1dd0e89..7ac9e75 100644
 +			}, []);
 +			const elapsed = Math.max(0, Math.floor((clock - started.current) / 1000));
 +			const time = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
-+			const visible = [...rows.slice(0, revealed).slice(-(5 - activityRows.length)), ...activityRows];
++			const visible = rows.slice(-5);
 +			return (0, react_jsx_runtime.jsxs)("div", {
 +				className: "rScV5Q_generationProcess",
 +				"data-research-generation-process": "", "data-research-generation-stage": presentation.stage, "aria-busy": true,
 +				children: [(0, react_jsx_runtime.jsxs)('div', {
 +					className: 'rScV5Q_generationHeader', 'aria-hidden': true,
-+					children: [(0, react_jsx_runtime.jsx)('span', { children: '生成进程' }), (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-elapsed': '', children: time })]
++					children: [(0, react_jsx_runtime.jsx)('span', { children: presentation.stage === 'building' ? '构建组件' : '研究进展' }), (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-elapsed': '', children: time })]
 +				}), (0, react_jsx_runtime.jsxs)('div', {
 +					className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,
 +					children: [(0, react_jsx_runtime.jsx)('div', { className: 'rScV5Q_generationLog', children: visible.map((row) => (0, react_jsx_runtime.jsxs)('div', {
@@ -8381,7 +8416,7 @@ index 1dd0e89..7ac9e75 100644
 +			tag.textContent += ".rScV5Q_selectionActions{box-sizing:border-box;z-index:24;pointer-events:auto;position:absolute;transform:translate(-50%,-100%);height:42px;padding:5px;display:flex;align-items:center;gap:2px;overflow:visible;white-space:nowrap;color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 96%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:13px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_selectionActions button{height:30px;padding:0 10px;border:0;border-radius:8px;color:inherit;background:transparent;font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_selectionActions button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_selectionActions button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}.rScV5Q_selectionActions button:disabled{opacity:.45;cursor:default}.rScV5Q_mindMapControl{position:relative}.rScV5Q_mindMapMenu{z-index:32;box-sizing:border-box;width:258px;padding:5px;position:absolute;left:0;top:35px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:10px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_mindMapMenu button{box-sizing:border-box;width:100%;height:auto;min-height:46px;padding:7px 9px;display:flex;align-items:flex-start;flex-direction:column;gap:2px;text-align:left}.rScV5Q_mindMapMenu strong{font:var(--dsw-font-xs-strong-13)}.rScV5Q_mindMapMenu span{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}body[data-ds-dark-theme] .rScV5Q_selectionActions,body[data-ds-dark-theme] .rScV5Q_mindMapMenu{background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 96%,transparent)}";
 +			tag.textContent += "[data-research-generated-mind-map][data-selected=true]{border-color:rgb(0,80,150);outline:2px solid rgba(0,80,150,.24);outline-offset:1px}[data-research-generated-mind-map]>.rScV5Q_previewBody{background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactBody{height:100%;min-height:100%;padding:0;background:#fff}[data-research-generated-mind-map] .rScV5Q_artifactMeta{display:none}.rScV5Q_mindMap{box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;padding:32px 40px;display:flex;align-items:safe center;justify-content:safe center;gap:40px;overflow:auto;background:#fff;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif}.rScV5Q_mindMapNode{box-sizing:border-box;flex:none;display:flex;align-items:center;justify-content:center;width:200px;min-height:54px;max-width:200px;padding:9px 14px;border:0;border-radius:0;box-shadow:none;background:rgb(30,185,225);color:#fff;text-align:center;font-family:STHeiti_YFD,\"STHeiti SC\",\"PingFang SC\",sans-serif;font-size:14px;font-weight:700;line-height:1.35;white-space:normal;word-break:normal;overflow-wrap:break-word}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"phrase\"]{text-align:center;text-wrap:balance}.rScV5Q_mindMapNode[data-research-mind-map-copy=\"sentence\"]{justify-content:flex-start;text-align:left;text-wrap:pretty}.rScV5Q_mindMapRoot{width:224px;min-height:60px;max-width:224px}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"0\"]{background:rgb(0,80,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"1\"]{background:rgb(0,120,180)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"2\"]{background:rgb(30,185,225)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"3\"]{background:rgb(179,235,255);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"4\"]{background:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"5\"]{background:rgb(150,150,150)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"6\"]{background:rgb(193,198,200);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"7\"]{background:rgb(204,204,204);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"8\"]{background:rgb(255,200,25);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"9\"]{background:rgb(255,215,30);color:rgb(60,60,60)}.rScV5Q_mindMapNode[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNode[data-research-mind-map-depth=\"12\"]{background:rgb(255,230,30);color:rgb(60,60,60)}.rScV5Q_mindMapChildren{flex:none;position:relative;display:flex;flex-direction:column;justify-content:center;gap:16px}.rScV5Q_mindMapChildren:after{content:\"\";position:absolute;left:-40px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch{flex:none;position:relative;display:flex;align-items:center;gap:40px}.rScV5Q_mindMapBranch:before{content:\"\";position:absolute;left:-20px;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:after{content:\"\";position:absolute;left:-20px;top:-8px;bottom:-8px;width:1px;background:rgb(150,150,150)}.rScV5Q_mindMapBranch:first-child:after{top:50%}.rScV5Q_mindMapBranch:last-child:after{bottom:50%}.rScV5Q_mindMapBranch:only-child:after{display:none}";
 +			tag.textContent += ".rScV5Q_mindMapNodeEditor{margin:0;resize:none;overflow:hidden;outline:2px solid rgba(255,255,255,.9);outline-offset:-3px;white-space:pre-wrap;user-select:text;cursor:text;caret-color:currentColor}.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"3\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"6\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"7\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"8\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"9\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"10\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"11\"],.rScV5Q_mindMapNodeEditor[data-research-mind-map-depth=\"12\"]{outline-color:rgba(0,80,150,.72)}";
-+			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;height:100%;min-height:100%;padding:18px 20px;display:flex;flex-direction:column;align-items:stretch;gap:12px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:left;overflow:hidden}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:10px;line-height:16px;color:var(--dsw-alias-label-tertiary);letter-spacing:.08em;font-variant-numeric:tabular-nums}.rScV5Q_generationTerminal{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;overflow:hidden;font-size:12px;line-height:20px;letter-spacing:.015em}.rScV5Q_generationLog{display:flex;flex-direction:column;gap:4px;overflow:hidden}.rScV5Q_generationLogRow{display:flex;align-items:baseline;gap:10px;flex:none;color:var(--dsw-alias-label-secondary);animation:rScV5Q_generationRowIn .24s ease-out both}.rScV5Q_generationLogRow:not(:last-child){opacity:.7}.rScV5Q_generationPrompt{color:var(--dsw-alias-label-tertiary);flex:none;width:10px}.rScV5Q_generationLogText{display:inline-block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;animation:rScV5Q_generationType .6s steps(20,end) both}.rScV5Q_generationStamp{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px;font-variant-numeric:tabular-nums}.rScV5Q_generationCurrent{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--dsw-alias-label-primary)}.rScV5Q_generationSpinner{display:inline-block;width:12px;height:12px;box-sizing:border-box;flex:none;border:1.5px solid var(--dsw-alias-border-l2);border-top-color:currentColor;border-radius:50%;animation:rScV5Q_generationSpin .8s linear infinite}@keyframes rScV5Q_generationSpin{to{transform:rotate(360deg)}}.rScV5Q_generationCursor{display:inline-block;width:5px;height:13px;background:currentColor;opacity:.75;animation:rScV5Q_generationBlink .8s steps(2,end) infinite}.rScV5Q_generationFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:26px;border-top:1px solid var(--dsw-alias-border-l2);padding-top:9px;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:16px}.rScV5Q_generationFooter>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rScV5Q_generationFooter>button{height:24px;flex:none;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;background:transparent;color:var(--dsw-alias-label-secondary);font-size:11px;cursor:pointer}.rScV5Q_generationFooter>button:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationAnnouncement{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.rScV5Q_containerDraftFooter{justify-content:flex-end}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:width 350ms cubic-bezier(.22,1,.36,1),height 350ms cubic-bezier(.22,1,.36,1),left 350ms cubic-bezier(.22,1,.36,1),top 350ms cubic-bezier(.22,1,.36,1)}@keyframes rScV5Q_generationRowIn{from{transform:translateY(5px)}to{transform:translateY(0)}}@keyframes rScV5Q_generationType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes rScV5Q_generationBlink{50%{opacity:0}}@media(prefers-reduced-motion:reduce){.rScV5Q_generationLogRow,.rScV5Q_generationLogText,.rScV5Q_generationCursor,.rScV5Q_generationSpinner{animation:none}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:none}}";
++			tag.textContent += ".rScV5Q_generationProcess{box-sizing:border-box;height:100%;min-height:100%;padding:18px 20px;display:flex;flex-direction:column;align-items:stretch;gap:12px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:left;overflow:hidden}body[data-ds-dark-theme] .rScV5Q_generationProcess{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_generationHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:10px;line-height:16px;color:var(--dsw-alias-label-tertiary);letter-spacing:.08em;font-variant-numeric:tabular-nums}.rScV5Q_generationTerminal{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;overflow:hidden;font-size:12px;line-height:20px;letter-spacing:.015em}.rScV5Q_generationLog{display:flex;flex-direction:column;gap:4px;overflow:hidden}.rScV5Q_generationLogRow{display:flex;align-items:baseline;gap:10px;flex:none;color:var(--dsw-alias-label-secondary);animation:rScV5Q_generationRowIn .24s ease-out both}.rScV5Q_generationLogRow:not(:last-child){opacity:.7}.rScV5Q_generationPrompt{color:var(--dsw-alias-label-tertiary);flex:none;width:10px}.rScV5Q_generationLogText{white-space:normal!important;overflow-wrap:anywhere;display:inline-block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;animation:rScV5Q_generationType .6s steps(20,end) both}.rScV5Q_generationStamp{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px;font-variant-numeric:tabular-nums}.rScV5Q_generationCurrent{display:flex;align-items:center;gap:10px;min-height:24px;color:var(--dsw-alias-label-primary)}.rScV5Q_generationSpinner{display:inline-block;width:12px;height:12px;box-sizing:border-box;flex:none;border:1.5px solid var(--dsw-alias-border-l2);border-top-color:currentColor;border-radius:50%;animation:rScV5Q_generationSpin .8s linear infinite}@keyframes rScV5Q_generationSpin{to{transform:rotate(360deg)}}.rScV5Q_generationCursor{display:inline-block;width:5px;height:13px;background:currentColor;opacity:.75;animation:rScV5Q_generationBlink .8s steps(2,end) infinite}.rScV5Q_generationFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:26px;border-top:1px solid var(--dsw-alias-border-l2);padding-top:9px;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:16px}.rScV5Q_generationFooter>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rScV5Q_generationFooter>button{height:24px;flex:none;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:0;background:transparent;color:var(--dsw-alias-label-secondary);font-size:11px;cursor:pointer}.rScV5Q_generationFooter>button:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationAnnouncement{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.rScV5Q_containerDraftFooter{justify-content:flex-end}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:width 350ms cubic-bezier(.22,1,.36,1),height 350ms cubic-bezier(.22,1,.36,1),left 350ms cubic-bezier(.22,1,.36,1),top 350ms cubic-bezier(.22,1,.36,1)}@keyframes rScV5Q_generationRowIn{from{transform:translateY(5px)}to{transform:translateY(0)}}@keyframes rScV5Q_generationType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes rScV5Q_generationBlink{50%{opacity:0}}@media(prefers-reduced-motion:reduce){.rScV5Q_generationLogRow,.rScV5Q_generationLogText,.rScV5Q_generationCursor,.rScV5Q_generationSpinner{animation:none}.rScV5Q_richNode[data-research-auto-sizing=true]{transition:none}}";
 +			tag.textContent += ".rScV5Q_generationFailure{box-sizing:border-box;min-height:100%;padding:24px;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xs-13)}.rScV5Q_generationFailure button{height:30px;padding:0 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_generationFailure button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_generationFailure button:disabled{opacity:.45;cursor:default}";
 +			tag.textContent += ".rScV5Q_globalToolbar{z-index:40;pointer-events:auto;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);height:38px;padding:3px;display:flex;align-items:center;gap:2px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 94%,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2);backdrop-filter:blur(14px)}.rScV5Q_globalToolbar>button,.rScV5Q_globalToolSlot>button{height:32px;padding:0 11px;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rScV5Q_globalToolbar button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_globalToolbar button:disabled{opacity:.45;cursor:default}.rScV5Q_globalToolbar svg{width:16px;height:16px;flex:none}.rScV5Q_globalToolSlot{position:relative}.rScV5Q_linkPopover{box-sizing:border-box;position:absolute;left:0;bottom:calc(100% + 10px);width:360px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:11px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_linkPopover>label{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12)}.rScV5Q_linkPopover>div{display:flex;gap:8px}.rScV5Q_linkPopover input{box-sizing:border-box;min-width:0;flex:1;height:34px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:var(--dsw-font-xs-13)}.rScV5Q_linkPopover input:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 18%,transparent)}.rScV5Q_linkPopover button{height:34px;padding:0 12px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_linkError{color:var(--dsw-alias-state-danger-primary);font:var(--dsw-font-xxs-12)}.rScV5Q_root[data-dragging=true] .rScV5Q_globalToolbar{display:none}";
 +			tag.textContent += "[data-research-web-link] .rScV5Q_artifactBody,[data-research-generated-container] .rScV5Q_artifactBody{padding:0;gap:0;height:100%}[data-research-web-link] .rScV5Q_artifactMeta,[data-research-generated-container] .rScV5Q_artifactMeta{box-sizing:border-box;flex:none;min-height:24px;padding:5px 10px;color:var(--dsw-alias-label-caption);border-top:1px solid var(--dsw-alias-border-l2)}.rScV5Q_webFrameShell{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}.rScV5Q_webFrameControls{box-sizing:border-box;flex:none;height:32px;padding:0 9px;display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-tertiary);border-bottom:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12)}.rScV5Q_webFrameControls>span{min-width:0;margin-right:auto;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rScV5Q_webFrameControls button,.rScV5Q_webFrameControls a{padding:3px 6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_webFrameControls button:hover,.rScV5Q_webFrameControls a:hover{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_webFrameViewport{box-sizing:border-box;min-width:0;min-height:0;flex:1;overflow:hidden;background:#fff}.rScV5Q_webFrame{box-sizing:border-box;display:block;width:100%;height:100%;min-height:0;border:0;background:#fff}.rScV5Q_previewPlaceholder button,.rScV5Q_previewPlaceholder a{height:30px;padding:0 11px;display:inline-flex;align-items:center;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;text-decoration:none;cursor:pointer}.rScV5Q_containerDraft{box-sizing:border-box;min-height:0;flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--dsw-alias-bg-layer-1)}body[data-ds-dark-theme] .rScV5Q_containerDraft{background:var(--dsw-alias-bg-layer-2)}.rScV5Q_containerDraft textarea{box-sizing:border-box;min-height:120px;flex:1;resize:none;padding:12px 13px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;outline:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);font:var(--dsw-font-xs-13);line-height:1.55}.rScV5Q_containerDraft textarea:focus{border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--dsw-alias-state-business-primary) 16%,transparent)}.rScV5Q_containerDraftFooter{display:flex;align-items:center;gap:12px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxs-12)}.rScV5Q_containerDraftFooter span{min-width:0;margin-right:auto}.rScV5Q_containerDraftFooter button{height:30px;padding:0 13px;border:0;border-radius:7px;color:var(--dsw-alias-button-label-primary);background:var(--dsw-alias-state-business-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer}.rScV5Q_containerDraftFooter button:disabled{opacity:.45;cursor:default}";
@@ -9806,7 +9841,7 @@ index 1dd0e89..7ac9e75 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +15513,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15548,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9825,7 +9860,7 @@ index 1dd0e89..7ac9e75 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15552,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15587,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -10185,7 +10220,7 @@ index 1dd0e89..7ac9e75 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15913,167 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15948,202 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -10221,6 +10256,41 @@ index 1dd0e89..7ac9e75 100644
 +			const researchWorkspace = (0, react.useMemo)(() => sessionId === void 0 ? ABSENT_RESEARCH_WORKSPACE : researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);
 +			const researchWorkspaceSnapshot2 = (0, react.useSyncExternalStore)(researchWorkspace.subscribe, researchWorkspace.getSnapshot, researchWorkspace.getSnapshot);
 +			const [researchReferenceStatus, setResearchReferenceStatus] = (0, react.useState)(null);
++            const workbenchActions = (0, react.useRef)(resolvedActions);
++            const [workbenchFocus, setWorkbenchFocus] = (0, react.useState)(null);
++            const fittedWorkbench = (0, react.useRef)(null);
++            workbenchActions.current = resolvedActions;
++            (0, react.useEffect)(() => {
++                if (!sessionId) return;
++                let active = true, timer;
++                const controller = new AbortController();
++                const poll = async () => {
++                    try {
++                        const response = await fetch('/sherlock/research-workbenches/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parentSessionId: sessionId }), signal: controller.signal });
++                        if (!response.ok) throw new Error('工作台状态暂不可用');
++                        const { plans } = await response.json();
++                        const acknowledged = [];
++                        for (const plan of plans ?? []) {
++                            if (!active) return;
++                            if (researchWorkspace.applyWorkbench(plan)) { acknowledged.push(plan.id); setWorkbenchFocus(plan.id); workbenchActions.current.setView?.('research'); }
++                        }
++                        if (acknowledged.length && active) await fetch('/sherlock/research-workbenches/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parentSessionId: sessionId, acknowledged }), signal: controller.signal });
++                    } catch (e) { if (active && e.message?.includes('容量')) setResearchReferenceStatus(e.message); }
++                    finally { if (active) timer = setTimeout(poll, 1500); }
++                };
++                void poll();
++                return () => { active = false; controller.abort(); clearTimeout(timer); };
++            }, [sessionId, researchWorkspace]);
++            (0, react.useEffect)(() => {
++                if (!research || !workbenchFocus || fittedWorkbench.current === workbenchFocus || (researchWorkspaceSnapshot2.canvasSize?.width ?? 0) < 100 || (researchWorkspaceSnapshot2.canvasSize?.height ?? 0) < 100) return;
++                const nodes = researchWorkspaceSnapshot2.artifacts.filter(n => n.workbenchId === workbenchFocus);
++                if (!nodes.length) return;
++                fittedWorkbench.current = workbenchFocus;
++                setWorkbenchFocus(null);
++                researchWorkspace.setViewport(researchWorkbenchViewport(nodes, researchWorkspaceSnapshot2.viewport, researchWorkspaceSnapshot2.canvasSize));
++            }, [research, workbenchFocus, researchWorkspace, researchWorkspaceSnapshot2.canvasSize?.width, researchWorkspaceSnapshot2.canvasSize?.height]);
++
++
 +			(0, react.useLayoutEffect)(() => {
 +				setResearchReferenceStatus(null);
 +			}, [research, sessionId]);
@@ -10357,7 +10427,7 @@ index 1dd0e89..7ac9e75 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +16083,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +16153,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -10369,7 +10439,7 @@ index 1dd0e89..7ac9e75 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +16093,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16163,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -10377,7 +10447,7 @@ index 1dd0e89..7ac9e75 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +16125,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16195,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -10387,7 +10457,7 @@ index 1dd0e89..7ac9e75 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +16144,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16214,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10492,7 +10562,7 @@ index 1dd0e89..7ac9e75 100644
  				})]
  			});
  		}
-@@ -6951,6 +16226,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16296,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10524,7 +10594,7 @@ index 1dd0e89..7ac9e75 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +16280,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16350,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10545,7 +10615,7 @@ index 1dd0e89..7ac9e75 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +16302,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16372,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10569,7 +10639,7 @@ index 1dd0e89..7ac9e75 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +16359,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16429,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -10587,7 +10657,7 @@ index 1dd0e89..7ac9e75 100644
  				})] })
  			});
  		}
-@@ -7053,14 +16369,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16439,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -10666,7 +10736,7 @@ index 1dd0e89..7ac9e75 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16449,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16519,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -10683,7 +10753,7 @@ index 1dd0e89..7ac9e75 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16472,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16542,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -10692,7 +10762,7 @@ index 1dd0e89..7ac9e75 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16525,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16595,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -10710,7 +10780,7 @@ index 1dd0e89..7ac9e75 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16561,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16631,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -10718,7 +10788,7 @@ index 1dd0e89..7ac9e75 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17453,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17523,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -10749,7 +10819,7 @@ index 1dd0e89..7ac9e75 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17498,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17568,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -10774,7 +10844,7 @@ index 1dd0e89..7ac9e75 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18452,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18522,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -10783,7 +10853,7 @@ index 1dd0e89..7ac9e75 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18542,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18612,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10825,7 +10895,7 @@ index 1dd0e89..7ac9e75 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +18751,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +18821,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10842,7 +10912,7 @@ index 1dd0e89..7ac9e75 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18921,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +18991,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10852,7 +10922,7 @@ index 1dd0e89..7ac9e75 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +18963,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +19033,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10867,7 +10937,7 @@ index 1dd0e89..7ac9e75 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +18981,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +19051,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10880,7 +10950,7 @@ index 1dd0e89..7ac9e75 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +19030,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +19100,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10894,7 +10964,7 @@ index 1dd0e89..7ac9e75 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +19068,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +19138,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10904,7 +10974,7 @@ index 1dd0e89..7ac9e75 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +19200,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +19270,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10919,7 +10989,7 @@ index 1dd0e89..7ac9e75 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +19216,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +19286,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10928,7 +10998,7 @@ index 1dd0e89..7ac9e75 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +19240,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19310,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -10937,7 +11007,7 @@ index 1dd0e89..7ac9e75 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +19266,150 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19336,151 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -10970,6 +11040,7 @@ index 1dd0e89..7ac9e75 100644
 +		exports.TurnTailNodeView = TurnTailNodeView;
 +		exports.researchGenerationPresentation = researchGenerationPresentation;
 +		exports.researchGenerationLog = researchGenerationLog;
++		exports.researchWorkbenchViewport = researchWorkbenchViewport;
 +		exports.researchTaskInputSummary = researchTaskInputSummary;
 +		exports.ResearchTaskInputRecord = ResearchTaskInputRecord;
 +		exports.UserStyleBubble = UserStyleBubble;
