@@ -16,7 +16,7 @@ function fallbackModule(): any {
   return fallback
 }
 
-async function mountContainer() {
+async function mountContainer(overrides: Record<string, unknown> = {}) {
   const browserWindow = new Window({ url: 'https://sherlock.local/' })
   const globals = ['window', 'document', 'navigator', 'IS_REACT_ACT_ENVIRONMENT']
   const previous = globals.map((key) => Object.getOwnPropertyDescriptor(globalThis, key))
@@ -38,6 +38,7 @@ async function mountContainer() {
     if (id === 'react') return React
     if (id === 'react/jsx-runtime') return requireModule('react/jsx-runtime')
     if (id === 'react-dom') return requireModule('react-dom')
+    if (id === '@deepseek-ai/dsh-client-ui-primitives') return { MarkdownText: ({ text }: any) => createElement('div', null, text) }
     return fallbackModule()
   })
   browserWindow.localStorage.setItem('sherlock.research.canvas.artifacts.v1:chrome', JSON.stringify([{
@@ -45,7 +46,8 @@ async function mountContainer() {
     excerpt: 'html', generationStatus: 'completed', generationLastSeq: 3,
     sourceNodeIds: [], containerPrompt: '原始需求', refreshMinutes: 0,
     lastSuccessfulAt: Date.now(), x: 500, y: 400, width: 1200, height: 1600, sizeMode: 'auto',
-    containerSpec: { version: 1, type: 'html', title: '交互图表', html: '<input value="保留输入"><button>计数</button>' }
+    containerSpec: { version: 1, type: 'html', title: '交互图表', html: '<input value="保留输入"><button>计数</button>' },
+    ...overrides
   }]))
   const workspace = new client.ResearchWorkspaceRegistry(browserWindow.localStorage).for('chrome')
   const submitted: Array<{ id: string; prompt: string }> = []
@@ -55,6 +57,7 @@ async function mountContainer() {
     return createElement(client.ResearchCanvasArtifactCard, {
       node: snapshot.artifacts[0], sessionId: 'chrome', visible: true,
       onActivate: activated,
+      onAutoHeight: (node: any, height: number) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),
       onSubmitContainer: (node: any, prompt: string) => {
         submitted.push({ id: node.id, prompt })
         workspace.beginContainerGeneration(node.id, prompt)
@@ -221,6 +224,7 @@ describe('Research generation event retention', () => {
       if (id === 'react') return React
       if (id === 'react/jsx-runtime') return requireModule('react/jsx-runtime')
       if (id === 'react-dom') return requireModule('react-dom')
+    if (id === '@deepseek-ai/dsh-client-ui-primitives') return { MarkdownText: ({ text }: any) => createElement('div', null, text) }
       return fallbackModule()
     })
     const stored = new Map([['sherlock.research.canvas.artifacts.v1:retention', JSON.stringify([{
@@ -279,5 +283,27 @@ describe('Research generation event retention', () => {
     expect(workspace.applyGenerationInspection('html', { ...identity, state: 'completed', lastSeq: 206, events: [], finalOutput })).toBe(true)
     expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ generationStatus: 'completed', generationLastSeq: 206, containerSpec: finalOutput })
     expect(workspace.getSnapshot().artifacts[0]).not.toHaveProperty('generationPartialText')
+  })
+})
+
+
+describe('completed container content sizing', () => {
+  it('fits native report content on completion even when its loading placeholder was resized', async () => {
+    const mounted = await mountContainer({ containerSpec: undefined, generationStatus: 'running', generationTaskId: 'task-native', generationLastSeq: 1, width: 640, height: 420, sizeMode: 'manual' })
+    const prototype = mounted.browserWindow.HTMLElement.prototype
+    const previous = Object.getOwnPropertyDescriptor(prototype, 'scrollHeight')
+    Object.defineProperty(prototype, 'scrollHeight', { configurable: true, get() { return 1050 } })
+    try {
+      await act(async () => {
+        mounted.workspace.applyGenerationInspection('html', { taskId: 'task-native', canvasNodeId: 'html', state: 'completed', lastSeq: 2, finalOutput: JSON.stringify({ version: 1, type: 'markdown', title: '黄金报告', content: '# 黄金报告\n完整研究内容' }), events: [] })
+      })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'auto', height: 1088, generationStatus: 'completed' })
+      await act(async () => { mounted.workspace.updateNodeGeometry('html', { height: 500, sizeMode: 'manual' }) })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'manual', height: 500 })
+    } finally {
+      if (previous) Object.defineProperty(prototype, 'scrollHeight', previous)
+      else delete (prototype as any).scrollHeight
+      await mounted.cleanup()
+    }
   })
 })
