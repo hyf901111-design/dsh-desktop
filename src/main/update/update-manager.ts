@@ -27,6 +27,9 @@ let intervalTimer: NodeJS.Timeout | undefined
 let resetTimer: NodeJS.Timeout | undefined
 let checkPromise: Promise<unknown> | undefined
 let lastCheckedAt = 0
+let downloadedVersion: string | undefined
+let downloading = false
+let installRequested = false
 let installing = false
 let started = false
 let handlersRegistered = false
@@ -90,52 +93,65 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
     return getUpdateStatus()
   }
 
-  if (checkPromise || ['available', 'downloading', 'downloaded'].includes(status.phase)) {
+  if (checkPromise) {
+    await checkPromise
+    return getUpdateStatus()
+  }
+  if (installing || status.phase === 'downloading') {
     return getUpdateStatus()
   }
 
   transition({ type: 'check', manual })
   lastCheckedAt = Date.now()
-  checkPromise = autoUpdater.checkForUpdates()
-
-  try {
-    await checkPromise
-  } catch (error) {
+  checkPromise = Promise.resolve().then(() => autoUpdater.checkForUpdates()).catch((error) => {
     transition({ type: 'error', message: errorMessage(error) })
     if (manual) scheduleReset()
-  } finally {
+  }).finally(() => {
     checkPromise = undefined
-  }
+  })
+  await checkPromise
 
   return getUpdateStatus()
 }
 
 export async function installDownloadedUpdate(): Promise<void> {
-  if (status.phase !== 'downloaded' || installing) return
-  installing = true
-  // An explicit install must surface native failures even after a background check.
-  status = { ...status, manual: true }
-
+  if (status.phase !== 'downloaded' || installing || installRequested || downloading) return
+  installRequested = true
   try {
-    // Keep the app usable while Squirrel prepares the update or requests authorization.
-    // The normal before-quit handler stops services once native installation is ready.
+    const latest = await checkForUpdates(true)
+    if (latest.phase === 'available') {
+      // A newer release superseded the cached archive. Prepare it and let the
+      // user confirm installation of that version after its final refresh.
+      await downloadAvailableUpdate()
+      return
+    }
+    if (latest.phase !== 'downloaded') return
+    installing = true
+    status = { ...status, manual: true }
     autoUpdater.quitAndInstall(false, true)
   } catch (error) {
     installing = false
     transition({ type: 'error', message: errorMessage(error) }, true)
     scheduleReset()
+  } finally {
+    installRequested = false
   }
 }
 
 export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
-  if (status.phase !== 'available') return getUpdateStatus()
-
+  if (status.phase !== 'available' || downloading || installing) return getUpdateStatus()
+  downloading = true
   try {
+    const latest = await checkForUpdates(true)
+    if (latest.phase !== 'available') return getUpdateStatus()
     await autoUpdater.downloadUpdate()
+    // A release can be published while the archive is downloading.
+    await checkForUpdates(true)
   } catch (error) {
     transition({ type: 'error', message: errorMessage(error) }, true)
+  } finally {
+    downloading = false
   }
-
   return getUpdateStatus()
 }
 
@@ -151,7 +167,8 @@ export function stopUpdateManager(): void {
 
 function configureUpdater(): void {
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
+  // Do not hand an archive to Squirrel before the final explicit freshness check.
+  autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowPrerelease = false
   autoUpdater.logger = {
     info: (...args: unknown[]) => console.info('[updater]', ...args),
@@ -164,7 +181,7 @@ function configureUpdater(): void {
     transition({ type: 'check', manual: status.manual })
   )
   autoUpdater.on('update-available', (info) =>
-    transition({ type: 'available', version: info.version })
+    transition({ type: downloadedVersion === info.version ? 'downloaded' : 'available', version: info.version })
   )
   autoUpdater.on('download-progress', (progress) =>
     transition({ type: 'progress', percent: progress.percent, transferredBytes: progress.transferred, totalBytes: progress.total })
@@ -174,6 +191,7 @@ function configureUpdater(): void {
     scheduleReset()
   })
   autoUpdater.on('update-downloaded', (info) => {
+    downloadedVersion = info.version
     transition({ type: 'downloaded', version: info.version })
   })
   autoUpdater.on('error', (error) => {
