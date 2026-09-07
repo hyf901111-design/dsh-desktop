@@ -328,6 +328,7 @@ export function buildResearchTaskPrompt(request) {
     const allowsWeb = containerPromptHasExplicitWebUrl(validated.prompt)
     return [
       '请按用户的画布容器需求创建可直接呈现的交付物，以 JSON 对象返回。',
+      '只生成用户要求的一种成品；不要附加未要求的摘要、指标卡、背景介绍、方法论、示例数据或重复结论。用户指定条数、章节、长度、格式时严格遵守。简单表格、指标、列表直接填写所需内容，不为它们生成 HTML 包装或额外解释；用户明确要求 HTML、交互、详细报告时保留该要求。',
       '按用户字面需求直接制作最小完整成品；不要扩展为额外研究报告或多页系统。普通布局自行合理决定，不反复规划、不解释词义。优先复用已有证据，只检索缺少的关键事实，信息足够后立即生成。',
       '只允许输出以下 schema 之一，字段必须完全一致，不得增加任何字段：',
       ...(allowsWeb ? [
