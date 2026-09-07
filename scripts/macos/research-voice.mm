@@ -34,7 +34,7 @@ static void DeliverEvent(napi_env env, napi_value callback, void *, void *data) 
   napi_value object, receiver, ignored;
   if (napi_create_object(env, &object) != napi_ok) return;
   SetString(env, object, "type", event->type);
-  if (event->type != "toggle") SetString(env, object, "requestId", event->requestID);
+  if (!event->requestID.empty()) SetString(env, object, "requestId", event->requestID);
   if (event->type == "state") SetString(env, object, "state", event->state);
   if (event->type == "partial" || event->type == "final") SetString(env, object, "text", event->text);
   if (event->type == "error") {
@@ -104,11 +104,14 @@ static void DeliverEvent(napi_env env, napi_value callback, void *, void *data) 
 @property(nonatomic, strong) SVVoiceSession *session;
 @property(nonatomic) BOOL fnDown;
 @property(nonatomic) BOOL fnChord;
+@property(nonatomic) BOOL fnHolding;
+@property(nonatomic) NSUInteger fnGeneration;
 @property(nonatomic) double fnPressedAt;
 @property(nonatomic) double fnLastTapAt;
 - (void)installMonitor;
 - (void)dispose;
 - (void)resetFn;
+- (void)activateHold:(NSUInteger)generation;
 - (BOOL)handleFn:(BOOL)down modifiers:(BOOL)modifiers keyDown:(BOOL)keyDown time:(double)time active:(BOOL)active;
 - (void)emit:(VoiceEvent)event;
 - (void)start:(NSString *)requestID locale:(NSString *)locale;
@@ -398,10 +401,9 @@ static void DeliverEvent(napi_env env, napi_value callback, void *, void *data) 
   [self emit:std::move(event)];
   const double elapsed = now - session.startedAt;
   const BOOL heardSpeech = session.heardSpeech || session->heardAudio.load();
-  const double lastSound = std::max(session.lastSpeechAt, session->lastSoundTime.load());
   if (!heardSpeech && elapsed >= 10) {
     [self error:@"no_speech" message:@"没有识别到语音，请重试。" session:session];
-  } else if (elapsed >= 90 || (heardSpeech && now - lastSound >= 2)) {
+  } else if (elapsed >= 90) {
     [self stop:session.requestID];
   }
 }
@@ -423,7 +425,13 @@ static void DeliverEvent(napi_env env, napi_value callback, void *, void *data) 
 }
 
 - (void)resetFn {
-  _fnDown = NO; _fnChord = NO; _fnPressedAt = 0; _fnLastTapAt = 0;
+  _fnGeneration++; _fnHolding = NO; _fnDown = NO; _fnChord = NO; _fnPressedAt = 0; _fnLastTapAt = 0;
+}
+
+- (void)activateHold:(NSUInteger)generation {
+  if (_disposed || !_enabled || !_fnDown || _fnChord || _fnHolding || _fnGeneration != generation || _session) return;
+  _fnHolding = YES; _fnLastTapAt = 0;
+  VoiceEvent event; event.type = "hold-start"; [self emit:std::move(event)];
 }
 
 - (BOOL)handleFn:(BOOL)down modifiers:(BOOL)modifiers keyDown:(BOOL)keyDown time:(double)time active:(BOOL)active {
@@ -439,13 +447,32 @@ static void DeliverEvent(napi_env env, napi_value callback, void *, void *data) 
     return NO;
   }
   if (down) {
-    if (!_fnDown) { _fnDown = YES; _fnChord = NO; _fnPressedAt = time; }
+    if (!_fnDown) {
+      _fnDown = YES; _fnChord = NO; _fnPressedAt = time;
+      const NSUInteger generation = ++_fnGeneration;
+      __weak SVVoiceController *weakSelf = self;
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 350 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+        SVVoiceController *owner = weakSelf;
+        [owner activateHold:generation];
+      });
+    }
+    if (time - _fnPressedAt >= 0.35) [self activateHold:_fnGeneration];
     // Consume only isolated Fn flag events in the active research window.
     // Fn+key still arrives with its modifier bits and is never swallowed.
     return YES;
   }
   if (!_fnDown) return NO;
-  _fnDown = NO;
+  _fnDown = NO; _fnGeneration++;
+  if (_fnHolding) {
+    _fnHolding = NO; _fnLastTapAt = 0;
+    VoiceEvent event; event.type = "finish"; [self emit:std::move(event)];
+    return YES;
+  }
+  if (_session && !_fnChord) {
+    _fnLastTapAt = 0;
+    VoiceEvent event; event.type = "finish"; [self emit:std::move(event)];
+    return YES;
+  }
   const BOOL valid = !_fnChord && time >= _fnPressedAt && time - _fnPressedAt <= 0.5;
   _fnChord = NO;
   if (!valid) { _fnLastTapAt = 0; return NO; }

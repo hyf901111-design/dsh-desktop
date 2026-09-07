@@ -13,10 +13,14 @@ type ResearchVoiceCaptureEvent =
 
 export type ResearchVoiceNativeEvent =
   | { type: 'toggle' }
+  | { type: 'hold-start' }
+  | { type: 'finish' }
   | (ResearchVoiceCaptureEvent & { requestId: string })
 
 export type ResearchVoiceEvent =
   | { type: 'toggle'; sessionId: string }
+  | { type: 'hold-start'; sessionId: string }
+  | { type: 'finish'; sessionId: string }
   | (ResearchVoiceCaptureEvent & ResearchVoiceRequest)
 
 export type ResearchVoiceApi = {

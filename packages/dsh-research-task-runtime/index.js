@@ -321,6 +321,7 @@ export function buildResearchTaskPrompt(request) {
     const allowsWeb = containerPromptHasExplicitWebUrl(validated.prompt)
     return [
       '请按用户的画布容器需求创建可直接呈现的交付物，以 JSON 对象返回。',
+      '按用户字面需求直接制作最小完整成品；不要扩展为额外研究报告或多页系统。普通布局自行合理决定，不反复规划、不解释词义。优先复用已有证据，只检索缺少的关键事实，信息足够后立即生成。',
       '只允许输出以下 schema 之一，字段必须完全一致，不得增加任何字段：',
       ...(allowsWeb ? [
         '{"version": 1, "type": "web", "title": "标题", "url": "https://example.com", "description": "可选说明"}'
@@ -1140,9 +1141,30 @@ export function createSubagentAdapter(ctx) {
     async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress }) {
       const parent = await resolveParent(parentSessionId)
       const needsWebData = kind === 'container' && containerNeedsWebData(query ?? '')
-      const effectivePrompt = needsWebData
-        ? `${prompt}\n\n${await collectContainerEvidence(parent, containerSearchPlan(query), signal, onProgress)}`
-        : prompt
+      if (signal.aborted) throw signal.reason
+      let effectivePrompt = prompt
+      if (needsWebData) {
+        // Host lookup is an optional head start, never a gate that prevents a child from existing.
+        const lookup = new AbortController()
+        const abort = () => lookup.abort(signal.reason)
+        signal.addEventListener('abort', abort, { once: true })
+        let timer
+        try {
+          const evidence = await Promise.race([
+            collectContainerEvidence(parent, containerSearchPlan(query), lookup.signal, (event) => !lookup.signal.aborted && onProgress?.(event)),
+            new Promise((_, reject) => { timer = setTimeout(() => { lookup.abort(); reject(unavailableContainerData()) }, 5000) })
+          ])
+          effectivePrompt += `\n\n${evidence}\n以上资料足以回答的内容请直接使用，不要重复检索。`
+        } catch (error) {
+          if (signal.aborted) throw error
+          effectivePrompt += '\n主机预检未取得可用资料。请直接使用 web_search 按用户的具体标的和字段检索，不要搜索词语释义；查不到时如实说明，不得编造数据。'
+        } finally {
+          clearTimeout(timer)
+          lookup.abort()
+          signal.removeEventListener('abort', abort)
+        }
+      }
+      if (signal.aborted) throw signal.reason
       const run = await ctx.subagents.start('spawn', {
         label: '画布生成任务',
         parent,

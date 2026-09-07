@@ -227,8 +227,8 @@ export class ResearchVoiceController {
 
   private receive(event: ResearchVoiceNativeEvent): void {
     if (!event || this.disposed) return
-    if (event.type === 'toggle') {
-      if (this.currentActive(this.active, true)) this.send(this.active, { type: 'toggle', sessionId: this.active.sessionId })
+    if (event.type === 'toggle' || event.type === 'hold-start' || event.type === 'finish') {
+      if (this.currentActive(this.active, true)) this.send(this.active, { type: event.type, sessionId: this.active.sessionId })
       return
     }
     const capture = this.capture

@@ -106,12 +106,15 @@ test('empty final and ten seconds without speech never create a final instructio
   assert.deepEqual(events.filter((event) => event.type === 'error').map(({ code }) => code), ['no_speech', 'no_speech'])
 })
 
-test('two seconds of silence stops speech and recognition timeout preserves the final transcript', async () => {
+test('silence keeps recording until an explicit stop, then preserves the final transcript', async () => {
   native.setEnabled(true)
   native.start('silence', 'zh-CN')
   native.__testAuthorize('silence')
   native.__testResult('silence', '创建一个风险分析表', false, false)
   native.__testTick('silence', 4, 2.1, true, 0.2)
+  await flush()
+  assert.equal(events.some(event => event.state === 'transcribing'), false)
+  native.stop('silence')
   native.__testTick('silence', 10, 8, true, 0)
   await flush()
   assert.equal(events.filter((event) => event.state === 'transcribing').length, 1)
@@ -199,4 +202,37 @@ test('a modifier event while Fn is held does not masquerade as a Fn release', as
 test('native lifecycle does not keep a Node process alive', () => {
   const source = `const n = require(${JSON.stringify(binary)}); n.init(() => {}); n.setEnabled(true); n.dispose(); n.dispose()`
   execFileSync(process.execPath, ['-e', source], { timeout: 5000 })
+})
+
+
+test('one Fn tap ends an existing recording without waiting for a second tap', async () => {
+  native.setEnabled(true)
+  native.start('single-finish', 'zh-CN')
+  native.__testAuthorize('single-finish')
+  native.__testFn(true, false, false, 1, true)
+  native.__testFn(false, false, false, 1.1, true)
+  await flush()
+  assert.equal(events.filter(event => event.type === 'finish').length, 1)
+  assert.equal(events.filter(event => event.type === 'toggle').length, 0)
+})
+
+
+test('holding Fn activates once and releasing sends finish, while chords and disabled state do not activate', async () => {
+  native.setEnabled(true)
+  native.__testFn(true, false, false, 1, true)
+  native.__testFn(true, false, false, 1.4, true)
+  native.__testFn(true, false, false, 1.5, true)
+  native.__testFn(false, false, false, 2, true)
+  await flush()
+  assert.deepEqual(events, [{ type: 'hold-start' }, { type: 'finish' }])
+  events = []
+  native.__testFn(true, false, false, 3, true)
+  native.__testFn(true, true, true, 3.1, true)
+  native.__testFn(true, false, false, 3.5, true)
+  native.__testFn(false, false, false, 4, true)
+  native.setEnabled(false)
+  native.__testFn(true, false, false, 5, true)
+  native.__testFn(true, false, false, 5.4, true)
+  await flush()
+  assert.deepEqual(events, [])
 })

@@ -911,6 +911,26 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
+  it('starts a child after the five-second preflight budget and ignores late lookup events', async () => {
+    const fixture = containerAdapterFixture()
+    const lookup = Promise.withResolvers()
+    fixture.ctx.web.search.mockReturnValue(lookup.promise)
+    const onProgress = vi.fn()
+    vi.useFakeTimers()
+    try {
+      const pending = fixture.start('监控比特币最新价格', onProgress)
+      await vi.advanceTimersByTimeAsync(5001)
+      const handle = await pending
+      expect(handle.childSessionId).toBe('child-1')
+      expect(fixture.ctx.web.search.mock.calls[0][1].aborted).toBe(true)
+      const count = onProgress.mock.calls.length
+      lookup.resolve({ content: 'late', sources: [] })
+      await vi.advanceTimersByTimeAsync(1)
+      expect(onProgress).toHaveBeenCalledTimes(count)
+      await handle.dispose()
+    } finally { vi.useRealTimers() }
+  })
+
   it('reports real host lookup progress before the child prompt is created', async () => {
     const fixture = containerAdapterFixture()
     const search = Promise.withResolvers()
@@ -991,9 +1011,10 @@ describe('Research task Subagent adapter', () => {
   it('fails unrelated search evidence instead of starting with irrelevant or fabricated market data', async () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '生成是一个汉语词语。', sources: [{ title: '生成', url: 'https://example.com/dictionary', snippet: '生成内容' }] })
-    await expect(fixture.start('生成一个ETF的数据监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    await expect(fixture.start('生成一个ETF的数据监控面板')).resolves.toMatchObject({ childSessionId: 'child-1' })
     expect(fixture.ctx.web.fetch).not.toHaveBeenCalled()
-    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start).toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls.at(-1)[1].prompt[0].text).not.toContain('来源 1：')
   })
 
   it('rejects the actual mainstream dictionary results for a cryptocurrency monitoring request', async () => {
@@ -1003,9 +1024,10 @@ describe('Research task Subagent adapter', () => {
       { title: '主流（主流）_百度百科', url: 'https://baike.baidu.com/item/%E4%B8%BB%E6%B5%81/20314220', snippet: '涵盖所有领域知识的中文知识性百科全书。' },
       { title: '主流 - 搜索 词典', url: 'https://global.bing.com/dict/search?q=主流', snippet: '主流的释义，拼音，main stream; main trend。' }
     ] })
-    await expect(fixture.start('生成一个主流加密货币监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    await expect(fixture.start('生成一个主流加密货币监控面板')).resolves.toMatchObject({ childSessionId: 'child-1' })
     expect(fixture.ctx.web.fetch).not.toHaveBeenCalled()
-    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start).toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls.at(-1)[1].prompt[0].text).not.toContain('来源 1：')
   })
 
   it.each([
@@ -1035,10 +1057,11 @@ describe('Research task Subagent adapter', () => {
   it('rejects word-definition evidence even when it repeats the whole monitoring subject', async () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '加密货币的意思与拼音，词语释义。', sources: [{ title: '加密货币的意思 - 词典', url: 'https://example.com/definition', snippet: '加密货币的词语释义与拼音。' }] })
-    await expect(fixture.start('生成一个加密货币监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
-    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    await expect(fixture.start('生成一个加密货币监控面板')).resolves.toMatchObject({ childSessionId: 'child-1' })
+    expect(fixture.ctx.subagents.start).toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls.at(-1)[1].prompt[0].text).not.toContain('来源 1：')
     fixture.ctx.web.search.mockResolvedValue({ content: '加密货币的意思与拼音，词语释义。', sources: [] })
-    await expect(fixture.start('生成一个加密货币监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    await expect(fixture.start('生成一个加密货币监控面板')).resolves.toMatchObject({ childSessionId: 'child-1' })
   })
 
   it('keeps relevant monitoring evidence whose snippet mentions a data dictionary', async () => {
@@ -1070,8 +1093,9 @@ describe('Research task Subagent adapter', () => {
   it('treats explicit search no_results as unavailable even when its notice mentions the ETF subject', async () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ status: 'no_results', content: '未找到 ETF 可引用来源，不能据此推断实时价格。', sources: [] })
-    await expect(fixture.start('生成ETF监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
-    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    await expect(fixture.start('生成ETF监控面板')).resolves.toMatchObject({ childSessionId: 'child-1' })
+    expect(fixture.ctx.subagents.start).toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls.at(-1)[1].prompt[0].text).not.toContain('来源 1：')
   })
 
   it('preserves real latest-data lookup when replacing supplied demonstration data', async () => {
@@ -1085,9 +1109,9 @@ describe('Research task Subagent adapter', () => {
 
   it('does not search only presentation words when no monitoring subject was provided', async () => {
     const fixture = containerAdapterFixture()
-    await expect(fixture.start('生成一个数据监控面板')).rejects.toMatchObject({ code: 'CONTAINER_DATA_SUBJECT_REQUIRED' })
+    await expect(fixture.start('生成一个数据监控面板')).resolves.toMatchObject({ childSessionId: 'child-1' })
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
-    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start).toHaveBeenCalled()
   })
 
   it.each(['510300', '00700'])('accepts a numeric financial code as the search subject: %s', async (code) => {
@@ -1101,7 +1125,7 @@ describe('Research task Subagent adapter', () => {
 
   it.each(['监控一个', '监控两个面板', '监控123最新净值', '监控123456789最新净值'])('rejects a quantity or invalid numeric subject: %s', async (query) => {
     const fixture = containerAdapterFixture()
-    await expect(fixture.start(query)).rejects.toMatchObject({ code: 'CONTAINER_DATA_SUBJECT_REQUIRED' })
+    await expect(fixture.start(query)).resolves.toMatchObject({ childSessionId: 'child-1' })
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
   })
 
@@ -1140,19 +1164,21 @@ describe('Research task Subagent adapter', () => {
   it('keeps a later explicit ETF code in the subject query and rejects a different ETF', async () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '纳指ETF最新净值1.25。', sources: [{ title: '纳指ETF最新净值', url: 'https://example.com/nasdaq', snippet: '纳指ETF最新净值1.25' }] })
-    await expect(fixture.start('生成ETF数据监控面板，监控沪深300ETF 510300 最新净值')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
+    await expect(fixture.start('生成ETF数据监控面板，监控沪深300ETF 510300 最新净值')).resolves.toMatchObject({ childSessionId: 'child-1' })
     expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: '沪深300ETF 510300 最新净值', maxResults: 5 }, expect.any(AbortSignal))
-    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start).toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls.at(-1)[1].prompt[0].text).not.toContain('来源 1：')
   })
 
   it('requires the specific uncoded ETF object rather than a matching fund manager alone', async () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '华夏纳斯达克ETF最新净值1.25。', sources: [{ title: '华夏纳斯达克ETF最新净值', url: 'https://example.com/nasdaq', snippet: '华夏ETF最新净值1.25' }] })
-    await expect(fixture.start('监控华夏沪深300ETF最新净值')).rejects.toMatchObject({ code: 'CONTAINER_DATA_UNAVAILABLE' })
-    expect(fixture.ctx.subagents.start).not.toHaveBeenCalled()
+    await expect(fixture.start('监控华夏沪深300ETF最新净值')).resolves.toMatchObject({ childSessionId: 'child-1' })
+    expect(fixture.ctx.subagents.start).toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls.at(-1)[1].prompt[0].text).not.toContain('来源 1：')
     fixture.ctx.web.search.mockResolvedValue({ content: '华夏沪深300ETF净值1.26。', sources: [{ title: '华夏基金 · 沪深300ETF最新净值', url: 'https://example.com/csi300etf', snippet: '净值1.26' }] })
     const handle = await fixture.start('监控华夏沪深300ETF最新净值')
-    expect(fixture.ctx.subagents.start).toHaveBeenCalledTimes(1)
+    expect(fixture.ctx.subagents.start).toHaveBeenCalledTimes(2)
     await handle.dispose()
   })
 
@@ -1330,7 +1356,7 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
-  it('fails a live-data container explicitly instead of starting a placeholder child when host lookup fails', async () => {
+  it('starts a recovery child without fabricated evidence when host lookup fails', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     const parent = { id: 'parent-1', session: { events: [] } }
     const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
@@ -1355,12 +1381,10 @@ describe('Research task Subagent adapter', () => {
       prompt: '产品固定 JSON 提示词',
       signal: new AbortController().signal,
       onSessionEvent: vi.fn()
-    })).rejects.toMatchObject({
-      code: 'CONTAINER_DATA_UNAVAILABLE',
-      message: '暂时无法获取容器所需的最新数据，请检查网络或搜索设置后重试。'
-    })
+    })).resolves.toMatchObject({ childSessionId: 'child-1' })
 
-    expect(ctx.subagents.start).not.toHaveBeenCalled()
+    expect(ctx.subagents.start).toHaveBeenCalled()
+    expect(ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('不得编造数据')
   })
 
   it('passes the validated task kind to the isolated task adapter', async () => {

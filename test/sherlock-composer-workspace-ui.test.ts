@@ -8479,7 +8479,10 @@ describe('Sherlock workspace and composer controls', () => {
       expect(host.querySelector('[role="status"]')?.textContent).toBe('正在整理资料')
       const building = { ...node, generationLastSeq: 4, generationEvents: [...node.generationEvents, { seq: 4, type: 'assistant-delta', text: '<main><style>private-code' }] }
       await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: building, onCancel })) })
-      expect(host.textContent).toContain('组件内容持续生成')
+      expect(host.textContent).toContain('正在接收新内容')
+      expect(host.textContent).not.toContain('把内容组织到组件中')
+      expect(host.querySelector('.rScV5Q_generationFooter [data-research-generation-cancel]')).not.toBeNull()
+      expect(host.querySelector('.rScV5Q_generationFooter .rScV5Q_generationSpinner')?.textContent).toBe('')
       await act(async () => { await vi.advanceTimersByTimeAsync(1800) })
       const stagnantRows = host.querySelectorAll('.rScV5Q_generationStamp').length
       expect(stagnantRows).toBe(1)
@@ -12797,6 +12800,18 @@ describe('Research voice toolbar', () => {
       expect(workspace.getSnapshot().artifacts[0]).toMatchObject({
         kind: 'generated-container', containerPrompt: '创建一个倒计时', generationStatus: 'queued'
       })
+    } finally { await mounted.cleanup() }
+  })
+
+  it.each(['toggle', 'hold-start'])('finishes and submits exactly once through the Fn %s gesture', async (gesture) => {
+    const mounted = await mountVoice()
+    try {
+      await act(async () => { mounted.emit({ type: gesture }) })
+      const requestId = mounted.bridge.start.mock.calls[0]![0].requestId
+      await act(async () => { mounted.emit({ type: 'state', requestId, state: 'listening' }); mounted.emit({ type: 'finish' }); mounted.emit({ type: 'finish' }) })
+      expect(mounted.bridge.stop).toHaveBeenCalledTimes(1)
+      await act(async () => { mounted.emit({ type: 'final', requestId, text: '生成销售图表' }); mounted.emit({ type: 'final', requestId, text: '生成销售图表' }) })
+      expect(mounted.generate).toHaveBeenCalledTimes(1)
     } finally { await mounted.cleanup() }
   })
 
