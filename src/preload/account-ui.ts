@@ -50,7 +50,7 @@ export function mountAccountUi(
 
  .sherlock-account-avatar{display:grid;place-items:center;background:transparent;color:var(--dsw-alias-label-primary);border-radius:50%;width:23px;height:23px;flex:none;font:11px system-ui}
  .sherlock-account-menu{position:fixed;z-index:3000;width:240px;padding:8px;border-radius:16px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);border:1px solid var(--dsw-alias-border-l2,#555);box-shadow:0 12px 40px #0003;font:13px system-ui}
- .sherlock-account-menu button{display:block;width:100%}.sherlock-account-menu strong{display:block;padding:12px;border-bottom:1px solid var(--dsw-alias-border-l2);margin-bottom:6px}
+ .sherlock-account-menu button{display:block;width:100%}
  .sherlock-account-nav{color:var(--dsw-alias-label-primary)}
  [data-account-nav][aria-current=page]{background:var(--dsw-specific-sidebar-nav-item-active,#ffffff14)}
  .sherlock-account-page{overflow:auto;padding:30px max(32px,calc((100% - 760px)/2)) 60px;color:var(--dsw-alias-label-primary);font:14px/1.6 system-ui;flex:1}
@@ -465,10 +465,7 @@ export function mountAccountUi(
           menu = document.createElement('div')
           menu.className = 'sherlock-account-menu'
           menu.role = 'menu'
-          const name = document.createElement('strong')
-          name.textContent = user?.username ?? 'Sherlock'
           menu.append(
-            name,
             button(user ? '账户信息' : '登录 / 注册', () => open(true)),
             button('设置', () => open(false))
           )

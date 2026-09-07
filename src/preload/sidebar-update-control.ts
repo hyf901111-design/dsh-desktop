@@ -132,11 +132,15 @@ export class SidebarUpdateControl {
           button.title = updateMessage(status, this.locale)
           panel.hidden = false
           panel.setAttribute('role', 'status')
+          const loading = this.document.createElement('span')
+          loading.className = 'sherlock-update-loading'
+          loading.setAttribute('aria-hidden', 'true')
           const message = this.document.createElement('p')
+          message.className = 'sherlock-sidebar-update-message'
           message.textContent = this.locale === 'zh'
-            ? '系统正在解压并校验更新，完成后将自动重启。请保持应用打开。'
-            : 'The system is unpacking and verifying the update. Sherlock will restart automatically; please keep it open.'
-          panel.append(message)
+            ? '正在解压并校验更新文件，完成后将自动更新重启'
+            : 'Unpacking and verifying update files. Sherlock will update and restart automatically.'
+          panel.append(loading, message)
         }
         return
       }
@@ -338,7 +342,7 @@ const styles = `
     box-sizing: border-box;
     position: absolute;
     right: 0;
-    bottom: 48px;
+    bottom: 60px;
     z-index: 2147483646;
     width: 260px;
     padding: 13px;
@@ -346,9 +350,17 @@ const styles = `
     background: var(--dsw-alias-bg-layer-2, rgba(38, 38, 41, .98));
     border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, .14));
     border-radius: 12px;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, .3);
+    box-shadow: none;
     font: 500 13px/19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
+  #${PANEL_ID}[role="status"] { display: flex; align-items: flex-start; gap: 10px; }
+  #${PANEL_ID}[hidden] { display: none; }
+  .sherlock-update-loading {
+    box-sizing: border-box; width: 16px; height: 16px; flex: 0 0 16px; margin-top: 2px;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+    animation: sherlock-update-spin .85s linear infinite;
+  }
+  @keyframes sherlock-update-spin { to { transform: rotate(360deg); } }
   .sherlock-sidebar-update-message { margin: 0; }
   .sherlock-sidebar-update-actions { display: flex; gap: 8px; margin-top: 11px; }
   .sherlock-sidebar-update-actions button {
@@ -367,5 +379,6 @@ const styles = `
   }
   @media (prefers-reduced-motion: reduce) {
     #${BUTTON_ID} { transition: none; }
+    .sherlock-update-loading { animation: none; }
   }
 `
