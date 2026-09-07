@@ -69,6 +69,40 @@
           "Real provider response remains non-deterministic; bounded empty-output recovery remains"
         ],
         "generatedAt": "2026-09-07T11:02:01.546Z"
+      },
+      "merged": {
+        "mergeCommit": "e403da40c3aacbec01924c2bed6f8dcbd6b40961",
+        "verificationCommit": "e403da40c3aacbec01924c2bed6f8dcbd6b40961",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/research-html-theme.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-task-runtime.test.js test/research-container-chrome.test.ts test/research-html-theme.test.js",
+            "verifiedCommit": "e403da40c3aacbec01924c2bed6f8dcbd6b40961",
+            "completedAt": "2026-09-07T11:02:47.266Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "e403da40c3aacbec01924c2bed6f8dcbd6b40961",
+            "completedAt": "2026-09-07T11:02:47.266Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-07T11:02:47.266Z"
       }
     }
   ],
