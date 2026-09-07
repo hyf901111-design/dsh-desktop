@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260907-07",
+  "branch": "codex/integration/20260907-07",
+  "baseMainCommit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+  "expectedMainCommit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+  "createdAt": "2026-09-07T11:55:22.935Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "0.8.9 全部研究画布与语音修复",
+        "branch": "codex/feat/release089-complete-20260907",
+        "baseCommit": "43fc4eeda8e650c74cf78b16264e948c54367365",
+        "tipCommit": "8d67b4867a2d74c773d42904a0ef3d4a29d3df1b",
+        "commits": [
+          {
+            "commit": "dac8c248ca57659d4e53b4adbd5534ded7460fd2",
+            "parents": [
+              "43fc4eeda8e650c74cf78b16264e948c54367365"
+            ],
+            "subject": "集成：创建批次 20260907-05"
+          },
+          {
+            "commit": "44978b1eacad50a8f2bee0533e2543cf526c992d",
+            "parents": [
+              "43fc4eeda8e650c74cf78b16264e948c54367365"
+            ],
+            "subject": "修复：解耦画布搜索权限并按生成内容适配组件尺寸"
+          },
+          {
+            "commit": "e403da40c3aacbec01924c2bed6f8dcbd6b40961",
+            "parents": [
+              "dac8c248ca57659d4e53b4adbd5534ded7460fd2",
+              "44978b1eacad50a8f2bee0533e2543cf526c992d"
+            ],
+            "subject": "集成：合并功能 codex/feat/research-output-sizing-20260907"
+          },
+          {
+            "commit": "b71d73217b200b9fb95343ebb6bc2a760683b647",
+            "parents": [
+              "e403da40c3aacbec01924c2bed6f8dcbd6b40961"
+            ],
+            "subject": "集成：记录功能 codex/feat/research-output-sizing-20260907 合并验证"
+          },
+          {
+            "commit": "56c112dbd29b018e7efed4a9a158cd410a6c6656",
+            "parents": [
+              "b71d73217b200b9fb95343ebb6bc2a760683b647"
+            ],
+            "subject": "集成：创建批次 20260907-06"
+          },
+          {
+            "commit": "843b885b4e2afad40dab1cda5fbad7bbc4db7e80",
+            "parents": [
+              "44978b1eacad50a8f2bee0533e2543cf526c992d"
+            ],
+            "subject": "优化：画布生成支持十个并发子任务并验证排队取消"
+          },
+          {
+            "commit": "f3d7882284448208951f470fc350cbbd0c9d1126",
+            "parents": [
+              "843b885b4e2afad40dab1cda5fbad7bbc4db7e80"
+            ],
+            "subject": "修复：长报告与 HTML 组件突破旧高度上限并保留宽度约束"
+          },
+          {
+            "commit": "472176d1a93e5484a338cefd93271008872b46e8",
+            "parents": [
+              "56c112dbd29b018e7efed4a9a158cd410a6c6656",
+              "f3d7882284448208951f470fc350cbbd0c9d1126"
+            ],
+            "subject": "集成：合并功能 codex/feat/research-ten-slots-20260907"
+          },
+          {
+            "commit": "26f47edae0695a2f2fda2fc14ef9a2a42b554515",
+            "parents": [
+              "472176d1a93e5484a338cefd93271008872b46e8"
+            ],
+            "subject": "集成：记录功能 codex/feat/research-ten-slots-20260907 合并验证"
+          },
+          {
+            "commit": "9b5117ca007c4fc57f3bc3fca7269b3cd633af96",
+            "parents": [
+              "26f47edae0695a2f2fda2fc14ef9a2a42b554515"
+            ],
+            "subject": "修复：语音结束时空结果不再覆盖已识别指令"
+          },
+          {
+            "commit": "72e9b2f10afcece372e5cf9313daa4fb69c88765",
+            "parents": [
+              "9b5117ca007c4fc57f3bc3fca7269b3cd633af96"
+            ],
+            "subject": "优化：整理画布按实际内容适配尺寸并约束生成范围"
+          },
+          {
+            "commit": "be3864b43bf349302d0e7b6255f1ecfe8d3c9132",
+            "parents": [
+              "f3d7882284448208951f470fc350cbbd0c9d1126"
+            ],
+            "subject": "修复：语音结束时空结果不再覆盖已识别指令"
+          },
+          {
+            "commit": "68e62e13fbb09bc07d0c65c0f6b768aa74f79068",
+            "parents": [
+              "be3864b43bf349302d0e7b6255f1ecfe8d3c9132"
+            ],
+            "subject": "优化：整理画布按实际内容适配尺寸并约束生成范围"
+          },
+          {
+            "commit": "dd54307146673661e4f5ddfce8f7e0e604a5db2c",
+            "parents": [
+              "68e62e13fbb09bc07d0c65c0f6b768aa74f79068"
+            ],
+            "subject": "文档：记录画布生成语音与尺寸实机回归结果"
+          },
+          {
+            "commit": "8d67b4867a2d74c773d42904a0ef3d4a29d3df1b",
+            "parents": [
+              "72e9b2f10afcece372e5cf9313daa4fb69c88765",
+              "dd54307146673661e4f5ddfce8f7e0e604a5db2c"
+            ],
+            "subject": "集成：汇总画布尺寸与语音实测修复"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "config/sherlock-integration-batches/20260907-05.json"
+          },
+          {
+            "status": "A",
+            "path": "config/sherlock-integration-batches/20260907-06.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/verification/sherlock-research-generation-20260907.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "scripts/macos/research-voice.mm"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-voice-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/research-html-theme.test.js",
+              "test/research-voice.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "134 focused cases; real containers and voice confirmed; arrangement stable",
+            "verifiedCommit": "8d67b4867a2d74c773d42904a0ef3d4a29d3df1b",
+            "completedAt": "2026-09-07T11:54:29.635481+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Six real generated components; native mic final and table; no overlaps after arrange"
+        },
+        "acceptanceCriteria": [
+          "Usable report output",
+          "Content fitting arrangement",
+          "Voice final retained",
+          "Ten concurrent tasks"
+        ],
+        "risks": [],
+        "generatedAt": "2026-09-07T11:54:29.635974+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "test/research-container-chrome.test.ts",
+        "test/research-html-theme.test.js",
+        "test/research-voice.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
