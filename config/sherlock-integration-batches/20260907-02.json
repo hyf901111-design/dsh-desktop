@@ -164,6 +164,41 @@
           "Usage events are not financial charges"
         ],
         "generatedAt": "2026-09-07T05:13:19.950Z"
+      },
+      "merged": {
+        "mergeCommit": "ed198350475c98b1bed377ae861030a6f9cfab6a",
+        "verificationCommit": "ed198350475c98b1bed377ae861030a6f9cfab6a",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/account-service.test.ts",
+              "test/update-state.test.ts",
+              "test/update-manager.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/account-service.test.ts test/update-state.test.ts test/update-manager.test.ts test/settings-about.test.ts",
+            "verifiedCommit": "ed198350475c98b1bed377ae861030a6f9cfab6a",
+            "completedAt": "2026-09-07T05:16:28.178Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "ed198350475c98b1bed377ae861030a6f9cfab6a",
+            "completedAt": "2026-09-07T05:16:28.178Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-07T05:16:28.178Z"
       }
     }
   ],
