@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.8.5',
+      date: '2026-09-07',
+      items: ["语音支持双按 Fn 开始、单按结束发送；长按 Fn 说话、松开发送", "修复语音创建组件后子代理未启动的问题，缩短前置检索等待，减少不必要的需求扩展", "丰富组件生成中的实时进度反馈，使用圆环加载状态并合并停止按钮，修正组件底部边角显示", "优化差分更新请求方式，减少因多段 Range 响应不兼容导致的全量下载回退；缓存或校验不可用时仍安全回退", "接入基金研究私有数据能力，并修复新增插件依赖缺失可能导致的客户端启动失败"]
+    },
+    {
       version: '0.8.4',
       date: '2026-09-06',
       items: ["下载完成后可选择重启并安装，安装器准备期间保持客户端可用，避免提前中断当前界面", "设置关于页新增下载更新与重启安装按钮，实时显示下载进度；安装失败后可重新尝试", "优化收起侧栏的升级入口：保持紧凑图标与悬停提示，避免按钮溢出或遮挡设置"]
@@ -180,6 +185,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.8.5',
+      date: '2026-09-07',
+      items: ["Voice supports double-tap Fn to start and a single press to finish and send, or hold Fn to talk and release to send", "Fixed voice-created components failing before a subagent starts; reduced preliminary search waits and unnecessary scope expansion", "Added more varied live generation feedback, a circular loading indicator with an inline Stop action, and corrected bottom component corners", "Improved differential download compatibility with single-range requests; full downloads remain a fallback when cache or validation is unavailable", "Added private fund research data integration and fixed startup failures caused by missing newly added plugin dependencies"]
+    },
     {
       version: '0.8.4',
       date: '2026-09-06',
