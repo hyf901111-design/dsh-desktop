@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "8d332b10e0cd66d6df913457e52f1bbcb945e58a",
-        "tipCommit": "d8f62dfc0d6504470021c701d3ea5c86ca3b4dea",
+        "baseCommit": "d8f62dfc0d6504470021c701d3ea5c86ca3b4dea",
+        "tipCommit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
         "commits": [
           {
-            "commit": "d8f62dfc0d6504470021c701d3ea5c86ca3b4dea",
+            "commit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
             "parents": [
-              "8d332b10e0cd66d6df913457e52f1bbcb945e58a"
+              "d8f62dfc0d6504470021c701d3ea5c86ca3b4dea"
             ],
-            "subject": "品牌：更新中英文欢迎语为探索更远与洞见更深"
+            "subject": "验证：同步空白研究页的新中文欢迎语"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "test/branding-patch.test.ts"
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
           }
         ],
         "checks": [
@@ -38,12 +34,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/branding-patch.test.ts"
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "Research empty-state headline"
             ],
             "outcome": "passed",
-            "summary": "8 项品牌检查通过；中英文欢迎语更新",
-            "verifiedCommit": "d8f62dfc0d6504470021c701d3ea5c86ca3b4dea",
-            "completedAt": "2026-09-08T02:43:39.349256+00:00",
+            "summary": "研究空白页欢迎语与输入布局检查通过",
+            "verifiedCommit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
+            "completedAt": "2026-09-08T02:44:49.783912+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -60,45 +58,7 @@
         "risks": [
           "稳定应用 ID 和用户数据目录沿用以保留现有配置"
         ],
-        "generatedAt": "2026-09-08T02:43:39.349256+00:00"
-      },
-      "merged": {
-        "mergeCommit": "87e0ff414a223505deccfc62ce7da31c1803b264",
-        "verificationCommit": "87e0ff414a223505deccfc62ce7da31c1803b264",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "87e0ff414a223505deccfc62ce7da31c1803b264",
-            "completedAt": "2026-09-08T02:43:59.278Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "87e0ff414a223505deccfc62ce7da31c1803b264",
-            "completedAt": "2026-09-08T02:43:59.278Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T02:43:59.278Z"
+        "generatedAt": "2026-09-08T02:44:49.783912+00:00"
       }
     }
   ],
