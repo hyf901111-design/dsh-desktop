@@ -9,30 +9,84 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Build mode and component progress",
+        "featureName": "Build mode, generation repair and fixed component sizes",
         "branch": "codex/feat/build-mode-20260907",
-        "baseCommit": "598d956c62f19b713ceb67bab4c71457fc8702f7",
-        "tipCommit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
+        "baseCommit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
+        "tipCommit": "6f59ab3ccbe028bcce4bdfd6cf01a5c2cac50ce4",
         "commits": [
           {
-            "commit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
+            "commit": "e206c7f1015d6a242c964dc96fc3dcb0390de1cd",
             "parents": [
-              "598d956c62f19b713ceb67bab4c71457fc8702f7"
+              "052b2ede532560a0b26827b0262d1cf442ed0f56"
             ],
-            "subject": "功能：新增并发研究工作台构建模式并优化组件生成进展"
+            "subject": "修复：打包重建品牌资源时保留构建模式并验证模式配置"
+          },
+          {
+            "commit": "7f8d5f6c9a4741db8a71e41cee2ab6792342ccef",
+            "parents": [
+              "e206c7f1015d6a242c964dc96fc3dcb0390de1cd"
+            ],
+            "subject": "修复：工作台检索误判与反复查数并统一组件规格和渐进展示"
+          },
+          {
+            "commit": "20119e3a42f1694cebc0779b6da78b8891bf2563",
+            "parents": [
+              "7f8d5f6c9a4741db8a71e41cee2ab6792342ccef"
+            ],
+            "subject": "修复：保留容器原始需求校验并在提交后附加尺寸约束"
+          },
+          {
+            "commit": "9d940d3627316a7a53d1667f7361c3123e39f442",
+            "parents": [
+              "20119e3a42f1694cebc0779b6da78b8891bf2563"
+            ],
+            "subject": "测试：按三档规格验证旧组件整理与内容保留"
+          },
+          {
+            "commit": "6b3b9049d9b98e022a74c4900ee1984172192696",
+            "parents": [
+              "9d940d3627316a7a53d1667f7361c3123e39f442"
+            ],
+            "subject": "修复：明确模型连接重试原因并预留组件布局提示长度"
+          },
+          {
+            "commit": "d9db1b2729076f6ca4f2ce8ac3dc7d1eb90d23f4",
+            "parents": [
+              "6b3b9049d9b98e022a74c4900ee1984172192696"
+            ],
+            "subject": "文档：记录组件生成排障与最终客户端验收结果"
+          },
+          {
+            "commit": "6f59ab3ccbe028bcce4bdfd6cf01a5c2cac50ce4",
+            "parents": [
+              "d9db1b2729076f6ca4f2ce8ac3dc7d1eb90d23f4"
+            ],
+            "subject": "修复：允许集成批次重新交接已验收功能的后续修复"
           }
         ],
         "files": [
           {
+            "status": "M",
+            "path": "docs/sherlock-multi-session-integration-runbook.md"
+          },
+          {
             "status": "A",
-            "path": "docs/verification/sherlock-build-mode-20260908.md"
+            "path": "docs/verification/sherlock-component-repair-20260908.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/package.json"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
@@ -41,22 +95,30 @@
           },
           {
             "status": "M",
-            "path": "patches/@deepseek-ai+dsh-agent-presets+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-agent-preset+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
             "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "scripts/install-brand-assets.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sherlock-integration-executor.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/refresh-sherlock-integration-handoff.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-executor.test.ts"
           },
           {
             "status": "M",
             "path": "test/research-task-runtime.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/research-workbench.test.js"
           },
           {
@@ -71,68 +133,33 @@
         "checks": [
           {
             "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-workbench.test.js",
-              "test/standard-agent-preset.test.ts",
-              "test/research-task-runtime.test.js"
+              "git",
+              "diff",
+              "--check"
             ],
             "outcome": "passed",
-            "summary": "101 focused cases; 6 additional focused UI cases, typecheck and four patch checks passed",
-            "verifiedCommit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
-            "completedAt": "2026-09-07T16:16:53.927700+00:00",
+            "summary": "Clean feature tree; implementation tested in 112 runtime cases and focused UI cases; signed packaged parity and final four-panel first-attempt success recorded in verification document. Integration refresh lifecycle regression passed; original 31 executor cases passed.",
+            "verifiedCommit": "6f59ab3ccbe028bcce4bdfd6cf01a5c2cac50ce4",
+            "completedAt": "2026-09-08T00:13:36.892187+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Isolated browser with real Kimi: simple Q&A stays chat; 2 and 4 panels generate concurrently and switch to Research; whole-group viewport verified."
+          "summary": "Packaged client: four panels first-attempt concurrent success in 6-8 seconds each; two small and two medium, aligned after Arrange Canvas. Original failure now reports unavailable source data explicitly."
         },
         "acceptanceCriteria": [
-          "Public research progress and real build stages",
-          "Standard capabilities retained; simple Q&A does not create a workbench",
-          "Independent panels generated concurrently; automatic Research transition",
-          "Planned dimensions, aligned layout and whole-group viewport"
+          "Real child public progress plus per-panel task descriptions",
+          "0.5-second visual reveal while tasks start concurrently",
+          "Three planned size presets and aligned rows after arrangement",
+          "Empty-text search-permission regression and retry submission fixed"
         ],
         "risks": [
-          "Native desktop search requires packaged validation; isolated web harness has no Electron bridge",
-          "Feature committed locally only; shared client and public feeds unchanged"
+          "Existing integration batch f5e77c5 contains local overlays matching feature source; batch not accepted or promoted. Reconcile through governance before any release.",
+          "Original on-chain request cannot obtain authenticated or dynamic source values; no fabricated data emitted.",
+          "Initial automatic viewport scale remains conservative; Arrange Canvas refits visible area."
         ],
-        "generatedAt": "2026-09-07T16:16:53.927700+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
-        "verificationCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-workbench.test.js",
-              "test/standard-agent-preset.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-workbench.test.js test/standard-agent-preset.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
-            "completedAt": "2026-09-07T22:05:05.291Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "ea0343c72adbcd7c5d0109e63fbc021f8f832aca",
-            "completedAt": "2026-09-07T22:05:05.291Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-07T22:05:05.291Z"
+        "generatedAt": "2026-09-08T00:13:57.313950+00:00"
       }
     }
   ],
