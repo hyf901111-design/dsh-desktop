@@ -11,29 +11,25 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "64e28d4e32239b39c1157587034e7520ac7c642e",
-        "tipCommit": "73c013e31ffe887d46ee2ae4dc23a706281f47d3",
+        "baseCommit": "73c013e31ffe887d46ee2ae4dc23a706281f47d3",
+        "tipCommit": "8d332b10e0cd66d6df913457e52f1bbcb945e58a",
         "commits": [
           {
-            "commit": "73c013e31ffe887d46ee2ae4dc23a706281f47d3",
+            "commit": "8d332b10e0cd66d6df913457e52f1bbcb945e58a",
             "parents": [
-              "64e28d4e32239b39c1157587034e7520ac7c642e"
+              "73c013e31ffe887d46ee2ae4dc23a706281f47d3"
             ],
-            "subject": "修复：品牌更名时保留原有加密存储身份和账户登录"
+            "subject": "界面：缩小侧栏品牌标志并去掉悬停背景"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/app-identity.ts"
+            "path": "patches/@deepseek-ai+dsh-client-ui-sidebar+0.1.0-rc.7.patch"
           },
           {
             "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/app-identity.test.ts"
+            "path": "test/branding-patch.test.ts"
           }
         ],
         "checks": [
@@ -42,26 +38,12 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/app-identity.test.ts",
-              "test/brand-migration.test.ts",
-              "test/account-service.test.ts"
+              "test/branding-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "17 项身份、品牌和账户检查通过",
-            "verifiedCommit": "73c013e31ffe887d46ee2ae4dc23a706281f47d3",
-            "completedAt": "2026-09-08T02:29:00.406520+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "73c013e31ffe887d46ee2ae4dc23a706281f47d3",
-            "completedAt": "2026-09-08T02:29:00.406520+00:00",
+            "summary": "8 项品牌检查通过；缩小侧栏 Logo，悬停背景透明",
+            "verifiedCommit": "8d332b10e0cd66d6df913457e52f1bbcb945e58a",
+            "completedAt": "2026-09-08T02:38:40.228046+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -78,45 +60,7 @@
         "risks": [
           "稳定应用 ID 和用户数据目录沿用以保留现有配置"
         ],
-        "generatedAt": "2026-09-08T02:29:00.406520+00:00"
-      },
-      "merged": {
-        "mergeCommit": "05b6c81ba7588f19d5c6d5319e787c4d5d94621e",
-        "verificationCommit": "05b6c81ba7588f19d5c6d5319e787c4d5d94621e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "05b6c81ba7588f19d5c6d5319e787c4d5d94621e",
-            "completedAt": "2026-09-08T02:29:31.472Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "05b6c81ba7588f19d5c6d5319e787c4d5d94621e",
-            "completedAt": "2026-09-08T02:29:31.472Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T02:29:31.472Z"
+        "generatedAt": "2026-09-08T02:38:40.228046+00:00"
       }
     }
   ],
