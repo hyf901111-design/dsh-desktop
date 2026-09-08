@@ -9,51 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "圆角图表卡片与悬浮交互细化",
+        "featureName": "组件操作按钮避让滚动条",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "878d7948441d6ea4a0cc2c9ad3b9063de737187b",
-        "tipCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
+        "baseCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
+        "tipCommit": "1492e3c4d4fa5214832afd27eefd9d5aa0739193",
         "commits": [
           {
-            "commit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
+            "commit": "1492e3c4d4fa5214832afd27eefd9d5aa0739193",
             "parents": [
-              "878d7948441d6ea4a0cc2c9ad3b9063de737187b"
+              "24af8e6aa20a8e4827cdaae230957372e7c0ed83"
             ],
-            "subject": "优化：采用圆角图表卡片并细化悬浮缩放与蓝色链接"
+            "subject": "修复：组件附加操作向内避让滚动条"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/research-component-style.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
             "status": "M",
             "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "test/research-container-chrome.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
           }
         ],
         "checks": [
@@ -62,29 +34,12 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-html-theme.test.js",
-              "test/research-task-runtime.test.js"
+              "test/research-container-chrome.test.ts"
             ],
             "outcome": "passed",
-            "summary": "123 项组件及生成规则检查、15 项图表与交互回归、类型检查通过",
-            "verifiedCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
-            "completedAt": "2026-09-08T06:31:28.628998+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "auto-fit|auto fit|manual sizing|trusted.*pointer|content.*select|resiz|theme|chart"
-            ],
-            "outcome": "passed",
-            "summary": "123 项组件及生成规则检查、15 项图表与交互回归、类型检查通过",
-            "verifiedCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
-            "completedAt": "2026-09-08T06:31:28.628998+00:00",
+            "summary": "11 项组件操作检查与类型检查通过",
+            "verifiedCommit": "1492e3c4d4fa5214832afd27eefd9d5aa0739193",
+            "completedAt": "2026-09-08T06:53:12.722131+00:00",
             "timeoutMs": 120000
           },
           {
@@ -94,62 +49,25 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "123 项组件及生成规则检查、15 项图表与交互回归、类型检查通过",
-            "verifiedCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
-            "completedAt": "2026-09-08T06:31:28.628998+00:00",
+            "summary": "11 项组件操作检查与类型检查通过",
+            "verifiedCommit": "1492e3c4d4fa5214832afd27eefd9d5aa0739193",
+            "completedAt": "2026-09-08T06:53:12.722131+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Chromium 中验证深浅卡片配色、蓝色链接、无浮动标题、仅单个局部悬停手柄、操作按钮移出淡出及关闭菜单 inert；待集成客户端复验。"
+          "summary": "Chromium 深浅主题和 2.5 倍缩放下测得按钮及菜单右侧内缩均为 82.5 屏幕像素，可避让 24 CSS 像素的滚动条区域；待集成客户端复验。"
         },
         "acceptanceCriteria": [
-          "深浅主题采用 shadcn Card 细框圆角底色，点击选中淡蓝外发光",
-          "无左上角浮动小标题和四角圆点，仅右下角局部悬停出现缩放手柄",
-          "右上角操作、附加菜单、缩放提示自然渐入渐出，保留键盘可访问性",
-          "HTML 和原生组件链接统一蓝色，更新生成默认规范"
+          "组件右上角按钮与菜单向内避让滚动条",
+          "保持悬停过渡和菜单键盘操作"
         ],
         "risks": [
           "长内容和用户主动缩小的组件仍允许滚动",
           "原有点阵与主题背景不变"
         ],
-        "generatedAt": "2026-09-08T06:31:28.628998+00:00"
-      },
-      "merged": {
-        "mergeCommit": "61a200dc050d3d9aa3868c0fa7bad3536e280286",
-        "verificationCommit": "61a200dc050d3d9aa3868c0fa7bad3536e280286",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "61a200dc050d3d9aa3868c0fa7bad3536e280286",
-            "completedAt": "2026-09-08T06:32:19.387Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "61a200dc050d3d9aa3868c0fa7bad3536e280286",
-            "completedAt": "2026-09-08T06:32:19.387Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T06:32:19.387Z"
+        "generatedAt": "2026-09-08T06:53:12.722131+00:00"
       }
     }
   ],
