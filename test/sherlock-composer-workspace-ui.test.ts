@@ -2762,7 +2762,7 @@ describe('Sherlock workspace and composer controls', () => {
     expect(selected).toEqual(['memory-files'])
   })
 
-  it('renders theme-aware light and dark dotted research surfaces', async () => {
+  it('renders pure white and pure black research surfaces with dots', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
       document: browserWindow.document
@@ -2782,16 +2782,17 @@ describe('Sherlock workspace and composer controls', () => {
     expect(canvas).not.toBeNull()
     if (canvas === null) return
 
+    expect(browserWindow.getComputedStyle(canvas).backgroundImage).toContain('radial-gradient')
     expect(canvas.getAttribute('tabindex')).toBe('0')
     expect(browserWindow.getComputedStyle(canvas).backgroundPosition).toBe(
       '-10px -10px'
     )
     expect(browserWindow.getComputedStyle(canvas).backgroundColor).toBe(
-      'rgb(247, 248, 250)'
+      'rgb(255, 255, 255)'
     )
     browserWindow.document.body.setAttribute('data-ds-dark-theme', '')
     expect(browserWindow.getComputedStyle(canvas).backgroundColor).toBe(
-      'rgb(23, 25, 29)'
+      'rgb(0, 0, 0)'
     )
   })
 
@@ -10062,6 +10063,8 @@ describe('Sherlock workspace and composer controls', () => {
     }] });
     try {
       const frame = mounted.host.querySelector('[data-research-html-artifact]') as any;
+      expect(mounted.host.textContent).not.toContain('阅读内容');
+      expect(mounted.host.querySelector('a[href="https://example.org/news"]')).toBeNull();
       const ownWindow = { postMessage: vi.fn() };
       Object.defineProperty(frame, 'contentWindow', { configurable: true, value: ownWindow });
       const send = async (data: unknown, source: unknown = ownWindow) => { await act(async () => { mounted.browserWindow.dispatchEvent(new mounted.browserWindow.MessageEvent('message', { data, source: source as any })); }); };
