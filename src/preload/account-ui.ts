@@ -28,7 +28,7 @@ export function mountAccountUi(
  .sherlock-account-avatar svg{display:block;width:100%;height:100%}
  .sherlock-account-avatar[data-authenticated=true]{background:#000;color:#fff;font-weight:600;font-style:normal}
  body[data-ds-dark-theme] .sherlock-account-avatar[data-authenticated=true]{background:#ff8a3d;color:#171717}
- .sherlock-auth-logo{display:block;width:136px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
+ .sherlock-auth-logo{display:block;width:88px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
  .VOzbGW_overlay{z-index:1000!important;background:var(--dsw-alias-bg-layer-2,#181818)}
@@ -53,7 +53,8 @@ export function mountAccountUi(
 
  .sherlock-account-avatar{display:grid;place-items:center;background:transparent;color:var(--dsw-alias-label-primary);border-radius:50%;width:23px;height:23px;flex:none;font:11px system-ui}
  .sherlock-account-menu{position:fixed;z-index:3000;width:240px;padding:8px;border-radius:16px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);border:1px solid var(--dsw-alias-border-l2,#555);box-shadow:0 12px 40px #0003;font:13px system-ui}
- .sherlock-account-menu button{display:block;width:100%}
+ .sherlock-account-menu button{display:flex;align-items:center;gap:10px;width:100%}
+ .sherlock-account-menu-icon{width:18px;height:18px;flex:none;color:var(--dsw-alias-label-secondary,currentColor)}
  .sherlock-account-nav{color:var(--dsw-alias-label-primary)}
  [data-account-nav][aria-current=page]{background:var(--dsw-specific-sidebar-nav-item-active,#ffffff14)}
  .sherlock-account-page{overflow:auto;padding:30px max(32px,calc((100% - 760px)/2)) 60px;color:var(--dsw-alias-label-primary);font:14px/1.6 system-ui;flex:1}
@@ -100,6 +101,27 @@ export function mountAccountUi(
     menu?.remove()
     menu = undefined
     trigger?.setAttribute('aria-expanded', 'false')
+  }
+  const menuButton = (
+    label: string,
+    icon: 'account' | 'settings' | 'logout',
+    click: () => void
+  ) => {
+    const paths = {
+      account: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>',
+      settings: '<path d="m9 3-.5 2-2 1.2-2-.6-2 3.5 1.5 1.4v3L2.5 15l2 3.5 2-.6 2 1.2L9 21h6l.5-1.9 2-1.2 2 .6 2-3.5-1.5-1.5v-3L21.5 9l-2-3.5-2 .6-2-1.2L15 3Z"/><circle cx="12" cy="12" r="3"/>',
+      logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14 5-5-5-5M21 12H9"/>'
+    }
+    const b = button(label, click)
+    const svg = new DOMParser().parseFromString(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[icon]}</svg>`,
+      'image/svg+xml'
+    ).documentElement
+    svg.setAttribute('class', 'sherlock-account-menu-icon')
+    svg.setAttribute('aria-hidden', 'true')
+    svg.setAttribute('focusable', 'false')
+    b.prepend(document.importNode(svg, true))
+    return b
   }
   function updateTrigger() {
     if (!trigger) return
@@ -476,12 +498,12 @@ export function mountAccountUi(
           menu.className = 'sherlock-account-menu'
           menu.role = 'menu'
           menu.append(
-            button(user ? '账户信息' : '登录 / 注册', () => open(true)),
-            button('设置', () => open(false))
+            menuButton(user ? '账户信息' : '登录 / 注册', 'account', () => open(true)),
+            menuButton('设置', 'settings', () => open(false))
           )
           if (user)
             menu.append(
-              button('退出登录', () => {
+              menuButton('退出登录', 'logout', () => {
                 void invoke('logout').then((reply) => {
                   if (reply.error) {
                     open(true)
