@@ -17,6 +17,20 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.9.2',
+      date: '2026-09-08',
+      items: [
+        '新增股票、指数、ETF 与基金统一查数，登录后自动查询行情、净值和基金研究数据',
+        '修复基金对比参数兼容问题，分别展示近一年收益率、单位净值和统计日期，明确数据时效与口径',
+        '支持股票不复权日线查询；分钟线等暂不支持的能力明确提示，避免混用或编造数据',
+        '统一生成组件、总结与思维导图的外框、底色和滚动条，增强选中外发光并优化来源链接颜色',
+        '组件标题区支持拖动，附加按钮和右下角缩放提示自然渐入渐出，扩大缩放操作范围并避免遮挡滚动条',
+        '统一组件创建、排队与生成过程的背景色，调亮深色研究画布并保留点阵',
+        '优化临时侧边栏关闭按钮位置，更新登录头像背景与白色用户名首字母',
+        '完善应用改名后的启动路径与 Dock 入口恢复，修复任务执行期间追加消息的处理顺序'
+      ]
+    },
+    {
       version: '0.9.1',
       date: '2026-09-08',
       items: ["产品统一更名为 EWork Odyssey，更新应用图标、深浅色标识与中英文标语", "组件生成增加格式验收、自动恢复和可读内容回退，减少生成失败后手动重试", "丰富监控面板、新闻、日历和报告等交互组件，并让内容更聚焦用户需求", "优化表格列宽和来源链接排版，精简组件顶部导航与重复信息", "修复点击组件内容无法选中整块组件的问题，保留内部链接和控件交互", "增强触控板缩放灵敏度，研究画布采用浅色纯白、深色深灰背景并保留点阵", "修复设置下拉菜单无响应，优化账户菜单图标、登录面板和随主题变化的用户名首字头像"]
@@ -215,6 +229,20 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.9.2',
+      date: '2026-09-08',
+      items: [
+        'Added unified stock, index, ETF and fund queries for quotes, NAV and fund research after sign-in',
+        'Fixed fund comparison parameter handling and separated one-year returns, unit NAV, dates and data freshness',
+        'Added unadjusted daily stock bars and clear explanations for unsupported capabilities such as minute bars',
+        'Unified generated components, summaries and mind maps with consistent frames, backgrounds and scrollbars, stronger selection glow and clearer source links',
+        'Made component titles draggable, added smooth hover actions and corner resize hints, and enlarged resize targets without covering scrollbars',
+        'Matched creation, queued and generating backgrounds to their frames, and lightened the dark canvas while retaining the dot grid',
+        'Moved the temporary sidebar close button and refreshed signed-in avatars with white username initials',
+        'Improved launch-path and Dock recovery after app renaming, and fixed follow-up message ordering during running tasks'
+      ]
+    },
     {
       version: '0.9.1',
       date: '2026-09-08',

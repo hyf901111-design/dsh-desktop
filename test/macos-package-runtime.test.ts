@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -42,6 +42,10 @@ describe('macOS package runtime verification', () => {
       try {
         mkdirSync(runtimeRoot, { recursive: true })
         mkdirSync(packagedSkillRoot, { recursive: true })
+        copyFileSync(
+          path.join(projectRoot, 'scripts', 'macos', 'update-recovery.cjs'),
+          path.join(resourcesPath, 'update-recovery.cjs')
+        )
         writeFileSync(path.join(runtimeRoot, 'package.json'), '{"type":"module"}\n')
         symlinkSync(nodeModulesPath, path.join(runtimeRoot, 'node_modules'))
         symlinkSync(
