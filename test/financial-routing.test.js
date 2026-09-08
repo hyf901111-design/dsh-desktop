@@ -201,6 +201,33 @@ describe('financial admission, hosted transport and storage',()=>{
     const response=await handleRequest(new Request(`https://x${QUERY_PATH}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(request())}),env)
     expect(response.status).toBe(401)
   })
+  it('accepts a redundant fund discriminator for research without dropping other invalid arguments',async()=>{
+    const evidence=['510300','159919'].flatMap((subject_code,i)=>[
+      {subject_code,field:'unit_nav',label:'单位净值',value:4+i,unit:'CNY',as_of:'2026-09-07'},
+      {subject_code,field:'return_1y',label:'近一年收益率',value:5+i,unit:'%',as_of:'2026-09-07'}
+    ])
+    const fund={research:vi.fn(async()=>fundResult('2026-09-07',{
+      subjects:['510300','159919'].map(fund_code=>({fund_code,fund_name:'沪深300ETF',fund_type:'etf',currency:'CNY'})),evidence
+    }))}
+    const router=createFinancialRouter({fund,clock})
+    const fetch=vi.fn(async(_url,init)=>Response.json((await router.query(JSON.parse(init.body))).value))
+    const tool=createFinancialTool(createHostedFundProvider({fetch,clock,bridge:undefined}))
+    const args={intent:'research',asset:'fund',symbols:['510300','159919'],task:'compare'}
+    vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(NOW)
+    try {
+      const value=await tool.execute(args,{})
+      expect(value.records.map(r=>[r.instrument,r.metric,r.as_of])).toEqual(expect.arrayContaining([
+        ['510300','单位净值','2026-09-07'],['159919','单位净值','2026-09-07'],
+        ['510300','近一年收益率','2026-09-07'],['159919','近一年收益率','2026-09-07']
+      ]))
+      expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({operation:'financial',intent:'research',symbols:args.symbols,task:'compare'})
+      expect(args.asset).toBe('fund')
+      for (const invalid of [{asset:'stock'},{asset:'etf'},{provider:'x'},{lookback_days:365},{operation:'financial'}]) {
+        await expect(tool.execute({...args,...invalid},{})).rejects.toThrow()
+      }
+      expect(fetch).toHaveBeenCalledTimes(1)
+    } finally {vi.useRealTimers()}
+  })
   it('runs the business tool through the no-secret hosted transport and rejects unknown inputs',async()=>{
     const router=createFinancialRouter({market:marketFixture(),clock})
     const fetch=vi.fn(async(_url,init)=>{
