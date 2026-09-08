@@ -7,7 +7,7 @@ index 7c166a8..785f652 100644
  			name: "harness:identity",
  			order: -100,
 -			text: "You are an AI agent powered by DeepSeek Harness."
-+			text: "You are Sherlock Agent."
++			text: "You are EWork Odyssey Agent."
  		});
  		this.section({
  			name: PERSONA_SECTION,

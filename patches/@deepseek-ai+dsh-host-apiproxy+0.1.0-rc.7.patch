@@ -186,7 +186,7 @@ index 11ee6c4..01cd376 100644
 +	if (typeof manifest !== "object" || manifest === null || manifest.format !== PRESET_ARCHIVE_FORMAT || manifest.version !== PRESET_ARCHIVE_VERSION || typeof manifest.id !== "string" || !PRESET_ARCHIVE_ID.test(manifest.id)) throw new Error("Preset package manifest is unsupported or invalid");
 +	if (manifest.name !== void 0 && (typeof manifest.name !== "string" || manifest.name.length > 160)) throw new Error("Preset package manifest has an invalid name");
 +	if (manifest.description !== void 0 && (typeof manifest.description !== "string" || manifest.description.length > 4e3)) throw new Error("Preset package manifest has an invalid description");
-+	if (manifest.sourceDshVersion !== void 0 && (typeof manifest.sourceDshVersion !== "string" || manifest.sourceDshVersion.length > 64)) throw new Error("Preset package manifest has an invalid Sherlock version");
++	if (manifest.sourceDshVersion !== void 0 && (typeof manifest.sourceDshVersion !== "string" || manifest.sourceDshVersion.length > 64)) throw new Error("Preset package manifest has an invalid EWork Odyssey version");
 +	const files = /* @__PURE__ */ Object.create(null);
 +	for (const [name, bytes] of Object.entries(archive)) {
 +		if (name === "manifest.json") continue;
@@ -592,7 +592,7 @@ index 11ee6c4..01cd376 100644
 +		}
 +		if (path === "/api/agent-preset.import" && req.method === "POST") {
 +			const contentType = req.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
-+			if (contentType !== PRESET_ARCHIVE_MIME && contentType !== "application/zip" && contentType !== "application/octet-stream") return presetArchiveFailure("Content type must be a Sherlock preset package.", 415);
++			if (contentType !== PRESET_ARCHIVE_MIME && contentType !== "application/zip" && contentType !== "application/octet-stream") return presetArchiveFailure("Content type must be a EWork Odyssey preset package.", 415);
 +			const contentLength = Number(req.headers.get("content-length"));
 +			if (Number.isFinite(contentLength) && contentLength > PRESET_ARCHIVE_MAX_COMPRESSED) return presetArchiveFailure("Preset package is larger than 16 MB.", 413);
 +			let data;

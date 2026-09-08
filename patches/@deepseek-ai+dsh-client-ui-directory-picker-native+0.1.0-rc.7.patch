@@ -9,7 +9,7 @@ index ec4b6fa..a900fc3 100644
 -			const injected = () => ({ pick: () => ctx.workspaces.pickDirectory() });
 +			const injected = () => ({ pick: () => {
 +				const bridge = window.dshDesktopDirectoryPicker;
-+				if (!bridge || typeof bridge.pick !== "function") return Promise.reject(new Error("Sherlock directory picker bridge is unavailable"));
++				if (!bridge || typeof bridge.pick !== "function") return Promise.reject(new Error("EWork Odyssey directory picker bridge is unavailable"));
 +				return bridge.pick();
 +			} });
  			ctx.slots.inject("conversation.hero.workspace.directoryFlow", () => ctx.slots.inject("sidebar.workspaces.directoryFlow", function* () {

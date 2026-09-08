@@ -40,7 +40,7 @@ const sherlockPersonaText = 'You are a coding agent powered by the {{model}} mod
 function replaceRequired(contents, search, replacement, file) {
   if (contents.includes(replacement)) return contents
   if (!contents.includes(search)) {
-    throw new Error(`Could not update Sherlock branding in ${file}: expected content was not found`)
+    throw new Error(`Could not update EWork Odyssey branding in ${file}: expected content was not found`)
   }
   return contents.replace(search, replacement)
 }
@@ -49,7 +49,7 @@ function replaceRequiredAny(contents, searches, replacement, file) {
   if (contents.includes(replacement)) return contents
   const search = searches.find((candidate) => contents.includes(candidate))
   if (!search) {
-    throw new Error(`Could not update Sherlock branding in ${file}: expected content was not found`)
+    throw new Error(`Could not update EWork Odyssey branding in ${file}: expected content was not found`)
   }
   return contents.replace(search, replacement)
 }
@@ -103,7 +103,7 @@ await writeFile(
   replaceRequired(
     brandedIndex,
     '<title>DeepSeek Harness</title>',
-    '<title>Sherlock</title>',
+    '<title>EWork Odyssey</title>',
     path.relative(projectRoot, indexPath)
   )
 )
@@ -113,11 +113,11 @@ const namedManifest = replaceRequired(
   replaceRequired(
     manifest,
     '"name": "DeepSeek Harness"',
-    '"name": "Sherlock"',
+    '"name": "EWork Odyssey"',
     path.relative(projectRoot, manifestPath)
   ),
   '"short_name": "DSH"',
-  '"short_name": "Sherlock"',
+  '"short_name": "EWork Odyssey"',
   path.relative(projectRoot, manifestPath)
 )
 await writeFile(
@@ -128,12 +128,12 @@ await writeFile(
       '"src": "/favicon.svg",\n      "sizes": "any",\n      "type": "image/svg+xml"',
       '"src": "/dsh-desktop-logo.png",\n      "sizes": "1254x1254",\n      "type": "image/png"'
     ],
-    '"src": "/sherlock-icon.png",\n      "sizes": "1254x1254",\n      "type": "image/png"',
+    '"src": "/sherlock-icon.png",\n      "sizes": "1024x1024",\n      "type": "image/png"',
     path.relative(projectRoot, manifestPath)
   )
 )
 
-console.log(`Installed Sherlock brand assets: ${[
+console.log(`Installed EWork Odyssey brand assets: ${[
   destination,
   sherlockDestination,
   sherlockResearchDestination,

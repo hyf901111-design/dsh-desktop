@@ -123,12 +123,12 @@ function currentReceipt(receiptPath: string): InstallReceipt | undefined {
 
 function retiredPluginPath(customPluginsPath: string, packageName: string): string {
   if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/iu.test(packageName)) {
-    throw new Error(`Invalid retired Sherlock plugin name: ${packageName}`)
+    throw new Error(`Invalid retired EWork Odyssey plugin name: ${packageName}`)
   }
   const candidate = path.resolve(customPluginsPath, ...packageName.split('/'))
   const relative = path.relative(customPluginsPath, candidate)
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new Error(`Retired Sherlock plugin escapes the custom plugin directory: ${packageName}`)
+    throw new Error(`Retired EWork Odyssey plugin escapes the custom plugin directory: ${packageName}`)
   }
   return candidate
 }
@@ -167,10 +167,10 @@ export function installBundledPluginProfile(
   const retiredPlugins = manifest.dsh?.sherlock?.retiredPlugins ?? []
   const bundles = manifest.dsh?.profile?.bundles
   if (!Array.isArray(bundles) || !bundles.includes('dsh-file-drop')) {
-    throw new Error('The packaged Sherlock plugin profile is missing its attachment bundle.')
+    throw new Error('The packaged EWork Odyssey plugin profile is missing its attachment bundle.')
   }
   if (plugins.some((packageName) => retiredPlugins.includes(packageName))) {
-    throw new Error('The packaged Sherlock plugin profile includes a retired plugin.')
+    throw new Error('The packaged EWork Odyssey plugin profile includes a retired plugin.')
   }
 
   const harnessPath = path.join(options.userDataPath, 'harness')
@@ -202,7 +202,7 @@ export function installBundledPluginProfile(
     const packagedModulesPath = path.join(stagedProfilePath, 'modules')
     const installedModulesPath = path.join(stagedProfilePath, 'node_modules')
     if (!existsSync(packagedModulesPath) || existsSync(installedModulesPath)) {
-      throw new Error('The packaged Sherlock plugin profile is missing its offline modules.')
+      throw new Error('The packaged EWork Odyssey plugin profile is missing its offline modules.')
     }
     renameSync(packagedModulesPath, installedModulesPath)
 

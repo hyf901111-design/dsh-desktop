@@ -7,7 +7,7 @@ export type SherlockReleaseNote = {
 }
 
 export type SherlockAboutInfo = {
-  productName: 'Sherlock'
+  productName: 'EWork Odyssey'
   version: string
   releaseNotes: SherlockReleaseNote[]
 }
@@ -34,7 +34,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     {
       version: '0.8.7',
       date: '2026-09-07',
-      items: ["新增 Sherlock 账户体系，使用用户名、密码和邀请码注册，支持登录、退出及账户内修改密码", "基金研究等托管云端数据能力需要登录；用户自行配置的模型 API 不受影响", "设置改为全窗口左侧导航，登录与注册保留紧凑品牌浮窗；注册和修改密码增加二次密码确认", "优化账户图标、收起侧栏与更新入口布局，关于页面使用 Sherlock Logo", "更新下载同时显示百分比、已下载大小与文件总大小，保留下载后确认安装流程"]
+      items: ["新增 EWork Odyssey 账户体系，使用用户名、密码和邀请码注册，支持登录、退出及账户内修改密码", "基金研究等托管云端数据能力需要登录；用户自行配置的模型 API 不受影响", "设置改为全窗口左侧导航，登录与注册保留紧凑品牌浮窗；注册和修改密码增加二次密码确认", "优化账户图标、收起侧栏与更新入口布局，关于页面使用 EWork Odyssey Logo", "更新下载同时显示百分比、已下载大小与文件总大小，保留下载后确认安装流程"]
     },
     {
       version: '0.8.6',
@@ -147,7 +147,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         '侧栏新增并排的“新对话”和“新研究”入口，“新研究”可直接创建并进入研究模式',
         '优化研究组件引用标签：选择组件后先以半透明状态提示，取消选择会自动移除，点击输入区后则固定保留',
         '进一步放宽研究画布的缩小范围，并在视口偏离内容时提供快速回到内容的入口',
-        '新增简洁的 Sherlock 启动动画，改善客户端启动时的视觉衔接',
+        '新增简洁的 EWork Odyssey 启动动画，改善客户端启动时的视觉衔接',
         '修复“新研究”首屏画布、顶栏和右侧对话区布局异常，并使用专用研究图标',
         '修复研究画布中 PDF 已加载但页面显示为空白的问题',
         '完善空白研究右侧引导，在首条消息发送前显示品牌标题；工作区和模式选择固定显示在输入框上方，并确保新对话不再丢失模式入口',
@@ -159,7 +159,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       version: '0.7.4',
       date: '2026-08-31',
       items: [
-        '统一 Sherlock Agent 品牌表述，并修正部分会话中用户消息与助手回复的显示顺序',
+        '统一 EWork Odyssey Agent 品牌表述，并修正部分会话中用户消息与助手回复的显示顺序',
         '修复退出客户端时访问已销毁窗口导致的 JavaScript 报错',
         '完善研究画布引用交互：点击文件、PPT 或助手回复组件即可选中并作为输入标签引用，PPT 组件不再显示下载按钮',
         '优化研究输入标签：支持在标签之间准确放置光标，清晰显示输入位置，并消除选中时的抖动和位移',
@@ -228,7 +228,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     {
       version: '0.8.7',
       date: '2026-09-07',
-      items: ["Added invite-only Sherlock accounts with registration, sign-in, sign-out, and password changes", "Hosted cloud data capabilities such as fund research require sign-in; personally configured model APIs remain unaffected", "Full-window settings with left navigation and compact branded authentication dialogs; confirm passwords during registration and password changes", "Refined account icons, collapsed sidebar and update controls, and the Sherlock logo in About", "Update downloads show percentage and downloaded/total size, with installation confirmation after downloading"]
+      items: ["Added invite-only EWork Odyssey accounts with registration, sign-in, sign-out, and password changes", "Hosted cloud data capabilities such as fund research require sign-in; personally configured model APIs remain unaffected", "Full-window settings with left navigation and compact branded authentication dialogs; confirm passwords during registration and password changes", "Refined account icons, collapsed sidebar and update controls, and the EWork Odyssey logo in About", "Update downloads show percentage and downloaded/total size, with installation confirmation after downloading"]
     },
     {
       version: '0.8.6',
@@ -341,10 +341,10 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         'Added separate New Chat and New Research sidebar actions, with New Research opening directly in Research mode',
         'Refined Research reference tags with a provisional translucent state, automatic removal on deselection, and persistent tags after focusing the composer',
         'Expanded the Research canvas zoom-out range and added a quick way to return to content when the viewport drifts away',
-        'Added a restrained Sherlock launch animation for a smoother transition into the client',
+        'Added a restrained EWork Odyssey launch animation for a smoother transition into the client',
         'Fixed the New Research first-screen canvas, header, and right-side conversation layout, and added a dedicated Research icon',
         'Fixed blank PDF pages in the Research canvas after successful document loading',
-        'Improved blank Research guidance with the Sherlock headline, kept workspace and mode controls above the composer, and prevented the mode control from disappearing in New Chat',
+        'Improved blank Research guidance with the EWork Odyssey headline, kept workspace and mode controls above the composer, and prevented the mode control from disappearing in New Chat',
         'Fixed New Chat doing nothing when reusing a blank Research session, so it now switches directly to the New Chat screen',
         'Widened assistant reply components added to the Research canvas while preserving adaptive sizing and manual resize controls'
       ]
@@ -353,7 +353,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       version: '0.7.4',
       date: '2026-08-31',
       items: [
-        'Standardized Sherlock Agent branding and fixed the display order of user messages and assistant replies in affected conversations',
+        'Standardized EWork Odyssey Agent branding and fixed the display order of user messages and assistant replies in affected conversations',
         'Fixed a JavaScript error caused by accessing a destroyed window while quitting the client',
         'Improved Research canvas references: click a file, PowerPoint, or assistant reply component to select and cite it as an input tag, while PowerPoint components no longer show a download button',
         'Improved Research input tags with precise caret placement between tags, a clearly visible insertion point, and stable selection without jitter or displacement',
@@ -410,7 +410,7 @@ export function buildSherlockAboutInfo(
   locale: SherlockAboutLocale
 ): SherlockAboutInfo {
   return {
-    productName: 'Sherlock',
+    productName: 'EWork Odyssey',
     version,
     releaseNotes: releaseNotes[locale].map((note) => ({
       ...note,

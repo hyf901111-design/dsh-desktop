@@ -168,14 +168,14 @@ export class ResearchCanvasClipboard {
   private reference(): string | null {
     if (this.has(RESEARCH_CLIPBOARD_FORMAT)) {
       const data = this.options.clipboard.readBuffer(RESEARCH_CLIPBOARD_FORMAT)
-      if (data.length !== 48 || !opaque(data.toString())) throw new Error('Sherlock 剪贴板引用无效，请重新复制。')
+      if (data.length !== 48 || !opaque(data.toString())) throw new Error('EWork Odyssey 剪贴板引用无效，请重新复制。')
       return data.toString()
     }
     const html = this.options.clipboard.readHTML()
     if (!/<meta\b[^>]*\bname\s*=\s*(?:"sherlock-research-clipboard"|'sherlock-research-clipboard'|sherlock-research-clipboard(?=\s|\/?>))/i.test(html)) return null
-    if (html.length > MAX_HTML_ENVELOPE) throw new Error('Sherlock 剪贴板引用无效，请重新复制。')
+    if (html.length > MAX_HTML_ENVELOPE) throw new Error('EWork Odyssey 剪贴板引用无效，请重新复制。')
     const ref = html.match(/<meta name="sherlock-research-clipboard" content="([a-f0-9]{48})">/)?.[1]
-    if (!ref) throw new Error('Sherlock 剪贴板引用无效，请重新复制。')
+    if (!ref) throw new Error('EWork Odyssey 剪贴板引用无效，请重新复制。')
     return ref
   }
   private nativePaths(): string[] | null {
@@ -227,7 +227,7 @@ export class ResearchCanvasClipboard {
         const snapshot = { version: 1, nodes }
         if (Buffer.byteLength(JSON.stringify(snapshot)) > MAX_SNAPSHOT) throw new Error('组件快照不能超过 2 MiB。')
         await this.atomicJson(target, snapshot); created.push(target)
-        const text = nodes.map((node) => String(node.excerpt || node.title || node.name || 'Sherlock 组件')).join('\n\n').slice(0, MAX_TEXT)
+        const text = nodes.map((node) => String(node.excerpt || node.title || node.name || 'EWork Odyssey 组件')).join('\n\n').slice(0, MAX_TEXT)
         // A single Electron write preserves both the opaque HTML envelope and text fallback.
         this.options.clipboard.write({ text, html: `<meta name="sherlock-research-clipboard" content="${snapshotId}"><span>${text.replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[char]!)}</span>` })
         return { ok: true }

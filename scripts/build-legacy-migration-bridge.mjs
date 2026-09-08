@@ -17,8 +17,8 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const bridgeContract = {
   bundleIdentifier: 'io.dsh.desktop',
   embeddedBundleIdentifier: 'com.evanarts.sherlock',
-  productName: 'Sherlock',
-  executableName: 'Sherlock',
+  productName: 'EWork Odyssey',
+  executableName: 'EWork Odyssey',
   signingName: 'Sherlock Desktop Update Signing',
   signingFingerprint: '8B8FCCFB659D94D5C9A9CE2B735EB0FAE457CC7B'
 }

@@ -8,17 +8,19 @@ cd "$project_root"
 mode="${1:---run}"
 machine_arch="$(uname -m)"
 if [ "$machine_arch" = "arm64" ]; then
-  formal_app="$project_root/dist-notarized/mac-arm64/Sherlock.app"
+  formal_app="$project_root/dist-notarized/mac-arm64/EWork Odyssey.app"
 else
-  formal_app="$project_root/dist-notarized/mac/Sherlock.app"
+  formal_app="$project_root/dist-notarized/mac/EWork Odyssey.app"
 fi
-formal_executable="$formal_app/Contents/MacOS/Sherlock"
+formal_executable="$formal_app/Contents/MacOS/EWork Odyssey"
 formal_runtime_node="$formal_app/Contents/Resources/app/node_modules/node/bin/node"
 workspace_runtime_node="$project_root/node_modules/node/bin/node"
 
 stop_sherlock_apps() {
   pkill -x 'Sherlock Dev' 2>/dev/null || true
   pkill -x 'Sherlock' 2>/dev/null || true
+  pkill -x 'EWork Odyssey Dev' 2>/dev/null || true
+  pkill -x 'EWork Odyssey' 2>/dev/null || true
 }
 
 ensure_workspace_runtime() {
@@ -37,7 +39,7 @@ build_formal_app() {
   ensure_workspace_runtime
   npm run package:formal:dir
   test -x "$formal_executable" || {
-    echo "Sherlock executable was not built at: $formal_executable" >&2
+    echo "EWork Odyssey executable was not built at: $formal_executable" >&2
     exit 1
   }
   test -x "$formal_runtime_node" || {
@@ -61,10 +63,10 @@ case "$mode" in
     open_formal_app
     stable_checks=0
     for _attempt in $(seq 1 80); do
-      if pgrep -x 'Sherlock' >/dev/null; then
+      if pgrep -x 'EWork Odyssey' >/dev/null; then
         stable_checks=$((stable_checks + 1))
         if [ "$stable_checks" -ge 4 ]; then
-          echo 'Sherlock is running.'
+          echo 'EWork Odyssey is running.'
           exit 0
         fi
       else
@@ -72,7 +74,7 @@ case "$mode" in
       fi
       sleep 0.5
     done
-    echo 'Sherlock did not stay running.' >&2
+    echo 'EWork Odyssey did not stay running.' >&2
     exit 1
     ;;
   --debug)
@@ -82,7 +84,7 @@ case "$mode" in
   --logs)
     build_formal_app
     open_formal_app
-    exec /usr/bin/log stream --style compact --predicate 'process == "Sherlock"'
+    exec /usr/bin/log stream --style compact --predicate 'process == "EWork Odyssey"'
     ;;
   --telemetry)
     build_formal_app
@@ -149,7 +151,7 @@ case "$mode" in
       --notarized "$project_root/dist-notarized" \
       --output "$project_root/dist-release"
     test -d "$formal_app" || {
-      echo "Formal Sherlock app was not built at: $formal_app" >&2
+      echo "Formal EWork Odyssey app was not built at: $formal_app" >&2
       exit 1
     }
     formal_smoke_user_data="$(mktemp -d /tmp/sherlock-formal-smoke.XXXXXX)"

@@ -1,7 +1,7 @@
 {
   "name": "dsh-web-search-session-model",
   "version": "0.1.0",
-  "description": "Sherlock web search provider that follows the current session model route.",
+  "description": "EWork Odyssey web search provider that follows the current session model route.",
   "private": true,
   "type": "module",
   "main": "./index.js",

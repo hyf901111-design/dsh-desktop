@@ -8,8 +8,8 @@ async function projectFile(relativePath: string): Promise<string> {
   return readFile(path.join(projectRoot, relativePath), 'utf8')
 }
 
-describe('Sherlock client brand migration', () => {
-  it('ships Sherlock application and installer display names', async () => {
+describe('EWork Odyssey client brand migration', () => {
+  it('ships EWork Odyssey application and installer display names', async () => {
     const packageJson = JSON.parse(await projectFile('package.json')) as {
       description: string
       scripts: Record<string, string>
@@ -21,18 +21,18 @@ describe('Sherlock client brand migration', () => {
     }
     const developmentConfig = await projectFile('electron-builder.dev.cjs')
 
-    expect(packageJson.description).toBe('Sherlock local-first desktop knowledge assistant.')
-    expect(packageJson.build.productName).toBe('Sherlock')
+    expect(packageJson.description).toBe('EWork Odyssey local-first desktop knowledge assistant.')
+    expect(packageJson.build.productName).toBe('EWork Odyssey')
     expect(packageJson.build.artifactName).toBe('sherlock-${os}-${arch}.${ext}')
     expect(packageJson.build.nsis.artifactName).toBe('sherlock-windows-${arch}-setup.${ext}')
     expect(packageJson.scripts.build).toContain('node scripts/install-brand-assets.mjs')
-    expect(packageJson.scripts['package:mac:arm64']).toContain('dist/mac-arm64/Sherlock.app')
-    expect(packageJson.scripts['package:mac:x64']).toContain('dist/mac/Sherlock.app')
-    expect(developmentConfig).toContain("productName: 'Sherlock Dev'")
+    expect(packageJson.scripts['package:mac:arm64']).toContain('dist/mac-arm64/EWork Odyssey.app')
+    expect(packageJson.scripts['package:mac:x64']).toContain('dist/mac/EWork Odyssey.app')
+    expect(developmentConfig).toContain("productName: 'EWork Odyssey Dev'")
     expect(developmentConfig).toContain("artifactName: 'sherlock-dev-windows-${arch}-setup.${ext}'")
   })
 
-  it('uses the formal Sherlock identity for everyday build and run', async () => {
+  it('uses the formal EWork Odyssey identity for everyday build and run', async () => {
     const packageJson = JSON.parse(await projectFile('package.json')) as {
       scripts: Record<string, string>
     }
@@ -41,17 +41,17 @@ describe('Sherlock client brand migration', () => {
     expect(packageJson.scripts['package:formal:dir']).toContain(
       '--config electron-builder.notarized.cjs'
     )
-    expect(buildAndRun).toContain('dist-notarized/mac-arm64/Sherlock.app')
+    expect(buildAndRun).toContain('dist-notarized/mac-arm64/EWork Odyssey.app')
     expect(buildAndRun).toContain('build_formal_app')
-    expect(buildAndRun).toContain("echo 'Sherlock is running.'")
+    expect(buildAndRun).toContain("echo 'EWork Odyssey is running.'")
     expect(buildAndRun).toContain('codesign --verify --deep --strict')
     expect(buildAndRun).toContain('stable_checks=0')
     expect(buildAndRun).toContain('[ "$stable_checks" -ge 4 ]')
     expect(buildAndRun).not.toContain('package:dev:dir')
-    expect(buildAndRun).not.toContain('Sherlock Dev is running.')
+    expect(buildAndRun).not.toContain('EWork Odyssey Dev is running.')
   })
 
-  it('uses Sherlock across Electron-owned user interfaces', async () => {
+  it('uses EWork Odyssey across Electron-owned user interfaces', async () => {
     const files = await Promise.all([
       'src/main/index.ts',
       'src/main/runtime/harness-runtime.ts',
@@ -66,8 +66,8 @@ describe('Sherlock client brand migration', () => {
     ].map(projectFile))
     const ownedSurfaces = files.join('\n')
 
-    expect(ownedSurfaces).toContain('Sherlock')
-    expect(ownedSurfaces).not.toMatch(/DSH Desktop|DSH Mobile|DeepSeek Harness/)
+    expect(ownedSurfaces).toContain('EWork Odyssey')
+    expect(ownedSurfaces).not.toMatch(/DSH Desktop|DSH Mobile|DeepSeek Harness|\bSherlock\b/)
     expect(ownedSurfaces).not.toMatch(/compatible DSH plugin|兼容的 DSH 插件/)
   })
 
@@ -101,7 +101,7 @@ describe('Sherlock client brand migration', () => {
     )
   })
 
-  it('brands the embedded web shell and patched visible copy as Sherlock', async () => {
+  it('brands the embedded web shell and patched visible copy as EWork Odyssey', async () => {
     const [index, manifest, installer, settings, pluginSettings, presets, directoryPicker, workspace] =
       await Promise.all([
         projectFile('node_modules/@deepseek-ai/dsh-web-frontend/dist/index.html'),
@@ -114,16 +114,16 @@ describe('Sherlock client brand migration', () => {
         projectFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js')
       ])
 
-    expect(index).toContain('<title>Sherlock</title>')
-    expect(manifest).toContain('"name": "Sherlock"')
-    expect(manifest).toContain('"short_name": "Sherlock"')
+    expect(index).toContain('<title>EWork Odyssey</title>')
+    expect(manifest).toContain('"name": "EWork Odyssey"')
+    expect(manifest).toContain('"short_name": "EWork Odyssey"')
     expect(installer).not.toContain('DSH Desktop')
-    expect(installer).toContain('inside Sherlock')
+    expect(installer).toContain('inside EWork Odyssey')
 
     expect(settings).not.toContain('displayName: "DeepSeek"')
     expect(settings).not.toMatch(/DSH will|DSH 会/)
     expect(settings).not.toMatch(/DeepSeek Harness|DSH plugin ecosystem|DSH 插件生态/)
-    expect(settings).toMatch(/Sherlock will|Sherlock 会/)
+    expect(settings).toMatch(/EWork Odyssey will|EWork Odyssey 会/)
     expect(settings).toContain('useState)("openai")')
     expect(pluginSettings).not.toMatch(/The DeepSeek search provider|DeepSeek 搜索提供方/)
     expect(pluginSettings).toMatch(
@@ -131,8 +131,8 @@ describe('Sherlock client brand migration', () => {
     )
 
     expect(presets).not.toMatch(/Created with DSH|another DSH version|由 DSH|另一个 DSH 版本/)
-    expect(presets).toContain('Created with Sherlock')
-    expect(presets).toContain('children: "Sherlock"')
+    expect(presets).toContain('Created with EWork Odyssey')
+    expect(presets).toContain('children: "EWork Odyssey"')
     expect(directoryPicker).not.toContain('DSH Desktop directory picker')
     expect(workspace).not.toContain('acknowledged by DSH Desktop')
   })

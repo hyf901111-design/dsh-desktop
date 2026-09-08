@@ -105,8 +105,8 @@ export class SidebarUpdateControl {
         button.setAttribute(
           'aria-label',
           this.locale === 'zh'
-            ? `下载 Sherlock ${action.version} 更新`
-            : `Download Sherlock ${action.version} update`
+            ? `下载 EWork Odyssey ${action.version} 更新`
+            : `Download EWork Odyssey ${action.version} update`
         )
         button.title = button.getAttribute('aria-label') ?? ''
         button.innerHTML = `${downloadIcon}<span class="sherlock-sidebar-update-label">${
@@ -139,7 +139,7 @@ export class SidebarUpdateControl {
           message.className = 'sherlock-sidebar-update-message'
           message.textContent = this.locale === 'zh'
             ? '正在解压并校验更新文件，完成后将自动更新重启'
-            : 'Unpacking and verifying update files. Sherlock will update and restart automatically.'
+            : 'Unpacking and verifying update files. EWork Odyssey will update and restart automatically.'
           panel.append(loading, message)
         }
         return
@@ -149,8 +149,8 @@ export class SidebarUpdateControl {
         button.setAttribute(
           'aria-label',
           this.locale === 'zh'
-            ? `安装 Sherlock ${action.version} 更新`
-            : `Install Sherlock ${action.version} update`
+            ? `安装 EWork Odyssey ${action.version} 更新`
+            : `Install EWork Odyssey ${action.version} update`
         )
         button.title = button.getAttribute('aria-label') ?? ''
         button.innerHTML = downloadIcon
@@ -160,7 +160,7 @@ export class SidebarUpdateControl {
         button.dataset.action = 'retry'
         button.setAttribute(
           'aria-label',
-          this.locale === 'zh' ? '重新检查 Sherlock 更新' : 'Check for Sherlock updates again'
+          this.locale === 'zh' ? '重新检查 EWork Odyssey 更新' : 'Check for EWork Odyssey updates again'
         )
         button.innerHTML = retryIcon
         return

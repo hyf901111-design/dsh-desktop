@@ -558,7 +558,7 @@ index bc28439..d3c86e3 100644
 +		const composed = composeEntries(layers.map((layer) => layer.patches));
 +		const presets = composed.find((entry) => entry.id === "agent-presets");
 +		if (presets !== void 0) layers.push({
-+			label: "Sherlock standard preset policy",
++			label: "EWork Odyssey standard preset policy",
 +			patches: [{
 +				id: "agent-presets",
 +				config: {

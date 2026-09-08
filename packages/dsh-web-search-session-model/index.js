@@ -311,14 +311,14 @@ function validateLocalEndpoint(endpoint) {
   const token = nonEmptyString(endpoint?.token)
   if (!url || !token || !URL.canParse(url)) {
     throw new WebError(
-      'Sherlock local browser search is unavailable.',
+      'EWork Odyssey local browser search is unavailable.',
       'WEB_LOCAL_SEARCH_UNAVAILABLE'
     )
   }
   const parsed = new URL(url)
   if (parsed.protocol !== 'http:' || parsed.hostname !== '127.0.0.1') {
     throw new WebError(
-      'Sherlock local browser search endpoint is invalid.',
+      'EWork Odyssey local browser search endpoint is invalid.',
       'WEB_LOCAL_SEARCH_UNAVAILABLE'
     )
   }
@@ -452,7 +452,7 @@ export class SessionModelSearchProvider {
   async search(request, signal) {
     const mode = this.dependencies.mode()
     if (mode === 'off') {
-      throw new WebError('Web search is disabled in Sherlock settings.', 'WEB_SEARCH_DISABLED')
+      throw new WebError('Web search is disabled in EWork Odyssey settings.', 'WEB_SEARCH_DISABLED')
     }
     if (signal?.aborted) throw abortWebError(signal)
 

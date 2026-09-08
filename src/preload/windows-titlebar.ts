@@ -49,7 +49,7 @@ export function mountWindowsTitlebar(options: TitlebarMountOptions): void {
 
   const host = document.createElement('div')
   host.id = HOST_ID
-  host.setAttribute('aria-label', locale === 'zh' ? 'Sherlock 标题栏' : 'Sherlock title bar')
+  host.setAttribute('aria-label', locale === 'zh' ? 'EWork Odyssey 标题栏' : 'EWork Odyssey title bar')
   const shadow = host.attachShadow({ mode: 'closed' })
   const style = document.createElement('style')
   style.textContent = titlebarStyles
@@ -321,7 +321,7 @@ function menuEntries(locale: 'en' | 'zh'): MenuEntry[] {
     {
       kind: 'command',
       command: 'about',
-      label: zh ? '关于 Sherlock' : 'About Sherlock'
+      label: zh ? '关于 EWork Odyssey' : 'About EWork Odyssey'
     },
     { kind: 'command', command: 'quit', label: zh ? '退出' : 'Exit' }
   ]
