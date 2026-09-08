@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, copyFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, copyFileSync, rmSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,21 +7,25 @@ import { promisify } from 'node:util'
 import { app } from 'electron'
 
 const execute = promisify(execFile)
-const BUNDLE_ID = 'com.evanarts.sherlock'
+const BUNDLE_IDS = ['com.evanarts.sherlock', 'io.dsh.desktop']
 const helperPath = () => join(process.resourcesPath, 'update-recovery.cjs')
 const nodePath = () => join(process.resourcesPath, 'app', 'node_modules', 'node', 'bin', 'node')
-const currentBundle = () => dirname(dirname(dirname(app.getPath('exe'))))
+const currentBundle = () => realpathSync(dirname(dirname(dirname(app.getPath('exe')))))
 
 export async function armMacRenameRecovery(version: string): Promise<(() => void) | undefined> {
   if (process.platform !== 'darwin' || !app.isPackaged) return
-  const statePath = join(app.getPath('home'), 'Library', 'Caches', `${BUNDLE_ID}.ShipIt`, 'ShipItState.plist')
+  const currentApp = currentBundle()
+  const { stdout: identifier } = await execute('/usr/bin/plutil', ['-extract', 'CFBundleIdentifier', 'raw', '-o', '-', join(currentApp, 'Contents', 'Info.plist')])
+  const bundleId = identifier.trim()
+  if (!BUNDLE_IDS.includes(bundleId)) return
+  const statePath = join(app.getPath('home'), 'Library', 'Caches', `${bundleId}.ShipIt`, 'ShipItState.plist')
   const { stdout } = await execute('/usr/bin/plutil', ['-convert', 'json', '-o', '-', statePath])
   const state = JSON.parse(stdout)
   const helper = createRequire(import.meta.url)(helperPath()) as {
-    resolveRenamePlan: (state: unknown, app: string, version: string) => { oldApp: string; targetApp: string; version: string } | null
+    resolveRenamePlan: (state: unknown, app: string, version: string) => { oldApp: string; targetApp: string; version: string; bundleId: string } | null
     signatureHash: (app: string) => string
   }
-  const plan = helper.resolveRenamePlan(state, currentBundle(), version)
+  const plan = helper.resolveRenamePlan(state, currentApp, version)
   if (!plan) return
   const hash = helper.signatureHash(fileURLToPath(state.updateBundleURL))
   const logs = join(app.getPath('userData'), 'logs')

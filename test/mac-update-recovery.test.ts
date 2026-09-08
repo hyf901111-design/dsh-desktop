@@ -8,7 +8,7 @@ const staged = '/private/tmp/update.abcd/EWork Odyssey.app'
 const info = { CFBundleIdentifier: 'com.evanarts.sherlock', CFBundleShortVersionString: '0.9.2' }
 const state = { bundleIdentifier: info.CFBundleIdentifier, targetBundleURL: pathToFileURL(oldApp).href + '/', updateBundleURL: pathToFileURL(staged).href + '/', useUpdateBundleName: true }
 it('uses the post-install path for a renamed signed bundle, including spaces and Chinese paths', () => {
-  expect(resolveRenamePlan(state, oldApp, '0.9.2', () => info)).toEqual({ oldApp, targetApp, version: '0.9.2' })
+  expect(resolveRenamePlan(state, oldApp, '0.9.2', () => info)).toEqual({ oldApp, targetApp, version: '0.9.2', bundleId: info.CFBundleIdentifier })
 })
 it('keeps user-renamed bundles in place and does not arm a second launcher for same-name updates', () => {
   expect(resolveRenamePlan({ ...state, useUpdateBundleName: false }, oldApp, '0.9.2', () => info)).toBeNull()
@@ -99,4 +99,10 @@ it.skipIf(process.platform !== 'darwin')('verifies the installed signed bundle a
     writeFileSync(join(renamed, 'Contents', 'Info.plist'), info.replace('0.9.2', '0.9.3'))
     expect(isExpectedBundle(renamed, '0.9.3', hash)).toBe(false)
   } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+it('keeps the legacy signed update channel bound to its own bundle identity', () => {
+  const legacy = { ...info, CFBundleIdentifier: 'io.dsh.desktop' }
+  expect(resolveRenamePlan({ ...state, bundleIdentifier: 'io.dsh.desktop' }, oldApp, '0.9.2', () => legacy)).toMatchObject({ bundleId: 'io.dsh.desktop', targetApp })
+  expect(() => resolveRenamePlan({ ...state, bundleIdentifier: 'io.dsh.desktop' }, oldApp, '0.9.2', () => info)).toThrow('identity/version')
 })
