@@ -59,23 +59,49 @@ function migrateDockTiles(tiles, oldApp, targetApp, resolvePath = localBundleURL
   })
   return { changed, tiles: next }
 }
+function dockMigrationScript(bundleId = BUNDLE_ID, domain = 'com.apple.dock') {
+  return `ObjC.import('Foundation');
+const BUNDLE_ID = ${JSON.stringify(bundleId)};
+const migrateDockTiles = ${migrateDockTiles.toString()};
+function run(argv) {
+  const defaults = $.NSUserDefaults.alloc.initWithSuiteName(${JSON.stringify(domain)});
+  const original = defaults.objectForKey('persistent-apps');
+  if (!original) return 'unchanged';
+  const entries = original.mutableCopy;
+  const resolvePath = raw => { const url = $.NSURL.URLWithString(raw); if (!url || !url.isFileURL) return null; return ObjC.unwrap(url.path); };
+  let changed = false;
+  for (let index = 0; index < original.count; index++) {
+    const tile = original.objectAtIndex(index);
+    const data = tile.objectForKey('tile-data');
+    if (!data) continue;
+    const file = data.objectForKey('file-data');
+    if (!file) continue;
+    const url = file.objectForKey('_CFURLString');
+    if (!url) continue;
+    const result = migrateDockTiles([{'tile-data':{'file-data':{_CFURLString:ObjC.unwrap(url)}}}], argv[0], '', resolvePath, argv[1], argv[2]);
+    if (!result.changed) continue;
+    // Keep native NSData bookmarks and all unrelated preference objects intact.
+    const updatedTile = tile.mutableCopy;
+    const updatedData = data.mutableCopy;
+    const fields = result.tiles[0]['tile-data'];
+    updatedData.setObjectForKey($(fields['file-data']), 'file-data');
+    updatedData.setObjectForKey($(fields['file-label']), 'file-label');
+    updatedData.setObjectForKey($(fields['bundle-identifier']), 'bundle-identifier');
+    updatedData.removeObjectForKey('book');
+    updatedData.removeObjectForKey('file-alias');
+    updatedTile.setObjectForKey(updatedData, 'tile-data');
+    entries.replaceObjectAtIndexWithObject(index, updatedTile);
+    changed = true;
+  }
+  if (changed) { defaults.setObjectForKey(entries, 'persistent-apps'); defaults.synchronize; }
+  return changed ? 'changed' : 'unchanged';
+}`
+}
 function repairDock(oldApp, targetApp) {
   if (path.dirname(oldApp) !== path.dirname(targetApp) || fs.existsSync(oldApp)) return false
   const bundleId = plist(path.join(targetApp, 'Contents/Info.plist')).CFBundleIdentifier
   if (!BUNDLE_IDS.includes(bundleId)) return false
-  // CFPreferences is used instead of editing the on-disk plist behind cfprefsd.
-  // The transform runs next to the read/write, preserving all unrelated settings.
-  const script = `ObjC.import('Foundation');
-const BUNDLE_ID = '${bundleId}';
-const migrateDockTiles = ${migrateDockTiles.toString()};
-function run(argv) {
-  const defaults = $.NSUserDefaults.alloc.initWithSuiteName('com.apple.dock');
-  const original = ObjC.deepUnwrap(defaults.objectForKey('persistent-apps')) || [];
-  const resolvePath = raw => { const url = $.NSURL.URLWithString(raw); if (!url || !url.isFileURL) return null; return ObjC.unwrap(url.path); };
-  const result = migrateDockTiles(original, argv[0], '', resolvePath, argv[1], argv[2]);
-  if (result.changed) { defaults.setObjectForKey($(result.tiles), 'persistent-apps'); defaults.synchronize; }
-  return result.changed ? 'changed' : 'unchanged';
-}`
+  const script = dockMigrationScript(bundleId)
   const result = run('/usr/bin/osascript', ['-l', 'JavaScript', '-e', script, oldApp, pathToFileURL(targetApp).href + '/', path.basename(targetApp, '.app')]).trim()
   if (result !== 'changed') return false
   // Restart only this user's Dock after a real change, never another user's Dock.
@@ -117,7 +143,7 @@ async function guard(options, dependencies = {}) {
   }
   log('Recovery timed out; no unverified application was launched.')
 }
-module.exports = { BUNDLE_ID, resolveRenamePlan, migrateDockTiles, repairDock, signatureHash, isExpectedBundle, guard }
+module.exports = { BUNDLE_ID, resolveRenamePlan, migrateDockTiles, dockMigrationScript, repairDock, signatureHash, isExpectedBundle, guard }
 if (require.main === module) {
   const options = JSON.parse(process.argv[2])
   const action = options.action === 'repair-dock' ? Promise.resolve().then(() => repairDock(options.oldApp, options.targetApp)) : guard(options, { ready: () => { process.send?.({ ready: true }); process.disconnect?.() } })
