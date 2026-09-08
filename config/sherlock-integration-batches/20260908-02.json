@@ -116,6 +116,44 @@
           "来源导航通过宿主链接打开，HTML 继续保持沙箱隔离"
         ],
         "generatedAt": "2026-09-08T01:33:40.530881+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c374f0a74fd96a93de3c5d46d61f9a57b69d006c",
+        "verificationCommit": "c374f0a74fd96a93de3c5d46d61f9a57b69d006c",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/research-task-runtime.test.js",
+              "test/research-workbench.test.js",
+              "test/research-html-theme.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
+            "verifiedCommit": "c374f0a74fd96a93de3c5d46d61f9a57b69d006c",
+            "completedAt": "2026-09-08T01:34:04.637Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
+            "verifiedCommit": "c374f0a74fd96a93de3c5d46d61f9a57b69d006c",
+            "completedAt": "2026-09-08T01:34:04.637Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-08T01:34:04.637Z"
       }
     }
   ],
