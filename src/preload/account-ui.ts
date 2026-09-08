@@ -111,7 +111,7 @@ export function mountAccountUi(
     if (user) {
       const initial = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
         .segment(user.username.trim())[Symbol.iterator]().next().value?.segment
-      avatar.textContent = initial ?? ''
+      avatar.textContent = initial?.toUpperCase() ?? ''
     } else {
       const avatarSvg = new DOMParser().parseFromString(
         accountAvatar,
