@@ -9,27 +9,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Dock 原生书签保真迁移",
+        "featureName": "统一组件外框与头像，修正临时侧栏关闭按钮",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
-        "tipCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
+        "baseCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
+        "tipCommit": "6c15fab72870f10dc63374f120b29ebada524297",
         "commits": [
           {
-            "commit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
+            "commit": "4386270869d43e9435465de09ce26c0ce4d13932",
             "parents": [
-              "0a6d372224e3352cf03ca876d9ff788898569aaa"
+              "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5"
             ],
-            "subject": "修复：迁移 Dock 时保留其他入口的原生书签"
+            "subject": "优化：统一画布组件外框并消除白边，更新登录头像"
+          },
+          {
+            "commit": "6c15fab72870f10dc63374f120b29ebada524297",
+            "parents": [
+              "4386270869d43e9435465de09ce26c0ce4d13932"
+            ],
+            "subject": "调整：将临时侧栏关闭按钮移到标题左侧"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/macos/update-recovery.cjs"
+            "path": "build/sherlock-account-background.png"
           },
           {
             "status": "M",
-            "path": "test/mac-update-recovery.test.ts"
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-drop.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
           }
         ],
         "checks": [
@@ -38,14 +65,42 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/mac-update-recovery.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/update-manager.test.ts"
+              "test/research-container-chrome.test.ts"
             ],
             "outcome": "passed",
-            "summary": "29项升级检查（含真实CFPreferences二进制书签迁移）与类型检查通过",
-            "verifiedCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
-            "completedAt": "2026-09-08T07:33:14.433Z",
+            "summary": "17项组件交互检查通过",
+            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
+            "completedAt": "2026-09-08T08:06:41.003276+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "resiz|geometry|natural|landscape|PDF|generated summary|generated mind.map|mind.map node"
+            ],
+            "outcome": "passed",
+            "summary": "19项渲染、编辑和尺寸检查通过",
+            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
+            "completedAt": "2026-09-08T08:06:41.003276+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-file-drop.test.ts",
+              "-t",
+              "geometry|aspect|resiz|PDF|image"
+            ],
+            "outcome": "passed",
+            "summary": "21项文件与画布尺寸检查通过",
+            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
+            "completedAt": "2026-09-08T08:06:41.003276+00:00",
             "timeoutMs": 120000
           },
           {
@@ -55,61 +110,26 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "29项升级检查（含真实CFPreferences二进制书签迁移）与类型检查通过",
-            "verifiedCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
-            "completedAt": "2026-09-08T07:33:14.433Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
+            "completedAt": "2026-09-08T08:06:41.003276+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "系统偏好迁移使用隔离测试域验证，未更改用户 Dock。"
+          "outcome": "passed",
+          "summary": "浏览器核验深浅主题、头像、导图与总结放大、改名编辑、标题拖动和角落缩放。实际客户端已定位白色 iframe 底层；打包后继续核验原工作台和临时侧栏。"
         },
         "acceptanceCriteria": [
-          "标题区域统一且可拖动，源摘要组件也有标题",
-          "固定边框色、扩大圆头角落手柄，操作避让滚动条",
-          "跨名升级使用校验后的最终路径恢复启动，迁移精确旧 Dock 地址"
+          "所有画布组件采用统一外框和标题拖动区，保留点阵及选中光晕",
+          "深色内容底层不透白边，思维导图跟随主题",
+          "登录头像使用 Group 85，黑色首字、英文大写",
+          "临时侧栏关闭按钮位于标题之前"
         ],
         "risks": [
-          "旧发布进程不能回溯获得保护代码；已经跨名失败者首次仍需打开新应用",
-          "不发布、不更改版本和更新源，待用户本地验收"
+          "本地测试，未发布或变更更新源"
         ],
-        "generatedAt": "2026-09-08T07:33:14.433Z"
-      },
-      "merged": {
-        "mergeCommit": "ea79544471343514032ec0523c04db8b84c00e21",
-        "verificationCommit": "ea79544471343514032ec0523c04db8b84c00e21",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "ea79544471343514032ec0523c04db8b84c00e21",
-            "completedAt": "2026-09-08T07:34:11.888Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ea79544471343514032ec0523c04db8b84c00e21",
-            "completedAt": "2026-09-08T07:34:11.888Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T07:34:11.888Z"
+        "generatedAt": "2026-09-08T08:06:41.003276+00:00"
       }
     }
   ],
