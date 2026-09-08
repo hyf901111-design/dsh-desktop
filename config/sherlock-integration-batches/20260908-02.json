@@ -11,115 +11,54 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
-        "tipCommit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
+        "baseCommit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
+        "tipCommit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
         "commits": [
           {
-            "commit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
+            "commit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
             "parents": [
-              "7b8ec4845c263f08e9068f95715aea6a765ac4ec"
+              "97f22919c38f8bffb67b697fbac2cb187dba304d"
             ],
-            "subject": "修复：组件内容点击选中并增强触控板缩放和深灰画布"
+            "subject": "优化：替换访客图标并按主题显示用户名首字头像"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "build/sherlock-account-avatar.svg"
           },
           {
             "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-wheel.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/research-canvas-wheel.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-wheel.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
+            "path": "src/preload/account-ui.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
+              "npm",
               "run",
-              "test/research-html-theme.test.js",
-              "test/research-canvas-wheel.test.ts",
-              "test/research-canvas-wheel-preload.test.ts"
+              "typecheck"
             ],
             "outcome": "passed",
-            "summary": "20 项 iframe 事件与缩放桥接检查、12 项聚焦 UI 检查及类型检查通过",
-            "verifiedCommit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
-            "completedAt": "2026-09-08T03:42:24.955362+00:00",
+            "summary": "类型检查通过；头像五种登录、主题和用户名组合渲染验证通过",
+            "verifiedCommit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
+            "completedAt": "2026-09-08T03:57:19.355712+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "聚焦渲染验证选中不重载 iframe、修饰键选择与手势锚点；最终包构建后复验内容点击。"
+          "summary": "实际头像渲染函数已验证访客 SVG、黑底首字、橙底首字及中文首字；构建后核验客户端。"
         },
         "acceptanceCriteria": [
-          "点击生成组件内容可选中组件且保留内部交互",
-          "深色画布 #181818，浅色及点阵保持",
-          "捏合类型在桌面桥接中保留并提升缩放幅度"
+          "未登录使用用户提供的 Group 71.svg",
+          "登录后显示用户名首字",
+          "浅色黑底白字，深色橙底深色字"
         ],
         "risks": [
           "稳定应用 ID 和用户数据目录沿用以保留现有配置"
         ],
-        "generatedAt": "2026-09-08T03:42:24.955362+00:00"
-      },
-      "merged": {
-        "mergeCommit": "763df92d02db7ab7f6a7d38e8e4622b312d1949a",
-        "verificationCommit": "763df92d02db7ab7f6a7d38e8e4622b312d1949a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "763df92d02db7ab7f6a7d38e8e4622b312d1949a",
-            "completedAt": "2026-09-08T03:43:19.503Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "763df92d02db7ab7f6a7d38e8e4622b312d1949a",
-            "completedAt": "2026-09-08T03:43:19.503Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T03:43:19.503Z"
+        "generatedAt": "2026-09-08T03:57:19.355712+00:00"
       }
     }
   ],
