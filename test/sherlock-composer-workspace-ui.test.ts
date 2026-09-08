@@ -418,7 +418,7 @@ async function mountConversationRoot(
   const sidebarRoot = createRoot(detailsPortalHost)
   const transitions = { enter: 0, leave: 0 }
   const translate = (key: string) => ({
-    'hero.headline': '迷雾之中，洞见真相',
+    'hero.headline': '探索更远，洞见更深。',
     'hero.preview': '预览版',
     'research.right.conversation': '对话',
     'research.right.files': '文件',
@@ -12506,7 +12506,7 @@ describe('Sherlock workspace and composer controls', () => {
       const emptyState = mounted.detailsPortalHost.querySelector('[data-research-empty-state]')
       const workspaceRow = mounted.detailsPortalHost.querySelector('[data-research-empty-workspace-row]')
       const composer = mounted.detailsPortalHost.querySelector('[data-test-composer-bar]')
-      expect(emptyState?.textContent).toContain('迷雾之中，洞见真相')
+      expect(emptyState?.textContent).toContain('探索更远，洞见更深。')
       expect(emptyState?.textContent).toContain('预览版')
       expect(workspaceRow).not.toBeNull()
       expect(composer).not.toBeNull()
