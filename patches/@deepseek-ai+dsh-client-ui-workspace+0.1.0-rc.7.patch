@@ -133,7 +133,7 @@ index ec779d5..e760100 100644
 +			const desktop = typeof window === "undefined" ? void 0 : window.dshDesktop;
 +			if (typeof desktop?.showItemInFolder === "function") {
 +				const result = await desktop.showItemInFolder(path);
-+				if (result?.ok !== true) throw new Error("Finder reveal was not acknowledged by Sherlock.");
++				if (result?.ok !== true) throw new Error("Finder reveal was not acknowledged by EWork Odyssey.");
 +				return;
 +			}
 +			await fallback(path);

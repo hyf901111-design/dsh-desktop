@@ -811,7 +811,7 @@ index 1dd0e89..d983f68 100644
 +			});
 +			return { caret: start, removedLength: end - start };
 +		}
-+		/** Command-menu trigger branded as Sherlock's slash key. */
++		/** Command-menu trigger branded as EWork Odyssey's slash key. */
 +		function CommandLauncherButton({ label, expanded, disabled, onMouseDown, onClick }) {
 +			return (0, react_jsx_runtime.jsx)("button", {
 +				type: "button",
@@ -2621,7 +2621,7 @@ index 1dd0e89..d983f68 100644
 +			"research.right.closeDetails": "关闭详情",
 +			"research.right.pathUnavailable": "路径不可用",
 +			"research.right.source.computer": "本地电脑",
-+			"research.right.source.sherlock": "Sherlock",
++			"research.right.source.sherlock": "EWork Odyssey",
 +			"research.files.unavailable": "所选文件不可用，请重新选择",
 +			"research.context.badge": "参考当前画板资料 · {total}个组件",
 +			"research.context.scope": "本次参考范围",
@@ -2722,7 +2722,7 @@ index 1dd0e89..d983f68 100644
 +			"research.right.closeDetails": "Close Details",
 +			"research.right.pathUnavailable": "Path unavailable",
 +			"research.right.source.computer": "Computer",
-+			"research.right.source.sherlock": "Sherlock",
++			"research.right.source.sherlock": "EWork Odyssey",
 +			"research.files.unavailable": "One or more selected files are unavailable. Please select them again.",
 +			"research.context.badge": "Use current canvas · {total} components",
 +			"research.context.scope": "Reference scope for this send",
@@ -3441,7 +3441,7 @@ index 1dd0e89..d983f68 100644
 +  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style>${lockedRuntime}</head><body>${html}</body></html>`
 +  const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
 +  const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)});`
-+  return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 Sherlock 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`
++  return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 EWork Odyssey 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`
 +}
 +// RESEARCH_COMPONENT_THEME_END
 +
@@ -3592,17 +3592,17 @@ index 1dd0e89..d983f68 100644
 +		}
 +		function serializeResearchPrompt(files, text, occurrences = [], artifacts = [], artifactOccurrences = [], canvasContext) {
 +			const context = canvasContext === void 0 ? void 0 : canonicalResearchCanvasContext(canvasContext);
-+			if (context === null) throw new TypeError("Invalid Sherlock Research canvas context");
++			if (context === null) throw new TypeError("Invalid EWork Odyssey Research canvas context");
 +			if (context === void 0 && (!Array.isArray(files) || files.length === 0) && (!Array.isArray(artifacts) || artifacts.length === 0)) return String(text ?? "");
 +			const descriptors = researchPromptFiles(files, true);
-+			if (descriptors === null) throw new TypeError("Invalid Sherlock Research file descriptors");
++			if (descriptors === null) throw new TypeError("Invalid EWork Odyssey Research file descriptors");
 +			const quotedArtifacts = researchPromptArtifacts(artifacts);
-+			if (quotedArtifacts === null || descriptors.length === 0 && quotedArtifacts.length === 0 && context === void 0) throw new TypeError("Invalid Sherlock Research assistant references");
++			if (quotedArtifacts === null || descriptors.length === 0 && quotedArtifacts.length === 0 && context === void 0) throw new TypeError("Invalid EWork Odyssey Research assistant references");
 +			const body = String(text ?? "");
 +			const positions = researchPromptOccurrences(occurrences, descriptors, body, "fileId");
-+			if (positions === null) throw new TypeError("Invalid Sherlock Research file occurrences");
++			if (positions === null) throw new TypeError("Invalid EWork Odyssey Research file occurrences");
 +			const quotePositions = researchPromptOccurrences(artifactOccurrences, quotedArtifacts, body, "artifactId");
-+			if (quotePositions === null) throw new TypeError("Invalid Sherlock Research assistant occurrences");
++			if (quotePositions === null) throw new TypeError("Invalid EWork Odyssey Research assistant occurrences");
 +			const payload = JSON.stringify({
 +				files: descriptors,
 +				...(context === void 0 ? {} : { canvasContext: context }),
@@ -3610,7 +3610,7 @@ index 1dd0e89..d983f68 100644
 +				...(quotedArtifacts.length === 0 ? {} : { artifacts: quotedArtifacts }),
 +				...(quotePositions.length === 0 ? {} : { artifactOccurrences: quotePositions })
 +			}).replaceAll(RESEARCH_PROMPT_SUFFIX, "\\u241f");
-+			if (payload.length + RESEARCH_PROMPT_PREFIX.length + RESEARCH_PROMPT_SUFFIX.length > RESEARCH_PROMPT_MAX_HEADER) throw new TypeError("Sherlock Research references exceed the prompt header limit");
++			if (payload.length + RESEARCH_PROMPT_PREFIX.length + RESEARCH_PROMPT_SUFFIX.length > RESEARCH_PROMPT_MAX_HEADER) throw new TypeError("EWork Odyssey Research references exceed the prompt header limit");
 +			return `${RESEARCH_PROMPT_PREFIX}${payload}${RESEARCH_PROMPT_SUFFIX}${body}`;
 +		}
 +		function boundedResearchTaskError(value) {
@@ -3707,7 +3707,7 @@ index 1dd0e89..d983f68 100644
 +		function chatFileReference(path) {
 +			const canonicalPath = boundedString(path);
 +			const name = canonicalPath === null ? null : boundedString(researchPromptBasename(canonicalPath));
-+			if (canonicalPath === null || name === null) throw new TypeError("Invalid Sherlock Chat file reference");
++			if (canonicalPath === null || name === null) throw new TypeError("Invalid EWork Odyssey Chat file reference");
 +			const descriptor = { path: canonicalPath, name };
 +			return {
 +				source: CHAT_FILE_REFERENCE_SOURCE,
@@ -3813,7 +3813,7 @@ index 1dd0e89..d983f68 100644
 +			async serialize(ref, signal) {
 +				if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Chat file serialization aborted");
 +				const file = parseChatFileReference(ref);
-+				if (file === null) throw new Error("Invalid Sherlock Chat file reference");
++				if (file === null) throw new Error("Invalid EWork Odyssey Chat file reference");
 +				return `📎 文件：\`${file.path.replaceAll("`", "\\`")}\``;
 +			}
 +		};
@@ -3831,7 +3831,7 @@ index 1dd0e89..d983f68 100644
 +				name: researchPromptBasename(file?.name)
 +			});
 +			const displayName = file?.displayName === void 0 ? void 0 : normalizeResearchCanvasDisplayName(file.displayName, file.name);
-+			if (sourceDescriptor === null || displayName === null) throw new TypeError("Invalid Sherlock Research file reference");
++			if (sourceDescriptor === null || displayName === null) throw new TypeError("Invalid EWork Odyssey Research file reference");
 +			const descriptor = displayName === void 0 ? sourceDescriptor : { ...sourceDescriptor, name: displayName };
 +			return {
 +				source: RESEARCH_FILE_REFERENCE_SOURCE,
@@ -3857,7 +3857,7 @@ index 1dd0e89..d983f68 100644
 +		function researchArtifactReference(artifact) {
 +			const { sourceText: _sourceText, ...lightweightArtifact } = artifact;
 +			const descriptor = canonicalResearchArtifactReference(lightweightArtifact);
-+			if (descriptor === null) throw new TypeError("Invalid Sherlock Research assistant reference");
++			if (descriptor === null) throw new TypeError("Invalid EWork Odyssey Research assistant reference");
 +			const label = researchArtifactReferenceLabel(descriptor);
 +			return {
 +				source: RESEARCH_ARTIFACT_REFERENCE_SOURCE,
@@ -3881,7 +3881,7 @@ index 1dd0e89..d983f68 100644
 +			async serialize(ref, signal) {
 +				if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Research file serialization aborted");
 +				const file = parseResearchFileReference(ref);
-+				if (file === null) throw new Error("Invalid Sherlock Research file reference");
++				if (file === null) throw new Error("Invalid EWork Odyssey Research file reference");
 +				const payload = JSON.stringify(file).replaceAll(RESEARCH_PROMPT_SUFFIX, "\\u241f");
 +				return `${RESEARCH_FILE_REFERENCE_PREFIX}${payload}${RESEARCH_PROMPT_SUFFIX}`;
 +			}
@@ -3902,7 +3902,7 @@ index 1dd0e89..d983f68 100644
 +			async serialize(ref, signal) {
 +				if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Research assistant serialization aborted");
 +				const artifact = parseResearchArtifactReference(ref);
-+				if (artifact === null) throw new Error("Invalid Sherlock Research assistant reference");
++				if (artifact === null) throw new Error("Invalid EWork Odyssey Research assistant reference");
 +				const payload = JSON.stringify(artifact).replaceAll(RESEARCH_PROMPT_SUFFIX, "\\u241f");
 +				return `${RESEARCH_ARTIFACT_REFERENCE_PREFIX}${payload}${RESEARCH_PROMPT_SUFFIX}`;
 +			}

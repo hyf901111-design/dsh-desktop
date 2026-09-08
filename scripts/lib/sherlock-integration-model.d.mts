@@ -16,6 +16,7 @@ export interface FeatureHandoff {
   baseCommit: string
   tipCommit: string
   commits: RangeCommit[]
+  boundaryParents?: string[]
   files: NameStatusChange[]
   checks: CheckEvidence[]
   uiVerification: { outcome: 'passed' | 'not-applicable'; summary: string }

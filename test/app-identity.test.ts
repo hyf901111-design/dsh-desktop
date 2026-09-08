@@ -16,29 +16,29 @@ afterEach(async () => {
 })
 
 describe('desktop app identity', () => {
-  it('keeps old legacy data isolated while the bridge and notarized app share Sherlock data', () => {
+  it('keeps old legacy data isolated while the bridge and notarized app share EWork Odyssey data', () => {
     expect(
       resolveDesktopIdentity('/Users/test/Library/Application Support', 'legacy', '')
     ).toEqual({
-      name: 'Sherlock',
+      name: 'EWork Odyssey',
       userData: '/Users/test/Library/Application Support/dsh-desktop'
     })
     expect(
       resolveDesktopIdentity('/Users/test/Library/Application Support', 'legacy-bridge', '')
     ).toEqual({
-      name: 'Sherlock',
+      name: 'EWork Odyssey',
       userData: '/Users/test/Library/Application Support/sherlock-desktop'
     })
     expect(
       resolveDesktopIdentity('/Users/test/Library/Application Support', 'notarized', '')
     ).toEqual({
-      name: 'Sherlock',
+      name: 'EWork Odyssey',
       userData: '/Users/test/Library/Application Support/sherlock-desktop'
     })
     expect(
       resolveDesktopIdentity('/Users/test/Library/Application Support', 'development', '')
     ).toEqual({
-      name: 'Sherlock Dev',
+      name: 'EWork Odyssey Dev',
       userData: '/Users/test/Library/Application Support/dsh-desktop-dev'
     })
   })

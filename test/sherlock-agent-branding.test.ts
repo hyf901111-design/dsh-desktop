@@ -17,17 +17,17 @@ function renderedSectionText(section: PromptSection): string {
   return typeof section.text === 'function' ? section.text() : section.text
 }
 
-describe('Sherlock Agent model-facing identity', () => {
-  it('assembles the fixed identity as Sherlock Agent', async () => {
+describe('EWork Odyssey Agent model-facing identity', () => {
+  it('assembles the fixed identity as EWork Odyssey Agent', async () => {
     const prompt = new SystemPrompt(new Context(), {})
 
     const rendered = renderPrompt(await prompt.assemble())
 
-    expect(rendered).toContain('You are Sherlock Agent.')
+    expect(rendered).toContain('You are EWork Odyssey Agent.')
     expect(rendered).not.toContain('DeepSeek Harness')
   })
 
-  it('describes the implementation checkout as Sherlock Agent', () => {
+  it('describes the implementation checkout as EWork Odyssey Agent', () => {
     const sections: PromptSection[] = []
     addHarnessSourceSection(
       {
@@ -41,15 +41,15 @@ describe('Sherlock Agent model-facing identity', () => {
           }
         }
       } as never,
-      '/Applications/Sherlock.app/Contents/Resources/app'
+      '/Applications/EWork Odyssey.app/Contents/Resources/app'
     )
 
     const rendered = sections.map(renderedSectionText).join('\n')
-    expect(rendered).toContain('Sherlock Agent implementation checkout')
+    expect(rendered).toContain('EWork Odyssey Agent implementation checkout')
     expect(rendered).not.toContain('DeepSeek Harness')
   })
 
-  it('describes the active desktop surface as Sherlock', () => {
+  it('describes the active desktop surface as EWork Odyssey', () => {
     const sections: PromptSection[] = []
     const promptContext = {
       get(name: string) {
@@ -95,7 +95,7 @@ describe('Sherlock Agent model-facing identity', () => {
     })
 
     const rendered = sections.map(renderedSectionText).join('\n')
-    expect(rendered).toContain('Sherlock desktop interface')
+    expect(rendered).toContain('EWork Odyssey desktop interface')
     expect(rendered).not.toContain('DeepSeek Harness')
   })
 })

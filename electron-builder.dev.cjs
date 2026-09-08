@@ -3,14 +3,14 @@ const packageJson = require('./package.json')
 module.exports = {
   ...packageJson.build,
   appId: 'io.dsh.desktop.dev',
-  productName: 'Sherlock Dev',
+  productName: 'EWork Odyssey Dev',
   directories: {
     ...packageJson.build.directories,
     output: 'dist-dev'
   },
   extraMetadata: {
     name: 'sherlock-dev',
-    productName: 'Sherlock Dev',
+    productName: 'EWork Odyssey Dev',
     dshDesktopChannel: 'development'
   },
   nsis: {

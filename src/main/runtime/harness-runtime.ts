@@ -165,7 +165,7 @@ export class HarnessRuntime {
       return
     }
     if (!existsSync(this.options.dshPatchPath)) {
-      this.setState('failed', `Sherlock runtime patch was not found: ${this.options.dshPatchPath}`)
+      this.setState('failed', `EWork Odyssey runtime patch was not found: ${this.options.dshPatchPath}`)
       return
     }
 
@@ -201,7 +201,7 @@ export class HarnessRuntime {
     this.writeLog(`\n[desktop] starting ${new Date().toISOString()}`)
     this.writeLog(`[desktop] launch directory ${launchDirectory}`)
     this.writeLog(`[desktop] endpoint ${url}`)
-    this.setState('starting', 'Starting Sherlock…')
+    this.setState('starting', 'Starting EWork Odyssey…')
 
     let child: ChildProcessWithoutNullStreams
     try {

@@ -51,7 +51,7 @@ class SearchVerificationError extends Error {}
 export function browserSearchWindowOptions(): BrowserWindowConstructorOptions {
   return {
     show: false,
-    title: 'Sherlock Web Search',
+    title: 'EWork Odyssey Web Search',
     width: 960,
     height: 720,
     webPreferences: {
@@ -308,7 +308,7 @@ export class BrowserSearchController {
   private throwIfUnavailable(signal?: AbortSignal): void {
     if (signal?.aborted === true) throw abortError(signal)
     if (this.disposed) {
-      throw new Error('本地搜索当前不可用，请重新打开 Sherlock 后重试。')
+      throw new Error('本地搜索当前不可用，请重新打开 EWork Odyssey 后重试。')
     }
   }
 

@@ -252,7 +252,7 @@ function configureAppIdentity(): void {
   // would make an ordinary upgrade look like a fresh installation.
   const explicitAppDataPath = app.commandLine.getSwitchValue('sherlock-app-data-dir').trim()
   if (explicitAppDataPath && !isAbsolute(explicitAppDataPath)) {
-    throw new Error('The Sherlock app-data path must be absolute.')
+    throw new Error('The EWork Odyssey app-data path must be absolute.')
   }
   const appDataPath = explicitAppDataPath ? normalize(explicitAppDataPath) : app.getPath('appData')
   if (explicitAppDataPath) app.setPath('appData', appDataPath)
@@ -265,7 +265,7 @@ function configureAppIdentity(): void {
     try {
       migrateLegacyUserData(join(appDataPath, 'dsh-desktop'), identity.userData)
     } catch (error) {
-      console.warn('[desktop] failed to migrate legacy Sherlock user data', error)
+      console.warn('[desktop] failed to migrate legacy EWork Odyssey user data', error)
     }
   }
   app.setName(identity.name)
@@ -288,7 +288,7 @@ function configureAppIdentity(): void {
         )
       }
     } catch (error) {
-      console.warn('[desktop] failed to synchronize bundled Sherlock skills', error)
+      console.warn('[desktop] failed to synchronize bundled EWork Odyssey skills', error)
     }
 
     const bundledProfilePath = join(process.resourcesPath, 'sherlock-plugin-profile')
@@ -299,10 +299,10 @@ function configureAppIdentity(): void {
         appVersion: app.getVersion()
       })
       if (result.installed) {
-        console.info('[desktop] installed bundled Sherlock plugin profile', result.plugins)
+        console.info('[desktop] installed bundled EWork Odyssey plugin profile', result.plugins)
       }
     } catch (error) {
-      console.error('[desktop] failed to install bundled Sherlock plugin profile', error)
+      console.error('[desktop] failed to install bundled EWork Odyssey plugin profile', error)
       throw error
     }
   }
@@ -662,7 +662,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
   ipcMain.handle('desktop-menu:execute', async (event, command: unknown) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (!isDesktopMenuCommand(command)) {
-      throw new Error('Unknown Sherlock menu command.')
+      throw new Error('Unknown EWork Odyssey menu command.')
     }
     await executeDesktopMenuCommand(command)
     return { ok: true }
@@ -672,7 +672,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
   ipcMain.handle('desktop-titlebar:set-theme', (event, isDark: unknown) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (typeof isDark !== 'boolean') {
-      throw new Error('The Sherlock titlebar theme must be a boolean.')
+      throw new Error('The EWork Odyssey titlebar theme must be a boolean.')
     }
     if (
       (process.platform === 'win32' || process.platform === 'darwin') &&
@@ -691,7 +691,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     },
     openDirectory: async () => {
       const window = mainWindow
-      if (!window) throw new Error('The main Sherlock window is unavailable.')
+      if (!window) throw new Error('The main EWork Odyssey window is unavailable.')
       const result = await dialog.showOpenDialog(window, {
         title: harnessLocale() === 'zh' ? '选择工作区目录' : 'Select Workspace Directory',
         properties: ['openDirectory', 'createDirectory']
@@ -841,8 +841,8 @@ async function executeDesktopMenuCommand(command: DesktopMenuCommand): Promise<v
     case 'about':
       await dialog.showMessageBox(window, {
         type: 'info',
-        title: 'Sherlock',
-        message: `Sherlock ${app.getVersion()}`,
+        title: 'EWork Odyssey',
+        message: `EWork Odyssey ${app.getVersion()}`,
         detail: 'A local-first desktop knowledge assistant.',
         buttons: ['OK'],
         noLink: true
@@ -893,7 +893,7 @@ async function waitForPluginRecoveryAction(options: {
 
 function showUnexpectedError(error: unknown): void {
   const message = error instanceof Error ? error.stack ?? error.message : String(error)
-  dialog.showErrorBox('Sherlock encountered an error', message)
+  dialog.showErrorBox('EWork Odyssey encountered an error', message)
 }
 
 async function showPluginRecovery(options?: {

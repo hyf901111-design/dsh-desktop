@@ -136,6 +136,7 @@ export function validateFeatureHandoff(value) {
     'baseCommit',
     'tipCommit',
     'commits',
+    'boundaryParents',
     'files',
     'checks',
     'uiVerification',
@@ -155,6 +156,9 @@ export function validateFeatureHandoff(value) {
   if (commitIds.size !== commits.length) fail('commits 不能包含重复提交。')
   if (commits.at(-1).commit !== tipCommit) fail('commits 必须按范围顺序结束于 tipCommit。')
   if (commitIds.has(baseCommit)) fail('commits 不能包含 baseCommit。')
+  const boundaryParents = handoff.boundaryParents === undefined ? [] : strings(handoff.boundaryParents, 'boundaryParents').map((parent) => sha(parent, 'boundaryParents'))
+  const externalParents = [...new Set(commits.flatMap((commit) => commit.parents).filter((parent) => parent !== baseCommit && !commitIds.has(parent)))].sort()
+  if (JSON.stringify([...boundaryParents].sort()) !== JSON.stringify(externalParents)) fail('commits 的父提交未包含在范围内，或 boundaryParents 与实际边界不一致。')
   const commitPositions = new Map(commits.map((commit, index) => [commit.commit, index]))
   const reachable = new Set([tipCommit])
   const pending = [tipCommit]
@@ -169,7 +173,7 @@ export function validateFeatureHandoff(value) {
   }
   for (const [index, commit] of commits.entries()) {
     for (const parent of commit.parents) {
-      if (parent === baseCommit) continue
+      if (parent === baseCommit || boundaryParents.includes(parent)) continue
       const parentIndex = commitPositions.get(parent)
       if (parentIndex === undefined) fail(`commits[${index}] 的父提交未包含在范围内。`)
       if (parentIndex >= index) fail(`commits 必须按父提交在前的拓扑顺序排列。`)
@@ -192,6 +196,7 @@ export function validateFeatureHandoff(value) {
     baseCommit,
     tipCommit,
     commits,
+    ...(boundaryParents.length ? { boundaryParents } : {}),
     files,
     checks,
     uiVerification: {
@@ -224,6 +229,11 @@ export function buildFeatureHandoff({ repository, baseCommit, metadata, generate
   }
   const commits = listRangeCommits(context.worktreeRoot, declaredBase, context.head)
   if (commits.length === 0) fail('功能提交范围不能为空。')
+  const rangeIds = new Set(commits.map((commit) => commit.commit))
+  const boundaryParents = [...new Set(commits.flatMap((commit) => commit.parents).filter((parent) => parent !== declaredBase && !rangeIds.has(parent)))].sort()
+  for (const parent of boundaryParents) {
+    if (!isAncestor(context.worktreeRoot, parent, declaredBase)) fail('范围外父提交必须是基线的祖先。')
+  }
   const fields = object(metadata, 'metadata')
   const handoff = validateFeatureHandoff({
     schemaVersion: 1,
@@ -232,6 +242,7 @@ export function buildFeatureHandoff({ repository, baseCommit, metadata, generate
     baseCommit: declaredBase,
     tipCommit: context.head,
     commits,
+    ...(boundaryParents.length ? { boundaryParents } : {}),
     // baseCommit is required to be an ancestor, making this exact two-endpoint
     // comparison equivalent to Git's three-dot feature inventory.
     files: diffNameStatus(context.worktreeRoot, declaredBase, context.head),

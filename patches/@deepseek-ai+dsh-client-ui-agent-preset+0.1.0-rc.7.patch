@@ -32,10 +32,10 @@ index 259765c..7617bc7 100644
 +			packageFile: "Package",
 +			packageContents: "Contents",
 +			packageContentsValue: "{count} files",
-+			packageVersion: "Created with Sherlock {version}",
++			packageVersion: "Created with EWork Odyssey {version}",
 +			importWarningAbsolutePaths: "Some files contain absolute paths and may need editing on this computer.",
 +			importWarningPossibleSecrets: "Some files may contain API keys, tokens, or other secrets. Review them after importing.",
-+			importWarningVersionMismatch: "This package was created with another Sherlock version and may need changes.",
++			importWarningVersionMismatch: "This package was created with another EWork Odyssey version and may need changes.",
 +			importConfirm: "Import",
 +			importing: "Importing…",
 +			readingPackage: "Reading package…",
@@ -75,10 +75,10 @@ index 259765c..7617bc7 100644
 +			packageFile: "压缩包",
 +			packageContents: "内容",
 +			packageContentsValue: "{count} 个文件",
-+			packageVersion: "由 Sherlock {version} 创建",
++			packageVersion: "由 EWork Odyssey {version} 创建",
 +			importWarningAbsolutePaths: "部分文件包含绝对路径，换到这台电脑后可能需要调整。",
 +			importWarningPossibleSecrets: "部分文件可能包含 API Key、Token 或其他密钥，请在导入后检查。",
-+			importWarningVersionMismatch: "该压缩包由另一个 Sherlock 版本创建，可能需要调整。",
++			importWarningVersionMismatch: "该压缩包由另一个 EWork Odyssey 版本创建，可能需要调整。",
 +			importConfirm: "导入",
 +			importing: "正在导入…",
 +			readingPackage: "正在读取压缩包…",
@@ -209,7 +209,7 @@ index 259765c..7617bc7 100644
  			}
  			return response.result.ok ? void 0 : response.result.error.message;
  		}
-+		/** Reduce every roster-backed surface to Sherlock's single standard mode. */
++		/** Reduce every roster-backed surface to EWork Odyssey's single standard mode. */
 +		async function normalizeStandardPresetRoster(api, roster) {
 +			const standard = roster.presets.find((preset) => preset.id === STANDARD_AGENT_PRESET_ID);
 +			if (standard === void 0) return {
@@ -527,7 +527,7 @@ index 259765c..7617bc7 100644
 +								(0, react_jsx_runtime.jsx)("dd", { children: draft.fileName }),
 +								(0, react_jsx_runtime.jsx)("dt", { children: t("packageContents") }),
 +								(0, react_jsx_runtime.jsx)("dd", { children: t("packageContentsValue", { count: draft.fileCount }) }),
-+								draft.sourceDshVersion === void 0 ? null : (0, react_jsx_runtime.jsx)("dt", { children: "Sherlock" }),
++								draft.sourceDshVersion === void 0 ? null : (0, react_jsx_runtime.jsx)("dt", { children: "EWork Odyssey" }),
 +								draft.sourceDshVersion === void 0 ? null : (0, react_jsx_runtime.jsx)("dd", { children: t("packageVersion", { version: draft.sourceDshVersion }) })
 +							]
 +						}),

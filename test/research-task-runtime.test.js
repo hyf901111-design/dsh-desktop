@@ -324,7 +324,7 @@ describe('Research task contract and prompt', () => {
     const prompt = buildResearchTaskPrompt({ ...containerRequest(), prompt: '创建紫色品牌的交互式收入图表，包含筛选按钮' })
     expect(prompt).toContain('用户明确提出的品牌、配色、字体或布局要求优先，仅覆盖其明确要求的方面')
     expect(prompt).toContain('仅要求品牌色或强调色不等于要求固定深浅主题')
-    expect(prompt).toContain('仍须适配 Sherlock 深浅主题')
+    expect(prompt).toContain('仍须适配 EWork Odyssey 深浅主题')
     expect(prompt).toContain('超出原生 schema 表达能力的明确视觉要求，使用 html 实现')
     expect(prompt).toContain('用户需求：创建紫色品牌的交互式收入图表，包含筛选按钮')
   })

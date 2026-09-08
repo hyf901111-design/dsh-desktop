@@ -1,7 +1,7 @@
 {
   "name": "dsh-fund-research-runtime",
   "version": "0.1.0",
-  "description": "Sherlock product runtime for evidence-based fund research.",
+  "description": "EWork Odyssey product runtime for evidence-based fund research.",
   "private": true,
   "type": "module",
   "main": "./index.js",

@@ -33,7 +33,7 @@ export function assertTrustedMainWindowEvent(
   window: TrustedWindow | undefined
 ): asserts window is TrustedWindow {
   if (!window || !isTrustedMainWindowEvent(event, window)) {
-    throw new Error('This action is only available from the main Sherlock window.')
+    throw new Error('This action is only available from the main EWork Odyssey window.')
   }
 }
 

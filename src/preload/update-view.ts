@@ -53,11 +53,11 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
       return zh ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`
     }
     case 'installing':
-      return zh ? '正在准备安装，完成后将自动重启…' : 'Preparing installation; Sherlock will restart automatically…'
+      return zh ? '正在准备安装，完成后将自动重启…' : 'Preparing installation; EWork Odyssey will restart automatically…'
     case 'downloaded':
-      return zh ? `Sherlock${version} 已下载完成` : `Sherlock${version} is ready to install`
+      return zh ? `EWork Odyssey${version} 已下载完成` : `EWork Odyssey${version} is ready to install`
     case 'up-to-date':
-      return zh ? 'Sherlock 已是最新版本' : 'Sherlock is up to date'
+      return zh ? 'EWork Odyssey 已是最新版本' : 'EWork Odyssey is up to date'
     case 'unsupported':
       return zh ? '当前版本不支持自动更新' : 'Automatic updates are unavailable in this build'
     case 'error':

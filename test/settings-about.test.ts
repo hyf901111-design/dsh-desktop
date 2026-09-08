@@ -76,7 +76,7 @@ async function loadSettingsBundle(options?: {
   Object.assign(bundleWindow, {
     sherlockAbout: options?.aboutBridge ?? {
       getInfo: async (): Promise<AboutInfo> => ({
-        productName: 'Sherlock',
+        productName: 'EWork Odyssey',
         version: '0.6.7',
         releaseNotes: []
       }),
@@ -139,7 +139,7 @@ function installBrowserGlobals(browserWindow: Window): () => void {
   }
 }
 
-describe('Sherlock About settings', () => {
+describe('EWork Odyssey About settings', () => {
   it('builds localized release notes around the real runtime version', async () => {
     const aboutModule = await import('../src/preload/about-info').catch(() => null)
 
@@ -163,7 +163,7 @@ describe('Sherlock About settings', () => {
     expect(zh.releaseNotes.find((note) => note.version === '0.8.2')?.items).toHaveLength(6)
     expect(en.releaseNotes.find((note) => note.version === '0.8.2')?.items).toHaveLength(6)
     expect(zh.releaseNotes.find((note) => note.version === '0.8.2')?.items.some((item) => item.includes('Fn'))).toBe(true)
-    expect(zh.productName).toBe('Sherlock')
+    expect(zh.productName).toBe('EWork Odyssey')
     expect(zh.version).toBe('9.8.7')
     expect(zh.releaseNotes.find((note) => note.version === '0.8.1')).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
     expect(en.releaseNotes.find((note) => note.version === '0.8.1')).toMatchObject({ version: '0.8.1', date: '2026-09-04' })
@@ -244,7 +244,7 @@ describe('Sherlock About settings', () => {
       browserWindow,
       aboutBridge: {
         getInfo: async () => ({
-          productName: 'Sherlock',
+          productName: 'EWork Odyssey',
           version: '0.7.2',
           releaseNotes: []
         }),
@@ -269,7 +269,7 @@ describe('Sherlock About settings', () => {
       'about.error': '暂时无法读取版本信息',
       'about.check': '检查更新',
       'about.checking': '正在检查更新…',
-      'about.upToDate': 'Sherlock 已是最新版本',
+      'about.upToDate': 'EWork Odyssey 已是最新版本',
       'about.updateAvailable': '发现新版本 {version}',
       'about.checkFailed': '检查更新失败'
     }
@@ -292,7 +292,7 @@ describe('Sherlock About settings', () => {
         button?.click()
       })
       expect(checkForUpdates).toHaveBeenCalledOnce()
-      expect(host.textContent).toContain('Sherlock 已是最新版本')
+      expect(host.textContent).toContain('EWork Odyssey 已是最新版本')
     } finally {
       await act(async () => root.unmount())
       restoreGlobals()
@@ -308,7 +308,7 @@ describe('Sherlock About settings', () => {
     const installUpdate = vi.fn(async () => {})
     const unsubscribe = vi.fn()
     const bundle = await loadSettingsBundle({ browserWindow, aboutBridge: {
-      getInfo: async () => ({ productName: 'Sherlock', version: '0.8.3', releaseNotes: [] }),
+      getInfo: async () => ({ productName: 'EWork Odyssey', version: '0.8.3', releaseNotes: [] }),
       checkForUpdates: async () => available,
       getUpdateStatus: async () => ({ ...available, phase: 'idle' }),
       downloadUpdate,
@@ -393,7 +393,7 @@ describe('Sherlock About settings', () => {
     if (typeof AboutContent !== 'function') return
 
     const info: AboutInfo = {
-      productName: 'Sherlock',
+      productName: 'EWork Odyssey',
       version: '0.7.0',
       releaseNotes: [
         {
@@ -414,7 +414,7 @@ describe('Sherlock About settings', () => {
       })
     )
 
-    expect(html).toContain('Sherlock')
+    expect(html).toContain('EWork Odyssey')
     expect(html).toContain('当前版本 0.7.0')
     expect(html).toContain('更新日志')
     expect(html).toContain('新增研究画布')

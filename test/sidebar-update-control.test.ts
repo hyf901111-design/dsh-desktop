@@ -37,7 +37,7 @@ function actions() {
   }
 }
 
-describe('Sherlock sidebar update control', () => {
+describe('EWork Odyssey sidebar update control', () => {
   it('mounts one hidden control at the end of the sidebar footer', () => {
     const document = fixture()
     const control = new SidebarUpdateControl(document, 'zh', actions())
@@ -104,7 +104,7 @@ describe('Sherlock sidebar update control', () => {
     )!
     expect(button.hidden).toBe(false)
     expect(button.dataset.action).toBe('download')
-    expect(button.getAttribute('aria-label')).toBe('下载 Sherlock 0.6.0 更新')
+    expect(button.getAttribute('aria-label')).toBe('下载 EWork Odyssey 0.6.0 更新')
     expect(button.querySelector('.sherlock-sidebar-update-label')?.textContent).toBe('下载更新')
     expect(button.innerHTML).toContain('M12 3v11')
     button.click()
