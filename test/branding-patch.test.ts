@@ -70,8 +70,8 @@ describe('EWork Odyssey sidebar branding', () => {
     const heroEnd = client.indexOf('//#endregion', heroStart)
     const hero = client.slice(heroStart, heroEnd)
 
-    expect(client).toContain('"hero.headline": "迷雾之中，洞见真相"')
-    expect(client).toContain('"hero.headline": "Through the Mist, See the Truth"')
+    expect(client).toContain('"hero.headline": "探索更远，洞见更深。"')
+    expect(client).toContain('"hero.headline": "Explore Further. See Deeper."')
     expect(hero).not.toContain('FishLogo')
     expect(hero).toContain('children: t("hero.preview")')
   })
