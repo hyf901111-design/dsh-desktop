@@ -49,3 +49,20 @@ describe('stable interactive collections',()=>{
  it('escapes hostile data and rejects unsafe URLs',()=>{const out=renderInteractiveArtifact({...base,title:'<script>alert(1)</script>'});expect(out.html).toContain('&lt;script&gt;');expect(renderInteractiveArtifact({...base,items:[{...base.items[0],url:'javascript:alert(1)'}]})).toBeNull()});
  it('labels dashboards as snapshots with data dates',()=>{const out=renderInteractiveArtifact({version:1,type:'dashboard',title:'数据',asOf:'2026-09-08',items:[{label:'指标',value:'12%',detail:'公开样例'}]});expect(out.html).toContain('未开启持续更新');expect(out.html).toContain('2026-09-08')});
 });
+
+describe('evidence-preserving synthesis retries',()=>{
+ it('carries web evidence into a tool-free repair instead of searching from scratch',async()=>{
+  const start=vi.fn(async()=>({childSessionId:'child-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve(start.mock.calls.length===1?{stopReason:'completed',output:[{type:'reasoning',text:'PRIVATE'}],researchEvidence:'已取得来源：[示例报告](https://example.org/report)，覆盖公司12家。'}:{stopReason:'completed',output:[]})}));
+  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'task'});
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'研究公司覆盖数量'});
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'));
+  expect(start).toHaveBeenCalledTimes(2);expect(start.mock.calls[1][0].synthesisOnly).toBe(true);
+  expect(start.mock.calls[1][0].prompt).toContain('覆盖公司12家');expect(start.mock.calls[1][0].prompt).not.toContain('PRIVATE');
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toContain('完整分析暂未完成');await runtime.dispose();
+ });
+ it('retains only successful identified search results',async()=>{
+  const {researchSearchEvidence}=await import('../packages/dsh-research-task-runtime/index.js');
+  const event={type:'tool/result',data:{message:{content:[{type:'tool-result',toolCallId:'search',content:[{type:'text',text:'[来源](https://example.org) 有效摘要'},{type:'reasoning',text:'PRIVATE'}]},{type:'tool-result',toolCallId:'read-file',content:[{type:'text',text:'PRIVATE FILE'}]},{type:'tool-result',toolCallId:'search',isError:true,content:[{type:'text',text:'PRIVATE ERROR'}]}]}}};
+  const text=researchSearchEvidence(event,new Set(['search']));expect(text).toContain('有效摘要');expect(text).not.toContain('PRIVATE');
+ });
+});

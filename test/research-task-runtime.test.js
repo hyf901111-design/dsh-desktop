@@ -937,6 +937,29 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
+  it('bounds a stuck research child and carries only its search evidence into recovery', async () => {
+    const { createSubagentAdapter } = await runtimeModule()
+    vi.useFakeTimers()
+    const parent = { id: 'parent-1' }, child = { id: 'child-1', session: { events: [] } }
+    const run = { id: child.id, localAgent: child, result: new Promise(() => {}), dispose: vi.fn(async () => {}) }
+    const ctx = sessionEventContext(parent, child, run)
+    let handle
+    try {
+      handle = await createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query: '离线研究', prompt: '生成组件', signal: new AbortController().signal, onSessionEvent: vi.fn() })
+      ctx.emit(child, { type: 'tool/call', seq: 1, data: { callId: 'search-1', name: 'web_search' } })
+      ctx.emit(child, { type: 'tool/result', seq: 2, data: { message: { content: [{ type: 'tool-result', toolCallId: 'search-1', content: [{ type: 'text', text: '来源摘要：已取得数据' }] }] } } })
+      await vi.advanceTimersByTimeAsync(180001)
+      await expect(handle.result).resolves.toMatchObject({ stopReason: 'completed', output: [], researchEvidence: '来源摘要：已取得数据' })
+      await handle.dispose()
+      expect(run.dispose).toHaveBeenCalledTimes(1)
+      const repair = await createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query: '最新医药市场', prompt: '基于已有证据整理', synthesisOnly: true, signal: new AbortController().signal, onSessionEvent: vi.fn() })
+      expect(ctx.subagents.start.mock.calls.at(-1)[1].toolFilter.allow).toEqual([])
+      await vi.advanceTimersByTimeAsync(90001)
+      await expect(repair.result).resolves.toMatchObject({ stopReason: 'completed', output: [] })
+      await repair.dispose()
+    } finally { await handle?.dispose(); vi.useRealTimers() }
+  })
+
   it('starts a child after the five-second preflight budget and ignores late lookup events', async () => {
     const fixture = containerAdapterFixture()
     const lookup = Promise.withResolvers()
