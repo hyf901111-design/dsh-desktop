@@ -1,7 +1,7 @@
 {
   "name": "sherlock",
   "version": "0.9.0",
-  "description": "Sherlock local-first desktop knowledge assistant.",
+  "description": "EWork Odyssey local-first desktop knowledge assistant.",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
@@ -50,11 +50,11 @@
     "package:dev:dir": "npm run build && electron-builder --dir --config electron-builder.dev.cjs",
     "package:dev:win": "node scripts/verify-target.mjs win32 x64 && npm run build && electron-builder --win --x64 --publish never --config electron-builder.dev.cjs",
     "package:mac": "npm run build && electron-builder --mac --publish never && npm run verify:package:mac -- --app auto",
-    "package:mac:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/Sherlock.app\"",
-    "package:mac:arm64:unsigned-ci": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/Sherlock.app\" --skip-signature",
-    "package:mac:x64": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/Sherlock.app\"",
-    "package:mac:x64:unsigned-ci": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/Sherlock.app\" --skip-signature",
-    "package:mac:notarized:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run prepare:bundled-plugin-profile && npm run build && electron-builder --mac --arm64 --publish never --config electron-builder.notarized.cjs && npm run verify:package:mac -- --app \"dist-notarized/mac-arm64/Sherlock.app\"",
+    "package:mac:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/EWork Odyssey.app\"",
+    "package:mac:arm64:unsigned-ci": "node scripts/verify-target.mjs darwin arm64 && npm run build && electron-builder --mac --arm64 --publish never && npm run verify:package:mac -- --app \"dist/mac-arm64/EWork Odyssey.app\" --skip-signature",
+    "package:mac:x64": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/EWork Odyssey.app\"",
+    "package:mac:x64:unsigned-ci": "node scripts/verify-target.mjs darwin x64 && npm run build && electron-builder --mac --x64 --publish never && npm run verify:package:mac -- --app \"dist/mac/EWork Odyssey.app\" --skip-signature",
+    "package:mac:notarized:arm64": "node scripts/verify-target.mjs darwin arm64 && npm run prepare:bundled-plugin-profile && npm run build && electron-builder --mac --arm64 --publish never --config electron-builder.notarized.cjs && npm run verify:package:mac -- --app \"dist-notarized/mac-arm64/EWork Odyssey.app\"",
     "verify:package:mac": "node scripts/verify-packaged-macos.mjs",
     "release:cloudflare": "node scripts/publish-cloudflare-release.mjs",
     "release:cloudflare:prune-oldest": "node scripts/prune-oldest-cloudflare-release.mjs",
@@ -116,7 +116,7 @@
   },
   "build": {
     "appId": "io.dsh.desktop",
-    "productName": "Sherlock",
+    "productName": "EWork Odyssey",
     "asar": false,
     "npmRebuild": false,
     "compression": "maximum",
@@ -196,8 +196,8 @@
         "zip"
       ],
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Sherlock 需要使用麦克风，将你的语音指令转为研究画布组件。",
-        "NSSpeechRecognitionUsageDescription": "Sherlock 使用语音识别将你的指令转成文字，并在研究画布中执行。"
+        "NSMicrophoneUsageDescription": "EWork Odyssey 需要使用麦克风，将你的语音指令转为研究画布组件。",
+        "NSSpeechRecognitionUsageDescription": "EWork Odyssey 使用语音识别将你的指令转成文字，并在研究画布中执行。"
       },
       "entitlements": "build/entitlements.mac.plist"
     },

@@ -20,7 +20,7 @@ function readOption(name) {
 }
 
 function resolveAutomaticAppPath() {
-  const appName = 'Sherlock.app'
+  const appName = 'EWork Odyssey.app'
   const candidates =
     process.arch === 'arm64'
       ? [path.resolve('dist/mac-arm64', appName), path.resolve('dist/mac', appName)]

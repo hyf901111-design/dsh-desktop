@@ -15,7 +15,7 @@ const VOLATILE_NAMES = new Set([
 const MIGRATION_MARKER = '.sherlock-legacy-migration-complete'
 
 /**
- * Copies durable data from the historical DSH directory into Sherlock's new
+ * Copies durable data from the historical DSH directory into EWork Odyssey's new
  * application identity. A sibling staging directory keeps interrupted copies
  * from making a later launch look like migration already completed.
  */

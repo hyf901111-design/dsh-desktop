@@ -9,8 +9,8 @@
         color-scheme: light dark;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         --surface: #f8f8f6;
-        --logo-filter: none;
-        --sheen-filter: invert(1);
+        --logo-filter: brightness(0);
+        --sheen-filter: none;
         --keyhole-glow: rgba(104, 120, 151, 0.2);
         --label: #17181a;
         --secondary-label: #777a80;
@@ -33,7 +33,7 @@
       .logo-stage {
         position: relative;
         width: min(212px, 42vw);
-        aspect-ratio: 1317 / 180;
+        aspect-ratio: 104 / 34;
         isolation: isolate;
       }
       .logo-reveal {
@@ -110,7 +110,7 @@
       @media (prefers-color-scheme: dark) {
         :root {
           --surface: #141416;
-          --logo-filter: invert(1);
+          --logo-filter: none;
           --sheen-filter: none;
           --keyhole-glow: rgba(190, 203, 229, 0.22);
           --label: #f3f4f6;
@@ -125,7 +125,7 @@
   </head>
   <body>
     <main>
-      <div class="logo-stage" role="img" aria-label="Sherlock">
+      <div class="logo-stage" role="img" aria-label="EWork Odyssey">
         <span class="keyhole-pulse" aria-hidden="true"></span>
         <div class="logo-reveal" aria-hidden="true">
           <img class="logo-mark" src="sherlock-logo.svg" alt="" />

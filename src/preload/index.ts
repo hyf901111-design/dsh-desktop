@@ -157,7 +157,7 @@ window.addEventListener('unhandledrejection', (event) => {
 contextBridge.exposeInMainWorld(
   'sherlockDesktopInfo',
   Object.freeze({
-    name: 'Sherlock',
+    name: 'EWork Odyssey',
     version: appVersionFromArguments(process.argv)
   })
 )

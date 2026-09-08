@@ -25,7 +25,7 @@ export function mountAccountUi(
  .sherlock-field-heading .sherlock-field-error{font-size:11px;font-weight:400;color:var(--dsw-alias-label-secondary);text-align:right}
  .sherlock-field-heading .sherlock-field-error:empty{display:none}
  .sherlock-account-avatar svg{display:block;width:100%;height:100%}
- .sherlock-auth-logo{display:block;width:136px;height:auto;fill:currentColor}
+ .sherlock-auth-logo{display:block;width:136px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
  .VOzbGW_overlay{z-index:2000!important;background:var(--dsw-alias-bg-layer-2,#181818)}
@@ -110,7 +110,7 @@ export function mountAccountUi(
     avatarSvg.setAttribute('aria-hidden', 'true')
     avatar.append(document.importNode(avatarSvg, true))
     const label = document.createElement('span')
-    label.textContent = user?.username ?? '登录 Sherlock'
+    label.textContent = user?.username ?? '登录 EWork Odyssey'
     const chevron = document.createElement('span')
     chevron.className = 'sherlock-account-chevron'
     chevron.textContent = '⌃'
@@ -124,7 +124,7 @@ export function mountAccountUi(
       const dialog = document.createElement('dialog')
       authDialog = dialog
       dialog.className = 'sherlock-auth-dialog'
-      dialog.setAttribute('aria-label', '登录 Sherlock')
+      dialog.setAttribute('aria-label', '登录 EWork Odyssey')
       const content = document.createElement('div')
       content.className = 'VOzbGW_content'
       const close = button('×', () => dialog.close(), 'sherlock-auth-close')
@@ -200,14 +200,14 @@ export function mountAccountUi(
     page.className = 'sherlock-account-page'
     page.setAttribute(
       'aria-label',
-      user ? '账户信息' : register ? '注册 Sherlock' : '登录 Sherlock'
+      user ? '账户信息' : register ? '注册 EWork Odyssey' : '登录 EWork Odyssey'
     )
     const title = document.createElement('h1')
     title.textContent = user
       ? '账户信息'
       : register
-        ? '注册 Sherlock'
-        : '登录 Sherlock'
+        ? '注册 EWork Odyssey'
+        : '登录 EWork Odyssey'
     page.append(title)
     if (!user) {
       const logo = new DOMParser().parseFromString(
@@ -219,7 +219,7 @@ export function mountAccountUi(
       page.prepend(document.importNode(logo, true))
       root.setAttribute(
         'aria-label',
-        register ? '注册 Sherlock' : '登录 Sherlock'
+        register ? '注册 EWork Odyssey' : '登录 EWork Odyssey'
       )
     }
     const form = document.createElement('form')
@@ -505,7 +505,7 @@ export function mountAccountUi(
     const root = panel()
     if (!root || root.dataset.accountMounted) return
     root.dataset.accountMounted = 'true'
-    root.setAttribute('aria-label', 'Sherlock 设置')
+    root.setAttribute('aria-label', 'EWork Odyssey 设置')
     root.removeAttribute('aria-labelledby')
     const nav = root.querySelector('nav')!
     const back = button('← 返回应用', () => {

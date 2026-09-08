@@ -1,8 +1,8 @@
-# Sherlock 本地测试构建手册
+# EWork Odyssey 本地测试构建手册
 
 ## 触发与边界
 
-用户说“本地启动看看”“构建给我测试”“测试一下最新版本”或同义表达时，执行本手册。目标是把当前开发成果构建成正式 Sherlock 身份的本地应用并直接打开，供少量开发用户现场测试。
+用户说“本地启动看看”“构建给我测试”“测试一下最新版本”或同义表达时，执行本手册。目标是把当前开发成果构建成正式 EWork Odyssey 身份的本地应用并直接打开，供少量开发用户现场测试。
 
 本流程必须跳过 Apple 公证，并且不得：
 
@@ -11,7 +11,7 @@
 - 推送源码、推送标签或触发正式发布自动化；
 - 删除、重置或迁移用户现有的工作区、会话、模型配置和凭据。
 
-只有用户明确要求“更新上传发布正式版”“发布 Sherlock 正式版”“发布大版本”或对外发布时，才改走 `docs/sherlock-formal-release-runbook.md`。
+只有用户明确要求“更新上传发布正式版”“发布 EWork Odyssey 正式版”“发布大版本”或对外发布时，才改走 `docs/sherlock-formal-release-runbook.md`。
 
 ## 执行步骤
 
@@ -25,16 +25,16 @@
 
 构建和开发启动会先检查 `package.json` 中所有 `file:` 本地依赖。拉取新增插件后若安装链接缺失，会自动执行 npm ci 按锁文件恢复依赖并应用 postinstall 补丁（不修改锁文件），再次检查通过后才继续；依赖齐全时不重复安装。缺少源码或安装失败会立即停止，最终包检查也会拒绝缺少插件入口的应用。首次克隆仍需先运行 `npm ci`。
 
-该命令会停止旧的 Sherlock/Sherlock Dev 进程；仅在工作区内置 Node 缺失时自动执行 `npm rebuild node`；以 `com.evanarts.sherlock` 身份构建 `dist-notarized/mac-arm64/Sherlock.app`；显式禁用 Apple 公证；检查应用主程序、内置 Node 和深度签名后启动应用。
+该命令会停止旧的 EWork Odyssey/EWork Odyssey Dev 进程；仅在工作区内置 Node 缺失时自动执行 `npm rebuild node`；以 `com.evanarts.sherlock` 身份构建 `dist-notarized/mac-arm64/EWork Odyssey.app`；显式禁用 Apple 公证；检查应用主程序、内置 Node 和深度签名后启动应用。
 
 4. 对最终产物运行完整的本地包检查：
 
 ```bash
 npm run verify:package:mac -- \
-  --app "dist-notarized/mac-arm64/Sherlock.app"
+  --app "dist-notarized/mac-arm64/EWork Odyssey.app"
 ```
 
-5. 读取真实 Sherlock 窗口，确认看到工作区、会话和输入框等完整主界面，不得把进程存在、HTTP 可访问或恢复页当作启动成功。确认原有用户数据仍可见，并让应用保持打开供用户测试。
+5. 读取真实 EWork Odyssey 窗口，确认看到工作区、会话和输入框等完整主界面，不得把进程存在、HTTP 可访问或恢复页当作启动成功。确认原有用户数据仍可见，并让应用保持打开供用户测试。
 
 ## 失败处理
 

@@ -15,7 +15,7 @@ afterEach(async () => {
   await Promise.all(fixtures.splice(0).map((fixture) => rm(fixture, { recursive: true })))
 })
 
-describe('formal Sherlock build and run', () => {
+describe('formal EWork Odyssey build and run', () => {
   it('embeds the notarized update feed in local directory builds', async () => {
     const builderConfig = await readFile(
       path.resolve('electron-builder.notarized.cjs'),
@@ -43,7 +43,7 @@ describe('formal Sherlock build and run', () => {
     const fakeBinDirectory = path.join(fixture, 'fake-bin')
     const packagedApp = path.join(
       fixture,
-      'dist-notarized/mac-arm64/Sherlock.app'
+      'dist-notarized/mac-arm64/EWork Odyssey.app'
     )
     await mkdir(scriptDirectory)
     await mkdir(fakeBinDirectory)
@@ -66,8 +66,8 @@ case "$*" in
     ;;
   "run package:formal:dir")
     mkdir -p "${packagedApp}/Contents/MacOS"
-    touch "${packagedApp}/Contents/MacOS/Sherlock"
-    chmod +x "${packagedApp}/Contents/MacOS/Sherlock"
+    touch "${packagedApp}/Contents/MacOS/EWork Odyssey"
+    chmod +x "${packagedApp}/Contents/MacOS/EWork Odyssey"
     if [ -x "${fixture}/node_modules/node/bin/node" ]; then
       mkdir -p "${packagedApp}/Contents/Resources/app/node_modules/node/bin"
       cp "${fixture}/node_modules/node/bin/node" \
@@ -130,9 +130,9 @@ if [ "$*" = "rebuild node" ]; then
   touch "${fixture}/node_modules/node/bin/node"
   chmod +x "${fixture}/node_modules/node/bin/node"
 else
-  mkdir -p "${fixture}/dist-notarized/mac-arm64/Sherlock.app/Contents/MacOS"
-  touch "${fixture}/dist-notarized/mac-arm64/Sherlock.app/Contents/MacOS/Sherlock"
-  chmod +x "${fixture}/dist-notarized/mac-arm64/Sherlock.app/Contents/MacOS/Sherlock"
+  mkdir -p "${fixture}/dist-notarized/mac-arm64/EWork Odyssey.app/Contents/MacOS"
+  touch "${fixture}/dist-notarized/mac-arm64/EWork Odyssey.app/Contents/MacOS/EWork Odyssey"
+  chmod +x "${fixture}/dist-notarized/mac-arm64/EWork Odyssey.app/Contents/MacOS/EWork Odyssey"
 fi
 `
     )

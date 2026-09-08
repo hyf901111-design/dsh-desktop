@@ -3,7 +3,7 @@ const packageJson = require('./package.json')
 module.exports = {
   ...packageJson.build,
   appId: 'com.evanarts.sherlock',
-  productName: 'Sherlock',
+  productName: 'EWork Odyssey',
   artifactName: 'sherlock-${os}-${arch}.${ext}',
   directories: {
     ...packageJson.build.directories,
@@ -22,7 +22,7 @@ module.exports = {
   ],
   extraMetadata: {
     name: 'sherlock',
-    productName: 'Sherlock',
+    productName: 'EWork Odyssey',
     dshDesktopChannel: 'notarized'
   },
   mac: {

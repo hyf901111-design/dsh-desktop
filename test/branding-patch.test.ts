@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const projectRoot = path.resolve(import.meta.dirname, '..')
 
-describe('Sherlock sidebar branding', () => {
+describe('EWork Odyssey sidebar branding', () => {
   it('matches the native window surface to the initial Harness theme', async () => {
     const main = await readFile(path.join(projectRoot, 'src', 'main', 'index.ts'), 'utf8')
 
@@ -23,7 +23,7 @@ describe('Sherlock sidebar branding', () => {
     expect(main).toContain("height: '24px'")
   })
 
-  it('uses the supplied Sherlock vector wordmark in the expanded sidebar', async () => {
+  it('uses the supplied EWork Odyssey vector wordmark in the expanded sidebar', async () => {
     const patch = await readFile(
       path.join(projectRoot, 'patches', '@deepseek-ai+dsh-client-ui-sidebar+0.1.0-rc.7.patch'),
       'utf8'
@@ -32,8 +32,8 @@ describe('Sherlock sidebar branding', () => {
     expect(patch).toContain('SherlockLogo')
     expect(patch).toContain('/sherlock-logo.svg')
     expect(patch).toContain('-webkit-mask:')
-    expect(patch).toContain('width:120px;height:17px')
-    expect(patch).toContain('"aria-label": "Sherlock"')
+    expect(patch).toContain('width:104px;height:34px')
+    expect(patch).toContain('"aria-label": "EWork Odyssey"')
     expect(patch).not.toContain('DshDesktopLogo')
     expect(patch).not.toContain('/dsh-desktop-logo-light.png')
     expect(patch).not.toContain('/dsh-desktop-logo-dark.png')
@@ -120,11 +120,11 @@ describe('Sherlock sidebar branding', () => {
     expect(installer).toContain("'sherlock-logo.svg'")
     expect(installer).toContain('<link rel="icon" type="image/png" href="/sherlock-icon.png" />')
     expect(installer).toContain('"src": "/sherlock-icon.png"')
-    expect(installer).toContain('<title>Sherlock</title>')
-    expect(installer).toContain('"name": "Sherlock"')
+    expect(installer).toContain('<title>EWork Odyssey</title>')
+    expect(installer).toContain('"name": "EWork Odyssey"')
 
     const logo = await readFile(path.join(projectRoot, 'build', 'sherlock-logo.svg'), 'utf8')
-    expect(logo).toContain('viewBox="275 334 1317 180"')
+    expect(logo).toContain('viewBox="0 0 104 34"')
     expect(logo).not.toContain('transform="matrix(')
   })
 

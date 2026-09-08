@@ -68,7 +68,7 @@ async function loadStateDot(): Promise<StateDotComponent> {
   return context.StateDot
 }
 
-describe('Sherlock loading indicator', () => {
+describe('EWork Odyssey loading indicator', () => {
   it('renders the ongoing state as the same open white ring used by Codex', async () => {
     const StateDot = await loadStateDot()
     const html = renderToStaticMarkup(

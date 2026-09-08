@@ -41,7 +41,7 @@ type ActiveResearch = {
   frame: { processId: number; routingId: number }
 }
 type Capture = ResearchVoiceRequest & { nativeRequestId: string; active: ActiveResearch; state: ResearchVoiceState }
-const unavailable = (diagnostic?: string): ResearchVoiceResult => ({ ok: false, error: diagnostic || '此设备暂时无法使用语音识别，请在 macOS 版 Sherlock 中重试。' })
+const unavailable = (diagnostic?: string): ResearchVoiceResult => ({ ok: false, error: diagnostic || '此设备暂时无法使用语音识别，请在 macOS 版 EWork Odyssey 中重试。' })
 const invalid = (): ResearchVoiceResult => ({ ok: false, error: '语音请求已失效，请返回当前研究重新开始。' })
 
 // Loading/initialization happens before microphone access; preserve the useful

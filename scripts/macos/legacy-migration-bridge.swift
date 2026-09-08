@@ -3,7 +3,7 @@ import Foundation
 
 private let legacyBundleIdentifier = "io.dsh.desktop"
 private let sherlockBundleIdentifier = "com.evanarts.sherlock"
-private let embeddedRelativePath = "Contents/Resources/Sherlock.app"
+private let embeddedRelativePath = "Contents/Resources/EWork Odyssey.app"
 
 private enum BridgeError: LocalizedError {
     case invalidBundle(String)
@@ -35,8 +35,8 @@ private func run(_ executable: String, _ arguments: [String]) throws -> Int32 {
 private func showFailure(_ error: Error) {
     let alert = NSAlert()
     alert.alertStyle = .critical
-    alert.messageText = "Sherlock 更新未完成"
-    alert.informativeText = "请重新打开 Sherlock 后再试。\n\n\(error.localizedDescription)"
+    alert.messageText = "EWork Odyssey 更新未完成"
+    alert.informativeText = "请重新打开 EWork Odyssey 后再试。\n\n\(error.localizedDescription)"
     alert.addButton(withTitle: "好")
     alert.runModal()
 }
@@ -53,7 +53,7 @@ private func migrateToNotarizedSherlock() throws {
         let embeddedBundle = Bundle(url: embeddedApp),
         embeddedBundle.bundleIdentifier == sherlockBundleIdentifier
     else {
-        throw BridgeError.invalidBundle("The notarized Sherlock application is missing.")
+        throw BridgeError.invalidBundle("The notarized EWork Odyssey application is missing.")
     }
 
     let parent = currentApp.deletingLastPathComponent()
