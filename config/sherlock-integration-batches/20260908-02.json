@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260908-02",
+  "branch": "codex/integration/20260908-02",
+  "baseMainCommit": "7a4586b2af97ef15b616bfe47b1dabdd2e9d62de",
+  "expectedMainCommit": "7a4586b2af97ef15b616bfe47b1dabdd2e9d62de",
+  "createdAt": "2026-09-08T01:33:54.603Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件可靠性和交互工作台",
+        "branch": "codex/feat/component-resilience-20260908",
+        "baseCommit": "7a4586b2af97ef15b616bfe47b1dabdd2e9d62de",
+        "tipCommit": "124a53d28ce6f0463671540931562a6d78e8bbce",
+        "commits": [
+          {
+            "commit": "124a53d28ce6f0463671540931562a6d78e8bbce",
+            "parents": [
+              "7a4586b2af97ef15b616bfe47b1dabdd2e9d62de"
+            ],
+            "subject": "修复：组件输出自动验收恢复并增加交互面板与可读表格"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "scripts/install-brand-assets.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/research-artifact-resilience.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/research-task-runtime.test.js",
+              "test/research-workbench.test.js",
+              "test/research-html-theme.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "134 项运行时及主题检查、8 项聚焦渲染检查通过",
+            "verifiedCommit": "124a53d28ce6f0463671540931562a6d78e8bbce",
+            "completedAt": "2026-09-08T01:33:40.530881+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
+            ],
+            "outcome": "passed",
+            "summary": "134 项运行时及主题检查、8 项聚焦渲染检查通过",
+            "verifiedCommit": "124a53d28ce6f0463671540931562a6d78e8bbce",
+            "completedAt": "2026-09-08T01:33:40.530881+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "DOM 渲染和交互测试通过；两份真实失败输出恢复通过；打包客户端验收在集成后执行。"
+        },
+        "acceptanceCriteria": [
+          "含说明的完整 JSON 可恢复",
+          "损坏输出有一次自动修复和真实内容保留",
+          "表格列宽可读，来源可点击",
+          "新闻、报告、日历和指标面板具备稳定交互"
+        ],
+        "risks": [
+          "无法凭空补齐外部不可获得的数据",
+          "来源导航通过宿主链接打开，HTML 继续保持沙箱隔离"
+        ],
+        "generatedAt": "2026-09-08T01:33:40.530881+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-artifact-resilience.test.js",
+        "test/research-task-runtime.test.js",
+        "test/research-workbench.test.js",
+        "test/research-html-theme.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "-t",
+        "dense table|runtime errors|native container|generated HTML frame|stale HTML"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
