@@ -71,6 +71,38 @@
           "本地客户端兼容修复；Cloudflare路由已部署，客户端修复未对外发布"
         ],
         "generatedAt": "2026-09-08T09:44:49.446Z"
+      },
+      "merged": {
+        "mergeCommit": "8a97383eb3cb7d987cf2634d39260b88dd565ea9",
+        "verificationCommit": "8a97383eb3cb7d987cf2634d39260b88dd565ea9",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-routing.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/financial-routing.test.js",
+            "verifiedCommit": "8a97383eb3cb7d987cf2634d39260b88dd565ea9",
+            "completedAt": "2026-09-08T09:45:50.136Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8a97383eb3cb7d987cf2634d39260b88dd565ea9",
+            "completedAt": "2026-09-08T09:45:50.136Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-08T09:45:50.136Z"
       }
     }
   ],
