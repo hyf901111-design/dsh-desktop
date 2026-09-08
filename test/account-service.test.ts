@@ -126,3 +126,30 @@ it('allows logout to finish after the server session has already expired', async
   expect(await service.invoke('logout', {})).toEqual({ ok: true })
   expect(await service.invoke('me', {})).toEqual({ user: null })
 })
+
+it('forwards research schemas and larger analysis requests through the authenticated local bridge', async () => {
+  const realFetch = globalThis.fetch
+  const { service, endpoint } = await setup()
+  const cloudToken = 'c'.repeat(64)
+  const remote = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    if (String(url).endsWith('/login')) return Response.json({ token: cloudToken })
+    expect(String(url)).toBe('https://updates.evanarts.com/v1/fund-research/query')
+    expect((init?.headers as Record<string, string>).authorization).toBe(`Bearer ${cloudToken}`)
+    expect(init?.redirect).toBe('error')
+    const body = JSON.parse(Buffer.from(init?.body as Buffer).toString())
+    expect(body.operation).toBe('execute')
+    expect(body.arguments.query.length).toBe(3000)
+    return Response.json({ status: 'received' })
+  })
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', {})
+  const headers = { authorization: `Bearer ${endpoint.token}` }
+  const response = await realFetch(endpoint.url, { method: 'POST', headers, body: JSON.stringify({
+    operation: 'execute', capability: 'financial_news', schema_hash: 'b'.repeat(64), arguments: { query: 'x'.repeat(3000) }
+  }) })
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ status: 'received' })
+  const large = await realFetch(endpoint.url, { method: 'POST', headers, body: 'x'.repeat(17 * 1024) })
+  expect(large.status).toBe(413)
+  expect(remote).toHaveBeenCalledTimes(2)
+})

@@ -1,5 +1,5 @@
 import { authenticate, authError, handleAccountRequest } from '../accounts/auth.js'
-import { validateResearchRequest } from '../../packages/dsh-fund-research-runtime/contract.js'
+import { validateServiceQuery, RESEARCH_REQUEST_BYTES } from '../../packages/dsh-fund-research-runtime/research-operations.js'
 
 export const QUERY_PATH = '/v1/fund-research/query'
 export const HEALTH_PATH = '/v1/fund-research/health'
@@ -15,7 +15,7 @@ export function failure(status, code, retryAfter) {
 
 export async function parseQuery(request) {
   const size = request.headers.get('content-length')
-  if (size !== null && (!/^\d+$/u.test(size) || Number(size) > 2048)) throw new Error('Invalid body.')
+  if (size !== null && (!/^\d+$/u.test(size) || Number(size) > RESEARCH_REQUEST_BYTES)) throw new Error('Invalid body.')
   const reader = request.body?.getReader()
   if (!reader) throw new Error('Missing body.')
   const chunks = []
@@ -29,10 +29,12 @@ export async function parseQuery(request) {
       const { done, value } = await Promise.race([reader.read(), timeout])
       if (done) break
       bytes += value.byteLength
-      if (bytes > 2048) throw new Error('Body too large.')
+      if (bytes > RESEARCH_REQUEST_BYTES) throw new Error('Body too large.')
       chunks.push(Buffer.from(value))
     }
-    return validateResearchRequest(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+    const input = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+    if (!input?.operation && bytes > 2048) throw new Error('Legacy query too large.')
+    return validateServiceQuery(input)
   } finally {
     clearTimeout(timer)
     void reader.cancel().catch(() => {})

@@ -73,6 +73,12 @@ function fundSize(value) {
 function fundType(summary) {
   const name = cleanText(summary.fundName)
   if (!name) throw new Error('Fund identity is unavailable.')
+  // The v1 evidence contract denominates NAV in CNY. Other share currencies use
+  // the schema-driven research endpoint, which preserves the source units.
+  const currency = String(summary.currency ?? summary.currencyCode ?? summary.navCurrency ?? '').trim()
+  if ((currency && !/^(?:CNY|RMB|人民币)$/iu.test(currency)) || /美元|港币|港元|欧元|日元|英镑|\bUSD\b|\bHKD\b/iu.test(name)) {
+    throw Object.assign(new Error('Unsupported share currency.'), { code: 'FUND_TYPE_UNSUPPORTED' })
+  }
   const hasTrackedIndex = /^[A-Z0-9.\-]{2,32}$/iu.test(String(summary.indexCode ?? '')) &&
     Boolean(cleanText(summary.indexName))
   if (hasTrackedIndex && /ETF\s*(?:联接|连接)/iu.test(name)) return 'etf_feeder'
@@ -80,6 +86,13 @@ function fundType(summary) {
   if (hasTrackedIndex && /指数/iu.test(String(summary.fundInvestType ?? ''))) {
     return 'index_fund'
   }
+  const type = String(summary.fundInvestType ?? '').normalize('NFKC')
+  if (/QDII/iu.test(type)) return 'qdii_fund'
+  if (/FOF|基金中基金/iu.test(type)) return 'fof'
+  if (/货币/iu.test(type)) return 'money_market_fund'
+  if (/债券/iu.test(type)) return 'bond_fund'
+  if (/混合/iu.test(type)) return 'mixed_fund'
+  if (/股票/iu.test(type)) return 'equity_fund'
   throw Object.assign(new Error('Unsupported fund type.'), { code: 'FUND_TYPE_UNSUPPORTED' })
 }
 

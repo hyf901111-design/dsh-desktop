@@ -42,7 +42,7 @@ export class AccountService {
         const chunks: Buffer[] = []
         for await (const chunk of req) {
           size += chunk.length
-          if (size > 2048) {
+          if (size > 16 * 1024) {
             res.writeHead(413).end()
             return
           }

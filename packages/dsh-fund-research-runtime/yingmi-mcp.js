@@ -1,11 +1,13 @@
+import { isResearchTool } from './research-capabilities.js'
+import { argumentsMatchSchema } from './research-schema.js'
+import { serviceError } from './contract.js'
+import { researchHash } from './research-operations.js'
+
 const OFFICIAL_MCP_ENDPOINT = 'https://stargate.yingmi.com/mcp/v2'
 const PROTOCOL_VERSIONS = Object.freeze(['2025-06-18', '2025-03-26'])
 const RESPONSE_LIMIT_BYTES = 1024 * 1024
 const NAV_HISTORY_TOOL = 'BatchGetFundNavHistory'
-const READ_ONLY_TOOLS = new Set([
-  'BatchGetFundsDetail',
-  NAV_HISTORY_TOOL
-])
+
 
 function privateFailure(state = 'failed') {
   const error = new Error('Private fund data request failed.')
@@ -21,30 +23,11 @@ function validCredential(value) {
   return typeof value === 'string' && value.trim().length >= 8 && value.length <= 4_096
 }
 
-function validateSchemaValue(schema, value) {
-  const definition = record(schema)
-  if (definition.type === 'string') return typeof value === 'string'
-  if (definition.type === 'boolean') return typeof value === 'boolean'
-  if (definition.type === 'number') return typeof value === 'number' && Number.isFinite(value)
-  if (definition.type === 'integer') return Number.isInteger(value)
-  if (definition.type === 'array') {
-    return Array.isArray(value) && value.every((entry) => validateSchemaValue(definition.items, entry))
-  }
-  if (definition.type === 'object') {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-    const properties = record(definition.properties)
-    const required = Array.isArray(definition.required) ? definition.required : []
-    if (required.some((key) => typeof key !== 'string' || !(key in value))) return false
-    if (Object.keys(value).some((key) => !(key in properties))) return false
-    return Object.entries(value).every(([key, entry]) => validateSchemaValue(properties[key], entry))
-  }
-  return false
-}
-
 function validateArguments(inputSchema, args) {
-  const schema = record(inputSchema)
-  if (schema.type !== 'object' || schema.additionalProperties !== false) throw privateFailure('incompatible')
-  if (!validateSchemaValue(schema, args)) throw privateFailure('incompatible')
+  let valid
+  try { valid = argumentsMatchSchema(inputSchema, args) }
+  catch { throw serviceError('RESEARCH_SCHEMA_UNSUPPORTED') }
+  if (!valid) throw serviceError('RESEARCH_ARGUMENTS_INVALID')
 }
 
 function requestAbort(signal, timeoutMs) {
@@ -174,8 +157,10 @@ export function createYingmiMcpClient({
   const rpcRequest = async (method, params, {
     notification = false,
     retrySession = true,
+    expectedSchemaHash,
     signal
   } = {}) => {
+    if (signal?.aborted) throw privateFailure()
     if (halted) throw halted
     const operation = requestAbort(signal, timeoutMs)
     const id = ++sequence
@@ -203,10 +188,11 @@ export function createYingmiMcpClient({
           const requestedName = record(params).name
           const args = record(params).arguments
           const refreshed = (await listTools(signal)).find((entry) => entry.name === requestedName)
-          if (!READ_ONLY_TOOLS.has(requestedName) || !refreshed) throw privateFailure('incompatible')
+          if (!isResearchTool(requestedName) || !refreshed) throw privateFailure('incompatible')
+          if (expectedSchemaHash && researchHash(refreshed.inputSchema) !== expectedSchemaHash) throw serviceError('RESEARCH_SCHEMA_CHANGED')
           validateArguments(refreshed.inputSchema, args)
         }
-        return rpcRequest(method, params, { notification, retrySession: false, signal })
+        return rpcRequest(method, params, { notification, retrySession: false, expectedSchemaHash, signal })
       }
       if (response.status === 401 || response.status === 403) throw privateFailure('unauthorized')
       if (response.status === 429) throw privateFailure('rate_limited')
@@ -224,7 +210,7 @@ export function createYingmiMcpClient({
     } catch (error) {
       const state = error?.state
       if (state === 'unauthorized' || state === 'rate_limited') halted = error
-      if (state) throw error
+      if (state || error?.code?.startsWith('RESEARCH_')) throw error
       throw privateFailure()
     } finally {
       operation.dispose()
@@ -271,7 +257,8 @@ export function createYingmiMcpClient({
             throw privateFailure('incompatible')
           }
           seenNames.add(tool.name)
-          result.push(Object.freeze({ name: tool.name, inputSchema: record(tool.inputSchema) }))
+          result.push(Object.freeze({ name: tool.name, inputSchema: record(tool.inputSchema),
+            ...(typeof tool.description === 'string' ? { description: tool.description } : {}) }))
           if (result.length > 256) throw privateFailure('incompatible')
         }
         if (response.nextCursor === undefined) return Object.freeze(result)
@@ -289,12 +276,22 @@ export function createYingmiMcpClient({
 
   return Object.freeze({
     async callTool(name, args, { signal } = {}) {
-      if (!READ_ONLY_TOOLS.has(name)) throw privateFailure('incompatible')
+      if (!isResearchTool(name)) throw privateFailure('incompatible')
       const tool = (await listTools(signal)).find((entry) => entry.name === name)
       if (!tool) throw privateFailure('incompatible')
       validateArguments(tool.inputSchema, args)
       const result = await rpcRequest('tools/call', { name, arguments: args }, { signal })
       return toolPayload(result, name)
+    },
+    async callToolResult(name, args, { signal, schemaHash } = {}) {
+      if (!isResearchTool(name)) throw privateFailure('incompatible')
+      const tool = (await listTools(signal)).find(entry => entry.name === name)
+      if (!tool) throw serviceError('RESEARCH_CAPABILITY_UNAVAILABLE')
+      validateArguments(tool.inputSchema, args)
+      const result = await rpcRequest('tools/call', { name, arguments: args }, { signal, expectedSchemaHash: schemaHash })
+      if (!result || typeof result !== 'object') throw privateFailure()
+      if (result.isError === true) throw serviceError('RESEARCH_QUERY_FAILED')
+      return result
     },
     async listTools({ signal } = {}) {
       return listTools(signal)

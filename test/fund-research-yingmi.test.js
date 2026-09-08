@@ -432,12 +432,40 @@ describe('private fund mappings', () => {
       })]
     })
     await expect(provider.research({ task: 'single', funds: ['000001'] }))
+      .resolves.toMatchObject({ subjects: [{ fund_type: 'mixed_fund' }] })
+  })
+
+  it('supports active funds using the disclosed type rather than inferring it from the name', async () => {
+    const { provider } = providerFor({
+      BatchGetFundsDetail: [fundDetail('000001', '主动成长混合', { indexCode: null, indexName: null })]
+    })
+    await expect(provider.research({ task: 'single', funds: ['000001'] }))
+      .resolves.toMatchObject({ subjects: [{ fund_type: 'equity_fund' }] })
+  })
+
+  it.each([
+    ['混合型', 'mixed_fund'], ['债券型', 'bond_fund'], ['货币型', 'money_market_fund'],
+    ['基金中基金(FOF)', 'fof'], ['QDII股票型', 'qdii_fund']
+  ])('supports disclosed %s fund types', async (fundInvestType, fund_type) => {
+    const { provider } = providerFor({
+      BatchGetFundsDetail: [fundDetail('000001', '测试公募基金', { indexCode: '', indexName: '', fundInvestType })]
+    })
+    const result = await provider.research({ task: 'single', funds: ['000001'] })
+    expect(result.subjects[0].fund_type).toBe(fund_type)
+    expect(validateJsonSchemaValue(FUND_RESEARCH_OUTPUT_SCHEMA, result)).toEqual([])
+  })
+
+  it('still rejects unidentified fund types instead of guessing', async () => {
+    const { provider } = providerFor({
+      BatchGetFundsDetail: [fundDetail('000001', '测试产品', { indexCode: '', indexName: '', fundInvestType: '未知产品' })]
+    })
+    await expect(provider.research({ task: 'single', funds: ['000001'] }))
       .rejects.toMatchObject({ code: 'FUND_TYPE_UNSUPPORTED' })
   })
 
-  it('rejects active funds outside the enabled product scope', async () => {
+  it('never labels a foreign-currency QDII share NAV as CNY', async () => {
     const { provider } = providerFor({
-      BatchGetFundsDetail: [fundDetail('000001', '主动成长混合', { indexCode: null, indexName: null })]
+      BatchGetFundsDetail: [fundDetail('000001', '测试QDII美元份额', { indexCode: '', indexName: '', fundInvestType: 'QDII', currency: 'USD' })]
     })
     await expect(provider.research({ task: 'single', funds: ['000001'] }))
       .rejects.toMatchObject({ code: 'FUND_TYPE_UNSUPPORTED' })
