@@ -144,6 +144,7 @@ async function loadClientBundle(
         querySelector: () => null,
         createElement: () => ({
           dataset: {} as Record<string, string>,
+          setAttribute() {},
           textContent: ''
         }),
         head: {
@@ -9703,7 +9704,7 @@ describe('Sherlock workspace and composer controls', () => {
     })
     expect(svg).toContain('<svg')
     expect(svg).toContain('收入趋势')
-    expect(svg).toContain('oklch(37.4% .01 67.558)')
+    expect(svg).toContain('#3b82f6')
     expect(svg).toContain('font-family="Arial,Helvetica Neue,PingFang SC,sans-serif"')
     expect(svg).not.toMatch(/script|foreignObject|var\(--/)
   })
@@ -13049,9 +13050,13 @@ describe('generated component theme', () => {
       await send({ type: 'sherlock-content-size', width: 1200, height: 1300, html: 'untrusted' })
       await send({ type: 'sherlock-content-size', width: 9000, height: 1300 })
       expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 960, height: 680 })
+      await send({ type: 'sherlock-content-hover', active: true })
+      expect(card.hasAttribute('data-research-content-hover')).toBe(true)
+      await act(async () => { mounted.browserWindow.document.body.dispatchEvent(new mounted.browserWindow.PointerEvent('pointermove', { bubbles: true })) })
+      expect(card.hasAttribute('data-research-content-hover')).toBe(false)
       await send({ type: 'sherlock-content-size', width: 1200, height: 1300 })
       const fitted = mounted.workspace.getSnapshot().artifacts[0] as any
-      expect(fitted).toMatchObject({ width: 1202, height: 1338, sizeMode: 'auto' })
+      expect(fitted).toMatchObject({ width: 1202, height: 1302, sizeMode: 'auto' })
       expect(fitted.x - fitted.width / 2).toBe(20)
       expect(fitted.y - fitted.height / 2).toBe(60)
       expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame)
@@ -13099,7 +13104,7 @@ describe('generated component theme', () => {
       expect(Number(point?.getAttribute('r'))).toBeGreaterThan(0)
       const svg = (mounted.client.buildResearchContainerChartSvg as any)(spec, 'dark')
       expect(svg).toContain('<circle')
-      expect(svg).toContain('oklch(27.4% .006 286.033)')
+      expect(svg).toContain('#93c5fd')
     } finally { await mounted.cleanup() }
   })
 
@@ -13145,18 +13150,18 @@ describe('generated component theme', () => {
       expect(mounted.host.querySelectorAll('[data-research-container-chart] circle')).toHaveLength(0)
       expect(mounted.host.querySelector('.rScV5Q_chartGrid')?.getAttribute('stroke-dasharray')).toBe('4 4')
       const content = mounted.host.querySelector('.rScV5Q_containerContent') as any
-      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-bg')).toBe('oklch(.97 0 0)')
+      expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-bg')).toBe('#ffffff')
       await act(async () => { mounted.browserWindow.document.body.setAttribute('data-ds-dark-theme', '') })
       // Happy DOM caches ancestor selectors on existing nodes after body changes.
       // A fresh CSS probe verifies the resolved dark rule independently of that cache.
       const darkProbe = content.cloneNode(false)
       content.parentElement.appendChild(darkProbe)
-      expect(mounted.browserWindow.getComputedStyle(darkProbe).getPropertyValue('--sherlock-bg')).toBe('oklch(.14 .0047 263.79)')
+      expect(mounted.browserWindow.getComputedStyle(darkProbe).getPropertyValue('--sherlock-bg')).toBe('#171717')
       expect(mounted.browserWindow.getComputedStyle(content).getPropertyValue('--sherlock-font-sans')).toContain('Arial')
       const build = mounted.client.buildResearchContainerChartSvg as any
-      expect(build(spec, 'light')).toContain('oklch(37.4% .01 67.558)')
-      expect(build(spec, 'dark')).toContain('oklch(27.4% .006 286.033)')
-      expect(build(spec, 'dark')).toContain('oklch(.17 .0065 271.01)')
+      expect(build(spec, 'light')).toContain('#3b82f6')
+      expect(build(spec, 'dark')).toContain('#93c5fd')
+      expect(build(spec, 'dark')).toContain('#171717')
       expect(build(spec, 'dark')).not.toMatch(/var\(--|script/)
       expect(build(spec, 'light')).toContain('stroke-dasharray="4 4"')
       expect(build(spec, 'light')).toContain('stroke-width="2"')
