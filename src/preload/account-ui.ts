@@ -11,6 +11,7 @@ export function mountAccountUi(
   invoke: (action: string, input?: unknown) => Promise<Reply>
 ) {
   const style = document.createElement('style')
+  // Keep the settings shell below the shared portaled menus (z-index 1100).
   style.textContent = `
  .sherlock-auth-dialog{box-sizing:border-box;width:min(360px,calc(100vw - 40px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--dsw-alias-border-l2,#555);border-radius:20px;background:var(--dsw-alias-bg-layer-2,#191919);color:var(--dsw-alias-label-primary);box-shadow:0 24px 90px #0005;overflow:auto}
  .sherlock-auth-dialog::backdrop{background:#0005}
@@ -28,7 +29,7 @@ export function mountAccountUi(
  .sherlock-auth-logo{display:block;width:136px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
- .VOzbGW_overlay{z-index:2000!important;background:var(--dsw-alias-bg-layer-2,#181818)}
+ .VOzbGW_overlay{z-index:1000!important;background:var(--dsw-alias-bg-layer-2,#181818)}
  .VOzbGW_mask{display:none!important}
  .VOzbGW_panel{width:100vw!important;max-width:none!important;height:100vh!important;border-radius:0!important;box-shadow:none!important}
  .VOzbGW_nav{width:250px!important;padding:52px 12px 20px!important;background:var(--dsw-specific-sidebar-fill);overflow-y:auto;gap:12px!important}
