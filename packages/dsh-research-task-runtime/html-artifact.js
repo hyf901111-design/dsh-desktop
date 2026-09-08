@@ -199,6 +199,16 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       document.removeEventListener('load', schedule, true)
     }, 8000)
   }
+  // Error text and stack traces never leave the sandbox. The host can show retained text.
+  addEventListener('error', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
+  addEventListener('unhandledrejection', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
+  document.addEventListener('click', event => {
+    const anchor = event.target?.closest?.('a[href]')
+    if (!anchor) return
+    event.preventDefault()
+    if (!event.isTrusted) return
+    try { const u = new URL(anchor.getAttribute('href')); if (/^https?:$/.test(u.protocol) && !u.username && !u.password) parent.postMessage({ type: 'sherlock-source-request', url: u.href }, '*') } catch {}
+  }, true)
   document.addEventListener('DOMContentLoaded', () => {
     const declaration = Array.from(document.querySelectorAll('meta[name]')).find((meta) => meta.getAttribute('name')?.trim().toLowerCase() === 'sherlock-theme')
     const value = declaration?.getAttribute('content')?.trim().toLowerCase()
@@ -227,6 +237,10 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   }
   addEventListener('message', (event) => {
     const data = event.data
+    if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data)) {
+      if (data.type === 'sherlock-content-failed' && Object.keys(data).length === 1) { parent.postMessage({ type: data.type }, '*'); return }
+      if (data.type === 'sherlock-source-request' && Object.keys(data).length === 2 && typeof data.url === 'string' && data.url.length <= 8192) { parent.postMessage({ type: data.type, url: data.url }, '*'); return }
+    }
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
         Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
         data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&

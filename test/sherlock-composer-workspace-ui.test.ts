@@ -10041,6 +10041,43 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
+  it('keeps dense table columns readable and renders short safe source links', async () => {
+    const mounted = await mountResearchCanvas({ sessionId: 'table-resilience', artifacts: [{
+      id: 'dense', kind: 'generated-container', messageId: 'dense', title: '政策', excerpt: '政策', x: 400, y: 300, width: 540, height: 600, sizeMode: 'manual', generationStatus: 'completed', containerPrompt: '政策比较', refreshMinutes: 0,
+      containerSpec: { version: 1, type: 'table', title: '政策', columns: ['时间','政策','要点','影响','来源'], rows: [['2026.09','政策正文','要点内容','影响说明','[国家医保局](https://example.org/very/long/path/to/document.html)']] }
+    }] });
+    try {
+      const table = mounted.host.querySelector('[data-research-container-table]') as any;
+      expect(table.style.tableLayout).toBe('fixed'); expect(table.style.minWidth).toBe('640px');
+      expect(table.querySelector('a').textContent).toBe('国家医保局');
+      expect(table.querySelector('a').getAttribute('href')).toBe('https://example.org/very/long/path/to/document.html');
+      expect(table.textContent).not.toContain('/very/long');
+    } finally { await mounted.cleanup(); }
+  });
+
+  it('retains readable HTML content on runtime errors and requires a host click to open a source', async () => {
+    const mounted = await mountResearchCanvas({ sessionId: 'html-resilience', artifacts: [{
+      id: 'safe', kind: 'generated-container', messageId: 'safe', title: '新闻', excerpt: '新闻', x: 400, y: 300, width: 720, height: 600, sizeMode: 'manual', generationStatus: 'completed', containerPrompt: '新闻', refreshMinutes: 0,
+      containerSpec: { version: 1, type: 'html', title: '新闻', html: '<h1>已有真实研究内容</h1><a href="https://example.org/news">新闻来源</a><script>throw Error("private")</script>' }
+    }] });
+    try {
+      const frame = mounted.host.querySelector('[data-research-html-artifact]') as any;
+      const ownWindow = { postMessage: vi.fn() };
+      Object.defineProperty(frame, 'contentWindow', { configurable: true, value: ownWindow });
+      const send = async (data: unknown, source: unknown = ownWindow) => { await act(async () => { mounted.browserWindow.dispatchEvent(new mounted.browserWindow.MessageEvent('message', { data, source: source as any })); }); };
+      await send({ type: 'sherlock-source-request', url: 'https://attacker.invalid' });
+      expect(mounted.host.textContent).not.toContain('打开来源：');
+      await send({ type: 'sherlock-source-request', url: 'https://example.org/news' });
+      expect(mounted.host.textContent).toContain('打开来源：新闻来源');
+      await send({ type: 'sherlock-content-failed' }, mounted.browserWindow);
+      expect(mounted.host.querySelector('[data-research-html-artifact]')).not.toBeNull();
+      await send({ type: 'sherlock-content-failed' });
+      expect(mounted.host.querySelector('[data-research-html-artifact]')).toBeNull();
+      expect(mounted.host.textContent).toContain('已有真实研究内容');
+      expect(mounted.host.textContent).not.toContain('private');
+    } finally { await mounted.cleanup(); }
+  });
+
   it('renders all five native container types without executable HTML', async () => {
     const authorize = vi.fn(async (value: { url: string }) => ({ url: value.url }))
     const base = {
