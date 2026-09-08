@@ -13078,7 +13078,7 @@ describe('generated component theme', () => {
       expect(fit(html, 800, 600)).toBe(false)
       expect(fit(html, Infinity, 1300)).toBe(false)
       await act(async () => { expect(fit(html, 1100, 4200)).toBe(true) })
-      expect(workspace.getSnapshot().artifacts[0].height).toBe(4200)
+      expect(workspace.getSnapshot().artifacts[0].height).toBe(1440)
       await act(async () => { workspace.updateNodeGeometry('html-guard', { width: 700, height: 500, sizeMode: 'manual' }) })
       expect(fit(html, 1500, 1500)).toBe(false)
       expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 700, height: 500, sizeMode: 'manual' })
