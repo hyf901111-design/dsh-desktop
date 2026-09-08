@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.9.0',
+      date: '2026-09-08',
+      items: ["新增构建模式，自动拆解研究工作台并并发生成独立组件；简单问答仍在对话中完成", "组件预设小、中、大三种规格，提前规划内容与尺寸，整理画布时统一同行大小并整齐排列", "组件框按约 0.5 秒间隔依次出现，后台生成任务保持并发", "生成进度展示真实检索主题与子任务回报，并补充当前任务说明和页面构建步骤", "修复搜索权限误判、重复生成和重试提交失败，限制无效检索循环并如实提示数据缺失", "优化连接中断、超时和限流提示，保留重试过程并减少不必要的生成内容"]
+    },
+    {
       version: '0.8.9',
       date: '2026-09-07',
       items: ["修复研究容器因搜索权限判断不完整而反复返回空正文的问题", "生成完成后按实际内容自动扩展组件，长报告与 HTML 可完整展示", "整理画布按内容重新适配组件框尺寸，再排列位置，减少组件内滚动", "修复语音结束时空识别结果覆盖已有文字、导致生成失败的问题", "每个研究会话支持最多 10 个并发生成子任务，超出后有序排队", "精简组件生成范围，减少未要求的摘要、背景和 HTML 包装"]
@@ -205,6 +210,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.9.0',
+      date: '2026-09-08',
+      items: ["Added Build mode to plan independent research panels and generate them concurrently, while simple Q&A stays in chat", "Added small, medium and large component presets with planned content budgets and aligned rows when arranging the canvas", "Panels appear at roughly 0.5-second intervals while generation tasks run concurrently", "Generation progress shows real search topics and task reports, with concise activity descriptions and page-building steps", "Fixed search permission detection and retry submission failures; bounded unproductive searches and disclosed unavailable data", "Improved connection, timeout and rate-limit feedback, preserved retry progress, and reduced unnecessary generated content"]
+    },
     {
       version: '0.8.9',
       date: '2026-09-07',
