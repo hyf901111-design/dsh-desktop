@@ -14,12 +14,14 @@ const schema = { type: 'object', $defs: { code: { type: 'string', pattern: '^\\d
   weights: { type: 'array', items: { type: 'number', minimum: 0, maximum: 1 } }
 }, required: ['fundCode'], additionalProperties: false }
 const key = 'synthetic-worker-research-key'
+const newsContent = [{ type: 'text', text: '盈米基金观点 2026-09-04' },
+  { type: 'resource_link', uri: 'https://yingmi.cn/article/877', name: '盈米基金原文', mimeType: 'text/html' }]
 const seen = []
 const built = await build({ entryPoints: [fileURLToPath(new URL('../services/fund-data/worker.js', import.meta.url))],
   bundle: true, write: false, format: 'esm', platform: 'neutral', external: ['cloudflare:*', 'node:*'] })
 const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
   modules: true, script: built.outputFiles[0].text, compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
-  bindings: { YINGMI_API_KEY: key, DAILY_RESEARCH_LIMIT: '20', CACHE_TTL_SECONDS: '600' },
+  bindings: { YINGMI_API_KEY: key, DAILY_RESEARCH_LIMIT: '24', CACHE_TTL_SECONDS: '600' },
   d1Databases: { ACCOUNTS_DB: 'test-accounts' },
   durableObjects: { FUND_COORDINATOR: { className: 'FundResearchCoordinator', useSQLite: true } },
   ratelimits: { FUND_REQUEST_LIMITER: { namespace_id: '2026090701', simple: { limit: 100, period: 60 } } },
@@ -35,6 +37,11 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
       assert.ok(reviewed.includes(body.params.name))
       seen.push(body.params.name)
       if (body.params.arguments.query === 'error') result = { isError: true, content: [{ type: 'text', text: key }] }
+      else if (body.params.arguments.query === 'invalid-arguments') return Response.json({ jsonrpc: '2.0', id: body.id,
+        error: { code: -32602, message: `Invalid arguments ${key}` } })
+      else if (body.params.arguments.query === 'mixed-news') result = { content: newsContent }
+      else if (body.params.arguments.query === 'structured-news') result = { structuredContent: { source: '盈米基金', apiKey: key },
+        content: [...newsContent, { type: 'image', data: 'unavailable-image' }] }
       else result = { structuredContent: { asOf: '2026-09-04', fundCode: body.params.arguments.fundCode, value: 0.12 } }
     } else throw Error('Unexpected upstream method')
     return Response.json({ jsonrpc: '2.0', id: body.id, result })
@@ -72,7 +79,16 @@ try {
     arguments_json: JSON.stringify({ fundCode: '000001', query: 'error' }) }), { code: 'RESEARCH_QUERY_FAILED' })
   assert.equal((await query.execute({ capability: 'financial_news', schema_hash: detail.entries[0].schema_hash,
     arguments_json: JSON.stringify({ fundCode: '000001' }) })).status, 'received')
+  const newsQuery = input => query.execute({ capability: 'financial_news', schema_hash: detail.entries[0].schema_hash,
+    arguments_json: JSON.stringify({ fundCode: '000001', query: input }) })
+  await assert.rejects(() => newsQuery('invalid-arguments'), { code: 'RESEARCH_ARGUMENTS_INVALID' })
+  assert.equal((await catalog.execute({ capability: 'financial_news' })).entries[0].state, 'available')
+  assert.deepEqual(JSON.parse((await newsQuery('mixed-news')).data_json), { content: newsContent })
+  const mixed = await newsQuery('structured-news')
+  assert.deepEqual(JSON.parse(mixed.data_json), { structuredContent: { source: '盈米基金' }, content: newsContent })
+  assert.ok(mixed.limitations.some(item => /未包含.*image/.test(item)))
+  assert.ok(!JSON.stringify(mixed).includes(key))
   await assert.rejects(() => catalog.execute({}), { code: 'FUND_SERVICE_BUSY' })
-  assert.equal(seen.length, 10)
-  console.log('Workers research operations: 60 available definitions; 8 representative categories, refs/arrays, >2 KiB authenticated bodies, isolated query errors and persistent budget passed.')
+  assert.equal(seen.length, 13)
+  console.log('Workers research operations: 60 definitions; 8 categories, refs/arrays, >2 KiB authenticated bodies, isolated tool/JSON-RPC parameter errors, preserved sources/mixed content, omitted-media notices and persistent budget passed.')
 } finally { await mf.dispose() }

@@ -21,7 +21,7 @@ const schema = { type: 'object', properties: {
 const args = { code: '000001', period: 'oneYear' }
 const execute = (capability = 'fund_risk', arguments_ = args) => ({ operation: 'execute', capability, arguments: arguments_, schema_hash: researchHash(schema) })
 
-function source({ names = reviewedTools, schemas = {}, result = { structuredContent: { date: '2026-09-04', value: 0.12 } }, paginate = false, sse = false, expireWith } = {}) {
+function source({ names = reviewedTools, schemas = {}, result = { structuredContent: { date: '2026-09-04', value: 0.12 } }, paginate = false, sse = false, expireWith, rpcError } = {}) {
   let renewed = false
   const fetch = vi.fn(async (_url, init) => {
     expect(String(_url)).toBe('https://stargate.yingmi.com/mcp/v2')
@@ -40,7 +40,8 @@ function source({ names = reviewedTools, schemas = {}, result = { structuredCont
       if (expireWith && !renewed) { renewed = true; return new Response(null, { status: 404 }) }
       data = typeof result === 'function' ? result(body.params) : result
     } else throw Error('Unexpected method')
-    const json = JSON.stringify({ jsonrpc: '2.0', id: body.id, result: data })
+    const error = rpcError?.(body)
+    const json = JSON.stringify({ jsonrpc: '2.0', id: body.id, ...(error ? { error } : { result: data }) })
     return new Response(sse ? `event: message\r\ndata: ${json}\r\n\r\n` : json, { headers: {
       'content-type': sse ? 'text/event-stream' : 'application/json',
       ...(body.method === 'initialize' ? { 'Mcp-Session-Id': renewed ? 'new' : 'first' } : {})
@@ -75,7 +76,8 @@ describe('reviewed research capabilities and live schemas', () => {
     const detail = await provider.researchOperation({ operation: 'catalog', capability: 'fund_risk' })
     expect(JSON.parse(detail.entries[0].arguments_schema_json)).toEqual(schema)
     expect(detail.entries[0].schema_hash).toBe(researchHash(schema))
-    expect(JSON.stringify(detail)).not.toMatch(/synthetic-yingmi-key|AnalyzeFundRisk|盈米/)
+    expect(JSON.stringify(detail)).not.toContain(KEY)
+    expect(detail.entries[0].description).toBe('Read AnalyzeFundRisk; 盈米 [已隐藏]')
   })
 
   it('routes every reviewed capability to its exact upstream tool with validated arguments', async () => {
@@ -148,6 +150,10 @@ describe('reviewed research capabilities and live schemas', () => {
 })
 
 describe('research output boundary', () => {
+  const link = { type: 'resource_link', uri: 'https://yingmi.cn/archives/877', name: '盈米基金原文', mimeType: 'text/html' }
+  const summary = { type: 'text', text: '盈米基金经理观点摘要' }
+  const article = { type: 'resource', resource: { uri: 'https://yingmi.cn/archives/877', mimeType: 'text/plain', text: '原始观点与披露日期：2026-09-04' } }
+
   it.each([
     [{ content: [{ type: 'text', text: '[1]:\n  - code: 000001' }] }, '[1]:\n  - code: 000001', 'received'],
     [{ content: [{ type: 'text', text: '{"items":[]}' }] }, { items: [] }, 'received'],
@@ -162,14 +168,51 @@ describe('research output boundary', () => {
     expect(value.limitations.length).toBeGreaterThan(0)
   })
 
+  it.each([
+    [{ content: [summary, link] }, { content: [summary, link] }],
+    [{ content: [link] }, { content: [link] }],
+    [{ content: [summary, article] }, { content: [summary, article] }],
+    [{ structuredContent: { value: 0.12 }, content: [summary, link] }, { structuredContent: { value: 0.12 }, content: [summary, link] }],
+    [{ structuredContent: { value: 0.12 }, content: [summary] }, { structuredContent: { value: 0.12 }, content: [summary] }],
+    [{ structuredContent: { value: 0.12 }, content: [{ type: 'text', text: '{ "value": 0.12 }' }] }, { value: 0.12 }]
+  ])('retains source links, embedded text and supplementary content without fetching their URIs', async (result, expected) => {
+    const { provider, fetch } = source({ result })
+    const value = await provider.researchOperation(execute('financial_news'))
+    expect(JSON.parse(value.data_json)).toEqual(expected)
+    expect(value.status).toBe('received')
+    expect(fetch.mock.calls.every(([url]) => url === 'https://stargate.yingmi.com/mcp/v2')).toBe(true)
+  })
+
+  it('reports omitted media explicitly when usable content is returned', async () => {
+    const { provider } = source({ result: { content: [summary, link, { type: 'image', data: 'unavailable-image' }] } })
+    const value = await provider.researchOperation(execute('financial_news'))
+    expect(JSON.parse(value.data_json)).toEqual({ content: [summary, link] })
+    expect(value.limitations.some(item => /未包含.*image/.test(item))).toBe(true)
+    expect(value.quality_state).toBe('unverified')
+  })
+
   it('redacts credential-bearing fields and text while retaining dates and source URLs', async () => {
     const { provider } = source({ result: { structuredContent: {
-      title: '基金经理观点', date: '2026-09-04', url: 'https://example.com/article?apiKey=do-not-return',
-      apiKey: KEY, authorization: `Bearer ${KEY}`, text: `SearchManagerViewpoint ${KEY}`
+      title: '盈米基金经理观点', date: '2026-09-04', url: 'https://yingmi.cn/article?apiKey=do-not-return',
+      source: '盈米基金', yingmi: '公开字段', apiKey: KEY, authorization: `Bearer ${KEY}`,
+      text: `SearchManagerViewpoint ${KEY} Bearer synthetic-other-token`
     } } })
     const value = await provider.researchOperation(execute('manager_views'))
-    expect(JSON.stringify(value)).not.toMatch(/do-not-return|synthetic-yingmi-key|SearchManagerViewpoint/)
-    expect(JSON.parse(value.data_json)).toMatchObject({ title: '基金经理观点', date: '2026-09-04' })
+    expect(JSON.stringify(value)).not.toMatch(/do-not-return|synthetic-yingmi-key|synthetic-other-token/)
+    expect(JSON.parse(value.data_json)).toEqual({ title: '盈米基金经理观点', date: '2026-09-04',
+      url: 'https://yingmi.cn/article?apiKey=[已隐藏]', source: '盈米基金', yingmi: '公开字段',
+      text: 'SearchManagerViewpoint [已隐藏] Bearer [已隐藏]' })
+  })
+
+  it('redacts credentials in mixed content while preserving public provenance', async () => {
+    const { provider } = source({ result: { structuredContent: { title: '盈米基金', apiKey: KEY },
+      content: [{ ...link, uri: `${link.uri}?token=private-url-token` },
+        { ...article, resource: { ...article.resource, text: `盈米观点 ${KEY}`, authorization: `Bearer ${KEY}` } }] } })
+    const value = await provider.researchOperation(execute('financial_news'))
+    expect(value.data_json).not.toMatch(/private-url-token|synthetic-yingmi-key|authorization|apiKey/)
+    expect(JSON.parse(value.data_json)).toEqual({ structuredContent: { title: '盈米基金' },
+      content: [{ ...link, uri: `${link.uri}?token=[已隐藏]` },
+        { ...article, resource: { ...article.resource, text: '盈米观点 [已隐藏]' } }] })
   })
 
   it('rejects MCP errors, unsupported media and oversized results as distinct failures', async () => {
@@ -238,6 +281,30 @@ describe('hosted research path and model tools', () => {
     const failing = hosted({ result: { isError: true, content: [{ type: 'text', text: KEY }] } })
     await expect(failing.provider.researchOperation(execute())).rejects.toMatchObject({ code: 'RESEARCH_QUERY_FAILED' })
     expect(failing.storage.values.has('cooldown')).toBe(false)
+  })
+
+  it.each([false, true])('isolates JSON-RPC invalid arguments over JSON/SSE (SSE=%s)', async sse => {
+    const setup = hosted({ sse, rpcError: body => body.method === 'tools/call' && body.params.arguments.code === '000001'
+      ? { code: -32602, message: `Invalid arguments ${KEY}`, data: { apiKey: KEY } } : undefined })
+    await expect(setup.provider.researchOperation(execute())).rejects.toMatchObject({
+      code: 'RESEARCH_ARGUMENTS_INVALID', message: expect.not.stringContaining(KEY)
+    })
+    expect(setup.storage.values.has('cooldown')).toBe(false)
+    const detail = await setup.provider.researchOperation({ operation: 'catalog', capability: 'fund_risk' })
+    expect(detail.entries[0].state).toBe('available')
+    expect((await setup.provider.researchOperation(execute('fund_risk', { code: '000002' }))).status).toBe('received')
+    expect(setup.calls()).toHaveLength(2)
+  })
+
+  it.each([
+    ['tools/call', -32603], ['initialize', -32602], ['tools/list', -32602]
+  ])('retains global outage protection for %s errors with code %s', async (method, code) => {
+    const setup = hosted({ rpcError: body => body.method === method ? { code, message: KEY } : undefined })
+    await expect(setup.provider.researchOperation(execute())).rejects.toMatchObject({ code: 'FUND_SERVICE_UNAVAILABLE' })
+    expect(setup.storage.values.has('cooldown')).toBe(true)
+    const count = setup.fetch.mock.calls.length
+    await expect(setup.provider.researchOperation({ operation: 'catalog' })).rejects.toMatchObject({ code: 'FUND_SERVICE_UNAVAILABLE' })
+    expect(setup.fetch).toHaveBeenCalledTimes(count)
   })
 
   it('never persists private combination inputs or results, even on repeated queries', async () => {

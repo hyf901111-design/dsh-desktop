@@ -45,7 +45,7 @@ function requestAbort(signal, timeoutMs) {
   }
 }
 
-async function readRpcResponse(response, id, signal) {
+async function readRpcResponse(response, id, signal, method) {
   const contentType = response.headers.get('content-type') ?? ''
   const isSse = contentType.includes('text/event-stream')
   if (!isSse && !contentType.includes('application/json')) throw privateFailure('incompatible')
@@ -72,7 +72,7 @@ async function readRpcResponse(response, id, signal) {
       if (!isSse && done) {
         let parsed
         try { parsed = JSON.parse(buffer) } catch { throw privateFailure('incompatible') }
-        return rpcValue(parsed, id)
+        return rpcValue(parsed, id, method)
       }
       if (isSse) {
         buffer = buffer.replace(/\r\n/gu, '\n')
@@ -88,7 +88,7 @@ async function readRpcResponse(response, id, signal) {
           if (!data) continue
           let message
           try { message = JSON.parse(data) } catch { throw privateFailure('incompatible') }
-          if (record(message).id === id) return rpcValue(message, id)
+          if (record(message).id === id) return rpcValue(message, id, method)
         }
       }
       if (done) throw privateFailure('incompatible')
@@ -103,9 +103,11 @@ async function readRpcResponse(response, id, signal) {
   }
 }
 
-function rpcValue(value, id) {
+function rpcValue(value, id, method) {
   const message = record(value)
   if (message.jsonrpc !== '2.0' || message.id !== id) throw privateFailure('incompatible')
+  // Retain only the error category, never upstream messages or diagnostic data.
+  if (method === 'tools/call' && record(message.error).code === -32602) throw privateFailure('invalid_arguments')
   if (message.error !== undefined || !Object.hasOwn(message, 'result')) throw privateFailure()
   return message.result
 }
@@ -206,9 +208,12 @@ export function createYingmiMcpClient({
         if (!/^[\x21-\x7e]{1,512}$/u.test(receivedSession)) throw privateFailure('incompatible')
         sessionId = receivedSession
       }
-      return await readRpcResponse(response, id, operation.signal)
+      return await readRpcResponse(response, id, operation.signal, method)
     } catch (error) {
       const state = error?.state
+      // A tools/call parameter rejection belongs to this query. Initialization
+      // and discovery failures still indicate an unavailable service.
+      if (method === 'tools/call' && state === 'invalid_arguments') throw serviceError('RESEARCH_ARGUMENTS_INVALID')
       if (state === 'unauthorized' || state === 'rate_limited') halted = error
       if (state || error?.code?.startsWith('RESEARCH_')) throw error
       throw privateFailure()
