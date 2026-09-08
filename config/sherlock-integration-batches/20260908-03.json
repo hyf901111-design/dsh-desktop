@@ -9,30 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "画布组件悬浮操作与内容适配",
+        "featureName": "圆角图表卡片与悬浮交互细化",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "ea15b565692a747db95b690fee6ad4c890f5cde0",
-        "tipCommit": "878d7948441d6ea4a0cc2c9ad3b9063de737187b",
+        "baseCommit": "878d7948441d6ea4a0cc2c9ad3b9063de737187b",
+        "tipCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
         "commits": [
           {
-            "commit": "1aebc7c5349bc620e2937b4538fd0ee13a80a9a7",
+            "commit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
             "parents": [
-              "ea15b565692a747db95b690fee6ad4c890f5cde0"
+              "878d7948441d6ea4a0cc2c9ad3b9063de737187b"
             ],
-            "subject": "修复：网页组件内容悬停时同步显示外框操作"
-          },
-          {
-            "commit": "878d7948441d6ea4a0cc2c9ad3b9063de737187b",
-            "parents": [
-              "1aebc7c5349bc620e2937b4538fd0ee13a80a9a7"
-            ],
-            "subject": "优化：限制长资料自动高度并消除放大阅读的尺寸跳动"
+            "subject": "优化：采用圆角图表卡片并细化悬浮缩放与蓝色链接"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "docs/research-component-style.md"
+          },
+          {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
@@ -48,7 +49,7 @@
           },
           {
             "status": "M",
-            "path": "test/research-workbench.test.js"
+            "path": "test/research-task-runtime.test.js"
           },
           {
             "status": "M",
@@ -62,63 +63,28 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
               "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
+              "test/research-task-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "37 项相关检查与类型检查通过；7 项直接相关缩放和尺寸回归通过",
-            "verifiedCommit": "878d7948441d6ea4a0cc2c9ad3b9063de737187b",
-            "completedAt": "2026-09-08T05:58:47.684167+00:00",
+            "summary": "123 项组件及生成规则检查、15 项图表与交互回归、类型检查通过",
+            "verifiedCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
+            "completedAt": "2026-09-08T06:31:28.628998+00:00",
             "timeoutMs": 120000
           },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "37 项相关检查与类型检查通过；7 项直接相关缩放和尺寸回归通过",
-            "verifiedCommit": "878d7948441d6ea4a0cc2c9ad3b9063de737187b",
-            "completedAt": "2026-09-08T05:58:47.684167+00:00",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "浏览器截图验证内容悬停出现操作按钮、放大和关闭后输入保留、尺寸无跳动。首轮集成客户端验证 Inspect 关闭按钮避让并可独立关闭；长资料自动高度限制待最终构建复验。"
-        },
-        "acceptanceCriteria": [
-          "临时详情侧栏关闭按钮避开全局面板按钮",
-          "生成组件悬停或键盘聚焦时显示操作按钮",
-          "右下角拖动调整大小并支持放大阅读",
-          "内容自动增高且后续行不重叠，整理不压回固定高度"
-        ],
-        "risks": [
-          "长内容和用户主动缩小的组件仍允许滚动",
-          "原有点阵与主题背景不变"
-        ],
-        "generatedAt": "2026-09-08T05:58:47.684167+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b8eef78f01c39a928bc5d3ae0b4bbe10570ef2d2",
-        "verificationCommit": "b8eef78f01c39a928bc5d3ae0b4bbe10570ef2d2",
-        "checks": [
           {
             "argv": [
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "auto-fit|auto fit|manual sizing|trusted.*pointer|content.*select|resiz|theme|chart"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "b8eef78f01c39a928bc5d3ae0b4bbe10570ef2d2",
-            "completedAt": "2026-09-08T05:59:50.580Z",
+            "summary": "123 项组件及生成规则检查、15 项图表与交互回归、类型检查通过",
+            "verifiedCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
+            "completedAt": "2026-09-08T06:31:28.628998+00:00",
             "timeoutMs": 120000
           },
           {
@@ -128,13 +94,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b8eef78f01c39a928bc5d3ae0b4bbe10570ef2d2",
-            "completedAt": "2026-09-08T05:59:50.580Z",
+            "summary": "123 项组件及生成规则检查、15 项图表与交互回归、类型检查通过",
+            "verifiedCommit": "24af8e6aa20a8e4827cdaae230957372e7c0ed83",
+            "completedAt": "2026-09-08T06:31:28.628998+00:00",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-09-08T05:59:50.580Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实 Chromium 中验证深浅卡片配色、蓝色链接、无浮动标题、仅单个局部悬停手柄、操作按钮移出淡出及关闭菜单 inert；待集成客户端复验。"
+        },
+        "acceptanceCriteria": [
+          "深浅主题采用 shadcn Card 细框圆角底色，点击选中淡蓝外发光",
+          "无左上角浮动小标题和四角圆点，仅右下角局部悬停出现缩放手柄",
+          "右上角操作、附加菜单、缩放提示自然渐入渐出，保留键盘可访问性",
+          "HTML 和原生组件链接统一蓝色，更新生成默认规范"
+        ],
+        "risks": [
+          "长内容和用户主动缩小的组件仍允许滚动",
+          "原有点阵与主题背景不变"
+        ],
+        "generatedAt": "2026-09-08T06:31:28.628998+00:00"
       }
     }
   ],
