@@ -202,6 +202,9 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   // Error text and stack traces never leave the sandbox. The host can show retained text.
   addEventListener('error', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
   addEventListener('unhandledrejection', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
+  const publishHover = (active) => parent.postMessage({ type: 'sherlock-content-hover', active }, '*')
+  document.documentElement.addEventListener('pointerenter', () => publishHover(true))
+  document.documentElement.addEventListener('pointerleave', () => publishHover(false))
   document.addEventListener('pointerdown', event => {
     if (event.isTrusted && event.button === 0) parent.postMessage({ type: 'sherlock-content-pointer', metaKey: event.metaKey, shiftKey: event.shiftKey }, '*')
   }, true)
@@ -241,6 +244,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   addEventListener('message', (event) => {
     const data = event.data
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data)) {
+      if (data.type === 'sherlock-content-hover' && Object.keys(data).length === 2 && typeof data.active === 'boolean') { parent.postMessage({ type: data.type, active: data.active }, '*'); return }
       if (data.type === 'sherlock-content-pointer' && Object.keys(data).length === 3 && typeof data.metaKey === 'boolean' && typeof data.shiftKey === 'boolean') { parent.postMessage({ type: data.type, metaKey: data.metaKey, shiftKey: data.shiftKey }, '*'); return }
       if (data.type === 'sherlock-content-failed' && Object.keys(data).length === 1) { parent.postMessage({ type: data.type }, '*'); return }
       if (data.type === 'sherlock-source-request' && Object.keys(data).length === 2 && typeof data.url === 'string' && data.url.length <= 8192) { parent.postMessage({ type: data.type, url: data.url }, '*'); return }

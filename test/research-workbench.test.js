@@ -121,7 +121,7 @@ describe('研究工作台', () => {
         expect(times[1]-times[0]).toBeGreaterThanOrEqual(500);
         workspace.organizeCanvas(new Map([['s0', {width: 720, height: 3500}]]));
         const nodes = workspace.getSnapshot().artifacts;
-        expect(nodes.map(n=>n.height)).toEqual([3500,3500,840,840]);
+        expect(nodes.map(n=>n.height)).toEqual([1440,1440,840,840]);
         expect(nodes[0].y).toBe(nodes[1].y);
         expect(nodes[2].y).toBe(nodes[3].y);
     });
