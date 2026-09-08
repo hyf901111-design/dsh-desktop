@@ -1,5 +1,6 @@
 import sherlockLogo from '../../build/sherlock-logo.svg?raw'
 import accountAvatar from '../../build/sherlock-account-avatar.svg?raw'
+import accountBackground from '../../build/sherlock-account-background.png?url&inline'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   user?: Account | null
@@ -26,8 +27,7 @@ export function mountAccountUi(
  .sherlock-field-heading .sherlock-field-error{font-size:11px;font-weight:400;color:var(--dsw-alias-label-secondary);text-align:right}
  .sherlock-field-heading .sherlock-field-error:empty{display:none}
  .sherlock-account-avatar svg{display:block;width:100%;height:100%}
- .sherlock-account-avatar[data-authenticated=true]{background:#000;color:#fff;font-weight:600;font-style:normal}
- body[data-ds-dark-theme] .sherlock-account-avatar[data-authenticated=true]{background:#ff8a3d;color:#171717}
+ .sherlock-account-avatar[data-authenticated=true]{background:transparent url("${accountBackground}") center/cover no-repeat;color:#fff;font-weight:600;font-style:normal}
  .sherlock-auth-logo{display:block;width:88px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
