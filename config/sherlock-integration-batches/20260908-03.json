@@ -9,49 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一组件标题缩放与改名升级恢复",
+        "featureName": "登录头像图片背景与白色首字",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "e5497fb978438139dfca32bfd1517e41d89135ca",
-        "tipCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
+        "baseCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
+        "tipCommit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
         "commits": [
           {
-            "commit": "18ceef8556f84289611fe959e8b8278285ee5f73",
+            "commit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
             "parents": [
-              "e5497fb978438139dfca32bfd1517e41d89135ca"
+              "18ceef8556f84289611fe959e8b8278285ee5f73"
             ],
-            "subject": "修复：兼容两类签名通道的改名恢复标识"
+            "subject": "优化：登录头像使用蓝色图片背景与白色用户名首字"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "scripts/macos/update-recovery.cjs"
+            "status": "A",
+            "path": "build/sherlock-account-background.png"
           },
           {
             "status": "M",
-            "path": "src/main/update/mac-update-recovery.ts"
+            "path": "src/preload/account-ui.ts"
           },
           {
             "status": "M",
-            "path": "test/mac-update-recovery.test.ts"
+            "path": "src/preload/assets.d.ts"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/mac-update-recovery.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/update-manager.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "28项升级检查与类型检查通过",
-            "verifiedCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
-            "completedAt": "2026-09-08T07:22:52.631Z",
-            "timeoutMs": 120000
-          },
           {
             "argv": [
               "npm",
@@ -59,61 +44,22 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "28项升级检查与类型检查通过",
-            "verifiedCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
-            "completedAt": "2026-09-08T07:22:52.631Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
+            "completedAt": "2026-09-08T07:26:59.562Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 ResearchCanvas 在 Chromium 验证标题拖动70×40，56px热区缩放80×60，放大后恢复尺寸；深浅主题均已截图核对。"
+          "summary": "真实账户UI在Chromium深浅主题均显示提供的PNG背景与白色大写H，已截图核对。"
         },
         "acceptanceCriteria": [
-          "标题区域统一且可拖动，源摘要组件也有标题",
-          "固定边框色、扩大圆头角落手柄，操作避让滚动条",
-          "跨名升级使用校验后的最终路径恢复启动，迁移精确旧 Dock 地址"
+          "登录头像背景使用用户提供的Group 78.png",
+          "深浅主题均为白色用户名首字，英文大写"
         ],
-        "risks": [
-          "旧发布进程不能回溯获得保护代码；已经跨名失败者首次仍需打开新应用",
-          "不发布、不更改版本和更新源，待用户本地验收"
-        ],
-        "generatedAt": "2026-09-08T07:22:52.631Z"
-      },
-      "merged": {
-        "mergeCommit": "a2f5045cc7e1354629ab26b9d53839cd8d142e1f",
-        "verificationCommit": "a2f5045cc7e1354629ab26b9d53839cd8d142e1f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "a2f5045cc7e1354629ab26b9d53839cd8d142e1f",
-            "completedAt": "2026-09-08T07:23:59.312Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a2f5045cc7e1354629ab26b9d53839cd8d142e1f",
-            "completedAt": "2026-09-08T07:23:59.312Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T07:23:59.312Z"
+        "risks": [],
+        "generatedAt": "2026-09-08T07:26:59.562Z"
       }
     }
   ],
