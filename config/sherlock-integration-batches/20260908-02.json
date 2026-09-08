@@ -11,21 +11,41 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "d8f62dfc0d6504470021c701d3ea5c86ca3b4dea",
-        "tipCommit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
+        "baseCommit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
+        "tipCommit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
         "commits": [
           {
-            "commit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
+            "commit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
             "parents": [
-              "d8f62dfc0d6504470021c701d3ea5c86ca3b4dea"
+              "bb3c697ecc7366933129d65c2245ddd7a7c194d6"
             ],
-            "subject": "验证：同步空白研究页的新中文欢迎语"
+            "subject": "修复：恢复设置下拉菜单并调整启动标志和 Dock 图标尺寸"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
+            "path": "build/app-icon.png"
+          },
+          {
+            "status": "M",
+            "path": "build/icon.icns"
+          },
+          {
+            "status": "M",
+            "path": "build/icon.ico"
+          },
+          {
+            "status": "M",
+            "path": "build/splash.html"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/branding-patch.test.ts"
           }
         ],
         "checks": [
@@ -34,20 +54,19 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "Research empty-state headline"
+              "test/branding-patch.test.ts",
+              "test/brand-migration.test.ts"
             ],
             "outcome": "passed",
-            "summary": "研究空白页欢迎语与输入布局检查通过",
-            "verifiedCommit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
-            "completedAt": "2026-09-08T02:44:49.783912+00:00",
+            "summary": "15 项品牌与图标检查通过；类型检查通过",
+            "verifiedCommit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
+            "completedAt": "2026-09-08T03:01:34.630215+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "品牌与关于页面渲染检查通过；最终客户端深浅主题验收在集成构建后执行。"
+          "summary": "真实客户端复现菜单遮挡，浏览器确认菜单层级 1100；集成构建后复验修复、Logo 和 Dock 图标。"
         },
         "acceptanceCriteria": [
           "名称统一为 EWork Odyssey",
@@ -58,45 +77,7 @@
         "risks": [
           "稳定应用 ID 和用户数据目录沿用以保留现有配置"
         ],
-        "generatedAt": "2026-09-08T02:44:49.783912+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c1b2f5ae82ec3eed6f17a7c6f063cef015239ce4",
-        "verificationCommit": "c1b2f5ae82ec3eed6f17a7c6f063cef015239ce4",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "c1b2f5ae82ec3eed6f17a7c6f063cef015239ce4",
-            "completedAt": "2026-09-08T02:45:25.516Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "c1b2f5ae82ec3eed6f17a7c6f063cef015239ce4",
-            "completedAt": "2026-09-08T02:45:25.516Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T02:45:25.516Z"
+        "generatedAt": "2026-09-08T03:01:34.630215+00:00"
       }
     }
   ],
