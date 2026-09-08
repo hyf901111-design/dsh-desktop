@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.9.3',
+      date: '2026-09-08',
+      items: ["画布容器和语音创建接入金融查数工具，可按需求查询股票、指数、ETF 和基金数据", "金融组件优先使用结构化行情数据，明确行情时间、数据口径及缺失或暂不支持的能力", "模式选择菜单增加图标，优化当前选中项的背景与布局", "缩小发送按钮，优化输入区域的视觉比例", "优化智能容器表单，提亮输入框背景、收紧间距并使用通栏创建按钮", "移除容器组件顶部的派生功能栏，增大组件生成过程的状态文字"]
+    },
+    {
       version: '0.9.2',
       date: '2026-09-08',
       items: [
@@ -229,6 +234,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.9.3',
+      date: '2026-09-08',
+      items: ["Connected canvas containers and voice-created components to financial data tools for stocks, indices, ETFs and funds", "Prioritized structured financial data with explicit timestamps, data definitions and unavailable capabilities", "Added mode-picker icons and refined selected-option styling and layout", "Reduced the send button size for better input-area proportions", "Refined container forms with a lighter input background, tighter spacing and a full-width create button", "Removed the derived-actions toolbar above containers and increased generation-status text size"]
+    },
     {
       version: '0.9.2',
       date: '2026-09-08',
