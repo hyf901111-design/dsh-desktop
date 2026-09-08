@@ -9,35 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一滚动条、增强组件选中光晕并调整画布与头像配色",
+        "featureName": "统一组件创建、排队和生成进度背景",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "6c15fab72870f10dc63374f120b29ebada524297",
-        "tipCommit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
+        "baseCommit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
+        "tipCommit": "d94e9d7c323f38f61e3550c4cd80b67480a58e37",
         "commits": [
           {
-            "commit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
+            "commit": "d94e9d7c323f38f61e3550c4cd80b67480a58e37",
             "parents": [
-              "6c15fab72870f10dc63374f120b29ebada524297"
+              "9ed8858594ffb310ea0e9099913012860e1abfd9"
             ],
-            "subject": "优化：统一组件滚动条并增强选中光晕，调整画布与头像配色"
+            "subject": "优化：统一组件创建和生成过程的背景色"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
             "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/account-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -46,77 +34,27 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-html-theme.test.js",
               "test/research-container-chrome.test.ts"
             ],
             "outcome": "passed",
-            "summary": "32项主题和组件交互检查通过",
-            "verifiedCommit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
-            "completedAt": "2026-09-08T08:36:01.289336+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
-            "completedAt": "2026-09-08T08:36:01.289336+00:00",
+            "summary": "17项组件交互检查通过",
+            "verifiedCommit": "d94e9d7c323f38f61e3550c4cd80b67480a58e37",
+            "completedAt": "2026-09-08T08:41:05.646725+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器确认 HTML 与原生总结滚动条在深浅主题下的宽度、颜色、圆角相同，长内容可滚动；选中光晕增强、深色画布为 #202020 且保留点阵；彩色头像显示白色大写 H；临时侧栏关闭按钮位于标题左侧且能关闭。"
+          "summary": "浏览器核验16种状态组合：容器创建、排队、生成、失败和总结/导图排队、生成均在深浅主题下与外框底色一致；创建输入在切换主题后保留，提交按钮正常可用。"
         },
         "acceptanceCriteria": [
-          "原生与 HTML 组件使用统一圆角细滚动条",
-          "选中光晕更明显，固定边框颜色保持一致",
-          "深色画布稍浅并保留点阵",
-          "彩色头像背景上的首字为白色，英文字母大写"
+          "组件创建、排队、生成与失败状态的内部底色跟随统一组件外框",
+          "深色 #171717、浅色纯白，保留输入和操作按钮"
         ],
         "risks": [
           "本地测试，未发布或变更更新源"
         ],
-        "generatedAt": "2026-09-08T08:36:01.289336+00:00"
-      },
-      "merged": {
-        "mergeCommit": "069719ad5da7563716a8987d0886a6384a3ef523",
-        "verificationCommit": "069719ad5da7563716a8987d0886a6384a3ef523",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "069719ad5da7563716a8987d0886a6384a3ef523",
-            "completedAt": "2026-09-08T08:37:27.788Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "069719ad5da7563716a8987d0886a6384a3ef523",
-            "completedAt": "2026-09-08T08:37:27.788Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T08:37:27.788Z"
+        "generatedAt": "2026-09-08T08:41:05.646725+00:00"
       }
     }
   ],
