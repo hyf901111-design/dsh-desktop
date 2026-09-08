@@ -120,3 +120,13 @@ npm run git:handoff -- --help
 npm run git:integration:preflight -- --help
 npm run git:integration -- --help
 ```
+
+## 已合并功能的后续修复
+
+验收前功能分支继续修复时，先重新生成交接卡，再使用受所有权和精确 tip 保护的更新入口。旧卡和证据保留在 Git 历史；新卡必须是同一分支、以原交接 tip 为基线的严格后继，更新后必须重新执行 merge、accept、promote。已接受批次不能刷新。
+
+```bash
+node scripts/refresh-sherlock-integration-handoff.mjs --repo <integration-worktree> --manifest <manifest> --handoff <new-card> --confirm-batch <batch> --confirm-tip <current-integration-sha> --dry-run
+```
+
+确认 dry-run 后去掉该参数执行。此入口不接受脏工作区，不改变功能引用，也不复用旧 tip 的检查结论。

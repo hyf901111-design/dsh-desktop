@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..6115008 100644
+index 1dd0e89..d983f68 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -514,7 +514,7 @@ index 1dd0e89..6115008 100644
 +							parentSessionId: session.sessionId,
 +							canvasNodeId: targetNodeId,
 +							kind: 'container',
-+							prompt
++							prompt: researchComponentPrompt(target, prompt)
 +						});
 +						if (!workspace.attachGenerationTask(targetNodeId, result)) return { ok: false, error: '生成组件已失效' };
 +						return { ok: true, taskId: result.taskId };
@@ -2839,7 +2839,7 @@ index 1dd0e89..6115008 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8577,6969 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8577,7003 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -4712,7 +4712,8 @@ index 1dd0e89..6115008 100644
 +				messageId,
 +				title,
 +				excerpt,
-+				...(typeof value.workbenchId === "string" && Number.isInteger(value.workbenchIndex) ? { workbenchId: value.workbenchId.slice(0, 100), workbenchIndex: value.workbenchIndex, workbenchColumns: value.workbenchColumns === 2 ? 2 : 3 } : {}),
++				...(typeof value.workbenchId === "string" && Number.isInteger(value.workbenchIndex) ? { workbenchId: value.workbenchId.slice(0, 100), workbenchIndex: value.workbenchIndex, workbenchRevealAt: Number.isFinite(value.workbenchRevealAt) ? value.workbenchRevealAt : 0, workbenchColumns: value.workbenchColumns === 2 ? 2 : 3 } : {}),
++				...(container && Object.hasOwn({small:1,medium:1,large:1}, value.containerSizePreset) ? {containerSizePreset: value.containerSizePreset} : {}),
 +				...(webLink ? { url, titleMode, ...(sourceText === null ? {} : { sourceText }) } : {}),
 +				x: value.x,
 +				y: value.y,
@@ -5110,8 +5111,27 @@ index 1dd0e89..6115008 100644
 +			const raise = (node) => stackOrders.has(node.id) ? { ...node, stackOrder: stackOrders.get(node.id) } : node;
 +			return { files: files.map(raise), artifacts: artifacts.map(raise) };
 +		}
++        const RESEARCH_COMPONENT_SIZES = { small: 360, medium: 600, large: 840 };
++        function researchComponentSize(node) { return Object.hasOwn(RESEARCH_COMPONENT_SIZES, node.containerSizePreset) ? node.containerSizePreset : node.height <= 360 ? 'small' : node.height <= 600 ? 'medium' : 'large'; }
++        function researchComponentPrompt(node, prompt) {
++            const size = researchComponentSize(node), height = RESEARCH_COMPONENT_SIZES[size];
++            return `${prompt}\n组件使用固定${size}规格，外框720×${height}px，内容高${height - 38}px。请精简到核心内容：最多${size === 'small' ? 5 : size === 'medium' ? 10 : 14}行表格、6列，或${size === 'small' ? 250 : size === 'medium' ? 450 : 650}字；来源用简短链接，次要细节放折叠区，避免重复背景与说明，不通过长正文撑高外框。`;
++        }
++        function researchAlignComponentPresets(artifacts, top = 48) {
++            const components = artifacts.filter(n => n.kind === 'generated-container');
++            const columns = components.length === 2 || components.length === 4 ? 2 : 3;
++            const replacements = new Map();
++            for (let i = 0; i < components.length; i += columns) {
++                const row = components.slice(i, i + columns);
++                const height = Math.max(...row.map(n => RESEARCH_COMPONENT_SIZES[researchComponentSize(n)]));
++                const size = Object.keys(RESEARCH_COMPONENT_SIZES).find(key => RESEARCH_COMPONENT_SIZES[key] === height);
++                row.forEach((n, col) => replacements.set(n.id, { ...n, width: 720, height, x: col * 752 + 360, y: top + height / 2, containerSizePreset: size, sizeMode: 'auto' }));
++                top += height + 32;
++            }
++            return artifacts.map(n => replacements.get(n.id) ?? n);
++        }
 +		function researchGenerationSizedNode(node, geometry) {
-+			if (geometry === null) return node;
++			if (geometry === null || node.containerSizePreset && node.sizeMode !== "manual") return node;
 +			const next = { ...node, ...geometry, ...(node.workbenchId && node.sizeMode !== "manual" ? { width: node.width } : {}) };
 +			// Selection outputs grow down/right from their visible title, not out of view.
 +			if (node.sizeMode !== "manual" && (node.kind === "generated-mind-map" || node.kind === "generated-summary" || node.kind === "generated-container" || node.creationMode === "selection")) {
@@ -5123,7 +5143,7 @@ index 1dd0e89..6115008 100644
 +			return next;
 +		}
 +		function researchGenerationAutoGeometry(node) {
-+			if (node?.sizeMode === "manual" || node?.workbenchId) return null;
++			if (node?.sizeMode === "manual" || node?.workbenchId || node?.containerSizePreset) return null;
 +			// A stable progress surface must not grow with hidden code or tool logs.
 +			return { width: 480, height: 300 };
 +		}
@@ -5391,7 +5411,7 @@ index 1dd0e89..6115008 100644
 +				return filesDurable;
 +			};
 +			const publish = (next, persist = false) => {
-+                const changedGroups = new Set(next.artifacts.filter(n => n.workbenchId && n.sizeMode !== "manual" && snapshot.artifacts.some(old => old.id === n.id && (old.height !== n.height || old.width !== n.width))).map(n => n.workbenchId));
++                const changedGroups = new Set(next.artifacts.filter(n => n.workbenchId && !n.containerSizePreset && n.sizeMode !== "manual" && snapshot.artifacts.some(old => old.id === n.id && (old.height !== n.height || old.width !== n.width))).map(n => n.workbenchId));
 +                for (const id of changedGroups) {
 +                    const group = next.artifacts.filter(n => n.workbenchId === id).sort((a, b) => a.workbenchIndex - b.workbenchIndex);
 +                    const prior = snapshot.artifacts.filter(n => n.workbenchId === id);
@@ -5753,7 +5773,7 @@ index 1dd0e89..6115008 100644
 +                        generationStatus: p.taskId ? 'queued' : 'failed', generationLastSeq: 0,
 +                        ...(p.taskId ? { generationTaskId: p.taskId } : { generationError: p.error ?? '任务未启动，请重试。' }),
 +                        x: p.x + p.width / 2, y: bottom + p.y + p.height / 2, width: p.width, height: p.height, sizeMode: 'auto',
-+                        workbenchId: plan.id, workbenchIndex: plan.panels.indexOf(p), workbenchColumns: plan.panels.length === 2 || plan.panels.length === 4 ? 2 : 3
++                        containerSizePreset: p.size ?? researchComponentSize(p), workbenchId: plan.id, workbenchIndex: plan.panels.indexOf(p), workbenchRevealAt: Date.now() + plan.panels.indexOf(p) * 500, workbenchColumns: plan.panels.length === 2 || plan.panels.length === 4 ? 2 : 3
 +                    }));
 +                    if (nodes.some(n => n === null)) return false;
 +                    const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);
@@ -5777,7 +5797,7 @@ index 1dd0e89..6115008 100644
 +						excerpt: "描述想创建的内容",
 +						generationStatus: "draft",
 +						generationLastSeq: 0,
-+						containerPrompt: "",
++						containerPrompt: "", containerSizePreset: "medium",
 +						refreshMinutes: 0,
 +						...point
 +					});
@@ -5830,7 +5850,7 @@ index 1dd0e89..6115008 100644
 +					const { generationError: _generationError, refreshError: _refreshError, generationTaskId: _taskId, generationChildSessionId: _childId, generationStartedAt: _startedAt, generationCompletedAt: _completedAt, generationEvents: _events, generationPartialText: _partial, ...queued } = current;
 +					const artifacts2 = snapshot.artifacts.slice();
 +					artifacts2[index] = {
-+						...queued,
++						...queued, containerSizePreset: researchComponentSize(current), width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)],
 +						containerPrompt: prompt,
 +						generationStatus: "queued",
 +						generationLastSeq: 0,
@@ -6031,7 +6051,7 @@ index 1dd0e89..6115008 100644
 +					const artifacts2 = snapshot.artifacts.slice();
 +					const { generationError: _error, generationTaskId: _task, generationChildSessionId: _child, generationStartedAt: _started, generationCompletedAt: _completed, generationEvents: _events, generationPartialText: _partial, ...retrying } = current;
 +					artifacts2[index] = {
-+						...retrying,
++						...retrying, ...(kind === "container" ? { containerSizePreset: researchComponentSize(current), width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)] } : {}),
 +						generationStatus: 'queued',
 +						generationLastSeq: 0,
 +						excerpt: '正在准备任务…'
@@ -6111,6 +6131,10 @@ index 1dd0e89..6115008 100644
 +                    }
 +                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
 +					if (organized === null) return false;
++                    const otherNodes = [...organized.files, ...organized.artifacts.filter(n => n.kind !== 'generated-container')];
++                    const top = otherNodes.length ? Math.max(...otherNodes.map(n => n.y + normalizeResearchCanvasNodeGeometry(n).height / 2)) + 48 : 48;
++                    organized.artifacts = researchAlignComponentPresets(organized.artifacts, top);
++                    organized.viewport = researchWorkbenchViewport([...organized.files, ...organized.artifacts], organized.viewport, snapshot.canvasSize);
 +					commitUpdate(organized, true);
 +					return true;
 +				},
@@ -6213,7 +6237,7 @@ index 1dd0e89..6115008 100644
 +                            if (htmlContentMeasurements.size >= RESEARCH_CANVAS_MAX_ARTIFACTS_PER_SESSION && !htmlContentMeasurements.has(nodeId)) htmlContentMeasurements.delete(htmlContentMeasurements.keys().next().value);
 +                            htmlContentMeasurements.set(nodeId, { html: expectedHtml, dimensions: { width: dimensions.width, height: dimensions.height } });
 +                        }
-+                        const geometry = researchHtmlAutoGeometry(node, dimensions);
++                        const geometry = node.containerSizePreset ? null : researchHtmlAutoGeometry(node, dimensions);
 +						if (geometry === null) return false;
 +						const now = Date.now();
 +						let budget = htmlFitStates.get(nodeId);
@@ -7442,7 +7466,7 @@ index 1dd0e89..6115008 100644
 +			const research = /网页|搜索|检索/.test(lastTool);
 +			if (latest?.type === 'tool-finished' && latest.failed) return { stage: 'recovering', title: research ? '正在调整检索' : '正在调整生成', detail: '这一步没有完成，正在重新整理后续处理', step: 1 };
 +			if (latest?.type === 'tool-started') return { stage: research ? 'researching' : 'organizing', title: research ? '正在查找资料' : '正在整理资料', detail: research ? '查找相关数据与来源' : '读取材料，梳理内容之间的关系', step: 1 };
-+			if (latest?.type === 'assistant-delta' && /(?:\{\s*"(?:type|title)"|<html|<style|```)/i.test(node.generationPartialText ?? latest.text ?? '') || latest === undefined && typeof node.generationPartialText === 'string' && node.generationPartialText.length > 0) return { stage: 'building', title: '正在绘制组件', detail: '', step: 2 };
++			if (latest?.type === 'assistant-delta' && /(?:\{\s*"(?:version|type|title)"|<html|<style|```)/i.test(node.generationPartialText ?? latest.text ?? '') || latest === undefined && typeof node.generationPartialText === 'string' && node.generationPartialText.length > 0) return { stage: 'building', title: '正在绘制组件', detail: '', step: 2 };
 +			if (latest?.type === 'sources-ready' || latest?.type === 'tool-finished') return { stage: 'organizing', title: '正在整理资料', detail: '梳理已获得的信息，准备组件内容', step: 1 };
 +			if (latest?.type === 'assistant-delta') return { stage: 'researching', title: '正在研究与整理', detail: '', step: 1 };
 +			return { stage: 'planning', title: '正在整理需求', detail: '理解要展示的内容，准备呈现方式', step: 0 };
@@ -7458,7 +7482,7 @@ index 1dd0e89..6115008 100644
 +			let content = '', segment = '';
 +			const flush = (id) => {
 +				// Only public assistant prose before an artifact enters this log. Reasoning events are never admitted.
-+				const prose = segment.split(/(?:```|\{\s*"(?:type|title)"|<!doctype|<html)/i)[0];
++				const prose = segment.split(/(?:```|\{\s*"(?:version|type|title)"|<!doctype|<html)/i)[0];
 +				for (const [i, line] of prose.split(/\n+/).entries()) if (line.trim() && !/^[\s{}\[\]"<>]/.test(line.trim())) append(`${id}-${i}`, line.replace(/^[#*\s]+/, ''));
 +				segment = '';
 +			};
@@ -7492,6 +7516,8 @@ index 1dd0e89..6115008 100644
 +		}
 +		function ResearchGenerationProcess({ node, onCancel }) {
 +			const presentation = researchGenerationPresentation(node);
++            const taskLabel = researchPublicProgress(node.title || '当前组件');
++            const activity = presentation.stage === 'queued' ? `等待开始「${taskLabel}」` : presentation.stage === 'building' ? `正在组织「${taskLabel}」的内容与布局` : presentation.stage === 'researching' ? `正在为「${taskLabel}」查找数据并核对来源` : presentation.stage === 'recovering' ? `正在调整「${taskLabel}」的资料获取方式` : presentation.stage === 'organizing' ? `正在整理「${taskLabel}」已取得的信息` : `正在分析「${taskLabel}」的需求和呈现方式`;
 +			const rows = (0, react.useMemo)(() => researchGenerationLog(node), [node.generationEvents, node.generationPartialText]);
 +			const [clock, setClock] = (0, react.useState)(() => Date.now());
 +			const started = (0, react.useRef)(node.generationStartedAt ?? Date.now());
@@ -7511,7 +7537,7 @@ index 1dd0e89..6115008 100644
 +				children: [(0, react_jsx_runtime.jsxs)('div', {
 +					className: 'rScV5Q_generationHeader', 'aria-hidden': true,
 +					children: [(0, react_jsx_runtime.jsx)('span', { children: presentation.stage === 'building' ? '构建组件' : '研究进展' }), (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-elapsed': '', children: time })]
-+				}), (0, react_jsx_runtime.jsxs)('div', {
++				}), (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', style: { fontSize: '12px', lineHeight: 1.6, color: 'var(--text-muted)', marginTop: '12px' }, children: activity }), (0, react_jsx_runtime.jsxs)('div', {
 +					className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,
 +					children: [(0, react_jsx_runtime.jsx)('div', { className: 'rScV5Q_generationLog', children: visible.map((row) => (0, react_jsx_runtime.jsxs)('div', {
 +						className: 'rScV5Q_generationLogRow', 'data-research-generation-row': '',
@@ -8246,6 +8272,13 @@ index 1dd0e89..6115008 100644
 +			});
 +		}
 +		function ResearchCanvasArtifactCard({ node, sessionId, visible = true, selected = false, dragging = false, resizing = false, editing = false, editingContent = false, sourceUnavailable = false, onRenameCommit, onRenameCancel, onContentEdit, onContentCommit, onContentCancel, onMindMapNodeCommit, onOpenContextMenu, onActivate, onAutoHeight, onWebInspection, onRetryGeneration, onCancelGeneration, onSubmitContainer, onSetContainerRefresh, onHtmlSize, retryDisabled = false }) {
++			const [revealClock, setRevealClock] = (0, react.useState)(Date.now);
++            const revealDelay = Math.max(0, Math.min(4500, (node.workbenchRevealAt ?? 0) - revealClock));
++            (0, react.useEffect)(() => {
++                if (revealDelay <= 0) return;
++                const timer = setTimeout(() => setRevealClock(Date.now()), revealDelay);
++                return () => clearTimeout(timer);
++            }, [node.id, node.workbenchRevealAt, revealDelay]);
 +			const activate = () => onActivate?.(node);
 +			const contentRef = (0, react.useRef)(null);
 +			const [editingContainerPrompt, setEditingContainerPrompt] = (0, react.useState)(false);
@@ -8254,7 +8287,7 @@ index 1dd0e89..6115008 100644
 +				contentRef.current?.closest('[data-research-artifact-card]')?.querySelector('[data-research-container-more]')?.focus({ preventScroll: true });
 +			};
 +			(0, react.useLayoutEffect)(() => {
-+				if (node.sizeMode === "manual" || node.kind === "web-link" || node.kind === "generated-container" && node.containerSpec?.type === "html" || RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || node.kind === 'generated-mind-map' && node.generationStatus === 'completed' || contentRef.current === null || typeof ResizeObserver === "undefined") return;
++				if (node.containerSizePreset || node.sizeMode === "manual" || node.kind === "web-link" || node.kind === "generated-container" && node.containerSpec?.type === "html" || RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus) || node.kind === 'generated-mind-map' && node.generationStatus === 'completed' || contentRef.current === null || typeof ResizeObserver === "undefined") return;
 +				const content = contentRef.current;
 +				let active = true;
 +				const measure = () => {
@@ -8271,6 +8304,7 @@ index 1dd0e89..6115008 100644
 +				measure();
 +				return () => { active = false; observer.disconnect(); };
 +			}, [node.id, node.sizeMode, node.height, node.width, node.kind, node.generationStatus, node.containerSpec, node.excerpt, onAutoHeight]);
++			if (revealDelay > 0) return null;
 +			return (0, react_jsx_runtime.jsx)(ResearchCanvasRichNodeFrame, {
 +				node,
 +				selected,
@@ -9841,7 +9875,7 @@ index 1dd0e89..6115008 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +15548,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15582,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -9860,7 +9894,7 @@ index 1dd0e89..6115008 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15587,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15621,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -10220,7 +10254,7 @@ index 1dd0e89..6115008 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +15948,202 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +15982,202 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -10427,7 +10461,7 @@ index 1dd0e89..6115008 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +16153,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +16187,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -10439,7 +10473,7 @@ index 1dd0e89..6115008 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +16163,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16197,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -10447,7 +10481,7 @@ index 1dd0e89..6115008 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +16195,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16229,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -10457,7 +10491,7 @@ index 1dd0e89..6115008 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +16214,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16248,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10562,7 +10596,7 @@ index 1dd0e89..6115008 100644
  				})]
  			});
  		}
-@@ -6951,6 +16296,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16330,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10594,7 +10628,7 @@ index 1dd0e89..6115008 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +16350,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16384,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10615,7 +10649,7 @@ index 1dd0e89..6115008 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +16372,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16406,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10639,7 +10673,7 @@ index 1dd0e89..6115008 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +16429,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16463,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -10657,7 +10691,7 @@ index 1dd0e89..6115008 100644
  				})] })
  			});
  		}
-@@ -7053,14 +16439,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16473,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -10736,7 +10770,7 @@ index 1dd0e89..6115008 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16519,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16553,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -10753,7 +10787,7 @@ index 1dd0e89..6115008 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16542,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16576,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -10762,7 +10796,7 @@ index 1dd0e89..6115008 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16595,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16629,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -10780,7 +10814,7 @@ index 1dd0e89..6115008 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16631,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16665,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -10788,7 +10822,7 @@ index 1dd0e89..6115008 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17523,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17557,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -10819,7 +10853,7 @@ index 1dd0e89..6115008 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17568,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17602,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -10844,7 +10878,7 @@ index 1dd0e89..6115008 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18522,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18556,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -10853,7 +10887,7 @@ index 1dd0e89..6115008 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18612,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18646,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -10895,7 +10929,7 @@ index 1dd0e89..6115008 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +18821,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +18855,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -10912,7 +10946,7 @@ index 1dd0e89..6115008 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +18991,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +19025,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -10922,7 +10956,7 @@ index 1dd0e89..6115008 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +19033,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +19067,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -10937,7 +10971,7 @@ index 1dd0e89..6115008 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +19051,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +19085,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -10950,7 +10984,7 @@ index 1dd0e89..6115008 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +19100,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +19134,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -10964,7 +10998,7 @@ index 1dd0e89..6115008 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +19138,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +19172,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -10974,7 +11008,7 @@ index 1dd0e89..6115008 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +19270,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +19304,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -10989,7 +11023,7 @@ index 1dd0e89..6115008 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +19286,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +19320,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -10998,7 +11032,7 @@ index 1dd0e89..6115008 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +19310,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19344,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -11007,7 +11041,7 @@ index 1dd0e89..6115008 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +19336,151 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19370,152 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -11041,6 +11075,7 @@ index 1dd0e89..6115008 100644
 +		exports.researchGenerationPresentation = researchGenerationPresentation;
 +		exports.researchGenerationLog = researchGenerationLog;
 +		exports.researchWorkbenchViewport = researchWorkbenchViewport;
++        exports.researchAlignComponentPresets = researchAlignComponentPresets;
 +		exports.researchTaskInputSummary = researchTaskInputSummary;
 +		exports.ResearchTaskInputRecord = ResearchTaskInputRecord;
 +		exports.UserStyleBubble = UserStyleBubble;

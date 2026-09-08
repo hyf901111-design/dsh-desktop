@@ -15,7 +15,7 @@ import {
   validateFeatureHandoff,
   validateIntegrationBatchManifest
 } from './sherlock-integration-model.mjs'
-import { preflightIntegrationAction } from './sherlock-integration-preflight.mjs'
+import { preflightIntegrationAction, verifyFeatureHandoff } from './sherlock-integration-preflight.mjs'
 import {
   isAncestor,
   listRegisteredWorktrees,
@@ -845,4 +845,35 @@ export function cancelIntegrationBatch({ integrationRepository, manifestPath, co
     fail(error instanceof Error ? error.message : String(error))
   }
   return resultFor('cancelled', state, state.context.head, state.context.head, actions)
+}
+
+// Replace a stale card only with a verified descendant; keep the original in Git history.
+export function refreshIntegrationHandoff({ integrationRepository, manifestPath, handoffPath, confirmBatchId, confirmTip, ownerToken, dryRun, now }) {
+  if (typeof dryRun !== 'boolean') fail('dryRun 必须为布尔值。')
+  checkedNow(now)
+  const state = readManifestForMutation(integrationRepository, manifestPath)
+  requireExactConfirmation(confirmBatchId, state.lease.batchId, 'confirmBatchId')
+  requireExactConfirmation(confirmTip, state.context.head, 'confirmTip')
+  sourceClean(state.context.worktreeRoot, '集成 worktree')
+  verifyMutationOwner(state.context, state.lease, ownerToken)
+  if (state.lease.acceptedTip) fail('已接受的批次不能更新交接卡。')
+  const handoff = validateFeatureHandoff(JSON.parse(readFileSync(handoffPath, 'utf8')))
+  const previous = selectedFeature(state.manifest, handoff.branch)
+  if (handoff.baseCommit !== (previous.merged ? previous.handoff.tipCommit : previous.handoff.baseCommit) || handoff.tipCommit === previous.handoff.tipCommit ||
+      !isAncestor(state.context.worktreeRoot, previous.handoff.tipCommit, handoff.tipCommit)) {
+    fail('新交接卡必须以原功能 tip 为基线并指向其严格后继。')
+  }
+  const report = verifyFeatureHandoff({ repository: state.context.worktreeRoot, handoff, batchMainCommit: state.context.head })
+  if (!report.ok) fail(`新交接卡预检失败：${report.findings.map(item => item.message).join('；')}`)
+  const next = validateIntegrationBatchManifest({ ...state.manifest, features: state.manifest.features.map(feature =>
+    feature.handoff.branch === handoff.branch ? { handoff } : feature) })
+  const actions = [action('refresh-handoff', '记录经验证的后继交接卡，清除旧合并证据，要求重新合并和验收。')]
+  if (dryRun) return resultFor('planned', state, state.context.head, state.context.head, actions)
+  writeFileSync(state.manifestPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8')
+  runGit(state.context.worktreeRoot, ['add', '--', state.lease.manifestPath])
+  runGit(state.context.worktreeRoot, ['commit', '-m', `集成：更新功能交接 ${handoff.branch} 至 ${handoff.tipCommit}`])
+  const afterCommit = resolveRepositoryContext(state.context.worktreeRoot).head
+  updateActiveBatchTip({ repository: state.context.worktreeRoot, ownerToken, expectedRevision: state.lease.revision,
+    expectedTip: state.lease.currentTip, nextTip: afterCommit, updatedAt: now })
+  return resultFor('prepared', state, state.context.head, afterCommit, actions)
 }

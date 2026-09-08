@@ -8,6 +8,7 @@ import { buildFeatureHandoff } from '../scripts/lib/sherlock-integration-model.m
 import { acquireActiveBatchLease, readActiveBatchLease, updateActiveBatchTip } from '../scripts/lib/sherlock-active-batch.mjs'
 import { resolveRepositoryContext } from '../scripts/lib/sherlock-git-state.mjs'
 import {
+  refreshIntegrationHandoff,
   adoptIntegrationBatch,
   acceptIntegrationBatch,
   cancelIntegrationBatch,
@@ -824,4 +825,39 @@ exit "$status"
     expect(readFileSync(manifestPath)).toEqual(manifest)
     expect(readFileSync(path.join(integration, 'notes', 'untracked.txt'))).toEqual(untracked)
   })
+})
+
+describe('successor handoff refresh', () => {
+  it('records a verified successor without reusing old merge evidence, then requires merge and acceptance', () => {
+    const repository = fixture()
+    prepareIntegrationRoot(repository)
+    const cardPath = handoffFile(repository, 'refresh')
+    const original = JSON.parse(readFileSync(cardPath, 'utf8'))
+    const integration = repository.createWorktree('integration-refresh', 'codex/integration/20260831-99')
+    const declared: Array<{ argv: [string, ...string[]]; timeoutMs: number }> = [{ argv: [process.execPath, '-e', 'process.exit(0)'], timeoutMs: 1000 }]
+    adoptIntegrationBatch({ integrationRepository: integration, batchId: '20260831-99', handoffPaths: [cardPath], integrationChecks: declared, dryRun: false, now: '2026-08-31T06:00:00.000Z' })
+    const context = resolveRepositoryContext(integration)
+    const ownerToken = JSON.parse(readFileSync(path.join(context.gitDirectory, 'sherlock-integration-owner.json'), 'utf8')).ownerToken
+    const manifestPath = path.join(integration, 'config/sherlock-integration-batches/20260831-99.json')
+    const merged = mergeIntegrationFeature({ integrationRepository: integration, manifestPath, featureBranch: original.branch, ownerToken, dryRun: false, now: '2026-08-31T06:01:00.000Z' })
+    const options = { integrationRepository: integration, manifestPath, handoffPath: cardPath, confirmBatchId: '20260831-99', confirmTip: merged.afterCommit, ownerToken, dryRun: false, now: '2026-08-31T06:02:00.000Z' }
+    expect(() => refreshIntegrationHandoff(options)).toThrow(/严格后继/)
+    const feature = path.join(repository.root, 'worktrees', 'refresh')
+    repository.write(feature, 'src/refresh.ts', 'export const integration = 2\n')
+    const tip = repository.commit(feature, '修复已验收功能')
+    const successor = buildFeatureHandoff({ repository: feature, baseCommit: original.tipCommit, generatedAt: options.now,
+      metadata: { featureName: original.featureName, checks: original.checks.map((check: any) => ({ ...check, verifiedCommit: tip })), uiVerification: original.uiVerification, acceptanceCriteria: original.acceptanceCriteria, risks: original.risks } })
+    writeFileSync(cardPath, JSON.stringify(successor))
+    const before = repository.snapshot()
+    expect(() => refreshIntegrationHandoff({ ...options, ownerToken: 'wrong' })).toThrow(/owner/)
+    expect(refreshIntegrationHandoff({ ...options, dryRun: true }).status).toBe('planned')
+    expect(repository.snapshot().equals(before)).toBe(true)
+    const refreshed = refreshIntegrationHandoff(options)
+    expect(JSON.parse(readFileSync(manifestPath, 'utf8')).features[0].merged).toBeUndefined()
+    expect(() => acceptIntegrationBatch({ ...options, commit: refreshed.afterCommit })).toThrow(/合并/)
+    const next = mergeIntegrationFeature({ ...options, featureBranch: original.branch })
+    acceptIntegrationBatch({ ...options, commit: next.afterCommit })
+    expect(readActiveBatchLease(integration)?.acceptedTip).toBe(next.afterCommit)
+    expect(() => refreshIntegrationHandoff({ ...options, confirmTip: next.afterCommit })).toThrow(/已接受/)
+  }, 30000)
 })

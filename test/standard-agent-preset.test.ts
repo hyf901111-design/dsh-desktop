@@ -91,6 +91,11 @@ describe('Sherlock standard agent preset policy', () => {
     expect(persona).toContain('final answer')
   })
 
+  it('preserves Build mode through the actual package branding step', () => {
+    const result = spawnSync(process.execPath, ['scripts/install-brand-assets.mjs'], { encoding: 'utf8' })
+    expect(result.status, result.stderr).toBe(0)
+  })
+
   it('keeps Build mode capabilities identical to Standard and preserves its selected identity', async () => {
     const options = { customTags: [{ tag: 'tag:yaml.org,2002:js', resolve: (v: string) => v }] }
     const readPreset = async (id: string) => parse(await readFile(`node_modules/@deepseek-ai/dsh/config/sherlock-agent-presets/${id}/agent.cordis.yml`, 'utf8'), options) as any[]

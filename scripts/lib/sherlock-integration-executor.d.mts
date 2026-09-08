@@ -92,3 +92,14 @@ export function cancelIntegrationBatch(options: {
   dryRun: boolean
   now: string
 }): IntegrationExecutionResult
+
+export function refreshIntegrationHandoff(options: {
+  integrationRepository: string
+  manifestPath: string
+  handoffPath: string
+  confirmBatchId: string
+  confirmTip: string
+  ownerToken: string
+  dryRun: boolean
+  now: string
+}): IntegrationExecutionResult

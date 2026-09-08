@@ -7013,7 +7013,7 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('arranges completed containers using real content height and trusted HTML dimensions after manual resizing', async () => {
+  it('arranges legacy native and HTML containers into aligned fixed presets without deleting long content', async () => {
     const html = '<main>Long HTML</main>'
     const mounted = await mountResearchCanvas({ sessionId: 'arrange-real-size', artifacts: [
       { id: 'long-native', kind: 'generated-container', messageId: 'native', title: 'Report', excerpt: 'Report', x: 100, y: 100, width: 560, height: 300, sizeMode: 'manual', generationStatus: 'completed', refreshMinutes: 0, containerPrompt: '报告', containerSpec: { version: 1, type: 'markdown', title: 'Report', content: 'Long report' } },
@@ -7027,8 +7027,9 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { canvas.dispatchEvent(new browserWindow.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 460, clientY: 320 })) })
       await act(async () => { click(browserWindow, host.querySelector('[data-research-context-arrange]') as HappyDOMElement | null) })
       const nodes = workspace.getSnapshot().artifacts
-      expect(nodes.find(node => node.id === 'long-native')).toMatchObject({ width: 560, height: 3238 })
-      expect(nodes.find(node => node.id === 'long-html')).toMatchObject({ width: 960, height: 3600 })
+      expect(nodes.find(node => node.id === 'long-native')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { content: 'Long report' } })
+      expect(nodes.find(node => node.id === 'long-html')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { html } })
+      expect(nodes[0]!.y).toBe(nodes[1]!.y)
       const [a, b] = nodes as any[]
       expect(Math.abs(a.x - b.x) >= (a.width + b.width) / 2 || Math.abs(a.y - b.y) >= (a.height + b.height) / 2).toBe(true)
       expect(content.getAttribute('style')).toBeNull()
@@ -9928,7 +9929,7 @@ describe('Sherlock workspace and composer controls', () => {
         '制作收入、利润和现金流三项核心指标'
       ) as Record<string, unknown>
       const generatedId = String(target.id)
-      fetchMock.mockImplementationOnce(async () => ({
+      fetchMock.mockImplementation(async () => ({
         ok: true,
         status: 202,
         async json() {
@@ -9961,8 +9962,14 @@ describe('Sherlock workspace and composer controls', () => {
         parentSessionId: session.sessionId,
         canvasNodeId: generatedId,
         kind: 'container',
-        prompt: '制作收入、利润和现金流三项核心指标'
+        prompt: expect.stringContaining('制作收入、利润和现金流三项核心指标')
       })
+      expect(payload.prompt).toContain('720×600');
+      expect(target.prompt).toBe('制作收入、利润和现金流三项核心指标');
+      (mounted.workspace as any).failGeneration(generatedId, '模拟可重试错误');
+      const retry = mounted.workspace.retryGeneration(generatedId) as Record<string, unknown>;
+      expect(retry.prompt).toBe(target.prompt);
+      expect(await hub.generateResearchSelection(session, { sessionId: session.sessionId, kind: retry.kind, targetNodeId: generatedId, prompt: retry.prompt })).toMatchObject({ ok: true });
       expect(mounted.workspace.applyGenerationInspection(generatedId, {
         taskId: 'task-container', canvasNodeId: generatedId, state: 'completed',
         lastSeq: 3, completedAt: 1_000, events: [],
@@ -9980,8 +9987,8 @@ describe('Sherlock workspace and composer controls', () => {
         kind: 'generated-container',
         title: '核心经营指标',
         generationStatus: 'completed',
-        width: 640,
-        height: 420,
+        width: 720,
+        height: 600,
         lastSuccessfulAt: 1_000,
         containerSpec: {
           version: 1,
@@ -13104,3 +13111,30 @@ describe('generated component theme', () => {
     } finally { await mounted.cleanup() }
   })
 })
+
+
+describe('Workbench staggered reveal and component task descriptions', () => {
+  it('reveals the second frame after 500ms while preserving its real progress and task description', async () => {
+    const browserWindow = new Window();
+    const restore = installBrowserGlobals(browserWindow);
+    vi.useFakeTimers();
+    let root: ReturnType<typeof createRoot> | undefined;
+    try {
+      const client = await loadClientBundle('dsh-client-ui-conversation', undefined, { document: browserWindow.document, window: browserWindow });
+      const Card = client.ResearchCanvasArtifactCard as ComponentType<Record<string, unknown>>;
+      const host = browserWindow.document.createElement('div');
+      browserWindow.document.body.appendChild(host);
+      root = createRoot(host);
+      const now = Date.now();
+      const node = { id: 'first', kind: 'generated-container', title: '链上数据', messageId: 'first', excerpt: '', containerPrompt: '链上研究', generationStatus: 'running', generationTaskId: 'task', generationEvents: [{ type: 'tool-started', tool: '搜索资料', detail: 'BTC 资金费率' }], width:720, height:600, x:360, y:300, containerSizePreset:'medium', sizeMode:'auto', workbenchRevealAt:now };
+      await act(async () => { root!.render(createElement('div', null, createElement(Card,{node}), createElement(Card,{node:{...node,id:'second',workbenchRevealAt:now+500}}))); });
+      expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(1);
+      expect(host.textContent).toContain('BTC 资金费率');
+      expect(host.querySelector('[data-research-generation-description]')?.textContent).toContain('链上数据');
+      await act(async () => { await vi.advanceTimersByTimeAsync(499); });
+      expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(2);
+    } finally { if (root) await act(async()=>root!.unmount()); vi.useRealTimers(); restore(); await browserWindow.happyDOM.close(); }
+  });
+});

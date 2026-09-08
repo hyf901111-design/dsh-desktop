@@ -1,3 +1,4 @@
+import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { registerWorkbench } from './workbench.js'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
@@ -24,7 +25,8 @@ export const MAX_BODY_BYTES = 384 * 1024
 const MAX_ID_LENGTH = 256
 const MAX_TITLE_LENGTH = 512
 const MAX_PATH_LENGTH = 8_192
-const MAX_CONTAINER_PROMPT = 8_000
+// Keep room for fixed-size instructions after the UI validates an 8,000-character user prompt.
+const MAX_CONTAINER_PROMPT = 9_000
 const MAX_EVENT_TEXT = 8_192
 const MAX_PUBLIC_EVENTS = 160
 const MAX_FINAL_OUTPUT = 240_000
@@ -46,7 +48,7 @@ const NATIVE_TEXT_EXTENSIONS = new Set([
   '.js', '.json', '.jsx', '.kt', '.log', '.md', '.mjs', '.py', '.rb', '.rs',
   '.sh', '.sql', '.swift', '.toml', '.ts', '.tsx', '.txt', '.xml', '.yaml', '.yml'
 ])
-const RESEARCH_TASK_PERSONA = '你是 Sherlock 研究画布的内容生成助手。只处理给定的画布任务和资料，不与用户展开对话，不泄露私有推理、工具参数或内部错误；最终只输出产品提示词要求的内容。'
+const RESEARCH_TASK_PERSONA = '你是 Sherlock 研究画布的内容生成助手。只处理给定的画布任务和资料，不与用户展开对话，不泄露私有推理、工具参数或内部错误；可用简短的公开进展说明已完成的工作和下一步，但最终必须输出产品提示词要求的组件正文。每个面板最多进行 8 次有价值的检索，优先合并字段查询；已有信息足以展示时立即构建。缺失的数据如实标注，不为凑齐所有字段持续换词搜索，不伪造趋势图。'
 const DETAILS = new Set(['brief', 'standard', 'detailed'])
 const REQUEST_KEYS = new Set([
   'parentSessionId',
@@ -178,7 +180,7 @@ export function validateResearchTaskStart(value) {
     parentSessionId,
     canvasNodeId,
     kind: request.kind,
-    ...(request.kind === 'create' ? { prompt: requiredString(request.prompt, MAX_CONTAINER_PROMPT, '创建需求无效') } : {}),
+    ...(request.kind === 'create' ? { prompt: requiredString(request.prompt, 8_000, '创建需求无效') } : {}),
     ...(detail === undefined ? {} : { detail }),
     sources
   })
@@ -210,7 +212,7 @@ function containerAllowsWebSearch(prompt) {
   if (/(?:不需要|无需|不用|不要|不必|禁止)(?:再|去|进行|额外|任何)?(?:联网|上网|搜索|检索|查找|查询|获取外部数据)|不联网|离线(?:页面|模式|运行)?|\b(?:do not|don't|no need to|without)\s+(?:search|searching|browse|browsing|internet|network)\b/iu.test(value)) return false
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
   const illustrative = /演示数据|示例数据|示意数据|模拟数据|虚构数据|样例数据|\b(?:sample|demo|mock|synthetic|illustrative)\s+data\b/iu.test(value)
-  const supplied = /(?:以下|这些|给定|提供|上述|下列).{0,12}(?:数据|数值)|数据(?:如下|为|是|：|:)|(?:收入|成本|销量|收益率|价格|净值)[：:\s]*[-+]?\d+(?:[、,，]\s*[-+]?\d+){1,}/u.test(value)
+  const supplied = /(?:以下|这些|给定|上述|下列).{0,12}(?:数据|数值)|(?:我|用户)(?:已|已经)?提供的(?:数据|数值)|数据(?:如下|为|是)[：:\s]*|数据[：:]\s*(?:[-+]?\d|[\[{]|\|)|(?:收入|成本|销量|收益率|价格|净值)[：:\s]*[-+]?\d+(?:[、,，]\s*[-+]?\d+){1,}/u.test(value)
   if ((illustrative || supplied) && !explicitFresh) return false
   if (/静态图形|\bstatic (?:graphic|shape)/iu.test(value)) return false
   return true
@@ -539,7 +541,18 @@ export function publicProgressText(value) {
   const text = value.replace(/https?:\/\/\S+/gu, '[来源链接]').replace(/(?:Bearer\s+\S+|(?:api[_-]?key|token|password|secret)\s*[:=]\s*\S+)/giu, '[已隐藏]').replace(/(?:\/Users\/|\/home\/)[^\s]+/gu, '[本地文件]').replace(/[\r\n\t]+/gu, ' ').trim().slice(0, 240)
   return text || undefined
 }
+const MODEL_FAILURE_MESSAGES = {
+  TRANSPORT: '模型连接中断，请稍后重试。',
+  TIMEOUT: '模型响应超时，请稍后重试。',
+  RATE_LIMIT: '模型服务暂时限流，请稍后重试。'
+}
+
 export function publicEventFromSessionEvent(event) {
+  if (event?.type === 'llm/retry') {
+    const code = event.data?.failure?.code
+    const text = code === 'TRANSPORT' ? '模型连接中断，正在自动重试。' : code === 'TIMEOUT' ? '模型响应超时，正在自动重试。' : code === 'RATE_LIMIT' ? '模型服务暂时限流，正在等待重试。' : undefined
+    return text ? { type: 'assistant-delta', text: `${text}\n` } : null
+  }
   if (event?.type === 'assistant/chunk' && event.data?.chunk?.type === 'text-delta') {
     const text = eventText(event.data.chunk.text)
     return text === undefined ? null : { type: 'assistant-delta', text }
@@ -861,6 +874,11 @@ export class ResearchTaskRuntime {
 
   onSessionEvent(task, sessionEvent) {
     if (task.state !== 'running') return
+    if (sessionEvent?.type === 'turn/start') delete task.modelFailureMessage
+    if (sessionEvent?.type === 'turn/end' && sessionEvent.data?.reason?.kind === 'error') {
+      const code = sessionEvent.data.reason.error?.code
+      task.modelFailureMessage = Object.hasOwn(MODEL_FAILURE_MESSAGES, code) ? MODEL_FAILURE_MESSAGES[code] : undefined
+    }
     const value = publicEventFromSessionEvent(sessionEvent)
     if (value === null) return
     this.appendEvent(task, value)
@@ -960,7 +978,7 @@ export class ResearchTaskRuntime {
               ? '任务未能生成内容，请重试。'
               : result?.stopReason === 'aborted'
                 ? '任务已取消，可重试。'
-                : '生成失败，请重试。'
+                : task.modelFailureMessage ?? '生成失败，请重试。'
         await this.finish(
           task,
           result?.stopReason === 'aborted' ? 'cancelled' : 'failed',
@@ -977,7 +995,7 @@ export class ResearchTaskRuntime {
               ? '任务已取消，可重试。'
               : error instanceof ResearchTaskError
                 ? error.message
-                : '生成失败，请重试。'
+                : task.modelFailureMessage ?? '生成失败，请重试。'
           }
         )
       }
@@ -1201,6 +1219,16 @@ export function createSubagentAdapter(ctx) {
         throw new ResearchTaskError('LOCAL_CHILD_REQUIRED', '画布任务无法在本地运行')
       }
 
+      // Restrict only this child after its bounded research phase. In-flight reads
+      // finish normally, then the same conversation synthesizes existing evidence.
+      let searchCalls = 0, researchClosed = false, liftResearchLimit
+      const closeResearch = () => {
+        if (researchClosed || signal.aborted || !child.ctx?.tools?.restrict || !child.steer) return
+        researchClosed = true
+        liftResearchLimit = child.ctx.tools.restrict({ deny: ['web_search'] })
+        child.steer(createUserMessage({ content: [{ type: 'text', text: '本面板的资料检索阶段已结束。请使用当前会话已经取得的证据直接生成最终组件 JSON，不要再次搜索；缺少的字段注明缺失和已知数据日期，不能据此虚构数值或趋势。' }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime', form: 'notice', summary: '结束检索并构建组件' } }))
+      }
+      const researchTimer = kind === 'container' ? setTimeout(closeResearch, 120000) : undefined
       const seen = new Set()
       const deliver = (event) => {
         const seq = event?.seq
@@ -1208,6 +1236,8 @@ export function createSubagentAdapter(ctx) {
           if (seen.has(seq)) return
           seen.add(seq)
         }
+        if (event?.type === 'tool/call' && event.data?.name === 'web_search') searchCalls++
+        if (event?.type === 'tool/result' && searchCalls >= 8) closeResearch()
         onSessionEvent(event)
       }
       const off = ctx.on('session/event', (session, event) => {
@@ -1217,6 +1247,8 @@ export function createSubagentAdapter(ctx) {
         for (const event of [...child.session.events]) deliver(event)
       } catch (error) {
         off()
+        clearTimeout(researchTimer)
+        liftResearchLimit?.()
         await run.dispose().catch(() => undefined)
         throw error
       }
@@ -1229,6 +1261,8 @@ export function createSubagentAdapter(ctx) {
           if (disposed) return
           disposed = true
           off()
+          clearTimeout(researchTimer)
+          liftResearchLimit?.()
           await run.dispose()
         }
       }

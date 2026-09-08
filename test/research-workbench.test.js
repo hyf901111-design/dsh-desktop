@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { validateWorkbench, layoutWorkbench, registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js';
 import { publicEventFromSessionEvent } from '../packages/dsh-research-task-runtime/index.js';
 const panel = (n) => ({ title: `面板${n}`, prompt: `研究独立维度${n}`, type: n % 2 ? 'table' : 'markdown', height: 480 + n * 40 });
+function toolPanel(n) { const {height, ...p} = panel(n); return {...p, size: height <= 600 ? 'medium' : 'large'}; }
 function fake() { const f = new Proxy(function () { }, { get: () => f, apply: () => f }); return f; }
 async function bundle() {
     let descriptor;
@@ -22,7 +23,7 @@ describe('研究工作台', () => {
     it('plans aligned rows using the tallest panel in each row', () => {
         const panels = layoutWorkbench(Array.from({ length: 7 }, (_, i) => panel(i)));
         expect(panels.slice(0, 3).map(p => p.y)).toEqual([0, 0, 0]);
-        expect(panels[3].y).toBe(592);
+        expect(panels[3].y).toBe(632);
         expect(panels.every(p => p.width === 720)).toBe(true);
     });
     it('fits the whole workbench rather than only the nearest panel, leaving room for the composer', async () => {
@@ -44,7 +45,7 @@ describe('研究工作台', () => {
         let dispose;
         try {
             dispose = await registerWorkbench(ctx, { start }, options);
-            const args = { requestId: 'one', title: '医药行业研究', panels: Array.from({ length: 10 }, (_, i) => panel(i)) };
+            const args = { requestId: 'one', title: '医药行业研究', panels: Array.from({ length: 10 }, (_, i) => toolPanel(i)) };
             const exec = { agent: { session: { id: 'parent' } }, signal: new AbortController().signal };
             const [first, repeated] = await Promise.all([tool.execute(args, exec), tool.execute(args, exec)]);
             expect(repeated.planId).toBe(first.planId);
@@ -73,7 +74,7 @@ describe('研究工作台', () => {
         const dispose = await registerWorkbench(ctx, { start }, { filePath: join(dir, 'plans.json'), isTrustedRequest: () => trusted, readJsonBody: async () => body });
         const read = async () => { let result, status; await handler({ method: 'POST' }, { writeHead: s => { status = s; }, end: text => { result = JSON.parse(text); } }); return { status, ...result }; };
         try {
-            const result = await tool.execute({ requestId: 'partial', title: '工作台', panels: [panel(0), panel(1)] }, { agent: { session: { id: 'parent' } } });
+            const result = await tool.execute({ requestId: 'partial', title: '工作台', panels: [toolPanel(0), toolPanel(1)] }, { agent: { session: { id: 'parent' } } });
             const pending = await read();
             expect(pending.plans[0].panels[0].taskId).toBe('successful-task');
             expect(pending.plans[0].panels[1].error).toBe('面板任务未能启动，请重试。');
@@ -102,11 +103,27 @@ describe('研究工作台', () => {
         expect(client.createResearchWorkspaceSession(storage, 's').getSnapshot().artifacts[0].workbenchId).toBe('board');
         workspace.applyGenerationInspection('n0', { taskId: 't0', canvasNodeId: 'n0', state: 'running', lastSeq: 1, events: [] });
         expect(workspace.getSnapshot().artifacts[0].width).toBe(720);
-        expect(workspace.getSnapshot().artifacts[0].height).toBe(480);
+        expect(workspace.getSnapshot().artifacts[0].height).toBe(600);
         workspace.applyGenerationInspection('n0', { taskId: 't0', canvasNodeId: 'n0', state: 'completed', lastSeq: 2, events: [], finalOutput: JSON.stringify({ type: 'markdown', title: '内容', markdown: '# 标题\n正文' }) });
         const nodes = workspace.getSnapshot().artifacts;
         expect(nodes[0].width).toBe(720);
         expect(nodes[3].y - nodes[3].height / 2).toBeGreaterThanOrEqual(Math.max(...nodes.slice(0, 2).map((n) => n.y + n.height / 2)) + 31);
+    });
+    it('uses only three fixed sizes and keeps completed and arranged rows aligned', async () => {
+        const input = { requestId: 'sizes', title: '工作台', panels: [0,1,2,3].map((n) => ({ ...panel(n), size: n === 0 ? 'small' : n === 1 ? 'medium' : 'large' })) };
+        const planned = layoutWorkbench(validateWorkbench(input).panels);
+        expect(planned.map(p => p.height)).toEqual([600,600,840,840]);
+        const client = await bundle(), workspace = client.createResearchWorkspaceSession(store(), 'sizes');
+        workspace.applyWorkbench({ id: 'sizes', panels: planned.map((p,i) => ({ ...p, nodeId: `s${i}`, taskId: `t${i}` })) });
+        workspace.updateNodeGeometry('s0', { height: 3500, sizeMode: 'auto' });
+        expect(workspace.getSnapshot().artifacts[0].height).toBe(600);
+        const times = workspace.getSnapshot().artifacts.map(p => p.workbenchRevealAt);
+        expect(times[1]-times[0]).toBeGreaterThanOrEqual(500);
+        workspace.organizeCanvas(new Map([['s0', {width: 720, height: 3500}]]));
+        const nodes = workspace.getSnapshot().artifacts;
+        expect(nodes.map(n=>n.height)).toEqual([600,600,840,840]);
+        expect(nodes[0].y).toBe(nodes[1].y);
+        expect(nodes[2].y).toBe(nodes[3].y);
     });
     it('surfaces real search topics and public reports, omitting private reasoning and raw artifact code', async () => {
         const event = publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'web_search', arguments: JSON.stringify({ query: 'CDE 医药审批进展', token: 'private-token' }) } });

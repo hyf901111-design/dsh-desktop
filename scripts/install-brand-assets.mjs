@@ -79,6 +79,15 @@ await writeFile(
   'utf8'
 )
 
+// Recreate Build from the same Standard configuration on every packaged build.
+const buildPresetRoot = path.join(sherlockPresetRoot, 'build')
+await cp(path.join(sherlockPresetRoot, 'standard'), buildPresetRoot, { recursive: true })
+const buildPolicy = ' Build mode: You have every Standard mode capability. For a request that benefits from a multi-panel research workbench, plan the minimum number of independent panels and call research_workbench_create once to launch them concurrently. For simple factual questions, explanations, translations, or requests asking what components are possible, answer normally without creating a workbench. For a pharma research workbench, consider distinct purposes such as market, policy, clinical pipeline, company comparison, BD transactions, and catalysts; select only the 2–10 panels needed by this request, not a fixed inventory. Specify concise titles, independent scopes, content types and one of three fixed sizes: small 720x360, medium 720x600, large 720x840. Panels in each row share a size. Plan compact content that fits the selected frame; avoid long repetitive reports. Do not complete all panel research in the parent first. Missing data must be stated honestly; do not claim continuous monitoring is active. The tool opens Research automatically. After submission, give a brief acknowledgment, without duplicating panel reports or writing extra HTML files.'
+const buildAgentPath = path.join(buildPresetRoot, 'agent.cordis.yml')
+const standardAgent = await readFile(sherlockAgentPath, 'utf8')
+await writeFile(buildAgentPath, replaceRequired(standardAgent, sherlockPersonaText, sherlockPersonaText + buildPolicy, buildAgentPath), 'utf8')
+await writeFile(path.join(buildPresetRoot, 'preset.yml'), 'name: 构建模式\ndescription: 具备标准模式的完整能力，按需求规划独立研究面板，并行构建规整的画布工作台；简单问题直接回答。\norder: 2\n', 'utf8')
+
 const index = await readFile(indexPath, 'utf8')
 const brandedIndex = replaceRequiredAny(
   index,
