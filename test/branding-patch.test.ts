@@ -50,8 +50,8 @@ describe('EWork Odyssey sidebar branding', () => {
       .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .toBuffer({ resolveWithObject: true })
 
-    expect(info.width).toBe(824)
-    expect(info.height).toBe(824)
+    expect(info.width).toBe(912)
+    expect(info.height).toBe(912)
   })
 
   it('shows the new truth-seeking headline without the whale mark', async () => {
