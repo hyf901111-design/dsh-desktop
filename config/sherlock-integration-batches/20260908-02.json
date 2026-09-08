@@ -11,77 +11,39 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "bb3c697ecc7366933129d65c2245ddd7a7c194d6",
-        "tipCommit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
+        "baseCommit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
+        "tipCommit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
         "commits": [
           {
-            "commit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
+            "commit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
             "parents": [
-              "bb3c697ecc7366933129d65c2245ddd7a7c194d6"
+              "6923676d4082df3cac203cbd848ca81c8ad3abf6"
             ],
-            "subject": "修复：恢复设置下拉菜单并调整启动标志和 Dock 图标尺寸"
+            "subject": "优化：精简组件内容入口与行情面板并统一研究画布黑白底色"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "build/app-icon.png"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "build/icon.icns"
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
           },
           {
             "status": "M",
-            "path": "build/icon.ico"
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
           },
           {
             "status": "M",
-            "path": "build/splash.html"
+            "path": "test/research-artifact-resilience.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/account-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/branding-patch.test.ts"
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
           }
         ],
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/branding-patch.test.ts",
-              "test/brand-migration.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "15 项品牌与图标检查通过；类型检查通过",
-            "verifiedCommit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
-            "completedAt": "2026-09-08T03:01:34.630215+00:00",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实客户端复现菜单遮挡，浏览器确认菜单层级 1100；集成构建后复验修复、Logo 和 Dock 图标。"
-        },
-        "acceptanceCriteria": [
-          "名称统一为 EWork Odyssey",
-          "提供的启动和客户端标志完整使用",
-          "浅色黑色深色白色",
-          "保留既有数据与组件恢复能力"
-        ],
-        "risks": [
-          "稳定应用 ID 和用户数据目录沿用以保留现有配置"
-        ],
-        "generatedAt": "2026-09-08T03:01:34.630215+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e3ccd591d10404e003d6f1cab6e7735f7a28b7ba",
-        "verificationCommit": "e3ccd591d10404e003d6f1cab6e7735f7a28b7ba",
         "checks": [
           {
             "argv": [
@@ -90,32 +52,29 @@
               "run",
               "test/research-artifact-resilience.test.js",
               "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
               "test/research-html-theme.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "e3ccd591d10404e003d6f1cab6e7735f7a28b7ba",
-            "completedAt": "2026-09-08T03:02:17.309Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "e3ccd591d10404e003d6f1cab6e7735f7a28b7ba",
-            "completedAt": "2026-09-08T03:02:17.309Z",
+            "summary": "组件渲染与恢复聚焦检查通过；画布底色、按需来源、失败恢复三项 UI 检查通过",
+            "verifiedCommit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
+            "completedAt": "2026-09-08T03:23:41.225816+00:00",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-09-08T03:02:17.309Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "聚焦渲染验证通过，安装包构建后复验真实研究画布。"
+        },
+        "acceptanceCriteria": [
+          "去掉常驻内容与来源工具栏",
+          "行情面板围绕用户需求精简",
+          "点阵保留，浅色纯白底、深色纯黑底",
+          "保持来源点击与自动恢复"
+        ],
+        "risks": [
+          "稳定应用 ID 和用户数据目录沿用以保留现有配置"
+        ],
+        "generatedAt": "2026-09-08T03:23:41.225816+00:00"
       }
     }
   ],
