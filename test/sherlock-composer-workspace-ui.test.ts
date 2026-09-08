@@ -2892,7 +2892,7 @@ describe('Sherlock workspace and composer controls', () => {
 
       expect(renderedMarkdown).toContain(markdown)
       expect(host.querySelector('[data-production-markdown]')?.textContent).toBe(markdown)
-      expect(heights.at(-1)).toBe(337)
+      expect(heights.at(-1)).toBe(367)
 
       await act(async () => {
         root.render(createElement(Card, {
@@ -3842,7 +3842,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(mounted.host.querySelector('[data-research-node-title]')?.textContent)
         .toContain('1 / 3')
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 320, height: 320 / 0.75 + 36, aspectRatio: 0.75, sizeMode: 'auto'
+        width: 320, height: 320 / 0.75 + 66, aspectRatio: 0.75, sizeMode: 'auto'
       })
       expect(harness.getDocumentInputs[0]).toEqual({
         url: 'sherlock-preview://capability-pdf-1/',
@@ -3927,7 +3927,7 @@ describe('Sherlock workspace and composer controls', () => {
         bodySize.height = 531
         ;(mounted.workspace as unknown as {
           updateNodeGeometry(id: string, geometry: Record<string, unknown>): void
-        }).updateNodeGeometry('pdf-1', { width: 400, height: 400 / 0.75 + 36 })
+        }).updateNodeGeometry('pdf-1', { width: 400, height: 400 / 0.75 + 66 })
         resizeObserverCallbacks.at(-1)?.()
         await Promise.resolve(); await Promise.resolve()
       })
@@ -3954,7 +3954,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(restoreSequence).toBe(2)
       expect(mounted.host.querySelectorAll('[data-research-pdf-page]')).toHaveLength(3)
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 400, height: 400 / 0.75 + 36, aspectRatio: 0.75, sizeMode: 'auto'
+        width: 400, height: 400 / 0.75 + 66, aspectRatio: 0.75, sizeMode: 'auto'
       })
       await mounted.cleanup()
       cleaned = true
@@ -4076,7 +4076,7 @@ describe('Sherlock workspace and composer controls', () => {
         .toContain('encrypted.pdf')
       expect(mounted.host.querySelector('[data-research-pdf-error]')).not.toBeNull()
       expect(mounted.workspace.getSnapshot().files[0]).toMatchObject({
-        width: 540, height: 540 / 1.4 + 36, sizeMode: 'manual', aspectRatio: 1.4
+        width: 540, height: 540 / 1.4 + 66, sizeMode: 'manual', aspectRatio: 1.4
       })
       expect(releases).toHaveLength(1)
     } finally {
@@ -4093,7 +4093,7 @@ describe('Sherlock workspace and composer controls', () => {
       files: [{
         id: 'pdf-body-size', name: 'body-size.pdf', source: 'computer',
         authorizationId: 'authorization-body-size', contentType: 'application/pdf',
-        x: 200, y: 200, width: 320, height: 320 / 0.75 + 36,
+        x: 200, y: 200, width: 320, height: 320 / 0.75 + 66,
         sizeMode: 'auto', aspectRatio: 0.75
       }],
       pdfjs: harness.pdfjs,
@@ -4145,7 +4145,7 @@ describe('Sherlock workspace and composer controls', () => {
         ;(mounted.workspace as unknown as {
           updateNodeGeometry(id: string, geometry: Record<string, unknown>): void
         }).updateNodeGeometry('pdf-body-size', {
-          width: 400, height: 400 / 0.75 + 36, sizeMode: 'manual'
+          width: 400, height: 400 / 0.75 + 66, sizeMode: 'manual'
         })
         resizeObserverCallbacks.at(-1)?.()
         await Promise.resolve(); await Promise.resolve()
@@ -8915,7 +8915,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(mindMap?.getAttribute('data-research-mind-map-detail')).toBe('detailed')
       expect(mounted.host.querySelector('[data-research-generated-mind-map]')).not.toBeNull()
       expect(mounted.host.querySelector(
-        '[data-research-generated-mind-map] > [data-research-node-title][data-research-node-move-handle]'
+        '[data-research-generated-mind-map] > [data-research-node-title][data-research-node-move-handle] .rScV5Q_nodeTitleText'
       )?.textContent).toBe('思维导图')
       expect(Array.from(
         mounted.host.querySelectorAll('[data-research-mind-map-node]')
