@@ -6,6 +6,7 @@ import {
   buildFeatureHandoff,
   validateFeatureHandoff
 } from '../scripts/lib/sherlock-integration-model.mjs'
+import { verifyFeatureHandoff } from '../scripts/lib/sherlock-integration-preflight.mjs'
 import { listRangeCommits } from '../scripts/lib/sherlock-git-state.mjs'
 import { createGitWorkflowFixture, type GitWorkflowFixture } from './helpers/git-workflow-fixture'
 
@@ -78,6 +79,25 @@ afterEach(() => {
 })
 
 describe('feature session handoffs', () => {
+  it('verifies merged side branches rooted before the refreshed handoff base', () => {
+    const repository = fixture()
+    const root = repository.git(repository.main, 'rev-parse', 'HEAD')
+    const feature = repository.createWorktree('continued', 'codex/feat/continued-20260908')
+    const side = repository.createWorktree('brand', 'codex/feat/brand-20260908')
+    repository.write(feature, 'runtime.txt', 'existing fix')
+    const base = repository.commit(feature, '已有组件修复')
+    repository.write(side, 'brand.txt', 'new brand')
+    repository.commit(side, '品牌替换')
+    repository.git(feature, 'merge', '--no-ff', 'codex/feat/brand-20260908', '-m', '集成品牌')
+    const tip = repository.git(feature, 'rev-parse', 'HEAD')
+    const card = buildFeatureHandoff({ repository: feature, baseCommit: base, metadata: metadata(tip), generatedAt: metadata(tip).generatedAt })
+    expect(card.boundaryParents).toEqual([root])
+    expect(verifyFeatureHandoff({ repository: feature, handoff: card, batchMainCommit: base }).ok).toBe(true)
+    expect(() => validateFeatureHandoff({ ...card, boundaryParents: [] })).toThrow(/父提交/)
+    const unrelated = { ...card, boundaryParents: ['f'.repeat(40)], commits: card.commits.map((commit) => ({ ...commit, parents: commit.parents.map((parent) => parent === root ? 'f'.repeat(40) : parent) })) }
+    expect(verifyFeatureHandoff({ repository: feature, handoff: unrelated, batchMainCommit: base }).ok).toBe(false)
+  })
+
   it('builds a deterministic card for the exact branch with ordered commits, rename records, and check argv', () => {
     const repository = fixture()
     repository.write(repository.main, 'src/original.ts', 'export const original = true\n')

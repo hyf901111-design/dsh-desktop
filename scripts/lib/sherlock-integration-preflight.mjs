@@ -159,6 +159,10 @@ export function verifyFeatureHandoff({ repository, handoff, batchMainCommit }) {
   const batchBaseAncestor = attempt(report, 'batch-ancestry-check-failed', () => isAncestor(context.worktreeRoot, card.baseCommit, batchMainCommit))
   if (batchBaseAncestor === false) addError(report, 'feature-base-not-ancestor', '交接卡 base 不是当前集成提交的祖先。', { base: card.baseCommit, batchMainCommit })
 
+  for (const parent of card.boundaryParents ?? []) {
+    const boundaryAncestor = attempt(report, 'feature-boundary-check-failed', () => isAncestor(context.worktreeRoot, parent, card.baseCommit))
+    if (boundaryAncestor === false) addError(report, 'feature-boundary-not-ancestor', '范围外父提交不是交接基线的祖先。', { parent, base: card.baseCommit })
+  }
   const liveCommits = attempt(report, 'feature-history-read-failed', () => listRangeCommits(context.worktreeRoot, card.baseCommit, comparisonTip))
   if (liveCommits && !sameJson(liveCommits, card.commits)) {
     addError(report, 'feature-history-mismatch', '功能提交历史与交接卡不一致。', { expected: card.commits, actual: liveCommits })
