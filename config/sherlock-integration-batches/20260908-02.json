@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "6923676d4082df3cac203cbd848ca81c8ad3abf6",
-        "tipCommit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
+        "baseCommit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
+        "tipCommit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
         "commits": [
           {
-            "commit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
+            "commit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
             "parents": [
-              "6923676d4082df3cac203cbd848ca81c8ad3abf6"
+              "7b8ec4845c263f08e9068f95715aea6a765ac4ec"
             ],
-            "subject": "优化：精简组件内容入口与行情面板并统一研究画布黑白底色"
+            "subject": "修复：组件内容点击选中并增强触控板缩放和深灰画布"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
@@ -37,7 +33,19 @@
           },
           {
             "status": "M",
-            "path": "test/research-artifact-resilience.test.js"
+            "path": "src/main/state/research-canvas-wheel.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/research-canvas-wheel.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-wheel.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
           },
           {
             "status": "M",
@@ -50,69 +58,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-html-theme.test.js"
+              "test/research-html-theme.test.js",
+              "test/research-canvas-wheel.test.ts",
+              "test/research-canvas-wheel-preload.test.ts"
             ],
             "outcome": "passed",
-            "summary": "组件渲染与恢复聚焦检查通过；画布底色、按需来源、失败恢复三项 UI 检查通过",
-            "verifiedCommit": "7b8ec4845c263f08e9068f95715aea6a765ac4ec",
-            "completedAt": "2026-09-08T03:23:41.225816+00:00",
+            "summary": "20 项 iframe 事件与缩放桥接检查、12 项聚焦 UI 检查及类型检查通过",
+            "verifiedCommit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
+            "completedAt": "2026-09-08T03:42:24.955362+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "聚焦渲染验证通过，安装包构建后复验真实研究画布。"
+          "summary": "聚焦渲染验证选中不重载 iframe、修饰键选择与手势锚点；最终包构建后复验内容点击。"
         },
         "acceptanceCriteria": [
-          "去掉常驻内容与来源工具栏",
-          "行情面板围绕用户需求精简",
-          "点阵保留，浅色纯白底、深色纯黑底",
-          "保持来源点击与自动恢复"
+          "点击生成组件内容可选中组件且保留内部交互",
+          "深色画布 #181818，浅色及点阵保持",
+          "捏合类型在桌面桥接中保留并提升缩放幅度"
         ],
         "risks": [
           "稳定应用 ID 和用户数据目录沿用以保留现有配置"
         ],
-        "generatedAt": "2026-09-08T03:23:41.225816+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f5dbaba51ad3610fa645315f9b7c70302578bf4a",
-        "verificationCommit": "f5dbaba51ad3610fa645315f9b7c70302578bf4a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "f5dbaba51ad3610fa645315f9b7c70302578bf4a",
-            "completedAt": "2026-09-08T03:26:38.058Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "f5dbaba51ad3610fa645315f9b7c70302578bf4a",
-            "completedAt": "2026-09-08T03:26:38.058Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T03:26:38.058Z"
+        "generatedAt": "2026-09-08T03:42:24.955362+00:00"
       }
     }
   ],
