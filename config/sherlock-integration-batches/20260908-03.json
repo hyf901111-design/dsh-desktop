@@ -9,30 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一组件外框与头像，修正临时侧栏关闭按钮",
+        "featureName": "统一滚动条、增强组件选中光晕并调整画布与头像配色",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
-        "tipCommit": "6c15fab72870f10dc63374f120b29ebada524297",
+        "baseCommit": "6c15fab72870f10dc63374f120b29ebada524297",
+        "tipCommit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
         "commits": [
           {
-            "commit": "4386270869d43e9435465de09ce26c0ce4d13932",
+            "commit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
             "parents": [
-              "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5"
+              "6c15fab72870f10dc63374f120b29ebada524297"
             ],
-            "subject": "优化：统一画布组件外框并消除白边，更新登录头像"
-          },
-          {
-            "commit": "6c15fab72870f10dc63374f120b29ebada524297",
-            "parents": [
-              "4386270869d43e9435465de09ce26c0ce4d13932"
-            ],
-            "subject": "调整：将临时侧栏关闭按钮移到标题左侧"
+            "subject": "优化：统一组件滚动条并增强选中光晕，调整画布与头像配色"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "build/sherlock-account-background.png"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
@@ -44,19 +37,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/shell-style.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-container-chrome.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-file-drop.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
+            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -65,42 +46,13 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/research-html-theme.test.js",
               "test/research-container-chrome.test.ts"
             ],
             "outcome": "passed",
-            "summary": "17项组件交互检查通过",
-            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
-            "completedAt": "2026-09-08T08:06:41.003276+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "resiz|geometry|natural|landscape|PDF|generated summary|generated mind.map|mind.map node"
-            ],
-            "outcome": "passed",
-            "summary": "19项渲染、编辑和尺寸检查通过",
-            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
-            "completedAt": "2026-09-08T08:06:41.003276+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-file-drop.test.ts",
-              "-t",
-              "geometry|aspect|resiz|PDF|image"
-            ],
-            "outcome": "passed",
-            "summary": "21项文件与画布尺寸检查通过",
-            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
-            "completedAt": "2026-09-08T08:06:41.003276+00:00",
+            "summary": "32项主题和组件交互检查通过",
+            "verifiedCommit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
+            "completedAt": "2026-09-08T08:36:01.289336+00:00",
             "timeoutMs": 120000
           },
           {
@@ -111,60 +63,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "6c15fab72870f10dc63374f120b29ebada524297",
-            "completedAt": "2026-09-08T08:06:41.003276+00:00",
+            "verifiedCommit": "9ed8858594ffb310ea0e9099913012860e1abfd9",
+            "completedAt": "2026-09-08T08:36:01.289336+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器核验深浅主题、头像、导图与总结放大、改名编辑、标题拖动和角落缩放。实际客户端已定位白色 iframe 底层；打包后继续核验原工作台和临时侧栏。"
+          "summary": "浏览器确认 HTML 与原生总结滚动条在深浅主题下的宽度、颜色、圆角相同，长内容可滚动；选中光晕增强、深色画布为 #202020 且保留点阵；彩色头像显示白色大写 H；临时侧栏关闭按钮位于标题左侧且能关闭。"
         },
         "acceptanceCriteria": [
-          "所有画布组件采用统一外框和标题拖动区，保留点阵及选中光晕",
-          "深色内容底层不透白边，思维导图跟随主题",
-          "登录头像使用 Group 85，黑色首字、英文大写",
-          "临时侧栏关闭按钮位于标题之前"
+          "原生与 HTML 组件使用统一圆角细滚动条",
+          "选中光晕更明显，固定边框颜色保持一致",
+          "深色画布稍浅并保留点阵",
+          "彩色头像背景上的首字为白色，英文字母大写"
         ],
         "risks": [
           "本地测试，未发布或变更更新源"
         ],
-        "generatedAt": "2026-09-08T08:06:41.003276+00:00"
-      },
-      "merged": {
-        "mergeCommit": "459830f4f7ff0695de2c29fb7e48602d09fef498",
-        "verificationCommit": "459830f4f7ff0695de2c29fb7e48602d09fef498",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "459830f4f7ff0695de2c29fb7e48602d09fef498",
-            "completedAt": "2026-09-08T08:08:18.213Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "459830f4f7ff0695de2c29fb7e48602d09fef498",
-            "completedAt": "2026-09-08T08:08:18.213Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T08:08:18.213Z"
+        "generatedAt": "2026-09-08T08:36:01.289336+00:00"
       }
     }
   ],
