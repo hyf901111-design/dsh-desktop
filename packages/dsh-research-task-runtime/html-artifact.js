@@ -220,6 +220,18 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     const value = declaration?.getAttribute('content')?.trim().toLowerCase()
     fixedTheme = value === 'light' || value === 'dark' ? value : null
     apply()
+    // The client supplies the draggable title. Suppress only a leading heading;
+    // section headings after substantive content, links, inputs and data stay intact.
+    const heading = document.body?.querySelector('h1,h2,h3')
+    if (heading && !heading.querySelector('a,button,input,select,textarea')) {
+      const walker = document.createTreeWalker(document.body, 4)
+      let leading = true
+      for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+        if (heading.contains(text)) break
+        if (text.textContent.trim() && !text.parentElement?.closest('script,style,template,noscript,[hidden]')) { leading = false; break }
+      }
+      if (leading) { heading.setAttribute('data-sherlock-host-title', ''); heading.style.setProperty('display', 'none', 'important') }
+    }
     startContentMeasurement()
   }, { once: true })
   apply()

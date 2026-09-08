@@ -92,6 +92,22 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
 }
 
 describe('Research container chrome', () => {
+  it.each([
+    { version: 1, type: 'markdown', title: '资料来源', content: '> 已保留来源摘要。\n\nSources: [来源](https://example.com)' },
+    { version: 1, type: 'kpi', title: '核心指标', items: [{ label: '指标', value: 42 }] }
+  ])('owns a draggable title before every content type, including source fallbacks', async spec => {
+    const mounted = await mountContainer({ title: spec.title, containerSpec: spec })
+    try {
+      const header = mounted.host.querySelector('[data-research-node-move-handle]')!
+      expect(header.querySelector('.rScV5Q_nodeTitleText')?.textContent).toBe(spec.title)
+      expect(header.nextElementSibling?.hasAttribute('data-research-preview-body')).toBe(true)
+      expect(mounted.host.querySelectorAll('.rScV5Q_nativeCardContent h3')).toHaveLength(0)
+      const resize = mounted.host.querySelector('[data-research-resize-handle="se"] svg path')!
+      expect(resize.getAttribute('stroke-linecap')).toBe('round')
+      expect(resize.getAttribute('stroke-width')).toBe('5')
+    } finally { await mounted.cleanup() }
+  })
+
   it('keeps only the title chrome and moves component actions to More', async () => {
     const mounted = await mountContainer()
     try {

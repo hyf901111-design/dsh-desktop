@@ -13056,7 +13056,7 @@ describe('generated component theme', () => {
       expect(card.hasAttribute('data-research-content-hover')).toBe(false)
       await send({ type: 'sherlock-content-size', width: 1200, height: 1300 })
       const fitted = mounted.workspace.getSnapshot().artifacts[0] as any
-      expect(fitted).toMatchObject({ width: 1202, height: 1302, sizeMode: 'auto' })
+      expect(fitted).toMatchObject({ width: 1202, height: 1366, sizeMode: 'auto' })
       expect(fitted.x - fitted.width / 2).toBe(20)
       expect(fitted.y - fitted.height / 2).toBe(60)
       expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame)

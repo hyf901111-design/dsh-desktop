@@ -40,6 +40,21 @@ function runtime(html, { standalone = false, systemDark = false, configure } = {
 const themeMessage = (colorScheme) => ({ type: 'sherlock-theme', colorScheme })
 
 describe('offline HTML component theme runtime', () => {
+  it('lets the host own a leading title while preserving descriptions, section headings and inputs', () => {
+    const inner = runtime(runtime(buildResearchHtmlPreview('<main><h2>原标题</h2><p>数据说明</p><input value="保留输入"><h3>明细分组</h3></main>')).childHtml())
+    const input = inner.window.document.querySelector('input')
+    inner.parsed()
+    expect(inner.window.document.querySelector('h2').style.display).toBe('none')
+    expect(inner.window.document.querySelector('h3').style.display).not.toBe('none')
+    expect(inner.window.document.querySelector('input')).toBe(input)
+    expect(input.value).toBe('保留输入')
+    for (const html of ['<p>摘要</p><h2>明细分组</h2>', '<h2><a href="https://example.com">可点击标题</a></h2>']) {
+      const section = runtime(runtime(buildResearchHtmlPreview(html)).childHtml())
+      section.parsed()
+      expect(section.window.document.querySelector('h2').style.display).not.toBe('none')
+    }
+  })
+
   it('relays content selection only from its own inner frame and validates modifiers', () => {
     const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
     const pointer = { type: 'sherlock-content-pointer', metaKey: false, shiftKey: true };

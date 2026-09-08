@@ -302,7 +302,7 @@ describe('Research task contract and prompt', () => {
     const { buildResearchTaskPrompt } = await runtimeModule()
     const prompt = buildResearchTaskPrompt({ ...containerRequest(), prompt: '将一月至三月的收入 12、18、16 和成本 8、11、10 绘制成图表' })
     expect(prompt).toContain('单层圆角细框')
-    expect(prompt).toContain('标题、简短说明、图表')
+    expect(prompt).toContain('客户端统一提供 64px 可拖动标题区')
     expect(prompt).toContain('18px / 600')
     expect(prompt).toContain('柱顶圆角约 4px')
     expect(prompt).toContain('Tooltip 使用 1px 细边框、8px 圆角和轻阴影')
