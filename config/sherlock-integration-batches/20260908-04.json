@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260908-04",
+  "branch": "codex/integration/20260908-04",
+  "baseMainCommit": "83aabea9fcea3915faf7c67381b448f73e3ad097",
+  "expectedMainCommit": "83aabea9fcea3915faf7c67381b448f73e3ad097",
+  "createdAt": "2026-09-08T09:44:49.891Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "兼容基金对比的资产类型参数",
+        "branch": "codex/feat/financial-query-compat-20260908",
+        "baseCommit": "83aabea9fcea3915faf7c67381b448f73e3ad097",
+        "tipCommit": "f36a127e230938f51ad27466508e961ba4464aaa",
+        "commits": [
+          {
+            "commit": "f36a127e230938f51ad27466508e961ba4464aaa",
+            "parents": [
+              "83aabea9fcea3915faf7c67381b448f73e3ad097"
+            ],
+            "subject": "修复：兼容基金对比的资产类型参数并明确查询字段"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/financial-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-routing.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-routing.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "37项金融路由检查和类型检查通过；实际已登录桥接查询返回两只基金净值和一年收益率",
+            "verifiedCommit": "f36a127e230938f51ad27466508e961ba4464aaa",
+            "completedAt": "2026-09-08T09:44:33.716Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "37项金融路由检查和类型检查通过；实际已登录桥接查询返回两只基金净值和一年收益率",
+            "verifiedCommit": "f36a127e230938f51ad27466508e961ba4464aaa",
+            "completedAt": "2026-09-08T09:44:33.717Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅修改工具输入规范化与参数说明，无界面结构改动；真实模型对话将在集成测试客户端中复测"
+        },
+        "acceptanceCriteria": [
+          "research重复传asset:fund时可查询且保持原有日期和收益率口径",
+          "其他错误参数仍拒绝，不放宽云端协议"
+        ],
+        "risks": [
+          "本地客户端兼容修复；Cloudflare路由已部署，客户端修复未对外发布"
+        ],
+        "generatedAt": "2026-09-08T09:44:49.446Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/financial-routing.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
