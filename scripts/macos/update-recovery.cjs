@@ -5,6 +5,7 @@ const path = require('node:path')
 const { fileURLToPath, pathToFileURL } = require('node:url')
 const { execFileSync } = require('node:child_process')
 const BUNDLE_ID = 'com.evanarts.sherlock'
+const BUNDLE_IDS = [BUNDLE_ID, 'io.dsh.desktop']
 const run = (command, args) => execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000 })
 const plist = file => JSON.parse(run('/usr/bin/plutil', ['-convert', 'json', '-o', '-', file]))
 function localBundleURL(value) {
@@ -15,12 +16,12 @@ function localBundleURL(value) {
   return result
 }
 function resolveRenamePlan(state, currentApp, version, readInfo = app => plist(path.join(app, 'Contents/Info.plist'))) {
-  if (state.bundleIdentifier !== BUNDLE_ID || localBundleURL(state.targetBundleURL) !== path.resolve(currentApp)) throw new Error('Installer target does not match this application')
+  if (!BUNDLE_IDS.includes(state.bundleIdentifier) || localBundleURL(state.targetBundleURL) !== path.resolve(currentApp)) throw new Error('Installer target does not match this application')
   const staged = localBundleURL(state.updateBundleURL)
   const info = readInfo(staged)
-  if (info.CFBundleIdentifier !== BUNDLE_ID || info.CFBundleShortVersionString !== version) throw new Error('Staged update identity/version mismatch')
+  if (info.CFBundleIdentifier !== state.bundleIdentifier || info.CFBundleShortVersionString !== version) throw new Error('Staged update identity/version mismatch')
   const target = state.useUpdateBundleName === true ? path.join(path.dirname(currentApp), path.basename(staged)) : currentApp
-  return target === currentApp ? null : { oldApp: currentApp, targetApp: target, version }
+  return target === currentApp ? null : { oldApp: currentApp, targetApp: target, version, bundleId: state.bundleIdentifier }
 }
 function signatureHash(app) {
   // codesign diagnostic output is on stderr even on success.
@@ -30,10 +31,10 @@ function signatureHash(app) {
   if (result.status !== 0 || !hash) throw new Error('Cannot read verified update signature')
   return hash
 }
-function isExpectedBundle(app, version, hash) {
+function isExpectedBundle(app, version, hash, bundleId = BUNDLE_ID) {
   try {
     const info = plist(path.join(app, 'Contents/Info.plist'))
-    if (info.CFBundleIdentifier !== BUNDLE_ID || info.CFBundleShortVersionString !== version || signatureHash(app) !== hash) return false
+    if (!BUNDLE_IDS.includes(bundleId) || info.CFBundleIdentifier !== bundleId || info.CFBundleShortVersionString !== version || signatureHash(app) !== hash) return false
     run('/usr/bin/codesign', ['--verify', '--deep', '--strict', app])
     return true
   } catch { return false }
@@ -60,11 +61,12 @@ function migrateDockTiles(tiles, oldApp, targetApp, resolvePath = localBundleURL
 }
 function repairDock(oldApp, targetApp) {
   if (path.dirname(oldApp) !== path.dirname(targetApp) || fs.existsSync(oldApp)) return false
-  if (plist(path.join(targetApp, 'Contents/Info.plist')).CFBundleIdentifier !== BUNDLE_ID) return false
+  const bundleId = plist(path.join(targetApp, 'Contents/Info.plist')).CFBundleIdentifier
+  if (!BUNDLE_IDS.includes(bundleId)) return false
   // CFPreferences is used instead of editing the on-disk plist behind cfprefsd.
   // The transform runs next to the read/write, preserving all unrelated settings.
   const script = `ObjC.import('Foundation');
-const BUNDLE_ID = '${BUNDLE_ID}';
+const BUNDLE_ID = '${bundleId}';
 const migrateDockTiles = ${migrateDockTiles.toString()};
 function run(argv) {
   const defaults = $.NSUserDefaults.alloc.initWithSuiteName('com.apple.dock');
@@ -93,7 +95,7 @@ async function guard(options, dependencies = {}) {
   const running = dependencies.appRunning || appRunning
   const dock = dependencies.repairDock || repairDock
   const launch = dependencies.launch || (target => run('/usr/bin/open', ['-a', target]))
-  const { parentPid, oldApp, targetApp, version, hash } = options
+  const { parentPid, oldApp, targetApp, version, hash, bundleId = BUNDLE_ID } = options
   if (!Number.isInteger(parentPid) || parentPid < 2 || !hash || path.dirname(oldApp) !== path.dirname(targetApp)) throw new Error('Invalid relaunch guard')
   const log = message => { try { fs.appendFileSync(options.logFile, `${new Date().toISOString()} ${message}\n`, { mode: 0o600 }) } catch {} }
   dependencies.ready?.()
@@ -101,11 +103,11 @@ async function guard(options, dependencies = {}) {
   while (alive(parentPid) && now() < deadline) await pause(500)
   if (alive(parentPid)) { log('Cancelled: original app is still running.'); return }
   while (now() < deadline) {
-    if (expected(targetApp, version, hash)) {
+    if (expected(targetApp, version, hash, bundleId)) {
       // Give ShipIt its normal relaunch window, then use the installed bundle's
       // absolute URL only if no process from that exact bundle has appeared.
       await pause(4000)
-      if (!expected(targetApp, version, hash)) continue
+      if (!expected(targetApp, version, hash, bundleId)) continue
       try { dock(oldApp, targetApp) } catch (error) { log(`Dock repair deferred: ${error.message}`) }
       if (!running(targetApp)) launch(targetApp)
       log(`Verified renamed update and recovered launch: ${targetApp}`)
