@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { resolveDesktopIdentity } from '../src/main/app-identity'
+import { configureDesktopName, resolveDesktopIdentity } from '../src/main/app-identity'
 import { migrateLegacyUserData } from '../src/main/app-data-migration'
 
 const temporaryDirectories: string[] = []
@@ -16,6 +16,27 @@ afterEach(async () => {
 })
 
 describe('desktop app identity', () => {
+  it('preserves secret-store identity until ready and switches public branding before windows', () => {
+    for (const platform of ['darwin', 'linux', 'win32'] as const) {
+      const names: string[] = []
+      let ready: (() => void) | undefined
+      const host = { setName: (name: string) => { names.push(name) }, once: (_event: 'ready', callback: () => void) => { ready = callback } }
+      configureDesktopName(host, 'EWork Odyssey', platform)
+      if (platform === 'win32') expect(names).toEqual(['EWork Odyssey'])
+      else {
+        expect(names).toEqual(['Sherlock'])
+        ready!()
+        expect(names).toEqual(['Sherlock', 'EWork Odyssey'])
+      }
+    }
+    const names: string[] = []
+    let ready: (() => void) | undefined
+    configureDesktopName({ setName: (name) => { names.push(name) }, once: (_event, callback) => { ready = callback } }, 'EWork Odyssey Dev', 'darwin')
+    expect(names).toEqual(['Sherlock Dev'])
+    ready!()
+    expect(names.at(-1)).toBe('EWork Odyssey Dev')
+  })
+
   it('keeps old legacy data isolated while the bridge and notarized app share EWork Odyssey data', () => {
     expect(
       resolveDesktopIdentity('/Users/test/Library/Application Support', 'legacy', '')
