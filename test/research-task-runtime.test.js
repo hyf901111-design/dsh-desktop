@@ -1019,6 +1019,17 @@ describe('Research task Subagent adapter', () => {
     } finally { childReady.resolve(); await runtime.dispose() }
   })
 
+  it('routes financial containers to the hosted tool before web lookup', async () => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start('贵州茅台 600519.SH 最新行情监控面板')
+    const child = fixture.ctx.subagents.start.mock.calls[0][1]
+    expect(child.toolFilter.allow).toContain('financial_query')
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    expect(child.prompt[0].text).toContain('优先调用 financial_query')
+    expect(child.prompt[0].text).toContain('登录')
+    await handle.dispose()
+  })
+
   it.each([
     '使用演示数据生成一个ETF数据监控面板',
     '做最新价格监控的演示页面，使用模拟数据',
@@ -1039,7 +1050,7 @@ describe('Research task Subagent adapter', () => {
   it.each(['写一篇关于黄金最近的一个研究报告', '黄金近期研究报告', 'Gold research report from the last week'])('keeps search available for research wording: %s', async (query) => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start(query)
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
     await handle.dispose()
   })
 
@@ -1051,7 +1062,7 @@ describe('Research task Subagent adapter', () => {
   ])('does not treat a data heading as supplied values: %s', async query => {
     const fixture = containerAdapterFixture();
     const handle = await fixture.start(query);
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] });
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] });
     await handle.dispose();
   });
 
@@ -1075,7 +1086,7 @@ describe('Research task Subagent adapter', () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('分析黄金的供需格局')
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
     await handle.dispose()
   })
 
@@ -1092,7 +1103,7 @@ describe('Research task Subagent adapter', () => {
     expect(fixture.ctx.web.fetch).toHaveBeenCalledTimes(1)
     expect(fixture.ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/etf' }, expect.any(AbortSignal))
     const child = fixture.ctx.subagents.start.mock.calls[0][1]
-    expect(child.toolFilter).toEqual({ allow: ['web_search'] })
+    expect(child.toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
     expect(child.prompt[0].text).toContain('https://example.com/etf')
     expect(child.prompt[0].text).toContain('120亿元')
     expect(child.prompt[0].text).not.toContain('生成(汉语词语)')
@@ -1195,7 +1206,7 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.web.search.mockResolvedValue({ content: '比特币最新价格为60000美元。', sources: [] })
     const handle = await fixture.start('生成比特币监控面板，用真实最新数据替换演示数据')
     expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: '比特币 最新数据', maxResults: 5 }, expect.any(AbortSignal))
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
     await handle.dispose()
   })
 
@@ -1206,12 +1217,13 @@ describe('Research task Subagent adapter', () => {
     expect(fixture.ctx.subagents.start).toHaveBeenCalled()
   })
 
-  it.each(['510300', '00700'])('accepts a numeric financial code as the search subject: %s', async (code) => {
+  it.each(['510300', '00700'])('routes a numeric financial subject to the hosted tool: %s', async (code) => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: `${code} 最新净值1.25。`, sources: [] })
     const handle = await fixture.start(`监控${code}最新净值`)
-    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: `${code} 最新净值`, maxResults: 5 }, expect.any(AbortSignal))
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain(`${code} 最新净值1.25`)
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toContain('financial_query')
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('优先调用 financial_query')
     await handle.dispose()
   })
 
@@ -1221,11 +1233,12 @@ describe('Research task Subagent adapter', () => {
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
   })
 
-  it('keeps explicitly requested financial fields in a cleaned subject query', async () => {
+  it('uses financial tools for requested NAV and turnover fields', async () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: 'ETF净值与成交额数据。', sources: [] })
     const handle = await fixture.start('生成一个ETF数据监控面板，显示最新净值和成交额')
-    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: 'ETF 最新净值 成交额', maxResults: 5 }, expect.any(AbortSignal))
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toContain('financial_query')
     await handle.dispose()
   })
 
@@ -1233,9 +1246,9 @@ describe('Research task Subagent adapter', () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '沪深300ETF（510300）单位净值1.25，2026-09-04。', sources: [] })
     const handle = await fixture.start('查找沪深300ETF（510300）最近一次可核实的单位净值和日期，生成一个简洁的指标组件，注明来源，不要估算或编造。')
-    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: '沪深300ETF 510300 最新净值', maxResults: 5 }, expect.any(AbortSignal))
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['web_search'] })
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('2026-09-04')
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('真实数值、单位、日期')
     await handle.dispose()
   })
 
@@ -1247,8 +1260,8 @@ describe('Research task Subagent adapter', () => {
     ] })
     fixture.ctx.web.fetch.mockResolvedValue({ body: { content: '510300净值1.25。' } })
     const handle = await fixture.start('监控沪深300ETF 510300最新净值')
-    expect(fixture.ctx.web.fetch).toHaveBeenCalledTimes(1)
-    expect(fixture.ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/510300' }, expect.any(AbortSignal))
+    expect(fixture.ctx.web.fetch).not.toHaveBeenCalled()
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toContain('financial_query')
     expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).not.toContain('000300')
     await handle.dispose()
   })
@@ -1257,7 +1270,7 @@ describe('Research task Subagent adapter', () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.web.search.mockResolvedValue({ content: '纳指ETF最新净值1.25。', sources: [{ title: '纳指ETF最新净值', url: 'https://example.com/nasdaq', snippet: '纳指ETF最新净值1.25' }] })
     await expect(fixture.start('生成ETF数据监控面板，监控沪深300ETF 510300 最新净值')).resolves.toMatchObject({ childSessionId: 'child-1' })
-    expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: '沪深300ETF 510300 最新净值', maxResults: 5 }, expect.any(AbortSignal))
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
     expect(fixture.ctx.subagents.start).toHaveBeenCalled()
     expect(fixture.ctx.subagents.start.mock.calls.at(-1)[1].prompt[0].text).not.toContain('来源 1：')
   })
@@ -1334,9 +1347,9 @@ describe('Research task Subagent adapter', () => {
 
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
       parent,
-      prompt: [{ type: 'text', text: '产品固定提示词' }],
+      prompt: [{ type: 'text', text: expect.stringContaining('产品固定提示词') }],
       maxDepth: 1,
-      toolFilter: { allow: ['web_search'] }
+      toolFilter: { allow: ['financial_query', 'web_search'] }
     }))
     expect(ctx.subagents.start.mock.calls[0][1].persona).toContain('画布')
     expect(parent.session.events).toHaveLength(0)
@@ -1363,10 +1376,10 @@ describe('Research task Subagent adapter', () => {
     ctx.agents.withInitiator = vi.fn((_parent, operation) => operation())
     ctx.web = {
       search: vi.fn(async () => ({
-        content: '沪深300最新点位为 3,987.42 点，较前一交易日上涨 0.63%。',
+        content: '现货黄金最新价格为 3,987.42 点，较前一交易日上涨 0.63%。',
         sources: [{
           url: 'https://example.com/csi300',
-          title: '沪深300行情',
+          title: '现货黄金行情',
           snippet: '更新时间 2026-09-02 12:30'
         }],
         truncated: false
@@ -1382,7 +1395,7 @@ describe('Research task Subagent adapter', () => {
     const handle = await createSubagentAdapter(ctx).start({
       parentSessionId: parent.id,
       kind: 'container',
-      query: '生成沪深300行情监控，包含最新点位、涨跌幅、今开、最高和最低',
+      query: '生成现货黄金行情监控，包含最新价格、涨跌幅、今开、最高和最低',
       prompt: '产品固定 JSON 提示词',
       signal: new AbortController().signal,
       onSessionEvent: vi.fn()
@@ -1391,13 +1404,13 @@ describe('Research task Subagent adapter', () => {
     expect(ctx.agents.withInitiator).toHaveBeenCalledTimes(2)
     expect(ctx.agents.withInitiator).toHaveBeenNthCalledWith(1, parent, expect.any(Function))
     expect(ctx.web.search).toHaveBeenCalledWith({
-      query: '沪深300 最新行情 点位 涨跌幅 今开 最高 最低',
+      query: '现货黄金 最新行情 价格 涨跌幅 今开 最高 最低',
       maxResults: 5
     }, expect.any(AbortSignal))
     expect(ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/csi300' }, expect.any(AbortSignal))
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
       parent,
-      toolFilter: { allow: ['web_search'] },
+      toolFilter: { allow: ['financial_query', 'web_search'] },
       prompt: [expect.objectContaining({
         text: expect.stringMatching(/产品固定 JSON 提示词[\s\S]*主机已获取[\s\S]*3,987\.42/u)
       })]
@@ -1442,7 +1455,7 @@ describe('Research task Subagent adapter', () => {
       maxResults: 5
     }, expect.any(AbortSignal))
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
-      toolFilter: { allow: ['web_search'] },
+      toolFilter: { allow: ['financial_query', 'web_search'] },
       prompt: [expect.objectContaining({ text: expect.stringContaining('TRON 生态进展') })]
     }))
     await handle.dispose()

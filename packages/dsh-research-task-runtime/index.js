@@ -67,7 +67,8 @@ const TOOL_LABELS = new Map([
   ['grep', '检索资料'],
   ['glob', '查找文件'],
   ['web_search', '搜索资料'],
-  ['web_fetch', '读取网页']
+  ['web_fetch', '读取网页'],
+  ['financial_query', '查询金融数据']
 ])
 
 export class ResearchTaskError extends Error {
@@ -356,7 +357,7 @@ export function buildResearchTaskPrompt(request) {
       allowsWeb
         ? '只有用户明确提供的 http 或 https 网址才能用于 web；不得把用户没有提供的网址替换成自行猜测的网站。'
         : '用户未提供明确网址时，不得生成 web，也不得自行猜测或推荐外部网站；这不限制使用 html 创建自包含页面。',
-      '当需求涉及实时、监控或最新数据时，先使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
+      '当需求涉及实时、监控或最新数据时，金融数据先使用 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
       '不要输出代码围栏、解释、前言或 JSON 之外的文字；HTML/CSS/JavaScript 只能放在 html 字段内。',
       '图表最多 24 个标签和 6 个系列；表格最多 12 列和 100 行；KPI 最多 12 项。',
       '',
@@ -1206,9 +1207,12 @@ export function createSubagentAdapter(ctx) {
   return {
     async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress, synthesisOnly = false }) {
       const parent = await resolveParent(parentSessionId)
-      const needsWebData = !synthesisOnly && kind === 'container' && containerNeedsWebData(query ?? '')
+      const permitsTools = !synthesisOnly && kind === 'container' && containerAllowsWebSearch(query ?? '')
+      const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
+      const needsWebData = permitsTools && !financialSubject && containerNeedsWebData(query ?? '')
       if (signal.aborted) throw signal.reason
       let effectivePrompt = prompt
+      if (permitsTools) effectivePrompt += '\n股票、指数、ETF、基金的行情、净值、历史日线或对比研究，优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要替代该工具已覆盖的数据。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。网页搜索只补充工具未覆盖的资料。生成的是带数据时点的快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -1223,7 +1227,7 @@ export function createSubagentAdapter(ctx) {
           effectivePrompt += `\n\n${evidence}\n以上资料足以回答的内容请直接使用，不要重复检索。`
         } catch (error) {
           if (signal.aborted) throw error
-          effectivePrompt += '\n主机预检未取得可用资料。请直接使用 web_search 按用户的具体标的和字段检索，不要搜索词语释义；查不到时如实说明，不得编造数据。'
+          effectivePrompt += '\n主机预检未取得可用资料。金融数据优先调用 financial_query；其他资料使用 web_search 按用户的具体标的和字段检索，不要搜索词语释义；查不到时如实说明，不得编造数据。'
         } finally {
           clearTimeout(timer)
           lookup.abort()
@@ -1239,7 +1243,7 @@ export function createSubagentAdapter(ctx) {
         maxDepth: 1,
         toolFilter: {
           // Tool availability must not depend on a freshness keyword match.
-          allow: !synthesisOnly && kind === 'container' && containerAllowsWebSearch(query ?? '') ? ['web_search'] : []
+          allow: permitsTools ? ['financial_query', 'web_search'] : []
         },
         persona: RESEARCH_TASK_PERSONA
       })
