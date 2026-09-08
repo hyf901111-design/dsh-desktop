@@ -176,6 +176,10 @@
         "filter": [
           "research-voice.node"
         ]
+      },
+      {
+        "from": "scripts/macos/update-recovery.cjs",
+        "to": "update-recovery.cjs"
       }
     ],
     "publish": [

@@ -55,3 +55,23 @@ it('waits for all cleanup tasks, including when one throws', async () => {
   expect(quit).toHaveBeenCalledOnce()
   expect(warn).toHaveBeenCalledOnce()
 })
+
+it('arms rename recovery before quit and cancels it if native installation throws', async () => {
+  const updater = native(), cancel = vi.fn()
+  const beforeQuit = vi.fn(async () => cancel)
+  updater.quitAndInstall.mockImplementation(() => { throw new Error('installer failed') })
+  const result = expect(prepareNativeMacInstall(updater, 120_000, beforeQuit)).rejects.toThrow('installer failed')
+  expect(beforeQuit).not.toHaveBeenCalled()
+  updater.emit('update-downloaded')
+  await result
+  expect(beforeQuit).toHaveBeenCalledOnce()
+  expect(cancel).toHaveBeenCalledOnce()
+})
+it('keeps the original app running when the rename guard cannot start', async () => {
+  const updater = native()
+  const result = expect(prepareNativeMacInstall(updater, 120_000, async () => { throw new Error('guard unavailable') })).rejects.toThrow('guard unavailable')
+  updater.emit('update-downloaded')
+  await result
+  expect(updater.quitAndInstall).not.toHaveBeenCalled()
+  expect(updater.listenerCount('update-downloaded')).toBe(0)
+})
