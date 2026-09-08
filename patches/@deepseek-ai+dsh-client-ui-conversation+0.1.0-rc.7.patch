@@ -2839,7 +2839,7 @@ index 1dd0e89..d983f68 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8577,7003 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8577,7052 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -3345,6 +3345,16 @@ index 1dd0e89..d983f68 100644
 +      document.removeEventListener('load', schedule, true)
 +    }, 8000)
 +  }
++  // Error text and stack traces never leave the sandbox. The host can show retained text.
++  addEventListener('error', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
++  addEventListener('unhandledrejection', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
++  document.addEventListener('click', event => {
++    const anchor = event.target?.closest?.('a[href]')
++    if (!anchor) return
++    event.preventDefault()
++    if (!event.isTrusted) return
++    try { const u = new URL(anchor.getAttribute('href')); if (/^https?:$/.test(u.protocol) && !u.username && !u.password) parent.postMessage({ type: 'sherlock-source-request', url: u.href }, '*') } catch {}
++  }, true)
 +  document.addEventListener('DOMContentLoaded', () => {
 +    const declaration = Array.from(document.querySelectorAll('meta[name]')).find((meta) => meta.getAttribute('name')?.trim().toLowerCase() === 'sherlock-theme')
 +    const value = declaration?.getAttribute('content')?.trim().toLowerCase()
@@ -3373,6 +3383,10 @@ index 1dd0e89..d983f68 100644
 +  }
 +  addEventListener('message', (event) => {
 +    const data = event.data
++    if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data)) {
++      if (data.type === 'sherlock-content-failed' && Object.keys(data).length === 1) { parent.postMessage({ type: data.type }, '*'); return }
++      if (data.type === 'sherlock-source-request' && Object.keys(data).length === 2 && typeof data.url === 'string' && data.url.length <= 8192) { parent.postMessage({ type: data.type, url: data.url }, '*'); return }
++    }
 +    if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
 +        Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
 +        data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&
@@ -8106,6 +8120,16 @@ index 1dd0e89..d983f68 100644
 +			return width <= before.width + 2 && height <= before.height + 2 ? null : { width, height, sizeMode: "auto", x: node.x + (width - before.width) / 2, y: node.y + (height - before.height) / 2 };
 +		}
 +		function ResearchHtmlArtifact({ spec, node, onSize }) {
++			const [readable, setReadable] = (0, react.useState)(false);
++			const [requestedSource, setRequestedSource] = (0, react.useState)(null);
++			const sources = (0, react.useMemo)(() => {
++				const seen = new Set(); const links = [];
++				for (const match of spec.html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
++					const href = normalizeResearchWebUrl(match[1].replace(/&amp;/g, "&"));
++					if (href && !seen.has(href) && links.length < 40) { seen.add(href); links.push({ href, label: researchHtmlText(match[2]).slice(0, 60) || researchWebUrlHostname(href) }); }
++				}
++				return links;
++			}, [spec.html]);
 +			const frameRef = (0, react.useRef)(null);
 +			const fittingRef = (0, react.useRef)({ node, onSize });
 +			fittingRef.current = { node, onSize };
@@ -8125,6 +8149,10 @@ index 1dd0e89..d983f68 100644
 +				const receiveSize = (event) => {
 +					const data = event.data;
 +					const current = fittingRef.current;
++					if (event.source === frame.contentWindow && data && typeof data === "object" && !Array.isArray(data)) {
++						if (data.type === "sherlock-content-failed" && Object.keys(data).length === 1 && researchHtmlText(spec.html).length >= 8) { setReadable(true); return; }
++						if (data.type === "sherlock-source-request" && Object.keys(data).length === 2) { const source = sources.find(s => s.href === normalizeResearchWebUrl(data.url)); if (source) setRequestedSource(source); return; }
++					}
 +					if (event.source !== frame.contentWindow || !data || typeof data !== "object" || Array.isArray(data) || Object.keys(data).length !== 3 || !Object.hasOwn(data, "type") || !Object.hasOwn(data, "width") || !Object.hasOwn(data, "height") || data.type !== "sherlock-content-size" || !Number.isInteger(data.width) || !Number.isInteger(data.height) || data.width < 1 || data.height < 1 || data.width > 2400 || data.height > 12000 || growths >= 3 || Date.now() - startedAt > 8000 || current.node?.sizeMode === "manual" || current.node?.containerSpec?.html !== spec.html) return;
 +					const card = frame.closest("[data-research-node-id]");
 +					if (card?.getAttribute("data-node-resizing") === "true" || card?.getAttribute("data-node-dragging") === "true") return;
@@ -8140,8 +8168,28 @@ index 1dd0e89..d983f68 100644
 +				observer?.observe(owner.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
 +				sendTheme();
 +				return () => { observer?.disconnect(); view.removeEventListener("message", receiveSize); };
-+			}, [srcDoc]);
-+			return (0, react_jsx_runtime.jsx)("iframe", { ref: frameRef, "data-research-html-artifact": "", className: "rScV5Q_webFrame", title: spec.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }, "aria-label": `${spec.title}（离线交互网页）` });
++			}, [srcDoc, readable]);
++			return (0, react_jsx_runtime.jsxs)("div", { style: { display: "flex", flexDirection: "column", flex: 1, minHeight: 0, minWidth: 0 }, children: [
++				(0, react_jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", padding: "6px 12px", maxHeight: 90, overflow: "auto", fontSize: 12 }, children: [
++					(0, react_jsx_runtime.jsx)("button", { type: "button", onClick: () => setReadable(v => !v), children: readable ? "交互视图" : "阅读内容" }),
++					requestedSource ? (0, react_jsx_runtime.jsx)("a", { href: requestedSource.href, target: "_blank", rel: "noopener noreferrer", style: { fontWeight: 700 }, children: `打开来源：${requestedSource.label} ↗` }) : null,
++					...sources.map((source, i) => (0, react_jsx_runtime.jsx)("a", { href: source.href, target: "_blank", rel: "noopener noreferrer", title: source.href, children: `${source.label} ↗` }, i))
++				] }),
++				readable ? (0, react_jsx_runtime.jsx)("div", { style: { overflow: "auto", padding: 20, whiteSpace: "pre-wrap", userSelect: "text" }, children: researchHtmlText(spec.html) || "当前交互内容没有可提取的正文。" }) : (0, react_jsx_runtime.jsx)("iframe", { ref: frameRef, "data-research-html-artifact": "", className: "rScV5Q_webFrame", title: spec.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }, "aria-label": `${spec.title}（离线交互网页）` })
++			] });
++		}
++		function ResearchTableCell({ cell }) {
++			const text = String(cell);
++			const parts = []; let offset = 0;
++			const pattern = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>]+)/g;
++			for (const match of text.matchAll(pattern)) {
++				parts.push(text.slice(offset, match.index));
++				const href = normalizeResearchWebUrl(match[2] || match[3]);
++				parts.push(href ? (0, react_jsx_runtime.jsx)("a", { href, target: "_blank", rel: "noopener noreferrer", title: href, onPointerDown: event => event.stopPropagation(), children: match[1] || researchWebUrlHostname(href) }, match.index) : match[0]);
++				offset = match.index + match[0].length;
++			}
++			parts.push(text.slice(offset));
++			return (0, react_jsx_runtime.jsx)("span", { children: parts });
 +		}
 +		function ResearchContainerContent({ node, sessionId, visible, onHtmlSize }) {
 +			const spec = node.containerSpec;
@@ -8149,7 +8197,7 @@ index 1dd0e89..d983f68 100644
 +			if (spec.type === "mind-map") return (0, react_jsx_runtime.jsx)(ResearchMindMap, { nodeId: node.id, text: spec.content });
 +			if (spec.type === "web") return (0, react_jsx_runtime.jsx)(ResearchCanvasWebFrame, { node: { ...node, url: spec.url }, sessionId, visible });
 +			if (spec.type === "chart") return (0, react_jsx_runtime.jsx)(ResearchContainerChart, { spec });
-+			if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerTableScroll", children: (0, react_jsx_runtime.jsxs)("table", { "data-research-container-table": "", children: [(0, react_jsx_runtime.jsx)("thead", { children: (0, react_jsx_runtime.jsx)("tr", { children: spec.columns.map((column, index) => (0, react_jsx_runtime.jsx)("th", { children: column }, index)) }) }), (0, react_jsx_runtime.jsx)("tbody", { children: spec.rows.map((row, rowIndex) => (0, react_jsx_runtime.jsx)("tr", { children: row.map((cell, cellIndex) => (0, react_jsx_runtime.jsx)("td", { "data-numeric": typeof cell === "number" ? "true" : void 0, children: String(cell) }, cellIndex)) }, rowIndex)) })] }) });
++			if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerTableScroll", children: (0, react_jsx_runtime.jsxs)("table", { "data-research-container-table": "", style: { tableLayout: "fixed", width: "100%", minWidth: Math.max(420, spec.columns.length * 128) }, children: [(0, react_jsx_runtime.jsx)("thead", { children: (0, react_jsx_runtime.jsx)("tr", { children: spec.columns.map((column, index) => (0, react_jsx_runtime.jsx)("th", { children: column }, index)) }) }), (0, react_jsx_runtime.jsx)("tbody", { children: spec.rows.map((row, rowIndex) => (0, react_jsx_runtime.jsx)("tr", { children: row.map((cell, cellIndex) => (0, react_jsx_runtime.jsx)("td", { "data-numeric": typeof cell === "number" ? "true" : void 0, children: (0, react_jsx_runtime.jsx)(ResearchTableCell, { cell }) }, cellIndex)) }, rowIndex)) })] }) });
 +			if (spec.type === "kpi") return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerKpis", "data-research-container-kpi": "", children: spec.items.map((item, index) => (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("span", { children: item.label }), (0, react_jsx_runtime.jsx)("strong", { children: String(item.value) }), item.change === void 0 ? null : (0, react_jsx_runtime.jsx)("em", { children: String(item.change) })] }, index)) });
 +			return (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerMarkdown", "data-research-container-markdown": "", children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text: spec.content, streaming: false }) });
 +		}
@@ -8458,6 +8506,7 @@ index 1dd0e89..d983f68 100644
 +				// RESEARCH_NATIVE_THEME_STYLE
 +				tag.textContent += RESEARCH_COMPONENT_THEME_CSS.replaceAll(':root:where([data-sherlock-theme="dark"])', 'body[data-ds-dark-theme] .rScV5Q_containerContent').replaceAll(':root', '.rScV5Q_containerContent');
 +				tag.textContent += ".rScV5Q_containerContent{background:var(--sherlock-bg);color:var(--sherlock-text);font:13px/1.5 var(--sherlock-font-sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}.rScV5Q_containerChart{padding:28px 24px 24px;background:var(--sherlock-surface)}.rScV5Q_chartGrid{stroke:var(--sherlock-chart-grid);stroke-dasharray:4 4}.rScV5Q_chartAxis{stroke:var(--sherlock-chart-grid);stroke-width:1;stroke-dasharray:4 4}.rScV5Q_chartLabel{fill:var(--sherlock-chart-label);font:12px var(--sherlock-font-sans)}.rScV5Q_chartLegend{justify-content:flex-start;padding:18px 0 0 5%;color:var(--sherlock-chart-label);font:12px var(--sherlock-font-sans)}.rScV5Q_chartLegend i{width:10px;height:2px;border-radius:0}.rScV5Q_containerControls button,.rScV5Q_containerControls select{border-radius:0}.rScV5Q_containerTableScroll{padding:18px 22px}.rScV5Q_containerTableScroll table{color:var(--sherlock-text);font:13px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerTableScroll th,.rScV5Q_containerTableScroll td{padding:11px 10px;border:0;border-bottom:1px solid var(--sherlock-border)}.rScV5Q_containerTableScroll th{background:transparent;color:var(--sherlock-muted);font:600 12px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerTableScroll tr:nth-child(even) td{background:transparent}.rScV5Q_containerTableScroll td[data-numeric=true]{text-align:right;font-variant-numeric:tabular-nums}.rScV5Q_containerKpis{padding:20px;gap:14px}.rScV5Q_containerKpis>div{border:1px solid var(--sherlock-border);border-radius:var(--sherlock-radius);background:var(--sherlock-surface);padding:18px}.rScV5Q_containerKpis span{color:var(--sherlock-muted);font:12px/1.5 var(--sherlock-font-sans)}.rScV5Q_containerKpis strong{color:var(--sherlock-text);font:750 28px/1.2 var(--sherlock-font-sans);font-variant-numeric:tabular-nums;letter-spacing:-.02em}.rScV5Q_containerKpis em{color:var(--sherlock-accent);font:12px/1.5 var(--sherlock-font-mono)}.rScV5Q_containerMarkdown{color:var(--sherlock-text);padding:20px 24px}.rScV5Q_containerMarkdown a{color:var(--sherlock-accent)}.rScV5Q_containerContent .rScV5Q_mindMap{background:var(--sherlock-bg);font-family:var(--sherlock-font-sans)}.rScV5Q_containerContent .rScV5Q_mindMapNode{border:1px solid var(--sherlock-border);border-radius:var(--sherlock-radius);background:var(--sherlock-surface);color:var(--sherlock-text);font-family:var(--sherlock-font-sans)}.rScV5Q_containerContent .rScV5Q_mindMapNode[data-research-mind-map-depth=\"0\"]{background:var(--sherlock-accent-soft);color:var(--sherlock-accent)}.rScV5Q_containerContent .rScV5Q_mindMapRoot:after,.rScV5Q_containerContent .rScV5Q_mindMapChildren:after,.rScV5Q_containerContent .rScV5Q_mindMapBranch:before,.rScV5Q_containerContent .rScV5Q_mindMapBranch:after{background:var(--sherlock-border)}";
++			tag.textContent += ".rScV5Q_containerTableScroll{overflow:auto;min-width:0}.rScV5Q_containerTableScroll td,.rScV5Q_containerTableScroll th{vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:normal}.rScV5Q_containerTableScroll a{text-decoration:underline;text-underline-offset:3px}.rScV5Q_containerMarkdown table{display:block;overflow-x:auto;max-width:100%}.rScV5Q_containerMarkdown th,.rScV5Q_containerMarkdown td{min-width:120px;max-width:280px;overflow-wrap:anywhere}";
 +				tag.textContent += ".rScV5Q_mindMapRoot{position:relative}.rScV5Q_mindMapRoot:after{content:\"\";position:absolute;left:100%;top:50%;width:20px;height:1px;background:rgb(150,150,150)}.rScV5Q_mindMapRoot+.rScV5Q_mindMapChildren:after{display:none}";
 +				tag.textContent += ".rScV5Q_contextDownloadGroup{position:relative}.rScV5Q_contextDownloadFormats{box-sizing:border-box;z-index:32;min-width:92px;padding:4px;position:absolute;left:calc(100% + 6px);top:-4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:9px;box-shadow:var(--dsw-shadow-lv2)}.rScV5Q_contextDownloadFormats button{justify-content:flex-start;gap:6px}.rScV5Q_downloadFeedback{box-sizing:border-box;z-index:28;pointer-events:auto;min-height:32px;max-width:240px;padding:7px 9px;display:flex;align-items:center;gap:8px;position:absolute;transform:translate(-50%,0);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:var(--dsw-shadow-lv2);font:var(--dsw-font-xxs-12)}.rScV5Q_downloadFeedback[data-state=error]{color:var(--dsw-alias-state-error-primary);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 45%,var(--dsw-alias-border-l2))}.rScV5Q_downloadFeedback span{min-width:0;overflow-wrap:anywhere}.rScV5Q_downloadFeedback button{flex:none;height:24px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);font:inherit;cursor:pointer}.rScV5Q_downloadFeedback button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_downloadFeedback button:disabled{opacity:.45;cursor:default}";
 +				tag.textContent += ".rScV5Q_linkPopover button,.rScV5Q_containerDraftFooter button{height:34px;padding:0 14px;border:0;border-radius:8px;color:#fff;background:#0f1115;box-shadow:0 1px 2px rgba(0,0,0,.12);font:var(--dsw-font-xs-strong-13);cursor:pointer;transition:background-color .12s ease,color .12s ease,transform .08s ease}.rScV5Q_linkPopover button:hover:not(:disabled),.rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#23262b}.rScV5Q_linkPopover button:active:not(:disabled),.rScV5Q_containerDraftFooter button:active:not(:disabled){background:#050607;transform:translateY(1px)}.rScV5Q_linkPopover button:focus-visible,.rScV5Q_containerDraftFooter button:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-label-primary) 55%,transparent);outline-offset:2px}.rScV5Q_linkPopover button:disabled,.rScV5Q_containerDraftFooter button:disabled{color:#8a9099;background:#d7dae0;cursor:default}.rScV5Q_linkPopover button:disabled{opacity:1}body[data-ds-dark-theme] .rScV5Q_linkPopover button,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button{color:#202124;background:#f5f5f5}body[data-ds-dark-theme] .rScV5Q_linkPopover button:hover:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:hover:not(:disabled){background:#fff}body[data-ds-dark-theme] .rScV5Q_linkPopover button:active:not(:disabled),body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:active:not(:disabled){background:#dedede}body[data-ds-dark-theme] .rScV5Q_linkPopover button:disabled,body[data-ds-dark-theme] .rScV5Q_containerDraftFooter button:disabled{color:#969ca5;background:#454950}";

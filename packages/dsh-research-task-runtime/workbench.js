@@ -5,7 +5,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 export const WORKBENCH_PATH = '/sherlock/research-workbenches/list';
 export const PANEL_SIZES = { small: 360, medium: 600, large: 840 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : p.height <= 360 ? 'small' : p.height <= 600 ? 'medium' : 'large';
-const types = ['markdown', 'table', 'chart', 'kpi', 'html'];
+const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 export function validateWorkbench(value) {
     if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 2 || value.panels.length > 10)
@@ -92,7 +92,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             }
             await Promise.all(plan.panels.map(async (p) => {
                 try {
-                    const receipt = await runtime.start({ parentSessionId, canvasNodeId: p.nodeId, kind: 'container', prompt: `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型；框宽 ${p.width}px，目标内容高度 ${p.height - 38}px，固定${p.size}规格，不得通过超长正文撑高外框。表格最多${p.size === "small" ? 5 : p.size === "medium" ? 10 : 14}行、6列；文字最多${p.size === "small" ? 250 : p.size === "medium" ? 450 : 650}字，优先核心数据和结论，使用简短来源链接，细节可用折叠区。内容简洁完整，遵守用户指定的行数、条数和范围，不额外扩写背景、摘要。标题简短，来源和日期放在正文，避免重复其他面板内容。数据注明来源和日期，无法获得的数据明确标注缺失；不得伪造实时数据或声称已开启持续监控。` });
+                    const receipt = await runtime.start({ parentSessionId, canvasNodeId: p.nodeId, kind: 'container', prompt: `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型；框宽 ${p.width}px，目标内容高度 ${p.height - 38}px，固定${p.size}规格，不得通过超长正文撑高外框。表格最多${p.size === "small" ? 5 : p.size === "medium" ? 10 : 14}行、最多4个主要列（更多字段用详情或横向滚动），不得压缩成逐字换行；来源必须短标签可点击；文字最多${p.size === "small" ? 250 : p.size === "medium" ? 450 : 650}字，优先核心数据和结论，使用简短来源链接，细节可用折叠区。内容简洁完整，遵守用户指定的行数、条数和范围，不额外扩写背景、摘要。标题简短，来源和日期放在正文，避免重复其他面板内容。数据注明来源和日期，无法获得的数据明确标注缺失；不得伪造实时数据或声称已开启持续监控。` });
                     p.taskId = receipt.taskId;
                 }
                 catch {
@@ -109,12 +109,12 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     };
     const disposeTool = ctx.tools.register(defineTool({
         name: 'research_workbench_create',
-        description: '在研究画布一次创建由独立面板组成的工作台，各面板自动并发生成。仅用于需要多个研究维度的工作台需求；简单问答直接回复。先判断最少必要面板数（2–10），分别指定用途、范围、内容类型和高度，不要在主会话先重复完成所有检索与报告。相同请求重试使用相同 requestId。返回 accepted 仅表示任务已提交，不表示数据已生成或监控已启用。',
+        description: '在研究画布一次创建由独立面板组成的工作台，各面板自动并发生成。仅用于需要多个研究维度的工作台需求；简单问答直接回复。先判断最少必要面板数（2–10），分别指定用途、范围、内容类型和高度。按使用目的选择交互：新闻/政策/交易动态用 news，报告库用 reports，日历用 calendar，指标监控快照用 dashboard，趋势用 chart，对比才用 table；综合工作台通常包含至少三种有意义的形式，避免清一色表格或长文。尊重用户明确要求的形式，不要在主会话先重复完成所有检索与报告。相同请求重试使用相同 requestId。返回 accepted 仅表示任务已提交，不表示数据已生成或监控已启用。',
         parameters: {
             requestId: { type: 'string', required: true, description: '本轮需求的唯一稳定标识，重试保持一致。' },
             title: { type: 'string', required: true },
             panels: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
-                        title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的研究问题、内容边界、必要数据与来源；避免与其他面板重复。' },
+                        title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题、内容边界、数据与来源，以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
                         type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '固定规格：small 720×360、medium 720×600、large 720×840。同排会统一到较大规格，请按信息量选择并精简内容。' }
                     } } }
         },

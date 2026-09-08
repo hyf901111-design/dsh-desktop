@@ -356,8 +356,10 @@ describe('Research task contract and prompt', () => {
       await runtime.start(containerRequest('oversized'))
       await deferred.waitForStarts(2)
       deferred.complete('task-2', JSON.stringify({ version: 1, type: 'html', title: '过大', html: '<main>' + '文'.repeat(70_000) + '</main>' }))
-      await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-2' })).toMatchObject({ state: 'failed', error: expect.stringMatching(/HTML.*200.*KB/) }))
-      expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-2' }).finalOutput).toBeUndefined()
+      await deferred.waitForStarts(3)
+      deferred.complete('task-2', JSON.stringify({ version: 1, type: 'markdown', title: '精简内容', content: '已自动压缩为可读的完整内容。' }))
+      await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-2' })).toMatchObject({ state: 'completed' }))
+      expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-2' }).finalOutput).toContain('已自动压缩')
       await runtime.dispose()
       const restored = new ResearchTaskRuntime({ adapter: deferred.adapter, storage })
       await restored.restore()
@@ -1589,7 +1591,7 @@ describe('Research task persistence and restart recovery', () => {
         ...containerRequest(),
         taskId: 'container-task',
         state: 'completed',
-        finalOutput: '{"version":1,"type":"kpi","title":"收入","items":[]}',
+        finalOutput: '{"version":1,"type":"kpi","title":"收入","items":[{"label":"收入","value":42}]}',
         createdAt: 100,
         completedAt: 120
       }]
@@ -1606,7 +1608,7 @@ describe('Research task persistence and restart recovery', () => {
       parentSessionId: 'parent-1', taskId: 'container-task', afterSeq: 0
     })).toMatchObject({
       state: 'completed',
-      finalOutput: '{"version":1,"type":"kpi","title":"收入","items":[]}'
+      finalOutput: '{"version":1,"type":"kpi","title":"收入","items":[{"label":"收入","value":42}]}'
     })
     expect(storage.snapshot().tasks[0]).toMatchObject(containerRequest())
     expect(storage.snapshot().tasks[0]).not.toHaveProperty('sources')
