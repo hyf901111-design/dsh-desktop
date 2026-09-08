@@ -5,8 +5,10 @@ const desktopShellStyles = `
     padding-right: 88px;
     min-height: 54px;
     box-sizing: border-box;
+    justify-content: flex-start;
   }
-  .ydkMvW_title { min-width: 0; }
+  .ydkMvW_title { min-width: 0; flex: 1; }
+  .ydkMvW_close { order: -1; }
   .t8lSSG_toggleCluster {
     top: calc(8px + env(safe-area-inset-top)) !important;
   }
