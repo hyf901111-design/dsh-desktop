@@ -26,6 +26,8 @@ export function mountAccountUi(
  .sherlock-field-heading .sherlock-field-error{font-size:11px;font-weight:400;color:var(--dsw-alias-label-secondary);text-align:right}
  .sherlock-field-heading .sherlock-field-error:empty{display:none}
  .sherlock-account-avatar svg{display:block;width:100%;height:100%}
+ .sherlock-account-avatar[data-authenticated=true]{background:#000;color:#fff;font-weight:600;font-style:normal}
+ body[data-ds-dark-theme] .sherlock-account-avatar[data-authenticated=true]{background:#ff8a3d;color:#171717}
  .sherlock-auth-logo{display:block;width:136px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
@@ -104,12 +106,19 @@ export function mountAccountUi(
     trigger.replaceChildren()
     const avatar = document.createElement('i')
     avatar.className = 'sherlock-account-avatar'
-    const avatarSvg = new DOMParser().parseFromString(
-      accountAvatar,
-      'image/svg+xml'
-    ).documentElement
-    avatarSvg.setAttribute('aria-hidden', 'true')
-    avatar.append(document.importNode(avatarSvg, true))
+    avatar.setAttribute('aria-hidden', 'true')
+    avatar.dataset.authenticated = String(user !== null)
+    if (user) {
+      const initial = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+        .segment(user.username.trim())[Symbol.iterator]().next().value?.segment
+      avatar.textContent = initial ?? ''
+    } else {
+      const avatarSvg = new DOMParser().parseFromString(
+        accountAvatar,
+        'image/svg+xml'
+      ).documentElement
+      avatar.append(document.importNode(avatarSvg, true))
+    }
     const label = document.createElement('span')
     label.textContent = user?.username ?? '登录 EWork Odyssey'
     const chevron = document.createElement('span')
