@@ -46,8 +46,16 @@ describe('stable interactive collections',()=>{
   doc.getElementById('expand').click();expect(doc.querySelector('details').open).toBe(true);w.happyDOM.abort();
  });
  it.each(['news','reports'])('provides searchable %s and safe source links',type=>{const out=renderInteractiveArtifact({...base,type});expect(out.html).toContain('https://example.org/a');expect(out.html).toContain('筛选分类');expect(out.html).not.toContain('<iframe')});
+ it('shows compact dashboard values without list controls or repeated dates',()=>{
+  const out=renderInteractiveArtifact({version:1,type:'dashboard',title:'行情快照',asOf:'2026-09-08',items:[{label:'最新价',value:'示例 100 元',detail:'离线验收数据',url:'https://example.org/quote'},{label:'成交额',value:'示例 12 亿'}]});
+  const w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.body.innerHTML=out.html;w.eval(w.document.querySelector('script').textContent);
+  expect([...w.document.querySelectorAll('article')].every(a=>!a.hidden)).toBe(true);
+  expect(w.document.querySelector('.controls')).toBeNull();expect(w.document.querySelector('#count')).toBeNull();
+  expect(w.document.querySelectorAll('.meta')).toHaveLength(0);expect(w.document.querySelectorAll('details')).toHaveLength(1);
+  expect(w.document.querySelector('details a').href).toBe('https://example.org/quote');w.happyDOM.abort();
+ });
  it('escapes hostile data and rejects unsafe URLs',()=>{const out=renderInteractiveArtifact({...base,title:'<script>alert(1)</script>'});expect(out.html).toContain('&lt;script&gt;');expect(renderInteractiveArtifact({...base,items:[{...base.items[0],url:'javascript:alert(1)'}]})).toBeNull()});
- it('labels dashboards as snapshots with data dates',()=>{const out=renderInteractiveArtifact({version:1,type:'dashboard',title:'数据',asOf:'2026-09-08',items:[{label:'指标',value:'12%',detail:'公开样例'}]});expect(out.html).toContain('未开启持续更新');expect(out.html).toContain('2026-09-08')});
+ it('labels dashboards as snapshots with data dates',()=>{const out=renderInteractiveArtifact({version:1,type:'dashboard',title:'数据',asOf:'2026-09-08',items:[{label:'指标',value:'12%',detail:'公开样例'}]});expect(out.html).toContain('数据快照');expect(out.html).not.toContain('class="controls"');expect(out.html).not.toContain('id="count"');expect(out.html).toContain('2026-09-08')});
 });
 
 describe('evidence-preserving synthesis retries',()=>{
