@@ -171,6 +171,40 @@
           "Initial automatic viewport scale remains conservative; Arrange Canvas refits visible area."
         ],
         "generatedAt": "2026-09-08T00:15:55.091621+00:00"
+      },
+      "merged": {
+        "mergeCommit": "538577fd61eea1040dbe7bd402102e0f88698ba3",
+        "verificationCommit": "538577fd61eea1040dbe7bd402102e0f88698ba3",
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-workbench.test.js",
+              "test/standard-agent-preset.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-workbench.test.js test/standard-agent-preset.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "538577fd61eea1040dbe7bd402102e0f88698ba3",
+            "completedAt": "2026-09-08T00:15:57.134Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "538577fd61eea1040dbe7bd402102e0f88698ba3",
+            "completedAt": "2026-09-08T00:15:57.134Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-08T00:15:57.134Z"
       }
     }
   ],
