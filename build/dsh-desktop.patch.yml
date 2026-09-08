@@ -51,3 +51,7 @@
   config:
     profile: web
     allowRestart: false
+
+# Retire the earlier local financial adapter: normal conversations use the hosted business entry.
+- id: sherlock-tonghuashun-mcp
+  disabled: true

@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..30dca6c 100644
+index 1dd0e89..400d820 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -1772,7 +1772,7 @@ index 1dd0e89..30dca6c 100644
  				const right = Math.min(viewport.right, content.right);
  				const x = left + Math.max(0, right - left) / 2;
  				const height = visibleBottom - viewport.top;
-@@ -5332,35 +6410,537 @@ window.__ModuleLoader__.load({
+@@ -5332,35 +6410,606 @@ window.__ModuleLoader__.load({
  				scrollTop: scrollport.scrollTop
  			};
  		}
@@ -2042,6 +2042,10 @@ index 1dd0e89..30dca6c 100644
 +				return topic === null ? t("execution.status.researching") : t("execution.status.webSearchTopic", { topic });
 +			}
 +			if (name === "web_fetch") return t("execution.status.researching");
++			if (name === "financial_query") {
++				const tasks = { quote: "查询股票行情", history: "查询历史行情", nav: "获取基金净值", profile: "查询基金资料", resolve: "核对证券名称与代码", research: "研究基金数据", catalog: "核对可用研究范围", analysis: "核对基金研究数据" };
++				return t("execution.status.currentTask", { task: tasks[args?.intent] ?? "核对金融数据" });
++			}
 +			if (/skill/.test(name) && /(?:ppt|slide|presentation)/iu.test(String(args?.name ?? ""))) return t("execution.status.pptSkill");
 +			if (/bash|shell|exec|terminal|command|pwsh/.test(name)) {
 +				const describedTask = safeExecutionTask(args?.description);
@@ -2203,6 +2207,71 @@ index 1dd0e89..30dca6c 100644
 +			}
 +			return entries;
 +		}
++		/** Merge transient steering at its durable insertion sequence until handoff completes. */
++		function mergePendingSteeringFlow(flow, pending, nodeStore) {
++			const sequenced = pending.map((item, index) => ({
++				item,
++				index,
++				anchorSeq: item.anchorSeq
++			})).filter((entry) => typeof entry.anchorSeq === "number" && Number.isFinite(entry.anchorSeq)).sort((left, right) => left.anchorSeq - right.anchorSeq || left.index - right.index);
++			const unsequenced = pending.filter((item) => typeof item.anchorSeq !== "number" || !Number.isFinite(item.anchorSeq));
++			const merged = [];
++			let pendingIndex = 0;
++			const pushPending = (item) => merged.push({
++				kind: "pending-steering",
++				key: `pending-steering:${item.id}`,
++				item
++			});
++			const pushBefore = (anchorSeq) => {
++				while (pendingIndex < sequenced.length && sequenced[pendingIndex].anchorSeq < anchorSeq) {
++					pushPending(sequenced[pendingIndex].item);
++					pendingIndex++;
++				}
++			};
++			for (let flowIndex = 0; flowIndex < flow.length; flowIndex++) {
++				const entry = flow[flowIndex];
++				if (entry.kind === "node") {
++					const anchorSeq = nodeStore.get(entry.key)?.anchorSeq;
++					if (typeof anchorSeq === "number" && Number.isFinite(anchorSeq)) pushBefore(anchorSeq);
++					merged.push(entry);
++					continue;
++				}
++				let nodeKeys = [];
++				let boundary = false;
++				let segment = 0;
++				const pushExecution = (running, allowEmpty = false) => {
++					if (nodeKeys.length === 0 && !allowEmpty) return;
++					merged.push({
++						...entry,
++						key: `${entry.key}:pending:${segment++}`,
++						nodeKeys,
++						running
++					});
++					nodeKeys = [];
++				};
++				for (const key of entry.nodeKeys) {
++					const anchorSeq = nodeStore.get(key)?.anchorSeq;
++					if (typeof anchorSeq === "number" && Number.isFinite(anchorSeq)) while (pendingIndex < sequenced.length && sequenced[pendingIndex].anchorSeq < anchorSeq) {
++						pushExecution(false);
++						pushPending(sequenced[pendingIndex].item);
++						pendingIndex++;
++						boundary = true;
++					}
++					nodeKeys.push(key);
++				}
++				if (entry.running && flowIndex === flow.length - 1) while (pendingIndex < sequenced.length) {
++					pushExecution(false);
++					pushPending(sequenced[pendingIndex].item);
++					pendingIndex++;
++					boundary = true;
++				}
++				if (!boundary) merged.push(entry);
++				else pushExecution(entry.running, entry.running);
++			}
++			while (pendingIndex < sequenced.length) pushPending(sequenced[pendingIndex++].item);
++			for (const item of unsequenced) pushPending(item);
++			return merged;
++		}
 +		/** Latest durable user message, independent of internal nodes appended in the same render. */
 +		function latestDirectUserKey(order, nodeStore) {
 +			for (let index = order.length - 1; index >= 0; index--) {
@@ -2334,7 +2403,7 @@ index 1dd0e89..30dca6c 100644
  				})]
  			});
  		}
-@@ -5374,6 +6954,11 @@ window.__ModuleLoader__.load({
+@@ -5374,6 +7023,11 @@ window.__ModuleLoader__.load({
  			const timeline = useSession((s) => s.chat.timeline);
  			const inbox = useSession((s) => s.queue);
  			const cwd = useSessions((s) => s.byId[sessionId]?.cwd);
@@ -2346,7 +2415,7 @@ index 1dd0e89..30dca6c 100644
  			const running = useSession((s) => s.running);
  			const openState = useSession((s) => s.openState);
  			const openError = useSession((s) => s.openError);
-@@ -5381,11 +6966,60 @@ window.__ModuleLoader__.load({
+@@ -5381,11 +7035,61 @@ window.__ModuleLoader__.load({
  			const loadingOlder = useSession((s) => s.loadingOlder);
  			const selectedCallId = useStore((s) => s.selection?.callId);
  			const pendingSteering = (0, react.useMemo)(() => inbox.filter((item) => item.placement === "steering"), [inbox]);
@@ -2374,6 +2443,7 @@ index 1dd0e89..30dca6c 100644
 +				return null;
 +			}, [running, runningTurn, order, nodeStore]);
 +			const compactFlow = (0, react.useMemo)(() => compactConversationFlow(order, nodeStore, runningTurnNumber), [order, nodeStore, runningTurnNumber]);
++			const renderFlow = (0, react.useMemo)(() => mergePendingSteeringFlow(compactFlow, pendingSteering, nodeStore), [compactFlow, pendingSteering, nodeStore]);
 +			const seatProps = (0, react.useMemo)(() => ({
 +				useSession,
 +				researchTaskIdentity,
@@ -2408,7 +2478,7 @@ index 1dd0e89..30dca6c 100644
  			/** Last position delivered or written on the main thread. */
  			const observedTopRef = (0, react.useRef)(0);
  			/** Paging anchor: semantic row/position at click, updated by reader scrolls
-@@ -5394,7 +7028,9 @@ window.__ModuleLoader__.load({
+@@ -5394,7 +7098,9 @@ window.__ModuleLoader__.load({
  			const firstSeqRef = (0, react.useRef)(null);
  			const openedRef = (0, react.useRef)(false);
  			const lastKeyRef = (0, react.useRef)(null);
@@ -2418,7 +2488,7 @@ index 1dd0e89..30dca6c 100644
  			/** Flow tip signature — follow-scroll only when this moves, never on a
  			*  scroll-driven at-bottom chrome re-render (which would snap inertial
  			*  scrolls the rest of the way to the floor). */
-@@ -5402,26 +7038,37 @@ window.__ModuleLoader__.load({
+@@ -5402,26 +7108,37 @@ window.__ModuleLoader__.load({
  			const firstKey = order[0];
  			const firstSeq = firstKey === void 0 ? null : nodeStore.get(firstKey)?.anchorSeq ?? null;
  			const lastKey = order.at(-1) ?? null;
@@ -2460,7 +2530,7 @@ index 1dd0e89..30dca6c 100644
  					else {
  						el.scrollTop = saved.scrollTop;
  						const row = anchorElement(local, saved.anchorKey);
-@@ -5436,6 +7083,7 @@ window.__ModuleLoader__.load({
+@@ -5436,6 +7153,7 @@ window.__ModuleLoader__.load({
  					}
  					firstSeqRef.current = firstSeq;
  					lastKeyRef.current = lastKey;
@@ -2468,7 +2538,7 @@ index 1dd0e89..30dca6c 100644
  					lastSteeringIdRef.current = lastSteeringId;
  					followSigRef.current = followSig;
  					return;
-@@ -5449,18 +7097,26 @@ window.__ModuleLoader__.load({
+@@ -5449,18 +7167,26 @@ window.__ModuleLoader__.load({
  					firstSeqRef.current = firstSeq;
  					/* v8 ignore next -- ?? arm: a prepend adds nodes, so the flow list here is never empty. */
  					lastKeyRef.current = lastKey;
@@ -2497,7 +2567,7 @@ index 1dd0e89..30dca6c 100644
  			});
  			const onScrollRef = (0, react.useRef)(() => {});
  			onScrollRef.current = () => {
-@@ -5468,6 +7124,7 @@ window.__ModuleLoader__.load({
+@@ -5468,6 +7194,7 @@ window.__ModuleLoader__.load({
  				/* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
  				if (local === null) return;
  				const el = scrollerOf(local);
@@ -2505,7 +2575,7 @@ index 1dd0e89..30dca6c 100644
  				const floor = Math.max(0, el.scrollHeight - el.clientHeight);
  				const movedByReader = Math.abs(el.scrollTop - Math.min(observedTopRef.current, floor)) > .5;
  				const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;
-@@ -5487,6 +7144,10 @@ window.__ModuleLoader__.load({
+@@ -5487,6 +7214,10 @@ window.__ModuleLoader__.load({
  				else if (position !== null) chatScroll.save(position);
  				observedTopRef.current = el.scrollTop;
  			};
@@ -2516,7 +2586,7 @@ index 1dd0e89..30dca6c 100644
  			(0, react.useEffect)(() => {
  				const local = listRef.current;
  				/* v8 ignore next -- ref-null guard: effect runs after the list node commits. */
-@@ -5514,11 +7175,13 @@ window.__ModuleLoader__.load({
+@@ -5514,11 +7245,13 @@ window.__ModuleLoader__.load({
  				const column = columnRef.current;
  				const local = listRef.current;
  				if (column === null || local === null || typeof ResizeObserver === "undefined") return;
@@ -2531,7 +2601,7 @@ index 1dd0e89..30dca6c 100644
  				if (composer !== null) observer.observe(composer);
  				return () => {
  					observer.disconnect();
-@@ -5540,9 +7203,29 @@ window.__ModuleLoader__.load({
+@@ -5540,9 +7273,29 @@ window.__ModuleLoader__.load({
  				}
  				loadOlder();
  			};
@@ -2562,7 +2632,7 @@ index 1dd0e89..30dca6c 100644
  					ref: listRef,
  					className: ChatView_module_css_default.scroll,
  					children: [(0, react_jsx_runtime.jsxs)("div", {
-@@ -5570,22 +7253,21 @@ window.__ModuleLoader__.load({
+@@ -5570,28 +7323,27 @@ window.__ModuleLoader__.load({
  									children: loadingOlder ? t("loading") : t("chat.loadOlder")
  								})
  							}),
@@ -2582,7 +2652,18 @@ index 1dd0e89..30dca6c 100644
 -							running && (0, react_jsx_runtime.jsx)(TurnStatus, {
 -								startTime: runningTurnStart,
 -								t
-+							compactFlow.map((entry) => {
+-							}),
+-							pendingSteering.map((item) => (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
+-								content: item.content,
+-								loadImage,
+-								t
+-							}, item.id))
++							renderFlow.map((entry) => {
++								if (entry.kind === "pending-steering") return (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
++									content: entry.item.content,
++									loadImage,
++									t
++								}, entry.key);
 +								if (entry.kind === "node") return (0, react_jsx_runtime.jsx)(ChatNodeSeat, {
 +									nodeKey: entry.key,
 +									...seatProps
@@ -2597,10 +2678,11 @@ index 1dd0e89..30dca6c 100644
 +									seatProps,
 +									t
 +								}, entry.key);
- 							}),
- 							pendingSteering.map((item) => (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
- 								content: item.content,
-@@ -5607,7 +7289,7 @@ window.__ModuleLoader__.load({
++							})
+ 						]
+ 					}), !atBottom && (0, react_jsx_runtime.jsx)("div", {
+ 						className: ChatView_module_css_default.toBottomSlot,
+@@ -5607,7 +7359,7 @@ window.__ModuleLoader__.load({
  							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
  						})
  					})]
@@ -2609,7 +2691,7 @@ index 1dd0e89..30dca6c 100644
  			});
  		}
  		//#endregion
-@@ -5816,6 +7498,33 @@ window.__ModuleLoader__.load({
+@@ -5816,6 +7568,33 @@ window.__ModuleLoader__.load({
  		/** Simplified Chinese dictionary (the key-set source of truth). */
  		const zh = {
  			"view.chat": "对话",
@@ -2643,7 +2725,7 @@ index 1dd0e89..30dca6c 100644
  			"hint.plan": PLAN_NEXT_ACTION_ZH,
  			"hint.goal": "输入目标，智能体将持续执行",
  			"hint.goal.active": "当前目标进行中。可输入 edit 修改 / pause 暂停 / resume 继续 / clear 清除",
-@@ -5870,12 +7579,15 @@ window.__ModuleLoader__.load({
+@@ -5870,12 +7649,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "仅在智能体运行时生效；Cmd/Ctrl+Enter 使用另一行为",
  			"settings.enter.queue": "排队发送",
  			"settings.enter.steer": "插话发送",
@@ -2663,7 +2745,7 @@ index 1dd0e89..30dca6c 100644
  			"hero.preview": "预览版",
  			"hero.chooseWorkspace": "选择工作区",
  			"session.hierarchy": "会话层级",
-@@ -5896,6 +7608,46 @@ window.__ModuleLoader__.load({
+@@ -5896,6 +7678,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "历史加载失败：{message}（{code}）",
  			"chat.loadOlder": "加载更早",
  			"chat.toBottom": "回到底部",
@@ -2710,7 +2792,7 @@ index 1dd0e89..30dca6c 100644
  			"message.extraBlock": "附加内容块",
  			"message.contextInjection": "上下文注入",
  			"message.contextRecall": "跨会话召回",
-@@ -5981,6 +7733,33 @@ window.__ModuleLoader__.load({
+@@ -5981,6 +7803,33 @@ window.__ModuleLoader__.load({
  		/** English dictionary, checked complete against the zh key set. */
  		const en = {
  			"view.chat": "Chat",
@@ -2744,7 +2826,7 @@ index 1dd0e89..30dca6c 100644
  			"hint.plan": PLAN_NEXT_ACTION_EN,
  			"hint.goal": "describe the objective for a long-running task",
  			"hint.goal.active": "goal active — edit / pause / resume / clear",
-@@ -6035,12 +7814,15 @@ window.__ModuleLoader__.load({
+@@ -6035,12 +7884,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "Busy only; Cmd/Ctrl+Enter uses the other behavior",
  			"settings.enter.queue": "Queue",
  			"settings.enter.steer": "Steer",
@@ -2761,7 +2843,7 @@ index 1dd0e89..30dca6c 100644
  			"hero.preview": "Preview",
  			"hero.chooseWorkspace": "Choose workspace",
  			"session.hierarchy": "Session hierarchy",
-@@ -6061,6 +7843,46 @@ window.__ModuleLoader__.load({
+@@ -6061,6 +7913,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "Failed to load history: {message} ({code})",
  			"chat.loadOlder": "Load earlier",
  			"chat.toBottom": "Back to bottom",
@@ -2808,7 +2890,7 @@ index 1dd0e89..30dca6c 100644
  			"message.extraBlock": "Extra content block",
  			"message.contextInjection": "Context injection",
  			"message.contextRecall": "Session recall",
-@@ -6383,7 +8205,11 @@ window.__ModuleLoader__.load({
+@@ -6383,7 +8275,11 @@ window.__ModuleLoader__.load({
  		*/
  		function QueueDock({ useSession, updateQueue, notify, t }) {
  			const inbox = useSession((s) => s.queue);
@@ -2821,7 +2903,7 @@ index 1dd0e89..30dca6c 100644
  			const running = useSession((s) => s.running);
  			const queueMutable = useSession((s) => s.subagent === null);
  			const [editing, setEditing] = (0, react.useState)(null);
-@@ -6532,7 +8358,7 @@ window.__ModuleLoader__.load({
+@@ -6532,7 +8428,7 @@ window.__ModuleLoader__.load({
  												type: "button",
  												className: QueueDock_module_css_default.action,
  												"aria-label": t("queue.edit"),
@@ -2830,7 +2912,7 @@ index 1dd0e89..30dca6c 100644
  												disabled: busy !== null || row.text === null,
  												onClick: () => {
  													if (row.text !== null) setEditing({
-@@ -6627,7 +8453,7 @@ window.__ModuleLoader__.load({
+@@ -6627,7 +8523,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$7;
@@ -2839,7 +2921,7 @@ index 1dd0e89..30dca6c 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8577,7202 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8647,7202 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -10074,7 +10156,7 @@ index 1dd0e89..30dca6c 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +15781,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15851,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -10093,7 +10175,7 @@ index 1dd0e89..30dca6c 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15820,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15890,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -10453,7 +10535,7 @@ index 1dd0e89..30dca6c 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +16181,202 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +16251,202 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -10660,7 +10742,7 @@ index 1dd0e89..30dca6c 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +16386,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +16456,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -10672,7 +10754,7 @@ index 1dd0e89..30dca6c 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +16396,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16466,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -10680,7 +10762,7 @@ index 1dd0e89..30dca6c 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +16428,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16498,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -10690,7 +10772,7 @@ index 1dd0e89..30dca6c 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +16447,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16517,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10795,7 +10877,7 @@ index 1dd0e89..30dca6c 100644
  				})]
  			});
  		}
-@@ -6951,6 +16529,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16599,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10827,7 +10909,7 @@ index 1dd0e89..30dca6c 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +16583,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16653,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10848,7 +10930,7 @@ index 1dd0e89..30dca6c 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +16605,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16675,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10872,7 +10954,7 @@ index 1dd0e89..30dca6c 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +16662,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16732,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -10890,7 +10972,7 @@ index 1dd0e89..30dca6c 100644
  				})] })
  			});
  		}
-@@ -7053,14 +16672,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16742,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -10969,7 +11051,7 @@ index 1dd0e89..30dca6c 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16752,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16822,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -10986,7 +11068,7 @@ index 1dd0e89..30dca6c 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16775,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16845,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -10995,7 +11077,7 @@ index 1dd0e89..30dca6c 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16828,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16898,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -11013,7 +11095,7 @@ index 1dd0e89..30dca6c 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16864,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16934,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -11021,7 +11103,7 @@ index 1dd0e89..30dca6c 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17756,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17826,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -11052,7 +11134,7 @@ index 1dd0e89..30dca6c 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17801,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17871,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -11077,7 +11159,7 @@ index 1dd0e89..30dca6c 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18755,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18825,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -11086,7 +11168,7 @@ index 1dd0e89..30dca6c 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18845,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18915,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -11128,7 +11210,7 @@ index 1dd0e89..30dca6c 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +19054,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +19124,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -11145,7 +11227,7 @@ index 1dd0e89..30dca6c 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +19224,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +19294,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -11155,7 +11237,7 @@ index 1dd0e89..30dca6c 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +19266,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +19336,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -11170,7 +11252,7 @@ index 1dd0e89..30dca6c 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +19284,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +19354,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -11183,7 +11265,7 @@ index 1dd0e89..30dca6c 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +19333,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +19403,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -11197,7 +11279,7 @@ index 1dd0e89..30dca6c 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +19371,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +19441,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -11207,7 +11289,7 @@ index 1dd0e89..30dca6c 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +19503,13 @@ window.__ModuleLoader__.load({
+@@ -9764,9 +19573,13 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -11222,7 +11304,7 @@ index 1dd0e89..30dca6c 100644
  						openFile: (path) => {
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +19519,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +19589,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -11231,7 +11313,7 @@ index 1dd0e89..30dca6c 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +19543,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19613,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -11240,7 +11322,7 @@ index 1dd0e89..30dca6c 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +19569,152 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19639,153 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -11280,6 +11362,7 @@ index 1dd0e89..30dca6c 100644
 +		exports.UserStyleBubble = UserStyleBubble;
 +		exports.compactionDefinition = compactionDefinition;
 +		exports.compactConversationFlow = compactConversationFlow;
++		exports.mergePendingSteeringFlow = mergePendingSteeringFlow;
 +		exports.latestDirectUserKey = latestDirectUserKey;
 +		exports.settleConversationScrollBottom = settleConversationScrollBottom;
 +		exports.shouldFollowConversationBottom = shouldFollowConversationBottom;

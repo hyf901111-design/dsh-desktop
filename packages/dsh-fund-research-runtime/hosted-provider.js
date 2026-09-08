@@ -1,3 +1,5 @@
+import { validateFinancialQuery, validateFinancialResult } from './financial-contract.js'
+import { validateServiceQuery, isOperationQuery, validateOperationResult } from './research-operations.js'
 import {
   cancelledError, normalizeResearchResult, toPublicFundResearchError,
   unavailableError, validateResearchRequest, serviceError
@@ -27,9 +29,8 @@ export function createHostedFundProvider({
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) {
     throw new TypeError('Invalid fund service timeout.')
   }
-  return Object.freeze({
-    async research(input, { signal } = {}) {
-      const query = validateResearchRequest(input)
+  async function send(input, { signal } = {}) {
+      const query = validateServiceQuery(input)
       if (signal?.aborted) throw cancelledError()
       const controller = new AbortController()
       const abort = () => controller.abort()
@@ -50,6 +51,11 @@ export function createHostedFundProvider({
         if (response.status === 401) throw serviceError('LOGIN_REQUIRED')
         if (response.status === 429) throw serviceError('FUND_SERVICE_BUSY')
         if (response.status === 503) throw serviceError('FUND_SERVICE_UNAVAILABLE')
+        if (isOperationQuery(query) || query.operation === 'financial') {
+          const codes = { 400: 'RESEARCH_ARGUMENTS_INVALID', 409: 'RESEARCH_SCHEMA_CHANGED',
+            413: 'RESEARCH_RESULT_TOO_LARGE', 422: 'RESEARCH_SCHEMA_UNSUPPORTED', 424: 'RESEARCH_CAPABILITY_UNAVAILABLE', 502: 'RESEARCH_QUERY_FAILED' }
+          if (codes[response.status]) throw serviceError(codes[response.status])
+        }
         if (response.status === 422) throw serviceError('FUND_TYPE_UNSUPPORTED')
         if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
           throw unavailableError()
@@ -68,6 +74,8 @@ export function createHostedFundProvider({
           chunks.push(Buffer.from(value))
         }
         const value = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if (query.operation === 'financial') return validateFinancialResult(value, query, clock)
+        if (isOperationQuery(query)) return validateOperationResult(value, query, clock)
         const received = Date.parse(value.received_at)
         const age = clock().valueOf() - received
         if (!Number.isFinite(received) || age < -60_000 || age > 15 * 60_000 ||
@@ -91,6 +99,14 @@ export function createHostedFundProvider({
         if (reader) void reader.cancel().catch(() => {})
         controller.abort()
       }
+  }
+  return Object.freeze({
+    financial(input, options) { return send(validateFinancialQuery(input), options) },
+    research(input, options) { return send(validateResearchRequest(input), options) },
+    researchOperation(input, options) {
+      const query = validateServiceQuery(input)
+      if (!isOperationQuery(query)) throw serviceError('RESEARCH_ARGUMENTS_INVALID')
+      return send(query, options)
     }
   })
 }

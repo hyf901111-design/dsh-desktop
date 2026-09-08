@@ -1,5 +1,5 @@
 import { authenticate, authError, handleAccountRequest } from '../accounts/auth.js'
-import { validateResearchRequest } from '../../packages/dsh-fund-research-runtime/contract.js'
+import { validateServiceQuery, RESEARCH_REQUEST_BYTES } from '../../packages/dsh-fund-research-runtime/research-operations.js'
 
 export const QUERY_PATH = '/v1/fund-research/query'
 export const HEALTH_PATH = '/v1/fund-research/health'
@@ -15,7 +15,7 @@ export function failure(status, code, retryAfter) {
 
 export async function parseQuery(request) {
   const size = request.headers.get('content-length')
-  if (size !== null && (!/^\d+$/u.test(size) || Number(size) > 2048)) throw new Error('Invalid body.')
+  if (size !== null && (!/^\d+$/u.test(size) || Number(size) > RESEARCH_REQUEST_BYTES)) throw new Error('Invalid body.')
   const reader = request.body?.getReader()
   if (!reader) throw new Error('Missing body.')
   const chunks = []
@@ -29,10 +29,12 @@ export async function parseQuery(request) {
       const { done, value } = await Promise.race([reader.read(), timeout])
       if (done) break
       bytes += value.byteLength
-      if (bytes > 2048) throw new Error('Body too large.')
+      if (bytes > RESEARCH_REQUEST_BYTES) throw new Error('Body too large.')
       chunks.push(Buffer.from(value))
     }
-    return validateResearchRequest(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+    const input = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+    if (!input?.operation && bytes > 2048) throw new Error('Legacy query too large.')
+    return validateServiceQuery(input)
   } finally {
     clearTimeout(timer)
     void reader.cancel().catch(() => {})
@@ -44,14 +46,14 @@ export async function handleRequest(request, env) {
   if (!url.search && url.pathname.startsWith('/v1/account/')) return handleAccountRequest(request, env)
   if (url.search || ![QUERY_PATH, HEALTH_PATH].includes(url.pathname)) return failure(404, 'NOT_FOUND')
   if (url.pathname === HEALTH_PATH && request.method === 'GET') {
-    const ready = Boolean(env.ACCOUNTS_DB && env.YINGMI_API_KEY?.trim() && env.FUND_REQUEST_LIMITER && env.FUND_COORDINATOR)
+    const ready = Boolean(env.ACCOUNTS_DB && (env.YINGMI_API_KEY?.trim() || env.TONGHUASHUN_API_KEY?.trim()) && env.FUND_REQUEST_LIMITER && env.FUND_COORDINATOR)
     return json({ status: ready ? 'ready' : 'unavailable' }, ready ? 200 : 503)
   }
   if (url.pathname !== QUERY_PATH || request.method !== 'POST') return failure(405, 'METHOD_NOT_ALLOWED')
   if (request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') {
     return failure(415, 'INVALID_CONTENT_TYPE')
   }
-  if (!env.ACCOUNTS_DB || !env.YINGMI_API_KEY?.trim() || !env.FUND_REQUEST_LIMITER || !env.FUND_COORDINATOR) {
+  if (!env.ACCOUNTS_DB || !(env.YINGMI_API_KEY?.trim() || env.TONGHUASHUN_API_KEY?.trim()) || !env.FUND_REQUEST_LIMITER || !env.FUND_COORDINATOR) {
     return failure(503, 'FUND_SERVICE_UNAVAILABLE', 60)
   }
   let user

@@ -8,6 +8,7 @@ export class FundResearchCoordinator extends DurableObject {
     this.service = new FundCoordinator(state, env)
   }
   fetch(request) { return this.service.fetch(request) }
+  alarm() { return this.service.alarm() }
 }
 
 export default { fetch: handleRequest }

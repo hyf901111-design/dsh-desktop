@@ -1,7 +1,10 @@
+import { createFinancialTool } from './financial-tool.js'
+import { createResearchOperationTools } from './research-tools.js'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import {
   CLAIM_STATUSES,
   FUND_RESEARCH_TASKS,
+  FUND_TYPE_VALUES,
   FundResearchError,
   isNormalizedResearchResult,
   toPublicFundResearchError,
@@ -20,7 +23,7 @@ const subjectSchema = {
   properties: {
     fund_code: { ...string, required: true },
     fund_name: { ...string, required: true },
-    fund_type: { type: 'string', enum: ['etf', 'index_fund', 'etf_feeder'], required: true },
+    fund_type: { type: 'string', enum: FUND_TYPE_VALUES, required: true },
     currency: { type: 'string', const: 'CNY', required: true }
   }
 }
@@ -104,7 +107,7 @@ export function createFundResearchTool(provider) {
   }
   return defineTool({
     name: 'fund_research',
-    description: '研究境内 ETF、场外指数基金和 ETF 联接基金。支持单基金概览、同日横向比较、持仓与风格分析、近期变化核验。只返回带日期和质量状态的事实证据，不提供买卖建议、适当性判断、交易操作或收益预测。',
+    description: '研究公募基金，包括 ETF、指数、联接、主动权益、混合、债券、货币、FOF 和 QDII。支持单基金概览、同日横向比较、资产行业配置、净值近期变化。更多业绩风险、名称查找、组合回测、归因和资讯使用 fund_research_catalog 与 fund_research_query。只返回带日期和质量状态的事实证据，不提供买卖建议、适当性判断、交易操作或收益预测。',
     parameters: {
       task: {
         type: 'string',
@@ -142,13 +145,23 @@ export function createFundResearchTool(provider) {
 
 export function registerFundResearchRuntime(ctx, options = {}) {
   const provider = options.provider ?? createHostedFundProvider()
-  const dispose = ctx.tools.register(createFundResearchTool(provider))
+  // The bundled app exposes only the product entry; legacy factories remain for older clients/tests.
+  const unified = typeof provider.financial === 'function'
+  const disposers = [ctx.tools.register(unified ? createFinancialTool(provider) : createFundResearchTool(provider))]
+  try {
+    if (!unified && typeof provider.researchOperation === 'function') {
+      for (const tool of createResearchOperationTools(provider)) disposers.push(ctx.tools.register(tool))
+    }
+  } catch (error) {
+    for (const dispose of disposers.reverse()) dispose()
+    throw error
+  }
   let disposed = false
   return {
     dispose() {
       if (disposed) return
       disposed = true
-      dispose()
+      for (const dispose of disposers.reverse()) dispose()
     }
   }
 }
@@ -170,3 +183,8 @@ export {
 export { createYingmiFundProvider } from './yingmi-provider.js'
 export { createYingmiMcpClient } from './yingmi-mcp.js'
 export { createHostedFundProvider } from './hosted-provider.js'
+
+export { createResearchOperationTools } from './research-tools.js'
+export { createYingmiResearchProvider } from './yingmi-research-provider.js'
+
+export { createFinancialTool } from './financial-tool.js'

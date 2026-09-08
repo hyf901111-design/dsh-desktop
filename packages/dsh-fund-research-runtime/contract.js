@@ -74,7 +74,8 @@ const SOURCE_TYPES = new Set([
   'mixed'
 ])
 const QUALITY_STATES = new Set(['verified', 'partial', 'stale'])
-const FUND_TYPES = new Set(['etf', 'index_fund', 'etf_feeder'])
+export const FUND_TYPE_VALUES = Object.freeze(['etf', 'index_fund', 'etf_feeder', 'equity_fund', 'mixed_fund', 'bond_fund', 'money_market_fund', 'fof', 'qdii_fund'])
+const FUND_TYPES = new Set(FUND_TYPE_VALUES)
 const FIELD_LABELS = new Map([
   ['unit_nav', '单位净值'],
   ['accumulated_nav', '累计净值'],
@@ -177,10 +178,18 @@ export function cancelledError() {
 }
 
 const SERVICE_MESSAGES = Object.freeze({
-  LOGIN_REQUIRED: '请在左下角登录 EWork Odyssey 后使用基金研究。',
-  FUND_SERVICE_BUSY: '基金查询较多，请稍后再试。',
-  FUND_SERVICE_UNAVAILABLE: '基金数据服务暂时不可用，请稍后重试。',
-  FUND_TYPE_UNSUPPORTED: '暂不支持该基金类型。'
+  FINANCIAL_ARGUMENTS_INVALID: '查询条件无效，请核对市场、代码、日期和指标。',
+  FINANCIAL_UNAVAILABLE: '此次暂未取得可用数据，请稍后重试。',
+  LOGIN_REQUIRED: '请在左下角登录 EWork Odyssey 后查询金融数据。',
+  FUND_SERVICE_BUSY: '金融数据查询较多，请稍后再试。',
+  FUND_SERVICE_UNAVAILABLE: '金融数据服务暂时不可用，请稍后重试。',
+  FUND_TYPE_UNSUPPORTED: '暂不支持该基金类型。',
+  RESEARCH_ARGUMENTS_INVALID: '研究参数无效，请按研究能力目录中的参数定义填写。',
+  RESEARCH_QUERY_FAILED: '此次研究未能取得可用结果，请检查输入范围后重试。',
+  RESEARCH_SCHEMA_CHANGED: '研究参数定义已更新，请重新查询该能力后再执行。',
+  RESEARCH_CAPABILITY_UNAVAILABLE: '该研究能力当前暂不可用。',
+  RESEARCH_SCHEMA_UNSUPPORTED: '该研究能力的参数定义暂不兼容。',
+  RESEARCH_RESULT_TOO_LARGE: '研究结果过大，请缩小基金范围、日期区间或分页查询。'
 })
 
 export function serviceError(code) {

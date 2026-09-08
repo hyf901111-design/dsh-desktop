@@ -34,7 +34,7 @@ async function loadConversationBundle(styleTexts?: string[]): Promise<ClientBund
     ? undefined
     : {
         querySelector: () => null,
-        createElement: () => ({ dataset: {}, textContent: '' }),
+        createElement: () => ({ dataset: {}, textContent: '', setAttribute() {} }),
         head: {
           appendChild(tag: { textContent?: string }) {
             styleTexts.push(tag.textContent ?? '')
@@ -1259,4 +1259,13 @@ describe('compact execution status', () => {
       ])
     ).toEqual([{ kind: 'text', text: '这是最终回答。' }, image])
   })
+})
+
+
+it('uses business progress labels for financial queries without supplier or transport text', async () => {
+  const client = await loadConversationBundle()
+  const label = client.executionActivityLabel as (node: unknown, t: typeof statusTranslator) => string
+  for (const [intent, expected] of [['quote', '正在查询股票行情…'], ['nav', '正在获取基金净值…']]) {
+    expect(label({ kind: 'tool-call', data: { root: { name: 'financial_query', argsRaw: JSON.stringify({ intent, query: 'Bearer should-not-render' }) } } }, statusTranslator)).toBe(expected)
+  }
 })
