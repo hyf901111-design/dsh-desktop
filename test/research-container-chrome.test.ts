@@ -52,11 +52,12 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
   const workspace = new client.ResearchWorkspaceRegistry(browserWindow.localStorage).for('chrome')
   const submitted: Array<{ id: string; prompt: string }> = []
   const activated = vi.fn()
+  const frameAction = vi.fn()
   function Harness() {
     const snapshot = useSyncExternalStore(workspace.subscribe, workspace.getSnapshot, workspace.getSnapshot)
     return createElement(client.ResearchCanvasArtifactCard, {
       node: snapshot.artifacts[0], sessionId: 'chrome', visible: true,
-      onActivate: activated,
+      onActivate: activated, onFrameAction: frameAction,
       onAutoHeight: (node: any, height: number) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),
       onSubmitContainer: (node: any, prompt: string) => {
         submitted.push({ id: node.id, prompt })
@@ -78,7 +79,7 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
     await act(async () => { target.dispatchEvent(new browserWindow.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true })) })
   }
   return {
-    browserWindow, host, workspace, submitted, activated, click, key,
+    browserWindow, host, workspace, submitted, activated, frameAction, click, key,
     async cleanup() {
       await act(async () => { root.unmount() })
       await browserWindow.happyDOM.close()
@@ -323,6 +324,29 @@ describe('completed container content sizing', () => {
       else delete (prototype as any).scrollHeight
       await mounted.cleanup()
     }
+  })
+})
+
+describe('shared canvas frames', () => {
+  it.each(['generated-summary', 'generated-mind-map', 'pasted-text', 'assistant-result'])('keeps %s content mounted when expanded and exposes its own menu actions', async kind => {
+    const mounted = await mountContainer({ kind, sourceNodeIds: ['source-a'], containerSpec: undefined, title: '研究成果', excerpt: '# 研究成果\n\n- 趋势\n  - 关键依据' })
+    try {
+      const { host, click, key, frameAction, browserWindow } = mounted
+      const content = host.querySelector('[data-research-artifact-content]')
+      expect(host.querySelectorAll('[data-research-resize-handle]')).toHaveLength(1)
+      await click('[data-research-container-expand]')
+      expect(host.querySelector('dialog')?.hasAttribute('open')).toBe(true)
+      expect(host.querySelector('[data-research-artifact-content]')).toBe(content)
+      await click('[data-research-frame-more]')
+      expect(browserWindow.document.activeElement?.getAttribute('data-research-frame-action')).toBe('rename')
+      await key(browserWindow.document.activeElement, 'End')
+      expect(browserWindow.document.activeElement?.getAttribute('data-research-frame-action')).toBe('remove')
+      await key(browserWindow.document.activeElement, 'Escape')
+      expect(host.querySelector('dialog')?.hasAttribute('open')).toBe(true)
+      await click('[data-research-frame-more]')
+      await click('[data-research-frame-action="rename"]')
+      expect(frameAction).toHaveBeenCalledWith(expect.objectContaining({ id: 'html', kind }), 'rename')
+    } finally { await mounted.cleanup() }
   })
 })
 

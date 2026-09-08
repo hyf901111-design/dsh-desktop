@@ -418,11 +418,11 @@ describe('Research canvas file drops', () => {
     })
 
     expect(workspace.getSnapshot().files[0]).toMatchObject({
-      width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
+      width: 320, height: 246, sizeMode: 'auto', aspectRatio: 16 / 9
     })
     expect(new client.ResearchWorkspaceRegistry(storage)
       .for('geometry-session').getSnapshot().files[0]).toMatchObject({
-        width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
+        width: 320, height: 246, sizeMode: 'auto', aspectRatio: 16 / 9
       })
   })
 
@@ -529,7 +529,7 @@ describe('Research canvas file drops', () => {
     )).toEqual({ scale: 0.5, x: -1_100, y: -700 })
   })
 
-  it('normalizes natural image ratio against the existing 36px titled-frame geometry', async () => {
+  it('normalizes natural image ratio against the shared 64px title and 2px frame geometry', async () => {
     const client = await loadConversationClient()
     expect(client.researchImageGeometryForNaturalSize).toBeTypeOf('function')
     if (typeof client.researchImageGeometryForNaturalSize !== 'function') return
@@ -539,7 +539,7 @@ describe('Research canvas file drops', () => {
       authorizationId: 'authorization-1', source: 'computer', x: 0, y: 0,
       width: 320, height: 272, sizeMode: 'auto'
     }, 1600, 900)).toMatchObject({
-      width: 320, height: 216, sizeMode: 'auto', aspectRatio: 16 / 9
+      width: 320, height: 246, sizeMode: 'auto', aspectRatio: 16 / 9
     })
     expect(client.researchImageGeometryForNaturalSize({}, 0, 900)).toBeNull()
   })
@@ -1256,7 +1256,7 @@ describe('Research canvas file drops', () => {
       'sherlock.research.canvas.files.v1:session-7'
     )
     expect(client.parseResearchCanvasFileNodes(JSON.stringify(valid))).toEqual([{
-      ...valid[0], width: 320, height: 320 / (17 / 22) + 36,
+      ...valid[0], width: 320, height: 320 / (17 / 22) + 66,
       sizeMode: 'auto', aspectRatio: 17 / 22
     }])
     expect(client.parseResearchCanvasFileNodes('[{"id":"1","name":"a","source":"computer","x":null,"y":2}]')).toEqual([])
@@ -1442,7 +1442,7 @@ describe('Research canvas file drops', () => {
 
     client.saveResearchCanvasFiles(memoryStorage, 's1', nodes)
     expect(client.loadResearchCanvasFiles(memoryStorage, 's1')).toEqual([{
-      ...nodes[0], width: 320, height: 320 / (17 / 22) + 36,
+      ...nodes[0], width: 320, height: 320 / (17 / 22) + 66,
       sizeMode: 'auto', aspectRatio: 17 / 22
     }])
 
@@ -1475,7 +1475,7 @@ describe('Research canvas file drops', () => {
     expect(workspace.getSnapshot().files).toEqual([{
       id: 'stable-file', path: '/w/stable.pdf', name: 'stable.pdf',
       source: 'sherlock', x: 12, y: 34, width: 320,
-      height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22
+      height: 320 / (17 / 22) + 66, sizeMode: 'auto', aspectRatio: 17 / 22
     }])
 
     workspace.setFiles([{
@@ -1485,7 +1485,7 @@ describe('Research canvas file drops', () => {
     expect(JSON.parse(values.get(key) ?? '[]')).toEqual([{
       id: 'next-file', path: '/w/next.pdf', name: 'next.pdf',
       source: 'sherlock', x: 56, y: 78, width: 320,
-      height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22
+      height: 320 / (17 / 22) + 66, sizeMode: 'auto', aspectRatio: 17 / 22
     }])
   })
 
@@ -1574,17 +1574,17 @@ describe('Research canvas file drops', () => {
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'icon', name: 'favicon.ico', contentType: 'image/x-icon',
       source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 276, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
+    })).toEqual({ width: 320, height: 306, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'assistant', kind: 'assistant-result', messageId: 'm1', title: 'Answer',
       excerpt: 'Evidence', x: 0, y: 0
     })).toEqual({ width: 520, height: 300, sizeMode: 'auto', resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'image', name: 'chart.png', mediaType: 'image/png', source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 276, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
+    })).toEqual({ width: 320, height: 306, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'pdf', name: 'filing.pdf', mediaType: 'application/pdf', source: 'computer', x: 0, y: 0
-    })).toEqual({ width: 320, height: 320 / (17 / 22) + 36, sizeMode: 'auto', aspectRatio: 17 / 22, resizable: true })
+    })).toEqual({ width: 320, height: 320 / (17 / 22) + 66, sizeMode: 'auto', aspectRatio: 17 / 22, resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'html', name: 'model.html', mediaType: 'text/html', source: 'computer', x: 0, y: 0
     })).toEqual({ width: 480, height: 360, sizeMode: 'auto', resizable: true })
@@ -1722,7 +1722,7 @@ describe('Research canvas file drops', () => {
       sizeMode: 'auto', aspectRatio: 17 / 22
     }
     expect(client.researchPdfGeometryForPage(initial, 600, 800)).toEqual({
-      width: 320, height: 320 / 0.75 + 36, sizeMode: 'auto', aspectRatio: 0.75
+      width: 320, height: 320 / 0.75 + 66, sizeMode: 'auto', aspectRatio: 0.75
     })
     expect(client.researchPdfGeometryForPage({
       ...initial, height: 320 / 0.75 + 32, aspectRatio: 0.75
@@ -1754,7 +1754,7 @@ describe('Research canvas file drops', () => {
       id: 'image', name: 'chart.png', mediaType: 'image/png', source: 'computer',
       x: 0, y: 0, width: 320, height: 272, sizeMode: 'auto', aspectRatio: 4 / 3
     }, 'se', { x: 80, y: 40 }, 2)).toMatchObject({
-      x: 20, y: 15, width: 360, height: 306, sizeMode: 'manual', aspectRatio: 4 / 3
+      x: 20, y: 15, width: 360, height: 336, sizeMode: 'manual', aspectRatio: 4 / 3
     })
   })
 
@@ -1770,18 +1770,18 @@ describe('Research canvas file drops', () => {
     }
 
     expect(client.normalizeResearchCanvasNodeGeometry(wideImage)).toEqual({
-      width: 928, height: 152, sizeMode: 'manual', aspectRatio: 8, resizable: true
+      width: 688, height: 152, sizeMode: 'manual', aspectRatio: 8, resizable: true
     })
     expect(client.resizeResearchCanvasNode(
       wideImage, 'se', { x: -5000, y: -5000 }, 1
     )).toMatchObject({
-      x: 0, y: 0, width: 928, height: 152,
+      x: 0, y: 0, width: 688, height: 152,
       sizeMode: 'manual', aspectRatio: 8
     })
     expect(client.normalizeResearchCanvasNodeGeometry({
       ...wideImage, id: 'tall-image', width: 120, aspectRatio: 0.25
     })).toEqual({
-      width: 160, height: 676, sizeMode: 'manual', aspectRatio: 0.25, resizable: true
+      width: 160, height: 706, sizeMode: 'manual', aspectRatio: 0.25, resizable: true
     })
   })
 
