@@ -11,22 +11,18 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "97f22919c38f8bffb67b697fbac2cb187dba304d",
-        "tipCommit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
+        "baseCommit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
+        "tipCommit": "60e11ee194e28e5e5825e0f2c9d43f7a91954a02",
         "commits": [
           {
-            "commit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
+            "commit": "60e11ee194e28e5e5825e0f2c9d43f7a91954a02",
             "parents": [
-              "97f22919c38f8bffb67b697fbac2cb187dba304d"
+              "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f"
             ],
-            "subject": "优化：替换访客图标并按主题显示用户名首字头像"
+            "subject": "优化：英文用户名头像首字母统一大写"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "build/sherlock-account-avatar.svg"
-          },
           {
             "status": "M",
             "path": "src/preload/account-ui.ts"
@@ -40,63 +36,26 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；头像五种登录、主题和用户名组合渲染验证通过",
-            "verifiedCommit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
-            "completedAt": "2026-09-08T03:57:19.355712+00:00",
+            "summary": "类型检查通过；头像五种渲染组合通过，英文 H、中文张均正确",
+            "verifiedCommit": "60e11ee194e28e5e5825e0f2c9d43f7a91954a02",
+            "completedAt": "2026-09-08T04:02:08.964975+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际头像渲染函数已验证访客 SVG、黑底首字、橙底首字及中文首字；构建后核验客户端。"
+          "summary": "实际渲染函数已验证英文首字大写、中文首字及登录和主题状态"
         },
         "acceptanceCriteria": [
           "未登录使用用户提供的 Group 71.svg",
           "登录后显示用户名首字",
-          "浅色黑底白字，深色橙底深色字"
+          "浅色黑底白字，深色橙底深色字",
+          "英文用户名首字母大写"
         ],
         "risks": [
           "稳定应用 ID 和用户数据目录沿用以保留现有配置"
         ],
-        "generatedAt": "2026-09-08T03:57:19.355712+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4b0193480eae2fa1f40ab9ca5e7b14856f756b5c",
-        "verificationCommit": "4b0193480eae2fa1f40ab9ca5e7b14856f756b5c",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "4b0193480eae2fa1f40ab9ca5e7b14856f756b5c",
-            "completedAt": "2026-09-08T03:57:43.590Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "4b0193480eae2fa1f40ab9ca5e7b14856f756b5c",
-            "completedAt": "2026-09-08T03:57:43.590Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T03:57:43.590Z"
+        "generatedAt": "2026-09-08T04:02:08.964975+00:00"
       }
     }
   ],
