@@ -27,15 +27,15 @@ export function researchHtmlText(html) {
 }
 
 // RESEARCH_COMPONENT_THEME_START — keep this host-free block in client parity.
-// Approved prototypes/bklit-theme-preview/src/style.css: Monochrome uses stone
-// in light mode and zinc in dark mode. Additional series retain a neutral ramp.
+// Card and chart tokens adapted to the shadcn/ui neutral Card / Area Chart treatment.
+// https://ui.shadcn.com/charts/area — shared by sandbox HTML and native cards.
 export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
   light: Object.freeze({
-    bg: 'oklch(.97 0 0)', surface: '#fff', 'surface-muted': '#f5f5f5', text: '#0a0b0c', muted: '#737373',
-    border: 'oklch(.92 0 0)', accent: '#0a0b0c', 'accent-soft': '#7373730f',
-    'chart-1': 'oklch(37.4% .01 67.558)', 'chart-2': 'oklch(55.3% .013 58.071)',
-    'chart-3': '#737373', 'chart-4': '#a8a29e', 'chart-5': '#d6d3d1', 'chart-6': '#292524',
-    'chart-background': 'oklch(.915 0 0)', 'chart-foreground': 'oklch(.145 .004 285)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
+    bg: '#ffffff', surface: '#ffffff', 'surface-muted': '#f5f5f5', text: '#0a0b0c', muted: '#737373',
+    border: '#e5e5e5', link: '#2563eb', accent: '#0a0b0c', 'accent-soft': '#7373730f',
+    'chart-1': '#3b82f6', 'chart-2': '#14b8a6',
+    'chart-3': '#8b5cf6', 'chart-4': '#f59e0b', 'chart-5': '#ec4899', 'chart-6': '#64748b',
+    'chart-background': '#ffffff', 'chart-foreground': 'oklch(.145 .004 285)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
     'chart-label': 'oklch(.45 .01 260)', 'chart-grid': 'oklch(.917 0 0)', 'chart-crosshair': 'oklch(.677 0 72.411)',
     'tooltip-bg': 'oklch(.999998 .0000253939 112.713)', 'tooltip-text': 'oklch(.147999 .0039982 228.752)',
     'tooltip-muted': 'oklch(.564 0 78.958)', 'tooltip-border': 'oklch(.92 0 0)',
@@ -44,13 +44,13 @@ export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
     'chart-segment-background': '#7373730f', 'chart-segment-line': '#73737340'
   }),
   dark: Object.freeze({
-    bg: 'oklch(.14 .0047 263.79)', surface: 'oklch(.17 .0065 271.01)', 'surface-muted': '#27272a', text: '#f9fafb', muted: '#9095a2',
-    border: 'oklch(.56 .0195 267.65 / .2)', accent: '#f9fafb', 'accent-soft': '#ffffff0f',
-    'chart-1': 'oklch(27.4% .006 286.033)', 'chart-2': 'oklch(44.2% .017 285.786)',
-    'chart-3': '#71717a', 'chart-4': '#a1a1aa', 'chart-5': '#d4d4d8', 'chart-6': '#f4f4f5',
-    'chart-background': 'oklch(.145 0 0)', 'chart-foreground': 'oklch(.45 0 0)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
-    'chart-label': 'oklch(.75 .01 260)', 'chart-grid': 'oklch(.6 .0124 243.77 / .25)', 'chart-crosshair': 'oklch(.72 .0158 281.84)',
-    'tooltip-bg': 'oklch(.21 .0058 285.9)', 'tooltip-text': 'oklch(.987 .002 197.1)',
+    bg: '#171717', surface: '#171717', 'surface-muted': '#262626', text: '#fafafa', muted: '#a3a3a3',
+    border: '#303030', link: '#60a5fa', accent: '#fafafa', 'accent-soft': '#ffffff0f',
+    'chart-1': '#93c5fd', 'chart-2': '#5eead4',
+    'chart-3': '#c4b5fd', 'chart-4': '#fcd34d', 'chart-5': '#f9a8d4', 'chart-6': '#94a3b8',
+    'chart-background': '#171717', 'chart-foreground': 'oklch(.45 0 0)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
+    'chart-label': 'oklch(.75 .01 260)', 'chart-grid': '#262626', 'chart-crosshair': 'oklch(.72 .0158 281.84)',
+    'tooltip-bg': '#1c1c1c', 'tooltip-text': 'oklch(.987 .002 197.1)',
     'tooltip-muted': 'oklch(.62 .0218 270.07)', 'tooltip-border': 'oklch(.56 .0195 267.65 / .2)',
     'chart-marker-background': '#27272a', 'chart-marker-border': '#3f3f46', 'chart-marker-foreground': '#d4d4d8',
     'chart-marker-badge-background': '#fafafa', 'chart-marker-badge-foreground': '#18181b',
@@ -71,10 +71,10 @@ const researchComponentPaletteCss = (palette) => Object.entries(palette).map(([k
 const researchComponentChartAliasCss = Object.entries(RESEARCH_COMPONENT_CHART_ALIASES).map(([key, semantic]) => `--${key}:var(--sherlock-${semantic})`).join(';')
 // Equal selector specificity lets a user's later :root custom palette override
 // either mode. Theme updates change the attribute, never the user's CSS rules.
-export const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};${researchComponentChartAliasCss};--sherlock-font-sans:Arial,"Helvetica Neue","PingFang SC",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:0px;--sherlock-shadow:none}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
+export const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};${researchComponentChartAliasCss};--sherlock-font-sans:Arial,"Helvetica Neue","PingFang SC",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:12px;--sherlock-shadow:none}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
 // Zero specificity is paired with the earliest cascade layer at injection, so
 // both layered and unlayered user styles retain priority over these defaults.
-const RESEARCH_COMPONENT_BASE_CSS = `:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans);font-synthesis:none}:where(body){margin:0}:where(*){box-sizing:border-box}:where(button,select,input,textarea,table,.research-card,.card,.panel,.kpi-card,[data-sherlock-card],[role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border-radius:var(--sherlock-radius);box-shadow:var(--sherlock-shadow)}:where(button,select,input,textarea){font:inherit;color:inherit;border:1px solid var(--sherlock-border);background:transparent}:where(button,select){cursor:pointer}:where(button){padding:6px 12px}:where(button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible){outline:2px solid var(--sherlock-muted);outline-offset:3px}:where(.research-card,.card,.panel,.kpi-card,[data-sherlock-card]){border:1px solid var(--sherlock-border);background:var(--sherlock-surface)}:where([role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border:1px solid var(--sherlock-tooltip-border);background:var(--sherlock-tooltip-bg);color:var(--sherlock-tooltip-text);font-size:12px;padding:13px 14px}:where(table){width:100%;border-collapse:collapse;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}:where(caption){text-align:left;padding-bottom:16px;color:var(--sherlock-muted)}:where(th){color:var(--sherlock-muted);font-weight:400}:where(th,td){padding:10px 8px;border-bottom:1px solid var(--sherlock-border)}:where(th:first-child,td:first-child){text-align:left}`
+const RESEARCH_COMPONENT_BASE_CSS = `:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans);font-synthesis:none}:where(body){margin:0}:where(*){box-sizing:border-box}:where(button,select,input,textarea,table,.research-card,.card,.panel,.kpi-card,[data-sherlock-card],[role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border-radius:var(--sherlock-radius);box-shadow:var(--sherlock-shadow)}:where(button,select,input,textarea){font:inherit;color:inherit;border:1px solid var(--sherlock-border);background:transparent}:where(button,select){cursor:pointer}:where(button){padding:6px 12px}:where(button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible){outline:2px solid var(--sherlock-muted);outline-offset:3px}:where(.research-card,.card,.panel,.kpi-card,[data-sherlock-card]){border:1px solid var(--sherlock-border);background:var(--sherlock-surface)}:where([role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border:1px solid var(--sherlock-tooltip-border);background:var(--sherlock-tooltip-bg);color:var(--sherlock-tooltip-text);font-size:12px;padding:13px 14px}:where(table){width:100%;border-collapse:collapse;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}:where(caption){text-align:left;padding-bottom:16px;color:var(--sherlock-muted)}:where(th){color:var(--sherlock-muted);font-weight:400}:where(th,td){padding:10px 8px;border-bottom:1px solid var(--sherlock-border)}:where(th:first-child,td:first-child){text-align:left}a[href],a[href]:visited{color:var(--sherlock-link)!important;text-underline-offset:3px;text-decoration-thickness:1px}a[href]:hover{text-decoration:underline}`
 
 // First-paint hint only: literal meta attributes outside inert/raw-text content.
 // The inner DOM is authoritative after parsing; no artifact DOM or code runs here.

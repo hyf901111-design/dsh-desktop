@@ -55,46 +55,33 @@ describe('offline HTML component theme runtime', () => {
     const inner = runtime(outer.childHtml())
     expect(inner.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('dark')
     expect(inner.window.document.documentElement.style.colorScheme).toBe('dark')
-    expect(outer.childHtml()).toContain('--sherlock-bg:oklch(.14 .0047 263.79)')
-    expect(outer.childHtml()).toContain('--sherlock-bg:oklch(.97 0 0)')
+    expect(outer.childHtml()).toContain('--sherlock-bg:#171717')
+    expect(outer.childHtml()).toContain('--sherlock-bg:#ffffff')
     expect(outer.childHtml()).toContain('--sherlock-chart-6:')
     const fallback = runtime(runtime(buildResearchHtmlPreview('<main>内容</main>', '报告', 'unknown')).childHtml())
     expect(fallback.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('light')
   })
 
-  it('uses the approved Bklit Monochrome stone/zinc chart values with compatible semantic variables', () => {
-    const reference = readFileSync(new URL('../prototypes/bklit-theme-preview/src/style.css', import.meta.url), 'utf8')
-    const modes = [
-      ['light', /\.theme-panel\s*\{([^}]+)\}/],
-      ['dark', /\.theme-panel\.dark\s*\{([^}]+)\}/]
-    ]
-    for (const [mode, selector] of modes) {
-      const declarations = reference.match(selector)?.[1]
-      expect(declarations).toBeTruthy()
-      const inner = runtime(runtime(buildResearchHtmlPreview('<main>图表</main>', '图表', mode)).childHtml())
+  it('keeps chart aliases and readable blue links in both card themes', () => {
+    for (const mode of ['light', 'dark']) {
+      const inner = runtime(runtime(buildResearchHtmlPreview('<a href="https://example.com" style="color:inherit">来源</a>', '图表', mode)).childHtml())
       const computed = inner.window.getComputedStyle(inner.window.document.documentElement)
-      const mapping = {
-        '--chart-line-primary': '--sherlock-chart-1', '--chart-line-secondary': '--sherlock-chart-2',
-        '--chart-grid': '--sherlock-chart-grid', '--chart-label': '--sherlock-chart-label',
-        '--chart-crosshair': '--sherlock-chart-crosshair', '--chart-background': '--sherlock-chart-background',
-        '--chart-tooltip-background': '--sherlock-tooltip-bg', '--chart-tooltip-foreground': '--sherlock-tooltip-text',
-        '--chart-tooltip-muted': '--sherlock-tooltip-muted'
+      for (const [alias, token] of Object.entries({ '--chart-line-primary': '--sherlock-chart-1', '--chart-line-secondary': '--sherlock-chart-2', '--chart-grid': '--sherlock-chart-grid', '--chart-label': '--sherlock-chart-label', '--chart-tooltip-background': '--sherlock-tooltip-bg' })) {
+        expect(computed.getPropertyValue(alias).trim()).toBe(computed.getPropertyValue(token).trim())
+        expect(computed.getPropertyValue(token).trim()).not.toBe('')
       }
-      for (const [chartToken, semanticToken] of Object.entries(mapping)) {
-        const expected = declarations.match(new RegExp(`${chartToken}:\\s*([^;]+)`))?.[1].trim()
-        expect(expected, chartToken).toBeTruthy()
-        expect(computed.getPropertyValue(semanticToken).trim(), `${mode} ${semanticToken}`).toBe(expected)
-        expect(computed.getPropertyValue(chartToken).trim(), `${mode} ${chartToken}`).toBe(expected)
-      }
+      expect(computed.getPropertyValue('--sherlock-bg').trim()).toBe(mode === 'dark' ? '#171717' : '#ffffff')
+      const link = inner.window.getComputedStyle(inner.window.document.querySelector('a'))
+      expect(link.color).toBe(mode === 'dark' ? '#60a5fa' : '#2563eb')
     }
   })
 
-  it('defaults cards, controls, tables and tooltips to thin square edges without overriding explicit user styling', () => {
+  it('defaults cards, controls, tables and tooltips to thin rounded edges without overriding explicit user styling', () => {
     const html = '<div class="research-card">卡片</div><button>按钮</button><div role="tooltip">提示</div><table><tr><th>季度</th><th>金额</th></tr><tr><td>Q1</td><td>20</td></tr></table><style>.custom{border-radius:18px;box-shadow:0 3px 8px red;color:purple}.custom{--chart-line-primary:hotpink}</style><button class="custom">自定义</button>'
     const inner = runtime(runtime(buildResearchHtmlPreview(html)).childHtml())
     for (const selector of ['.research-card', 'button:not(.custom)', '[role="tooltip"]', 'table']) {
       const style = inner.window.getComputedStyle(inner.window.document.querySelector(selector))
-      expect(style.borderRadius, selector).toBe('0px')
+      expect(style.borderRadius, selector).toBe('12px')
       expect(style.boxShadow, selector).toBe('none')
     }
     const custom = inner.window.getComputedStyle(inner.window.document.querySelector('.custom'))
@@ -117,7 +104,7 @@ describe('offline HTML component theme runtime', () => {
     expect(defaultStyle).toMatch(/\}\}$/)
     expect(defaultStyle).toContain('--sherlock-surface:')
     expect(defaultStyle).toContain(':where(button')
-    expect(defaultStyle).not.toContain('!important')
+    expect(defaultStyle).not.toMatch(/(?:background|border-radius|box-shadow):[^}]*!important/)
     expect(innerHtml.indexOf('@layer sherlock-component-defaults')).toBeLessThan(innerHtml.indexOf('@layer custom'))
     expect(innerHtml).toContain(userHtml)
   })
@@ -169,7 +156,7 @@ describe('offline HTML component theme runtime', () => {
     inner.parsed()
     inner.send(themeMessage('dark'))
     expect(inner.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('light')
-    expect(outer.childHtml()).not.toContain('!important')
+    expect(outer.childHtml()).not.toMatch(/background:[^}]*!important/)
     expect(outer.childHtml()).toContain('--sherlock-accent:#dd2233')
   })
 

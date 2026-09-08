@@ -98,6 +98,7 @@ describe('Research container chrome', () => {
       const { host, click } = mounted
       expect(host.querySelector('.rScV5Q_containerControls')).toBeNull()
       expect(host.querySelector('.rScV5Q_artifactMeta')).toBeNull()
+      expect(Array.from(host.querySelectorAll('[data-research-resize-handle]')).map((handle) => handle.getAttribute('data-research-resize-handle'))).toEqual(['se'])
       expect(host.querySelector('[data-research-node-title] [data-research-container-more]')).not.toBeNull()
       expect(host.querySelector('[role="menu"]')).toBeNull()
       await click('[data-research-container-more]')
@@ -158,6 +159,7 @@ describe('Research container chrome', () => {
       expect(browserWindow.document.activeElement).toBe(host.querySelector('[data-research-container-refresh-minutes="30"]'))
       await key(browserWindow.document.activeElement, 'Escape')
       expect(host.querySelector('[role="menu"]')).toBeNull()
+      expect(host.querySelector('.rScV5Q_containerMenuPopup[data-state="closed"]')?.hasAttribute('inert')).toBe(true)
       expect(browserWindow.document.activeElement).toBe(trigger)
       expect(pointer).not.toHaveBeenCalled()
       expect(activated).not.toHaveBeenCalled()
