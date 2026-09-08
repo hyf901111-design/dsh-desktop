@@ -82,6 +82,40 @@
           "金融接口需要登录；真实模型选择工具需在集成客户端验证"
         ],
         "generatedAt": "2026-09-08T14:56:05.686Z"
+      },
+      "merged": {
+        "mergeCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
+        "verificationCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/standard-agent-preset.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-container-chrome.test.ts test/standard-agent-preset.test.ts",
+            "verifiedCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
+            "completedAt": "2026-09-08T14:56:47.377Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
+            "completedAt": "2026-09-08T14:56:47.377Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-08T14:56:47.377Z"
       }
     }
   ],
