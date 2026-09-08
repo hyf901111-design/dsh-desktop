@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260908-03",
+  "branch": "codex/integration/20260908-03",
+  "baseMainCommit": "4304827e02c86db5aed5bac8042d7314810b85b2",
+  "expectedMainCommit": "4304827e02c86db5aed5bac8042d7314810b85b2",
+  "createdAt": "2026-09-08T05:45:42.851Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "画布组件悬浮操作与内容适配",
+        "branch": "codex/feat/canvas-polish-20260908",
+        "baseCommit": "4304827e02c86db5aed5bac8042d7314810b85b2",
+        "tipCommit": "ea15b565692a747db95b690fee6ad4c890f5cde0",
+        "commits": [
+          {
+            "commit": "ea15b565692a747db95b690fee6ad4c890f5cde0",
+            "parents": [
+              "4304827e02c86db5aed5bac8042d7314810b85b2"
+            ],
+            "subject": "优化：组件按内容适配尺寸并加入悬浮操作与放大阅读"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-container-chrome.test.ts",
+              "test/research-workbench.test.js",
+              "test/research-html-theme.test.js",
+              "test/desktop-shell-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "36 项相关检查及类型检查通过",
+            "verifiedCommit": "ea15b565692a747db95b690fee6ad4c890f5cde0",
+            "completedAt": "2026-09-08T05:45:42.142724+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "36 项相关检查及类型检查通过",
+            "verifiedCommit": "ea15b565692a747db95b690fee6ad4c890f5cde0",
+            "completedAt": "2026-09-08T05:45:42.142724+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "浏览器实际渲染确认隐藏顶栏和初始内容完整可见；放大阅读使用同一 iframe，状态保留由渲染测试覆盖。集成后继续真实客户端验证。"
+        },
+        "acceptanceCriteria": [
+          "临时详情侧栏关闭按钮避开全局面板按钮",
+          "生成组件悬停或键盘聚焦时显示操作按钮",
+          "右下角拖动调整大小并支持放大阅读",
+          "内容自动增高且后续行不重叠，整理不压回固定高度"
+        ],
+        "risks": [
+          "长内容和用户主动缩小的组件仍允许滚动",
+          "原有点阵与主题背景不变"
+        ],
+        "generatedAt": "2026-09-08T05:45:42.142724+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-container-chrome.test.ts",
+        "test/research-workbench.test.js",
+        "test/research-html-theme.test.js",
+        "test/desktop-shell-controls.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
