@@ -57,7 +57,7 @@ import {
 import { developerModeArgument } from '../shared/developer-mode'
 import { appVersionArgument } from '../shared/app-info'
 import { buildPluginRecoveryViewModel } from './plugin-recovery-view'
-import { resolveDesktopIdentity } from './app-identity'
+import { configureDesktopName, resolveDesktopIdentity } from './app-identity'
 import { migrateLegacyUserData } from './app-data-migration'
 import { installBundledPluginProfile } from './bundled-plugin-profile'
 import { synchronizeBundledESkillOverrides } from './bundled-skill-sync'
@@ -268,7 +268,7 @@ function configureAppIdentity(): void {
       console.warn('[desktop] failed to migrate legacy EWork Odyssey user data', error)
     }
   }
-  app.setName(identity.name)
+  configureDesktopName(app, identity.name)
   app.setPath('userData', identity.userData)
   if (app.isPackaged) {
     try {
