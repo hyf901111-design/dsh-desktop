@@ -253,3 +253,12 @@ describe('offline HTML component theme runtime', () => {
     expect(outer.parentMessages.length).toBeLessThanOrEqual(6)
   })
 })
+
+it('relays hover only from the current embedded component using a boolean state', () => {
+  const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
+  outer.send({type:'sherlock-content-hover',active:true},{});
+  outer.send({type:'sherlock-content-hover',active:'true'},outer.frame.contentWindow);
+  expect(outer.parentMessages).toHaveLength(0);
+  for(const active of [true,false]) outer.send({type:'sherlock-content-hover',active},outer.frame.contentWindow);
+  expect(outer.parentMessages.map(x=>x.data)).toEqual([{type:'sherlock-content-hover',active:true},{type:'sherlock-content-hover',active:false}]);
+});
