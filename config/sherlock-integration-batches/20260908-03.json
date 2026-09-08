@@ -68,6 +68,41 @@
           "原有点阵与主题背景不变"
         ],
         "generatedAt": "2026-09-08T06:53:12.722131+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c1ad0c413c4fb977cc20d957fe093b389abaa5ef",
+        "verificationCommit": "c1ad0c413c4fb977cc20d957fe093b389abaa5ef",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-container-chrome.test.ts",
+              "test/research-workbench.test.js",
+              "test/research-html-theme.test.js",
+              "test/desktop-shell-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
+            "verifiedCommit": "c1ad0c413c4fb977cc20d957fe093b389abaa5ef",
+            "completedAt": "2026-09-08T06:54:21.644Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c1ad0c413c4fb977cc20d957fe093b389abaa5ef",
+            "completedAt": "2026-09-08T06:54:21.644Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-08T06:54:21.644Z"
       }
     }
   ],
