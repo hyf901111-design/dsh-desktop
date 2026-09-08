@@ -124,6 +124,9 @@ try {
       )
     })
 
+    const updateRecovery = path.join(resourcesPath, 'update-recovery.cjs')
+    if (!existsSync(updateRecovery)) throw new Error('macOS rename recovery helper is missing')
+    execFileSync(runtimeNode, ['-e', "const h=require(process.argv[1]); if(typeof h.guard!=='function'||typeof h.repairDock!=='function')process.exit(1)", updateRecovery], { stdio: 'inherit' })
     verifyRuntime(runtimeNode, runtimeRoot)
     if (skipSignature) {
       console.log('signature: skipped (unsigned CI package)')

@@ -6,7 +6,8 @@ import type { AutoUpdater } from 'electron'
 // or a failed attempt cannot leave a late callback that unexpectedly quits.
 export function prepareNativeMacInstall(
   updater: Pick<EventEmitter, 'once' | 'removeListener'> & Pick<AutoUpdater, 'checkForUpdates' | 'quitAndInstall'>,
-  timeoutMs = 120_000
+  timeoutMs = 120_000,
+  beforeQuit?: () => Promise<(() => void) | undefined>
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const cleanup = () => {
@@ -15,9 +16,14 @@ export function prepareNativeMacInstall(
       updater.removeListener('error', failed)
     }
     const failed = (error: Error) => { cleanup(); reject(error) }
-    const ready = () => {
+    const ready = async () => {
       cleanup()
-      try { updater.quitAndInstall(); resolve() } catch (error) { reject(error) }
+      let cancel: (() => void) | undefined
+      try {
+        cancel = await beforeQuit?.()
+        updater.quitAndInstall()
+        resolve()
+      } catch (error) { cancel?.(); reject(error) }
     }
     const timer = setTimeout(() => failed(new Error(
       '安装器准备超时，应用尚未退出。请检查系统授权提示后重试更新。'

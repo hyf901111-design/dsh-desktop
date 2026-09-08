@@ -1,5 +1,6 @@
 import { app, autoUpdater as nativeUpdater, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import { prepareNativeMacInstall } from './native-install'
+import { armMacRenameRecovery, repairRenamedMacDock } from './mac-update-recovery'
 import electronUpdater from 'electron-updater'
 import type { UpdateStatus } from '../../shared/contracts'
 import {
@@ -72,6 +73,7 @@ export function startUpdateManager(): void {
     return
   }
 
+  void repairRenamedMacDock().catch(error => console.warn('[updater] Dock migration deferred', error))
   configureUpdater()
   startupTimer = setTimeout(
     () => void checkForUpdates(),
@@ -143,7 +145,7 @@ async function completeUpdate(): Promise<void> {
       if (latest.phase !== 'downloaded') return
       installing = true
       transition({ type: 'install' }, true)
-      if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater)
+      if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater, 120_000, () => armMacRenameRecovery(downloadedVersion!))
       else autoUpdater.quitAndInstall(false, true)
       return
     }
