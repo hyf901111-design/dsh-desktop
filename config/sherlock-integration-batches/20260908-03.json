@@ -75,6 +75,41 @@
           "不发布、不更改版本和更新源，待用户本地验收"
         ],
         "generatedAt": "2026-09-08T07:33:14.433Z"
+      },
+      "merged": {
+        "mergeCommit": "ea79544471343514032ec0523c04db8b84c00e21",
+        "verificationCommit": "ea79544471343514032ec0523c04db8b84c00e21",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-container-chrome.test.ts",
+              "test/research-workbench.test.js",
+              "test/research-html-theme.test.js",
+              "test/desktop-shell-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
+            "verifiedCommit": "ea79544471343514032ec0523c04db8b84c00e21",
+            "completedAt": "2026-09-08T07:34:11.888Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ea79544471343514032ec0523c04db8b84c00e21",
+            "completedAt": "2026-09-08T07:34:11.888Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-08T07:34:11.888Z"
       }
     }
   ],
