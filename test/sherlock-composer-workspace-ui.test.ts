@@ -7029,7 +7029,7 @@ describe('Sherlock workspace and composer controls', () => {
       const nodes = workspace.getSnapshot().artifacts
       expect(nodes.find(node => node.id === 'long-native')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { content: 'Long report' } })
       expect(nodes.find(node => node.id === 'long-html')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { html } })
-      expect(nodes[0].y).toBe(nodes[1].y)
+      expect(nodes[0]!.y).toBe(nodes[1]!.y)
       const [a, b] = nodes as any[]
       expect(Math.abs(a.x - b.x) >= (a.width + b.width) / 2 || Math.abs(a.y - b.y) >= (a.height + b.height) / 2).toBe(true)
       expect(content.getAttribute('style')).toBeNull()
@@ -9966,7 +9966,7 @@ describe('Sherlock workspace and composer controls', () => {
       })
       expect(payload.prompt).toContain('720×600');
       expect(target.prompt).toBe('制作收入、利润和现金流三项核心指标');
-      mounted.workspace.failGeneration(generatedId, '模拟可重试错误');
+      (mounted.workspace as any).failGeneration(generatedId, '模拟可重试错误');
       const retry = mounted.workspace.retryGeneration(generatedId) as Record<string, unknown>;
       expect(retry.prompt).toBe(target.prompt);
       expect(await hub.generateResearchSelection(session, { sessionId: session.sessionId, kind: retry.kind, targetNodeId: generatedId, prompt: retry.prompt })).toMatchObject({ ok: true });

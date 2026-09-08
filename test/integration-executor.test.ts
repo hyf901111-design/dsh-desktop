@@ -834,7 +834,7 @@ describe('successor handoff refresh', () => {
     const cardPath = handoffFile(repository, 'refresh')
     const original = JSON.parse(readFileSync(cardPath, 'utf8'))
     const integration = repository.createWorktree('integration-refresh', 'codex/integration/20260831-99')
-    const declared = [{ argv: [process.execPath, '-e', 'process.exit(0)'], timeoutMs: 1000 }]
+    const declared: Array<{ argv: [string, ...string[]]; timeoutMs: number }> = [{ argv: [process.execPath, '-e', 'process.exit(0)'], timeoutMs: 1000 }]
     adoptIntegrationBatch({ integrationRepository: integration, batchId: '20260831-99', handoffPaths: [cardPath], integrationChecks: declared, dryRun: false, now: '2026-08-31T06:00:00.000Z' })
     const context = resolveRepositoryContext(integration)
     const ownerToken = JSON.parse(readFileSync(path.join(context.gitDirectory, 'sherlock-integration-owner.json'), 'utf8')).ownerToken
