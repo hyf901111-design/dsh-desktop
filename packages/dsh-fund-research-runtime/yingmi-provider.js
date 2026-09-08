@@ -451,7 +451,8 @@ export function createYingmiFundProvider({
   fetch: request = globalThis.fetch,
   clock = () => new Date(),
   timeoutMs = 60_000,
-  requestTimeoutMs = 15_000
+  requestTimeoutMs = 15_000,
+  onDataGap = () => {}
 }) {
   if (typeof resolveCredential !== 'function') throw new TypeError('A credential resolver is required.')
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) {
@@ -494,7 +495,14 @@ export function createYingmiFundProvider({
         single: {
           name: 'private.single',
           buildArguments: (request) => ({ funds: [...request.funds] }),
-          normalize: normalizeSingle
+          normalize: (raw, context) => {
+            if (Array.isArray(raw) && raw.length === 0) onDataGap()
+            const { summary } = detailRows(raw, context.request.funds).get(context.request.funds[0])
+            // Identity, share currency and fund type must be valid before a missing field permits fallback.
+            fundType(summary)
+            if (summary.nav == null || summary.navDate == null || summary.navDate === '') onDataGap()
+            return normalizeSingle(raw, context)
+          }
         },
         compare: {
           name: 'private.compare',

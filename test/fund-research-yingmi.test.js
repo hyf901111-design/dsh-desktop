@@ -1,3 +1,4 @@
+import { createFinancialRouter } from '../services/fund-data/financial/router.js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { validateJsonSchemaValue } from '@deepseek-ai/dsh-tools'
 
@@ -520,8 +521,8 @@ describe('runtime hosted service seam', () => {
     const serverProvider = createYingmiFundProvider({
       resolveCredential: async () => PRIVATE_KEY, fetch: transport.fetch
     })
-    const request = { task: 'single', funds: ['510300'] }
-    const resultFromServer = await serverProvider.research(request)
+    const request = { operation: 'financial', intent: 'research', symbols: ['510300'], task: 'single' }
+    const { value: resultFromServer } = await createFinancialRouter({ fund: serverProvider }).query(request)
     const hostedFetch = vi.fn(async () => Response.json(resultFromServer))
     vi.stubGlobal('fetch', hostedFetch)
     const tools = new Map()
@@ -538,8 +539,8 @@ describe('runtime hosted service seam', () => {
 
     const runtime = registerFundResearchRuntime(ctx)
     expect(resolve).not.toHaveBeenCalled()
-    const result = await tools.get('fund_research').execute({ task: 'single', funds: ['510300'] }, {})
-    expect(result.subjects[0].fund_code).toBe('510300')
+    const result = await tools.get('financial_query').execute({ intent: 'research', task: 'single', symbols: ['510300'] }, {})
+    expect(result.records[0].instrument).toBe('510300')
     expect(resolve).not.toHaveBeenCalled()
     expect(hostedFetch.mock.calls[0][0]).toBe('https://updates.evanarts.com/v1/fund-research/query')
     expect(JSON.parse(hostedFetch.mock.calls[0][1].body)).toEqual(request)

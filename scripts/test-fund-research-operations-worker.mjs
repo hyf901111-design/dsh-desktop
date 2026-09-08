@@ -42,7 +42,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
       else if (body.params.arguments.query === 'mixed-news') result = { content: newsContent }
       else if (body.params.arguments.query === 'structured-news') result = { structuredContent: { source: '盈米基金', apiKey: key },
         content: [...newsContent, { type: 'image', data: 'unavailable-image' }] }
-      else result = { structuredContent: { asOf: '2026-09-04', fundCode: body.params.arguments.fundCode, value: 0.12 } }
+      else result = { structuredContent: { as_of: '2026-09-04', fundCode: body.params.arguments.fundCode, nav: 0.12 } }
     } else throw Error('Unexpected upstream method')
     return Response.json({ jsonrpc: '2.0', id: body.id, result })
   }
@@ -71,7 +71,7 @@ try {
       arguments_json: JSON.stringify({ fundCode: '000001', query: 'x'.repeat(3000), weights: [0.4, 0.6] }) })
     assert.equal(result.status, 'received')
     assert.equal(result.quality_state, 'unverified')
-    assert.equal(JSON.parse(result.data_json).fundCode, '000001')
+    assert.equal(JSON.parse(result.data_json).records[0].instrument, '000001')
     assert.ok(!JSON.stringify(result).includes(key))
   }
   const detail = await catalog.execute({ capability: 'financial_news' })
@@ -83,12 +83,13 @@ try {
     arguments_json: JSON.stringify({ fundCode: '000001', query: input }) })
   await assert.rejects(() => newsQuery('invalid-arguments'), { code: 'RESEARCH_ARGUMENTS_INVALID' })
   assert.equal((await catalog.execute({ capability: 'financial_news' })).entries[0].state, 'available')
-  assert.deepEqual(JSON.parse((await newsQuery('mixed-news')).data_json), { content: newsContent })
+  assert.deepEqual(JSON.parse((await newsQuery('mixed-news')).data_json), { records: [] })
   const mixed = await newsQuery('structured-news')
-  assert.deepEqual(JSON.parse(mixed.data_json), { structuredContent: { source: '盈米基金' }, content: newsContent })
-  assert.ok(mixed.limitations.some(item => /未包含.*image/.test(item)))
+  assert.deepEqual(JSON.parse(mixed.data_json), { records: [] })
+  assert.ok(mixed.limitations.some(item => /暂缺/.test(item)))
   assert.ok(!JSON.stringify(mixed).includes(key))
+  assert.doesNotMatch(JSON.stringify(mixed), /盈米|yingmi|https|resource_link/i)
   await assert.rejects(() => catalog.execute({}), { code: 'FUND_SERVICE_BUSY' })
   assert.equal(seen.length, 13)
-  console.log('Workers research operations: 60 definitions; 8 categories, refs/arrays, >2 KiB authenticated bodies, isolated tool/JSON-RPC parameter errors, preserved sources/mixed content, omitted-media notices and persistent budget passed.')
+  console.log('Workers research operations: 60 definitions; 8 categories, refs/arrays, >2 KiB authenticated bodies, isolated tool/JSON-RPC parameter errors, server-side business projection, supplier prose/links omitted with missing-data notices and persistent budget passed.')
 } finally { await mf.dispose() }

@@ -1772,7 +1772,7 @@ index 1dd0e89..b5a6bdf 100644
  				const right = Math.min(viewport.right, content.right);
  				const x = left + Math.max(0, right - left) / 2;
  				const height = visibleBottom - viewport.top;
-@@ -5332,35 +6410,537 @@ window.__ModuleLoader__.load({
+@@ -5332,35 +6410,541 @@ window.__ModuleLoader__.load({
  				scrollTop: scrollport.scrollTop
  			};
  		}
@@ -2042,6 +2042,10 @@ index 1dd0e89..b5a6bdf 100644
 +				return topic === null ? t("execution.status.researching") : t("execution.status.webSearchTopic", { topic });
 +			}
 +			if (name === "web_fetch") return t("execution.status.researching");
++			if (name === "financial_query") {
++				const tasks = { quote: "查询股票行情", history: "查询历史行情", nav: "获取基金净值", profile: "查询基金资料", resolve: "核对证券名称与代码", research: "研究基金数据", catalog: "核对可用研究范围", analysis: "核对基金研究数据" };
++				return t("execution.status.currentTask", { task: tasks[args?.intent] ?? "核对金融数据" });
++			}
 +			if (/skill/.test(name) && /(?:ppt|slide|presentation)/iu.test(String(args?.name ?? ""))) return t("execution.status.pptSkill");
 +			if (/bash|shell|exec|terminal|command|pwsh/.test(name)) {
 +				const describedTask = safeExecutionTask(args?.description);

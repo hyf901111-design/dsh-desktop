@@ -46,14 +46,14 @@ export async function handleRequest(request, env) {
   if (!url.search && url.pathname.startsWith('/v1/account/')) return handleAccountRequest(request, env)
   if (url.search || ![QUERY_PATH, HEALTH_PATH].includes(url.pathname)) return failure(404, 'NOT_FOUND')
   if (url.pathname === HEALTH_PATH && request.method === 'GET') {
-    const ready = Boolean(env.ACCOUNTS_DB && env.YINGMI_API_KEY?.trim() && env.FUND_REQUEST_LIMITER && env.FUND_COORDINATOR)
+    const ready = Boolean(env.ACCOUNTS_DB && (env.YINGMI_API_KEY?.trim() || env.TONGHUASHUN_API_KEY?.trim()) && env.FUND_REQUEST_LIMITER && env.FUND_COORDINATOR)
     return json({ status: ready ? 'ready' : 'unavailable' }, ready ? 200 : 503)
   }
   if (url.pathname !== QUERY_PATH || request.method !== 'POST') return failure(405, 'METHOD_NOT_ALLOWED')
   if (request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') {
     return failure(415, 'INVALID_CONTENT_TYPE')
   }
-  if (!env.ACCOUNTS_DB || !env.YINGMI_API_KEY?.trim() || !env.FUND_REQUEST_LIMITER || !env.FUND_COORDINATOR) {
+  if (!env.ACCOUNTS_DB || !(env.YINGMI_API_KEY?.trim() || env.TONGHUASHUN_API_KEY?.trim()) || !env.FUND_REQUEST_LIMITER || !env.FUND_COORDINATOR) {
     return failure(503, 'FUND_SERVICE_UNAVAILABLE', 60)
   }
   let user

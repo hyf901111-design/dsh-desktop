@@ -1,3 +1,4 @@
+import { createFinancialTool } from './financial-tool.js'
 import { createResearchOperationTools } from './research-tools.js'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import {
@@ -144,9 +145,11 @@ export function createFundResearchTool(provider) {
 
 export function registerFundResearchRuntime(ctx, options = {}) {
   const provider = options.provider ?? createHostedFundProvider()
-  const disposers = [ctx.tools.register(createFundResearchTool(provider))]
+  // The bundled app exposes only the product entry; legacy factories remain for older clients/tests.
+  const unified = typeof provider.financial === 'function'
+  const disposers = [ctx.tools.register(unified ? createFinancialTool(provider) : createFundResearchTool(provider))]
   try {
-    if (typeof provider.researchOperation === 'function') {
+    if (!unified && typeof provider.researchOperation === 'function') {
       for (const tool of createResearchOperationTools(provider)) disposers.push(ctx.tools.register(tool))
     }
   } catch (error) {
@@ -183,3 +186,5 @@ export { createHostedFundProvider } from './hosted-provider.js'
 
 export { createResearchOperationTools } from './research-tools.js'
 export { createYingmiResearchProvider } from './yingmi-research-provider.js'
+
+export { createFinancialTool } from './financial-tool.js'

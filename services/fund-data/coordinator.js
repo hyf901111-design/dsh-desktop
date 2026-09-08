@@ -1,3 +1,6 @@
+import { createFinancialRouter } from './financial/router.js'
+import { projectLegacyOperation } from './financial/projection.js'
+import { validateFinancialResult } from '../../packages/dsh-fund-research-runtime/financial-contract.js'
 import { createYingmiResearchProvider } from '../../packages/dsh-fund-research-runtime/yingmi-research-provider.js'
 import { isOperationQuery, researchHash, validateOperationResult } from '../../packages/dsh-fund-research-runtime/research-operations.js'
 import { createYingmiFundProvider } from '../../packages/dsh-fund-research-runtime/yingmi-provider.js'
@@ -10,10 +13,11 @@ function boundedSetting(value, fallback, max) {
 }
 
 export class FundCoordinator {
-  constructor(state, env, { provider, operationProvider, clock = () => new Date() } = {}) {
+  constructor(state, env, { provider, operationProvider, financialRouter, clock = () => new Date() } = {}) {
     this.state = state
     this.env = env
     this.clock = clock
+    this.financialRouter = financialRouter ?? createFinancialRouter({ env, clock })
     this.inflight = new Map()
     this.dailyLimit = boundedSetting(env.DAILY_RESEARCH_LIMIT, 1000, 100000)
     this.cacheMs = boundedSetting(env.CACHE_TTL_SECONDS, 600, 600) * 1000
@@ -32,7 +36,7 @@ export class FundCoordinator {
     if (request.method !== 'POST' || new URL(request.url).pathname !== '/query') return failure(404, 'NOT_FOUND')
     let query
     try { query = await parseQuery(request) } catch { return failure(400, 'INVALID_REQUEST') }
-    const key = `${query.operation === 'execute' ? 'transient' : 'cache'}:${isOperationQuery(query) ? researchHash(query) : hashPayload(query)}`
+    const key = `${['execute','financial'].includes(query.operation) ? 'transient' : 'cache'}:${isOperationQuery(query) ? researchHash(query) : hashPayload(query)}`
     // Install the promise before the first storage await; identical requests share one lookup.
     if (!this.inflight.has(key)) {
       if (this.inflight.size >= 4) return failure(429, 'FUND_SERVICE_BUSY', 10)
@@ -47,10 +51,11 @@ export class FundCoordinator {
   async lookup(key, query) {
     const now = this.clock().valueOf()
     // Generic analysis can contain user-supplied amounts or weights. Never persist its input or result.
-    const persist = !isOperationQuery(query)
+    const financial = query.operation === 'financial'
+    const persist = !isOperationQuery(query) && !financial
     const cached = persist ? await this.state.storage.get(key) : undefined
     if (cached?.expiresAt > now) return { value: cached.value }
-    const cooldown = await this.state.storage.get('cooldown')
+    const cooldown = financial ? undefined : await this.state.storage.get('cooldown')
     if (cooldown > now) return { status: 503, code: 'FUND_SERVICE_UNAVAILABLE', retryAfter: 30 }
     // One persistent global budget, so changing edge locations or restarting the object cannot reset it.
     const day = this.clock().toISOString().slice(0, 10)
@@ -63,9 +68,28 @@ export class FundCoordinator {
     })
     if (!allowed) return { status: 429, code: 'FUND_SERVICE_BUSY', retryAfter: 3600 }
     try {
-      const value = isOperationQuery(query)
+      if (financial) {
+        const { value, provenance } = await this.financialRouter.query(query)
+        validateFinancialResult(value, query, this.clock)
+        // Opaque evidence references retain server-only provenance; never persist quotes or user arguments.
+        if (provenance.length) await this.state.storage.put(`evidence:${provenance[0].evidence_id.slice(0,24)}`, { records:provenance, expiresAt:now + 86400000 })
+        let cursor
+        while (true) {
+          const page = await this.state.storage.list({ prefix:'evidence:', limit:64, ...(cursor ? {startAfter:cursor} : {}) })
+          const expired = [...page].filter(([, p]) => p.expiresAt <= now).map(([id]) => id)
+          if (expired.length) await this.state.storage.delete(expired)
+          if (page.size < 64) break
+          cursor = [...page.keys()].at(-1)
+        }
+        return { value }
+      }
+      let value = isOperationQuery(query)
         ? await this.operationProvider.researchOperation(query) : await this.provider.research(query)
-      if (isOperationQuery(query)) validateOperationResult(value, query, this.clock)
+      if (isOperationQuery(query)) {
+        validateOperationResult(value, query, this.clock)
+        value = projectLegacyOperation(value)
+        validateOperationResult(value, query, this.clock)
+      }
       else if (!isNormalizedResearchResult(value)) throw new Error('Invalid provider result.')
       // Cache only validated successful/partial evidence; failures never masquerade as unchanged data.
       if (persist) await this.state.storage.put(key, { expiresAt: this.clock().valueOf() + this.cacheMs, value })
@@ -85,7 +109,7 @@ export class FundCoordinator {
         RESEARCH_RESULT_TOO_LARGE: 413, RESEARCH_SCHEMA_UNSUPPORTED: 422, RESEARCH_CAPABILITY_UNAVAILABLE: 424, RESEARCH_QUERY_FAILED: 502 }
       if (Object.hasOwn(operationErrors, error?.code)) return { status: operationErrors[error.code], code: error.code }
       if (error?.code === 'FUND_TYPE_UNSUPPORTED') return { status: 422, code: 'FUND_TYPE_UNSUPPORTED' }
-      await this.state.storage.put('cooldown', this.clock().valueOf() + 30_000)
+      if (!financial) await this.state.storage.put('cooldown', this.clock().valueOf() + 30_000)
       return { status: 503, code: 'FUND_SERVICE_UNAVAILABLE', retryAfter: 30 }
     }
   }

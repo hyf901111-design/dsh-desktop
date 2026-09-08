@@ -1,3 +1,4 @@
+import { validateFinancialQuery, validateFinancialResult } from './financial-contract.js'
 import { validateServiceQuery, isOperationQuery, validateOperationResult } from './research-operations.js'
 import {
   cancelledError, normalizeResearchResult, toPublicFundResearchError,
@@ -73,6 +74,7 @@ export function createHostedFundProvider({
           chunks.push(Buffer.from(value))
         }
         const value = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if (query.operation === 'financial') return validateFinancialResult(value, query, clock)
         if (isOperationQuery(query)) return validateOperationResult(value, query, clock)
         const received = Date.parse(value.received_at)
         const age = clock().valueOf() - received
@@ -99,6 +101,7 @@ export function createHostedFundProvider({
       }
   }
   return Object.freeze({
+    financial(input, options) { return send(validateFinancialQuery(input), options) },
     research(input, options) { return send(validateResearchRequest(input), options) },
     researchOperation(input, options) {
       const query = validateServiceQuery(input)

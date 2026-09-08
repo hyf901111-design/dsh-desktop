@@ -161,7 +161,7 @@ describe('fund research public tool', () => {
         dispose = setup()
       }
     })
-    expect([...tools.keys()]).toEqual(['fund_research', 'fund_research_catalog', 'fund_research_query'])
+    expect([...tools.keys()]).toEqual(['financial_query'])
     dispose()
     expect(tools.size).toBe(0)
   })

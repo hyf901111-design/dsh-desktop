@@ -1,3 +1,4 @@
+import { validateFinancialQuery } from './financial-contract.js'
 import { createHash } from 'node:crypto'
 import { RESEARCH_CAPABILITIES, RESEARCH_CATEGORIES, researchCapability } from './research-capabilities.js'
 import { serviceError, validateResearchRequest } from './contract.js'
@@ -33,6 +34,7 @@ export function boundedJson(value, maxBytes = RESEARCH_REQUEST_BYTES) {
 
 export function validateServiceQuery(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw serviceError('RESEARCH_ARGUMENTS_INVALID')
+  if (input.operation === 'financial') return validateFinancialQuery(input)
   if (!Object.hasOwn(input, 'operation')) return validateResearchRequest(input)
   const query = boundedJson(input)
   if (query.operation === 'catalog') {
