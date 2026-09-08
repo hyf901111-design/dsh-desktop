@@ -26,4 +26,5 @@ export type ResearchCanvasNativeWheel = {
   deltaX: number
   deltaY: number
   deltaMode: 0
+  ctrlKey?: boolean
 }

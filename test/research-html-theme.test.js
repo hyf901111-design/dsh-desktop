@@ -40,6 +40,16 @@ function runtime(html, { standalone = false, systemDark = false, configure } = {
 const themeMessage = (colorScheme) => ({ type: 'sherlock-theme', colorScheme })
 
 describe('offline HTML component theme runtime', () => {
+  it('relays content selection only from its own inner frame and validates modifiers', () => {
+    const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
+    const pointer = { type: 'sherlock-content-pointer', metaKey: false, shiftKey: true };
+    outer.send(pointer, {});
+    outer.send({ ...pointer, metaKey: 'true' }, outer.frame.contentWindow);
+    expect(outer.parentMessages).toHaveLength(0);
+    outer.send(pointer, outer.frame.contentWindow);
+    expect(outer.parentMessages[0].data).toEqual(pointer);
+  });
+
   it('applies an explicit initial dark palette before artifact scripts, and normalizes unknown themes', () => {
     const outer = runtime(buildResearchHtmlPreview('<main>内容</main>', '报告', 'dark'))
     const inner = runtime(outer.childHtml())
