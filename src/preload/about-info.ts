@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.9.1',
+      date: '2026-09-08',
+      items: ["产品统一更名为 EWork Odyssey，更新应用图标、深浅色标识与中英文标语", "组件生成增加格式验收、自动恢复和可读内容回退，减少生成失败后手动重试", "丰富监控面板、新闻、日历和报告等交互组件，并让内容更聚焦用户需求", "优化表格列宽和来源链接排版，精简组件顶部导航与重复信息", "修复点击组件内容无法选中整块组件的问题，保留内部链接和控件交互", "增强触控板缩放灵敏度，研究画布采用浅色纯白、深色深灰背景并保留点阵", "修复设置下拉菜单无响应，优化账户菜单图标、登录面板和随主题变化的用户名首字头像"]
+    },
+    {
       version: '0.9.0',
       date: '2026-09-08',
       items: ["新增构建模式，自动拆解研究工作台并并发生成独立组件；简单问答仍在对话中完成", "组件预设小、中、大三种规格，提前规划内容与尺寸，整理画布时统一同行大小并整齐排列", "组件框按约 0.5 秒间隔依次出现，后台生成任务保持并发", "生成进度展示真实检索主题与子任务回报，并补充当前任务说明和页面构建步骤", "修复搜索权限误判、重复生成和重试提交失败，限制无效检索循环并如实提示数据缺失", "优化连接中断、超时和限流提示，保留重试过程并减少不必要的生成内容"]
@@ -210,6 +215,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.9.1',
+      date: '2026-09-08',
+      items: ["Renamed the app to EWork Odyssey with refreshed app icons, theme-aware logos and localized slogans", "Added generated-component validation, automatic recovery and readable fallbacks to reduce manual retries", "Expanded interactive dashboards, news, calendars and report components while keeping content focused on the request", "Improved table column widths and source links, and removed redundant component navigation and information", "Fixed selecting an entire component by clicking its content while preserving links and controls", "Increased trackpad zoom sensitivity and kept the dot grid on white and dark-gray research canvases", "Fixed unresponsive Settings menus and refined account menu icons, authentication dialogs and theme-aware username initials"]
+    },
     {
       version: '0.9.0',
       date: '2026-09-08',

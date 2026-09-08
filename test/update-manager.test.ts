@@ -95,7 +95,7 @@ describe('desktop update manager', () => {
       const handler = fakes.ipcHandlers.get(channel)
       expect(handler, channel).toBeTypeOf('function')
       await expect(Promise.resolve().then(() => handler?.(childEvent))).rejects.toThrow(
-        'main Sherlock window'
+        'main EWork Odyssey window'
       )
     }
   })
