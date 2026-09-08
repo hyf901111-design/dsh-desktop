@@ -2762,7 +2762,7 @@ describe('Sherlock workspace and composer controls', () => {
     expect(selected).toEqual(['memory-files'])
   })
 
-  it('renders pure white and pure black research surfaces with dots', async () => {
+  it('renders pure white and dark gray research surfaces with dots', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
       document: browserWindow.document
@@ -2792,7 +2792,7 @@ describe('Sherlock workspace and composer controls', () => {
     )
     browserWindow.document.body.setAttribute('data-ds-dark-theme', '')
     expect(browserWindow.getComputedStyle(canvas).backgroundColor).toBe(
-      'rgb(0, 0, 0)'
+      'rgb(24, 24, 24)'
     )
   })
 
@@ -3101,7 +3101,7 @@ describe('Sherlock workspace and composer controls', () => {
         office.dispatchEvent(metaWheel)
         const zoomed = mounted.workspace.getSnapshot().viewport
         expect(metaWheel.defaultPrevented).toBe(true)
-        expect(zoomed.scale).toBeCloseTo(1.105170918, 8)
+        expect(zoomed.scale).toBeCloseTo(1.221402758, 8)
         expect((280 - zoomed.x) / zoomed.scale).toBeCloseTo(280, 7)
         expect((190 - zoomed.y) / zoomed.scale).toBeCloseTo(190, 7)
       }
@@ -3884,7 +3884,7 @@ describe('Sherlock workspace and composer controls', () => {
       const zoomed = mounted.workspace.getSnapshot().viewport
       expect(metaWheel.defaultPrevented).toBe(true)
       expect(bubbledWheels).toBe(1)
-      expect(zoomed.scale).toBeCloseTo(1.105170918, 8)
+      expect(zoomed.scale).toBeCloseTo(1.221402758, 8)
       expect((320 - zoomed.x) / zoomed.scale).toBeCloseTo(320, 7)
       expect((240 - zoomed.y) / zoomed.scale).toBeCloseTo(240, 7)
 
@@ -3903,7 +3903,7 @@ describe('Sherlock workspace and composer controls', () => {
       const pinched = mounted.workspace.getSnapshot().viewport
       expect(pinch.defaultPrevented).toBe(true)
       expect(bubbledWheels).toBe(1)
-      expect(pinched.scale).toBeCloseTo(1, 8)
+      expect(pinched.scale).toBeCloseTo(Math.exp(-.12), 8)
       expect((320 - pinched.x) / pinched.scale).toBeCloseTo(320, 7)
       expect((240 - pinched.y) / pinched.scale).toBeCloseTo(240, 7)
       pdfBody.scrollTop = 872
@@ -10068,6 +10068,14 @@ describe('Sherlock workspace and composer controls', () => {
       const ownWindow = { postMessage: vi.fn() };
       Object.defineProperty(frame, 'contentWindow', { configurable: true, value: ownWindow });
       const send = async (data: unknown, source: unknown = ownWindow) => { await act(async () => { mounted.browserWindow.dispatchEvent(new mounted.browserWindow.MessageEvent('message', { data, source: source as any })); }); };
+      await act(async () => mounted.workspace.updateSelection([], 'replace'));
+      await send({ type: 'sherlock-content-pointer', metaKey: false, shiftKey: false }, mounted.browserWindow);
+      expect(mounted.workspace.getSnapshot().selection.selectedNodeIds).toEqual([]);
+      await send({ type: 'sherlock-content-pointer', metaKey: false, shiftKey: false });
+      expect(mounted.workspace.getSnapshot().selection.selectedNodeIds).toEqual(['safe']);
+      expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame);
+      await send({ type: 'sherlock-content-pointer', metaKey: true, shiftKey: false });
+      expect(mounted.workspace.getSnapshot().selection.selectedNodeIds).toEqual([]);
       await send({ type: 'sherlock-source-request', url: 'https://attacker.invalid' });
       expect(mounted.host.textContent).not.toContain('打开来源：');
       await send({ type: 'sherlock-source-request', url: 'https://example.org/news' });
@@ -10599,7 +10607,7 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { canvas.dispatchEvent(wheel) })
       const zoomed = workspace.getSnapshot().viewport
       expect(wheel.defaultPrevented).toBe(true)
-      expect(zoomed.scale).toBeCloseTo(1.105170918, 8)
+      expect(zoomed.scale).toBeCloseTo(1.221402758, 8)
       expect((360 - zoomed.x) / zoomed.scale).toBeCloseTo(360, 7)
       expect((260 - zoomed.y) / zoomed.scale).toBeCloseTo(260, 7)
     } finally {
@@ -10622,7 +10630,7 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { canvas.dispatchEvent(pinch) })
       const zoomed = workspace.getSnapshot().viewport
       expect(pinch.defaultPrevented).toBe(true)
-      expect(zoomed.scale).toBeCloseTo(1.105170918, 8)
+      expect(zoomed.scale).toBeCloseTo(1.377127764, 8)
       expect((360 - zoomed.x) / zoomed.scale).toBeCloseTo(360, 7)
       expect((260 - zoomed.y) / zoomed.scale).toBeCloseTo(260, 7)
     } finally {
@@ -10735,15 +10743,20 @@ describe('Sherlock workspace and composer controls', () => {
         { ...valid, clientY: Number.NaN },
         { ...valid, deltaY: 4_097 },
         { ...valid, deltaMode: 1 },
+        { ...valid, ctrlKey: 'true' },
         { ...valid, unexpected: true }
       ]) {
         await sendNative(invalid)
         expect(workspace.getSnapshot().viewport).toEqual(initial)
       }
 
+      await sendNative({ ...valid, ctrlKey: true, deltaY: -40 });
+      expect(workspace.getSnapshot().viewport.scale).toBeCloseTo(Math.exp(.32), 8);
+      await sendNative({ ...valid, ctrlKey: true, deltaY: 40 });
+      expect(workspace.getSnapshot().viewport.scale).toBeCloseTo(initial.scale, 8);
       await sendNative(valid)
       const zoomed = workspace.getSnapshot().viewport
-      expect(zoomed.scale).toBeCloseTo(1.105170918, 8)
+      expect(zoomed.scale).toBeCloseTo(1.221402758, 8)
       expect((300 - zoomed.x) / zoomed.scale).toBeCloseTo(300, 7)
       expect((150 - zoomed.y) / zoomed.scale).toBeCloseTo(150, 7)
 
@@ -12759,9 +12772,9 @@ describe('Sherlock workspace and composer controls', () => {
       }
     ) as { scale: number; x: number; y: number }
 
-    expect(next.scale).toBeCloseTo(1.105170918, 8)
-    expect(next.x).toBeCloseTo(-10.5170918, 7)
-    expect(next.y).toBeCloseTo(-8.41367344, 7)
+    expect(next.scale).toBeCloseTo(1.221402758, 8)
+    expect((100 - next.x) / next.scale).toBeCloseTo(100, 7)
+    expect((80 - next.y) / next.scale).toBeCloseTo(80, 7)
   })
 
   it('uses tuned trackpad pinch sensitivity while keeping the pointer anchored', async () => {
@@ -12780,9 +12793,9 @@ describe('Sherlock workspace and composer controls', () => {
       }
     ) as { scale: number; x: number; y: number }
 
-    expect(next.scale).toBeCloseTo(1.105170918, 8)
-    expect(next.x).toBeCloseTo(-10.5170918, 7)
-    expect(next.y).toBeCloseTo(-8.41367344, 7)
+    expect(next.scale).toBeCloseTo(1.377127764, 8)
+    expect((100 - next.x) / next.scale).toBeCloseTo(100, 7)
+    expect((80 - next.y) / next.scale).toBeCloseTo(80, 7)
   })
 
   it('pans the research viewport without changing its zoom', async () => {

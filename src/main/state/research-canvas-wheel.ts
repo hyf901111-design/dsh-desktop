@@ -135,7 +135,8 @@ export class ResearchCanvasWheelRouter {
       clientY: y,
       deltaX,
       deltaY,
-      deltaMode: 0
+      deltaMode: 0,
+      ...(mouse.modifiers?.some(modifier => modifier === 'control' || modifier === 'ctrl') ? { ctrlKey: true } : {})
     }
     try {
       this.webContents.send(RESEARCH_CANVAS_WHEEL_EVENT_CHANNEL, payload)

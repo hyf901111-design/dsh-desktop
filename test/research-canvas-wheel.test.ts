@@ -100,7 +100,7 @@ describe('research canvas native wheel router', () => {
       clientY: 250,
       deltaX: 3.5,
       deltaY: -120,
-      deltaMode: 0
+      deltaMode: 0, ctrlKey: true
     })
   })
 
