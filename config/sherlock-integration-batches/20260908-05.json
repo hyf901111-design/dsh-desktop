@@ -56,6 +56,40 @@
           "金融接口需要登录；真实模型选择工具需在集成客户端验证"
         ],
         "generatedAt": "2026-09-08T15:03:47.852Z"
+      },
+      "merged": {
+        "mergeCommit": "0e13f26d08c17ab73f3f9b0f7da85313c1e8334e",
+        "verificationCommit": "0e13f26d08c17ab73f3f9b0f7da85313c1e8334e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-container-chrome.test.ts",
+              "test/standard-agent-preset.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-container-chrome.test.ts test/standard-agent-preset.test.ts",
+            "verifiedCommit": "0e13f26d08c17ab73f3f9b0f7da85313c1e8334e",
+            "completedAt": "2026-09-08T15:04:43.235Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0e13f26d08c17ab73f3f9b0f7da85313c1e8334e",
+            "completedAt": "2026-09-08T15:04:43.235Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-08T15:04:43.235Z"
       }
     }
   ],
