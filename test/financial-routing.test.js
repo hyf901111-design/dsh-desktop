@@ -17,7 +17,7 @@ function marketFixture(fn) {
   return { call:vi.fn(async (service,tool,args) => {
     if (tool === 'get_a_share_calendar_trading_days') return {data:calendar}
     if (fn) return fn(service,tool,args)
-    if (tool === 'get_meta_tickers_search') return {data:{item:[{thscode:args.q,name:'同花顺',asset_type:'a-share',currency:'CNY'}]}}
+    if (tool === 'get_meta_tickers_search') return {data:{item:[{thscode:args.q,name:'同花顺',asset_type:args.asset_type,currency:'CNY'}]}}
     return quote(args.thscodes ?? args.thscode)
   }) }
 }
@@ -27,8 +27,9 @@ function fundResult(date='2026-09-07', overrides={}) { return {
   limitations:[], ...overrides
 } }
 function memoryState() {
-  const values=new Map();let queue=Promise.resolve()
+  const values=new Map();let queue=Promise.resolve(),alarm=null
   const storage={get:async k=>values.get(k),put:async(k,v)=>{values.set(k,v)},delete:async keys=>{for(const k of keys)values.delete(k)},
+    getAlarm:async()=>alarm,setAlarm:async time=>{alarm=time},deleteAlarm:async()=>{alarm=null},
     list:async({prefix,startAfter='',limit=Infinity})=>new Map([...values].filter(([k])=>k.startsWith(prefix)&&k>startAfter).sort(([a],[b])=>a.localeCompare(b)).slice(0,limit)),
     transaction:fn=>{const run=queue.then(()=>fn(storage));queue=run.catch(()=>{});return run}}
   return {storage,values}
@@ -49,7 +50,7 @@ describe('financial routing and public evidence',()=>{
     expect(duplicate.value.limitations).toContain(LIMITATIONS.unconfirmed)
   })
   it('does not label a newer NAV as the requested historical date',async()=>{
-    const {value}=await createFinancialRouter({fund:{research:async()=>fundResult('2026-09-07')},clock})
+    const {value}=await createFinancialRouter({fund:{research:async()=>fundResult('2026-09-07')},market:marketFixture(),clock})
       .query(request({intent:'nav',asset:'etf',symbols:['510300.SH'],as_of:'2026-09-04'}))
     expect(value.records[0]).toMatchObject({as_of:'2026-09-07',quality_state:'unconfirmed'})
     expect(value.limitations).toContain(LIMITATIONS.unconfirmed)
@@ -92,7 +93,7 @@ describe('financial routing and public evidence',()=>{
     const router=createFinancialRouter({market,fund,clock})
     const nav=await router.query(request({intent:'nav',asset:'etf',symbols:['510300.SH']}))
     expect(nav.value.records[0]).toMatchObject({instrument:'510300.SH',value:2.5,price_basis:'单位净值',as_of:'2026-09-07',quality_state:'unknown'})
-    expect(market.call).not.toHaveBeenCalled()
+    expect(market.call.mock.calls.map(([,tool])=>tool)).toEqual(['get_meta_tickers_search'])
     const price=await router.query(request({asset:'etf',symbols:['510300.SH']}))
     expect(price.value.records[0]).toMatchObject({value:120,price_basis:'交易价格'})
     expect(fund.research).toHaveBeenCalledTimes(1)
@@ -100,7 +101,7 @@ describe('financial routing and public evidence',()=>{
   })
   it('falls back once for a confirmed network failure, verifies currency, and keeps NAV date',async()=>{
     const fund={research:vi.fn(async()=>{throw Object.assign(new Error('secret'),{reason:'network_timeout'})})}
-    const market=marketFixture((_s,t,a)=>t==='get_meta_tickers_search'?{data:{item:[{thscode:a.q,currency:'CNY'}]}}:{data:{timestamp:NOW.valueOf(),item:[{nav_date:Date.parse('2026-09-07T00:00:00+08:00'),unit_nav:2.4}]}})
+    const market=marketFixture((_s,t,a)=>t==='get_meta_tickers_search'?{data:{item:[{thscode:a.q,asset_type:a.asset_type,currency:'CNY'}]}}:{data:{timestamp:NOW.valueOf(),item:[{nav_date:Date.parse('2026-09-07T00:00:00+08:00'),unit_nav:2.4}]}})
     const {value,provenance}=await createFinancialRouter({market,fund,clock}).query(request({intent:'nav',asset:'etf',symbols:['510300.SH']}))
     expect(value.records[0]).toMatchObject({value:2.4,as_of:'2026-09-07',price_basis:'单位净值'})
     expect(provenance[0].source).toBe('tonghuashun')
@@ -117,7 +118,7 @@ describe('financial routing and public evidence',()=>{
         else result={structuredContent:[{fundCode:'510300',data:{summary:{fundCode:'510300',fundName:'沪深300ETF',fundInvestType:'股票型',nav:null,navDate:'2026-09-07'}}}]}
         return Response.json({jsonrpc:'2.0',id:body.id,result})
       })
-      const market=marketFixture((_s,t,a)=>t==='get_meta_tickers_search'?{data:{item:[{thscode:a.q,currency:'CNY'}]}}:{data:{item:[{nav_date:Date.parse('2026-09-07T00:00:00+08:00'),unit_nav:2.4}]}})
+      const market=marketFixture((_s,t,a)=>t==='get_meta_tickers_search'?{data:{item:[{thscode:a.q,asset_type:a.asset_type,currency:'CNY'}]}}:{data:{item:[{nav_date:Date.parse('2026-09-07T00:00:00+08:00'),unit_nav:2.4}]}})
       const {value}=await createFinancialRouter({env:{YINGMI_API_KEY:'synthetic-key-only'},fetchImpl,market,clock}).query(request({intent:'nav',asset:'etf',symbols:['510300.SH']}))
       if(status===200)expect(value.records[0].value).toBe(2.4)
       else {expect(value.records).toEqual([]);expect(market.call).not.toHaveBeenCalled()}
@@ -130,7 +131,7 @@ describe('financial routing and public evidence',()=>{
   })
   it('prefers an exact requested NAV date and never splices fund fields',async()=>{
     const fund={research:async()=>fundResult('2026-09-04')}
-    const market=marketFixture((_s,t,a)=>t==='get_meta_tickers_search'?{data:{item:[{thscode:a.q,currency:'CNY'}]}}:{data:{item:[{nav_date:Date.parse('2026-09-07T00:00:00+08:00'),unit_nav:2.8}]}})
+    const market=marketFixture((_s,t,a)=>t==='get_meta_tickers_search'?{data:{item:[{thscode:a.q,asset_type:a.asset_type,currency:'CNY'}]}}:{data:{item:[{nav_date:Date.parse('2026-09-07T00:00:00+08:00'),unit_nav:2.8}]}})
     const {value,provenance}=await createFinancialRouter({fund,market,clock}).query(request({intent:'nav',asset:'etf',symbols:['510300.SH'],as_of:'2026-09-07'}))
     expect(value.records).toHaveLength(1);expect(value.records[0].value).toBe(2.8)
     expect(new Set(provenance.map(p=>p.source))).toEqual(new Set(['tonghuashun']))

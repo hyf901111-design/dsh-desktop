@@ -41,7 +41,7 @@
     "git:integration": "node scripts/manage-sherlock-integration.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:fund-service": "vitest run test/financial-routing.test.js test/fund-research-runtime.test.js test/fund-research-yingmi.test.js test/fund-research-operations.test.js test/fund-data-service.test.js test/fund-data-deployment.test.js test/account-service.test.ts && node scripts/test-fund-data-worker.mjs && node scripts/test-fund-research-operations-worker.mjs && node scripts/test-financial-routing-worker.mjs",
+    "test:fund-service": "vitest run test/financial-routing.test.js test/financial-routing-review.test.js test/fund-research-runtime.test.js test/fund-research-yingmi.test.js test/fund-research-operations.test.js test/fund-data-service.test.js test/fund-data-deployment.test.js test/account-service.test.ts && node scripts/test-fund-data-worker.mjs && node scripts/test-fund-research-operations-worker.mjs && node scripts/test-financial-routing-worker.mjs",
     "fund-service:check": "wrangler deploy --dry-run --config services/fund-data/wrangler.jsonc",
     "fund-service:deploy": "node scripts/deploy-fund-data-service.mjs",
     "package:dir": "npm run build && electron-builder --dir",

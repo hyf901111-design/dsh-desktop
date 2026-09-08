@@ -1,3 +1,4 @@
+import { serviceError } from '../../../packages/dsh-fund-research-runtime/contract.js'
 import { createMarketClient } from './market-mcp.js'
 import { POLICY, chinaDate, quoteQuality } from './policy.js'
 import { projectAnalysis, projectCatalog } from './projection.js'
@@ -80,13 +81,26 @@ export function createFinancialRouter({ env = {}, clock = () => new Date(), fetc
         if (!selected.length) throw issue('missing')
         return selected.map(e => {
           const subject = value.subjects.find(s => s.fund_code === e.subject_code)
-          if (!subject) throw issue('unconfirmed')
+          if (!subject || subject.currency !== 'CNY' || !q.symbols.some(code => code.slice(0,6) === e.subject_code)) throw issue('unconfirmed')
           return { instrument: q.asset === 'etf' ? q.symbols[0] : e.subject_code, name: subject.fund_name,
             metric:e.label, value:e.value, unit:e.unit ?? '原始单位', as_of:e.as_of,
             price_basis:e.field === 'unit_nav' ? '单位净值' : e.field === 'accumulated_nav' ? '累计净值' : '基金披露数据',
-            quality_state:datedQuality(e.as_of), ...(e.dimensions ? { dimensions:e.dimensions } : {}),
+            quality_state:value.quality_state === 'stale' ? 'delayed' : datedQuality(e.as_of), ...(e.dimensions ? { dimensions:e.dimensions } : {}),
             ...(e.period_start ? { period_start:e.period_start } : {}), ...(e.period_end ? { period_end:e.period_end } : {}) }
         })
+      }
+      let identityPromise
+      const verifyFundIdentity = () => {
+        if (!identityPromise) identityPromise = (async () => {
+          if (!available.tonghuashun) throw issue('unconfirmed')
+          const code = q.symbols[0]
+          const thscode = q.asset === 'fund' ? `${code}.OF` : code
+          const asset_type = q.asset === 'etf' ? 'fund-etf' : 'fund-otc'
+          const identity = await marketCall('meta','get_meta_tickers_search',{q:thscode,asset_type,limit:10},signal)
+          const matches = identity.data?.item?.filter(r => r.thscode === thscode)
+          if (matches?.length !== 1 || matches[0].currency !== 'CNY' || matches[0].asset_type !== asset_type) throw issue('unconfirmed')
+        })()
+        return identityPromise
       }
       const fallbackFund = async () => {
         const code = q.symbols[0]
@@ -94,6 +108,7 @@ export function createFinancialRouter({ env = {}, clock = () => new Date(), fetc
         if (!(q.asset === 'etf' && /^\d{6}\.(SH|SZ)$/.test(code)) && !(q.asset === 'fund' && /^\d{6}$/.test(code))) throw issue('unsupported')
         const thscode = q.asset === 'fund' ? `${code}.OF` : code
         const fund_type = q.asset === 'fund' ? 'otc' : 'exchange'
+        await verifyFundIdentity()
         const tool = q.intent === 'nav' ? 'get_fund_performance_nav' : 'get_fund_profile_detail'
         const raw = await marketCall('fund', tool, { fund_type, thscode, ...(q.intent === 'nav' ? { nav_type:q.nav_basis === 'adjusted' ? 'adj' : 'unit' } : {}) }, signal)
         const items = raw.data?.item
@@ -101,10 +116,6 @@ export function createFinancialRouter({ env = {}, clock = () => new Date(), fetc
         const row = items[0]
         if (row.thscode !== undefined && row.thscode !== thscode) throw issue('unconfirmed')
         if (q.intent === 'nav') {
-          // Currency is validated from the exact instrument catalogue before assuming CNY.
-          const identity = await marketCall('meta','get_meta_tickers_search',{ q:thscode,asset_type:q.asset === 'etf' ? 'fund-etf' : 'fund-otc',limit:10 },signal)
-          const match = identity.data?.item?.filter(r => r.thscode === thscode)
-          if (match?.length !== 1 || match[0].currency !== 'CNY') throw issue('unconfirmed')
           const date = epoch(row.nav_date) ? chinaDate(row.nav_date) : null
           const number = row[q.nav_basis === 'adjusted' ? 'adj_nav' : 'unit_nav']
           if (!date || !numeric(number) || number <= 0) throw issue('missing')
@@ -164,24 +175,29 @@ export function createFinancialRouter({ env = {}, clock = () => new Date(), fetc
         } else if (q.intent === 'nav' || q.intent === 'profile') {
           if (!['fund','etf'].includes(q.asset) || (q.intent === 'nav' && !POLICY.nav[q.nav_basis])) gap()
           else {
-            let candidate, primary
-            const canUseFund = available.yingmi && (q.intent === 'profile' || q.nav_basis === 'unit')
-            if (canUseFund) {
+            let candidate
+            const routes = q.intent === 'nav' ? POLICY.nav[q.nav_basis] : POLICY.profile
+            const needsFresh = value => q.intent === 'nav' && (value.rows.some(r => r.quality_state === 'delayed') || (q.as_of && value.rows.some(r => r.as_of !== q.as_of)))
+            const better = next => !candidate || (q.as_of ? next.rows.every(r => r.as_of === q.as_of) : next.rows[0].as_of > candidate.rows[0].as_of)
+            let attempts = 0
+            for (const source of routes) {
+              if (!available[source]) continue
+              if (++attempts > POLICY.maxSwitches + 1) break
               try {
-                primary = await fundCall({ task:'single',funds:[q.symbols[0].slice(0,6)] }, signal)
-                const rows = projectFund(primary,q.intent)
-                candidate = { rows,raw:primary,source:'yingmi' }
-                if (q.as_of && rows.some(r => r.as_of !== q.as_of)) throw issue('stale')
+                let next
+                if (source === 'yingmi') {
+                  const primary = await fundCall({task:'single',funds:[q.symbols[0].slice(0,6)]},signal)
+                  if (q.asset === 'etf') await verifyFundIdentity()
+                  next = {rows:projectFund(primary,q.intent),raw:primary,source}
+                } else next = {...await fallbackFund(),source}
+                if (better(next)) candidate = next
+                if (!needsFresh(candidate)) break
               } catch (error) {
-                if (!fallbackAllowed(error)) throw error
+                if (!fallbackAllowed(error)) {
+                  if (!candidate) throw error
+                  break
+                }
               }
-            }
-            if ((!candidate || (q.as_of && candidate.rows.some(r => r.as_of !== q.as_of))) && available.tonghuashun) {
-              try {
-                const second = await fallbackFund()
-                // A worse alternative never replaces a better dated primary. No field/time-series splicing.
-                if (!candidate || !q.as_of || second.rows.every(r => r.as_of === q.as_of)) candidate = { ...second,source:'tonghuashun' }
-              } catch (error) { if (!candidate) throw error }
             }
             if (!candidate) gap()
             else { for (const r of candidate.rows) { add(r,candidate.source,candidate.raw);qualityNote(r.quality_state) } }
@@ -230,6 +246,7 @@ export function createFinancialRouter({ env = {}, clock = () => new Date(), fetc
           }
         }
       } catch (error) {
+        if (['RESEARCH_ARGUMENTS_INVALID','RESEARCH_SCHEMA_CHANGED','RESEARCH_RESULT_TOO_LARGE','RESEARCH_SCHEMA_UNSUPPORTED','RESEARCH_CAPABILITY_UNAVAILABLE','RESEARCH_QUERY_FAILED'].includes(error.code)) throw serviceError(error.code)
         // Raw provider errors, parameters, endpoints and credentials never enter product output.
         result.records = []
         provenance.length = 0

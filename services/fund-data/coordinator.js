@@ -1,4 +1,5 @@
 import { createFinancialRouter } from './financial/router.js'
+import { retainProvenance, expireProvenance } from './financial/provenance.js'
 import { projectLegacyOperation } from './financial/projection.js'
 import { validateFinancialResult } from '../../packages/dsh-fund-research-runtime/financial-contract.js'
 import { createYingmiResearchProvider } from '../../packages/dsh-fund-research-runtime/yingmi-research-provider.js'
@@ -72,15 +73,7 @@ export class FundCoordinator {
         const { value, provenance } = await this.financialRouter.query(query)
         validateFinancialResult(value, query, this.clock)
         // Opaque evidence references retain server-only provenance; never persist quotes or user arguments.
-        if (provenance.length) await this.state.storage.put(`evidence:${provenance[0].evidence_id.slice(0,24)}`, { records:provenance, expiresAt:now + 86400000 })
-        let cursor
-        while (true) {
-          const page = await this.state.storage.list({ prefix:'evidence:', limit:64, ...(cursor ? {startAfter:cursor} : {}) })
-          const expired = [...page].filter(([, p]) => p.expiresAt <= now).map(([id]) => id)
-          if (expired.length) await this.state.storage.delete(expired)
-          if (page.size < 64) break
-          cursor = [...page.keys()].at(-1)
-        }
+        await retainProvenance(this.state.storage, provenance, this.clock().valueOf())
         return { value }
       }
       let value = isOperationQuery(query)
@@ -113,4 +106,6 @@ export class FundCoordinator {
       return { status: 503, code: 'FUND_SERVICE_UNAVAILABLE', retryAfter: 30 }
     }
   }
+
+  alarm() { return expireProvenance(this.state.storage, this.clock().valueOf()) }
 }

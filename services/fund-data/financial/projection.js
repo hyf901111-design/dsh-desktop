@@ -55,26 +55,53 @@ const fields = {
 const containers = new Set(['data','structuredContent','result','results','items','list','rows','summary','funds','performance','risk','navHistory','assetPortfolios','industryPortfolios','holdings','series','allocations','metrics'])
 const names = ['fundName','fund_name','securityName','stockName','name']
 const codeKeys = ['fundCode','fund_code','securityCode','stockCode','code']
-const dates = ['navDate','as_of','date','reportDate','reportPeriod','tradeDate','endDate']
+const dates = ['navDate','as_of','asOf','date','reportDate','reportPeriod','tradeDate','endDate']
 const metadata = new Set([...names,...codeKeys,...dates,'currency','unit','indexCode','indexName','fundInvestType'])
+const holdingContainers = new Set(['holdings','assetPortfolios','industryPortfolios','allocations'])
+const navFields = new Set(['nav','unit_nav','accumulatedNav'])
+const code = value => typeof value === 'string' && /^\d{6}(?:\.(?:SH|SZ|BJ))?$/.test(value) ? value : undefined
+const number = value => typeof value === 'number' ? Number.isFinite(value) :
+  typeof value === 'string' && value.length <= 60 && /^[+-]?\d+(?:\.\d+)?(?:%|万|亿)?$/.test(value)
 export function projectAnalysis(data, add, { defaultInstrument = '组合' } = {}) {
-  let omitted = false, emitted = 0
+  let omitted = false, emitted = 0, visited = 0
+  const emit = row => { if (emitted >= 150) { omitted = true; return }; add(row); emitted++ }
   function visit(value, inherited = {}, depth = 0) {
-    if (depth > 12 || emitted >= 150) { omitted = true; return }
+    if (++visited > 8000 || depth > 12 || emitted >= 150) { omitted = true; return }
     if (Array.isArray(value)) { for (const row of value.slice(0,150)) visit(row, inherited, depth + 1); if (value.length > 150) omitted = true; return }
     if (!value || typeof value !== 'object') { if (value !== null) omitted = true; return }
-    const rawCode = codeKeys.map(k => value[k]).find(v => typeof v === 'string' && /^\d{6}(?:\.(?:SH|SZ|BJ))?$/.test(v))
-    const instrument = rawCode ?? inherited.instrument ?? defaultInstrument
-    const name = names.map(k => businessText(value[k])).find(Boolean) ?? inherited.name
-    const rawDate = dates.map(k => value[k]).find(v => validDate(v))
-    const as_of = rawDate ?? inherited.as_of ?? null
-    if (rawCode && name) { add({ instrument, name, metric: '证券名称', value: name, unit: 'text', as_of, price_basis: '名称与代码', quality_state: 'unknown' }); emitted++ }
+    const ownFund = code(value.fundCode) ?? code(value.fund_code)
+    const security = code(value.securityCode) ?? code(value.stockCode)
+    const rawCode = ownFund ?? code(value.code) ?? security
+    // A holding belongs to its parent fund; its security identity is a dimension, not the owner's name.
+    const holding = inherited.domain === 'holdings'
+    const instrument = holding && inherited.instrument ? inherited.instrument : rawCode ?? inherited.instrument ?? defaultInstrument
+    const changed = rawCode && !holding && rawCode !== inherited.instrument
+    const ownName = businessText(value.fundName) ?? businessText(value.fund_name) ?? businessText(value.name) ?? businessText(value.securityName) ?? businessText(value.stockName)
+    const name = holding ? inherited.name : ownName ?? (changed ? undefined : inherited.name)
+    const parent = changed ? {} : inherited
+    const readDate = keys => keys.map(k => value[k]).find(validDate)
+    const navDate = readDate(['navDate']) ?? parent.navDate
+    const reportDate = readDate(['reportDate','reportPeriod']) ?? parent.reportDate
+    const observation = readDate(['as_of','asOf','date','tradeDate','endDate']) ?? (holding ? undefined : parent.observation)
+    const dimensions = holding ? {...(inherited.dimensions ?? {})} : {}
+    if (holding) {
+      if (rawCode) {
+        dimensions.security_code = rawCode
+        const securityName = businessText(value.securityName) ?? businessText(value.stockName) ?? businessText(value.fundName) ?? businessText(value.name)
+        if (securityName) dimensions.security_name = securityName
+      } else if (inherited.container === 'industryPortfolios' && businessText(value.name)) dimensions.industry = value.name
+      else if (inherited.container === 'assetPortfolios' && businessText(value.name)) dimensions.asset_class = value.name
+    }
+    if (rawCode && name && !holding) emit({ instrument, name, metric:'证券名称', value:name, unit:'text', as_of:null, price_basis:'名称与代码', quality_state:'unknown' })
     for (const [key, child] of Object.entries(value)) {
-      if (fields[key]) {
-        if (!(typeof child === 'number' && Number.isFinite(child)) && !businessText(child, 60)) { omitted = true; continue }
+      if (Object.hasOwn(fields,key)) {
+        if (!number(child)) { omitted = true; continue }
         const [metric, unit] = fields[key]
-        add({ instrument, ...(name ? { name } : {}), metric, value: child, unit, as_of, price_basis: '待核验原始口径', quality_state: 'unconfirmed' }); emitted++
-      } else if (containers.has(key)) visit(child, { instrument, name, as_of }, depth + 1)
+        const as_of = holding ? reportDate ?? observation ?? null : navFields.has(key) ? navDate ?? observation ?? null : observation ?? reportDate ?? null
+        emit({ instrument, ...(name ? {name} : {}), metric, value:child, unit, as_of, price_basis:'待核验原始口径', quality_state:'unconfirmed',
+          ...(Object.keys(dimensions).length ? {dimensions} : {}) })
+      } else if (containers.has(key)) visit(child, { instrument, name, navDate, reportDate, observation,
+        domain:holdingContainers.has(key) || holding ? 'holdings' : 'entity', container:key, ...(holding ? {dimensions} : {}) }, depth + 1)
       else if (!metadata.has(key)) omitted = true
     }
   }

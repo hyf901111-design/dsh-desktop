@@ -49,4 +49,14 @@ describe('desktop model provider policy', () => {
       })
     expect(JSON.stringify(inserted)).not.toContain('dsh-mcp-client')
   })
+
+  it('disables the previous local financial adapter after applying the home profile', () => {
+    const base = loadOverlayPatches('dsh-desktop-test', 'node_modules/@deepseek-ai/dsh-base/cordis.patch.yml')
+    const desktop = loadOverlayPatches('dsh-desktop-test', 'build/dsh-desktop.patch.yml')
+    // Boot order is bundles, profile, home preferences, then the desktop CLI overlay.
+    const home = [{ insert: [{ id: 'sherlock-tonghuashun-mcp', name: 'dsh-mcp-client', disabled: false }] }]
+    const effective = composeEntries([base, home, desktop])
+    expect(effective.find(entry => entry.id === 'sherlock-tonghuashun-mcp')).toMatchObject({ disabled: true })
+    expect(effective.find(entry => entry.id === 'sherlock-fund-research-runtime')).toMatchObject({ name: 'dsh-fund-research-runtime' })
+  })
 })

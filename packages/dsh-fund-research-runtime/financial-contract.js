@@ -1,4 +1,4 @@
-import { researchCapability } from './research-capabilities.js'
+import { RESEARCH_CAPABILITIES, researchCapability } from './research-capabilities.js'
 import { createHash } from 'node:crypto'
 import { serviceError } from './contract.js'
 
@@ -93,15 +93,29 @@ export function validateFinancialResult(value, query, clock = () => new Date()) 
       !['complete', 'partial', 'unavailable', 'unsupported', 'ambiguous'].includes(value.status) ||
       Object.keys(value).some(k => !['schema_version','request_hash','received_at','status','records','catalog','limitations'].includes(k)) ||
       Buffer.byteLength(JSON.stringify(value)) > 64 * 1024) fail()
-  const age = clock().valueOf() - Date.parse(value.received_at)
+  const now = clock().valueOf()
+  if (typeof value.received_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(value.received_at)) fail()
+  const age = now - Date.parse(value.received_at)
   if (!Number.isFinite(age) || age < -60000 || age > 15 * 60000) fail()
   if (!Array.isArray(value.records) || value.records.length > 500 || !Array.isArray(value.limitations) ||
       value.limitations.some(s => !Object.values(LIMITATIONS).includes(s))) fail()
+  if (value.status === 'complete' && (value.limitations.length || (!value.records.length && expected.intent !== 'catalog'))) fail()
+  if (['unavailable','unsupported'].includes(value.status) && value.records.length) fail()
+  if (value.status === 'partial' && !value.limitations.length) fail()
+  if (value.status === 'ambiguous' && (expected.intent !== 'resolve' || new Set(value.records.map(r => r.instrument)).size < 2)) fail()
+  const ids = new Set()
   for (const r of value.records) {
     if (!r || Object.keys(r).some(k => !['evidence_id','instrument','name','metric','value','unit','as_of','period_start','period_end','price_basis','quality_state','dimensions'].includes(k)) ||
         !/^[a-f0-9]{32}$/.test(r.evidence_id) || !businessText(r.instrument) || !businessText(r.metric) || !businessText(r.unit) || !businessText(r.price_basis) ||
         !QUALITY.includes(r.quality_state) || !(r.as_of === null || validDate(r.as_of) || (typeof r.as_of === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(r.as_of) && Number.isFinite(Date.parse(r.as_of)))) ||
         !(typeof r.value === 'number' ? Number.isFinite(r.value) : Boolean(businessText(r.value, 300)))) fail()
+    if (ids.has(r.evidence_id)) fail()
+    ids.add(r.evidence_id)
+    if (r.as_of !== null) {
+      const isDate = validDate(r.as_of)
+      if (isDate ? r.as_of > new Date(now + 8 * 3600000 + 60000).toISOString().slice(0,10) : new Date(r.as_of).toISOString() !== r.as_of || Date.parse(r.as_of) > now + 60000) fail()
+    }
+    if (r.quality_state === 'fresh' && (expected.intent !== 'quote' || r.as_of === null || validDate(r.as_of) || now - Date.parse(r.as_of) > 60000)) fail()
     if (expected.symbols && !expected.symbols.includes(r.instrument)) fail()
     if (r.name !== undefined && !businessText(r.name)) fail()
     for (const k of ['period_start', 'period_end']) if (r[k] !== undefined && !validDate(r[k])) fail()
@@ -109,12 +123,22 @@ export function validateFinancialResult(value, query, clock = () => new Date()) 
         Object.entries(r.dimensions).some(([k,v]) => !['security_code','security_name','asset_class','industry','region','benchmark_code','comparison_group','direction','rank'].includes(k) || !(typeof v === 'number' ? Number.isFinite(v) : businessText(v))))) fail()
   }
   if (value.catalog !== undefined) {
-    if (!Array.isArray(value.catalog) || value.catalog.length > 60) fail()
+    if (expected.intent !== 'catalog' || !Array.isArray(value.catalog) || value.catalog.length !== (expected.capability ? 1 : RESEARCH_CAPABILITIES.length)) fail()
+    const entries = new Set()
     for (const e of value.catalog) {
-      if (!e || Object.keys(e).some(k => !['id','title','category','state','arguments_schema_json','schema_hash'].includes(k)) ||
-          !businessText(e.id) || !businessText(e.title) || !businessText(e.category) || !['available','unavailable','incompatible'].includes(e.state)) fail()
-      if (e.arguments_schema_json !== undefined && (typeof e.arguments_schema_json !== 'string' || technical.test(e.arguments_schema_json) || !/^[a-f0-9]{64}$/.test(e.schema_hash))) fail()
+      const spec = researchCapability(e?.id)
+      if (!spec || entries.has(e.id) || e.title !== spec.title || e.category !== spec.category ||
+          (expected.capability && e.id !== expected.capability) ||
+          Object.keys(e).some(k => !['id','title','category','state','arguments_schema_json','schema_hash'].includes(k)) ||
+          !['available','unavailable','incompatible'].includes(e.state)) fail()
+      entries.add(e.id)
+      if (e.state === 'available' && expected.capability) {
+        if (typeof e.arguments_schema_json !== 'string' || Buffer.byteLength(e.arguments_schema_json) > 32 * 1024 || technical.test(e.arguments_schema_json) || !/^[a-f0-9]{64}$/.test(e.schema_hash)) fail()
+        let schema
+        try { schema = JSON.parse(e.arguments_schema_json) } catch { fail() }
+        if (!schema || schema.type !== 'object') fail()
+      } else if (e.arguments_schema_json !== undefined || e.schema_hash !== undefined) fail()
     }
-  }
+  } else if (expected.intent === 'catalog' && ['complete','partial'].includes(value.status)) fail()
   return Object.freeze(value)
 }

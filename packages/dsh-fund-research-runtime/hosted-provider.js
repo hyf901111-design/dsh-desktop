@@ -51,7 +51,7 @@ export function createHostedFundProvider({
         if (response.status === 401) throw serviceError('LOGIN_REQUIRED')
         if (response.status === 429) throw serviceError('FUND_SERVICE_BUSY')
         if (response.status === 503) throw serviceError('FUND_SERVICE_UNAVAILABLE')
-        if (isOperationQuery(query)) {
+        if (isOperationQuery(query) || query.operation === 'financial') {
           const codes = { 400: 'RESEARCH_ARGUMENTS_INVALID', 409: 'RESEARCH_SCHEMA_CHANGED',
             413: 'RESEARCH_RESULT_TOO_LARGE', 422: 'RESEARCH_SCHEMA_UNSUPPORTED', 424: 'RESEARCH_CAPABILITY_UNAVAILABLE', 502: 'RESEARCH_QUERY_FAILED' }
           if (codes[response.status]) throw serviceError(codes[response.status])
