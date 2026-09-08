@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "组件恢复与 EWork Odyssey 品牌更新",
         "branch": "codex/feat/component-resilience-20260908",
-        "baseCommit": "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f",
-        "tipCommit": "60e11ee194e28e5e5825e0f2c9d43f7a91954a02",
+        "baseCommit": "60e11ee194e28e5e5825e0f2c9d43f7a91954a02",
+        "tipCommit": "ecbb0e246d4e26778022b667fba8b21f4e83cb23",
         "commits": [
           {
-            "commit": "60e11ee194e28e5e5825e0f2c9d43f7a91954a02",
+            "commit": "ecbb0e246d4e26778022b667fba8b21f4e83cb23",
             "parents": [
-              "7f377c4e40ad6b7bf17633bc6c953e8f80e8b09f"
+              "60e11ee194e28e5e5825e0f2c9d43f7a91954a02"
             ],
-            "subject": "优化：英文用户名头像首字母统一大写"
+            "subject": "优化：账户菜单增加图标并缩小登录标识"
           }
         ],
         "files": [
@@ -36,64 +36,28 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；头像五种渲染组合通过，英文 H、中文张均正确",
-            "verifiedCommit": "60e11ee194e28e5e5825e0f2c9d43f7a91954a02",
-            "completedAt": "2026-09-08T04:02:08.964975+00:00",
+            "summary": "类型检查通过；实际渲染验证所有账户菜单项包含图标、访客登录弹窗 Logo 宽度为 88px，头像大写与主题正常",
+            "verifiedCommit": "ecbb0e246d4e26778022b667fba8b21f4e83cb23",
+            "completedAt": "2026-09-08T04:06:08.667326+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际渲染函数已验证英文首字大写、中文首字及登录和主题状态"
+          "summary": "类型检查通过；实际渲染验证所有账户菜单项包含图标、访客登录弹窗 Logo 宽度为 88px，头像大写与主题正常"
         },
         "acceptanceCriteria": [
           "未登录使用用户提供的 Group 71.svg",
           "登录后显示用户名首字",
           "浅色黑底白字，深色橙底深色字",
-          "英文用户名首字母大写"
+          "英文用户名首字母大写",
+          "账户菜单现有选项显示线条图标",
+          "登录弹窗 Logo 缩至 88px"
         ],
         "risks": [
           "稳定应用 ID 和用户数据目录沿用以保留现有配置"
         ],
-        "generatedAt": "2026-09-08T04:02:08.964975+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9b434e2b7578948ef6ee0e72a121767820ca81ba",
-        "verificationCommit": "9b434e2b7578948ef6ee0e72a121767820ca81ba",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-artifact-resilience.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-artifact-resilience.test.js test/research-task-runtime.test.js test/research-workbench.test.js test/research-html-theme.test.js",
-            "verifiedCommit": "9b434e2b7578948ef6ee0e72a121767820ca81ba",
-            "completedAt": "2026-09-08T04:03:49.060Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "dense table|runtime errors|native container|generated HTML frame|stale HTML"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sherlock-composer-workspace-ui.test.ts -t dense table|runtime errors|native container|generated HTML frame|stale HTML",
-            "verifiedCommit": "9b434e2b7578948ef6ee0e72a121767820ca81ba",
-            "completedAt": "2026-09-08T04:03:49.060Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T04:03:49.060Z"
+        "generatedAt": "2026-09-08T04:06:08.667326+00:00"
       }
     }
   ],
