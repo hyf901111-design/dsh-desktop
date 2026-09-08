@@ -9,76 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "登录头像图片背景与白色首字",
+        "featureName": "Dock 原生书签保真迁移",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
-        "tipCommit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
+        "baseCommit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
+        "tipCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
         "commits": [
           {
-            "commit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
+            "commit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
             "parents": [
-              "18ceef8556f84289611fe959e8b8278285ee5f73"
+              "0a6d372224e3352cf03ca876d9ff788898569aaa"
             ],
-            "subject": "优化：登录头像使用蓝色图片背景与白色用户名首字"
+            "subject": "修复：迁移 Dock 时保留其他入口的原生书签"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "build/sherlock-account-background.png"
+            "status": "M",
+            "path": "scripts/macos/update-recovery.cjs"
           },
           {
             "status": "M",
-            "path": "src/preload/account-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/assets.d.ts"
+            "path": "test/mac-update-recovery.test.ts"
           }
         ],
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "0a6d372224e3352cf03ca876d9ff788898569aaa",
-            "completedAt": "2026-09-08T07:26:59.562Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实账户UI在Chromium深浅主题均显示提供的PNG背景与白色大写H，已截图核对。"
-        },
-        "acceptanceCriteria": [
-          "登录头像背景使用用户提供的Group 78.png",
-          "深浅主题均为白色用户名首字，英文大写"
-        ],
-        "risks": [],
-        "generatedAt": "2026-09-08T07:26:59.562Z"
-      },
-      "merged": {
-        "mergeCommit": "4aad491aabef84f380ca6cfd00333cb0a34e6c3c",
-        "verificationCommit": "4aad491aabef84f380ca6cfd00333cb0a34e6c3c",
         "checks": [
           {
             "argv": [
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
+              "test/mac-update-recovery.test.ts",
+              "test/update-install-lifecycle.test.ts",
+              "test/update-manager.test.ts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "4aad491aabef84f380ca6cfd00333cb0a34e6c3c",
-            "completedAt": "2026-09-08T07:27:32.089Z",
+            "summary": "29项升级检查（含真实CFPreferences二进制书签迁移）与类型检查通过",
+            "verifiedCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
+            "completedAt": "2026-09-08T07:33:14.433Z",
             "timeoutMs": 120000
           },
           {
@@ -88,13 +55,26 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4aad491aabef84f380ca6cfd00333cb0a34e6c3c",
-            "completedAt": "2026-09-08T07:27:32.089Z",
+            "summary": "29项升级检查（含真实CFPreferences二进制书签迁移）与类型检查通过",
+            "verifiedCommit": "01539b67f2baf4ef79aa3bd63a8d968afa10ffe5",
+            "completedAt": "2026-09-08T07:33:14.433Z",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-09-08T07:27:32.089Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "系统偏好迁移使用隔离测试域验证，未更改用户 Dock。"
+        },
+        "acceptanceCriteria": [
+          "标题区域统一且可拖动，源摘要组件也有标题",
+          "固定边框色、扩大圆头角落手柄，操作避让滚动条",
+          "跨名升级使用校验后的最终路径恢复启动，迁移精确旧 Dock 地址"
+        ],
+        "risks": [
+          "旧发布进程不能回溯获得保护代码；已经跨名失败者首次仍需打开新应用",
+          "不发布、不更改版本和更新源，待用户本地验收"
+        ],
+        "generatedAt": "2026-09-08T07:33:14.433Z"
       }
     }
   ],
