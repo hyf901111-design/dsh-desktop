@@ -1,16 +1,17 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js b/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js
-index 37b931e..a5cd2f6 100644
+index 37b931e..63c816c 100644
 --- a/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js
-@@ -7051,6 +7051,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -7051,6 +7051,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  					id: item.id,
++					...item.anchorSeq === void 0 ? {} : { anchorSeq: item.anchorSeq },
  					messageId: item.message.id,
  					placement: item.placement,
 +					source: item.message.source,
  					content: item.message.content,
  					preview: previewOf(item.message.content),
  					text: textOf(item.message.content)
-@@ -8846,6 +8847,30 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -8846,6 +8848,30 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  			if (fullWidth?.[1] !== void 0 && fullWidth[2] !== void 0) return `${fullWidth[1]}（${BigInt(fullWidth[2]) + 1n}）`;
  			return `${title} (1)`;
  		}
@@ -41,7 +42,7 @@ index 37b931e..a5cd2f6 100644
  		/** Root sessions service: list store, current selection, object-layer manager, scope tree, bindings, and breadcrumb routes. */
  		var SessionRuntime = class {
  			rootCtx;
-@@ -8945,6 +8970,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -8945,6 +8971,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  						disposeViews();
  					};
  				}, "sessions: conversation registry rebuild");
@@ -76,7 +77,7 @@ index 37b931e..a5cd2f6 100644
  				rootCtx.reflect.provide("sessions", this, void 0);
  			}
  			/**
-@@ -9863,7 +9916,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -9863,7 +9917,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  				const sessions = this.sessions.list.getSnapshot();
  				for (const id of sessions.ids) {
  					const summary = sessions.byId[id];
@@ -85,7 +86,7 @@ index 37b931e..a5cd2f6 100644
  				}
  				const attempt = this.sessions.create({ workspaceId }).finally(() => {
  					this.connecting.delete(workspaceId);
-@@ -9922,7 +9975,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -9922,7 +9976,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  			* stays usable).
  			* @param workspaceId - explicit target Workspace for scoped actions.
  			*/
@@ -94,7 +95,7 @@ index 37b931e..a5cd2f6 100644
  				const workspace = this.list.getSnapshot();
  				const current = this.sessions.list.getSnapshot().current;
  				const currentWorkspaceId = current === void 0 ? void 0 : workspace.items.find((item) => item.sessionIds.includes(current))?.workspaceId;
-@@ -9932,6 +9985,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -9932,6 +9986,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  					return;
  				}
  				this.connectWorkspace(target).then((sessionId) => {
@@ -102,7 +103,7 @@ index 37b931e..a5cd2f6 100644
  					this.sessions.open(sessionId);
  				}, (reason) => {
  					console.warn("new session failed:", reason);
-@@ -10448,6 +10502,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -10448,6 +10503,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  		function displayFailureMessage(failure) {
  			if (failure === null || typeof failure !== "object") return String(failure);
  			const record = failure;
@@ -111,7 +112,7 @@ index 37b931e..a5cd2f6 100644
  			if (record.code === "AUTH") return "API key is invalid";
  			return typeof record.message === "string" ? record.message : JSON.stringify(failure);
  		}
-@@ -10508,6 +10564,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
+@@ -10508,6 +10565,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
  		exports.PendingWait = PendingWait;
  		exports.SessionCreateError = SessionCreateError;
  		exports.SessionProvideChannel = SessionProvideChannel;
@@ -119,6 +120,19 @@ index 37b931e..a5cd2f6 100644
  		exports.SessionRuntime = SessionRuntime;
  		exports.SlotRegistry = SlotRegistry;
  		exports.WorkspaceCreateError = WorkspaceCreateError;
+diff --git a/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/conversation.d.ts b/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/conversation.d.ts
+index 43ac58b..2f18c2f 100644
+--- a/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/conversation.d.ts
++++ b/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/conversation.d.ts
+@@ -277,6 +277,8 @@ export type ToolCallBlock = RunningToolCall | ToolResultNode;
+ /** One transient inbox occurrence from the authoritative `session/queue` snapshot. */
+ export interface QueuedMessage {
+     readonly id: MessageId;
++    /** Durable event sequence where this transient row entered the inbox, when known. */
++    readonly anchorSeq?: number;
+     /** Stable message identity used for transient-to-durable steering handoff. */
+     readonly messageId: MessageId;
+     /** Agent-resolved placement; only queued rows accept queue mutations. */
 diff --git a/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/workspaces.d.ts b/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/workspaces.d.ts
 index fe9180d..7eb15f8 100644
 --- a/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/workspaces.d.ts
