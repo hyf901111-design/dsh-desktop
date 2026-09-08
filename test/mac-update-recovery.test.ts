@@ -106,3 +106,31 @@ it('keeps the legacy signed update channel bound to its own bundle identity', ()
   expect(resolveRenamePlan({ ...state, bundleIdentifier: 'io.dsh.desktop' }, oldApp, '0.9.2', () => legacy)).toMatchObject({ bundleId: 'io.dsh.desktop', targetApp })
   expect(() => resolveRenamePlan({ ...state, bundleIdentifier: 'io.dsh.desktop' }, oldApp, '0.9.2', () => info)).toThrow('identity/version')
 })
+
+it.skipIf(process.platform !== 'darwin')('preserves native binary bookmarks of unrelated Dock entries through CFPreferences', async () => {
+  const { execFileSync } = await import('node:child_process')
+  const { randomUUID } = await import('node:crypto')
+  const { dockMigrationScript } = createRequire(import.meta.url)('../scripts/macos/update-recovery.cjs')
+  const domain = `com.evanarts.sherlock.dock-test-${randomUUID()}`
+  const script = dockMigrationScript('com.evanarts.sherlock', domain).replace('function run(argv)', 'function migrate(argv)') + `
+function run() {
+  const domain = ${JSON.stringify(domain)};
+  const defaults = $.NSUserDefaults.alloc.initWithSuiteName(domain);
+  try {
+    const book = $.NSData.alloc.initWithBase64EncodedStringOptions('YWJjZGVm', 0);
+    const tiles = [
+      {GUID:10,'tile-data':{'file-label':'Sherlock','file-data':{_CFURLString:'file:///Applications/Sherlock.app/'},book}},
+      {GUID:20,'tile-data':{'file-label':'Untouched','file-data':{_CFURLString:'file:///Applications/Other.app/'},book}}
+    ];
+    defaults.setObjectForKey($(tiles), 'persistent-apps'); defaults.synchronize;
+    const outcome = migrate(['/Applications/Sherlock.app','file:///Applications/EWork%20Odyssey.app/','EWork Odyssey']);
+    const saved = defaults.objectForKey('persistent-apps');
+    const other = saved.objectAtIndex(1).objectForKey('tile-data').objectForKey('book');
+    const first = ObjC.deepUnwrap(saved.objectAtIndex(0));
+    const repeated = migrate(['/Applications/Sherlock.app','file:///Applications/EWork%20Odyssey.app/','EWork Odyssey']);
+    return JSON.stringify({outcome,repeated,bookmark:ObjC.unwrap(other.base64EncodedStringWithOptions(0)),guid:first.GUID,label:first['tile-data']['file-label'],removed:!first['tile-data'].book});
+  } finally { defaults.removePersistentDomainForName(domain); defaults.synchronize; }
+}`
+  const result = JSON.parse(execFileSync('/usr/bin/osascript', ['-l', 'JavaScript', '-e', script], { encoding: 'utf8', timeout: 10000 }))
+  expect(result).toEqual({ outcome: 'changed', repeated: 'unchanged', bookmark: 'YWJjZGVm', guid: 10, label: 'EWork Odyssey', removed: true })
+})
