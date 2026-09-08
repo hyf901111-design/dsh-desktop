@@ -11,92 +11,29 @@
         "schemaVersion": 1,
         "featureName": "统一组件标题缩放与改名升级恢复",
         "branch": "codex/feat/canvas-polish-20260908",
-        "baseCommit": "1492e3c4d4fa5214832afd27eefd9d5aa0739193",
-        "tipCommit": "e5497fb978438139dfca32bfd1517e41d89135ca",
+        "baseCommit": "e5497fb978438139dfca32bfd1517e41d89135ca",
+        "tipCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
         "commits": [
           {
-            "commit": "bfe5278c82685a9eb2f69c9255e2b046eed4996c",
+            "commit": "18ceef8556f84289611fe959e8b8278285ee5f73",
             "parents": [
-              "1492e3c4d4fa5214832afd27eefd9d5aa0739193"
+              "e5497fb978438139dfca32bfd1517e41d89135ca"
             ],
-            "subject": "优化：统一组件拖动标题区与圆头缩放手柄"
-          },
-          {
-            "commit": "e5497fb978438139dfca32bfd1517e41d89135ca",
-            "parents": [
-              "bfe5278c82685a9eb2f69c9255e2b046eed4996c"
-            ],
-            "subject": "修复：应用改名更新后的重启保护与旧 Dock 入口迁移"
+            "subject": "修复：兼容两类签名通道的改名恢复标识"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/macos-product-rename-upgrade.md"
-          },
-          {
             "status": "M",
-            "path": "docs/research-component-style.md"
-          },
-          {
-            "status": "M",
-            "path": "package.json"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "A",
             "path": "scripts/macos/update-recovery.cjs"
           },
           {
             "status": "M",
-            "path": "scripts/verify-packaged-macos.mjs"
-          },
-          {
-            "status": "A",
             "path": "src/main/update/mac-update-recovery.ts"
           },
           {
             "status": "M",
-            "path": "src/main/update/native-install.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/update-manager.ts"
-          },
-          {
-            "status": "A",
             "path": "test/mac-update-recovery.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-container-chrome.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-install-lifecycle.test.ts"
           }
         ],
         "checks": [
@@ -105,32 +42,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-html-theme.test.js",
-              "test/research-task-runtime.test.js",
               "test/mac-update-recovery.test.ts",
               "test/update-install-lifecycle.test.ts",
               "test/update-manager.test.ts"
             ],
             "outcome": "passed",
-            "summary": "168 项聚焦检查与类型检查通过；内置 Node 保护进程就绪及取消通过。",
-            "verifiedCommit": "e5497fb978438139dfca32bfd1517e41d89135ca",
-            "completedAt": "2026-09-08T07:19:40.659Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "auto-fit|auto fit|manual sizing|trusted.*pointer|content.*select|resiz|theme|chart"
-            ],
-            "outcome": "passed",
-            "summary": "168 项聚焦检查与类型检查通过；内置 Node 保护进程就绪及取消通过。",
-            "verifiedCommit": "e5497fb978438139dfca32bfd1517e41d89135ca",
-            "completedAt": "2026-09-08T07:19:40.659Z",
+            "summary": "28项升级检查与类型检查通过",
+            "verifiedCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
+            "completedAt": "2026-09-08T07:22:52.631Z",
             "timeoutMs": 120000
           },
           {
@@ -140,9 +59,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "168 项聚焦检查与类型检查通过；内置 Node 保护进程就绪及取消通过。",
-            "verifiedCommit": "e5497fb978438139dfca32bfd1517e41d89135ca",
-            "completedAt": "2026-09-08T07:19:40.659Z",
+            "summary": "28项升级检查与类型检查通过",
+            "verifiedCommit": "18ceef8556f84289611fe959e8b8278285ee5f73",
+            "completedAt": "2026-09-08T07:22:52.631Z",
             "timeoutMs": 120000
           }
         ],
@@ -159,42 +78,7 @@
           "旧发布进程不能回溯获得保护代码；已经跨名失败者首次仍需打开新应用",
           "不发布、不更改版本和更新源，待用户本地验收"
         ],
-        "generatedAt": "2026-09-08T07:19:40.659Z"
-      },
-      "merged": {
-        "mergeCommit": "e5ee139e9d37e77de23446e2838c48542e46fbea",
-        "verificationCommit": "e5ee139e9d37e77de23446e2838c48542e46fbea",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-container-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-html-theme.test.js",
-              "test/desktop-shell-controls.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-container-chrome.test.ts test/research-workbench.test.js test/research-html-theme.test.js test/desktop-shell-controls.test.ts",
-            "verifiedCommit": "e5ee139e9d37e77de23446e2838c48542e46fbea",
-            "completedAt": "2026-09-08T07:21:09.742Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e5ee139e9d37e77de23446e2838c48542e46fbea",
-            "completedAt": "2026-09-08T07:21:09.742Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T07:21:09.742Z"
+        "generatedAt": "2026-09-08T07:22:52.631Z"
       }
     }
   ],
