@@ -12,7 +12,7 @@
         "featureName": "Build mode, generation repair and fixed component sizes",
         "branch": "codex/feat/build-mode-20260907",
         "baseCommit": "052b2ede532560a0b26827b0262d1cf442ed0f56",
-        "tipCommit": "6f59ab3ccbe028bcce4bdfd6cf01a5c2cac50ce4",
+        "tipCommit": "e65f303ea463fd3fa02d60fd518f7287404ba7e9",
         "commits": [
           {
             "commit": "e206c7f1015d6a242c964dc96fc3dcb0390de1cd",
@@ -62,6 +62,13 @@
               "d9db1b2729076f6ca4f2ce8ac3dc7d1eb90d23f4"
             ],
             "subject": "修复：允许集成批次重新交接已验收功能的后续修复"
+          },
+          {
+            "commit": "e65f303ea463fd3fa02d60fd518f7287404ba7e9",
+            "parents": [
+              "6f59ab3ccbe028bcce4bdfd6cf01a5c2cac50ce4"
+            ],
+            "subject": "修复：补齐集成交接类型声明与组件验收测试类型"
           }
         ],
         "files": [
@@ -103,6 +110,10 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/sherlock-integration-executor.d.mts"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/sherlock-integration-executor.mjs"
           },
           {
@@ -139,8 +150,8 @@
             ],
             "outcome": "passed",
             "summary": "Clean feature tree; implementation tested in 112 runtime cases and focused UI cases; signed packaged parity and final four-panel first-attempt success recorded in verification document. Integration refresh lifecycle regression passed; original 31 executor cases passed.",
-            "verifiedCommit": "6f59ab3ccbe028bcce4bdfd6cf01a5c2cac50ce4",
-            "completedAt": "2026-09-08T00:13:36.892187+00:00",
+            "verifiedCommit": "e65f303ea463fd3fa02d60fd518f7287404ba7e9",
+            "completedAt": "2026-09-08T00:15:55.091621+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -159,7 +170,7 @@
           "Original on-chain request cannot obtain authenticated or dynamic source values; no fabricated data emitted.",
           "Initial automatic viewport scale remains conservative; Arrange Canvas refits visible area."
         ],
-        "generatedAt": "2026-09-08T00:13:57.313950+00:00"
+        "generatedAt": "2026-09-08T00:15:55.091621+00:00"
       }
     }
   ],
