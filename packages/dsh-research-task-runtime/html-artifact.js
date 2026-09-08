@@ -171,7 +171,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
         if (visible(element)) include(element.getBoundingClientRect(), element, true)
       }
       const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
-      const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 16 : viewportHeight))
+      const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 32 : viewportHeight))
       const key = width + ':' + height
       if (key === previous) return
       previous = key

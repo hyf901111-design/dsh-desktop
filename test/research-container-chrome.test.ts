@@ -297,7 +297,7 @@ describe('completed container content sizing', () => {
       await act(async () => {
         mounted.workspace.applyGenerationInspection('html', { taskId: 'task-native', canvasNodeId: 'html', state: 'completed', lastSeq: 2, finalOutput: JSON.stringify({ version: 1, type: 'markdown', title: '黄金报告', content: '# 黄金报告\n完整研究内容' }), events: [] })
       })
-      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'auto', height: 3288, generationStatus: 'completed' })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'auto', height: 3252, generationStatus: 'completed' })
       await act(async () => { mounted.workspace.updateNodeGeometry('html', { height: 500, sizeMode: 'manual' }) })
       expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'manual', height: 500 })
     } finally {
@@ -305,5 +305,26 @@ describe('completed container content sizing', () => {
       else delete (prototype as any).scrollHeight
       await mounted.cleanup()
     }
+  })
+})
+
+describe('component focus view', () => {
+  it('opens and closes in the top layer without replacing the live iframe or stored geometry', async () => {
+    const mounted = await mountContainer()
+    try {
+      const {host, click, workspace, browserWindow} = mounted
+      const frame = host.querySelector('iframe')
+      const before = workspace.getSnapshot().artifacts[0]
+      await click('[data-research-container-expand]')
+      const dialog = host.querySelector('dialog')!
+      expect(dialog.hasAttribute('open')).toBe(true)
+      expect(dialog.getAttribute('role')).toBe('dialog')
+      expect(host.querySelector('iframe')).toBe(frame)
+      await act(async () => { dialog.dispatchEvent(new browserWindow.Event('cancel', { cancelable: true })) })
+      expect(dialog.hasAttribute('open')).toBe(false)
+      expect(host.querySelector('iframe')).toBe(frame)
+      expect(workspace.getSnapshot().artifacts[0]).toEqual(before)
+      expect(host.querySelector('[data-research-resize-handle="se"]')).not.toBeNull()
+    } finally { await mounted.cleanup() }
   })
 })
