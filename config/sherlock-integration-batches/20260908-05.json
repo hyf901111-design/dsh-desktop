@@ -11,33 +11,21 @@
         "schemaVersion": 1,
         "featureName": "画布金融工具与容器交互优化",
         "branch": "codex/feat/canvas-finance-ui-20260908",
-        "baseCommit": "f4af1e156c1f47a28e31613a82c829890975e383",
-        "tipCommit": "921919d06a4bc3f1aa7280293fcc2c208ade837d",
+        "baseCommit": "921919d06a4bc3f1aa7280293fcc2c208ade837d",
+        "tipCommit": "a3c08758f8317e8616225d8d11fc628960eb7942",
         "commits": [
           {
-            "commit": "921919d06a4bc3f1aa7280293fcc2c208ade837d",
+            "commit": "a3c08758f8317e8616225d8d11fc628960eb7942",
             "parents": [
-              "f4af1e156c1f47a28e31613a82c829890975e383"
+              "921919d06a4bc3f1aa7280293fcc2c208ade837d"
             ],
-            "subject": "修复：接通画布金融查数并优化模式菜单和容器创建样式"
+            "subject": "修复：模式菜单选中样式适配浮层挂载位置"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
             "path": "patches/@deepseek-ai+dsh-client-ui-agent-preset+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -46,32 +34,18 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-task-runtime.test.js",
-              "test/research-container-chrome.test.ts",
               "test/standard-agent-preset.test.ts"
             ],
             "outcome": "passed",
-            "summary": "123项聚焦检查及类型检查通过",
-            "verifiedCommit": "921919d06a4bc3f1aa7280293fcc2c208ade837d",
-            "completedAt": "2026-09-08T14:56:05.686Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "123项聚焦检查及类型检查通过",
-            "verifiedCommit": "921919d06a4bc3f1aa7280293fcc2c208ade837d",
-            "completedAt": "2026-09-08T14:56:05.686Z",
+            "summary": "7项模式检查通过；修正浮层选中态CSS作用域",
+            "verifiedCommit": "a3c08758f8317e8616225d8d11fc628960eb7942",
+            "completedAt": "2026-09-08T15:03:47.851Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实生产组件挂载检查通过；原生视觉与API调用将在集成客户端继续验证"
+          "summary": "集成客户端已验证容器无派生浮栏，真实子任务调用financial_query；菜单CSS作用域经组件挂载路径检查修正"
         },
         "acceptanceCriteria": [
           "容器和语音共享金融工具能力且保留离线边界",
@@ -81,41 +55,7 @@
         "risks": [
           "金融接口需要登录；真实模型选择工具需在集成客户端验证"
         ],
-        "generatedAt": "2026-09-08T14:56:05.686Z"
-      },
-      "merged": {
-        "mergeCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
-        "verificationCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-task-runtime.test.js",
-              "test/research-container-chrome.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-container-chrome.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
-            "completedAt": "2026-09-08T14:56:47.377Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "34bea9b4374a89c3541fd028d58e498ce4c86068",
-            "completedAt": "2026-09-08T14:56:47.377Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-08T14:56:47.377Z"
+        "generatedAt": "2026-09-08T15:03:47.852Z"
       }
     }
   ],
