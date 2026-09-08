@@ -171,7 +171,8 @@ describe('offline HTML component theme runtime', () => {
     inner.parsed()
     inner.send(themeMessage('dark'))
     expect(inner.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('light')
-    expect(outer.childHtml()).not.toMatch(/background:[^}]*!important/)
+    // Canvas-owned scrollbar rules are important; the page surface remains customizable.
+    expect(inner.window.getComputedStyle(inner.window.document.body).backgroundColor).toBe('pink')
     expect(outer.childHtml()).toContain('--sherlock-accent:#dd2233')
   })
 
