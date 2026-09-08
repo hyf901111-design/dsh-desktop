@@ -230,13 +230,13 @@ describe('offline HTML component theme runtime', () => {
     }
     const overflow = runtime(runtime(buildResearchHtmlPreview('<svg width="1160" height="1210"></svg>')).childHtml(), { configure: setup })
     overflow.parsed()
-    expect(overflow.parentMessages.at(-1)).toEqual({ data: { type: 'sherlock-content-size', width: 1196, height: 1246 }, origin: '*' })
+    expect(overflow.parentMessages.at(-1)).toEqual({ data: { type: 'sherlock-content-size', width: 1196, height: 1262 }, origin: '*' })
     const emptyShell = runtime(runtime(buildResearchHtmlPreview('<main style="min-height:100vh;padding:20px"><p>少量文字</p></main>')).childHtml(), { configure: setup })
     emptyShell.parsed()
     expect(emptyShell.parentMessages.at(-1)?.data).toEqual({ type: 'sherlock-content-size', width: 960, height: 600 })
     const padded = runtime(runtime(buildResearchHtmlPreview('<main style="padding:40px;border:3px solid #999;margin:24px"><svg width="1160" height="1210"></svg></main>')).childHtml(), { configure: setup })
     padded.parsed()
-    expect(padded.parentMessages.at(-1)?.data).toEqual({ type: 'sherlock-content-size', width: 1263, height: 1313 })
+    expect(padded.parentMessages.at(-1)?.data).toEqual({ type: 'sherlock-content-size', width: 1263, height: 1329 })
   })
 
   it('forwards only bounded content dimensions from its own inner frame, keeping theme messages separate', () => {

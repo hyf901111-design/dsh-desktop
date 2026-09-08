@@ -92,7 +92,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             }
             await Promise.all(plan.panels.map(async (p) => {
                 try {
-                    const receipt = await runtime.start({ parentSessionId, canvasNodeId: p.nodeId, kind: 'container', prompt: `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型；框宽 ${p.width}px，目标内容高度 ${p.height - 38}px，固定${p.size}规格，不得通过超长正文撑高外框。表格最多${p.size === "small" ? 5 : p.size === "medium" ? 10 : 14}行、最多4个主要列（更多字段用详情或横向滚动），不得压缩成逐字换行；来源必须短标签可点击；文字最多${p.size === "small" ? 250 : p.size === "medium" ? 450 : 650}字，优先核心数据和结论，使用简短来源链接，细节可用折叠区。内容简洁完整，遵守用户指定的行数、条数和范围，不额外扩写背景、摘要。标题简短，来源和日期放在正文，避免重复其他面板内容。数据注明来源和日期，无法获得的数据明确标注缺失；不得伪造实时数据或声称已开启持续监控。` });
+                    const receipt = await runtime.start({ parentSessionId, canvasNodeId: p.nodeId, kind: 'container', prompt: `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型；框宽 ${p.width}px，建议初始高度 ${p.height}px，使用自然高度和响应式布局，不设置固定高度的内部滚动区；必要时画布按实际内容增高。首屏表格最多${p.size === "small" ? 4 : p.size === "medium" ? 6 : 8}行、最多4个主要列（更多字段用默认折叠的详情），不得压缩成逐字换行；来源必须短标签可点击；文字最多${p.size === "small" ? 250 : p.size === "medium" ? 450 : 650}字，优先核心数据和结论，使用简短来源链接，细节可用折叠区。内容简洁完整，遵守用户指定的行数、条数和范围，不额外扩写背景、摘要。标题简短，来源和日期放在正文，避免重复其他面板内容。数据注明来源和日期，无法获得的数据明确标注缺失；不得伪造实时数据或声称已开启持续监控。` });
                     p.taskId = receipt.taskId;
                 }
                 catch {
@@ -115,7 +115,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             title: { type: 'string', required: true },
             panels: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题、内容边界、数据与来源，以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
-                        type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '固定规格：small 720×360、medium 720×600、large 720×840。同排会统一到较大规格，请按信息量选择并精简内容。' }
+                        type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '初始规格：small 720×360、medium 720×600、large 720×840。按信息量选择，首屏只呈现核心内容；容器可按内容增高，避免固定高度的内部滚动区。' }
                     } } }
         },
         output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },

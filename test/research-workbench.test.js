@@ -109,19 +109,19 @@ describe('研究工作台', () => {
         expect(nodes[0].width).toBe(720);
         expect(nodes[3].y - nodes[3].height / 2).toBeGreaterThanOrEqual(Math.max(...nodes.slice(0, 2).map((n) => n.y + n.height / 2)) + 31);
     });
-    it('uses only three fixed sizes and keeps completed and arranged rows aligned', async () => {
+    it('uses presets as initial sizes and preserves measured content when arranging', async () => {
         const input = { requestId: 'sizes', title: '工作台', panels: [0,1,2,3].map((n) => ({ ...panel(n), size: n === 0 ? 'small' : n === 1 ? 'medium' : 'large' })) };
         const planned = layoutWorkbench(validateWorkbench(input).panels);
         expect(planned.map(p => p.height)).toEqual([600,600,840,840]);
         const client = await bundle(), workspace = client.createResearchWorkspaceSession(store(), 'sizes');
         workspace.applyWorkbench({ id: 'sizes', panels: planned.map((p,i) => ({ ...p, nodeId: `s${i}`, taskId: `t${i}` })) });
         workspace.updateNodeGeometry('s0', { height: 3500, sizeMode: 'auto' });
-        expect(workspace.getSnapshot().artifacts[0].height).toBe(600);
+        expect(workspace.getSnapshot().artifacts[0].height).toBe(3500);
         const times = workspace.getSnapshot().artifacts.map(p => p.workbenchRevealAt);
         expect(times[1]-times[0]).toBeGreaterThanOrEqual(500);
         workspace.organizeCanvas(new Map([['s0', {width: 720, height: 3500}]]));
         const nodes = workspace.getSnapshot().artifacts;
-        expect(nodes.map(n=>n.height)).toEqual([600,600,840,840]);
+        expect(nodes.map(n=>n.height)).toEqual([3500,3500,840,840]);
         expect(nodes[0].y).toBe(nodes[1].y);
         expect(nodes[2].y).toBe(nodes[3].y);
     });
@@ -138,4 +138,19 @@ describe('研究工作台', () => {
         expect(text).not.toContain('private-code');
         expect(text).not.toContain('检索响应已返回');
     });
+});
+
+it('grows a preset HTML card and moves subsequent rows only by the additional row height', async () => {
+    const client = await bundle(), storage = store();
+    const html = '<main>可核验的内容</main>';
+    const nodes = [0,1,2,3].map(i => ({id:`fit${i}`,kind:'generated-container',messageId:`fit${i}`,title:'面板',excerpt:'内容',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'监控',refreshMinutes:0,width:720,height:600,x:(i%2)*752+360,y:i<2?348:980,sizeMode:'auto',containerSizePreset:'medium',workbenchId:'fit',containerSpec:{version:1,type:'html',title:'面板',html}}));
+    storage.setItem('sherlock.research.canvas.artifacts.v1:fit', JSON.stringify(nodes));
+    const workspace = client.createResearchWorkspaceSession(storage,'fit');
+    expect(workspace.fitHtmlContent('fit0',html,{width:720,height:1000})).toBe(true);
+    expect(workspace.getSnapshot().artifacts.map(n=>n.y)).toEqual([548,348,1380,1380]);
+    expect(workspace.fitHtmlContent('fit1',html,{width:720,height:900})).toBe(true);
+    expect(workspace.getSnapshot().artifacts[2].y).toBe(1380);
+    workspace.resizeNode('fit0','se',{x:0,y:-200},1);
+    expect(workspace.fitHtmlContent('fit0',html,{width:720,height:1100})).toBe(false);
+    expect(workspace.getSnapshot().artifacts[0].height).toBe(800);
 });
