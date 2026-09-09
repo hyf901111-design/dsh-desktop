@@ -33,12 +33,10 @@ export async function patchResearchBoardConversation(source) {
       'sharedSubmit: (mode) => {',
       'Sherlock research boards page adapter',
       'applyRemoteCanvas(canvas, metadata',
-      'sharedDraft: text =>'
+      'sharedDraft: text =>',
+      'async sink(session, text, imageIds, mode) {'
     ]) {
-      if (!source.includes(sentinel))
-        throw Error(
-          'Incomplete research boards structural patch: ' + sentinel
-        )
+      replace(source, sentinel, sentinel)
     }
     const end = source.indexOf(END)
     if (end < 0) throw Error('Incomplete research boards patch')

@@ -92,6 +92,11 @@ describe('real research board module adapter', () => {
         )
       )
     ).rejects.toThrow(/anchor/)
+    await expect(
+      patchResearchBoardConversation(
+        source.replace('async sink(session, text, imageIds, mode) {', 'async missingSink() {')
+      )
+    ).rejects.toThrow(/anchor/)
     const sidebar = await readFile(
       'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js',
       'utf8'
