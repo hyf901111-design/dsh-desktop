@@ -1566,8 +1566,13 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
     name.value = `${f.title} · 协作`
     name.setAttribute('aria-label', '协作名称')
     const scope = document.createElement('p')
-    scope.textContent = `将复制 ${capture.nodeCount} 个组件、${capture.historyCount} 条已保存对话及 ${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料。此后双方独立更新。`
-    d.body.append(name, scope)
+    scope.textContent =
+      capture.nodeCount === 0 && capture.historyCount === 0 && capture.assetBytes === 0
+        ? '当前研究尚无组件、已保存对话或资料，将创建空白共享画板。'
+        : `将当前研究的 ${capture.nodeCount} 个组件、${capture.historyCount} 条已保存对话及 ${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料复制到共享画板。`
+    const sync = document.createElement('p')
+    sync.textContent = '协作成员访问的是同一块共享画板，拖动、编辑和生成的组件会实时同步。原个人画板单独保留，后续修改不会与共享画板互相同步。'
+    d.body.append(name, scope, sync)
     inviteForm(
       page,
       d,
