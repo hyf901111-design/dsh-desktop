@@ -1341,6 +1341,7 @@ if (process.argv.includes('--serve')) {
     // Same selected session stays mounted across actual main null/loading states.
     const selectedBeforeLogin = await peer.evaluate(() => window.fixture.sessions.list.getSnapshot().current)
     const lifecycleModelCalls = users.map(u => u.modelCalls())
+    await settlePreviews()
     users[1].signOut()
     await peer.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
     assert.equal(users[1].service.getSnapshot().current, null)
@@ -1361,6 +1362,7 @@ if (process.argv.includes('--serve')) {
       window.recoveryCopies = []
       navigator.clipboard.writeText = async text => { window.recoveryCopies.push(text) }
     })
+    await settlePreviews()
     users[0].signOut()
     await page.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
     await page.getByRole('button', { name: '查看我的恢复记录', exact: true }).click()
@@ -1377,6 +1379,7 @@ if (process.argv.includes('--serve')) {
     await page.getByRole('button', { name: '查看我的恢复记录', exact: true }).click()
     assert.equal(await page.locator('.srb-dialog').getByText('仅属于林研究员', { exact: false }).count(), 0)
     await page.screenshot({ path: join(out, 'account-recovery-isolation.png') })
+    await settlePreviews()
     users[0].signOut()
     await page.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
     users[0].signIn()
