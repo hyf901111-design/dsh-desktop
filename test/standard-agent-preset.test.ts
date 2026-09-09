@@ -71,6 +71,28 @@ const roster = {
 }
 
 describe('Sherlock standard agent preset policy', () => {
+  it('keeps the hero mode aligned when loading and moving between sessions', async () => {
+    const client = await loadAgentPresetClient()
+    let session: { id: string; agentPreset: string } | undefined = { id: 'canvas', agentPreset: 'build' }
+    const Seat = client.AgentPresetSeatController as new (...args: unknown[]) => {
+      load(): Promise<void>; apply(): Promise<void>; store: SnapshotStore<Record<string, unknown>>
+    }
+    const seat = new Seat({ agentPresets: { list: async () => ({ result: { ok: true, value: {
+      presets: [{ id: 'standard', trust: 'system', isDefault: true }, { id: 'build', trust: 'system', isDefault: false }]
+    } } }) } }, () => session)
+    await seat.load()
+    expect(seat.store.getSnapshot().current).toBe('build')
+    session = { id: 'chat', agentPreset: 'standard' }
+    await seat.apply()
+    expect(seat.store.getSnapshot().current).toBe('standard')
+    session = { id: 'canvas', agentPreset: 'build' }
+    await seat.apply()
+    expect(seat.store.getSnapshot().current).toBe('build')
+    session = undefined
+    await seat.apply()
+    expect(seat.store.getSnapshot().current).toBe('standard')
+  })
+
   it('switches an existing conversation and keeps its selected mode', async () => {
     const client = await loadAgentPresetClient()
     const select = vi.fn(async () => ({ result: { ok: true, value: { agentPreset: 'build' } } }))

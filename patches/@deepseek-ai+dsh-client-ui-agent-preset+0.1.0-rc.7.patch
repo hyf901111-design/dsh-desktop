@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
-index 259765c..9f216a1 100644
+index 259765c..07abb1f 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
 @@ -18,9 +18,9 @@ window.__ModuleLoader__.load({
@@ -734,21 +734,29 @@ index 259765c..9f216a1 100644
  						options: presetOptions(presets),
 -						current: this.staged ?? this.currentSession()?.agentPreset ?? this.fallback,
 -						error: null
-+						current: this.fallback,
++						current: this.staged ?? (presets.some((preset) => preset.id === this.currentSession()?.agentPreset) ? this.currentSession().agentPreset : this.fallback),
 +						error: normalized.error
  					});
  				} catch (error) {
  					this.set({ error: messageOf(error) });
-@@ -1501,7 +1803,7 @@ window.__ModuleLoader__.load({
+@@ -1500,8 +1802,14 @@ window.__ModuleLoader__.load({
+ 			async apply() {
  				const staged = this.staged;
  				const session = this.currentSession();
- 				if (staged === void 0 || session === void 0) return;
+-				if (staged === void 0 || session === void 0) return;
 -				if (!session.blank || session.agentPreset === staged) {
++				if (staged === void 0) {
++					const state = this.store.getSnapshot();
++					const current = state.options.some((option) => option.id === session?.agentPreset) ? session.agentPreset : this.fallback;
++					if (current && state.current !== current) this.set({ current });
++					return;
++				}
++				if (session === void 0) return;
 +				if (session.agentPreset === staged) {
  					this.staged = void 0;
  					return;
  				}
-@@ -1655,7 +1957,7 @@ window.__ModuleLoader__.load({
+@@ -1655,7 +1963,7 @@ window.__ModuleLoader__.load({
  						id: "agent-preset",
  						order: -10,
  						locale: "settings.agentPreset",
@@ -757,7 +765,7 @@ index 259765c..9f216a1 100644
  					}, AgentPresetLabel);
  					return () => {
  						stop();
-@@ -1689,6 +1991,15 @@ window.__ModuleLoader__.load({
+@@ -1689,6 +1997,15 @@ window.__ModuleLoader__.load({
  				},
  				confirmCopy: () => section.confirmCopy(),
  				openLocation: (id) => section.openLocation(id),
@@ -773,7 +781,7 @@ index 259765c..9f216a1 100644
  				...creatorDraft === void 0 ? {} : { startCreatorDraft: creatorDraft },
  				confirmDelete: (id) => {
  					section.confirmDelete(id);
-@@ -1714,6 +2025,9 @@ window.__ModuleLoader__.load({
+@@ -1714,6 +2031,9 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		exports.AGENT_PRESET_SETTINGS_NS = AGENT_PRESET_SETTINGS_NS;
