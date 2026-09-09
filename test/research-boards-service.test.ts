@@ -1236,3 +1236,110 @@ it('accepts a cleared presence cursor and enforces the 100-node transient select
     })
   ).toMatchObject({ ok: false, error: { code: 'INVALID_REQUEST' } })
 })
+
+it.each(['event-first', 'ack-first'] as const)(
+  'settles an accepted owner cancel after broadcast-before-ACK (%s)',
+  async (order) => {
+    const t = make()
+    await ready(t)
+    const base = t.client.request
+    const reads: Array<() => void> = []
+    let accepted = false
+    t.client.request = async (e) => {
+      const response = await base(e)
+      if (e.kind === 'board.command' && e.body.action === 'cancel') {
+        accepted = true
+        t.watches
+          .find((w) => w.scope.scope === 'board' && !w.closed)!
+          .listener({ type: 'accessRevoked', reason: 'STALE_EPOCH' })
+        return { ...response, epoch: 2 }
+      }
+      if (e.kind === 'board.get' && accepted) {
+        const fresh = {
+          ...response,
+          board: {
+            ...response.board,
+            sharingEpoch: 2,
+            sharingState: 'ownerOnly'
+          }
+        }
+        if (reads.length < 2)
+          return new Promise((resolve) => reads.push(() => resolve(fresh)))
+        return fresh
+      }
+      return response
+    }
+    const cancelling = t.service.invoke('board.cancel', { boardId: 'board' })
+    for (let i = 0; i < 30 && reads.length < 2; i++)
+      await new Promise((r) => setImmediate(r))
+    expect(reads).toHaveLength(2)
+    const first = order === 'event-first' ? 0 : 1
+    reads[first]!()
+    await new Promise((r) => setImmediate(r))
+    reads[1 - first]!()
+    const reply = await cancelling
+    expect(reply).toMatchObject({
+      ok: true,
+      value: { operationId: t.sent[0].body.operationId, seq: 1 }
+    })
+    expect(t.sent.filter((e) => e.body.action === 'cancel')).toHaveLength(1)
+    expect(t.store.account('u').pending).toHaveLength(0)
+    expect(t.store.account('u').checkpoints.board!.board.sharingEpoch).toBe(2)
+    expect(t.service.getSnapshot().current).toMatchObject({
+      permissions: { read: true, manage: true },
+      board: { sharingState: 'ownerOnly' }
+    })
+  }
+)
+
+it.each(['network', 'account', 'revoked'] as const)(
+  'does not settle accepted owner cancel after %s failure during fresh authorization',
+  async (failure) => {
+    const t = make()
+    await ready(t)
+    const base = t.client.request
+    const reads: Array<() => void> = []
+    let accepted = false
+    t.client.request = async (e) => {
+      const response = await base(e)
+      if (e.kind === 'board.command') {
+        accepted = true
+        t.watches
+          .find((w) => w.scope.scope === 'board' && !w.closed)!
+          .listener({ type: 'accessRevoked', reason: 'STALE_EPOCH' })
+        return { ...response, epoch: 2 }
+      }
+      if (e.kind === 'board.get' && accepted) {
+        if (reads.length < 2)
+          return new Promise((resolve) =>
+            reads.push(() =>
+              resolve({
+                ...response,
+                board: {
+                  ...response.board,
+                  sharingEpoch: 2,
+                  sharingState: 'ownerOnly'
+                }
+              })
+            )
+          )
+        if (failure === 'account') t.account.generation++
+        throw Object.assign(Error(failure), {
+          code: failure === 'revoked' ? 'ACCESS_DENIED' : 'NETWORK_ERROR'
+        })
+      }
+      return response
+    }
+    const cancelling = t.service.invoke('board.cancel', { boardId: 'board' })
+    for (let i = 0; i < 30 && reads.length < 2; i++)
+      await new Promise((r) => setImmediate(r))
+    expect(reads).toHaveLength(2)
+    reads[0]!()
+    await new Promise((r) => setImmediate(r))
+    reads[1]!()
+    expect(await cancelling).toMatchObject({ ok: false })
+    expect(t.sent).toHaveLength(1)
+    if (failure === 'revoked')
+      expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
+  }
+)

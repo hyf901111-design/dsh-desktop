@@ -1,3 +1,4 @@
+import { mountResearchBoardNotifications } from './research-board-notifications-ui'
 import { mountAccountUi } from './account-ui'
 import { createResearchBoardsBridge } from './research-boards'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
@@ -123,7 +124,9 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
 })
 
 function initializeUi(): void {
-  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input))
+  const boards = createResearchBoardsBridge(ipcRenderer)
+  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards)
+  mountResearchBoardNotifications(document, boards)
   mountDeveloperModeUi()
   if (process.platform === 'win32') {
     mountWindowsTitlebar({ document, ipcRenderer, locale })

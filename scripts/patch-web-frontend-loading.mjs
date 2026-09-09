@@ -1,3 +1,4 @@
+import { installResearchBoardClientPatches } from './lib/patch-research-board-client.mjs'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -93,3 +94,5 @@ function patchStyles(path) {
 patchPrimitives(primitivesPath)
 patchJavaScript(asset('.js'))
 patchStyles(asset('.css'))
+
+await installResearchBoardClientPatches()

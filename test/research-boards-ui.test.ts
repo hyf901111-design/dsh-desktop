@@ -1,0 +1,263 @@
+import { Window } from 'happy-dom'
+import { expect, it, vi } from 'vitest'
+import { mountResearchBoardNotifications } from '../src/preload/research-board-notifications-ui'
+import type {
+  ResearchBoardsBridge,
+  ResearchBoardsState
+} from '../src/shared/research-boards'
+it('mounts a separate bell and keeps pending invitation after read, then accepts exact version', async () => {
+  const w = new Window({ url: 'http://localhost/' })
+  const state: ResearchBoardsState = {
+    version: 1,
+    eventSeq: 1,
+    account: {
+      status: 'ready',
+      generation: 1,
+      user: { userId: 'u', publicId: '0000000001', username: '甲' }
+    },
+    favorites: [],
+    boards: [],
+    current: null,
+    recoveries: [],
+    notifications: {
+      cursor: 1,
+      unreadCount: 1,
+      pendingCount: 1,
+      notifications: [
+        {
+          notificationId: 'n',
+          eventVersion: 2,
+          type: 'invitation',
+          boardId: 'b',
+          boardTitle: '研究',
+          createdAt: 1,
+          readAt: null,
+          invitation: { invitationId: 'i', version: 3, status: 'pending' }
+        }
+      ]
+    }
+  }
+  const invoke = vi.fn(async (action: string) => ({
+    ok: true as const,
+    value:
+      action === 'invitation.respond'
+        ? { invitation: { status: 'accepted' } }
+        : state.notifications
+  }))
+  const bridge: ResearchBoardsBridge = {
+    isSharedSession: () => false,
+    getSnapshot: async () => state,
+    subscribe: () => () => {},
+    invoke
+  }
+  const host = w.document.createElement('div')
+  host.dataset.researchBoardBellHost = ''
+  w.document.body.append(host)
+  const dispose = mountResearchBoardNotifications(
+    w.document as unknown as Document,
+    bridge
+  )
+  await new Promise((r) => setTimeout(r, 5))
+  const bell = host.querySelector('button[aria-label="消息中心"]')!
+  expect(bell).not.toBeNull()
+  ;(bell as any).click()
+  await new Promise((r) => setTimeout(r, 5))
+  expect(w.document.body.textContent).toContain('接受')
+  const accept = [...w.document.querySelectorAll('button')].find(
+    (b) => b.textContent === '接受'
+  )!
+  accept.click()
+  await new Promise((r) => setTimeout(r, 5))
+  expect(invoke).toHaveBeenCalledWith('invitation.respond', {
+    invitationId: 'i',
+    version: 3,
+    decision: 'accept'
+  })
+  dispose()
+  w.happyDOM.abort()
+})
+it('shows retry instead of login when collaboration bootstrap is unavailable', async () => {
+  const w = new Window({ url: 'http://localhost/' })
+  const host = w.document.createElement('div')
+  host.dataset.researchBoardBellHost = ''
+  w.document.body.append(host)
+  const bridge: ResearchBoardsBridge = {
+    isSharedSession: () => false,
+    subscribe: () => () => {},
+    invoke: async () => ({ ok: true, value: null }),
+    getSnapshot: async () => ({
+      version: 1,
+      eventSeq: 1,
+      account: { status: 'unavailable', generation: 1, user: null },
+      favorites: [],
+      boards: [],
+      current: null,
+      recoveries: [],
+      notifications: {
+        cursor: 0,
+        unreadCount: 0,
+        pendingCount: 0,
+        notifications: []
+      }
+    })
+  }
+  const dispose = mountResearchBoardNotifications(
+    w.document as unknown as Document,
+    bridge
+  )
+  await new Promise((r) => setTimeout(r, 5))
+  ;(host.querySelector('button') as any).click()
+  expect(w.document.body.textContent).toContain('协作服务暂不可用')
+  expect(w.document.body.textContent).not.toContain('登录')
+  dispose()
+  w.happyDOM.abort()
+})
+
+it('labels invitation results for inviter and recipient without reversing the actor', async () => {
+  const w = new Window({ url: 'http://localhost/' }),
+    host = w.document.createElement('div')
+  host.dataset.researchBoardBellHost = ''
+  w.document.body.append(host)
+  let emit: (event: any) => void = () => {}
+  const state: any = {
+    version: 1,
+    eventSeq: 1,
+    account: { status: 'ready', generation: 1, user: { userId: 'owner' } },
+    favorites: [],
+    boards: [],
+    current: null,
+    recoveries: [],
+    notifications: {
+      cursor: 1,
+      unreadCount: 1,
+      pendingCount: 0,
+      notifications: [
+        {
+          notificationId: 'n',
+          eventVersion: 2,
+          type: 'invitationResult',
+          boardId: 'b',
+          boardTitle: '研究',
+          actor: { userId: 'peer', username: '周同事' },
+          createdAt: 1,
+          readAt: 1,
+          invitation: { invitationId: 'i', version: 2, status: 'accepted' }
+        }
+      ]
+    }
+  }
+  const bridge: any = {
+    isSharedSession: () => false,
+    subscribe: (fn: any) => {
+      emit = fn
+      return () => {}
+    },
+    getSnapshot: async () => state,
+    invoke: async () => ({ ok: true, value: null })
+  }
+  const dispose = mountResearchBoardNotifications(w.document as any, bridge)
+  await new Promise((r) => setTimeout(r, 5))
+  ;(host.querySelector('button') as any).click()
+  expect(w.document.body.textContent).toContain('周同事接受了你的邀请')
+  expect(w.document.body.textContent).not.toContain('周同事 邀请你加入')
+  emit({
+    type: 'state',
+    state: {
+      ...state,
+      eventSeq: 2,
+      account: { ...state.account, user: { userId: 'peer' } }
+    }
+  })
+  ;(host.querySelector('button') as any).click()
+  expect(w.document.body.textContent).toContain('你已加入这份协作看板')
+  dispose()
+  w.happyDOM.abort()
+})
+it('aggregates startup history once and limits new bubbles to3 with hover-paused10second expiry', async () => {
+  vi.useFakeTimers()
+  const w = new Window({ url: 'http://localhost/' }),
+    host = w.document.createElement('div')
+  host.dataset.researchBoardBellHost = ''
+  w.document.body.append(host)
+  let emit: (event: any) => void = () => {}
+  const note = (i: number) => ({
+    notificationId: 'n' + i,
+    eventVersion: 1,
+    type: 'invitation',
+    boardId: 'b',
+    boardTitle: '研究' + i,
+    createdAt: 1,
+    readAt: null,
+    invitation: { invitationId: 'i' + i, version: 1, status: 'pending' }
+  })
+  let state: any = {
+    version: 1,
+    eventSeq: 1,
+    account: { status: 'ready', generation: 1, user: { userId: 'u' } },
+    favorites: [],
+    boards: [],
+    current: null,
+    recoveries: [],
+    notifications: {
+      cursor: 1,
+      unreadCount: 2,
+      pendingCount: 2,
+      notifications: [note(0), note(1)]
+    }
+  }
+  const bridge: any = {
+    isSharedSession: () => false,
+    subscribe: (fn: any) => {
+      emit = fn
+      return () => {}
+    },
+    getSnapshot: async () => state,
+    invoke: async () => ({ ok: true, value: null })
+  }
+  let dispose = mountResearchBoardNotifications(w.document as any, bridge)
+  try {
+    await vi.advanceTimersByTimeAsync(1)
+    expect(w.document.querySelector('.srb-bubble')?.textContent).toContain(
+      '2 条待处理'
+    )
+    dispose()
+    dispose = mountResearchBoardNotifications(w.document as any, bridge)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(w.document.querySelector('.srb-bubble')).toBeNull()
+    state = {
+      ...state,
+      eventSeq: 2,
+      notifications: {
+        ...state.notifications,
+        notifications: [
+          ...state.notifications.notifications,
+          ...[2, 3, 4, 5, 6].map(note)
+        ]
+      }
+    }
+    emit({ type: 'state', state })
+    await vi.advanceTimersByTimeAsync(1)
+    const bubble = w.document.querySelector('.srb-bubble')!
+    expect(bubble.textContent).toContain('研究2')
+    bubble.dispatchEvent(new w.Event('pointerenter'))
+    await vi.advanceTimersByTimeAsync(12000)
+    expect(w.document.querySelector('.srb-bubble')).toBe(bubble)
+    bubble.dispatchEvent(new w.Event('pointerleave'))
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(w.document.querySelector('.srb-bubble')?.textContent).toContain(
+      '研究3'
+    )
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(w.document.querySelector('.srb-bubble')?.textContent).toContain(
+      '研究4'
+    )
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(w.document.querySelector('.srb-bubble')?.textContent).toContain(
+      '2 条待处理'
+    )
+  } finally {
+    dispose()
+    w.happyDOM.abort()
+    vi.useRealTimers()
+  }
+})

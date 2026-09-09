@@ -1402,8 +1402,7 @@ export class ResearchBoardsService {
     const stack = redo ? r.undo.redoStack : r.undo.undoStack
     const item = stack.at(-1)
     const deleted = item?.meta.get('deleted') as
-      | Array<{ collection: 'files' | 'artifacts'; node: CanvasNode }>
-      | undefined
+      Array<{ collection: 'files' | 'artifacts'; node: CanvasNode }> | undefined
     if (deleted?.length) {
       const recoveryId = randomUUID()
       r.deletionRecovery.set(recoveryId, copy(deleted))
@@ -1487,6 +1486,52 @@ export class ResearchBoardsService {
     })
     await this.receiveBoard(op.boardId, snapshot, false, access)
     this.checkBoard(access)
+  }
+  private async settleOwnerTransition(
+    op: PendingOperation,
+    ctx: { generation: number; userId: string },
+    acceptedSeq: number
+  ) {
+    // The command response proves acceptance, but only a fresh authorized GET
+    // can restore reads after its own socket was retired by an epoch change.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      this.check(ctx)
+      const previous = this.boards.get(op.boardId)
+      if (
+        !previous ||
+        previous.connection === 'revoked' ||
+        previous.snapshot.board.role !== 'owner' ||
+        previous.snapshot.board.ownerId !== ctx.userId
+      )
+        throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
+      let current: RuntimeBoard
+      try {
+        current = await this.loadBoard(op.boardId, true)
+      } catch (error) {
+        this.check(ctx)
+        if (errorCode(error) === 'BOARD_ACCESS_CHANGED' && attempt < 2) continue
+        throw error
+      }
+      this.check(ctx)
+      const access = this.boardContext(op.boardId)
+      if (
+        this.boards.get(op.boardId) !== current ||
+        current.connection !== 'online' ||
+        !this.permissions(current).read ||
+        current.snapshot.board.role !== 'owner' ||
+        current.snapshot.board.ownerId !== ctx.userId ||
+        current.snapshot.seq < acceptedSeq
+      )
+        throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
+      this.checkBoard(access)
+      this.store.updateAccount(ctx.userId, (a) => {
+        a.pending = a.pending.filter((p) => p.operationId !== op.operationId)
+        a.checkpoints[op.boardId] = copy(current.snapshot)
+      })
+      if (this.currentBoard === op.boardId && !this.activeDispose)
+        this.watchCurrentBoard(op.boardId)
+      return
+    }
   }
   private async flushPending() {
     if (!this.accountView.user || this.stopped) return
@@ -1667,7 +1712,18 @@ export class ResearchBoardsService {
           a.pending = a.pending.filter((p) => p.operationId !== op.operationId)
         })
         await this.revoke(boardId, 'LEFT_BOARD')
-      } else await this.acknowledge(op, ctx)
+      } else {
+        try {
+          await this.acknowledge(op, ctx)
+        } catch (error) {
+          if (
+            errorCode(error) !== 'BOARD_ACCESS_CHANGED' ||
+            !['cancel', 'reopen', 'archive', 'restore'].includes(action)
+          )
+            throw error
+          await this.settleOwnerTransition(op, ctx, result.seq as number)
+        }
+      }
       return result
     } catch (error) {
       this.check(ctx)

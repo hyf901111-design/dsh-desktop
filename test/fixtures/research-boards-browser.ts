@@ -1,0 +1,410 @@
+// Browser fixture: actual transformed module factories, production bridge/UI, real React primitives.
+// @ts-expect-error Hosted runtime ships no React declarations in Electron TS project.
+import * as React from 'react'
+// @ts-expect-error See React declaration note above.
+import { createRoot } from 'react-dom/client'
+// @ts-expect-error See React declaration note above.
+import * as jsx from 'react/jsx-runtime'
+// @ts-expect-error See React declaration note above.
+import * as ReactDOM from 'react-dom'
+import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
+import * as slotModule from '@deepseek-ai/dsh-client-ui-slots'
+import { createResearchBoardsBridge } from '../../src/preload/research-boards'
+import { mountAccountUi } from '../../src/preload/account-ui'
+import { mountResearchBoardNotifications } from '../../src/preload/research-board-notifications-ui'
+import { SidebarUpdateControl } from '../../src/preload/sidebar-update-control'
+const h = React.createElement,
+  win = window as any,
+  user = new URL(location.href).searchParams.get('user') ?? '0'
+const rpc = async (channel: string, ...args: unknown[]) => {
+  const r = await fetch('/rpc?user=' + user, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ channel, args })
+  })
+  return r.json()
+}
+const sync = (channel: string, ...args: unknown[]) => {
+  const xhr = new XMLHttpRequest()
+  xhr.open('POST', '/sync?user=' + user, false)
+  xhr.setRequestHeader('content-type', 'application/json')
+  xhr.send(JSON.stringify({ channel, args }))
+  return JSON.parse(xhr.responseText)
+}
+const subscribers = new Set<Function>()
+new EventSource('/events?user=' + user).onmessage = (e) =>
+  subscribers.forEach((fn) => fn({}, JSON.parse(e.data)))
+const bridge = createResearchBoardsBridge({
+  invoke: rpc,
+  sendSync: sync,
+  on: (_, fn) => subscribers.add(fn),
+  removeListener: (_, fn) => subscribers.delete(fn)
+})
+win.dshDesktop = {
+  researchBoards: bridge,
+  researchCanvasStorage: {
+    getItem: (key: string) => sync('canvas:get', key),
+    setItem: (key: string, value: string) => sync('canvas:set', key, value)
+  },
+  researchClipboard: { canRead: async () => false },
+  researchLinkFrame: { releaseSession: async () => {} },
+  researchVoice: { setActive: async () => ({ ok: false }) }
+}
+let descriptor: any
+win.__ModuleLoader__ = { load: (d: any) => (descriptor = d) }
+const fallback: any = new Proxy(function () {}, {
+  get: () => fallback,
+  apply: () => undefined,
+  construct: () => ({})
+})
+const loaded: Record<string, any> = {
+  react: React,
+  'react/jsx-runtime': jsx,
+  'react-dom': ReactDOM,
+  '@deepseek-ai/dsh-client-ui-primitives': primitives,
+  '@deepseek-ai/dsh-client-ui-slots': slotModule
+}
+for (const name of ['runtime', 'conversation', 'sidebar']) {
+  ;(0, eval)(await (await fetch('/' + name + '.js')).text())
+  const mod = descriptor.factory((id: string) => loaded[id] ?? fallback)
+  loaded[name] = mod
+  if (name === 'runtime') loaded['@deepseek-ai/dsh-client-runtime/client'] = mod
+}
+const mod = loaded.conversation,
+  sidebar = loaded.sidebar
+function store(initial: any) {
+  let value = initial
+  const listeners = new Set<() => void>()
+  return {
+    getSnapshot: () => value,
+    subscribe: (fn: () => void) => {
+      listeners.add(fn)
+      return () => listeners.delete(fn)
+    },
+    set: (v: any) => {
+      value = v
+      listeners.forEach((fn) => fn())
+    }
+  }
+}
+const saved = JSON.parse(localStorage.getItem('fixture-sessions') ?? 'null')
+const list = store(
+  saved ?? {
+    current: 'original',
+    byId: {
+      original: {
+        id: 'original',
+        title: '黄金市场研究',
+        displayTitle: '黄金市场研究',
+        cwd: '/fixture',
+        blank: false
+      }
+    },
+    ids: ['original'],
+    phase: 'ready'
+  }
+)
+const ws = store({
+  items: [
+    {
+      workspaceId: 'workspace',
+      path: '/fixture',
+      title: '研究资料',
+      sessionIds: Object.keys(list.getSnapshot().byId)
+    }
+  ]
+})
+const registry = new mod.ResearchWorkspaceRegistry(),
+  bindings = new Map<string, any>(),
+  scopeEffects: Array<() => void> = []
+const sessions: any = {
+  list,
+  open: (id: string) => {
+    const old = list.getSnapshot().current
+    hub.setResearchActive(old, false)
+    list.set({ ...list.getSnapshot(), current: id })
+    hub.setResearchActive(id, true)
+  },
+  create: async () => {
+    const id = crypto.randomUUID()
+    const prior = list.getSnapshot()
+    list.set({
+      ...prior,
+      byId: {
+        ...prior.byId,
+        [id]: {
+          id,
+          title: '新研究',
+          displayTitle: '新研究',
+          cwd: '/fixture',
+          blank: true
+        }
+      },
+      ids: [...prior.ids, id]
+    })
+    return id
+  },
+  binding: (id: string) => {
+    if (!bindings.has(id))
+      bindings.set(id, {
+        sessionId: id,
+        session: {
+          sessionId: id,
+          getSnapshot: () => ({ queue: [] }),
+          subscribe: () => () => {},
+          rename: async (title: string) =>
+            list.set({
+              ...list.getSnapshot(),
+              byId: {
+                ...list.getSnapshot().byId,
+                [id]: {
+                  ...list.getSnapshot().byId[id],
+                  title,
+                  displayTitle: title
+                }
+              }
+            }),
+          prompt: async () => {
+            throw Error('Fixture forbids private model execution')
+          },
+          queue: { getSnapshot: () => [], subscribe: () => () => {} }
+        },
+        ctx: {
+          effect: (fn: () => () => void) => scopeEffects.push(fn()),
+          on: () => () => {},
+          get: () => undefined
+        }
+      })
+    return bindings.get(id)
+  },
+  scope: () => undefined,
+  scopeOf: (ctx: any) => ctx.sessionId
+}
+const ctx: any = {
+  sessions,
+  get: (name: string) =>
+    name === 'sessions'
+      ? sessions
+      : name === 'conversation'
+        ? { releaseDraftImage: () => {} }
+        : undefined
+}
+const hub = new mod.InputHub(ctx, (s: string) => s, registry)
+const slotsMap = new Map<string, any>(),
+  slots = {
+    inject: (_: string, fn: () => any) => fn(),
+    register: (options: any, component: any) => {
+      slotsMap.set(options.name, { options, component })
+      return () => slotsMap.delete(options.name)
+    }
+  }
+const page = mod.__page.createResearchBoardsPage({
+  sessions,
+  workspaces: { list: ws },
+  researchWorkspaces: registry,
+  inputHub: hub,
+  slots,
+  bridge
+})
+mod.__setAdapter(page)
+list.subscribe(() => {
+  localStorage.setItem('fixture-sessions', JSON.stringify(list.getSnapshot()))
+})
+const labels: Record<string, string> = {
+  'toggle.open': '展开侧边栏',
+  'toggle.collapse': '收起侧边栏',
+  'session.new': '新对话',
+  'session.new.label': '新建对话',
+  'session.newResearch': '新研究',
+  'session.newResearch.label': '新建研究',
+  'research.canvas': '研究画板',
+  'session.hierarchy': '会话层级',
+  'view.research': '研究',
+  'placeholder.default': '围绕画板继续研究',
+  'research.context.scope': '研究范围'
+}
+const t = (s: string, values: Record<string, unknown> = {}) =>
+  (labels[s] ?? mod.__zh[s] ?? s).replace(
+    /\{(\w+)\}/g,
+    (_: string, key: string) => String(values[key] ?? '')
+  )
+function App() {
+  React.useSyncExternalStore(list.subscribe, list.getSnapshot)
+  React.useSyncExternalStore(page.subscribe, page.version)
+  const [collapsed, setCollapsed] = React.useState(false)
+  const id = list.getSnapshot().current
+  const shell = hub.shell(id),
+    workspace = registry.for(id)
+  const v = page.getView(id)
+  const useInput = (selector: any) =>
+    React.useSyncExternalStore(shell.state.subscribe, () =>
+      selector(shell.state.getSnapshot())
+    )
+  const useSession = (selector: any) =>
+    selector({
+      blank: false,
+      composerPhase: 'active',
+      openState: 'open',
+      running: false,
+      subagent: null,
+      removed: false
+    })
+  const renderSlot = (name: string, owner: any = {}) => {
+    const r = slotsMap.get(name)
+    return r
+      ? h(r.component, { ...owner, ...r.options.inject(), sessionId: id })
+      : null
+  }
+  React.useEffect(() => {
+    hub.setResearchActive(id, true)
+    return () => hub.setResearchActive(id, false)
+  }, [id])
+  return h(
+    'div',
+    { className: 'fixture-shell', 'data-sidebar-collapsed': collapsed },
+    h(
+      'aside',
+      { className: 'fixture-sidebar', style: { width: collapsed ? 80 : 260 } },
+      h(sidebar.__SidebarRoot, {
+        collapsed,
+        width: 260,
+        t,
+        toggleSidebar: () => setCollapsed(!collapsed),
+        startSession: () => {},
+        startResearchSession: () => {},
+        renderSlot: (name: string, owner: any) =>
+          name === 'sidebar.workspaces'
+            ? h(
+                'div',
+                { className: 'fixture-workspaces', hidden: !owner.wide },
+                '工作区',
+                h('p', null, '研究资料')
+              )
+            : name === 'sidebar.settings'
+              ? h(
+                  'div',
+                  { 'data-slot': 'sidebar.settings' },
+                  h('button', { className: 'VOzbGW_trigger' }, '设置')
+                )
+              : renderSlot(name, owner)
+      })
+    ),
+    h(
+      'main',
+      { className: 'fixture-main' },
+      h(mod.__Header, {
+        sessionId: id,
+        useSession,
+        useSessions: (selector: any) => selector(list.getSnapshot()),
+        useStore: (selector: any) => selector({ view: 'research' }),
+        actions: { setView: () => {} },
+        renderSlot,
+        views: {
+          subscribe: () => () => {},
+          version: () => 0,
+          list: () => [{ id: 'research', label: '研究' }]
+        },
+        open: sessions.open,
+        t
+      }),
+      h(
+        'div',
+        { className: 'fixture-workbench' },
+        h(
+          'div',
+          { className: 'fixture-canvas' },
+          h(mod.ResearchCanvas, {
+            sessionId: id,
+            t,
+            researchWorkspaces: registry,
+            actions: {},
+            selectionGeneration: { disabled: true }
+          })
+        ),
+        h(
+          'div',
+          { className: 'fixture-discussion' },
+          page.isShared(id)
+            ? h(mod.__page.ResearchBoardDiscussion, {
+                page,
+                sessionId: id,
+                MarkdownText: primitives.MarkdownText
+              })
+            : h(
+                'div',
+                { className: 'srb-discussion' },
+                h('p', null, '在画板中整理资料，围绕选中的内容继续研究。')
+              ),
+          h(mod.__InputBar, {
+            sessionId: id,
+            t,
+            useInput,
+            useSession,
+            inputActions: shell.actions,
+            keyboard: shell,
+            useNotices: (sel: any) =>
+              React.useSyncExternalStore(shell.notices.subscribe, () =>
+                sel(shell.notices.getSnapshot())
+              ),
+            useLexicon: (sel: any) => sel(undefined),
+            useMenuLauncher: (sel: any) => sel(null),
+            useProjection: (_: string, sel: any) => sel?.(undefined),
+            renderSlot: () => null,
+            resolveSubmitMode: () => 'queue',
+            variant: 'composer',
+            blocked:
+              v && !v.permissions.edit ? { reason: '仅可查看' } : undefined,
+            researchCanvasWorkspace: workspace
+          })
+        )
+      ),
+      h(
+        'button',
+        {
+          className: 'fixture-add',
+          onClick: () =>
+            workspace.setArtifacts([
+              {
+                id: 'note',
+                messageId: 'note',
+                kind: 'pasted-text',
+                title: '金价观察',
+                excerpt: '美国就业与实际利率共同影响黄金。',
+                x: 330,
+                y: 220,
+                width: 420,
+                height: 200
+              }
+            ])
+        },
+        '加入研究笔记'
+      )
+    )
+  )
+}
+createRoot(document.getElementById('app')).render(h(App))
+mountAccountUi(
+  document,
+  async (action: string) =>
+    action === 'me'
+      ? {
+          user: {
+            id: 'u' + user,
+            username: user === '0' ? '林研究员' : '周同事',
+            createdAt: 1
+          }
+        }
+      : {},
+  bridge
+)
+mountResearchBoardNotifications(document, bridge)
+const updater = new SidebarUpdateControl(document, 'zh', {
+  download: () => {},
+  install: () => {},
+  retry: () => {}
+})
+new MutationObserver(() => updater.mount()).observe(document.body, {
+  subtree: true,
+  childList: true
+})
+win.fixture = { page, registry, hub, sessions, updater, ready: true }
