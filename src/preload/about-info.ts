@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.9.5',
+      date: '2026-09-09',
+      items: ["修复顶部模式按钮点击与子代理入口位置", "切换空白会话时同步顶部和输入区的模式状态", "中文界面下斜杠命令菜单名称和说明完整汉化"]
+    },
+    {
       version: '0.9.4',
       date: '2026-09-09',
       items: ["历史消息将文件显示为行内标签，与句子自然排列和换行，隐藏文件路径", "点击历史文件标签可展开右侧侧边屏并预览会话已附带的文件", "统一模式标签与菜单图标，已有聊天和研究顶部支持在任务空闲时切换模式", "缩小拖入研究画板的文件组件标题字号，改善长文件名显示", "增加无法预览文件卡片的图标留白，将组件右上角操作按钮向右调整", "隐藏研究组件及内嵌内容的滚动条，保留正常滚动操作"]
@@ -239,6 +244,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.9.5',
+      date: '2026-09-09',
+      items: ["Fix top mode button interaction and subagent menu placement", "Keep header and composer modes in sync when switching empty sessions", "Localize slash command names and descriptions in the Chinese interface"]
+    },
     {
       version: '0.9.4',
       date: '2026-09-09',
