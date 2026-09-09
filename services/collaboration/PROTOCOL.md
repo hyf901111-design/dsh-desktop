@@ -1,0 +1,60 @@
+# Research collaboration protocol v1
+
+All HTTP paths below start `/v1/collaboration`. All requests except ticket redemption require the existing `Authorization: Bearer <account-token>` header. Responses and assets carry `Cache-Control: no-store`. Never pass an account token in a URL. Errors: `{error:{code,message,retryable,details?}}`; 400 invalid input, 401 expired session/ticket, 403 access/role denied, 404 unknown object, 409 stale epoch/state/lease, 413 size exceeded, 429 rate limit. Times are Unix milliseconds (account sessions remain existing seconds).
+
+## Document exports
+
+`packages/dsh-research-collaboration/document.js` exports `createDocument(canvas): Y.Doc`, `encodeDocument(doc): Uint8Array`, `decodeDocument(bytes): Y.Doc`, `projectDocument(doc): Canvas`, `applyCanvasDiff(doc,before,after): Uint8Array`, `freezeSnapshot({canvas,history?}): Snapshot`, `mergeDocumentUpdate(doc,bytes,tombstones?:Set<string>): Uint8Array`, `validateCanvas(canvas): void`. `protocol.js` exports `PROTOCOL_VERSION`, `LIMITS`, `toBase64(bytes)`, `fromBase64(string)`.
+
+Canvas has `{files: Node[], artifacts: Node[]}`. Nodes require string `id`; editable text fields use Y.Text, fields use nested Y.Map, lists inside component data use Y.Array. Top-level `files` and `artifacts` are maps indexed by node ID. Local diff MUST receive the last local projected canvas and the next local canvas; untouched fields are not rewritten. Snapshot `tombstones` is a read-only string array of `collection:id`; clients may use it to filter their pending changes but can never clear it. Deleted IDs are permanent within this board: use a fresh ID to restore explicitly. No tasks, roles, credentials, local paths, selection, viewport or execution logs in the document. `freezeSnapshot` copies allowed fields and history, removes machine state, and returns a deeply frozen independent value. `mergeDocumentUpdate` validates on a clone before mutating the live doc, preserving server tombstones.
+
+## HTTP
+
+- `GET /me` -> `{user:{userId,publicId,username}}`; publicId exactly ten digits, including leading zero. Existing users provision lazily and race safely. Account API remains backward compatible.
+- `POST /users/lookup` `{publicId}` -> `{user}` exact ten-digit lookup (UI strips display spaces); max 5/minute/account.
+- `POST /boards` `{operationId,title,sourceRevision,capturedAt,snapshot:{canvas,history?},uploadId?,assets?:[{assetId,name,contentType,dataBase64}]}` -> `{board,created}`. operationId is account-scoped, retries return the existing frozen copy. Pass uploadId from the staging routes below for large files; inline assets are only a small-payload convenience. All declared assets must upload and every node asset reference must resolve before activation. `capturedAt` ISO string; sourceRevision opaque string; never submit a local session ID/path. Optional initial assets must have caller-generated UUID IDs (local->asset reference mapping is made before capture).
+- `GET /boards` -> `{boards}` accessible boards, each includes `role`.
+- `GET /boards/:boardId` -> `{board,snapshot:{canvas,history},documentUpdate,seq,tombstones,members,messages,tasks}`. documentUpdate is base64 Yjs state, authoritative starting point for a connection.
+- `POST /boards/:boardId/commands` -> command response below. Body always `{action,operationId,epoch,...}`. operationId 1–128 safe identifier characters; user-scoped idempotency. Reads after revoke are denied; `GET /boards/:boardId/receipts/:operationId` remains allowed to its submitter and returns only `{operationId,accepted,seq,epoch}` (no board content).
+- `POST /uploads` `{operationId}` -> `{uploadId,expiresAt,boardId:null|string}`. An account-owned staging operation lasts 24h. `PUT /uploads/:uploadId/assets/:assetId` sends raw bytes with `X-Asset-Name: encodeURIComponent(filename)`, `X-Asset-Size: <decimal byte length>` and `Content-Type`, returning `{assetId,size,contentHash,name,contentType,version:1}`. R2 streams are size checked without buffering a 50 MiB file. Upload all files, then create with uploadId; failed creation retains staging for retry. Successful creation atomically assigns assets and closes staging. Concurrent/repeated asset IDs are immutable: matching content is idempotent, different bytes return 409.
+- `POST /boards/:boardId/assets` raw bytes with `X-Operation-Id`, `X-Sharing-Epoch`, `X-Asset-Name: encodeURIComponent(filename)`, `X-Asset-Size`, `Content-Type` -> `{asset}`. Editors/owner only. `GET /boards/:boardId/assets/:assetId` proxies private bytes after live permission check. No presigned/public URL. Assets are immutable and board-scoped.
+- `GET /notifications?after=0&limit=50` -> `{notifications,cursor,unreadCount,pendingCount}`; monotonic numeric cursor, oldest unseen first, pending invitations at their current event version always additionally included even before cursor. Pending reminders do not consume the chronological page limit or advance its cursor; clients dedupe notificationId + eventVersion. Each notification includes `notificationId,eventVersion,type,boardId,boardTitle,actor,invitation?,createdAt,readAt`. Invitation current state is hydrated from D1, including expiry. `POST /notifications/read` `{notificationIds?:string[]}` marks specified or all read; does not process invitations.
+- `POST /invitations/:invitationId/respond` `{operationId,version,decision:'accept'|'decline'}` -> `{invitation,memberCount,boardId}`. Wrong recipient denied. Duplicate acceptance is idempotent. Old permission version rejected. Invites expire after 7 days; cancelled/expired/declined replies return 409 and `details.invitation` current state.
+- `POST /tickets` `{scope:'board',boardId}` or `{scope:'notifications'}` -> `{ticket,expiresAt,url,epoch?}`. Single use, 30 seconds, bound to session hash/user/scope/board/epoch. `url` is a relative `/v1/collaboration/connect?ticket=...`; convert protocol to wss and resolve against configured collaboration origin.
+- `GET /connect?ticket=...` with WebSocket upgrade redeems once. Live account session and membership/epoch are checked before welcome and on every message/broadcast/read. No automatic replay before the welcome permission check.
+
+## Board commands
+
+Every mutation returns `{action,operationId,seq,epoch,...result}` only after a durable transaction. Always use latest board.sharingEpoch as `epoch`.
+
+| action | additional body | result / authority |
+|---|---|---|
+| `update` | `update` base64 Yjs update | `{documentUpdate}` canonical merged state; editor/owner |
+| `refreshPause` | `paused:boolean` | `{board}` owner; interrupts refresh tasks when paused; board.refreshPaused is authoritative |
+| `rename` | `title` | `{board}` owner |
+| `invite` | `publicId,role:'editor'|'viewer'` | `{invitation}` owner; same pending role returns same invitation; role change increments version and notification |
+| `revokeInvitation` | `invitationId` | `{invitation}` owner |
+| `memberRole` | `userId,role` | `{member}` owner, cannot target owner |
+| `removeMember` | `userId` | `{removedUserId}` owner; stops leases, closes connections |
+| `leave` | none | `{removedUserId}` own non-owner membership |
+| `archive`, `restore` | none | `{board}` owner; archive stops tasks and cancels pending invites, read access retained |
+| `cancel` | none | `{board}` owner; ownerOnly, epoch++, cutoffSeq, revoked memberships/invites/leases; old writes denied |
+| `reopen` | none | `{board}` owner; shared, epoch++, no automatic member/invite restoration |
+| `message` | `text` | `{message}` editor/owner; trusted author, immutable submitted message |
+| `taskCreate` | `requestMessageId,targetId?,source?:'manual'|'refresh',targetCollection?:'artifacts'|'files'` | `{task}` request author only; captures accepted context seq and immutable snapshot, target content version |
+| `taskClaim` | `taskId,executorId` | `{task,leaseToken}` initiator only; session + executor lease, 30s |
+| `taskHeartbeat` | `taskId,leaseToken` | `{task}` same live executor; extends 30s |
+| `taskResult` | `taskId,leaseToken,text?,node?` | `{task}` same executor; immutable result, server applies node only if target exists/version matches; otherwise `pendingResult`/`targetDeleted` retained in task |
+| `taskStop` | `taskId` | `{task}` initiator or owner; interrupts lease |
+
+`task.contextSnapshot` is available only in authenticated board snapshot/claim, never notification. Refresh tasks require a target and are blocked while the owner pauses refresh; at most one pending/running refresh task exists per target. No task handoff: interrupted tasks require explicit new request/task. Owner archive/cancel and member removal/downgrade interrupt corresponding execution. Result nodes use document allowlist, cannot replace server authority; replies carry requestMessageId.
+
+## WebSocket JSON
+
+Server first sends `{type:'welcome',scope:'board',...snapshotResponse,presence:[{userId,username,role,joinedAt}]}` or `{type:'welcome',scope:'notifications',...notificationPage}`. Send board commands as `{type:'command',requestId,command:{action,operationId,epoch,...}}`; server responds `{type:'ack',requestId,...commandResponse}` or `{type:'error',requestId,error}`. Accepted changes broadcast `{type:'boardChanged',...snapshotResponse}` (full bounded checkpoint; clients apply documentUpdate through Yjs). Controls may send `{type:'accessRevoked',reason,epoch}` then close 4003. Server can send `{type:'presence',presence}`. Client `{type:'presence',cursor?:{x,y},selectedIds?:string[]}` updates a 30s lease; user identity is server supplied; ping every 10s via `{type:'ping'}` also refreshes presence and returns `{type:'pong'}`. Connections are hibernation sockets with serialized attachment. Presence dedupes account across connections, removes stale users by DO alarm <=30s. Notification events `{type:'notification',notification}` are at-least-once; dedupe notificationId + eventVersion and backfill HTTP cursor after reconnect. Notification ping revalidates sessions.
+
+## Limits and storage
+
+10 members/board; 7-day invite expiry; 20 new invites/day/inviter, declined re-invite cooldown 24h. Max 1,000 nodes, 1 MiB projected canvas or encoded Yjs checkpoint, 1 MiB single Yjs update, 16 KiB message, 50 MiB individual asset, 1 GiB aggregate assets per board, 25 MiB aggregate inline creation request, 100 history records. Notification retention 90 days except pending. Combined authoritative state and each operation receipt are checked against 1,800,000 UTF-8 bytes before any D1 mutation; oversized history/document/task accumulation returns 413, with no silent truncation or partial board activation. This conservative bound stays below [D1’s 2,000,000-byte per-row/string/BLOB limit](https://developers.cloudflare.com/d1/platform/limits/). Large source documents belong in versioned private assets. D1 is the atomic authority for board checkpoint/control/receipts/outbox; per-board DO serializes commands and mirrors committed checkpoint to SQLite-backed storage for recovery. Outbox persists before response, retries by alarm and notification reconnect. R2 incomplete creation objects are tracked and reclaimed after 24h; active board assets are never reclaimed by that path. Existing account login/model credentials and billing contract remain unchanged. Wrangler config is deployment-ready but deployment and shared-client build are outside this task.
+
+Task-claim replay is additionally bound to the current epoch, original still-live session, executorId, unexpired lease and running task. Reusing the same operationId for another action is rejected. Cancel/reopen retries may return the original safe owner receipt after the epoch advances; revoked users can access only the content-free receipt endpoint. Document projection preserves completed containerSpec/sourceText/generationSources and geometry; copied running components become interrupted with “复制时未完成”. Existing node IDs and nested shared arrays preserve separate table-cell and chart-series edits. Array insertion/removal preserves unchanged surrounding shared children; arbitrary concurrent reorder is not a first-version UI operation.
