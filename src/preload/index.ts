@@ -1,4 +1,5 @@
 import { mountAccountUi } from './account-ui'
+import { createResearchBoardsBridge } from './research-boards'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { UpdateStatus } from '../shared/contracts'
 import { developerModeEnabledFromArguments } from '../shared/developer-mode'
@@ -165,6 +166,7 @@ contextBridge.exposeInMainWorld(
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
+    researchBoards: createResearchBoardsBridge(ipcRenderer),
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
     showItemInFolder: (path: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('filesystem:show-item-in-folder', path),

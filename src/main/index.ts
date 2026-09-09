@@ -1,5 +1,11 @@
 import { finishQuitCleanup } from './quit-cleanup'
 import { AccountService } from './account-service'
+import { CollaborationClient } from './collaboration-client'
+import { ResearchBoardsStore } from './state/research-boards-store'
+import {
+  ResearchBoardsService,
+  registerResearchBoardsHandlers
+} from './research-boards-service'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
 import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
@@ -121,6 +127,8 @@ const PLUGIN_RECOVERY_ACTIONS = new Set<PluginRecoveryAction>([
 ])
 
 let accountService: AccountService | undefined
+let researchBoardsService: ResearchBoardsService | undefined
+let disposeResearchBoardsHandlers: (() => void) | undefined
 let mainWindow: BrowserWindow | undefined
 let runtime: HarnessRuntime
 let localSearchRuntime: LocalSearchRuntime | undefined
@@ -723,9 +731,13 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
         stat(path).then((value) => value.isFile()).catch(() => false)
       ))
     },
-    researchCanvasStorageGet: (key: unknown) => researchCanvasStorage.getItem(key),
+    researchCanvasStorageGet: (key: unknown) => researchBoardsService
+      ? researchBoardsService.readCanvasStorage(key)
+      : researchCanvasStorage.getItem(key),
     researchCanvasStorageSet: (key: unknown, value: unknown) =>
-      researchCanvasStorage.setItem(key, value),
+      researchBoardsService
+        ? researchBoardsService.writeCanvasStorage(key, value)
+        : researchCanvasStorage.setItem(key, value),
     onStorageReadRejected: (error) =>
       console.warn('[research-canvas] rejected storage read', error),
     onStorageWriteRejected: (error) =>
@@ -1102,7 +1114,16 @@ async function bootstrap(): Promise<void> {
   })
   const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
   researchContextBridge = new ResearchContextBridge({
-    readCanvas: (sessionId) => readStoredResearchCanvas(researchCanvasStorage, sessionId),
+    readCanvas: (sessionId) => researchBoardsService?.isSharedSession(sessionId)
+      ? researchBoardsService.readSharedCanvas(sessionId)
+      : readStoredResearchCanvas(researchCanvasStorage, sessionId),
+    canReadSession: (sessionId) => {
+      if (!researchBoardsService?.isSharedSession(sessionId)) return true
+      try {
+        researchBoardsService.readSharedCanvas(sessionId)
+        return true
+      } catch { return false }
+    },
     resolveFile: (identity) => researchFilePreviewRegistry!.resolveExportSource(identity)
   })
   const researchContext = await researchContextBridge.start()
@@ -1119,6 +1140,33 @@ async function bootstrap(): Promise<void> {
   )
   accountService = new AccountService(join(app.getPath('userData'), 'accounts'))
   const accountEndpoint = await accountService.start()
+  researchBoardsService = new ResearchBoardsService({
+    store: new ResearchBoardsStore(app.getPath('userData')),
+    storage: researchCanvasStorage,
+    account: accountService,
+    client: new CollaborationClient(accountService),
+    hooks: {
+      revokeBoard: ({ localSessionId }) => {
+        if (localSessionId) {
+          researchFilePreviewRegistry?.revokeSession(localSessionId)
+          researchContextBridge?.invalidateSession(localSessionId)
+        }
+      }
+    }
+  })
+  disposeResearchBoardsHandlers = registerResearchBoardsHandlers({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    service: researchBoardsService
+  })
+  researchBoardsService.subscribe(event => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('research:boards:event', event)
+    }
+  })
+  void researchBoardsService.start().catch(error =>
+    console.warn('[research-boards] unable to start collaboration', error)
+  )
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
   localSearchRuntime = await startLocalSearchRuntime({
@@ -1213,6 +1261,8 @@ if (!singleInstance) {
     showUnexpectedError(error)
     await localSearchRuntime?.stop()
     disposeResearchContextHandlers?.()
+    disposeResearchBoardsHandlers?.()
+    researchBoardsService?.stop()
     await researchContextBridge?.stop()
     app.quit()
   })
@@ -1228,6 +1278,8 @@ if (!singleInstance) {
     if (process.platform !== 'darwin') app.quit()
   })
   app.on('before-quit', (event) => {
+    disposeResearchBoardsHandlers?.()
+    researchBoardsService?.stop()
     accountService?.stop()
     researchVoiceController.dispose()
     if (quitting || !runtime) return

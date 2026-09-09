@@ -175,3 +175,9 @@ describe('trusted research canvas capture', () => {
     await expect(broken.bridge.capture({ sessionId: 'parent' })).rejects.not.toThrow('/private')
   })
 })
+
+it('rechecks shared access for existing captures and invalidates session handles',async()=>{
+ let allowed=true;const f=await fixture({canReadSession:()=>allowed});const capture=await f.bridge.capture({sessionId:'parent'})
+ allowed=false;expect((await f.snapshot({sessionId:'parent',captureId:capture.captureId})).status).toBe(404);await expect(f.bridge.capture({sessionId:'parent'})).rejects.toThrow()
+ allowed=true;f.bridge.invalidateSession('parent');expect((await f.snapshot({sessionId:'parent',captureId:capture.captureId})).status).toBe(404)
+})
