@@ -827,3 +827,101 @@ it('upgrades the committed Task3 transform to gesture hooks without duplicate pa
   expect(upgraded).toBe(await patchResearchBoardConversation(raw))
   expect(await patchResearchBoardConversation(upgraded)).toBe(upgraded)
 })
+
+it.each(['revoke', 'finish'])(
+  'retains only the unacknowledged held gesture after an earlier ACK then %s',
+  async (ending) => {
+    const f = await pageFixture(),
+      w = f.registry.for('shared'),
+      requests = [],
+      resolve = []
+    f.bridge.invoke.mockImplementation((action, input) => {
+      if (action === 'canvas.apply') {
+        requests.push(input)
+        return new Promise((r) => resolve.push(r))
+      }
+      return Promise.resolve({ ok: true, value: null })
+    })
+    const ack = (index) =>
+      resolve[index]({
+        ok: true,
+        value: {
+          canvas: {
+            ...requests[index].canvas,
+            artifacts: requests[index].canvas.artifacts.map((n) => ({
+              ...n,
+              title: 'teammate later title'
+            }))
+          },
+          canvasRevision: 'merged' + index,
+          localBranchRevision: 'branch' + index,
+          seq: 2 + index,
+          pendingCount: 0
+        }
+      })
+    try {
+      w.setArtifacts([
+        {
+          ...w.getSnapshot().artifacts[0],
+          excerpt: 'teammate secret baseline OWN_ACKED_TEXT'
+        }
+      ])
+      await new Promise((r) => setTimeout(r, 130))
+      expect(requests).toHaveLength(1)
+      w.setSelection({ selectedNodeIds: ['a'], orderedFileIds: [] })
+      w.moveNodes(['a'], { x: 45, y: 10 }, 1, false)
+      expect(w.getSnapshot().artifacts[0].x).toBe(245)
+      w.resizeNode('a', 'se', { x: 30, y: 20 }, 1, false)
+      const held = w.getSnapshot().artifacts[0]
+      expect(held.width).toBeGreaterThan(0)
+      expect(f.page.localRecovery()[0].text).toContain('OWN_ACKED_TEXT')
+      ack(0)
+      await new Promise((r) => setTimeout(r, 0))
+      const tail = f.page
+        .localRecovery()
+        .map((r) => r.text)
+        .join('\n')
+      expect(tail).toContain('a x: ' + held.x)
+      expect(tail).toContain('a width: ' + held.width)
+      expect(tail).not.toContain('OWN_ACKED_TEXT')
+      expect(tail).not.toContain('teammate')
+      expect(w.getSnapshot().artifacts[0].x).toBe(held.x)
+      expect(requests).toHaveLength(1)
+      if (ending === 'revoke') {
+        f.emit({
+          type: 'access',
+          boardId: 'board',
+          localSessionId: 'shared',
+          reason: 'REVOKED',
+          epoch: 2,
+          recoveries: []
+        })
+        expect(w.getSnapshot().artifacts).toEqual([])
+        expect(
+          f.page
+            .localRecovery()
+            .map((r) => r.text)
+            .join('\n')
+        ).toBe(tail)
+      } else {
+        w.persist()
+        await new Promise((r) => setTimeout(r, 0))
+        expect(requests).toHaveLength(2)
+        expect(requests[1].baseRevision).toBe('branch0')
+        expect(requests[1].canvas.artifacts[0].x).toBe(held.x)
+        expect(
+          f.page
+            .localRecovery()
+            .map((r) => r.text)
+            .join('\n')
+        ).toBe(tail)
+        ack(1)
+        await new Promise((r) => setTimeout(r, 0))
+        expect(f.page.localRecovery()).toEqual([])
+        expect(w.getSnapshot().artifacts[0].x).toBe(held.x)
+      }
+    } finally {
+      f.dispose()
+    }
+  }
+)

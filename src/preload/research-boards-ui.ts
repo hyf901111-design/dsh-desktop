@@ -358,7 +358,11 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       e.mutation = undefined
       e.revision = result.localBranchRevision
       e.error = undefined
-      if (!e.queued) ownRecovery.delete(`canvas:${e.view.boardId}`)
+      // The ACK covers its submitted local canvas, even if a later held gesture
+      // has not entered the queue. Hydration is held while busy, so this diff
+      // contains only locally authored changes after that exact submission.
+      ownRecovery.delete(`canvas:${e.view.boardId}`)
+      rememberOwnCanvas(e.view.boardId, mutation.canvas, canvasOf(e.workspace))
       if (!e.queued) {
         const pending = e.remote
         e.remote = undefined
