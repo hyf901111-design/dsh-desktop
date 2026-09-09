@@ -40,11 +40,13 @@ export async function patchResearchBoardConversation(source) {
     }
     const end = source.indexOf(END)
     if (end < 0) throw Error('Incomplete research boards patch')
-    return task4Patch(
-      gesturePatch(
-        source.slice(0, source.indexOf(START)) +
-          bundle +
-          source.slice(end + END.length)
+    return polishPatch(
+      task4Patch(
+        gesturePatch(
+          source.slice(0, source.indexOf(START)) +
+            bundle +
+            source.slice(end + END.length)
+        )
       )
     )
   }
@@ -293,7 +295,7 @@ export async function patchResearchBoardConversation(source) {
     'const result = await Promise.resolve(window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);',
     `const result = await Promise.resolve(sherlockShared(sessionId) ? window.dshDesktop?.researchBoards?.invoke?.("file.open",{boardId:sherlockBoardsAdapter?.getView(sessionId)?.boardId,localSessionId:sessionId,nodeId:node.id}) : node.personalImportFile ? window.dshDesktop?.researchBoards?.invoke?.("import.fileOpen",{localSessionId:sessionId,nodeId:node.id}) : window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);`
   )
-  return task4Patch(gesturePatch(source))
+  return polishPatch(task4Patch(gesturePatch(source)))
 }
 function gesturePatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_GESTURE_V1 */')) return source
@@ -450,6 +452,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
       patchResearchBoardConversation
     ],
     ['dsh-client-ui-sidebar', 'lib/client.js', patchResearchBoardSidebar],
+    ['dsh-client-ui-workspace', 'lib/client.js', patchResearchBoardWorkspace],
     [
       'dsh-client-ui-sidebar',
       'lib/types/client/contract/slots.d.ts',
@@ -468,4 +471,45 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
     const after = await patch(before)
     if (before !== after) await writeFile(path, after)
   }
+}
+
+function polishPatch(source) {
+  if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return source
+  source = replace(
+    source,
+    'node.kind !== "generated-container" && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)',
+    'sherlockBoardsPage.selectionNodeReady(node) && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)'
+  )
+  return source + '\n/* SHERLOCK_BOARD_POLISH_V1 */'
+}
+export function patchResearchBoardWorkspace(source) {
+  if (source.includes('/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')) return source
+  source = replace(
+    source,
+    'const [query, setQuery] = (0, react.useState)("");',
+    `const [sectionCollapsed, setSectionCollapsed] = (0, react.useState)(()=>{try{return localStorage.getItem("sherlock.workspaces.collapsed")==="true"}catch{return false}});
+            const [query, setQuery] = (0, react.useState)("");`
+  )
+  source = replace(
+    source,
+    'className: clsx(WorkspaceBrowser_module_css_default.root, !wide && WorkspaceBrowser_module_css_default.rail),',
+    'className: clsx(WorkspaceBrowser_module_css_default.root, !wide && WorkspaceBrowser_module_css_default.rail), "data-srb-workspaces":"", "data-section-collapsed":wide && sectionCollapsed && !searchExpanded,'
+  )
+  source = replace(
+    source,
+    `wide && (0, react_jsx_runtime.jsx)("span", {
+\t\t\t\t\t\t\t\tclassName: clsx(WorkspaceBrowser_module_css_default.sectionLabel, WorkspaceBrowser_module_css_default.wide, searchExpanded && WorkspaceBrowser_module_css_default.sectionLabelHidden),
+\t\t\t\t\t\t\t\tchildren: groupBy === "flat" ? t("section.sessions") : t("section.workspaces")`,
+    `wide && (0, react_jsx_runtime.jsxs)("button", {
+                                type:"button", "aria-label":sectionCollapsed?"展开工作区":"折叠工作区", "aria-expanded":!sectionCollapsed,
+                                onClick:()=>{setSectionCollapsed(!sectionCollapsed);try{localStorage.setItem("sherlock.workspaces.collapsed",String(!sectionCollapsed))}catch{}},
+                                className: clsx("srb-section-toggle", WorkspaceBrowser_module_css_default.sectionLabel, WorkspaceBrowser_module_css_default.wide, searchExpanded && WorkspaceBrowser_module_css_default.sectionLabelHidden),
+                                children: [groupBy === "flat" ? t("section.sessions") : t("section.workspaces"), (0,react_jsx_runtime.jsx)("span", {className:"srb-chevron", "data-collapsed":sectionCollapsed,"aria-hidden":true})]`
+  )
+  source = replace(
+    source,
+    'className: WorkspaceBrowser_module_css_default.listArea,',
+    'className: WorkspaceBrowser_module_css_default.listArea, "data-srb-workspace-list":"", hidden:wide && sectionCollapsed && !searchExpanded,'
+  )
+  return source + '\n/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */'
 }

@@ -46,7 +46,11 @@ export type AccountStore = {
   notifications: NotificationView
   creates: Record<
     string,
-    { operationId: string; body?: Record<string, unknown>; uploadId?: string }
+    {
+      operationId: string
+      body?: Record<string, unknown>
+      uploadId?: string
+    }
   >
 }
 export type BoardsStoreState = {
@@ -170,6 +174,14 @@ export class ResearchBoardsStore {
       s.favorites.push(value)
     })
     return clone(value)
+  }
+  touchFavorite(sessionId: string) {
+    if (!this.state.favorites.some((f) => f.sessionId === sessionId))
+      return false
+    this.transaction((s) => {
+      s.favorites.find((f) => f.sessionId === sessionId)!.updatedAt = Date.now()
+    })
+    return true
   }
   renameFavorite(id: string, title: string) {
     this.transaction((s) => {

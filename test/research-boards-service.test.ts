@@ -1765,3 +1765,17 @@ it.each(['preview-file', 'nonpreview-file', 'artifact', 'concurrent-file'])(
     expect(assets).toEqual(['cloud-asset'])
   }
 )
+it('records personal board content edits, preserves edit time on selection and identical rehydration', () => {
+  const t = make()
+  t.store.addFavorite({ sessionId: 'original', title: 'Original' })
+  const key = 'sherlock.research.canvas.artifacts.v1:original'
+  t.service.writeCanvasStorage(key, '[{"id":"note","x":10}]')
+  const stamp = t.service.getSnapshot().favorites[0]!.updatedAt
+  expect(stamp).toBeGreaterThan(0)
+  t.service.writeCanvasStorage(
+    'sherlock.research.canvas.selection.v1:original',
+    '{}'
+  )
+  t.service.writeCanvasStorage(key, '[{"id":"note","x":10}]')
+  expect(t.service.getSnapshot().favorites[0]!.updatedAt).toBe(stamp)
+})

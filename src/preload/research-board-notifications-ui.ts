@@ -1,3 +1,4 @@
+import { boardEditTime } from './research-board-presentation'
 import type {
   Notification,
   ResearchBoardsBridge,
@@ -48,7 +49,7 @@ export function mountResearchBoardNotifications(
   function anchor(el: HTMLElement) {
     const r = bell?.getBoundingClientRect()
     if (!r) return
-    el.style.left = `${Math.max(12, Math.min(r.left, win.innerWidth - 352))}px`
+    el.style.left = `${Math.max(12, Math.min(r.left, win.innerWidth - 372))}px`
     el.style.bottom = `${Math.max(12, Math.min(win.innerHeight - r.top + 8, win.innerHeight - 80))}px`
   }
   function pending(n: Notification) {
@@ -130,11 +131,13 @@ export function mountResearchBoardNotifications(
     const row = doc.createElement('article')
     row.className = 'srb-notification'
     row.dataset.notificationId = n.notificationId
+    row.dataset.unread = String(!n.readAt)
     const title = doc.createElement('p')
     title.textContent = n.boardTitle
-    const actor = n.actor as
-      { username?: string; userId?: string } | undefined
+    title.className = 'srb-notification-title'
+    const actor = n.actor as { username?: string; userId?: string } | undefined
     const subtitle = doc.createElement('p')
+    subtitle.className = 'srb-notification-subtitle'
     const ownResult = actor?.userId === state?.account.user?.userId
     const result =
       n.invitation?.status === 'accepted'
@@ -161,7 +164,8 @@ export function mountResearchBoardNotifications(
               sharingReopened: '协作看板重新开放'
             }[n.type] ?? '协作状态更新')
     const time = doc.createElement('small')
-    time.textContent = new Date(n.createdAt).toLocaleString()
+    time.textContent = boardEditTime(n.createdAt)
+    time.title = new Date(n.createdAt).toLocaleString()
     row.append(title, subtitle, time)
     if (pending(n)) {
       const controls = doc.createElement('div')
@@ -170,6 +174,7 @@ export function mountResearchBoardNotifications(
         boardButton(doc, '拒绝', () => respond(n, 'decline', row)),
         boardButton(doc, '接受', () => respond(n, 'accept', row))
       )
+      controls.lastElementChild?.classList.add('srb-primary')
       row.append(controls)
     } else {
       const status = doc.createElement('p')
@@ -182,9 +187,13 @@ export function mountResearchBoardNotifications(
             expired: '已过期'
           } as Record<string, string>
         )[String(n.invitation?.status)] ?? ''
-      row.append(status)
+      status.className = 'srb-notification-status'
+      const footer = doc.createElement('div')
+      footer.className = 'srb-notification-footer'
+      footer.append(status)
+      row.append(footer)
       if (n.invitation?.status === 'accepted')
-        row.append(
+        footer.append(
           boardButton(doc, '打开看板', () =>
             requestBoardPageAction(doc, 'open', n.boardId)
           )
@@ -259,8 +268,16 @@ export function mountResearchBoardNotifications(
     const items = state.notifications.notifications.filter(
       (n) => filter === 'all' || pending(n)
     )
-    if (!items.length) panel.append(doc.createTextNode('暂无消息'))
-    for (const n of items) panel.append(record(n))
+    const list = doc.createElement('div')
+    list.className = 'srb-notification-list'
+    if (!items.length) {
+      const empty = doc.createElement('div')
+      empty.className = 'srb-notification-empty'
+      empty.textContent = filter === 'pending' ? '没有待处理的邀请' : '暂无消息'
+      list.append(empty)
+    }
+    for (const n of items) list.append(record(n))
+    panel.append(list)
     anchor(panel)
   }
   function showNext() {

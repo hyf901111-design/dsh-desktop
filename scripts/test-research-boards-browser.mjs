@@ -14,7 +14,8 @@ import {
   readdir,
   mkdtemp,
   rm,
-  realpath
+  realpath,
+  symlink
 } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -27,8 +28,9 @@ import {
   patchResearchBoardSidebar
 } from './lib/patch-research-board-client.mjs'
 const root = process.cwd(),
-  out = join(root, 'output/playwright/research-boards')
+  out = process.env.SHERLOCK_BOARD_QA_OUTPUT || join(root, 'output/playwright/research-boards')
 await mkdir(out, { recursive: true })
+if (process.env.SHERLOCK_BOARD_QA_OUTPUT) await symlink(join(root, "node_modules"), join(out, "node_modules"), "dir").catch(e => { if(e.code !== "EEXIST") throw e })
 const packageRoot = process.env.SHERLOCK_COLLABORATION_PACKAGE_FIXTURE
   ? await realpath(process.env.SHERLOCK_COLLABORATION_PACKAGE_FIXTURE)
   : root
@@ -664,7 +666,8 @@ if (process.argv.includes('--serve')) {
       ])
     )
     await page.getByRole('button', { name: '设为常用', exact: true }).click()
-    await page.getByRole('button', { name: '共享协作', exact: true }).click()
+    await page.getByRole('button', { name: '画板设置', exact: true }).click()
+    await page.getByRole('menuitem', { name: '共享协作', exact: true }).click()
     await page.getByLabel('对方专有 ID').fill('0000 0000 02')
     await page
       .getByRole('button', { name: '查找并核对', exact: true })
@@ -690,16 +693,14 @@ if (process.argv.includes('--serve')) {
     await page
       .getByRole('button', { name: '打开协作看板', exact: true })
       .click()
-    await page.getByRole('button', { name: '管理协作', exact: true }).click()
+    await page.getByRole('button', { name: '画板设置', exact: true }).click()
+    await page.getByRole('menuitem', { name: '管理协作', exact: true }).click()
     await page.getByLabel('周同事待处理邀请权限').selectOption('viewer')
     await peer
       .locator('.srb-bubble')
       .getByText(/仅查看/)
       .waitFor()
-    await page
-      .locator('[data-pending-invitation]')
-      .getByText(/版本 2/)
-      .waitFor()
+    await until(async () => await page.getByLabel('周同事待处理邀请权限').inputValue() === 'viewer', 'updated invitation permission')
     await page.screenshot({
       animations: 'disabled',
       path: join(out, 'pending-invitation-owner.png')
@@ -1078,6 +1079,13 @@ if (process.argv.includes('--serve')) {
         .current.canvas.artifacts.find((n) => n.id === 'component').x,
       850
     )
+    await page.evaluate(() => {
+      const f=window.fixture, w=f.registry.for(f.sessions.list.getSnapshot().current)
+      w.updateSelection(['component'],'replace')
+    })
+    await page.locator('[data-research-selection-actions]').waitFor({state:'visible'})
+    await page.screenshot({ path: join(out, 'component-toolbar.png') })
+    await page.evaluate(() => {const f=window.fixture;f.registry.for(f.sessions.list.getSnapshot().current).updateSelection([],'replace')})
     await page.screenshot({ path: join(out, 'component-applied.png') })
     console.log(
       'TASK4_COMPONENT_PASSED real-InputHub/placeholder-ack/start-ack-lost-inspect/one-model/cas-preserve/idempotent-apply'
@@ -1540,7 +1548,8 @@ if (process.argv.includes('--serve')) {
     await peer.screenshot({ path: join(out, 'personal-import-light.png') })
     const reshareCalls = users.map(u => u.modelCalls())
     await peer.getByRole('button', { name: '设为常用', exact: true }).click()
-    await peer.getByRole('button', { name: '共享协作', exact: true }).click()
+    await peer.getByRole('button', { name: '画板设置', exact: true }).click()
+    await peer.getByRole('menuitem', { name: '共享协作', exact: true }).click()
     await peer.getByLabel('协作名称').fill('第二代独立协作')
     // Preview has completed. Later private transcript/file edits must stay private.
     users[1].sessionData.get(personalId).append('user/message', {
