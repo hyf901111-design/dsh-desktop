@@ -272,8 +272,8 @@ describe('durable research clipboard', () => {
     registerResearchClipboardHandlers({ ipcMain: { removeHandler: () => {}, handle: (channel, handler) => { handlers.set(channel, handler) } }, getMainWindow: () => window, service: f.service })
     expect(handlers.size).toBe(5)
     for (const handler of handlers.values()) {
-      expect(() => handler({ sender: window.webContents, senderFrame: { processId: 1, routingId: 3 } })).toThrow(/main Sherlock window/)
-      expect(() => handler({ sender: {}, senderFrame: window.webContents.mainFrame })).toThrow(/main Sherlock window/)
+      expect(() => handler({ sender: window.webContents, senderFrame: { processId: 1, routingId: 3 } })).toThrow(/main EWork Odyssey window/)
+      expect(() => handler({ sender: {}, senderFrame: window.webContents.mainFrame })).toThrow(/main EWork Odyssey window/)
     }
     expect(await handlers.get('research:clipboard:read')!({ sender: window.webContents, senderFrame: window.webContents.mainFrame })).toEqual({ kind: 'empty' })
   })

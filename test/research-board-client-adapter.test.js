@@ -184,8 +184,9 @@ describe('real research board module adapter', () => {
 
 async function pageFixture() {
   const fixture = await load()
-  const { createResearchBoardsPage } =
-    await import('../src/preload/research-boards-ui.ts')
+  const { createResearchBoardsPage } = await import(
+    '../src/preload/research-boards-ui.ts'
+  )
   const node = {
     id: 'a',
     messageId: 'a',
@@ -468,8 +469,9 @@ it('keeps more than256 shared nodes when editing and atomically applying another
 })
 
 it('renders at most5 avatars plus overflow and removes manage action after access ends', async () => {
-  const { ResearchBoardPresence, ResearchBoardHeader } =
-    await import('../src/preload/research-boards-ui.ts')
+  const { ResearchBoardPresence, ResearchBoardHeader } = await import(
+    '../src/preload/research-boards-ui.ts'
+  )
   const React = require('react'),
     { renderToStaticMarkup } = require('react-dom/server')
   const view = {
@@ -584,7 +586,10 @@ it('retains edits made while sync is paused and retries old mutation before the 
     if (action !== 'canvas.apply') return { ok: true, value: null }
     calls.push(p)
     if (failure)
-      return { ok: false, error: { code: 'NETWORK_ERROR', message: 'offline' } }
+      return {
+        ok: false,
+        error: { code: 'NETWORK_ERROR', message: 'offline' }
+      }
     return {
       ok: true,
       value: {
@@ -598,7 +603,10 @@ it('retains edits made while sync is paused and retries old mutation before the 
   })
   try {
     w.setArtifacts([
-      { ...w.getSnapshot().artifacts[0], excerpt: 'teammate secret baseline A' }
+      {
+        ...w.getSnapshot().artifacts[0],
+        excerpt: 'teammate secret baseline A'
+      }
     ])
     await new Promise((r) => setTimeout(r, 130))
     expect(calls).toHaveLength(1)
@@ -814,7 +822,8 @@ it('upgrades the committed Task3 transform to gesture hooks without duplicate pa
   )
   await mkdir('output/playwright/source-checks', { recursive: true })
   const path =
-    process.cwd() + '/output/playwright/source-checks/task3-base-transform.mjs'
+    process.cwd() +
+    '/output/playwright/source-checks/task3-base-transform.mjs'
   await writeFile(path, oldSource)
   const old = await import(pathToFileURL(path).href + '?v=' + Date.now())
   const raw = await readFile(
@@ -925,3 +934,23 @@ it.each(['revoke', 'finish'])(
     }
   }
 )
+it('Task4 transformed shared generation uses the board adapter without private fetch', async () => {
+  const t = await load(true)
+  expect(typeof t).toBe('object')
+  const raw = await readFile(
+    'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
+    'utf8'
+  )
+  const source = await patchResearchBoardConversation(raw)
+  expect(source).toContain('sherlockBoardsAdapter.generateShared')
+  expect(source).toContain('node.collaborationAssetId')
+  expect(source).toContain('PersonalResearchHistory')
+})
+
+it('places imported history before real native chat flow and suppresses the empty surface only while the native conversation is empty', async () => {
+  const { source } = await load(false)
+  expect(source).toContain('PersonalResearchHistory,{sessionId,flow:true')
+  expect(source).toContain(
+    'PersonalResearchHistory,{sessionId,empty:researchEmpty'
+  )
+})

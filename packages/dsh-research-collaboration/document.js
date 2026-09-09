@@ -1,8 +1,9 @@
+import { portableReferences } from './context.js'
 import * as Y from 'yjs'
 import { LIMITS } from './protocol.js'
 const collections = ['files', 'artifacts']
 const nodeFields = new Set(
-  'sizeMode aspectRatio source mediaType contentType previewEligible stackOrder rotation scale messageId titleMode sourceText containerPrompt containerSpec refreshMinutes refreshError lastSuccessfulAt generationStatus generationSources generationDetail generationError generationStartedAt generationCompletedAt creationMode workbenchId workbenchIndex workbenchRevealAt workbenchColumns containerSizePreset id kind title excerpt text content html data config chart table rows columns series options x y width height zIndex order parentId groupId sourceNodeIds assetId assetVersion name displayName mimeType size sourceUrl url capturedAt status version color style layout collapsed format language description citation citations references createdAt updatedAt'.split(
+  'sizeMode aspectRatio source mediaType contentType previewEligible stackOrder rotation scale messageId titleMode sourceText containerPrompt containerSpec refreshMinutes refreshScheduleId refreshError lastSuccessfulAt generationStatus generationSources generationDetail generationError generationStartedAt generationCompletedAt creationMode workbenchId workbenchIndex workbenchRevealAt workbenchColumns containerSizePreset id kind title excerpt text content html data config chart table rows columns series options x y width height zIndex order parentId groupId sourceNodeIds assetId assetVersion name displayName mimeType size sourceUrl url capturedAt status version color style layout collapsed format language description citation citations references createdAt updatedAt'.split(
     ' '
   )
 )
@@ -268,6 +269,7 @@ export function freezeSnapshot(input) {
     id: String(m.id ?? `history-${i}`),
     role: m.role === 'assistant' ? 'assistant' : 'user',
     text: String(m.text ?? ''),
+    ...(m.references ? { references: portableReferences(m.references) } : {}),
     ...(typeof m.authorName === 'string' ? { authorName: m.authorName } : {}),
     ...(typeof m.createdAt === 'number' ? { createdAt: m.createdAt } : {})
   }))

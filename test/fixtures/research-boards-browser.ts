@@ -42,6 +42,10 @@ const bridge = createResearchBoardsBridge({
 })
 win.dshDesktop = {
   researchBoards: bridge,
+  researchPreview: {
+    restore: (value: any) => rpc('preview:restore', value),
+    release: (value: any) => rpc('preview:release', value)
+  },
   researchCanvasStorage: {
     getItem: (key: string) => sync('canvas:get', key),
     setItem: (key: string, value: string) => sync('canvas:set', key, value)
@@ -68,7 +72,8 @@ for (const name of ['runtime', 'conversation', 'sidebar']) {
   ;(0, eval)(await (await fetch('/' + name + '.js')).text())
   const mod = descriptor.factory((id: string) => loaded[id] ?? fallback)
   loaded[name] = mod
-  if (name === 'runtime') loaded['@deepseek-ai/dsh-client-runtime/client'] = mod
+  if (name === 'runtime')
+    loaded['@deepseek-ai/dsh-client-runtime/client'] = mod
 }
 const mod = loaded.conversation,
   sidebar = loaded.sidebar
@@ -127,6 +132,7 @@ const sessions: any = {
   },
   create: async () => {
     const id = crypto.randomUUID()
+    await rpc('fixture:session-create', id)
     const prior = list.getSnapshot()
     list.set({
       ...prior,
@@ -264,7 +270,10 @@ function App() {
     { className: 'fixture-shell', 'data-sidebar-collapsed': collapsed },
     h(
       'aside',
-      { className: 'fixture-sidebar', style: { width: collapsed ? 80 : 260 } },
+      {
+        className: 'fixture-sidebar',
+        style: { width: collapsed ? 80 : 260 }
+      },
       h(sidebar.__SidebarRoot, {
         collapsed,
         width: 260,
@@ -331,9 +340,17 @@ function App() {
                 MarkdownText: primitives.MarkdownText
               })
             : h(
-                'div',
-                { className: 'srb-discussion' },
-                h('p', null, '在画板中整理资料，围绕选中的内容继续研究。')
+                mod.__page.PersonalResearchHistory,
+                {
+                  sessionId: id,
+                  empty: true,
+                  MarkdownText: primitives.MarkdownText
+                },
+                h(
+                  'div',
+                  { className: 'srb-discussion' },
+                  h('p', null, '在画板中整理资料，围绕选中的内容继续研究。')
+                )
               ),
           h(mod.__InputBar, {
             sessionId: id,

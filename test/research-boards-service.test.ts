@@ -368,7 +368,9 @@ it('persists before sending, survives restart and recovers only own changes on r
       'sherlock.research.canvas.artifacts.v1:shared-session'
     )
   ).toBe('[]')
-  const persisted = JSON.stringify(new ResearchBoardsStore(t.dir).account('u'))
+  const persisted = JSON.stringify(
+    new ResearchBoardsStore(t.dir).account('u')
+  )
   expect(persisted).toContain('OWN')
   expect(persisted).not.toContain('Imported private shared history')
   expect(persisted).not.toContain('abcOWN')
@@ -592,7 +594,9 @@ it('prevents source-session binding and returns concrete errors for unwired capt
     })
   ).toMatchObject({ ok: false, error: { code: 'BINDING_CONFLICT' } })
   expect(
-    await t.service.invoke('board.create', { favoriteId: favorite.favoriteId })
+    await t.service.invoke('board.create', {
+      favoriteId: favorite.favoriteId
+    })
   ).toMatchObject({ ok: false, error: { code: 'CAPTURE_UNAVAILABLE' } })
   expect(
     await t.service.invoke('request.submit', {
@@ -726,7 +730,9 @@ it('fails complete capture with unresolved assets instead of publishing a partia
     title: 'Missing file'
   })
   expect(
-    await t.service.invoke('board.create', { favoriteId: favorite.favoriteId })
+    await t.service.invoke('board.create', {
+      favoriteId: favorite.favoriteId
+    })
   ).toMatchObject({ ok: false, error: { code: 'RESOURCE_UNAVAILABLE' } })
   expect(t.sent).toHaveLength(0)
 })
@@ -757,7 +763,9 @@ it('removes rejected optimistic CRDT structs while preserving own recovery', asy
   expect(t.service.getSnapshot().current!.canvas.artifacts[0]!.excerpt).toBe(
     'abc'
   )
-  expect(JSON.stringify(t.store.account('u').recoveries)).toContain('rejected')
+  expect(JSON.stringify(t.store.account('u').recoveries)).toContain(
+    'rejected'
+  )
   expect(t.store.account('u').pending).toHaveLength(0)
 })
 
@@ -796,7 +804,9 @@ it('durably retries an invitation response with the same operation ID', async ()
       })
     ).ok
   ).toBe(false)
-  expect(new ResearchBoardsStore(t.dir).account('u').auxiliary).toHaveLength(1)
+  expect(new ResearchBoardsStore(t.dir).account('u').auxiliary).toHaveLength(
+    1
+  )
   offline = false
   await t.service.refresh()
   expect(operations).toHaveLength(2)
@@ -886,9 +896,9 @@ it('rejects a pre-revocation GET and permits independently requested later reaut
   expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
   expect(t.store.account('u').checkpoints.board).toBeUndefined()
   t.allow()
-  expect((await t.service.invoke('board.open', { boardId: 'board' })).ok).toBe(
-    true
-  )
+  expect(
+    (await t.service.invoke('board.open', { boardId: 'board' })).ok
+  ).toBe(true)
   release(null)
   expect(await opening).toMatchObject({
     ok: false,
@@ -944,9 +954,9 @@ it('discards an ACK checkpoint read produced before membership revocation', asyn
   expect(t.store.account('u').checkpoints.board).toBeUndefined()
   expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
   t.allow()
-  expect((await t.service.invoke('board.open', { boardId: 'board' })).ok).toBe(
-    true
-  )
+  expect(
+    (await t.service.invoke('board.open', { boardId: 'board' })).ok
+  ).toBe(true)
   expect(t.service.getSnapshot().current!.permissions.read).toBe(true)
 })
 
@@ -965,9 +975,9 @@ it('keeps revalidation fail-closed across permission GET and scheduled refresh n
     canvas: { files: [], artifacts: [] }
   })
   t.setOnline(true)
-  expect((await t.service.invoke('board.open', { boardId: 'board' })).ok).toBe(
-    true
-  )
+  expect(
+    (await t.service.invoke('board.open', { boardId: 'board' })).ok
+  ).toBe(true)
   expect(t.service.getSnapshot().current!.permissions.read).toBe(true)
 })
 
@@ -1211,8 +1221,13 @@ it('resumes a committed staged creation after losing its ACK without reopening i
     ).ok
   ).toBe(false)
   expect(
-    await t.service.invoke('board.create', { favoriteId: favorite.favoriteId })
-  ).toMatchObject({ ok: true, value: { board: { boardId: 'created-board' } } })
+    await t.service.invoke('board.create', {
+      favoriteId: favorite.favoriteId
+    })
+  ).toMatchObject({
+    ok: true,
+    value: { board: { boardId: 'created-board' } }
+  })
   expect(captures).toBe(1)
   expect(stageCount).toBe(1)
   expect(bodies[1]).toEqual(bodies[0])
@@ -1443,4 +1458,161 @@ it('hydrates retained invitation rows when role and terminal events use new noti
         (n) => n.invitation?.status === 'cancelled'
       )
   ).toBe(true)
+})
+it('Task4 main actions preserve request context and return independent personal import', async () => {
+  let captured: any
+  const m = make({
+    submitRequest: async (i: any) => {
+      captured = i
+      return {
+        accepted: false,
+        clientMutationId: i.clientMutationId,
+        state: 'pending'
+      }
+    },
+    personalImport: (id: string) => ({
+      history: [{ id: 'old', role: 'user', text: id }]
+    })
+  } as any)
+  await ready(m)
+  const result = await m.service.invoke('request.submit', {
+    boardId: 'board',
+    text: 'q',
+    clientMutationId: 'task4-m',
+    context: {
+      scope: 'references',
+      references: [{ collection: 'artifacts', nodeId: 'n' }]
+    }
+  })
+  expect(result.ok).toBe(true)
+  expect(captured.context.references[0].nodeId).toBe('n')
+  const imported = await m.service.invoke('import.get', {
+    localSessionId: 'personal'
+  })
+  expect(imported.ok).toBe(true)
+})
+it('publishes an atomic local canvas/revision pair through deferred materialization and account reset', async () => {
+  let hold = false,
+    release!: () => void
+  const t = make({
+    materializeBoard: async (input) => {
+      if (hold) await new Promise<void>((r) => (release = r))
+      const canvas = structuredClone(input.canvas)
+      for (const n of canvas.files) {
+        n.collaborationAssetId = n.assetId
+        delete n.assetId
+        n.path = '/owned/' + n.id
+        n.authorizationId = 'local-grant'
+        n.contentType = 'text/plain'
+      }
+      return canvas
+    }
+  })
+  const before = await ready(t)
+  hold = true
+  const remote = t.remote((c) =>
+    c.files.push({
+      id: 'file',
+      assetId: 'cloud',
+      name: 'evidence.txt',
+      contentType: 'text/plain',
+      source: 'computer',
+      x: 0,
+      y: 0
+    })
+  )
+  await new Promise((r) => setTimeout(r, 0))
+  ;(t.service as any).emitState()
+  const during = t.service.getSnapshot().current!
+  expect(during.canvas).toEqual(before.canvas)
+  expect(during.canvasRevision).toBe(before.canvasRevision)
+  expect(during.permissions.read).toBe(true)
+  expect(
+    t.service.readCanvasStorage(
+      'sherlock.research.canvas.files.v1:shared-session'
+    )
+  ).toBe('[]')
+  release()
+  await remote
+  const after = t.service.getSnapshot().current!
+  expect(after.canvas.files[0]!.path).toBe('/owned/file')
+  expect(after.canvas.files[0]!.assetId).toBeUndefined()
+  expect(after.canvasRevision).not.toBe(before.canvasRevision)
+  const late = t.remote((c) => (c.files[0].name = 'changed.txt'))
+  await new Promise((r) => setTimeout(r, 0))
+  t.account.authenticated = false
+  t.account.generation++
+  for (const listener of t.accountListeners) listener()
+  release()
+  await expect(late).rejects.toThrow()
+  expect(t.service.getSnapshot().current).toBeNull()
+  expect(
+    t.service.readCanvasStorage(
+      'sherlock.research.canvas.files.v1:shared-session'
+    )
+  ).toBe('[]')
+})
+
+it('keeps viewer copy authority alive through an ordinary content snapshot while still aborting epoch changes', async () => {
+  let captured: AbortSignal | undefined, release: any
+  const t = make({
+    preparePersonalCopy: async (i) => {
+      captured = i.signal
+      await new Promise((r) => (release = r))
+      i.signal.throwIfAborted()
+      return { copyId: 'copy', title: 'copy' }
+    }
+  })
+  t.setRole('viewer')
+  await t.service.start()
+  await t.service.invoke('board.open', { boardId: 'board' })
+  const pending = t.service.invoke('board.copyPersonal', { boardId: 'board' })
+  await new Promise((r) => setTimeout(r, 0))
+  await t.remote((c) => (c.artifacts[0].excerpt = 'remote update'))
+  expect(captured?.aborted).toBe(false)
+  release()
+  expect((await pending).ok).toBe(true)
+  const second = t.service.invoke('board.copyPersonal', { boardId: 'board' })
+  await new Promise((r) => setTimeout(r, 0))
+  t.revoke()
+  await t.service.receiveBoard('board', t.snapshot())
+  expect(captured?.aborted).toBe(true)
+  release()
+  expect((await second).ok).toBe(false)
+})
+
+it('retires durable former-editor writes when the first cold-start snapshot is viewer', async () => {
+  const t = make()
+  const view = await ready(t)
+  t.setOnline(false)
+  const canvas = structuredClone(view.canvas)
+  canvas.artifacts[0]!.excerpt = 'unsent editor intent'
+  await t.service.invoke('canvas.apply', {
+    boardId: 'board',
+    localSessionId: 'shared-session',
+    baseRevision: view.canvasRevision,
+    clientMutationId: 'cold-downgrade',
+    canvas
+  })
+  await t.service.flush()
+  expect(t.store.account('u').pending).toHaveLength(1)
+  t.service.stop()
+  t.setRole('viewer')
+  t.setOnline(true)
+  const store = new ResearchBoardsStore(t.dir)
+  const resumed = new ResearchBoardsService({
+    store,
+    storage: t.storage,
+    account: t.account,
+    client: t.client as never
+  })
+  services.push(resumed)
+  await resumed.start()
+  await resumed.invoke('board.open', { boardId: 'board' })
+  await resumed.flush()
+  expect(store.account('u').pending).toHaveLength(0)
+  expect(projectDocument(t.doc).artifacts[0]!.excerpt).toBe('abc')
+  expect(JSON.stringify(store.account('u').recoveries)).toContain(
+    'unsent editor intent'
+  )
 })

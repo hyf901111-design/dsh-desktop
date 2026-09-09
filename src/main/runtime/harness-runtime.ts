@@ -19,7 +19,7 @@ export interface HarnessRuntimeOptions {
   localSearchUrl: string
   accountEndpoint?: { url: string; token: string }
   localSearchToken: string
-  researchContext?: { url: string; token: string }
+  researchContext?: { url: string; token: string; boardsToken?:string }
   dshHome: string
   logPath: string
   launchProcess(
@@ -52,7 +52,7 @@ export function buildHarnessSpawnOptions(
   localSearch?: { url: string; token: string },
   bundledMarketInstallerEntry?: string,
   bundledResearchTaskEntry?: string,
-  researchContext?: { url: string; token: string },
+  researchContext?: { url: string; token: string; boardsToken?:string },
   bundledFundResearchEntry?: string
 ): SpawnOptionsWithoutStdio {
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...parentEnvironment } = environment
@@ -87,7 +87,8 @@ export function buildHarnessSpawnOptions(
       ...(researchContext
         ? {
             SHERLOCK_RESEARCH_CONTEXT_URL: researchContext.url,
-            SHERLOCK_RESEARCH_CONTEXT_TOKEN: researchContext.token
+            SHERLOCK_RESEARCH_CONTEXT_TOKEN: researchContext.token,
+            SHERLOCK_RESEARCH_BOARDS_TOKEN: researchContext.boardsToken
           }
         : {}),
       NO_COLOR: '1',

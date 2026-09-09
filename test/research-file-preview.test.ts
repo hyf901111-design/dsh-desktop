@@ -1651,7 +1651,7 @@ describe('Research preview privileged IPC registration', () => {
       path: filePath,
       sessionId: 'session-1',
       nodeId: 'node-1'
-    }))).rejects.toThrow('main Sherlock window')
+    }))).rejects.toThrow('main EWork Odyssey window')
     const descriptor = await finder?.(trusted, {
       path: filePath,
       sessionId: 'session-1',
@@ -1667,7 +1667,7 @@ describe('Research preview privileged IPC registration', () => {
       sessionId: 'session-1', nodeId: 'node-1',
       authorizationId: descriptor.authorizationId,
       capabilityToken: descriptor.capabilityToken
-    }))).rejects.toThrow('main Sherlock window')
+    }))).rejects.toThrow('main EWork Odyssey window')
     expect(await release?.(trusted, {
       sessionId: 'session-1', nodeId: 'node-1',
       authorizationId: descriptor.authorizationId,

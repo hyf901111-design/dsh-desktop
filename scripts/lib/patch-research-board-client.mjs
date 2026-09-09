@@ -36,14 +36,18 @@ export async function patchResearchBoardConversation(source) {
       'sharedDraft: text =>'
     ]) {
       if (!source.includes(sentinel))
-        throw Error('Incomplete research boards structural patch: ' + sentinel)
+        throw Error(
+          'Incomplete research boards structural patch: ' + sentinel
+        )
     }
     const end = source.indexOf(END)
     if (end < 0) throw Error('Incomplete research boards patch')
-    return gesturePatch(
-      source.slice(0, source.indexOf(START)) +
-        bundle +
-        source.slice(end + END.length)
+    return task4Patch(
+      gesturePatch(
+        source.slice(0, source.indexOf(START)) +
+          bundle +
+          source.slice(end + END.length)
+      )
     )
   }
   source = replace(
@@ -115,7 +119,7 @@ export async function patchResearchBoardConversation(source) {
       source,
       method,
       method +
-        '\n                if (sherlockShared(session.sessionId)) throw new Error("共享组件执行尚未就绪，请保留需求后重试。");'
+        `\n                if (sherlockShared(session.sessionId)) { if(!sherlockBoardsAdapter)throw new Error("共享研究暂不可用");return sherlockBoardsAdapter.${method.startsWith('async generate') ? 'generateShared' : method.startsWith('inspect') ? 'inspectShared' : 'cancelShared'}(session.sessionId,request); }`
     )
   }
   source = replace(
@@ -141,7 +145,7 @@ export async function patchResearchBoardConversation(source) {
   source = replace(
     source,
     'const node = canonicalResearchCanvasFileNode(item);',
-    'const canonical = canonicalResearchCanvasFileNode(item);\n                    const node = canonical && typeof item.collaborationAssetId === "string" ? {...canonical,collaborationAssetId:item.collaborationAssetId} : canonical;'
+    'const canonical = canonicalResearchCanvasFileNode(item);\n                    const node = canonical && typeof item.collaborationAssetId === "string" ? {...canonical,collaborationAssetId:item.collaborationAssetId} : canonical && item.personalImportFile ? {...canonical,personalImportFile:true} : canonical;'
   )
   source = replace(
     source,
@@ -214,7 +218,9 @@ export async function patchResearchBoardConversation(source) {
                 },
                 subscribeAssistantActions`
   )
-  const storageStart = source.indexOf('\t\tfunction researchCanvasStorage() {'),
+  const storageStart = source.indexOf(
+      '\t\tfunction researchCanvasStorage() {'
+    ),
     storageEnd = source.indexOf(
       '\n\t\tfunction researchCanvasFileCaption',
       storageStart
@@ -287,9 +293,9 @@ export async function patchResearchBoardConversation(source) {
   source = replace(
     source,
     'const result = await Promise.resolve(window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);',
-    `const result = await Promise.resolve(sherlockShared(sessionId) ? window.dshDesktop?.researchBoards?.invoke?.("file.open",{boardId:sherlockBoardsAdapter?.getView(sessionId)?.boardId,localSessionId:sessionId,nodeId:node.id}) : window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);`
+    `const result = await Promise.resolve(sherlockShared(sessionId) ? window.dshDesktop?.researchBoards?.invoke?.("file.open",{boardId:sherlockBoardsAdapter?.getView(sessionId)?.boardId,localSessionId:sessionId,nodeId:node.id}) : node.personalImportFile ? window.dshDesktop?.researchBoards?.invoke?.("import.fileOpen",{localSessionId:sessionId,nodeId:node.id}) : window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);`
   )
-  return gesturePatch(source)
+  return task4Patch(gesturePatch(source))
 }
 function gesturePatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_GESTURE_V1 */')) return source
@@ -334,7 +340,8 @@ function gesturePatch(source) {
       oldLeave,
       'if(v)sherlockBoardsAdapter.clearPresence(sessionId);'
     )
-  const oldListeners = 'root.addEventListener("pointerleave",leave);return()=>{'
+  const oldListeners =
+    'root.addEventListener("pointerleave",leave);return()=>{'
   if (source.includes(oldListeners))
     source = replace(
       source,
@@ -342,6 +349,73 @@ function gesturePatch(source) {
       'root.addEventListener("pointerleave",leave);window.addEventListener("blur",leave);root.addEventListener("pointercancel",leave);return()=>{window.removeEventListener("blur",leave);root.removeEventListener("pointercancel",leave);'
     )
   return source
+}
+function task4Patch(source) {
+  if (source.includes('/* SHERLOCK_BOARD_EXECUTION_V1 */')) return source
+  const oldNode =
+    'const node = canonical && typeof item.collaborationAssetId === "string" ? {...canonical,collaborationAssetId:item.collaborationAssetId} : canonical;'
+  if (source.includes(oldNode))
+    source = replace(
+      source,
+      oldNode,
+      'const node = canonical && typeof item.collaborationAssetId === "string" ? {...canonical,collaborationAssetId:item.collaborationAssetId} : canonical && item.personalImportFile ? {...canonical,personalImportFile:true} : canonical;'
+    )
+  const oldOpen =
+    ': window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);'
+  if (!source.includes('"import.fileOpen"'))
+    source = replace(
+      source,
+      oldOpen,
+      ': node.personalImportFile ? window.dshDesktop?.researchBoards?.invoke?.("import.fileOpen",{localSessionId:sessionId,nodeId:node.id}) ' +
+        oldOpen
+    )
+  for (const method of [
+    'async generateResearchSelection(session, request) {',
+    'inspectResearchGeneration(session, request) {',
+    'cancelResearchGeneration(session, request) {'
+  ]) {
+    const old =
+      method +
+      '\n                if (sherlockShared(session.sessionId)) throw new Error("共享组件执行尚未就绪，请保留需求后重试。");'
+    if (source.includes(old))
+      source = replace(
+        source,
+        old,
+        method +
+          `\n                if (sherlockShared(session.sessionId)) { if(!sherlockBoardsAdapter)throw new Error("共享研究暂不可用");return sherlockBoardsAdapter.${method.startsWith('async generate') ? 'generateShared' : method.startsWith('inspect') ? 'inspectShared' : 'cancelShared'}(session.sessionId,request); }`
+      )
+  }
+  source = replace(
+    source,
+    '!node.assetId ? null :',
+    '!(node.assetId || node.collaborationAssetId || node.personalImportFile) ? null :'
+  )
+  source = replace(
+    source,
+    'if (result?.ok !== true) button?.setAttribute',
+    'if (result?.ok !== true || ((sherlockShared(sessionId) || node.personalImportFile) && result?.value?.opened !== true)) button?.setAttribute'
+  )
+  source = replace(
+    source,
+    "if (editingPrompt || node.creationMode === 'selection' || node.refreshMinutes === 0",
+    "if (sherlockShared(sessionId) || editingPrompt || node.creationMode === 'selection' || node.refreshMinutes === 0"
+  )
+  source = replace(
+    source,
+    'if (active) workspace.applyGenerationInspection(node.id, inspection);',
+    'if (active && !sherlockShared(sessionId)) workspace.applyGenerationInspection(node.id, inspection);'
+  )
+  source = replace(
+    source,
+    '(0, react_dom.createPortal)(researchConversationView, researchSidebarSnapshot.conversationHost)',
+    '(0, react_dom.createPortal)(sherlockShared(sessionId) ? researchConversationView : (0,react_jsx_runtime.jsx)(sherlockBoardsPage.PersonalResearchHistory,{sessionId,empty:researchEmpty,MarkdownText:_deepseek_ai_dsh_client_ui_primitives.MarkdownText,children:researchConversationView}), researchSidebarSnapshot.conversationHost)'
+  )
+  source = replace(
+    source,
+    '\"data-chat-flow\": \"\",\n\t\t\t\t\t\tchildren: [',
+    '\"data-chat-flow\": \"\",\n\t\t\t\t\t\tchildren: [(0,react_jsx_runtime.jsx)(sherlockBoardsPage.PersonalResearchHistory,{sessionId,flow:true,MarkdownText:_deepseek_ai_dsh_client_ui_primitives.MarkdownText}),'
+  )
+  return source + '\n/* SHERLOCK_BOARD_EXECUTION_V1 */'
 }
 export function patchResearchBoardSidebar(source) {
   if (source.includes('"sidebar.researchBoards"')) return source

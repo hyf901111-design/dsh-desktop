@@ -1,3 +1,10 @@
+import { Session } from '@deepseek-ai/dsh-session'
+import { randomUUID } from 'node:crypto'
+import {
+  SharedExecutionRuntime,
+  fileExecutionStorage,
+  registerBoardRuntime
+} from '../packages/dsh-research-task-runtime/board-runtime.js'
 import assert from 'node:assert/strict'
 import { build } from 'esbuild'
 import {
@@ -6,7 +13,8 @@ import {
   mkdir,
   readdir,
   mkdtemp,
-  rm
+  rm,
+  realpath
 } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -24,7 +32,7 @@ await mkdir(out, { recursive: true })
 await build({
   stdin: {
     contents:
-      "export {ResearchBoardsService} from './src/main/research-boards-service.ts';export {ResearchBoardsStore} from './src/main/state/research-boards-store.ts';export {ResearchCanvasStorage} from './src/main/state/research-canvas-storage.ts';export {CollaborationClient,collaborationRequestSpec} from './src/main/collaboration-client.ts'",
+      "export {ResearchCanvasClipboard} from './src/main/state/research-canvas-clipboard.ts';export {ResearchBoardIntegration} from './src/main/research-board-integration.ts';export {ResearchFilePreviewRegistry,FileResearchPreviewAuthorizationStorage} from './src/main/state/research-file-preview.ts';export {ResearchBoardsService} from './src/main/research-boards-service.ts';export {ResearchBoardsStore} from './src/main/state/research-boards-store.ts';export {ResearchCanvasStorage} from './src/main/state/research-canvas-storage.ts';export {CollaborationClient,collaborationRequestSpec} from './src/main/collaboration-client.ts'",
     resolveDir: root
   },
   bundle: true,
@@ -34,6 +42,10 @@ await build({
   outfile: join(out, 'host.mjs')
 })
 const {
+  ResearchCanvasClipboard,
+  ResearchBoardIntegration,
+  ResearchFilePreviewRegistry,
+  FileResearchPreviewAuthorizationStorage,
   ResearchBoardsService,
   ResearchBoardsStore,
   ResearchCanvasStorage,
@@ -48,7 +60,9 @@ const worker = await build({
   write: false,
   external: ['cloudflare:workers', 'node:*']
 })
-const temp = await mkdtemp(join(tmpdir(), 'sherlock-boards-browser-'))
+const temp = await realpath(
+  await mkdtemp(join(tmpdir(), 'sherlock-boards-browser-'))
+)
 const mf = new Miniflare(
   convertV4MiniflareOptions({
     resourcePersistencePath: temp,
@@ -75,10 +89,9 @@ await mf.ready
 const db = await mf.getD1Database('ACCOUNTS_DB')
 for (const file of ['0001_accounts.sql', '0002_research_boards.sql'])
   await db.exec(
-    (await readFile('services/accounts/migrations/' + file, 'utf8')).replaceAll(
-      '\n',
-      ' '
-    )
+    (
+      await readFile('services/accounts/migrations/' + file, 'utf8')
+    ).replaceAll('\n', ' ')
   )
 await db
   .prepare('INSERT INTO invites(hash,expires_at,max_uses) VALUES(?,?,10)')
@@ -151,20 +164,30 @@ for (let i = 0; i < 2; i++) {
   const dir = join(temp, 'user' + i),
     store = new ResearchBoardsStore(dir),
     storage = new ResearchCanvasStorage(dir)
+  const accountListeners = new Set()
   const account = {
     generation: 1,
     authenticated: true,
-    subscribeSessionChanged: () => () => {},
+    subscribeSessionChanged: (f) => {
+      accountListeners.add(f)
+      return () => accountListeners.delete(f)
+    },
     async collaborationRequest(endpoint, signal) {
       const spec = collaborationRequestSpec(endpoint)
       const r = await mf.dispatchFetch('http://127.0.0.1' + spec.path, {
         method: spec.method,
         headers: { ...spec.headers, authorization: 'Bearer ' + tokens[i] },
-        ...(spec.body ? { body: spec.body } : {}),
+        ...(spec.body ? { body: spec.body, duplex: 'half' } : {}),
         signal
       })
       if (!r.ok) {
         const v = await r.json()
+        console.error(
+          'WORKER_REJECT',
+          endpoint.kind,
+          r.status,
+          JSON.stringify(v)
+        )
         throw Object.assign(Error(v.error.message), v.error, {
           status: r.status
         })
@@ -177,52 +200,165 @@ for (let i = 0; i < 2; i++) {
     socketFactory: socketAdapter,
     reconnectMs: 50
   })
-  const captures = new Map()
-  let counter = 0
-  const hooks = {
-    async previewCapture({ sessionId }) {
-      const canvas = {
-          files: JSON.parse(
-            storage.getItem('sherlock.research.canvas.files.v1:' + sessionId) ??
-              '[]'
-          ),
-          artifacts: JSON.parse(
-            storage.getItem(
-              'sherlock.research.canvas.artifacts.v1:' + sessionId
-            ) ?? '[]'
-          )
-        },
-        captureId = 'capture-' + ++counter
-      captures.set(captureId, canvas)
-      return {
-        captureId,
-        sourceRevision: captureId,
-        nodeCount: canvas.files.length + canvas.artifacts.length,
-        historyCount: 1,
-        assetBytes: 0
-      }
+  const original = Session.create('original')
+  original.append(
+    'user/message',
+    {
+      id: 'intro',
+      source: { kind: 'user' },
+      content: [{ type: 'text', text: '研究黄金价格的影响因素。' }]
     },
-    async captureOriginal({ captureId }) {
-      const canvas = captures.get(captureId)
-      if (!canvas) throw Error('Missing reviewed capture')
-      return {
-        sourceRevision: captureId,
-        capturedAt: new Date().toISOString(),
-        snapshot: {
-          canvas,
-          history: [
-            { id: 'intro', role: 'user', text: '研究黄金价格的影响因素。' }
-          ]
+    { surfaceOp: 'append' }
+  )
+  const sessionData = new Map([['original', original]])
+  let modelCalls = 0
+  const control = {
+    hold: false,
+    release: null,
+    dropStartAck: false,
+    clockOffset: 0
+  }
+  const runtimeRoutes = new Map(),
+    runtimeToken = randomUUID()
+  const execution = new SharedExecutionRuntime({
+    storage: fileExecutionStorage(join(dir, 'execution.json')),
+    execute: async (request, signal) => {
+      modelCalls++
+      if (control.hold) {
+        control.hold = false
+        await new Promise((resolve, reject) => {
+          control.release = resolve
+          signal.addEventListener('abort', () => reject(Error('STOPPED')), {
+            once: true
+          })
+        })
+      }
+      const evidence = []
+      for (const file of request.files ?? [])
+        evidence.push(await readFile(file.path, 'utf8'))
+      return request.kind === 'container'
+        ? JSON.stringify({
+            version: 1,
+            type: 'markdown',
+            title: '已生成组件',
+            content: '基于冻结资料的合成组件'
+          })
+        : '合成研究回答：' + (evidence.join('；') || '已参考保存的研究资料。')
+    }
+  })
+  await execution.restore()
+  const disposeRuntime = registerBoardRuntime(
+    {
+      webServer: {
+        register({ path, handler }) {
+          runtimeRoutes.set(path, handler)
+          return () => runtimeRoutes.delete(path)
+        }
+      },
+      sessions: { get: (id) => sessionData.get(id), flush: async () => true },
+      sessionPersistence: {
+        inspect: async (id) => {
+          const s = sessionData.get(id)
+          if (!s) throw Error('SESSION_NOT_FOUND')
+          return { meta: s.header, events: s.events }
         }
       }
+    },
+    execution,
+    { token: runtimeToken }
+  )
+  const runtimeServer = createServer((req, res) => {
+    const handler = runtimeRoutes.get(req.url)
+    if (handler) void handler(req, res)
+    else {
+      res.writeHead(404)
+      res.end()
     }
-  }
-  const service = new ResearchBoardsService({
+  })
+  await new Promise((resolve) =>
+    runtimeServer.listen(0, '127.0.0.1', resolve)
+  )
+  const registry = new ResearchFilePreviewRegistry({
+    storage: new FileResearchPreviewAuthorizationStorage(dir)
+  })
+  let clipboardPaths = []
+  const clipboard = new ResearchCanvasClipboard({
+    userDataPath: dir,
+    registry,
+    revealFile: () => {},
+    clipboard: {
+      availableFormats: () =>
+        clipboardPaths.length ? ['text/uri-list'] : [],
+      readBuffer: () =>
+        Buffer.from(
+          clipboardPaths.map((p) => pathToFileURL(p).href).join('\n')
+        ),
+      readText: () => '',
+      readHTML: () => '',
+      readImage: () => ({ isEmpty: () => true }),
+      write: () => {}
+    }
+  })
+  let service
+  const integration = new ResearchBoardIntegration({
+    root: join(dir, 'portable-runtime'),
+    now: () => Date.now() + control.clockOffset,
+    storage,
+    registry,
+    clipboard: () => clipboard,
+    client,
+    service: () => service,
+    runtimeUrl: () => `http://127.0.0.1:${runtimeServer.address().port}`,
+    runtimeToken,
+    runtimeRequest: async (action, body, signal) => {
+      const origin = `http://127.0.0.1:${runtimeServer.address().port}`
+      const response = await fetch(
+        origin + '/sherlock/research-boards/' + action,
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer ' + runtimeToken,
+            origin,
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify(body),
+          signal
+        }
+      )
+      const value = await response.json()
+      if (!response.ok) throw Error(value.error)
+      if (action === 'start' && control.dropStartAck) {
+        control.dropStartAck = false
+        throw Error('LOST_START_ACK')
+      }
+      return value
+    },
+    revealFile: (path) => {
+      assert.ok(path.startsWith(dir))
+    },
+    invalidate: () => {}
+  })
+  service = new ResearchBoardsService({
     store,
     storage,
     account,
     client,
-    hooks
+    hooks: {
+      ...integration.hooks,
+      ...Object.fromEntries(
+        ['materializeBoard', 'projectLocalCanvas'].map((name) => [
+          name,
+          async (input) => {
+            try {
+              return await integration.hooks[name](input)
+            } catch (e) {
+              console.error('TASK4_HOOK_ERROR', name, e.stack)
+              throw e
+            }
+          }
+        ])
+      )
+    }
   })
   await service.start()
   await db
@@ -230,7 +366,30 @@ for (let i = 0; i < 2; i++) {
     .bind(i === 0 ? '0000000001' : '0000000002', 'u' + i)
     .run()
   await service.invoke('boards.refresh', {})
-  users.push({ service, storage, client })
+  users.push({
+    account,
+    signOut: () => {
+      account.authenticated = false
+      account.generation++
+      for (const f of accountListeners) f()
+    },
+    service,
+    storage,
+    client,
+    control,
+    clipboard,
+    setClipboardPaths: (paths) => {
+      clipboardPaths = paths
+    },
+    dir,
+    integration,
+    registry,
+    sessionData,
+    execution,
+    runtimeServer,
+    disposeRuntime,
+    modelCalls: () => modelCalls
+  })
 }
 const assets = new Map()
 for (const file of ['sherlock-logo.svg', 'sherlock-research.svg'])
@@ -286,7 +445,8 @@ const browser = await build({
         }))
         b.onLoad({ filter: /.*/, namespace: 'raw' }, async (a) => ({
           contents:
-            'export default ' + JSON.stringify(await readFile(a.path, 'utf8')),
+            'export default ' +
+            JSON.stringify(await readFile(a.path, 'utf8')),
           loader: 'js'
         }))
         b.onLoad({ filter: /.*/, namespace: 'image' }, async (a) => ({
@@ -350,13 +510,42 @@ const server = createServer(async (req, res) => {
         value = await u.service.invoke(...args)
       else if (channel === 'research:boards:is-shared-session')
         value = u.service.isSharedSession(args[0])
-      else if (channel === 'canvas:get')
+      else if (channel === 'preview:restore') {
+        value = await u.registry.restore(args[0])
+        if (value)
+          value = {
+            ...value,
+            url: '/preview?user=' + index + '&cap=' + value.capabilityToken
+          }
+      } else if (channel === 'preview:release')
+        value = { ok: u.registry.releaseCapability(args[0]) }
+      else if (channel === 'fixture:session-create') {
+        u.sessionData.set(args[0], Session.create(args[0]))
+        value = true
+      } else if (channel === 'canvas:get')
         value = u.service.readCanvasStorage(args[0])
       else if (channel === 'canvas:set')
         value = u.service.writeCanvasStorage(...args)
       else throw Error('Unexpected fixture channel')
+      if (value?.ok === false && channel === 'research:boards:invoke')
+        console.error(
+          'IPC_REJECT',
+          channel,
+          args[0],
+          JSON.stringify(value.error)
+        )
       res.writeHead(200, { 'content-type': 'application/json' })
       res.end(JSON.stringify(value))
+      return
+    }
+    if (url.pathname === '/preview') {
+      const u = users[Number(url.searchParams.get('user'))],
+        cap = url.searchParams.get('cap')
+      const response = await u.registry.handle(
+        new Request('sherlock-preview://' + cap + '/', { method: req.method })
+      )
+      res.writeHead(response.status, Object.fromEntries(response.headers))
+      res.end(Buffer.from(await response.arrayBuffer()))
       return
     }
     if (assets.has(url.pathname)) {
@@ -385,8 +574,9 @@ if (process.argv.includes('--serve')) {
   process.on('SIGINT', () => void cleanup())
   await new Promise(() => {})
 } else {
-  const { default: playwright } =
-    await import('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js')
+  const { default: playwright } = await import(
+    '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
+  )
   const { chromium } = playwright
   const browser = await chromium.launch({
     headless: true,
@@ -404,7 +594,7 @@ if (process.argv.includes('--serve')) {
   const errors = [],
     failedRequests = []
   for (const p of [page, peer]) {
-    p.on('pageerror', (e) => errors.push(e.message))
+    p.on('pageerror', (e) => errors.push(e.stack ?? e.message))
     p.on('console', (m) => {
       if (m.type() === 'error')
         errors.push(m.text() + ' ' + JSON.stringify(m.location()))
@@ -438,8 +628,12 @@ if (process.argv.includes('--serve')) {
     await page.getByRole('button', { name: '设为常用', exact: true }).click()
     await page.getByRole('button', { name: '共享协作', exact: true }).click()
     await page.getByLabel('对方专有 ID').fill('0000 0000 02')
-    await page.getByRole('button', { name: '查找并核对', exact: true }).click()
-    await page.getByText('周同事 · ID 0000 0000 02', { exact: true }).waitFor()
+    await page
+      .getByRole('button', { name: '查找并核对', exact: true })
+      .click()
+    await page
+      .getByText('周同事 · ID 0000 0000 02', { exact: true })
+      .waitFor()
     await page
       .getByRole('button', { name: '创建副本并邀请', exact: true })
       .click()
@@ -490,7 +684,9 @@ if (process.argv.includes('--serve')) {
     })
     await peer.getByRole('button', { name: '关闭提醒', exact: true }).click()
     await page.getByLabel('对方专有 ID').fill('0000 0000 02')
-    await page.getByRole('button', { name: '查找并核对', exact: true }).click()
+    await page
+      .getByRole('button', { name: '查找并核对', exact: true })
+      .click()
     await page.getByRole('button', { name: '发送邀请', exact: true }).click()
     await page.getByRole('button', { name: '关闭', exact: true }).click()
     await peer.getByRole('button', { name: '接受', exact: true }).click()
@@ -581,14 +777,15 @@ if (process.argv.includes('--serve')) {
     await composer.fill('总结当前画板')
     await composer.press('Enter')
     await page
-      .getByText('共享研究执行接口尚未就绪，引用和输入已保留。', {
-        exact: true
-      })
+      .getByText('合成研究回答：已参考保存的研究资料。', { exact: true })
       .waitFor()
-    assert.equal(await composer.inputValue(), '总结当前画板')
-    await page.screenshot({
-      path: join(out, 'execution-unavailable-light.png')
-    })
+    await peer
+      .getByText('合成研究回答：已参考保存的研究资料。', { exact: true })
+      .waitFor()
+    assert.equal(await composer.inputValue(), '')
+    assert.equal(users[0].modelCalls(), 1)
+    assert.equal(users[1].modelCalls(), 0)
+    await page.screenshot({ path: join(out, 'execution-accepted-light.png') })
     await composer.fill('')
     await page.screenshot({
       animations: 'disabled',
@@ -649,8 +846,535 @@ if (process.argv.includes('--serve')) {
       animations: 'disabled',
       path: join(out, 'viewer-light.png')
     })
+    // Task4 production hooks: upload, independent bytes, bound open, viewer copy and round trip.
+    const ownerSession = await page.evaluate(
+      () => window.fixture.sessions.list.getSnapshot().current
+    )
+    const peerSession = await peer.evaluate(
+      () => window.fixture.sessions.list.getSnapshot().current
+    )
+    const textPath = join(users[0].dir, 'evidence.txt'),
+      binaryPath = join(users[0].dir, 'archive.bin')
+    await writeFile(textPath, '冻结资料：销售额 42。')
+    await writeFile(binaryPath, Buffer.from([1, 2, 3, 4]))
+    const fileGrant = await users[0].registry.admitFinder({
+      path: textPath,
+      sessionId: ownerSession,
+      nodeId: 'evidence'
+    })
+    users[0].setClipboardPaths([binaryPath])
+    const native = await users[0].clipboard.read()
+    assert.equal(native.kind, 'files')
+    await page.evaluate(
+      ({ textPath, fileGrant, asset }) => {
+        const f = window.fixture,
+          w = f.registry.for(f.sessions.list.getSnapshot().current)
+        w.setFiles([
+          {
+            id: 'evidence',
+            name: 'evidence.txt',
+            source: 'computer',
+            path: textPath,
+            authorizationId: fileGrant.authorizationId,
+            contentType: fileGrant.contentType,
+            x: 350,
+            y: 550
+          },
+          {
+            id: 'archive',
+            name: 'archive.bin',
+            source: 'computer',
+            assetId: asset.assetId,
+            previewEligible: false,
+            x: 800,
+            y: 550
+          }
+        ])
+      },
+      { textPath, fileGrant, asset: native.files[0] }
+    )
+    await peer.waitForFunction(
+      () => window.fixture.page.getState().current?.canvas.files.length === 2
+    )
+    await rm(textPath)
+    await rm(binaryPath)
+    const opened = await users[1].service.invoke('file.open', {
+      boardId,
+      localSessionId: peerSession,
+      nodeId: 'archive'
+    })
+    assert.equal(opened.ok, true, JSON.stringify(opened))
+    const mutation = 'selected-' + randomUUID(),
+      calls = users[0].modelCalls()
+    const asked = await users[0].service.invoke('request.submit', {
+      boardId,
+      text: '这份文件的数字是多少？',
+      clientMutationId: mutation,
+      context: {
+        scope: 'references',
+        references: [{ collection: 'files', nodeId: 'evidence' }]
+      }
+    })
+    assert.equal(asked.ok, true, JSON.stringify(asked))
+    await page
+      .getByText('合成研究回答：冻结资料：销售额 42。', { exact: true })
+      .waitFor()
+    assert.equal(users[0].modelCalls(), calls + 1)
+    assert.equal(users[1].modelCalls(), 0)
+    const repeated = await users[0].service.invoke('request.retry', {
+      boardId,
+      clientMutationId: mutation
+    })
+    assert.equal(
+      repeated.value.requestMessageId,
+      asked.value.requestMessageId
+    )
+    assert.equal(users[0].modelCalls(), calls + 1)
+    users[0].control.hold = true
+    users[0].control.dropStartAck = true
+    const componentCalls = users[0].modelCalls()
+    await page.evaluate(() => {
+      const f = window.fixture,
+        w = f.registry.for(f.sessions.list.getSnapshot().current)
+      w.setArtifacts([
+        ...w.getSnapshot().artifacts,
+        {
+          id: 'component',
+          messageId: 'component',
+          kind: 'generated-container',
+          title: '合成组件',
+          excerpt: '正在准备任务…',
+          containerPrompt: '依据当前资料制作研究卡片',
+          refreshMinutes: 0,
+          generationStatus: 'queued',
+          x: 660,
+          y: 180,
+          width: 400,
+          height: 250
+        }
+      ])
+    })
+    const component = await page.evaluate(async () => {
+      const f = window.fixture,
+        id = f.sessions.list.getSnapshot().current
+      return f.hub.generateResearchSelection(f.sessions.binding(id).session, {
+        sessionId: id,
+        targetNodeId: 'component',
+        kind: 'container',
+        prompt: '依据当前资料制作研究卡片'
+      })
+    })
+    assert.equal(component.ok, true, JSON.stringify(component))
+    await page.waitForFunction(() =>
+      window.fixture.page
+        .getState()
+        .current.tasks.some(
+          (t) => t.targetId === 'component' && t.status === 'running'
+        )
+    )
+    await page.evaluate(() => {
+      const f = window.fixture,
+        w = f.registry.for(f.sessions.list.getSnapshot().current)
+      w.setArtifacts(
+        w
+          .getSnapshot()
+          .artifacts.map((n) => (n.id === 'component' ? { ...n, x: 850 } : n))
+      )
+    })
+    await peer.waitForFunction(
+      () =>
+        window.fixture.page
+          .getState()
+          .current.canvas.artifacts.find((n) => n.id === 'component')?.x ===
+        850
+    )
+    users[0].control.release()
+    await page
+      .getByRole('button', { name: '应用保留的研究结果', exact: true })
+      .waitFor()
+    assert.equal(users[0].modelCalls(), componentCalls + 1)
+    assert.equal(users[1].modelCalls(), 0)
+    await page.screenshot({ path: join(out, 'component-cas-retained.png') })
+    await page
+      .getByRole('button', { name: '应用保留的研究结果', exact: true })
+      .click()
+    await peer.getByText('基于冻结资料的合成组件', { exact: true }).waitFor()
+    const applied = await users[0].service.invoke('task.applyResult', {
+      boardId,
+      taskId: component.taskId
+    })
+    assert.equal(applied.ok, true, JSON.stringify(applied))
+    assert.equal(
+      users[0].service
+        .getSnapshot()
+        .current.canvas.artifacts.filter((n) => n.id === 'component').length,
+      1
+    )
+    assert.equal(
+      users[0].service
+        .getSnapshot()
+        .current.canvas.artifacts.find((n) => n.id === 'component').x,
+      850
+    )
+    await page.screenshot({ path: join(out, 'component-applied.png') })
+    console.log(
+      'TASK4_COMPONENT_PASSED real-InputHub/placeholder-ack/start-ack-lost-inspect/one-model/cas-preserve/idempotent-apply'
+    )
+    await page.evaluate(() => {
+      const f = window.fixture
+      f.registry
+        .for(f.sessions.list.getSnapshot().current)
+        .setContainerRefresh('component', 1)
+    })
+    await page.waitForFunction(() =>
+      window.fixture.page
+        .getView(window.fixture.sessions.list.getSnapshot().current)
+        ?.canvas.artifacts.some(
+          (n) => n.id === 'component' && n.refreshMinutes === 1
+        )
+    )
+    await page.evaluate(() =>
+      window.fixture.page.flushCanvas(
+        window.fixture.sessions.list.getSnapshot().current
+      )
+    )
+    // The clock is the only scheduler seam replaced; production runRefresh owns authority, lease and runtime.
+    users[0].control.clockOffset = 61000
+    const refreshCalls = users[0].modelCalls()
+    const refresh = await users[0].integration.runRefresh(
+      'u0',
+      boardId,
+      'component'
+    )
+    assert.equal(refresh.accepted, true, JSON.stringify(refresh))
+    await page.waitForFunction(
+      (taskId) =>
+        window.fixture.page
+          .getView(window.fixture.sessions.list.getSnapshot().current)
+          ?.tasks.some(
+            (t) => t.taskId === taskId && t.status === 'completed'
+          ),
+      refresh.taskId
+    )
+    assert.equal(users[0].modelCalls(), refreshCalls + 1)
+    assert.deepEqual(
+      await users[1].integration.runRefresh('u1', boardId, 'component'),
+      { skipped: true }
+    )
+    assert.equal(users[1].modelCalls(), 0)
+    assert.equal(
+      (
+        await users[0].service.invoke('board.refreshPause', {
+          boardId,
+          paused: true
+        })
+      ).ok,
+      true
+    )
+    users[0].control.clockOffset = 122000
+    assert.deepEqual(
+      await users[0].integration.runRefresh('u0', boardId, 'component'),
+      { skipped: true }
+    )
+    assert.equal(users[0].modelCalls(), refreshCalls + 1)
+    assert.equal(
+      (
+        await users[0].service.invoke('board.refreshPause', {
+          boardId,
+          paused: false
+        })
+      ).ok,
+      true
+    )
+    await page.evaluate(() => {
+      const f = window.fixture
+      f.registry
+        .for(f.sessions.list.getSnapshot().current)
+        .setContainerRefresh('component', 0)
+    })
+    await page.waitForFunction(() =>
+      window.fixture.page
+        .getView(window.fixture.sessions.list.getSnapshot().current)
+        ?.canvas.artifacts.some(
+          (n) => n.id === 'component' && n.refreshMinutes === 0
+        )
+    )
+    console.log(
+      'TASK4_REFRESH_PASSED native-setting/durable-schedule/one-initiator/receiver-zero/owner-pause'
+    )
+    const lostMutation = randomUUID(),
+      beforeLost = users[0].modelCalls(),
+      baseRequest = users[0].client.request.bind(users[0].client)
+    let dropCommand = 'message'
+    users[0].client.request = async (...args) => {
+      const result = await baseRequest(...args)
+      if (
+        args[0].kind === 'board.command' &&
+        args[0].body.action === dropCommand
+      ) {
+        dropCommand = null
+        throw Error('LOST_COMMAND_ACK')
+      }
+      return result
+    }
+    const lostPayload = {
+      boardId,
+      text: '命令回执丢失恢复验证',
+      context: { scope: 'board', references: [] },
+      clientMutationId: lostMutation
+    }
+    const lostMessage = await users[0].service.invoke(
+      'request.submit',
+      lostPayload
+    )
+    assert.equal(lostMessage.ok, false)
+    users[0].integration.journal =
+      new users[0].integration.journal.constructor(
+        join(users[0].dir, 'portable-runtime')
+      )
+    dropCommand = 'taskCreate'
+    const lostTask = await users[0].service.invoke(
+      'request.submit',
+      lostPayload
+    )
+    assert.equal(lostTask.ok, true)
+    assert.equal(lostTask.value.state, 'taskCreateFailed')
+    assert.equal(lostTask.value.uncertain, true)
+    users[0].integration.journal =
+      new users[0].integration.journal.constructor(
+        join(users[0].dir, 'portable-runtime')
+      )
+    const resumedRequest = await users[0].service.invoke('request.retry', {
+      boardId,
+      clientMutationId: lostMutation
+    })
+    assert.equal(resumedRequest.ok, true, JSON.stringify(resumedRequest))
+    assert.equal(
+      resumedRequest.value.requestMessageId,
+      lostTask.value.requestMessageId
+    )
+    await page.waitForFunction(
+      (taskId) =>
+        window.fixture.page
+          .getView(window.fixture.sessions.list.getSnapshot().current)
+          ?.tasks.some(
+            (t) => t.taskId === taskId && t.status === 'completed'
+          ),
+      resumedRequest.value.taskId
+    )
+    assert.equal(users[0].modelCalls(), beforeLost + 1)
+    assert.equal(
+      users[0].service
+        .getSnapshot()
+        .current.messages.filter((m) => m.text === lostPayload.text).length,
+      1
+    )
+    assert.equal(
+      users[0].service
+        .getSnapshot()
+        .current.tasks.filter(
+          (t) => t.requestMessageId === resumedRequest.value.requestMessageId
+        ).length,
+      1
+    )
+    users[0].client.request = baseRequest
+    console.log(
+      'TASK4_COMMAND_ACK_RECOVERY_PASSED real-Worker/message-ACK/taskCreate-ACK/journal-reopen/same-message-task/one-model'
+    )
+    users[0].control.hold = true
+    const retryMutation = randomUUID(),
+      beforeStop = users[0].modelCalls()
+    const stopping = await users[0].service.invoke('request.submit', {
+      boardId,
+      text: '显式停止与恢复验证',
+      context: { scope: 'board', references: [] },
+      clientMutationId: retryMutation
+    })
+    assert.equal(stopping.ok, true, JSON.stringify(stopping))
+    await page.waitForFunction(() =>
+      window.fixture.page
+        .getView(window.fixture.sessions.list.getSnapshot().current)
+        ?.tasks.some((t) => t.status === 'running')
+    )
+    while (users[0].modelCalls() === beforeStop)
+      await new Promise((r) => setTimeout(r, 10))
+    assert.equal(
+      (
+        await users[0].service.invoke('task.stop', {
+          boardId,
+          taskId: stopping.value.taskId
+        })
+      ).ok,
+      true
+    )
+    for (
+      let i = 0;
+      i < 100 &&
+      users[0].execution.inspect(stopping.value.taskId).status !==
+        'interrupted';
+      i++
+    )
+      await new Promise((r) => setTimeout(r, 10))
+    assert.equal(
+      users[0].execution.inspect(stopping.value.taskId).status,
+      'interrupted'
+    )
+    await new Promise((r) => setTimeout(r, 30))
+    const retried = await users[0].service.invoke('request.retry', {
+      boardId,
+      clientMutationId: retryMutation
+    })
+    assert.equal(retried.ok, true, JSON.stringify(retried))
+    assert.equal(
+      retried.value.requestMessageId,
+      stopping.value.requestMessageId
+    )
+    assert.notEqual(retried.value.taskId, stopping.value.taskId)
+    await page.waitForFunction(
+      (taskId) =>
+        window.fixture.page
+          .getView(window.fixture.sessions.list.getSnapshot().current)
+          ?.tasks.some(
+            (t) => t.taskId === taskId && t.status === 'completed'
+          ),
+      retried.value.taskId
+    )
+    assert.equal(users[0].modelCalls(), beforeStop + 2)
+    assert.equal(users[1].modelCalls(), 0)
+    assert.equal(
+      users[0].service
+        .getSnapshot()
+        .current.messages.filter(
+          (m) => m.id === stopping.value.requestMessageId
+        ).length,
+      1
+    )
+    console.log(
+      'TASK4_STOP_RETRY_PASSED runtime-abort/original-message-identity/explicit-new-attempt/no-auto-replay'
+    )
+    const copy = await users[1].service.invoke('board.copyPersonal', {
+      boardId
+    })
+    assert.equal(copy.ok, true, JSON.stringify(copy))
+    const personalId = 'personal-' + randomUUID()
+    users[1].sessionData.set(personalId, Session.create(personalId))
+    const copied = await users[1].service.invoke(
+      'board.finalizePersonalCopy',
+      { copyId: copy.value.copyId, localSessionId: personalId }
+    )
+    assert.equal(copied.ok, true, JSON.stringify(copied))
+    assert.equal(
+      (
+        await users[1].service.invoke('board.finalizePersonalCopy', {
+          copyId: copy.value.copyId,
+          localSessionId: personalId
+        })
+      ).ok,
+      true
+    )
+    const imported = await users[1].service.invoke('import.get', {
+      localSessionId: personalId
+    })
+    assert.equal(imported.ok, true)
+    assert.equal(
+      imported.value.history.filter(
+        (h) => h.text === '这份文件的数字是多少？'
+      ).length,
+      1
+    )
+    users[1].sessionData
+      .get(personalId)
+      .append(
+        'user/message',
+        {
+          id: 'later-personal',
+          source: { kind: 'user' },
+          content: [{ type: 'text', text: '副本中的新问题' }]
+        },
+        { surfaceOp: 'append' }
+      )
+    const second = await users[1].integration.snapshots.preview({
+      sessionId: personalId,
+      accountId: 'u1',
+      signal: new AbortController().signal
+    })
+    const roundtrip = await users[1].integration.snapshots.capture({
+      sessionId: personalId,
+      accountId: 'u1',
+      operationId: randomUUID(),
+      captureId: second.captureId,
+      signal: new AbortController().signal
+    })
+    assert.equal(
+      roundtrip.snapshot.history.filter(
+        (h) => h.text === '这份文件的数字是多少？'
+      ).length,
+      1
+    )
+    assert.equal(roundtrip.snapshot.history.at(-1).text, '副本中的新问题')
+    assert.equal(roundtrip.assets.length, 2)
+    const personalFiles = JSON.parse(
+      users[1].storage.getItem(
+        'sherlock.research.canvas.files.v1:' + personalId
+      )
+    )
+    const ownedText = personalFiles.find((n) => n.name === 'evidence.txt')
+    assert.equal(
+      await readFile(ownedText.path, 'utf8'),
+      '冻结资料：销售额 42。'
+    )
+    await peer.evaluate(
+      ({ personalId, title }) => {
+        const f = window.fixture
+        ;(() => {
+          const s = f.sessions.list.getSnapshot()
+          f.sessions.list.set({
+            ...s,
+            byId: {
+              ...s.byId,
+              [personalId]: {
+                id: personalId,
+                title,
+                displayTitle: title,
+                cwd: '/fixture',
+                blank: false
+              }
+            },
+            ids: [...s.ids, personalId],
+            current: personalId
+          })
+        })()
+      },
+      { personalId, title: '独立个人副本' }
+    )
+    await peer.getByText('副本中的新问题', { exact: true }).count()
+    await peer.locator('[data-personal-import]').first().waitFor()
+    assert.equal(
+      await peer
+        .getByText('在画板中整理资料，围绕选中的内容继续研究。', {
+          exact: true
+        })
+        .count(),
+      0
+    )
+    assert.ok(
+      (await peer
+        .locator('[data-personal-import] small')
+        .filter({ hasText: '研究助手 · 林研究员' })
+        .count()) > 0
+    )
+    await peer.screenshot({ path: join(out, 'personal-import-light.png') })
+    await peer.evaluate((id) => window.fixture.page.openBoard(id), boardId)
+    globalThis.task4Personal = {
+      personalId,
+      copyId: copy.value.copyId,
+      personalFiles,
+      peerSession
+    }
     await page.setViewportSize({ width: 900, height: 760 })
-    await page.getByRole('button', { name: '收起侧边栏', exact: true }).click()
+    await page
+      .getByRole('button', { name: '收起侧边栏', exact: true })
+      .click()
     await page.locator('.hHd-Xa_collapsed').waitFor()
     await page.locator('.srb-section[data-wide=false]').waitFor()
     await page.screenshot({
@@ -680,7 +1404,9 @@ if (process.argv.includes('--serve')) {
     await page
       .getByRole('button', { name: '关闭消息中心', exact: true })
       .click()
-    await page.getByRole('button', { name: '展开侧边栏', exact: true }).click()
+    await page
+      .getByRole('button', { name: '展开侧边栏', exact: true })
+      .click()
     await page.locator('.srb-section[data-wide=true]').waitFor()
     await page.locator('#sherlock-sidebar-update-button').hover()
     await page.screenshot({
@@ -733,13 +1459,68 @@ if (process.argv.includes('--serve')) {
           .artifacts.length === 0
       )
     })
+    const personal = globalThis.task4Personal
+    assert.equal(
+      (
+        await users[1].service.invoke('file.open', {
+          boardId,
+          localSessionId: personal.peerSession,
+          nodeId: 'archive'
+        })
+      ).ok,
+      false
+    )
+    assert.equal(
+      (
+        await users[1].service.invoke('import.get', {
+          localSessionId: personal.personalId
+        })
+      ).ok,
+      true
+    )
+    assert.equal(
+      (
+        await users[1].service.invoke('import.fileOpen', {
+          localSessionId: personal.personalId,
+          nodeId: personal.personalFiles.find((n) => n.name === 'archive.bin')
+            .id
+        })
+      ).ok,
+      true
+    )
+    users[1].signOut()
+    assert.equal(
+      (
+        await users[1].service.invoke('import.get', {
+          localSessionId: personal.personalId
+        })
+      ).ok,
+      true
+    )
+    assert.ok(
+      (await users[1].integration.personalContext(personal.personalId))
+        .length > 0
+    )
+    assert.equal(
+      (
+        await users[1].service.invoke('import.fileOpen', {
+          localSessionId: personal.personalId,
+          nodeId: personal.personalFiles.find((n) => n.name === 'archive.bin')
+            .id
+        })
+      ).ok,
+      true
+    )
+    console.log(
+      'TASK4_FILE_COPY_ROUNDTRIP_PASSED frozen-source-delete/clipboard-nonpreview/bound-open/revoke-deny/viewer-copy/idempotent-finalize/import-display/personal-reshare-baseline-once'
+    )
     await peer.screenshot({
       animations: 'disabled',
       path: join(out, 'revoked-light.png')
     })
     assert.equal(await peer.locator('[data-shared-discussion]').count(), 0)
     console.log(
-      'UI_FLOWS_PASSED favorite/create/invite-role-version/revoke-live/reinvite/accept/open/presence/edit/held-drag-preview-final-only/submit-unavailable/reload/viewer/collapse/update-hover/account-id/cancel'
+      'UI_FLOWS_PASSED favorite/create/invite-role-version/revoke-live/reinvite/accept/open/presence/edit/held-drag-preview-final-only/submit-accepted-one-initiator/reload/viewer/collapse/update-hover/account-id/cancel'
     )
   } catch (e) {
     await page.screenshot({
@@ -764,7 +1545,12 @@ if (process.argv.includes('--serve')) {
   }
 }
 async function cleanup() {
-  for (const u of users) u.service.stop()
+  for (const u of users) {
+    u.integration.stop()
+    u.service.stop()
+    await u.disposeRuntime()
+    u.runtimeServer.close()
+  }
   for (const r of connections) r.end()
   server.close()
   await mf.dispose()

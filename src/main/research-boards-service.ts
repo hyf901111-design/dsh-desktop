@@ -1,3 +1,8 @@
+import {
+  normalizeRequestContext,
+  historyAssetIds,
+  portableAssetIds
+} from '../../packages/dsh-research-collaboration/context.js'
 import { randomUUID } from 'node:crypto'
 import * as Y from 'yjs'
 import {
@@ -74,6 +79,39 @@ export type CapturedAsset = {
   open(): Promise<BodyInit>
 }
 export type ResearchBoardHooks = {
+  canResumePersonalCopy?(
+    accountId: string,
+    copyId: string,
+    sessionId: string
+  ): boolean
+  completedPersonalCopy?(
+    accountId: string,
+    copyId: string,
+    sessionId: string
+  ): { localSessionId: string } | null
+  personalImport?(sessionId: string): any
+  personalFileOpen?(sessionId: string, nodeId: string): Promise<unknown>
+  fileOpen?(input: {
+    accountId: string
+    boardId: string
+    localSessionId: string
+    nodeId: string
+    signal: AbortSignal
+  }): Promise<unknown>
+  requestList?(accountId: string, boardId: string): unknown
+  requestRetry?(
+    accountId: string,
+    boardId: string,
+    mutation: string,
+    signal: AbortSignal
+  ): Promise<unknown>
+  taskAction?(
+    accountId: string,
+    boardId: string,
+    taskId: string,
+    action: string,
+    signal: AbortSignal
+  ): Promise<unknown>
   captureOriginal?(input: {
     sessionId: string
     accountId: string
@@ -140,6 +178,10 @@ export type ResearchBoardHooks = {
     boardId: string
     text: string
     clientMutationId: string
+    context?: {
+      scope: string
+      references: Array<{ collection: string; nodeId: string }>
+    }
     targetId?: string
     targetCollection?: 'files' | 'artifacts'
     source?: 'manual' | 'refresh'
@@ -158,6 +200,8 @@ type RuntimeBoard = {
   connection: BoardView['connection']
   presence: Presence[]
   materialized?: Canvas
+  materializedRevision?: string
+  materialization?: { revision: string; promise: Promise<void> }
   mutationReplies: Map<string, CanvasReply>
   deletionRecovery: Map<
     string,
@@ -243,7 +287,11 @@ function changes(before: Canvas, after: Canvas): OwnChange[] {
     if (equal(a, b)) return
     if (typeof a === 'string' && typeof b === 'string') {
       let prefix = 0
-      while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix])
+      while (
+        prefix < a.length &&
+        prefix < b.length &&
+        a[prefix] === b[prefix]
+      )
         prefix++
       let suffix = 0
       while (
@@ -330,7 +378,8 @@ function changes(before: Canvas, after: Canvas): OwnChange[] {
       else field(collection, n.id, [], old, n)
     }
     for (const id of previous.keys())
-      if (!next.has(id)) result.push({ kind: 'delete', collection, nodeId: id })
+      if (!next.has(id))
+        result.push({ kind: 'delete', collection, nodeId: id })
   }
   return result
 }
@@ -433,7 +482,11 @@ export class ResearchBoardsService {
   }
   private emitBoard(boardId: string, cause: string) {
     const r = this.boards.get(boardId)
-    if (r && this.currentBoard === boardId)
+    if (
+      r &&
+      this.currentBoard === boardId &&
+      (r.materializedRevision || !this.permissions(r).read)
+    )
       this.emit({
         type: 'board',
         boardId,
@@ -511,7 +564,10 @@ export class ResearchBoardsService {
     boardId: string,
     activation = this.activationVersion
   ) {
-    if (activation !== this.activationVersion || this.currentBoard !== boardId)
+    if (
+      activation !== this.activationVersion ||
+      this.currentBoard !== boardId
+    )
       return
     const ctx = this.boardContext(boardId)
     this.activeDispose?.()
@@ -564,10 +620,8 @@ export class ResearchBoardsService {
       board: copy(r.snapshot.board),
       connection: r.connection,
       permissions: permission,
-      canvas: read
-        ? copy(r.materialized ?? projectDocument(r.doc))
-        : emptyCanvas(),
-      canvasRevision: r.revision,
+      canvas: read ? copy(r.materialized ?? emptyCanvas()) : emptyCanvas(),
+      canvasRevision: r.materializedRevision ?? r.revision,
       seq: r.snapshot.seq,
       epoch: r.snapshot.board.sharingEpoch,
       history: read ? copy(r.snapshot.snapshot.history) : [],
@@ -624,7 +678,10 @@ export class ResearchBoardsService {
             : {})
         })) ?? [],
       current:
-        this.currentBoard && this.boards.has(this.currentBoard)
+        this.currentBoard &&
+        this.boards.has(this.currentBoard) &&
+        (this.boards.get(this.currentBoard)!.materializedRevision ||
+          !this.permissions(this.boards.get(this.currentBoard)!).read)
           ? this.view(this.boards.get(this.currentBoard)!)
           : null,
       notifications: copy(a?.notifications ?? emptyNotifications()),
@@ -668,7 +725,11 @@ export class ResearchBoardsService {
     if (this.options.account.authenticated) void this.refresh()
   }
   private retry() {
-    if (this.retryTimer || this.stopped || !this.options.account.authenticated)
+    if (
+      this.retryTimer ||
+      this.stopped ||
+      !this.options.account.authenticated
+    )
       return
     this.retryTimer = setTimeout(() => {
       this.retryTimer = undefined
@@ -959,7 +1020,8 @@ export class ResearchBoardsService {
   ): Promise<RuntimeBoard> {
     const existing = this.boards.get(boardId)
     if (existing && !force && this.permissions(existing).read) return existing
-    if (!replace && this.opening.has(boardId)) return this.opening.get(boardId)!
+    if (!replace && this.opening.has(boardId))
+      return this.opening.get(boardId)!
     const ctx = this.boardContext(boardId)
     const task = (async () => {
       try {
@@ -1015,8 +1077,10 @@ export class ResearchBoardsService {
     const retired =
       (previousEpoch !== undefined &&
         previousEpoch !== snapshot.board.sharingEpoch) ||
-      snapshot.board.role === 'viewer' ||
-      snapshot.board.lifecycle === 'archived'
+      (snapshot.board.role === 'viewer' &&
+        r?.snapshot.board.role !== 'viewer') ||
+      (snapshot.board.lifecycle === 'archived' &&
+        r?.snapshot.board.lifecycle !== 'archived')
     if (
       r &&
       (previousEpoch !== snapshot.board.sharingEpoch ||
@@ -1106,35 +1170,57 @@ export class ResearchBoardsService {
     this.emitBoard(boardId, 'remote')
   }
   private async materialize(r: RuntimeBoard, ctx = this.context()) {
-    const localSessionId = this.localSession(r.snapshot.board.boardId)
-    const canvas = projectDocument(r.doc)
-    r.materialized = undefined
+    const boardId = r.snapshot.board.boardId,
+      localSessionId = this.localSession(boardId),
+      deadline = Date.now() + 30000
     if (!localSessionId) return
-    const hasAssets = [...canvas.files, ...canvas.artifacts].some(
-      (n) => n.assetId
-    )
-    if (hasAssets && !this.options.hooks?.materializeBoard)
-      throw new ResearchBoardsError(
-        'RESOURCE_UNAVAILABLE',
-        '共享资料尚未完成本机授权。'
-      )
-    if (this.options.hooks?.materializeBoard) {
-      const revision = r.revision
-      const value = await this.options.hooks.materializeBoard({
-        accountId: ctx.userId,
-        boardId: r.snapshot.board.boardId,
-        epoch: r.snapshot.board.sharingEpoch,
-        localSessionId,
-        canvas: copy(canvas),
-        signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
-      })
+    while (r.materializedRevision !== r.revision) {
       this.check(ctx)
-      if (
-        this.boards.get(r.snapshot.board.boardId) !== r ||
-        r.revision !== revision
-      )
-        return
-      r.materialized = copy(value)
+      if (this.boards.get(boardId) !== r || r.abort.signal.aborted)
+        throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
+      if (Date.now() > deadline)
+        throw new ResearchBoardsError('STALE_CANVAS_REVISION')
+      const revision = r.revision
+      let pending = r.materialization
+      if (!pending || pending.revision !== revision) {
+        const canvas = projectDocument(r.doc)
+        const promise = (async () => {
+          if (
+            portableAssetIds(canvas).length &&
+            !this.options.hooks?.materializeBoard
+          )
+            throw new ResearchBoardsError(
+              'RESOURCE_UNAVAILABLE',
+              '共享资料尚未完成本机授权。'
+            )
+          const value = this.options.hooks?.materializeBoard
+            ? await this.options.hooks.materializeBoard({
+                accountId: ctx.userId,
+                boardId,
+                epoch: r.snapshot.board.sharingEpoch,
+                localSessionId,
+                canvas: copy(canvas),
+                signal: AbortSignal.any([
+                  this.generationAbort.signal,
+                  r.abort.signal
+                ])
+              })
+            : canvas
+          this.check(ctx)
+          if (this.boards.get(boardId) !== r || r.abort.signal.aborted)
+            throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
+          if (r.revision !== revision) return
+          r.materialized = copy(value)
+          r.materializedRevision = revision
+        })()
+        pending = { revision, promise }
+        r.materialization = pending
+      }
+      try {
+        await pending.promise
+      } finally {
+        if (r.materialization === pending) r.materialization = undefined
+      }
     }
   }
   private invalidateLocal(accountId: string, boardId: string) {
@@ -1160,7 +1246,11 @@ export class ResearchBoardsService {
       ).catch(() => {})
     } catch {}
   }
-  private async retirePending(boardId: string, reason: string, purge: boolean) {
+  private async retirePending(
+    boardId: string,
+    reason: string,
+    purge: boolean
+  ) {
     const ctx = this.context()
     const pending = this.store
       .account(ctx.userId)
@@ -1214,6 +1304,7 @@ export class ResearchBoardsService {
       r.connection = 'revoked'
       r.presence = []
       r.materialized = undefined
+      r.materializedRevision = undefined
       r.revisions.clear()
       r.mutationReplies.clear()
       r.deletionRecovery.clear()
@@ -1270,7 +1361,11 @@ export class ResearchBoardsService {
       if (!denied(error)) throw error
     }
   }
-  private requireBoard(boardId: string, localSessionId?: string, edit = false) {
+  private requireBoard(
+    boardId: string,
+    localSessionId?: string,
+    edit = false
+  ) {
     this.userId()
     const r = this.boards.get(boardId)
     if (!r || !this.permissions(r).read)
@@ -1284,15 +1379,16 @@ export class ResearchBoardsService {
       throw new ResearchBoardsError('READ_ONLY', '当前看板只读。')
     return r
   }
-  private canvasReply(
+  private async canvasReply(
     r: RuntimeBoard,
     branch = r.revision,
     clientMutationId?: string
-  ): CanvasReply {
+  ): Promise<CanvasReply> {
+    await this.materialize(r)
     const view = this.view(r)
     return {
       canvas: view.canvas,
-      canvasRevision: r.revision,
+      canvasRevision: r.materializedRevision ?? r.revision,
       localBranchRevision: branch,
       seq: r.snapshot.seq,
       pendingCount: view.pendingCount,
@@ -1389,7 +1485,13 @@ export class ResearchBoardsService {
     candidate.destroy()
     const own = changes(base.canvas, next)
     if (!own.length) return this.canvasReply(r, r.revision, mutation)
-    this.enqueue(boardId, 'update', { update: toBase64(delta) }, own, mutation)
+    this.enqueue(
+      boardId,
+      'update',
+      { update: toBase64(delta) },
+      own,
+      mutation
+    )
     const deleted = (['files', 'artifacts'] as const).flatMap((collection) =>
       base.canvas[collection]
         .filter((n) => !next[collection].some((x) => x.id === n.id))
@@ -1403,7 +1505,6 @@ export class ResearchBoardsService {
     if (deleted.length) r.undo.undoStack.at(-1)?.meta.set('deleted', deleted)
     r.revision = this.revision(r)
     const localBranchRevision = this.revision(r, branchBytes, next)
-    r.materialized = undefined
     try {
       await this.materialize(r, ctx)
     } catch (error) {
@@ -1411,7 +1512,7 @@ export class ResearchBoardsService {
       throw error
     }
     this.check(ctx)
-    const reply = this.canvasReply(r, localBranchRevision, mutation)
+    const reply = await this.canvasReply(r, localBranchRevision, mutation)
     r.mutationReplies.set(mutation, copy(reply))
     if (r.mutationReplies.size > 256)
       r.mutationReplies.delete(r.mutationReplies.keys().next().value!)
@@ -1429,7 +1530,8 @@ export class ResearchBoardsService {
     const stack = redo ? r.undo.redoStack : r.undo.undoStack
     const item = stack.at(-1)
     const deleted = item?.meta.get('deleted') as
-      Array<{ collection: 'files' | 'artifacts'; node: CanvasNode }> | undefined
+      | Array<{ collection: 'files' | 'artifacts'; node: CanvasNode }>
+      | undefined
     if (deleted?.length) {
       const recoveryId = randomUUID()
       r.deletionRecovery.set(recoveryId, copy(deleted))
@@ -1536,7 +1638,8 @@ export class ResearchBoardsService {
         current = await this.loadBoard(op.boardId, true)
       } catch (error) {
         this.check(ctx)
-        if (errorCode(error) === 'BOARD_ACCESS_CHANGED' && attempt < 2) continue
+        if (errorCode(error) === 'BOARD_ACCESS_CHANGED' && attempt < 2)
+          continue
         throw error
       }
       this.check(ctx)
@@ -1568,7 +1671,11 @@ export class ResearchBoardsService {
       try {
         this.check(ctx)
         let r = this.boards.get(op.boardId)
-        if (!r || r.connection === 'offline' || r.connection === 'revalidating')
+        if (
+          !r ||
+          r.connection === 'offline' ||
+          r.connection === 'revalidating'
+        )
           r = await this.loadBoard(op.boardId, true)
         this.check(ctx)
         if (
@@ -1633,7 +1740,10 @@ export class ResearchBoardsService {
         this.check(ctx)
         this.emitBoard(op.boardId, 'ack')
       } catch (error) {
-        if (ctx.generation !== this.options.account.generation || this.stopped)
+        if (
+          ctx.generation !== this.options.account.generation ||
+          this.stopped
+        )
           return
         if (errorCode(error) === 'BOARD_ACCESS_CHANGED') return
         if (denied(error)) {
@@ -1710,7 +1820,9 @@ export class ResearchBoardsService {
         .account(ctx.userId)
         .pending.find(
           (p) =>
-            p.boardId === boardId && p.action === action && equal(p.body, body)
+            p.boardId === boardId &&
+            p.action === action &&
+            equal(p.body, body)
         ) ??
       this.enqueue(
         boardId,
@@ -1726,7 +1838,12 @@ export class ResearchBoardsService {
       const result = await this.client.request<Record<string, unknown>>({
         kind: 'board.command',
         boardId,
-        body: { ...body, action, operationId: op.operationId, epoch: op.epoch }
+        body: {
+          ...body,
+          action,
+          operationId: op.operationId,
+          epoch: op.epoch
+        }
       })
       this.check(ctx)
       if (
@@ -1736,7 +1853,9 @@ export class ResearchBoardsService {
         throw new ResearchBoardsError('INVALID_RESPONSE')
       if (action === 'leave') {
         this.store.updateAccount(ctx.userId, (a) => {
-          a.pending = a.pending.filter((p) => p.operationId !== op.operationId)
+          a.pending = a.pending.filter(
+            (p) => p.operationId !== op.operationId
+          )
         })
         await this.revoke(boardId, 'LEFT_BOARD')
       } else {
@@ -1824,7 +1943,12 @@ export class ResearchBoardsService {
         if (upload.boardId) {
           if (upload.uploadId !== saved.body.uploadId)
             throw new ResearchBoardsError('INVALID_RESPONSE')
-          return this.finishCreation(ctx, favorite, saved.body, upload.boardId)
+          return this.finishCreation(
+            ctx,
+            favorite,
+            saved.body,
+            upload.boardId
+          )
         }
       }
       if (!this.options.hooks?.captureOriginal)
@@ -1844,17 +1968,16 @@ export class ResearchBoardsService {
       try {
         const frozen = freezeSnapshot(captured.snapshot)
         const assets = captured.assets ?? []
-        const refs = new Set(
-          [...frozen.canvas.files, ...frozen.canvas.artifacts].flatMap((n) =>
-            typeof n.assetId === 'string' ? [n.assetId] : []
-          )
-        )
+        const refs = new Set(portableAssetIds(frozen))
         if ([...refs].some((id) => !assets.some((a) => a.assetId === id)))
           throw new ResearchBoardsError(
             'RESOURCE_UNAVAILABLE',
             '共享资料未完整复制。'
           )
-        if (saved.body && saved.body.sourceRevision !== captured.sourceRevision)
+        if (
+          saved.body &&
+          saved.body.sourceRevision !== captured.sourceRevision
+        )
           throw new ResearchBoardsError(
             'SOURCE_CHANGED',
             '原研究已变化，请完成或清理上次捕获。'
@@ -2113,7 +2236,10 @@ export class ResearchBoardsService {
           accountId: ctx.userId,
           boardId,
           snapshot: copy(r.snapshot),
-          signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
+          signal: AbortSignal.any([
+            this.generationAbort.signal,
+            r.abort.signal
+          ])
         })
         this.check(ctx)
         return value
@@ -2122,6 +2248,12 @@ export class ResearchBoardsService {
         const p = exact(input, ['copyId', 'localSessionId'])
         const copyId = safeId(p.copyId),
           localSessionId = safeId(p.localSessionId)
+        const completed = this.options.hooks?.completedPersonalCopy?.(
+          this.context().userId,
+          copyId,
+          localSessionId
+        )
+        if (completed) return completed
         if (
           this.isSharedSession(localSessionId) ||
           this.store
@@ -2133,7 +2265,15 @@ export class ResearchBoardsService {
           const raw = this.options.storage.getItem(
             `sherlock.research.canvas.${kind}.v1:${localSessionId}`
           )
-          if (raw && raw !== '[]')
+          if (
+            raw &&
+            raw !== '[]' &&
+            !this.options.hooks?.canResumePersonalCopy?.(
+              this.context().userId,
+              copyId,
+              localSessionId
+            )
+          )
             throw new ResearchBoardsError('BINDING_CONFLICT')
         }
         if (!this.options.hooks?.finalizePersonalCopy)
@@ -2148,11 +2288,88 @@ export class ResearchBoardsService {
         this.check(ctx)
         return result
       }
+      case 'import.get': {
+        const p = exact(input, ['localSessionId'])
+        const id = safeId(p.localSessionId)
+        if (this.isSharedSession(id))
+          throw new ResearchBoardsError('BINDING_CONFLICT')
+        return this.options.hooks?.personalImport?.(id) ?? null
+      }
+      case 'import.fileOpen': {
+        const p = exact(input, ['localSessionId', 'nodeId'])
+        const id = safeId(p.localSessionId)
+        if (this.isSharedSession(id) || !this.options.hooks?.personalFileOpen)
+          throw new ResearchBoardsError('RESOURCE_UNAVAILABLE')
+        return this.options.hooks.personalFileOpen(id, safeId(p.nodeId))
+      }
+      case 'file.open': {
+        const p = exact(input, ['boardId', 'localSessionId', 'nodeId'])
+        const boardId = safeId(p.boardId)
+        const r = this.requireBoard(boardId)
+        const binding = this.getBinding(safeId(p.localSessionId))
+        if (binding?.boardId !== boardId)
+          throw new ResearchBoardsError('BINDING_CONFLICT')
+        if (!this.options.hooks?.fileOpen)
+          throw new ResearchBoardsError('RESOURCE_UNAVAILABLE')
+        return this.options.hooks.fileOpen({
+          accountId: this.context().userId,
+          boardId,
+          localSessionId: binding.localSessionId,
+          nodeId: safeId(p.nodeId),
+          signal: AbortSignal.any([
+            this.generationAbort.signal,
+            r.abort.signal
+          ])
+        })
+      }
+      case 'request.list':
+      case 'request.retry':
+      case 'task.stop':
+      case 'task.applyResult': {
+        const p = exact(
+          input,
+          ['boardId'],
+          action === 'request.retry'
+            ? ['clientMutationId']
+            : action.startsWith('task.')
+              ? ['taskId']
+              : []
+        )
+        const boardId = safeId(p.boardId),
+          r = this.requireBoard(
+            boardId,
+            undefined,
+            action !== 'request.list'
+          ),
+          accountId = this.context().userId
+        const signal = AbortSignal.any([
+          this.generationAbort.signal,
+          r.abort.signal
+        ])
+        if (action === 'request.list')
+          return this.options.hooks?.requestList?.(accountId, boardId) ?? []
+        if (action === 'request.retry' && this.options.hooks?.requestRetry)
+          return this.options.hooks.requestRetry(
+            accountId,
+            boardId,
+            safeId(p.clientMutationId),
+            signal
+          )
+        if (action.startsWith('task.') && this.options.hooks?.taskAction)
+          return this.options.hooks.taskAction(
+            accountId,
+            boardId,
+            safeId(p.taskId),
+            action === 'task.stop' ? 'stop' : 'apply',
+            signal
+          )
+        throw new ResearchBoardsError('EXECUTION_UNAVAILABLE')
+      }
       case 'request.submit': {
         const p = exact(
           input,
           ['boardId', 'text', 'clientMutationId'],
-          ['targetId', 'targetCollection', 'source']
+          ['targetId', 'targetCollection', 'source', 'context']
         )
         const boardId = safeId(p.boardId)
         const r = this.requireBoard(boardId, undefined, true)
@@ -2174,8 +2391,12 @@ export class ResearchBoardsService {
         const ctx = this.context()
         const result = await this.options.hooks.submitRequest({
           ...p,
+          context: normalizeRequestContext(p.context),
           accountId: ctx.userId,
-          signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
+          signal: AbortSignal.any([
+            this.generationAbort.signal,
+            r.abort.signal
+          ])
         } as Parameters<NonNullable<ResearchBoardHooks['submitRequest']>>[0])
         this.check(ctx)
         return result
@@ -2237,7 +2458,8 @@ export class ResearchBoardsService {
         const p = exact(input, [], ['notificationIds'])
         if (
           p.notificationIds !== undefined &&
-          (!Array.isArray(p.notificationIds) || p.notificationIds.length > 1000)
+          (!Array.isArray(p.notificationIds) ||
+            p.notificationIds.length > 1000)
         )
           throw new ResearchBoardsError('INVALID_REQUEST')
         const ids = (p.notificationIds as unknown[] | undefined)?.map(safeId)
@@ -2489,6 +2711,47 @@ export class ResearchBoardsService {
       ? binding
       : undefined
   }
+  taskAuthority(
+    accountId: string,
+    boardId: string,
+    epoch?: number,
+    write = false
+  ) {
+    const ctx = this.context()
+    if (ctx.userId !== accountId)
+      throw new ResearchBoardsError('SESSION_CHANGED')
+    const r = this.requireBoard(boardId, undefined, write)
+    if (epoch !== undefined && r.snapshot.board.sharingEpoch !== epoch)
+      throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
+    return {
+      snapshot: copy(r.snapshot),
+      localSessionId: this.store.account(accountId).bindings[boardId],
+      signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
+    }
+  }
+  async applyTaskCanvas(accountId: string, boardId: string, canvas: Canvas) {
+    const a = this.taskAuthority(accountId, boardId, undefined, true),
+      r = this.requireBoard(boardId, undefined, true)
+    if (!a.localSessionId) throw new ResearchBoardsError('BINDING_CONFLICT')
+    // Materialized local representation preserves the existing projection/asset guard.
+    const local = this.options.hooks?.materializeBoard
+      ? await this.options.hooks.materializeBoard({
+          accountId,
+          boardId,
+          epoch: a.snapshot.board.sharingEpoch,
+          localSessionId: a.localSessionId,
+          canvas,
+          signal: a.signal
+        })
+      : canvas
+    return this.applyCanvas({
+      boardId,
+      localSessionId: a.localSessionId,
+      baseRevision: r.revision,
+      clientMutationId: randomUUID(),
+      canvas: local
+    })
+  }
   readSharedCanvas(sessionId: string): Canvas {
     const binding = this.getBinding(sessionId)
     if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
@@ -2519,7 +2782,7 @@ export class ResearchBoardsService {
       this.permissions(r).read &&
       (kind === 'files' || kind === 'artifacts')
     )
-      return JSON.stringify((r.materialized ?? projectDocument(r.doc))[kind])
+      return JSON.stringify((r.materialized ?? emptyCanvas())[kind])
     return kind === 'selection' ? '{}' : kind === 'engaged' ? '0' : '[]'
   }
   writeCanvasStorage(key: unknown, value: unknown): boolean {
@@ -2563,7 +2826,10 @@ export function registerResearchBoardsHandlers(options: {
   service: ResearchBoardsService
 }): () => void {
   const { ipcMain, getMainWindow, service } = options
-  for (const channel of ['research:boards:invoke', 'research:boards:snapshot'])
+  for (const channel of [
+    'research:boards:invoke',
+    'research:boards:snapshot'
+  ])
     ipcMain.removeHandler(channel)
   registerTrustedMainWindowHandler(
     ipcMain,

@@ -5,6 +5,11 @@ export type HistoryRecord = {
   id: string
   role: 'user' | 'assistant'
   text: string
+  references?: Array<{
+    collection: string
+    nodeId: string
+    [key: string]: unknown
+  }>
   authorName?: string
   createdAt?: number
 }

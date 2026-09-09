@@ -1,3 +1,5 @@
+import {randomUUID} from 'node:crypto'
+import { ResearchBoardIntegration } from './research-board-integration'
 import { finishQuitCleanup } from './quit-cleanup'
 import { AccountService } from './account-service'
 import { CollaborationClient } from './collaboration-client'
@@ -132,6 +134,8 @@ let disposeResearchBoardsHandlers: (() => void) | undefined
 let mainWindow: BrowserWindow | undefined
 let runtime: HarnessRuntime
 let localSearchRuntime: LocalSearchRuntime | undefined
+let researchBoardIntegration:ResearchBoardIntegration|undefined
+let researchClipboardService:ResearchCanvasClipboard|undefined
 let researchContextBridge: ResearchContextBridge | undefined
 let disposeResearchContextHandlers: (() => void) | undefined
 let launchDirectory: string
@@ -754,7 +758,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
   registerResearchClipboardHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,
-    service: new ResearchCanvasClipboard({
+    service: researchClipboardService = new ResearchCanvasClipboard({
       userDataPath: app.getPath('userData'), clipboard,
       registry: researchFilePreviewRegistry,
       revealFile: (target) => shell.showItemInFolder(target)
@@ -1114,6 +1118,8 @@ async function bootstrap(): Promise<void> {
   })
   const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
   researchContextBridge = new ResearchContextBridge({
+    isSharedSession:id=>researchBoardsService?.isSharedSession(id)===true,
+    additionalSources:id=>researchBoardIntegration?.personalContext(id)??[],
     readCanvas: (sessionId) => researchBoardsService?.isSharedSession(sessionId)
       ? researchBoardsService.readSharedCanvas(sessionId)
       : readStoredResearchCanvas(researchCanvasStorage, sessionId),
@@ -1140,19 +1146,15 @@ async function bootstrap(): Promise<void> {
   )
   accountService = new AccountService(join(app.getPath('userData'), 'accounts'))
   const accountEndpoint = await accountService.start()
+  const collaborationClient=new CollaborationClient(accountService)
+  const boardsToken=randomUUID()
+  researchBoardIntegration=new ResearchBoardIntegration({root:join(app.getPath('userData'),'research-board-runtime'),storage:researchCanvasStorage,registry:researchFilePreviewRegistry,clipboard:()=>researchClipboardService,client:collaborationClient,service:()=>researchBoardsService!,runtimeUrl:()=>runtime?.snapshot().url,runtimeToken:boardsToken,revealFile:target=>shell.showItemInFolder(target),invalidate:id=>researchContextBridge?.invalidateSession(id)})
   researchBoardsService = new ResearchBoardsService({
     store: new ResearchBoardsStore(app.getPath('userData')),
     storage: researchCanvasStorage,
     account: accountService,
-    client: new CollaborationClient(accountService),
-    hooks: {
-      revokeBoard: ({ localSessionId }) => {
-        if (localSessionId) {
-          researchFilePreviewRegistry?.revokeSession(localSessionId)
-          researchContextBridge?.invalidateSession(localSessionId)
-        }
-      }
-    }
+    client: collaborationClient,
+    hooks: researchBoardIntegration.hooks
   })
   disposeResearchBoardsHandlers = registerResearchBoardsHandlers({
     ipcMain,
@@ -1185,7 +1187,7 @@ async function bootstrap(): Promise<void> {
     accountEndpoint,
     localSearchUrl: localSearchRuntime.endpoint.url,
     localSearchToken: localSearchRuntime.endpoint.token,
-    researchContext,
+    researchContext: {...researchContext,boardsToken},
     dshHome,
     logPath: join(app.getPath('logs'), 'harness.log'),
     launchProcess: (executablePath, args, options) => spawn(executablePath, args, options),
@@ -1263,6 +1265,7 @@ if (!singleInstance) {
     disposeResearchContextHandlers?.()
     disposeResearchBoardsHandlers?.()
     researchBoardsService?.stop()
+    researchBoardIntegration?.stop()
     await researchContextBridge?.stop()
     app.quit()
   })

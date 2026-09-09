@@ -1,3 +1,7 @@
+import {
+  resolveRequestContext,
+  historyAssetIds
+} from '../../packages/dsh-research-collaboration/context.js'
 import { createHash } from 'node:crypto'
 import { hash } from '../accounts/auth.js'
 import {
@@ -145,7 +149,10 @@ export class ResearchBoardRoom {
     const transform = new TransformStream({
       transform(chunk, controller) {
         size += chunk.byteLength
-        if (size > LIMITS.assetBytes || total.n + size > LIMITS.boardAssetBytes)
+        if (
+          size > LIMITS.assetBytes ||
+          total.n + size > LIMITS.boardAssetBytes
+        )
           throw Error('ASSET_TOO_LARGE')
         hasher.update(chunk)
         controller.enqueue(chunk)
@@ -314,7 +321,8 @@ export class ResearchBoardRoom {
       return { board: JSON.parse(previous.state).board, created: false }
     const title = requiredString(input.title, 256),
       sourceRevision = requiredString(input.sourceRevision, 256)
-    if (!Number.isFinite(Date.parse(input.capturedAt))) fail('INVALID_CAPTURE')
+    if (!Number.isFinite(Date.parse(input.capturedAt)))
+      fail('INVALID_CAPTURE')
     const snapshot = freezeSnapshot(input.snapshot ?? {}),
       document = createDocument(snapshot.canvas)
     let uploadId =
@@ -362,7 +370,7 @@ export class ResearchBoardRoom {
     ).results
     if (assets.reduce((s, a) => s + a.size, 0) > LIMITS.boardAssetBytes)
       fail('BOARD_ASSET_LIMIT', 413)
-    await this.validateAssets(snapshot.canvas, assets, true)
+    await this.validateAssets(snapshot, assets, true)
     const board = {
       boardId,
       ownerId: user.id,
@@ -418,7 +426,10 @@ export class ResearchBoardRoom {
     const available = new Set(assets.map((a) => a.id))
     const visit = (value) => {
       if (value && typeof value === 'object') {
-        if (typeof value.assetId === 'string' && !available.has(value.assetId))
+        if (
+          typeof value.assetId === 'string' &&
+          !available.has(value.assetId)
+        )
           fail('ASSET_NOT_READY', 409, { assetId: value.assetId })
         for (const child of Object.values(value)) visit(child)
       }
@@ -915,6 +926,12 @@ export class ResearchBoardRoom {
         author: actor,
         role: 'user',
         text: command.text,
+        context: resolveRequestContext(
+          command.context,
+          projectDocument(decodeDocument(fromBase64(current.documentUpdate))),
+          current.nodeVersions
+        ),
+        contextRevision: current.board.seq,
         createdAt: now()
       }
       current.messages.push(message)
@@ -939,6 +956,11 @@ export class ResearchBoardRoom {
       )
       if (!message || message.author.userId !== user.id)
         fail('REQUEST_AUTHOR_REQUIRED', 403)
+      for (const ref of message.context?.references ?? []) {
+        const key = `${ref.collection}:${ref.nodeId}`
+        if (current.nodeVersions[key] !== ref.nodeVersion)
+          fail('REFERENCED_SOURCE_CHANGED', 409, { name: ref.name })
+      }
       const source = command.source ?? 'manual'
       if (!['manual', 'refresh'].includes(source)) fail('INVALID_TASK_SOURCE')
       if (source === 'refresh' && (board.refreshPaused || !command.targetId))
@@ -964,6 +986,13 @@ export class ResearchBoardRoom {
         !canvas[targetCollection].some((n) => n.id === command.targetId)
       )
         fail('TARGET_NOT_FOUND', 404)
+      if (
+        source === 'refresh' &&
+        command.refreshScheduleId !==
+          canvas[targetCollection].find((n) => n.id === command.targetId)
+            ?.refreshScheduleId
+      )
+        fail('REFRESH_SCHEDULE_CHANGED', 409)
       const taskId = crypto.randomUUID(),
         contextKey = `contexts/${boardId}/${taskId}`
       await this.env.RESEARCH_ASSETS.put(
@@ -994,8 +1023,51 @@ export class ResearchBoardRoom {
       }
       current.tasks.push(task)
       result = { task: publicTask(task) }
+    } else if (action === 'taskApplyResult') {
+      const task = current.tasks.find((t) => t.taskId === command.taskId)
+      if (!task?.result?.node) fail('RESULT_UNAVAILABLE', 409)
+      if (task.resultState === 'applied') result = { task: publicTask(task) }
+      else {
+        if (!['pendingResult', 'targetDeleted'].includes(task.resultState))
+          fail('RESULT_UNAVAILABLE', 409)
+        const doc = decodeDocument(fromBase64(current.documentUpdate)),
+          before = projectDocument(doc),
+          after = structuredClone(before)
+        const collection = task.targetCollection,
+          index = after[collection].findIndex((n) => n.id === task.targetId),
+          node = structuredClone(task.result.node)
+        if (index < 0) {
+          node.id = crypto.randomUUID()
+          after[collection].push(node)
+        } else {
+          for (const k of [
+            'x',
+            'y',
+            'width',
+            'height',
+            'rotation',
+            'scale',
+            'stackOrder'
+          ]) {
+            if (after[collection][index][k] !== undefined)
+              node[k] = after[collection][index][k]
+            else delete node[k]
+          }
+          after[collection][index] = node
+        }
+        validateCanvas(after)
+        applyCanvasDiff(doc, before, after)
+        current.documentUpdate = toBase64(encodeDocument(doc))
+        current.nodeVersions[`${collection}:${node.id}`] =
+          (current.nodeVersions[`${collection}:${node.id}`] ?? 0) + 1
+        task.resultState = 'applied'
+        task.appliedTargetId = node.id
+        result = { task: publicTask(task) }
+      }
     } else if (
-      ['taskClaim', 'taskHeartbeat', 'taskResult', 'taskStop'].includes(action)
+      ['taskClaim', 'taskHeartbeat', 'taskResult', 'taskStop'].includes(
+        action
+      )
     ) {
       const task = current.tasks.find((t) => t.taskId === command.taskId)
       if (!task) fail('TASK_NOT_FOUND', 404)
@@ -1015,7 +1087,10 @@ export class ResearchBoardRoom {
         const context = await this.env.RESEARCH_ASSETS.get(task.contextKey)
         if (!context) fail('CONTEXT_UNAVAILABLE', 503)
         result = {
-          task: { ...publicTask(task), contextSnapshot: await context.json() },
+          task: {
+            ...publicTask(task),
+            contextSnapshot: await context.json()
+          },
           leaseToken
         }
       } else if (action === 'taskStop') {
@@ -1236,7 +1311,13 @@ export class ResearchBoardRoom {
     await authorize(this.env, boardId, user, { epoch })
     const pair = new WebSocketPair(),
       socket = pair[1]
-    const attachment = { user, boardId, epoch, joinedAt: now(), seenAt: now() }
+    const attachment = {
+      user,
+      boardId,
+      epoch,
+      joinedAt: now(),
+      seenAt: now()
+    }
     this.ctx.acceptWebSocket(socket)
     socket.serializeAttachment(attachment)
     await this.ctx.storage.put('boardId', boardId)
@@ -1310,13 +1391,19 @@ export class ResearchBoardRoom {
           socket.serializeAttachment(next)
           await this.sendPresence()
         } else if (message.type === 'command') {
-          const result = await this.command(a.boardId, a.user, message.command)
+          const result = await this.command(
+            a.boardId,
+            a.user,
+            message.command
+          )
           socket.send(JSON.stringify({ type: 'ack', requestId, ...result }))
         } else fail('UNKNOWN_MESSAGE')
       } catch (e) {
         const response = await errorResponse(e).json()
         try {
-          socket.send(JSON.stringify({ type: 'error', requestId, ...response }))
+          socket.send(
+            JSON.stringify({ type: 'error', requestId, ...response })
+          )
           if (
             e.status === 401 ||
             e.code === 'ACCESS_REVOKED' ||

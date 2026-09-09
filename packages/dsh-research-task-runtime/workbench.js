@@ -1,3 +1,4 @@
+import {assertPrivateResearchSession} from './board-runtime.js'
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -69,6 +70,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))
                 throw Error('研究会话不可用');
             exec.signal?.throwIfAborted();
+            await assertPrivateResearchSession(parentSessionId);
             const old = plans.find(p => p.parentSessionId === parentSessionId && p.requestId === input.requestId);
             if (old) {
                 if (JSON.stringify(validateWorkbench(old.input ?? old)) !== JSON.stringify(input))
@@ -129,6 +131,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 return send(403, { error: 'Request rejected' });
             try {
                 const { parentSessionId, acknowledged = [] } = await readJsonBody(req);
+                await assertPrivateResearchSession(parentSessionId);
                 if (!str(parentSessionId, 256))
                     return send(400, { error: '会话无效' });
                 if (!Array.isArray(acknowledged) || acknowledged.length > 100)

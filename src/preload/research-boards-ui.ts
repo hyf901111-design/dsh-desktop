@@ -119,7 +119,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     editors = new Map<string, EditState>(),
     activeResearch = new Set<string>(),
     opening = new Map<string, Promise<string>>(),
-    copies = new Map<string, string>()
+    copies = new Map<string, string>(),
+    copyFlights = new Map<string, Promise<void>>()
   const previewStates = new Map<
     string,
     {
@@ -192,7 +193,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   const purge = (id: string) => {
     for (const kind of ['files', 'artifacts', 'selection'])
       try {
-        win.localStorage.removeItem(`sherlock.research.canvas.${kind}.v1:${id}`)
+        win.localStorage.removeItem(
+          `sherlock.research.canvas.${kind}.v1:${id}`
+        )
       } catch {}
   }
   function rememberOwnCanvas(boardId: string, before: Canvas, after: Canvas) {
@@ -220,9 +223,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
             b = node[key]
           if (
             a === b ||
-            ['authorizationId', 'capabilityToken', 'path', 'assetId'].includes(
-              key
-            )
+            [
+              'authorizationId',
+              'capabilityToken',
+              'path',
+              'assetId'
+            ].includes(key)
           )
             continue
           if (typeof a === 'string' && typeof b === 'string') {
@@ -238,7 +244,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
               right++
             const inserted = b.slice(left, b.length - right)
             if (inserted) additions.push(`${node.id} ${key}: ${inserted}`)
-            else additions.push(`${node.id} ${key}: 删除了自己的未同步修改范围`)
+            else
+              additions.push(`${node.id} ${key}: 删除了自己的未同步修改范围`)
           } else if (typeof b === 'number' || typeof b === 'boolean')
             additions.push(`${node.id} ${key}: ${b}`)
         }
@@ -362,7 +369,11 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       // has not entered the queue. Hydration is held while busy, so this diff
       // contains only locally authored changes after that exact submission.
       ownRecovery.delete(`canvas:${e.view.boardId}`)
-      rememberOwnCanvas(e.view.boardId, mutation.canvas, canvasOf(e.workspace))
+      rememberOwnCanvas(
+        e.view.boardId,
+        mutation.canvas,
+        canvasOf(e.workspace)
+      )
       if (!e.queued) {
         const pending = e.remote
         e.remote = undefined
@@ -401,7 +412,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   }
   function presence(
     id: string,
-    input: { cursor?: { x: number; y: number } | null; selectedIds?: string[] }
+    input: {
+      cursor?: { x: number; y: number } | null
+      selectedIds?: string[]
+    }
   ) {
     const e = editors.get(id)
     if (!e?.view.permissions.read || e.view.connection !== 'online') return
@@ -459,7 +473,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (Date.now() - p.last >= 100) {
       clearTimeout(p.timer)
       send()
-    } else if (!p.timer) p.timer = setTimeout(send, 100 - (Date.now() - p.last))
+    } else if (!p.timer)
+      p.timer = setTimeout(send, 100 - (Date.now() - p.last))
   }
   function clearPresence(id: string) {
     const p = previewStates.get(id)
@@ -757,6 +772,77 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     )
   }
 
+  async function flushCanvas(sessionId: string) {
+    const e = editors.get(sessionId)
+    if (!e || !e.view.permissions.edit) throw Error('当前画板不可编辑')
+    if (e.workspace.isCollaborationGesture?.())
+      throw Error('请先完成当前拖动或缩放')
+    const until = Date.now() + 30000
+    while (e.busy || e.queued || e.mutation || e.view.pendingCount) {
+      if (e.paused || Date.now() > until || !e.view.permissions.edit)
+        throw Error(e.error ?? '画板更改尚未确认')
+      if (!e.busy && (e.queued || e.mutation)) await drain(e)
+      await new Promise((r) => setTimeout(r, 20))
+    }
+    if (e.view.pendingCount) throw Error('画板更改尚未由云端确认')
+    return e.view
+  }
+  async function generateShared(sessionId: string, request: any) {
+    const v = await flushCanvas(sessionId),
+      workspace = deps.researchWorkspaces.for(sessionId),
+      target = workspace
+        .getSnapshot()
+        .artifacts.find((n: any) => n.id === request.targetNodeId)
+    if (!target || request.sessionId !== sessionId)
+      throw Error('生成目标已失效')
+    const references = (request.selectedNodeIds ?? []).map(
+      (nodeId: string) => ({
+        collection: workspace
+          .getSnapshot()
+          .files.some((n: any) => n.id === nodeId)
+          ? 'files'
+          : 'artifacts',
+        nodeId
+      })
+    )
+    const text =
+      request.prompt ??
+      (request.kind === 'mind-map'
+        ? '请基于所选资料生成思维导图'
+        : '请总结所选研究资料')
+    const result = await call<RequestReply>('request.submit', {
+      boardId: v.boardId,
+      text,
+      clientMutationId: uuid(),
+      context: {
+        scope: references.length ? 'references' : 'board',
+        references
+      },
+      targetId: target.id,
+      targetCollection: 'artifacts',
+      source: 'manual'
+    })
+    if (!result.accepted || !result.taskId)
+      throw Error(result.error?.message ?? '消息已保存，任务尚未启动')
+    return { ok: true, taskId: result.taskId }
+  }
+  function inspectShared(sessionId: string, request: any) {
+    const v = view(sessionId),
+      task = v?.tasks.find((t: any) => t.taskId === request.taskId) as any
+    if (!task) throw Error('任务不存在')
+    return Promise.resolve({
+      taskId: task.taskId,
+      parentSessionId: sessionId,
+      state: task.status,
+      events: [],
+      lastSeq: v?.seq ?? 0
+    })
+  }
+  async function cancelShared(sessionId: string, request: any) {
+    const v = view(sessionId)
+    if (!v) throw Error('访问已结束')
+    return call('task.stop', { boardId: v.boardId, taskId: request.taskId })
+  }
   async function submitShared(
     sessionId: string,
     text: string,
@@ -784,16 +870,22 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       key = signature([text, context, mode])
     let request = sends.get(sessionId)
     if (request?.busy) return
-    if (!request || request.key !== key) {
+    if (
+      !request ||
+      request.key !== key ||
+      request.reply?.state === 'taskAccepted'
+    ) {
       request = { id: uuid(), key, busy: false }
       sends.set(sessionId, request)
     }
-    request.retry = () => submitShared(sessionId, text, context, imageIds, mode)
+    request.retry = () =>
+      submitShared(sessionId, text, context, imageIds, mode)
     request.busy = true
     const generation = state.account.generation
     saveDraft(sessionId, draft)
     shell?.setResearchContextPreparing?.(true)
     try {
+      await flushCanvas(sessionId)
       const reply = await call<RequestReply>('request.submit', {
         boardId: v.boardId,
         text,
@@ -846,10 +938,13 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     await drain(e)
     if (e.busy || e.paused) return false
     try {
-      const r = await call<CanvasReply>(redo ? 'canvas.redo' : 'canvas.undo', {
-        boardId: e.view.boardId,
-        localSessionId: id
-      })
+      const r = await call<CanvasReply>(
+        redo ? 'canvas.redo' : 'canvas.undo',
+        {
+          boardId: e.view.boardId,
+          localSessionId: id
+        }
+      )
       hydrate(e, { ...e.view, ...r })
       notify()
       return true
@@ -917,6 +1012,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     activate,
     openBoard,
     submitShared,
+    flushCanvas,
+    generateShared,
+    inspectShared,
+    cancelShared,
     retryRequest: (id: string) => {
       const r = sends.get(id)
       return r?.reply?.accepted &&
@@ -946,21 +1045,49 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       }
     },
     async copyPersonal(boardId: string) {
-      const copy = await call<{ copyId: string; title: string }>(
-        'board.copyPersonal',
-        { boardId }
-      )
-      let id = copies.get(copy.copyId)
-      if (!id) {
-        id = await fresh(copy.title)
-        copies.set(copy.copyId, id)
+      const accountId = state.account.user?.userId
+      if (!accountId) throw Error('请先登录')
+      const key =
+        'sherlock.research.personal-copy.v1:' + accountId + ':' + boardId
+      if (copyFlights.has(key)) return copyFlights.get(key)
+      const generation = state.account.generation
+      const work = (async () => {
+        let saved: any = null
+        try {
+          saved = JSON.parse(win.localStorage.getItem(key) ?? 'null')
+        } catch {}
+        const copy = saved?.copyId
+          ? saved
+          : await call<{
+              copyId: string
+              title: string
+              localSessionId?: string
+            }>('board.copyPersonal', { boardId })
+        win.localStorage.setItem(key, JSON.stringify(copy))
+        let id = copy.localSessionId ?? copies.get(copy.copyId)
+        if (!id) {
+          id = await fresh(copy.title)
+          if (generation !== state.account.generation)
+            throw Error('账户已改变')
+          copies.set(copy.copyId, id)
+          copy.localSessionId = id
+          win.localStorage.setItem(key, JSON.stringify(copy))
+        }
+        await call('board.finalizePersonalCopy', {
+          copyId: copy.copyId,
+          localSessionId: id
+        })
+        if (generation !== state.account.generation) throw Error('账户已改变')
+        win.localStorage.removeItem(key)
+        copies.delete(copy.copyId)
+        await api.openPersonal(id)
+      })()
+      copyFlights.set(key, work)
+      try {
+        return await work
+      } finally {
+        copyFlights.delete(key)
       }
-      await call('board.finalizePersonalCopy', {
-        copyId: copy.copyId,
-        localSessionId: id
-      })
-      copies.delete(copy.copyId)
-      await api.openPersonal(id)
     },
     async retryCanvas(id: string) {
       const e = editors.get(id)
@@ -1014,7 +1141,10 @@ export function ResearchBoardHeader({
   active?: boolean
 }) {
   const s = useBoard(page)
-  if (active === false || (active === undefined && !page.isResearch(sessionId)))
+  if (
+    active === false ||
+    (active === undefined && !page.isResearch(sessionId))
+  )
     return null
   const v = currentBoard(page, sessionId),
     f = s.favorites.find((f) => f.sessionId === sessionId)
@@ -1211,7 +1341,8 @@ export function ResearchBoardSidebar({
         },
         wide ? `${collapsed ? '›' : '⌄'} 研究看板` : '☆'
       ),
-      wide && h('button', { 'aria-label': '管理看板', onClick: openMenu }, '⋯')
+      wide &&
+        h('button', { 'aria-label': '管理看板', onClick: openMenu }, '⋯')
     ),
     !collapsed &&
       wide &&
@@ -1231,7 +1362,10 @@ export function ResearchBoardSidebar({
               draggable: true,
               onDragStart: (e: React.DragEvent) => {
                 setDrag(f.favoriteId)
-                e.dataTransfer.setData('text/x-sherlock-favorite', f.favoriteId)
+                e.dataTransfer.setData(
+                  'text/x-sherlock-favorite',
+                  f.favoriteId
+                )
               },
               onDragOver: (e: React.DragEvent) => e.preventDefault(),
               onDrop: (e: React.DragEvent) => {
@@ -1403,7 +1537,9 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
   }
   if (existing.length) {
     d.body.append(
-      document.createTextNode('已有协作副本，继续管理可邀请成员加入同一看板。')
+      document.createTextNode(
+        '已有协作副本，继续管理可邀请成员加入同一看板。'
+      )
     )
     for (const b of existing)
       d.body.append(
@@ -1724,6 +1860,20 @@ export function ResearchBoardDiscussion({
 }) {
   useBoard(page)
   const v = page.getView(sessionId)
+  const [pendingRequests, setPendingRequests] = React.useState([] as any[])
+  React.useEffect(() => {
+    let active = true
+    if (v?.permissions.read)
+      void page
+        .call<any[]>('request.list', { boardId: v.boardId })
+        .then((rows) => {
+          if (active) setPendingRequests(rows)
+        })
+        .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [v?.boardId, v?.seq, v?.permissions.read])
   if (!v?.permissions.read)
     return h(
       'div',
@@ -1756,12 +1906,75 @@ export function ResearchBoardDiscussion({
         h(
           'small',
           null,
-          m.authorName ?? (m.role === 'assistant' ? '研究助手' : '成员'),
+          m.role === 'assistant'
+            ? '研究助手' +
+                (m.author?.username ? ' · ' + m.author.username : '')
+            : (m.author?.username ?? m.authorName ?? '成员'),
           m.imported ? ' · 复制时的已保存对话' : ''
         ),
-        MarkdownText ? h(MarkdownText, { text: m.text }) : h('p', null, m.text)
+        MarkdownText
+          ? h(MarkdownText, { text: m.text })
+          : h('p', null, m.text)
       )
     ),
+    ...pendingRequests
+      .filter(
+        (r: any) =>
+          r.state === 'taskCreateFailed' ||
+          r.state === 'messageAccepted' ||
+          r.runtimeState === 'interrupted' ||
+          r.runtimeState === 'uncertain'
+      )
+      .map((r: any) =>
+        h(
+          'div',
+          { className: 'srb-status', key: r.clientMutationId },
+          r.runtimeState
+            ? '执行已中断或结果未确认；不会自动重复调用模型。'
+            : '消息已保存，任务尚未启动。',
+          h(
+            'button',
+            {
+              onClick: () =>
+                void page
+                  .call('request.retry', {
+                    boardId: v.boardId,
+                    clientMutationId: r.clientMutationId
+                  })
+                  .catch(page.showError)
+            },
+            r.runtimeState === 'uncertain'
+              ? '明确重新执行这条请求（可能已有一次执行）'
+              : r.runtimeState
+                ? '重新执行这条请求'
+                : '重试这条研究任务'
+          )
+        )
+      ),
+    ...v.tasks
+      .filter(
+        (t: any) =>
+          t.resultState === 'pendingResult' ||
+          t.resultState === 'targetDeleted'
+      )
+      .map((t: any) =>
+        h(
+          'button',
+          {
+            key: 'apply-' + t.taskId,
+            onClick: () =>
+              void page
+                .call('task.applyResult', {
+                  boardId: v.boardId,
+                  taskId: t.taskId
+                })
+                .catch(page.showError)
+          },
+          t.resultState === 'targetDeleted'
+            ? '将结果恢复为新组件'
+            : '应用保留的研究结果'
+        )
+      ),
     page.retryRequest(sessionId) &&
       h(
         'div',
@@ -1932,7 +2145,11 @@ export function ResearchBoardCanvasOverlay({
     )
   )
 }
-function mountBoardSlots(page: ResearchBoardsPage, slots: any, doc: Document) {
+function mountBoardSlots(
+  page: ResearchBoardsPage,
+  slots: any,
+  doc: Document
+) {
   const register = (
     name: string,
     id: string,
@@ -1958,5 +2175,62 @@ function mountBoardSlots(page: ResearchBoardsPage, slots: any, doc: Document) {
     'conversation.session.header.utilities',
     'sherlock-research-board-presence',
     ResearchBoardPresence
+  )
+}
+
+export function PersonalResearchHistory({
+  sessionId,
+  children,
+  MarkdownText,
+  empty = false,
+  flow = false
+}: any) {
+  const [baseline, setBaseline] = React.useState(null as any)
+  React.useEffect(() => {
+    let active = true
+    setBaseline(null)
+    const bridge = (window as any).dshDesktop?.researchBoards
+    if (!bridge || bridge.isSharedSession(sessionId)) return
+    void bridge
+      .invoke('import.get', { localSessionId: sessionId })
+      .then((r: any) => {
+        if (active && r.ok) setBaseline(r.value)
+      })
+    return () => {
+      active = false
+    }
+  }, [sessionId])
+  if (!flow && !empty) return children ?? null
+  if (!baseline?.history?.length) return flow ? null : (children ?? null)
+  const records = baseline.history.map((m: any) =>
+    h(
+      'article',
+      {
+        className: 'srb-message',
+        'data-personal-import': m.id,
+        key: m.id
+      },
+      h(
+        'small',
+        null,
+        m.role === 'assistant'
+          ? '研究助手 · ' + (m.authorName ?? '已保存的研究')
+          : (m.authorName ?? '已保存的研究对话')
+      ),
+      MarkdownText ? h(MarkdownText, { text: m.text }) : h('p', null, m.text)
+    )
+  )
+  return h(
+    'div',
+    {
+      className: 'srb-discussion',
+      ...(flow
+        ? {}
+        : {
+            'data-chat-flow': '',
+            style: { minHeight: 0, flex: 1, overflowY: 'auto' }
+          })
+    },
+    ...records
   )
 }

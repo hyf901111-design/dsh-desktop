@@ -1783,3 +1783,62 @@ describe('Research task trusted HTTP surface', () => {
     expect(routes).toHaveLength(0)
   })
 })
+
+it('default shared executor uses the production subagent adapter for QA and native component output without prompting parent history', async () => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  for (const kind of ['qa', 'container']) {
+    const text =
+      kind === 'qa'
+        ? '直接回答保存资料中的问题'
+        : JSON.stringify({
+            version: 1,
+            type: 'markdown',
+            title: '研究结论',
+            content: '来自资料的结论'
+          })
+    const parent = {
+      id: 'shared-parent',
+      session: { events: [] },
+      prompt: vi.fn()
+    }
+    const child = { id: 'child', session: { id: 'child', events: [] } }
+    const run = {
+      id: 'child',
+      localAgent: child,
+      result: Promise.resolve({
+        stopReason: 'completed',
+        output: [{ type: 'text', text }]
+      }),
+      dispose: vi.fn(async () => {})
+    }
+    const ctx = sessionEventContext(parent, child, run)
+    const executor = createSharedBoardExecutor(ctx)
+    try {
+      expect(
+        await executor.execute(
+          {
+            sessionId: parent.id,
+            kind,
+            prompt: '仅根据给定资料完成研究',
+            files: []
+          },
+          new AbortController().signal
+        )
+      ).toBe(text)
+      expect(ctx.subagents.start).toHaveBeenCalledTimes(1)
+      const request = ctx.subagents.start.mock.calls[0][1]
+      expect(request.parent).toBe(parent)
+      expect(request.maxDepth).toBe(1)
+      expect(request.toolFilter.allow).toEqual([
+        'financial_query',
+        'web_search'
+      ])
+      expect(request.persona).toContain(kind === 'qa' ? '直接回答' : '画布')
+      expect(parent.prompt).not.toHaveBeenCalled()
+      expect(parent.session.events).toHaveLength(0)
+      expect(run.dispose).toHaveBeenCalledTimes(1)
+    } finally {
+      await executor.dispose()
+    }
+  }
+})

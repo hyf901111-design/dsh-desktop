@@ -15,6 +15,8 @@ type Canvas = { files: unknown[]; artifacts: unknown[] }
 type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes: number }
 type Options = {
   canReadSession?(sessionId: string): boolean
+  isSharedSession?(sessionId:string):boolean
+  additionalSources?(sessionId:string):Source[]|Promise<Source[]>
   readCanvas(sessionId: string): Canvas | Promise<Canvas>
   resolveFile(value: { sessionId: string; nodeId: string; authorizationId: string }): Promise<{ path: string; name: string } | null>
   now?: () => number
@@ -115,7 +117,7 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (req.url !== '/snapshot' || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/board-authority'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
       try {
         const chunks: Buffer[] = []
         let size = 0
@@ -125,7 +127,9 @@ export class ResearchContextBridge {
           if (size > MAX_BODY_BYTES) throw new Error()
           chunks.push(chunk)
         }
-        const input = exact(JSON.parse(Buffer.concat(chunks).toString('utf8')), ['sessionId', 'captureId'])
+        const raw=JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if(req.url==='/board-authority'){const input=exact(raw,['sessionId']);return send(200,{shared:this.options.isSharedSession?.(String(input.sessionId))===true})}
+        const input = exact(raw, ['sessionId', 'captureId'])
         this.purge()
         const capture = this.captures.get(input.captureId as string)
         if (!capture || capture.sessionId !== input.sessionId || this.stopped || this.options.canReadSession?.(capture.sessionId) === false) return send(404, { error: '资料捕获已失效。' })
@@ -155,7 +159,7 @@ export class ResearchContextBridge {
     // Freeze the entire stored canvas before the first asynchronous file check.
     const canvas: Canvas = JSON.parse(JSON.stringify(raw))
     if (!Array.isArray(canvas.files) || !Array.isArray(canvas.artifacts) || canvas.files.length + canvas.artifacts.length > 1000) throw new Error('画板资料过多。')
-    const sources: Source[] = []
+    const sources: Source[] = await this.options.additionalSources?.(sessionId)??[]
     const seen = new Set<string>()
     for (const rawNode of [...canvas.files, ...canvas.artifacts]) {
       if (!rawNode || typeof rawNode !== 'object' || Array.isArray(rawNode)) continue
