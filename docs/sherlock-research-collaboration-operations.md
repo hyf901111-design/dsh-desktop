@@ -24,7 +24,7 @@ Worker 层另覆盖三角色、邀请拒绝/到期/撤销、重复接受、会�
 
 迁移到其他工作目录时先从相同 lock 的精确 resolved tgz URL 执行 `npm pack <resolved-url> --offline --ignore-scripts --pack-destination <private-output>`，重建带 name/version/archive/resolved/integrity 的 inventory，并校验 tarball SHA512。不按 npm 缓存 basename 或更新时间选择包。inventory 与所有解包目录均只属于本地测试输出。
 
-每次 sources 阶段建立两个独立目录：feature matching baseline；当前 main SHA 的 conversation baseline 加 feature 其他 matching baseline。先应用 patch-package 文件，再运行完整 `patch-web-frontend-loading.mjs` 两次并比较所有目标文件 hash，随后执行真实 conversation/sidebar module factory。最终浏览器读取 main 兼容目录的 conversation/sidebar、primitives 和 frontend CSS；esbuild 明确将 primitives 指向同一清洁目录。其他 React/runtime 开发依赖仍来自该 checkout 已安装依赖，在结果中不冒称全部来自四归档。
+每次 sources 阶段建立两个独立目录：feature matching baseline；当前 main SHA 的 conversation baseline 加 feature 其他 matching baseline。先应用 patch-package 文件，再运行完整 `patch-web-frontend-loading.mjs` 两次并比较所有目标文件 hash，随后执行真实 conversation/sidebar module factory。最终浏览器挂载真实 ResearchConversationPanel 的 conversationHost/composerHost 和 ComposerSurface，量取长历史滚动后的末条消息与底部 composer，读取 main 兼容目录的 conversation/sidebar、primitives 和 frontend CSS；esbuild 明确将 primitives 指向同一清洁目录。其他 React/runtime 开发依赖仍来自该 checkout 已安装依赖，在结果中不冒称全部来自四归档。
 
 两个本地 package 另以 `npm pack --ignore-scripts` 输出到私有目录，提取成 `node_modules/dsh-research-collaboration` 和 `node_modules/dsh-research-task-runtime` 的 sibling 布局，实际 import 并执行 context 与固定 ID runtime。context.js/context.d.ts、board-runtime.js 必须进入包。它们当前为内部相对文件，context 和 board-runtime **不是公开 subpath export**；runtime 使用 sibling `../dsh-research-collaboration/context.js`。main bundle 的仓库相对源输入与此安装布局分别验证，不把 feature symlink 或 tarball 检查称为 native 打包验收。活动或 canonical node_modules 不被修改。
 

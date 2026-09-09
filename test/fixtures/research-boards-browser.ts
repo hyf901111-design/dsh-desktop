@@ -234,6 +234,24 @@ const t = (s: string, values: Record<string, unknown> = {}) =>
     /\{(\w+)\}/g,
     (_: string, key: string) => String(values[key] ?? '')
   )
+// Exercise the native Research sidebar hosts and composer seat, not a substitute flex layout.
+function FixtureDiscussion({ sessionId, children }: any) {
+  const [conversationHost, setConversationHost] = React.useState(null)
+  const [composerHost, setComposerHost] = React.useState(null)
+  return h('div', { className: 'fixture-discussion' },
+    h(mod.__ResearchConversationPanel, {
+      active: true, sessionId, researchWorkspaces: registry,
+      conversationHostRef: setConversationHost, composerHostRef: setComposerHost
+    }),
+    conversationHost && ReactDOM.createPortal(children[0], conversationHost),
+    composerHost && ReactDOM.createPortal(h(mod.__ComposerSurface, {
+      hero: false, researchEmpty: false, inputBar: children[1], pending: [],
+      renderSlot: () => null,
+      renderSlotChain: (_name: string, _owner: any, options: any) => options.fallback,
+      t
+    }), composerHost)
+  )
+}
 function App() {
   React.useSyncExternalStore(list.subscribe, list.getSnapshot)
   React.useSyncExternalStore(page.subscribe, page.version)
@@ -331,8 +349,8 @@ function App() {
           })
         ),
         h(
-          'div',
-          { className: 'fixture-discussion' },
+          FixtureDiscussion,
+          { sessionId: id },
           page.isShared(id)
             ? h(mod.__page.ResearchBoardDiscussion, {
                 page,

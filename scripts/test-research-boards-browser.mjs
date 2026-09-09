@@ -423,7 +423,7 @@ assets.set(
   '/conversation.js',
   conversation.replace(
     '\t\texports.apply = apply;',
-    '\t\texports.__page=sherlockBoardsPage; exports.__setAdapter=a=>{sherlockBoardsAdapter=a;}; exports.__zh=zh; exports.__Header=ConversationSessionHeader; exports.__InputBar=InputBar;\n\t\texports.apply = apply;'
+    '\t\texports.__page=sherlockBoardsPage; exports.__setAdapter=a=>{sherlockBoardsAdapter=a;}; exports.__zh=zh; exports.__Header=ConversationSessionHeader; exports.__InputBar=InputBar; exports.__ResearchConversationPanel=ResearchConversationPanel; exports.__ComposerSurface=ComposerSurface;\n\t\texports.apply = apply;'
   )
 )
 assets.set(
@@ -498,7 +498,7 @@ const cssDir = packagePath('dsh-web-frontend', 'dist/assets'),
     (s) => s.startsWith('index-') && s.endsWith('.css')
   )
 assets.set('/base.css', await readFile(join(cssDir, css), 'utf8'))
-const html = `<!doctype html><html><head><meta charset="utf-8"><title>Sherlock Research Boards UI Fixture</title><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/fixture.css"><style>html,body,#app{height:100%;margin:0}body{--dsw-font-family:system-ui;--dsw-alias-label-primary:#232323;--dsw-alias-label-secondary:#727272;--dsw-alias-bg-base:#fdfdfd;--dsw-alias-bg-layer-2:#fff;--dsw-specific-sidebar-fill:#f5f5f5;--dsw-alias-border-l2:#dedede;--dsw-alias-interactive-bg-hover:#8882}body[data-ds-dark-theme]{--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#999;--dsw-alias-bg-base:#181818;--dsw-alias-bg-layer-2:#222;--dsw-specific-sidebar-fill:#202020;--dsw-alias-border-l2:#393939;background:#181818}.fixture-shell{display:flex;height:100%;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base)}.fixture-sidebar{flex:none;height:100%}.fixture-main{min-width:0;flex:1;display:flex;flex-direction:column;position:relative}.fixture-main>header{margin-right:330px}.fixture-workbench{display:flex;flex:1;min-height:0}.fixture-canvas{position:relative;flex:1;min-width:0}.fixture-canvas>[data-research-canvas]{height:100%;background-color:var(--dsw-alias-bg-base)}.fixture-discussion{width:330px;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2);overflow:auto}.fixture-discussion .srb-discussion{flex:1}.fixture-workspaces{padding:16px 12px}.fixture-add{display:none;position:absolute;bottom:12px;left:20px;padding:7px 12px;border:1px solid #8883;border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:inherit}.srb-discussion+div{flex:none}@media(max-width:850px){.fixture-discussion{width:280px}.fixture-main>header{margin-right:280px}}</style></head><body><div id="app"></div><script type="module" src="/fixture.js"></script></body></html>`
+const html = `<!doctype html><html><head><meta charset="utf-8"><title>Sherlock Research Boards UI Fixture</title><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/fixture.css"><style>html,body,#app{height:100%;margin:0}body{--dsw-font-family:system-ui;--dsw-alias-label-primary:#232323;--dsw-alias-label-secondary:#727272;--dsw-alias-bg-base:#fdfdfd;--dsw-alias-bg-layer-2:#fff;--dsw-specific-sidebar-fill:#f5f5f5;--dsw-alias-border-l2:#dedede;--dsw-alias-interactive-bg-hover:#8882}body[data-ds-dark-theme]{--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#999;--dsw-alias-bg-base:#181818;--dsw-alias-bg-layer-2:#222;--dsw-specific-sidebar-fill:#202020;--dsw-alias-border-l2:#393939;background:#181818}.fixture-shell{display:flex;height:100%;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base)}.fixture-sidebar{flex:none;height:100%}.fixture-main{min-width:0;flex:1;display:flex;flex-direction:column;position:relative}.fixture-main>header{margin-right:330px}.fixture-workbench{display:flex;flex:1;min-height:0}.fixture-canvas{position:relative;flex:1;min-width:0}.fixture-canvas>[data-research-canvas]{height:100%;background-color:var(--dsw-alias-bg-base)}.fixture-discussion{position:relative;width:330px;min-width:0;border-left:1px solid var(--dsw-alias-border-l2)}.fixture-workspaces{padding:16px 12px}.fixture-add{display:none;position:absolute;bottom:12px;left:20px;padding:7px 12px;border:1px solid #8883;border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:inherit}@media(max-width:850px){.fixture-discussion{width:280px}.fixture-main>header{margin-right:280px}}</style></head><body><div id="app"></div><script type="module" src="/fixture.js"></script></body></html>`
 const connections = new Set()
 const server = createServer(async (req, res) => {
   try {
@@ -1487,6 +1487,22 @@ if (process.argv.includes('--serve')) {
     assert.deepEqual(users.map(u => u.modelCalls()), reshareCalls)
     await page.getByText('副本中的新问题', { exact: true }).waitFor()
     await page.getByText('副本中的新问题', { exact: true }).scrollIntoViewIfNeeded()
+    await page.waitForFunction(() => window.fixture.page.getState().current?.presence.length === 2)
+    const secondLayout = await page.evaluate(() => {
+      const rect = element => { const r = element.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height } }
+      const panel = document.querySelector('.fixture-discussion')
+      const scroll = panel.querySelector('[data-conversation-scroll]')
+      const messages = panel.querySelectorAll('[data-shared-discussion] article')
+      return { panel: rect(panel), scroll: rect(scroll), scrollHeight: scroll.scrollHeight,
+        scrollTop: scroll.scrollTop, flow: rect(panel.querySelector('[data-shared-discussion]')),
+        composer: rect(panel.querySelector('[data-composer-card]')), lastMessage: rect(messages[messages.length - 1]) }
+
+    })
+    console.log('TASK5_SECOND_LAYOUT=' + JSON.stringify(secondLayout))
+    await writeFile(join(out, 'second-generation-layout.json'), JSON.stringify(secondLayout, null, 2))
+    assert.ok(secondLayout.scrollHeight > secondLayout.scroll.height, 'scenario has overflowing long history')
+    assert.ok(secondLayout.lastMessage.top >= secondLayout.scroll.top && secondLayout.lastMessage.bottom <= secondLayout.composer.top, 'last message can scroll fully above composer')
+    assert.ok(secondLayout.composer.bottom >= secondLayout.panel.bottom - 32 && secondLayout.composer.bottom <= secondLayout.panel.bottom + 1, 'long shared history keeps composer at panel bottom')
     await page.screenshot({ path: join(out, 'second-generation-cloud-history.png') })
     await page.evaluate(id => window.fixture.page.openBoard(id), boardId)
     console.log('TASK5_SECOND_GENERATION_PASSED favorite/reviewed-capture/independent-cloud-activation/other-account-history-refs-bytes/frozen-after-private-edit/no-execute')
@@ -1566,7 +1582,7 @@ if (process.argv.includes('--serve')) {
     for (const socket of networks[1].sockets) socket.close(1000)
     await peer.evaluate(() => {
       const f = window.fixture, w = f.registry.for(f.sessions.list.getSnapshot().current)
-      w.setArtifacts([...w.getSnapshot().artifacts, { id: 'offline-own-note', messageId: 'offline-own-note', kind: 'pasted-text', title: '本人离线笔记', excerpt: '本人离线补充。', x: 80, y: 80, width: 300, height: 160 }])
+      w.setArtifacts(w.getSnapshot().artifacts.map(n => n.id === 'note' ? { ...n, excerpt: n.excerpt + ' 本人离线补充。' } : n))
     })
     await peer.locator('.fixture-discussion textarea').last().fill('本人未发送草稿。')
     await until(() => users[1].service.store.account('u1').pending.some(p => p.action === 'update'), 'offline own update persisted')
