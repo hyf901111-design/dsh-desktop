@@ -59,6 +59,11 @@ export type PageDependencies = {
 }
 export { selectionNodeReady } from './research-board-presentation'
 import { boardEditTime } from './research-board-presentation'
+import {
+  selectedBoardSession,
+  selectBoardSession,
+  subscribeBoardSelection
+} from './research-board-navigation'
 const emptyState = (): ResearchBoardsState => ({
   version: 1,
   eventSeq: 0,
@@ -1528,8 +1533,7 @@ function manageSidebarBoards(page: ResearchBoardsPage) {
 }
 export function ResearchBoardSidebar({
   page,
-  wide = true,
-  expandSidebar
+  wide = true
 }: {
   page: ResearchBoardsPage
   wide?: boolean
@@ -1544,6 +1548,12 @@ export function ResearchBoardSidebar({
       }
     }),
     [drag, setDrag] = React.useState<string | null>(null)
+  const selectedSession = React.useSyncExternalStore(
+    subscribeBoardSelection,
+    selectedBoardSession
+  )
+
+  if (!wide) return null
 
   return h(
     'section',
@@ -1555,17 +1565,9 @@ export function ResearchBoardSidebar({
         'button',
         {
           className: 'srb-section-toggle',
-          'aria-label': !wide
-            ? '展开研究看板'
-            : collapsed
-              ? '展开研究看板'
-              : '折叠研究看板',
+          'aria-label': collapsed ? '展开研究看板' : '折叠研究看板',
           'aria-expanded': !collapsed,
           onClick: () => {
-            if (!wide) {
-              expandSidebar?.()
-              return
-            }
             setCollapsed(!collapsed)
             try {
               localStorage.setItem(
@@ -1575,18 +1577,16 @@ export function ResearchBoardSidebar({
             } catch {}
           }
         },
-        wide
-          ? h(
-              React.Fragment,
-              null,
-              '研究看板',
-              h('span', {
-                className: 'srb-chevron',
-                'data-collapsed': collapsed,
-                'aria-hidden': true
-              })
-            )
-          : boardIcon('boards')
+        h(
+          React.Fragment,
+          null,
+          '研究看板',
+          h('span', {
+            className: 'srb-chevron',
+            'data-collapsed': collapsed,
+            'aria-hidden': true
+          })
+        )
       )
     ),
     !collapsed &&
@@ -1603,7 +1603,8 @@ export function ResearchBoardSidebar({
             {
               key: f.favoriteId,
               className: 'srb-row',
-              'aria-current': page.current() === f.sessionId,
+              'aria-current':
+                selectedSession === f.sessionId && page.current() === f.sessionId,
               onContextMenu: (event: React.MouseEvent) => {
                 event.preventDefault()
                 favoriteMenu(page, f)
@@ -1633,7 +1634,10 @@ export function ResearchBoardSidebar({
             h(
               'button',
               {
-                onClick: safely(page, () => page.openPersonal(f.sessionId)),
+                onClick: safely(page, async () => {
+                  await page.openPersonal(f.sessionId)
+                  selectBoardSession(f.sessionId)
+                }),
                 title: f.title
               },
               h('span', null, f.title)
@@ -1657,12 +1661,16 @@ export function ResearchBoardSidebar({
                   event.preventDefault()
                   manageBoard(page, b.boardId)
                 },
-                'aria-current': page.current() === b.localSessionId
+                'aria-current':
+                  selectedSession === b.localSessionId && page.current() === b.localSessionId
               },
               h(
                 'button',
                 {
-                  onClick: safely(page, () => page.openBoard(b.boardId)),
+                  onClick: safely(page, async () => {
+                    await page.openBoard(b.boardId)
+                    selectBoardSession(page.current() ?? '')
+                  }),
                   title: b.title
                 },
                 b.sharingState === 'shared' && boardIcon('people'),

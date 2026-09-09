@@ -25,7 +25,8 @@ import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
 import { hash } from '../services/accounts/auth.js'
 import {
   patchResearchBoardConversation,
-  patchResearchBoardSidebar
+  patchResearchBoardSidebar,
+  patchResearchBoardWorkspace
 } from './lib/patch-research-board-client.mjs'
 const root = process.cwd(),
   out = process.env.SHERLOCK_BOARD_QA_OUTPUT || join(root, 'output/playwright/research-boards')
@@ -447,6 +448,7 @@ assets.set(
     'exports.__SidebarRoot=SidebarRoot;\n\t\texports.apply = apply;'
   )
 )
+assets.set('/workspace.js', patchResearchBoardWorkspace(await readFile(packagePath('dsh-client-ui-workspace', 'lib/client.js'), 'utf8')).replace('\t\texports.apply = apply;', 'exports.__SessionNodeItem=SessionNodeItem;\n\t\texports.apply = apply;'))
 assets.set(
   '/runtime.js',
   await readFile(
@@ -666,6 +668,30 @@ if (process.argv.includes('--serve')) {
       ])
     )
     await page.getByRole('button', { name: '设为常用', exact: true }).click()
+    const favoriteRow = page.locator('.srb-row').filter({ hasText: '黄金市场研究' }).first()
+    const workspaceRow = page.locator('.fixture-workspaces [role="treeitem"]').filter({ hasText: '黄金市场研究' }).first()
+    await favoriteRow.locator('button').click()
+    await until(async () => await favoriteRow.getAttribute('aria-current') === 'true', 'favorite selected')
+    assert.equal(await workspaceRow.getAttribute('aria-selected'), 'false')
+    const rowStyles = await page.evaluate(() => {
+      const board = document.querySelector('.srb-row'), row = document.querySelector('.fixture-workspaces [role="treeitem"]')
+      const values = (el) => { const s = getComputedStyle(el); return [s.fontSize, s.lineHeight] }
+      return { boardHeight: board.getBoundingClientRect().height, workspaceHeight: row.getBoundingClientRect().height,
+        boardTitle: values(board.querySelector('button')), workspaceTitle: values(row.querySelector('[class*="_title"]')),
+        boardTime: values(board.querySelector('time')), workspaceTime: values(row.querySelector('[class*="_time"]')) }
+    })
+    assert.equal(rowStyles.boardHeight, rowStyles.workspaceHeight)
+    assert.deepEqual(rowStyles.boardTitle, rowStyles.workspaceTitle)
+    assert.deepEqual(rowStyles.boardTime, rowStyles.workspaceTime)
+    await workspaceRow.click()
+    await until(async () => await workspaceRow.getAttribute('aria-selected') === 'true', 'workspace selected without session change')
+    assert.equal(await favoriteRow.getAttribute('aria-current'), 'false')
+    await favoriteRow.locator('button').click()
+    await until(async () => await favoriteRow.getAttribute('aria-current') === 'true', 'favorite reselected')
+    assert.equal(await workspaceRow.getAttribute('aria-selected'), 'false')
+    await page.mouse.move(700, 100)
+    await page.screenshot({ path: join(out, 'sidebar-single-selection.png') })
+    console.log('SIDEBAR_SELECTION_PASSED actual-workspace-row/styles/same-session-entry-switch')
     await page.getByRole('button', { name: '画板设置', exact: true }).click()
     await page.getByRole('menuitem', { name: '共享协作', exact: true }).click()
     await page.getByLabel('对方专有 ID').fill('0000 0000 02')
@@ -1623,7 +1649,8 @@ if (process.argv.includes('--serve')) {
       .getByRole('button', { name: '收起侧边栏', exact: true })
       .click()
     await page.locator('.hHd-Xa_collapsed').waitFor()
-    await page.locator('.srb-section[data-wide=false]').waitFor()
+    assert.equal(await page.locator('.srb-section').count(), 0)
+    assert.equal(await page.getByRole('button', { name: '展开研究看板', exact: true }).count(), 0)
     await page.screenshot({
       animations: 'disabled',
       path: join(out, 'narrow-dark.png')
