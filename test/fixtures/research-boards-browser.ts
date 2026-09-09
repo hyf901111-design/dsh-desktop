@@ -403,15 +403,7 @@ createRoot(document.getElementById('app')).render(h(App))
 mountAccountUi(
   document,
   async (action: string) =>
-    action === 'me'
-      ? {
-          user: {
-            id: 'u' + user,
-            username: user === '0' ? '林研究员' : '周同事',
-            createdAt: 1
-          }
-        }
-      : {},
+    action === 'me' ? rpc('fixture:account-me') : {},
   bridge
 )
 mountResearchBoardNotifications(document, bridge)

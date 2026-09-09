@@ -31,7 +31,7 @@ const built = await build({
       export class ResearchBoardRoom extends BaseRoom {
         async validateAssets(canvas,assets,verifyObjects){
           await super.validateAssets(canvas,assets,verifyObjects);
-          if(verifyObjects && canvas.files.some(n=>n.id==='activation-race-file'||n.id==='activation-cleanup-race-file')) {
+          if(verifyObjects && (canvas.canvas ?? canvas).files.some(n=>n.id==='activation-race-file'||n.id==='activation-cleanup-race-file')) {
             const barrier=this.env.ACTIVATION_BARRIER.get(this.env.ACTIVATION_BARRIER.idFromName(assets[0].upload_id));
             await barrier.fetch('https://test.internal/arrive');
           }
@@ -186,6 +186,34 @@ try {
     (await call(0, '/users/lookup', { publicId: '9999999999' })).status,
     404
   )
+  // Separate board/owner keeps terminal invitation checks independent of later roles.
+  const terminalBoard = await ok(call(2, '/boards', {
+    operationId: 'terminal-invites', title: '邀请终态', sourceRevision: 'terminal',
+    capturedAt: new Date().toISOString(), snapshot: { canvas: { files: [], artifacts: [] }, history: [] }
+  }))
+  const terminalInvite = async (i, suffix) => (await ok(call(2, `/boards/${terminalBoard.board.boardId}/commands`, {
+    action: 'invite', operationId: 'terminal-' + suffix, epoch: terminalBoard.board.sharingEpoch,
+    publicId: people[i].user.publicId, role: 'viewer'
+  }))).invitation
+  const declined = await terminalInvite(0, 'decline')
+  assert.equal((await ok(call(0, `/invitations/${declined.invitationId}/respond`, {
+    operationId: 'decline-final', version: declined.version, decision: 'decline'
+  }))).invitation.status, 'declined')
+  const staleDecline = await call(0, `/invitations/${declined.invitationId}/respond`, {
+    operationId: 'accept-declined', version: declined.version, decision: 'accept'
+  })
+  assert.equal(staleDecline.status, 409)
+  assert.equal((await staleDecline.json()).error.details.invitation.status, 'declined')
+  const expired = await terminalInvite(1, 'expire')
+  await db.prepare('UPDATE board_invitations SET expires_at=? WHERE id=?').bind(Date.now() - 1, expired.invitationId).run()
+  const staleExpired = await call(1, `/invitations/${expired.invitationId}/respond`, {
+    operationId: 'accept-expired', version: expired.version, decision: 'accept'
+  })
+  assert.equal(staleExpired.status, 409)
+  assert.equal((await staleExpired.json()).error.details.invitation.status, 'expired')
+  assert.equal((await call(0, `/boards/${terminalBoard.board.boardId}`)).status, 403)
+  assert.equal((await call(1, `/boards/${terminalBoard.board.boardId}`)).status, 403)
+  console.log('PASS: declined/expired invitations remain terminal and never grant membership')
   const input = {
     operationId: 'create-1',
     title: '黄金 · 协作',

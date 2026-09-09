@@ -260,6 +260,17 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
   }
   const hydrate = (e: EditState, v: BoardView) => {
+    // Fresh authority may resume new edits only after old work was retired.
+    // An uncertain mutation remains paused until the explicit retry path.
+    if (
+      !e.view.permissions.read &&
+      v.permissions.read &&
+      !e.mutation &&
+      !e.queued
+    ) {
+      e.paused = false
+      e.error = undefined
+    }
     e.view = v
     e.workspace.setCollaborationAccess(v.permissions.edit)
     if (!v.permissions.edit || v.connection !== 'online')

@@ -954,3 +954,43 @@ it('places imported history before real native chat flow and suppresses the empt
     'PersonalResearchHistory,{sessionId,empty:researchEmpty'
   )
 })
+
+it('resumes newly authorized editing after read revalidation without replaying retired changes', async () => {
+  const f = await pageFixture(), w = f.registry.for('shared'), submitted = []
+  f.bridge.invoke.mockImplementation(async (action, p) => {
+    if (action !== 'canvas.apply') return { ok: true, value: null }
+    submitted.push(p)
+    return { ok: true, value: { canvas: p.canvas, canvasRevision: 'accepted', localBranchRevision: 'accepted-local', seq: 3, pendingCount: 0 } }
+  })
+  try {
+    f.emit({ type: 'board', view: { ...f.view, connection: 'revalidating', permissions: { read: false, edit: false, manage: false, execute: false }, canvas: { files: [], artifacts: [] } } })
+    w.setArtifacts([{ id: 'forbidden', kind: 'pasted-text', excerpt: 'not authorized' }])
+    f.emit({ type: 'board', view: { ...f.view, canvasRevision: 'fresh-authority', seq: 2 } })
+    w.setArtifacts(w.getSnapshot().artifacts.map(n => ({ ...n, excerpt: n.excerpt + ' NEW OWN' })))
+    await new Promise(r => setTimeout(r, 160))
+    expect(submitted).toHaveLength(1)
+    expect(submitted[0].baseRevision).toBe('fresh-authority')
+    expect(submitted[0].canvas.artifacts[0].excerpt).toBe('teammate secret baseline NEW OWN')
+    expect(submitted[0].canvas.artifacts.some(n => n.id === 'forbidden')).toBe(false)
+  } finally { f.dispose() }
+})
+
+it('does not automatically replay an uncertain canvas mutation when read authority returns', async () => {
+  const f = await pageFixture(), w = f.registry.for('shared'), submitted = []
+  f.bridge.invoke.mockImplementation(async (action, p) => {
+    if (action !== 'canvas.apply') return { ok: true, value: null }
+    submitted.push(p)
+    return { ok: false, error: { code: 'NETWORK_ERROR', message: 'ACK lost' } }
+  })
+  try {
+    w.setArtifacts(w.getSnapshot().artifacts.map(n => ({ ...n, excerpt: n.excerpt + ' uncertain' })))
+    await new Promise(r => setTimeout(r, 160))
+    expect(submitted).toHaveLength(1)
+    f.emit({ type: 'board', view: { ...f.view, connection: 'revalidating', permissions: { read: false, edit: false, manage: false, execute: false }, canvas: { files: [], artifacts: [] } } })
+    f.emit({ type: 'board', view: { ...f.view, seq: 2, canvasRevision: 'reconfirmed' } })
+    w.setArtifacts([{ ...f.view.canvas.artifacts[0], excerpt: 'new input while uncertain' }])
+    await new Promise(r => setTimeout(r, 160))
+    expect(submitted).toHaveLength(1)
+    expect(f.page.editorError('shared')).toBe('ACK lost')
+  } finally { f.dispose() }
+})

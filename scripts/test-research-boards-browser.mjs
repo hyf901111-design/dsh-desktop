@@ -1,5 +1,5 @@
 import { Session } from '@deepseek-ai/dsh-session'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import {
   SharedExecutionRuntime,
   fileExecutionStorage,
@@ -29,6 +29,20 @@ import {
 const root = process.cwd(),
   out = join(root, 'output/playwright/research-boards')
 await mkdir(out, { recursive: true })
+const packageRoot = process.env.SHERLOCK_COLLABORATION_PACKAGE_FIXTURE
+  ? await realpath(process.env.SHERLOCK_COLLABORATION_PACKAGE_FIXTURE)
+  : root
+if (packageRoot !== root) assert.ok(packageRoot.startsWith(await realpath(join(root, 'output')) + '/'))
+const packagePath = (name, file) => join(packageRoot, 'node_modules/@deepseek-ai', name, file)
+const networks = [0, 1].map(() => ({ offline: false, sockets: new Set(), holdUpdates: null }))
+async function until(predicate, label, timeout = 15000) {
+  const end = Date.now() + timeout
+  while (!(await predicate())) {
+    assert.ok(Date.now() < end, 'Timed out: ' + label)
+    await new Promise(r => setTimeout(r, 30))
+  }
+}
+
 await build({
   stdin: {
     contents:
@@ -117,7 +131,7 @@ for (let i = 0; i < 2; i++) {
     .bind(hash(tokens[i]), 'u' + i, Math.floor(Date.now() / 1000) + 3600)
     .run()
 }
-function socketAdapter(url) {
+function socketAdapter(url, userIndex) {
   let socket,
     closed = false
   const listeners = new Map()
@@ -130,13 +144,16 @@ function socketAdapter(url) {
     },
     send: (data) => socket?.send(data),
     close: (code) => {
+      if (closed || api.readyState === 3) return
       closed = true
       api.readyState = 3
       socket?.close(code)
     }
   }
+  networks[userIndex].sockets.add(api)
   queueMicrotask(async () => {
     try {
+      if (networks[userIndex].offline) throw Error('FIXTURE_OFFLINE')
       const response = await mf.dispatchFetch(url.replace(/^ws:/, 'http:'), {
         headers: { Upgrade: 'websocket' }
       })
@@ -173,6 +190,8 @@ for (let i = 0; i < 2; i++) {
       return () => accountListeners.delete(f)
     },
     async collaborationRequest(endpoint, signal) {
+      if (networks[i].offline) throw Error('FIXTURE_OFFLINE')
+      if (endpoint.kind === 'board.command' && endpoint.body.action === 'update') await networks[i].holdUpdates
       const spec = collaborationRequestSpec(endpoint)
       const r = await mf.dispatchFetch('http://127.0.0.1' + spec.path, {
         method: spec.method,
@@ -197,7 +216,7 @@ for (let i = 0; i < 2; i++) {
   }
   const client = new CollaborationClient(account, {
     origin: 'http://127.0.0.1',
-    socketFactory: socketAdapter,
+    socketFactory: (url) => socketAdapter(url, i),
     reconnectMs: 50
   })
   const original = Session.create('original')
@@ -396,7 +415,7 @@ for (const file of ['sherlock-logo.svg', 'sherlock-research.svg'])
   assets.set('/' + file, await readFile('build/' + file, 'utf8'))
 const conversation = await patchResearchBoardConversation(
   await readFile(
-    'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
+    packagePath('dsh-client-ui-conversation', 'lib/client.js'),
     'utf8'
   )
 )
@@ -411,7 +430,7 @@ assets.set(
   '/sidebar.js',
   patchResearchBoardSidebar(
     await readFile(
-      'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js',
+      packagePath('dsh-client-ui-sidebar', 'lib/client.js'),
       'utf8'
     )
   ).replace(
@@ -428,6 +447,7 @@ assets.set(
 )
 const browser = await build({
   entryPoints: ['test/fixtures/research-boards-browser.ts'],
+  nodePaths: [join(root, 'node_modules')],
   bundle: true,
   platform: 'browser',
   format: 'esm',
@@ -439,6 +459,9 @@ const browser = await build({
     {
       name: 'assets',
       setup(b) {
+        if (packageRoot !== root) b.onResolve({ filter: /^@deepseek-ai\/dsh-client-ui-primitives$/ }, async () => ({
+          path: packagePath('dsh-client-ui-primitives', 'lib/index.js')
+        }))
         b.onResolve({ filter: /\?(raw|url)/ }, (a) => ({
           path: resolve(a.resolveDir, a.path.split('?')[0]),
           namespace: a.path.includes('raw') ? 'raw' : 'image'
@@ -470,7 +493,7 @@ assets.set(
   '/fixture.css',
   browser.outputFiles.find((f) => f.path.endsWith('.css'))?.text ?? ''
 )
-const cssDir = 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets',
+const cssDir = packagePath('dsh-web-frontend', 'dist/assets'),
   css = (await readdir(cssDir)).find(
     (s) => s.startsWith('index-') && s.endsWith('.css')
   )
@@ -506,6 +529,7 @@ const server = createServer(async (req, res) => {
       let value
       if (channel === 'research:boards:snapshot')
         value = u.service.getSnapshot()
+      else if (channel === 'fixture:account-me') value = u.account.authenticated ? { user: { id: 'u' + index, username: index === 0 ? '林研究员' : '周同事', createdAt: 1 } } : { user: null }
       else if (channel === 'research:boards:invoke')
         value = await u.service.invoke(...args)
       else if (channel === 'research:boards:is-shared-session')
@@ -592,8 +616,15 @@ if (process.argv.includes('--serve')) {
   const page = await context.newPage(),
     peer = await peerContext.newPage()
   const errors = [],
-    failedRequests = []
+    failedRequests = [],
+    previewRequests = new Set()
+  let previewChangedAt = 0
+  const settlePreviews = () => until(() => previewRequests.size === 0 && Date.now() - previewChangedAt > 250, 'preview requests settled')
   for (const p of [page, peer]) {
+    p.on('request', r => { if (new URL(r.url()).pathname === '/preview') { previewRequests.add(r); previewChangedAt = Date.now() } })
+    const finishPreview = r => { if (previewRequests.delete(r)) previewChangedAt = Date.now() }
+    p.on('requestfinished', finishPreview)
+    p.on('requestfailed', finishPreview)
     p.on('pageerror', (e) => errors.push(e.stack ?? e.message))
     p.on('console', (m) => {
       if (m.type() === 'error')
@@ -723,6 +754,29 @@ if (process.argv.includes('--serve')) {
       ),
       original
     )
+    // Hold only outgoing updates until both real renderer branches are persisted.
+    let releaseConcurrent
+    const concurrentGate = new Promise(r => { releaseConcurrent = r })
+    networks[0].holdUpdates = networks[1].holdUpdates = concurrentGate
+    await Promise.all([
+      page.evaluate(() => {
+        const f = window.fixture, w = f.registry.for(f.sessions.list.getSnapshot().current)
+        w.setArtifacts(w.getSnapshot().artifacts.map(n => ({ ...n, excerpt: n.excerpt + ' 同时文本证据。' })))
+      }),
+      peer.evaluate(() => {
+        const f = window.fixture, w = f.registry.for(f.sessions.list.getSnapshot().current)
+        w.setArtifacts(w.getSnapshot().artifacts.map(n => ({ ...n, x: 470 })))
+      })
+    ])
+    await until(() => users.every((u, i) => u.service.store.account('u' + i).pending.some(p => p.action === 'update')), 'both concurrent updates durable')
+    networks[0].holdUpdates = networks[1].holdUpdates = null
+    releaseConcurrent()
+    for (const clientPage of [page, peer]) await clientPage.waitForFunction(() => {
+      const f = window.fixture, n = f.registry.for(f.sessions.list.getSnapshot().current).getSnapshot().artifacts[0]
+      return n.x === 470 && n.excerpt.includes('同时文本证据。')
+    })
+    await until(() => users.every((u, i) => !u.service.store.account('u' + i).pending.length), 'concurrent ACKs')
+    console.log('TASK5_CONCURRENT_PASSED two-renderer-persisted-branches/text-and-geometry/converged')
     const oldX = await peer.evaluate(
       () =>
         window.fixture.registry
@@ -801,6 +855,7 @@ if (process.argv.includes('--serve')) {
     const beforeSession = await peer.evaluate(
       () => window.fixture.sessions.list.getSnapshot().current
     )
+    await settlePreviews()
     await peer.reload()
     await peer.waitForFunction(
       () => window.fixture?.page.getState().current?.permissions.read === true
@@ -1252,6 +1307,30 @@ if (process.argv.includes('--serve')) {
     console.log(
       'TASK4_STOP_RETRY_PASSED runtime-abort/original-message-identity/explicit-new-attempt/no-auto-replay'
     )
+    // A second deliberate author uses their own executor; receivers add no calls.
+    assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'editor' })).ok, true)
+    await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === true)
+    const authorCounts = users.map(u => u.modelCalls())
+    const secondAuthor = await peer.evaluate(async (boardId) => window.fixture.page.call('request.submit', {
+      boardId, text: '周同事独立提问', clientMutationId: 'peer-explicit-request',
+      context: { scope: 'references', references: [{ collection: 'files', nodeId: 'evidence' }] }
+    }), boardId)
+    await until(() => users[1].service.getSnapshot().current?.tasks.some(t => t.taskId === secondAuthor.taskId && t.status === 'completed'), 'second author completed')
+    assert.deepEqual(users.map(u => u.modelCalls()), [authorCounts[0], authorCounts[1] + 1])
+    const secondAuthorState = await users[0].client.request({ kind: 'board.get', boardId })
+    const peerMessage = secondAuthorState.messages.find(m => m.id === secondAuthor.requestMessageId)
+    assert.equal(peerMessage.author.userId, 'u1')
+    assert.notEqual(peerMessage.id, asked.value.requestMessageId)
+    assert.notEqual(secondAuthor.taskId, asked.value.taskId)
+    assert.equal(peerMessage.context.references[0].nodeId, 'evidence')
+    assert.equal(secondAuthorState.tasks.find(t => t.taskId === secondAuthor.taskId).requestMessageId, peerMessage.id)
+    await settlePreviews()
+    await peer.reload()
+    await peer.waitForFunction(() => window.fixture?.page.getState().current?.permissions.edit === true)
+    assert.deepEqual(users.map(u => u.modelCalls()), [authorCounts[0], authorCounts[1] + 1])
+    assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'viewer' })).ok, true)
+    await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === false)
+    console.log('TASK5_SECOND_AUTHOR_PASSED distinct-author-message-task-context/receiver-zero-delta/reload-no-execute')
     const copy = await users[1].service.invoke('board.copyPersonal', {
       boardId
     })
@@ -1364,6 +1443,54 @@ if (process.argv.includes('--serve')) {
         .count()) > 0
     )
     await peer.screenshot({ path: join(out, 'personal-import-light.png') })
+    const reshareCalls = users.map(u => u.modelCalls())
+    await peer.getByRole('button', { name: '设为常用', exact: true }).click()
+    await peer.getByRole('button', { name: '共享协作', exact: true }).click()
+    await peer.getByLabel('协作名称').fill('第二代独立协作')
+    // Preview has completed. Later private transcript/file edits must stay private.
+    users[1].sessionData.get(personalId).append('user/message', {
+      id: 'after-reviewed-preview', source: { kind: 'user' },
+      content: [{ type: 'text', text: '预览后仅本机问题' }]
+    }, { surfaceOp: 'append' })
+    await writeFile(ownedText.path, '预览后仅本机资料。')
+    await peer.getByLabel('对方专有 ID').fill('0000 0000 01')
+    await peer.getByRole('button', { name: '查找并核对', exact: true }).click()
+    await peer.getByText('林研究员 · ID 0000 0000 01', { exact: true }).waitFor()
+    await peer.getByRole('button', { name: '创建副本并邀请', exact: true }).click()
+    await peer.getByRole('button', { name: '打开协作看板', exact: true }).click()
+    await peer.waitForFunction(old => window.fixture.page.getState().current?.boardId && window.fixture.page.getState().current.boardId !== old, boardId)
+    const secondBoardId = await peer.evaluate(() => window.fixture.page.getState().current.boardId)
+    assert.notEqual(secondBoardId, boardId)
+    await page.getByRole('button', { name: '接受', exact: true }).click()
+    await page.getByRole('button', { name: '打开看板', exact: true }).click()
+    await page.waitForFunction(id => window.fixture.page.getState().current?.boardId === id, secondBoardId)
+    const secondCloud = await users[0].client.request({ kind: 'board.get', boardId: secondBoardId })
+    assert.equal(secondCloud.board.role, 'editor')
+    assert.equal(secondCloud.snapshot.history.filter(h => h.text === '这份文件的数字是多少？').length, 1)
+    assert.equal(secondCloud.snapshot.history.filter(h => h.text === '副本中的新问题').length, 1)
+    assert.equal(secondCloud.snapshot.history.filter(h => h.text === '预览后仅本机问题').length, 0)
+    let checkedReferences = 0
+    for (const record of secondCloud.snapshot.history) for (const ref of record.references ?? []) {
+      if (ref.assetId) {
+        const bytes = await users[0].client.request({ kind: 'asset.get', boardId: secondBoardId, assetId: ref.assetId })
+        assert.equal(await bytes.text(), '冻结资料：销售额 42。')
+        checkedReferences++
+      }
+    }
+    assert.ok(checkedReferences > 0, 'second generation history retains authorized reference bytes')
+    const secondText = secondCloud.snapshot.canvas.files.find(n => n.name === 'evidence.txt')
+    const secondBinary = secondCloud.snapshot.canvas.files.find(n => n.name === 'archive.bin')
+    assert.ok(secondText && secondBinary)
+    assert.equal(await (await users[0].client.request({ kind: 'asset.get', boardId: secondBoardId, assetId: secondText.assetId })).text(), '冻结资料：销售额 42。')
+    assert.deepEqual(Buffer.from(await (await users[0].client.request({ kind: 'asset.get', boardId: secondBoardId, assetId: secondBinary.assetId })).arrayBuffer()), Buffer.from([1, 2, 3, 4]))
+    assert.equal(await readFile(ownedText.path, 'utf8'), '预览后仅本机资料。')
+    assert.deepEqual(users.map(u => u.modelCalls()), reshareCalls)
+    await page.getByText('副本中的新问题', { exact: true }).waitFor()
+    await page.getByText('副本中的新问题', { exact: true }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: join(out, 'second-generation-cloud-history.png') })
+    await page.evaluate(id => window.fixture.page.openBoard(id), boardId)
+    console.log('TASK5_SECOND_GENERATION_PASSED favorite/reviewed-capture/independent-cloud-activation/other-account-history-refs-bytes/frozen-after-private-edit/no-execute')
+
     await peer.evaluate((id) => window.fixture.page.openBoard(id), boardId)
     globalThis.task4Personal = {
       personalId,
@@ -1433,6 +1560,16 @@ if (process.argv.includes('--serve')) {
       path: join(out, 'account-menu-dark.png')
     })
     await page.mouse.click(850, 400)
+    assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'editor' })).ok, true)
+    await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === true)
+    networks[1].offline = true
+    for (const socket of networks[1].sockets) socket.close(1000)
+    await peer.evaluate(() => {
+      const f = window.fixture, w = f.registry.for(f.sessions.list.getSnapshot().current)
+      w.setArtifacts([...w.getSnapshot().artifacts, { id: 'offline-own-note', messageId: 'offline-own-note', kind: 'pasted-text', title: '本人离线笔记', excerpt: '本人离线补充。', x: 80, y: 80, width: 300, height: 160 }])
+    })
+    await peer.locator('.fixture-discussion textarea').last().fill('本人未发送草稿。')
+    await until(() => users[1].service.store.account('u1').pending.some(p => p.action === 'update'), 'offline own update persisted')
     const cancelled = await users[0].service.invoke('board.cancel', {
       boardId
     })
@@ -1452,6 +1589,32 @@ if (process.argv.includes('--serve')) {
         })
     )
     assert.equal(cancelled.ok, true, JSON.stringify(cancelled))
+    networks[1].offline = false
+    await users[1].service.invoke('boards.refresh', {})
+    await until(() => users[1].service.store.account('u1').recoveries.some(r => JSON.stringify(r).includes('本人离线补充。')), 'own recovery after reconnect/cancel')
+    const recovery = users[1].service.store.account('u1').recoveries.filter(r => r.boardId === boardId)
+    const recoveryText = JSON.stringify(recovery)
+    assert.ok(recoveryText.includes('本人离线补充。'))
+    assert.ok(recoveryText.includes('本人未发送草稿。'))
+    assert.ok(!recoveryText.includes('同时文本证据。'), 'recovery excludes teammates accepted text')
+    await peer.getByText('共享访问已结束', { exact: true }).first().waitFor()
+    await peer.getByRole('button', { name: '查看我的恢复记录', exact: true }).click()
+    const recoveryDialog = peer.locator('.srb-dialog')
+    const recoveryRows = recoveryDialog.getByRole('button').filter({ hasText: /\d{4}/ })
+    for (let i = 0; i < await recoveryRows.count(); i++) await recoveryRows.nth(i).click()
+    await recoveryDialog.locator('pre').filter({ hasText: '本人离线补充。' }).waitFor()
+    await recoveryDialog.locator('pre').filter({ hasText: '本人未发送草稿。' }).waitFor()
+    assert.ok(!(await recoveryDialog.innerText()).includes('同时文本证据。'))
+    await peer.screenshot({ path: join(out, 'offline-cancel-own-recovery.png') })
+    await recoveryDialog.getByRole('button', { name: '关闭', exact: true }).click()
+    const freshStore = new ResearchBoardsStore(users[1].dir)
+    assert.ok(JSON.stringify(freshStore.account('u1').recoveries).includes('本人离线补充。'))
+    await settlePreviews()
+    await peer.reload()
+    await peer.waitForFunction(() => window.fixture?.ready)
+    assert.equal((await users[1].service.invoke('board.open', { boardId })).ok, false)
+    console.log('TASK5_OFFLINE_CANCEL_PASSED real-disconnect/own-edit-draft/reconnect/revoke/own-only-durable/reload-denied')
+
     await peer.waitForFunction(() => {
       const f = window.fixture
       return (
@@ -1488,6 +1651,7 @@ if (process.argv.includes('--serve')) {
       ).ok,
       true
     )
+    await settlePreviews()
     users[1].signOut()
     assert.equal(
       (
@@ -1511,6 +1675,25 @@ if (process.argv.includes('--serve')) {
       ).ok,
       true
     )
+    await peer.evaluate((id) => window.fixture.sessions.open(id), personal.personalId)
+    await peer.locator('[data-personal-import]').first().waitFor()
+    const oldFavorite = users[1].service.getSnapshot().favorites.find(f => f.sessionId === personal.personalId)
+    if (oldFavorite) await peer.getByRole('button', { name: '取消常用', exact: true }).click()
+    await peer.getByRole('button', { name: '设为常用', exact: true }).click()
+    await until(() => users[1].service.getSnapshot().favorites.some(f => f.sessionId === personal.personalId), 'signed-out favorite created')
+    const signedOutFavorite = { value: users[1].service.getSnapshot().favorites.find(f => f.sessionId === personal.personalId) }
+    assert.equal((await users[1].service.invoke('favorite.rename', { favoriteId: signedOutFavorite.value.favoriteId, title: '本机常用重命名' })).ok, true)
+    await settlePreviews()
+    await peer.reload()
+    await peer.waitForFunction(() => window.fixture?.page.getState().account.status === 'signedOut')
+    await peer.getByRole('button', { name: /本机常用重命名/ }).first().waitFor()
+    assert.equal(await peer.evaluate(() => window.fixture.sessions.list.getSnapshot().current), personal.personalId)
+    assert.equal(new ResearchBoardsStore(users[1].dir).snapshot().favorites.find(f => f.favoriteId === signedOutFavorite.value.favoriteId).title, '本机常用重命名')
+    await peer.screenshot({ path: join(out, 'signed-out-personal-favorite.png') })
+    // Return to terminated shared session for the existing termination surface assertion.
+    await settlePreviews()
+    await peer.evaluate(id => window.fixture.sessions.open(id), personal.peerSession)
+    console.log('TASK5_SIGNED_OUT_FAVORITE_PASSED rename/disk-reopen/renderer-reload/same-personal-session')
     console.log(
       'TASK4_FILE_COPY_ROUNDTRIP_PASSED frozen-source-delete/clipboard-nonpreview/bound-open/revoke-deny/viewer-copy/idempotent-finalize/import-display/personal-reshare-baseline-once'
     )
@@ -1536,6 +1719,18 @@ if (process.argv.includes('--serve')) {
   } finally {
     console.log('ERRORS=' + JSON.stringify([...new Set(errors)]))
     console.log('REQUEST_FAILURES=' + JSON.stringify(failedRequests))
+    const unexpectedErrors = errors.filter(entry => {
+      const prefix = 'Failed to load resource: net::ERR_INVALID_URL '
+      if (!entry.startsWith(prefix)) return true
+      try {
+        const location = JSON.parse(entry.slice(prefix.length))
+        return createHash('sha256').update(location.url).digest('hex') !== '529d2eb875d10d261ef43955db15af9f6be50681c33087bbf6d4e276edb95543'
+      } catch { return true }
+    })
+    if (unexpectedErrors.length || failedRequests.length) {
+      console.error('UNEXPECTED_BROWSER_ERRORS', JSON.stringify({ unexpectedErrors, failedRequests }))
+      process.exitCode = 1
+    }
     await writeFile(
       join(out, 'console.json'),
       JSON.stringify({ errors, failedRequests }, null, 2)
