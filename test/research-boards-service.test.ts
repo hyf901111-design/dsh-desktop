@@ -1235,6 +1235,48 @@ it('accepts a cleared presence cursor and enforces the 100-node transient select
       selectedIds: Array.from({ length: 101 }, (_, i) => `n-${i}`)
     })
   ).toMatchObject({ ok: false, error: { code: 'INVALID_REQUEST' } })
+  const preview = {
+    collection: 'artifacts',
+    nodeId: 'n',
+    x: 1,
+    y: 2,
+    width: 300,
+    height: 200
+  }
+  expect(
+    await t.service.invoke('presence.update', {
+      boardId: 'board',
+      previews: [preview]
+    })
+  ).toMatchObject({ ok: true })
+  expect(
+    await t.service.invoke('presence.update', {
+      boardId: 'board',
+      previews: [{ ...preview, nodeId: 'missing' }]
+    })
+  ).toMatchObject({ ok: false, error: { code: 'INVALID_REQUEST' } })
+  expect(
+    await t.service.invoke('presence.update', {
+      boardId: 'board',
+      selectedIds: Array(100).fill('x'.repeat(128))
+    })
+  ).toMatchObject({ ok: false, error: { code: 'INVALID_REQUEST' } })
+  t.setRole('viewer')
+  await t.service.receiveBoard('board', t.snapshot())
+  expect(
+    await t.service.invoke('presence.update', {
+      boardId: 'board',
+      previews: [preview]
+    })
+  ).toMatchObject({ ok: false, error: { code: 'READ_ONLY' } })
+  expect(
+    await t.service.invoke('presence.update', {
+      boardId: 'board',
+      cursor: null,
+      selectedIds: [],
+      previews: []
+    })
+  ).toMatchObject({ ok: true })
 })
 
 it.each(['event-first', 'ack-first'] as const)(
@@ -1343,3 +1385,62 @@ it.each(['network', 'account', 'revoked'] as const)(
       expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
   }
 )
+
+it('hydrates retained invitation rows when role and terminal events use new notification IDs', async () => {
+  const t = make()
+  await ready(t)
+  const watch = t.watches.find(
+    (w) => w.scope.scope === 'notifications' && !w.closed
+  )!
+  const n = {
+    notificationId: 'first',
+    eventVersion: 1,
+    type: 'invitation',
+    boardId: 'board',
+    boardTitle: 'Board',
+    createdAt: 1,
+    readAt: null,
+    invitation: {
+      invitationId: 'invite',
+      version: 1,
+      status: 'pending',
+      role: 'editor'
+    }
+  }
+  watch.listener({ type: 'notification', notification: n })
+  await new Promise((r) => setImmediate(r))
+  watch.listener({
+    type: 'notification',
+    notification: {
+      ...n,
+      notificationId: 'role',
+      eventVersion: 2,
+      invitation: { ...n.invitation, version: 2, role: 'viewer' }
+    }
+  })
+  await new Promise((r) => setImmediate(r))
+  expect(
+    t.service
+      .getSnapshot()
+      .notifications.notifications.find((n) => n.notificationId === 'first')!
+      .invitation
+  ).toMatchObject({ version: 2, role: 'viewer' })
+  watch.listener({
+    type: 'notification',
+    notification: {
+      ...n,
+      notificationId: 'revoked',
+      eventVersion: 2,
+      type: 'invitationCancelled',
+      invitation: { ...n.invitation, version: 2, status: 'cancelled' }
+    }
+  })
+  await new Promise((r) => setImmediate(r))
+  expect(
+    t.service
+      .getSnapshot()
+      .notifications.notifications.every(
+        (n) => n.invitation?.status === 'cancelled'
+      )
+  ).toBe(true)
+})

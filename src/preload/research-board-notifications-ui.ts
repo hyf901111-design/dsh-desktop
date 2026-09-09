@@ -29,6 +29,7 @@ export function mountResearchBoardNotifications(
     queue: Notification[] = [],
     burst = 0,
     aggregate = 0
+  let activeNotification: Notification | undefined
   let countdown: ReturnType<typeof setTimeout> | undefined,
     remaining = 10000,
     started = 0,
@@ -58,6 +59,7 @@ export function mountResearchBoardNotifications(
     countdown = undefined
     bubble?.remove()
     bubble = undefined
+    activeNotification = undefined
     if (next) showNext()
   }
   function pause() {
@@ -180,6 +182,12 @@ export function mountResearchBoardNotifications(
           } as Record<string, string>
         )[String(n.invitation?.status)] ?? ''
       row.append(status)
+      if (n.invitation?.status === 'accepted')
+        row.append(
+          boardButton(doc, '打开看板', () =>
+            requestBoardPageAction(doc, 'open', n.boardId)
+          )
+        )
     }
     return row
   }
@@ -265,6 +273,7 @@ export function mountResearchBoardNotifications(
       burst = 0
       return
     }
+    activeNotification = n
     bubble = doc.createElement('aside')
     bubble.className = 'srb-bubble'
     bubble.setAttribute('aria-live', 'polite')
@@ -320,6 +329,39 @@ export function mountResearchBoardNotifications(
         closeBubble()
       }
     })
+    resume()
+  }
+  function reconcileActiveBubble() {
+    if (!bubble || !activeNotification) return
+    const next = state?.notifications.notifications.find(
+      (n) => n.notificationId === activeNotification!.notificationId
+    )
+    if (next && JSON.stringify(next) === JSON.stringify(activeNotification))
+      return
+    const previous = bubble.querySelector('.srb-notification')
+    if (!previous) return
+    const focus = doc.activeElement as HTMLElement | null
+    const hadFocus = !!focus && previous.contains(focus)
+    const label = focus?.getAttribute('aria-label') ?? focus?.textContent
+    pause()
+    if (next) {
+      activeNotification = next
+      const row = record(next)
+      previous.replaceWith(row)
+      if (hadFocus) {
+        const target =
+          [...row.querySelectorAll('button')].find(
+            (b) => (b.getAttribute('aria-label') ?? b.textContent) === label
+          ) ?? bubble.querySelector<HTMLButtonElement>('header button')
+        target?.focus()
+      }
+    } else {
+      previous.textContent = '此邀请已不可用，请在消息中心查看最新状态。'
+      if (hadFocus)
+        bubble.querySelector<HTMLButtonElement>('header button')?.focus()
+      activeNotification = undefined
+    }
+    focused = bubble.contains(doc.activeElement)
     resume()
   }
   function openPanel() {
@@ -400,6 +442,14 @@ export function mountResearchBoardNotifications(
     } else
       for (const n of fresh) {
         if (
+          activeNotification?.invitation?.invitationId &&
+          activeNotification.invitation.invitationId ===
+            n.invitation?.invitationId
+        ) {
+          shown.set(n.notificationId, n.eventVersion)
+          continue
+        }
+        if (
           !queue.some(
             (q) =>
               q.notificationId === n.notificationId &&
@@ -418,6 +468,7 @@ export function mountResearchBoardNotifications(
         )!
       )
       .filter((n) => n && pending(n))
+    reconcileActiveBubble()
     reconcile()
     renderPanel()
   }

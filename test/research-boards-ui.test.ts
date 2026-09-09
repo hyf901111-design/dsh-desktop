@@ -261,3 +261,101 @@ it('aggregates startup history once and limits new bubbles to3 with hover-paused
     vi.useRealTimers()
   }
 })
+
+it('updates the active bubble to latest permission and cancelled status without stale actions', async () => {
+  const w = new Window({ url: 'http://localhost/' }),
+    host = w.document.createElement('div')
+  host.dataset.researchBoardBellHost = ''
+  w.document.body.append(host)
+  let emit: (e: any) => void = () => {}
+  const invoke = vi.fn(async () => ({ ok: true, value: null }))
+  const state: any = {
+    version: 1,
+    eventSeq: 1,
+    account: { status: 'ready', generation: 1, user: { userId: 'u' } },
+    favorites: [],
+    boards: [],
+    current: null,
+    recoveries: [],
+    notifications: {
+      cursor: 0,
+      unreadCount: 0,
+      pendingCount: 0,
+      notifications: []
+    }
+  }
+  const bridge: any = {
+    isSharedSession: () => false,
+    getSnapshot: async () => state,
+    subscribe: (fn: any) => {
+      emit = fn
+      return () => {}
+    },
+    invoke
+  }
+  const dispose = mountResearchBoardNotifications(w.document as any, bridge)
+  await new Promise((r) => setTimeout(r, 5))
+  const n = {
+    notificationId: 'n',
+    eventVersion: 1,
+    type: 'invitation',
+    boardId: 'b',
+    boardTitle: '研究',
+    createdAt: 1,
+    readAt: null,
+    invitation: {
+      invitationId: 'i',
+      version: 1,
+      role: 'editor',
+      status: 'pending'
+    }
+  }
+  const update = (note: any, seq: number) =>
+    emit({
+      type: 'state',
+      state: {
+        ...state,
+        eventSeq: seq,
+        notifications: {
+          ...state.notifications,
+          notifications: [note],
+          pendingCount: 1
+        }
+      }
+    })
+  try {
+    update(n, 2)
+    const bubble = w.document.querySelector('.srb-bubble')!
+    ;(
+      Array.from(bubble.querySelectorAll('button')).find(
+        (b) => b.textContent === '接受'
+      ) as any
+    ).focus()
+    update(
+      {
+        ...n,
+        eventVersion: 2,
+        invitation: { ...n.invitation, role: 'viewer', version: 2 }
+      },
+      3
+    )
+    expect(bubble.textContent).toContain('仅查看')
+    expect(w.document.activeElement?.textContent).toBe('接受')
+    update(
+      {
+        ...n,
+        eventVersion: 3,
+        invitation: { ...n.invitation, status: 'cancelled', version: 2 }
+      },
+      4
+    )
+    expect(bubble.textContent).toContain('已撤销')
+    expect(bubble.textContent).not.toContain('拒绝接受')
+    expect(w.document.activeElement?.getAttribute('aria-label')).toBe(
+      '关闭提醒'
+    )
+  } finally {
+    dispose()
+    w.happyDOM.abort()
+  }
+})

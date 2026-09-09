@@ -28,6 +28,8 @@ type Store<T> = {
 }
 type LegacyNode = Record<string, any>
 type Workspace = {
+  isCollaborationGesture?(): boolean
+
   getSnapshot(): LegacyNode
   subscribe(fn: () => void): () => void
   applyRemoteCanvas(canvas: Canvas, meta: { revision: string }): void
@@ -118,6 +120,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     activeResearch = new Set<string>(),
     opening = new Map<string, Promise<string>>(),
     copies = new Map<string, string>()
+  const previewStates = new Map<
+    string,
+    {
+      cursor: { x: number; y: number } | null
+      selectedIds: string[]
+      last: number
+      timer?: ReturnType<typeof setTimeout>
+    }
+  >()
   const ownRecovery = new Map<string, { boardId: string; text: string }>()
   const sends = new Map<
       string,
@@ -244,13 +255,21 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   const hydrate = (e: EditState, v: BoardView) => {
     e.view = v
     e.workspace.setCollaborationAccess(v.permissions.edit)
+    if (!v.permissions.edit || v.connection !== 'online')
+      clearPresence(v.localSessionId!)
     if (!v.permissions.read) {
       e.queued = undefined
       e.remote = undefined
       e.paused = true
       e.workspace.cancelTransient()
     }
-    if ((e.busy || e.queued || e.mutation) && v.permissions.read) {
+    if (
+      (e.busy ||
+        e.queued ||
+        e.mutation ||
+        e.workspace.isCollaborationGesture?.()) &&
+      v.permissions.read
+    ) {
       e.remote = v
       return
     }
@@ -291,6 +310,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         editor.observed = sig
         if (!editor.view.permissions.edit) return
         rememberOwnCanvas(editor.view.boardId, before, next)
+        if (workspace.isCollaborationGesture?.()) {
+          presence(v.localSessionId!, {})
+          return
+        }
         editor.queued = next
         if (editor.paused) return
         clearTimeout(editor.timer)
@@ -305,7 +328,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       e.busy ||
       e.paused ||
       (!e.queued && !e.mutation) ||
-      !e.view.permissions.edit
+      !e.view.permissions.edit ||
+      e.workspace.isCollaborationGesture?.()
     )
       return
     e.busy = true
@@ -371,7 +395,103 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (e.queued && !e.paused) void drain(e)
     }
   }
+  function presence(
+    id: string,
+    input: { cursor?: { x: number; y: number } | null; selectedIds?: string[] }
+  ) {
+    const e = editors.get(id)
+    if (!e?.view.permissions.read || e.view.connection !== 'online') return
+    let p = previewStates.get(id)
+    if (!p) {
+      p = { cursor: null, selectedIds: [], last: 0 }
+      previewStates.set(id, p)
+    }
+    Object.assign(p, input)
+    const send = () => {
+      p!.timer = undefined
+      p!.last = Date.now()
+      const current = editors.get(id)
+      if (
+        !current?.view.permissions.read ||
+        current.view.connection !== 'online'
+      )
+        return
+      const s = current.workspace.getSnapshot(),
+        selectedIds = s.selection.selectedNodeIds.slice(0, 100)
+      const previews =
+        current.view.permissions.edit &&
+        current.workspace.isCollaborationGesture?.()
+          ? (['files', 'artifacts'] as const)
+              .flatMap((collection) =>
+                s[collection]
+                  .filter((n: LegacyNode) => selectedIds.includes(n.id))
+                  .map((n: LegacyNode) => ({
+                    collection,
+                    nodeId: n.id,
+                    x: n.x,
+                    y: n.y,
+                    width: n.width,
+                    height: n.height
+                  }))
+              )
+              .slice(0, 100)
+          : []
+      const hints = { cursor: p!.cursor, selectedIds, previews }
+      while (
+        new TextEncoder().encode(JSON.stringify(hints)).byteLength > 8192
+      ) {
+        if (hints.selectedIds.length) {
+          const id = hints.selectedIds.pop()
+          const i = hints.previews.findIndex((n) => n.nodeId === id)
+          if (i >= 0) hints.previews.splice(i, 1)
+        } else if (hints.previews.length) hints.previews.pop()
+        else return
+      }
+      void call('presence.update', {
+        boardId: current.view.boardId,
+        ...hints
+      }).catch(() => {})
+    }
+    if (Date.now() - p.last >= 100) {
+      clearTimeout(p.timer)
+      send()
+    } else if (!p.timer) p.timer = setTimeout(send, 100 - (Date.now() - p.last))
+  }
+  function clearPresence(id: string) {
+    const p = previewStates.get(id)
+    clearTimeout(p?.timer)
+    previewStates.delete(id)
+    const e = editors.get(id)
+    if (e?.view.permissions.read && e.view.connection === 'online')
+      void call('presence.update', {
+        boardId: e.view.boardId,
+        cursor: null,
+        selectedIds: [],
+        previews: []
+      }).catch(() => {})
+  }
+  function finishGesture(id: string) {
+    const e = editors.get(id)
+    clearPresence(id)
+    if (!e?.view.permissions.edit) return
+    e.queued = canvasOf(e.workspace)
+    clearTimeout(e.timer)
+    void drain(e)
+  }
+  let clearingEditors = false
   const clearEditors = () => {
+    clearingEditors = true
+    for (const [id, shell] of deps.inputHub.shells) {
+      if (!isShared(id)) continue
+      const text = shell.snapshot?.draft
+      const boardId =
+        editors.get(id)?.view.boardId ??
+        state.boards.find((b) => b.localSessionId === id)?.boardId
+      if (text && boardId) ownRecovery.set(`draft:${id}`, { boardId, text })
+      shell.setDraft?.('')
+      shell.setResearchContextPreparing?.(false)
+    }
+    doc.querySelectorAll('.srb-dialog').forEach((dialog) => dialog.remove())
     for (const [id, e] of editors) {
       clearTimeout(e.timer)
       e.unsubscribe()
@@ -387,6 +507,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     for (const d of drafts.values()) clearTimeout(d.timer)
     drafts.clear()
     sends.clear()
+    clearingEditors = false
   }
   function watchFavoriteDeletion() {
     for (const f of state.favorites) {
@@ -582,6 +703,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       notify()
       return
     }
+    if (activeSession) clearPresence(activeSession)
     activeSession = wanted
     const turn = ++navigation
     try {
@@ -602,6 +724,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     notify()
   }
   function saveDraft(id: string, text: string) {
+    if (clearingEditors) return
     const v = view(id)
     if (!v?.permissions.edit) return
     let d = drafts.get(id)
@@ -799,6 +922,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     },
     saveDraft,
     undo,
+    presence,
+    clearPresence,
+    finishGesture,
     showError,
     isResearch: (id: string) => activeResearch.has(id),
     async openPersonal(id: string) {
@@ -905,7 +1031,7 @@ export function ResearchBoardHeader({
               : v.board.lifecycle === 'archived'
                 ? '协作 · 已归档'
                 : v.board.sharingState === 'ownerOnly'
-                  ? '共享已结束'
+                  ? '仅自己可见'
                   : '协作'
           ),
           v.permissions.read &&
@@ -1319,6 +1445,7 @@ function inviteForm(
     await d.run(
       async () => {
         boardId ??= await resolveBoard()
+        if (!d.dialog.isConnected) return
         await page.call('invitation.send', {
           boardId,
           publicId: confirmedPublicId,
@@ -1411,6 +1538,69 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
         })
       )
     )
+    if (v.permissions.manage) {
+      const pending = document.createElement('section')
+      pending.setAttribute('aria-label', '待处理邀请')
+      d.body.append(pending)
+      const renderPending = () => {
+        const current = page.getView(summary?.localSessionId)
+        pending.replaceChildren()
+        if (!current?.permissions.manage) return
+        const heading = document.createElement('strong')
+        heading.textContent = '待处理邀请'
+        pending.append(heading)
+        if (!current.pendingInvitations?.length)
+          pending.append(document.createTextNode('没有待处理邀请'))
+        for (const invite of current.pendingInvitations ?? []) {
+          const row = document.createElement('div')
+          row.className = 'srb-member'
+          row.dataset.pendingInvitation = invite.invitationId
+          const text = document.createElement('span')
+          text.textContent = `${invite.invitee.username} · ID ${publicIdLabel(invite.invitee.publicId)} · 版本 ${invite.version}`
+          const select = document.createElement('select')
+          select.setAttribute(
+            'aria-label',
+            `${invite.invitee.username}待处理邀请权限`
+          )
+          for (const value of ['editor', 'viewer']) {
+            const o = document.createElement('option')
+            o.value = value
+            o.textContent = boardRoleLabel(value)
+            o.selected = value === invite.role
+            select.append(o)
+          }
+          select.onchange = () => {
+            const role = select.value
+            void d.run(() =>
+              page.call('invitation.send', {
+                boardId,
+                publicId: invite.invitee.publicId,
+                role
+              })
+            )
+          }
+          row.append(
+            text,
+            select,
+            boardButton(document, '撤销邀请', () =>
+              d.run(() =>
+                page.call('invitation.revoke', {
+                  boardId,
+                  invitationId: invite.invitationId
+                })
+              )
+            )
+          )
+          pending.append(row)
+        }
+      }
+      renderPending()
+      const off = page.subscribe(() => {
+        if (!d.dialog.isConnected) off()
+        else renderPending()
+      })
+      d.dialog.addEventListener('close', off, { once: true })
+    }
     for (const group of [
       { label: '当前在场', users: v.presence },
       { label: '全部成员', users: v.members }
@@ -1653,6 +1843,11 @@ export function ResearchBoardCanvasOverlay({
     workspace.getSnapshot,
     workspace.getSnapshot
   )
+  const [previewNow, setPreviewNow] = React.useState(Date.now())
+  React.useEffect(() => {
+    const timer = setInterval(() => setPreviewNow(Date.now()), 500)
+    return () => clearInterval(timer)
+  }, [])
   const v = page.getView(sessionId)
   if (!v?.permissions.read)
     return h(
@@ -1700,15 +1895,22 @@ export function ResearchBoardCanvasOverlay({
               p.username
             ),
           ...(p.selectedIds ?? []).slice(0, 100).map((id) => {
-            const n = [...snapshot.files, ...snapshot.artifacts].find(
+            const accepted = [...snapshot.files, ...snapshot.artifacts].find(
               (n) => n.id === id
             )
+            const preview =
+              p.previewExpiresAt! > previewNow && p.previewSeq === v.seq
+                ? p.previews?.find((q) => q.nodeId === id)
+                : undefined
+            const n =
+              accepted && preview ? { ...accepted, ...preview } : accepted
             return (
               n &&
               h(
                 'div',
                 {
                   className: 'srb-occupied',
+                  'data-geometry-preview': !!preview,
                   key: `${p.userId}:${id}`,
                   style: {
                     left: (n.x - n.width / 2) * viewport.scale + viewport.x,

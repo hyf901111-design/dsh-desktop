@@ -24,7 +24,26 @@ export type Member = {
   joinedAt?: number
   version?: number
 }
+export type GeometryPreview = {
+  collection: 'files' | 'artifacts'
+  nodeId: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+export type PendingInvitation = {
+  invitationId: string
+  invitee: PublicUser
+  role: 'editor' | 'viewer'
+  version: number
+  expiresAt: number
+  status: 'pending'
+}
 export type Presence = Member & {
+  previews?: GeometryPreview[]
+  previewExpiresAt?: number
+  previewSeq?: number
   cursor?: { x: number; y: number } | null
   selectedIds?: string[]
 }
@@ -74,6 +93,7 @@ export type BoardSnapshot = {
   seq: number
   tombstones: string[]
   members: Member[]
+  pendingInvitations?: PendingInvitation[]
   messages: SharedMessage[]
   tasks: SharedTask[]
 }
@@ -135,6 +155,7 @@ export type BoardView = {
   messages: SharedMessage[]
   tasks: SharedTask[]
   members: Member[]
+  pendingInvitations?: PendingInvitation[]
   presence: Presence[]
   pendingCount: number
   canUndo: boolean
@@ -192,8 +213,7 @@ export type BoardsError = {
   details?: unknown
 }
 export type BoardsResult<T = unknown> =
-  | { ok: true; value: T }
-  | { ok: false; error: BoardsError }
+  { ok: true; value: T } | { ok: false; error: BoardsError }
 export type ResearchBoardsBridge = {
   isSharedSession(sessionId: string): boolean
   getSnapshot(): Promise<ResearchBoardsState>

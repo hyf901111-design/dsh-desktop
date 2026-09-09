@@ -13,7 +13,8 @@ import {
 import {
   LIMITS,
   toBase64,
-  fromBase64
+  fromBase64,
+  validatePresenceHints
 } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   sql,
@@ -489,6 +490,29 @@ export class ResearchBoardRoom {
       seq: current.board.seq,
       tombstones: current.tombstones,
       members,
+      pendingInvitations:
+        member.role === 'owner'
+          ? (
+              await sql(
+                this.env,
+                "SELECT i.id,i.invitee_id,i.role,i.version,i.expires_at,u.username,p.public_id FROM board_invitations i JOIN users u ON u.id=i.invitee_id JOIN research_public_ids p ON p.user_id=i.invitee_id WHERE i.board_id=? AND i.status='pending' AND i.expires_at>? AND i.epoch=? ORDER BY i.created_at,i.id",
+                boardId,
+                now(),
+                current.board.sharingEpoch
+              ).all()
+            ).results.map((i) => ({
+              invitationId: i.id,
+              invitee: {
+                userId: i.invitee_id,
+                username: i.username,
+                publicId: i.public_id
+              },
+              role: i.role,
+              version: i.version,
+              expiresAt: i.expires_at,
+              status: 'pending'
+            }))
+          : [],
       messages: current.messages,
       tasks: current.tasks.map(publicTask)
     }
@@ -1233,7 +1257,9 @@ export class ResearchBoardRoom {
       let requestId
       try {
         const a = socket.deserializeAttachment()
-        await authorize(this.env, a.boardId, a.user, { epoch: a.epoch })
+        const authority = await authorize(this.env, a.boardId, a.user, {
+          epoch: a.epoch
+        })
         if (
           typeof data !== 'string' ||
           Buffer.byteLength(data) > LIMITS.updateBytes * 1.4 + 4096
@@ -1247,19 +1273,41 @@ export class ResearchBoardRoom {
           socket.send(JSON.stringify({ type: 'pong' }))
           await this.sendPresence()
         } else if (message.type === 'presence') {
+          const hints = {
+            cursor: message.cursor ?? null,
+            selectedIds: message.selectedIds ?? [],
+            previews: message.previews ?? []
+          }
           if (
-            message.cursor &&
-            (!Number.isFinite(message.cursor.x) ||
-              !Number.isFinite(message.cursor.y))
+            hints.previews.length &&
+            (authority.member.role === 'viewer' ||
+              authority.current.board.lifecycle !== 'active')
           )
-            fail('INVALID_CURSOR')
-          a.cursor = message.cursor ?? null
-          a.selectedIds = Array.isArray(message.selectedIds)
-            ? message.selectedIds
-                .filter((v) => typeof v === 'string')
-                .slice(0, 100)
-            : []
-          socket.serializeAttachment(a)
+            fail('ACCESS_DENIED', 403)
+          try {
+            validatePresenceHints(
+              hints,
+              projectDocument(
+                decodeDocument(fromBase64(authority.current.documentUpdate))
+              )
+            )
+          } catch (error) {
+            fail(
+              error.message === 'PRESENCE_SIZE_LIMIT'
+                ? 'PRESENCE_SIZE_LIMIT'
+                : 'INVALID_PRESENCE',
+              400
+            )
+          }
+          const next = {
+            ...a,
+            ...hints,
+            previewExpiresAt: hints.previews.length ? now() + 3000 : 0,
+            previewSeq: authority.current.board.seq
+          }
+          if (Buffer.byteLength(JSON.stringify(next)) > 16000)
+            fail('PRESENCE_SIZE_LIMIT', 413)
+          socket.serializeAttachment(next)
           await this.sendPresence()
         } else if (message.type === 'command') {
           const result = await this.command(a.boardId, a.user, message.command)
@@ -1285,9 +1333,14 @@ export class ResearchBoardRoom {
       const a = socket.deserializeAttachment()
       if (!a || now() - a.seenAt > LIMITS.leaseMs) continue
       try {
-        const { member } = await authorize(this.env, a.boardId, a.user, {
-          epoch: a.epoch
-        })
+        const { member, current } = await authorize(
+          this.env,
+          a.boardId,
+          a.user,
+          {
+            epoch: a.epoch
+          }
+        )
         if (!people.has(a.user.id))
           people.set(a.user.id, {
             userId: a.user.id,
@@ -1295,7 +1348,16 @@ export class ResearchBoardRoom {
             role: member.role,
             joinedAt: a.joinedAt,
             cursor: a.cursor ?? null,
-            selectedIds: a.selectedIds ?? []
+            selectedIds: a.selectedIds ?? [],
+            previews:
+              member.role !== 'viewer' &&
+              current.board.lifecycle === 'active' &&
+              a.previewExpiresAt > now() &&
+              a.previewSeq === current.board.seq
+                ? (a.previews ?? [])
+                : [],
+            previewExpiresAt: a.previewExpiresAt ?? 0,
+            previewSeq: a.previewSeq ?? 0
           })
       } catch {}
     }

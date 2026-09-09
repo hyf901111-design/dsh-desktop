@@ -129,7 +129,7 @@ const connect = async (user, scope = 'board') => {
   r.webSocket.accept()
   return { ws: r.webSocket, ticket: t, welcome }
 }
-const next = (ws, type) =>
+const next = (ws, type, predicate = () => true) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       ws.removeEventListener('message', receive)
@@ -137,7 +137,7 @@ const next = (ws, type) =>
     }, 5000)
     function receive(e) {
       const m = JSON.parse(e.data)
-      if (m.type === type) {
+      if (m.type === type && predicate(m)) {
         clearTimeout(timer)
         ws.removeEventListener('message', receive)
         resolve(m)
@@ -210,6 +210,12 @@ try {
     ).status,
     403
   )
+  const ownerPending = await ok(call(0, `/boards/${boardId}`))
+  assert.equal(
+    ownerPending.pendingInvitations[0].invitationId,
+    invite.invitation.invitationId
+  )
+  assert.equal(ownerPending.pendingInvitations[0].invitee.userId, 'u1')
   const accept = () =>
     ok(
       call(1, `/invitations/${invite.invitation.invitationId}/respond`, {
@@ -247,6 +253,67 @@ try {
     ).status,
     401
   )
+  assert.deepEqual(
+    (await ok(call(1, `/boards/${boardId}`))).pendingInvitations,
+    []
+  )
+  const hint = {
+    cursor: { x: 10, y: 20 },
+    selectedIds: Array.from({ length: 100 }, (_, i) =>
+      ('n' + i).padEnd(128, 'x')
+    ),
+    previews: [
+      {
+        collection: 'artifacts',
+        nodeId: initial.artifacts[0].id,
+        x: 120,
+        y: 140,
+        width: 400,
+        height: 200
+      }
+    ]
+  }
+  while (Buffer.byteLength(JSON.stringify(hint)) > 8192) hint.selectedIds.pop()
+  assert(Buffer.byteLength(JSON.stringify(hint)) > 8000)
+  console.log(
+    'PRESENCE_WORKERD_ACCEPTED_HINT_BYTES=' +
+      Buffer.byteLength(JSON.stringify(hint))
+  )
+  const preview = next(owner.ws, 'presence', (m) =>
+    m.presence.some((p) => p.userId === 'u1' && p.previews?.length)
+  )
+  editor.ws.send(JSON.stringify({ type: 'presence', ...hint }))
+  assert.equal(
+    (await preview).presence.find((p) => p.userId === 'u1').previews[0].x,
+    120
+  )
+  const viewer = await connect(2)
+  await viewer.welcome
+  const forbiddenPreview = next(viewer.ws, 'error')
+  viewer.ws.send(JSON.stringify({ type: 'presence', ...hint }))
+  assert.equal((await forbiddenPreview).error.code, 'ACCESS_DENIED')
+  viewer.ws.close()
+  const oversized = next(editor.ws, 'error')
+  editor.ws.send(
+    JSON.stringify({
+      type: 'presence',
+      ...hint,
+      selectedIds: Array(100).fill('x'.repeat(128))
+    })
+  )
+  assert.equal((await oversized).error.code, 'PRESENCE_SIZE_LIMIT')
+  const cleared = next(owner.ws, 'presence', (m) =>
+    m.presence.some((p) => p.userId === 'u1' && !p.previews?.length)
+  )
+  editor.ws.send(
+    JSON.stringify({
+      type: 'presence',
+      cursor: null,
+      selectedIds: [],
+      previews: []
+    })
+  )
+  await cleared
   const state = await ok(call(1, `/boards/${boardId}`))
   const doc = decodeDocument(fromBase64(state.documentUpdate))
   const canvas = structuredClone(initial)

@@ -47,21 +47,27 @@ async function load(shared = true) {
     'utf8'
   )
   const source = await patchResearchBoardConversation(raw)
-  runInNewContext(source, {
-    window,
-    document: window.document,
-    navigator: window.navigator,
-    localStorage: window.localStorage,
-    sessionStorage: window.sessionStorage,
-    CustomEvent: window.CustomEvent,
-    TextEncoder,
-    TextDecoder,
-    AbortController,
-    setTimeout,
-    clearTimeout,
-    console,
-    queueMicrotask
-  })
+  runInNewContext(
+    source.replace(
+      '\t\texports.apply = apply;',
+      'exports.__setBoardsAdapter=value=>{sherlockBoardsAdapter=value;};\n\t\texports.apply = apply;'
+    ),
+    {
+      window,
+      document: window.document,
+      navigator: window.navigator,
+      localStorage: window.localStorage,
+      sessionStorage: window.sessionStorage,
+      CustomEvent: window.CustomEvent,
+      TextEncoder,
+      TextDecoder,
+      AbortController,
+      setTimeout,
+      clearTimeout,
+      console,
+      queueMicrotask
+    }
+  )
   const fallback = new Proxy(function () {}, {
     get: () => fallback,
     apply: () => undefined,
@@ -266,6 +272,7 @@ async function pageFixture() {
     bridge: fixture.bridge,
     document: fixture.window.document
   })
+  fixture.exports.__setBoardsAdapter(page)
   await new Promise((r) => setTimeout(r, 0))
   return {
     ...fixture,
@@ -617,4 +624,206 @@ it('retains edits made while sync is paused and retries old mutation before the 
   } finally {
     f.dispose()
   }
+})
+
+it('clears only shared shell text, references and preparation on account generation changes', async () => {
+  const f = await pageFixture()
+  const shared = {
+      snapshot: { draft: 'old account reference' },
+      setDraft: vi.fn(),
+      setResearchContextPreparing: vi.fn()
+    },
+    personal = { setDraft: vi.fn(), setResearchContextPreparing: vi.fn() }
+  f.hub.shells.set('shared', shared)
+  f.hub.shells.set('personal', personal)
+  f.bridge.isSharedSession = (id) => id === 'shared'
+  const dialog = f.window.document.createElement('dialog')
+  dialog.className = 'srb-dialog'
+  f.window.document.body.append(dialog)
+  try {
+    f.emit({
+      type: 'state',
+      state: {
+        ...f.page.getState(),
+        eventSeq: 99,
+        account: { status: 'signedOut', generation: 2, user: null },
+        current: null
+      }
+    })
+    expect(shared.setDraft).toHaveBeenCalledWith('')
+    expect(shared.setResearchContextPreparing).toHaveBeenCalledWith(false)
+    expect(personal.setDraft).not.toHaveBeenCalled()
+    expect(dialog.isConnected).toBe(false)
+  } finally {
+    f.dispose()
+  }
+})
+
+it('holds native gesture through remote hydration, emits previews, and commits only on persist', async () => {
+  const f = await pageFixture(),
+    w = f.registry.for('shared'),
+    canvasCalls = []
+  f.bridge.invoke.mockImplementation(async (action, p) => {
+    if (action === 'canvas.apply') {
+      canvasCalls.push(p)
+      return {
+        ok: true,
+        value: {
+          canvas: {
+            ...p.canvas,
+            artifacts: p.canvas.artifacts.map((n) => ({
+              ...n,
+              excerpt: 'teammate changed text'
+            }))
+          },
+          canvasRevision: 'merged',
+          localBranchRevision: 'branch',
+          seq: 3,
+          pendingCount: 0
+        }
+      }
+    }
+    return { ok: true, value: null }
+  })
+  try {
+    w.setSelection({ selectedNodeIds: ['a'], orderedFileIds: [] })
+    w.moveNodes(['a'], { x: 40, y: 20 }, 1, false)
+    await new Promise((r) => setTimeout(r, 170))
+    expect(canvasCalls).toHaveLength(0)
+    expect(
+      f.bridge.invoke.mock.calls.some(
+        ([action, p]) =>
+          action === 'presence.update' && p.previews?.[0]?.x === 240
+      )
+    ).toBe(true)
+    f.emit({
+      type: 'board',
+      boardId: 'board',
+      localSessionId: 'shared',
+      view: {
+        ...f.view,
+        canvas: {
+          ...f.view.canvas,
+          artifacts: f.view.canvas.artifacts.map((n) => ({
+            ...n,
+            excerpt: 'teammate changed text'
+          }))
+        },
+        canvasRevision: 'remote',
+        seq: 2
+      }
+    })
+    expect(w.getSnapshot().artifacts[0].x).toBe(240)
+    expect(w.getSnapshot().artifacts[0].excerpt).toBe(
+      'teammate secret baseline'
+    )
+    w.resizeNode('a', 'se', { x: 30, y: 10 }, 1, false)
+    await new Promise((r) => setTimeout(r, 140))
+    expect(canvasCalls).toHaveLength(0)
+    w.persist()
+    await new Promise((r) => setTimeout(r, 15))
+    expect(canvasCalls).toHaveLength(1)
+    expect(canvasCalls[0].baseRevision).toBe('base')
+    expect(canvasCalls[0].canvas.artifacts[0].excerpt).toBe(
+      'teammate secret baseline'
+    )
+    expect(w.getSnapshot().artifacts[0].excerpt).toBe('teammate changed text')
+  } finally {
+    f.dispose()
+  }
+})
+
+it('budgets long-ID multiselection previews by bytes without truncating the final canvas', async () => {
+  const f = await pageFixture(),
+    w = f.registry.for('shared'),
+    sent = []
+  const artifacts = Array.from({ length: 100 }, (_, i) => ({
+    ...f.view.canvas.artifacts[0],
+    id: ('n' + i).padEnd(128, 'x'),
+    messageId: ('n' + i).padEnd(128, 'x'),
+    width: 400,
+    height: 200
+  }))
+  f.bridge.invoke.mockImplementation(async (action, p) => {
+    sent.push([action, p])
+    return {
+      ok: true,
+      value:
+        action === 'canvas.apply'
+          ? {
+              canvas: p.canvas,
+              canvasRevision: 'merged',
+              localBranchRevision: 'branch',
+              seq: 2,
+              pendingCount: 0
+            }
+          : null
+    }
+  })
+  try {
+    f.emit({
+      type: 'board',
+      boardId: 'board',
+      localSessionId: 'shared',
+      view: { ...f.view, canvas: { files: [], artifacts } }
+    })
+    w.setSelection({
+      selectedNodeIds: artifacts.map((n) => n.id),
+      orderedFileIds: []
+    })
+    w.moveNodes(
+      artifacts.map((n) => n.id),
+      { x: 10, y: 0 },
+      1,
+      false
+    )
+    await new Promise((r) => setTimeout(r, 140))
+    const hint = sent
+      .filter(([action]) => action === 'presence.update')
+      .at(-1)[1]
+    const { boardId, ...payload } = hint
+    expect(
+      new TextEncoder().encode(JSON.stringify(payload)).byteLength
+    ).toBeLessThanOrEqual(8192)
+    expect(payload.previews.length).toBeGreaterThan(0)
+    expect(payload.previews.length).toBeLessThan(100)
+    w.persist()
+    await new Promise((r) => setTimeout(r, 15))
+    expect(
+      sent.find(([a]) => a === 'canvas.apply')[1].canvas.artifacts
+    ).toHaveLength(100)
+  } finally {
+    f.dispose()
+  }
+})
+
+it('upgrades the committed Task3 transform to gesture hooks without duplicate patching', async () => {
+  const { execFileSync } = await import('node:child_process'),
+    { mkdir, writeFile } = await import('node:fs/promises'),
+    { pathToFileURL } = await import('node:url')
+  const oldSource = execFileSync(
+    'git',
+    [
+      'show',
+      'edfcc87820d8ca611861692b0541c533ad96c7f8:scripts/lib/patch-research-board-client.mjs'
+    ],
+    { encoding: 'utf8' }
+  ).replace(
+    "const root = fileURLToPath(new URL('../..', import.meta.url))",
+    'const root = ' + JSON.stringify(process.cwd())
+  )
+  await mkdir('output/playwright/source-checks', { recursive: true })
+  const path =
+    process.cwd() + '/output/playwright/source-checks/task3-base-transform.mjs'
+  await writeFile(path, oldSource)
+  const old = await import(pathToFileURL(path).href + '?v=' + Date.now())
+  const raw = await readFile(
+    'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
+    'utf8'
+  )
+  const upgraded = await patchResearchBoardConversation(
+    await old.patchResearchBoardConversation(raw)
+  )
+  expect(upgraded).toBe(await patchResearchBoardConversation(raw))
+  expect(await patchResearchBoardConversation(upgraded)).toBe(upgraded)
 })

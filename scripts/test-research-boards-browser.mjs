@@ -455,11 +455,46 @@ if (process.argv.includes('--serve')) {
       animations: 'disabled',
       path: join(out, 'invitation-bubble-light.png')
     })
-    await peer.getByRole('button', { name: '接受', exact: true }).click()
-    await peer.getByRole('button', { name: '打开看板', exact: true }).click()
     await page
       .getByRole('button', { name: '打开协作看板', exact: true })
       .click()
+    await page.getByRole('button', { name: '管理协作', exact: true }).click()
+    await page.getByLabel('周同事待处理邀请权限').selectOption('viewer')
+    await peer
+      .locator('.srb-bubble')
+      .getByText(/仅查看/)
+      .waitFor()
+    await page
+      .locator('[data-pending-invitation]')
+      .getByText(/版本 2/)
+      .waitFor()
+    await page.screenshot({
+      animations: 'disabled',
+      path: join(out, 'pending-invitation-owner.png')
+    })
+    await page.getByRole('button', { name: '撤销邀请', exact: true }).click()
+    await peer
+      .locator('.srb-bubble')
+      .getByText('已撤销', { exact: true })
+      .waitFor()
+    assert.equal(
+      await peer
+        .locator('.srb-bubble')
+        .getByRole('button', { name: '接受', exact: true })
+        .count(),
+      0
+    )
+    await peer.screenshot({
+      animations: 'disabled',
+      path: join(out, 'invitation-revoked-live.png')
+    })
+    await peer.getByRole('button', { name: '关闭提醒', exact: true }).click()
+    await page.getByLabel('对方专有 ID').fill('0000 0000 02')
+    await page.getByRole('button', { name: '查找并核对', exact: true }).click()
+    await page.getByRole('button', { name: '发送邀请', exact: true }).click()
+    await page.getByRole('button', { name: '关闭', exact: true }).click()
+    await peer.getByRole('button', { name: '接受', exact: true }).click()
+    await peer.getByRole('button', { name: '打开看板', exact: true }).click()
     await page.locator('[data-shared-discussion]').waitFor()
     await peer.locator('[data-shared-discussion]').waitFor()
     await page.waitForFunction(
@@ -505,8 +540,29 @@ if (process.argv.includes('--serve')) {
     assert(handle)
     await peer.mouse.move(handle.x + 40, handle.y + 12)
     await peer.mouse.down()
+    const seqBefore = users[0].service.getSnapshot().current.seq
     await peer.mouse.move(handle.x + 120, handle.y + 42, { steps: 8 })
+    await page.locator('[data-geometry-preview=true]').waitFor()
+    await new Promise((r) => setTimeout(r, 350))
+    assert.equal(users[0].service.getSnapshot().current.seq, seqBefore)
+    assert.equal(
+      await page.evaluate(
+        () =>
+          window.fixture.registry
+            .for(window.fixture.sessions.list.getSnapshot().current)
+            .getSnapshot().artifacts[0].x
+      ),
+      oldX
+    )
+    await page.screenshot({
+      animations: 'disabled',
+      path: join(out, 'held-drag-ephemeral.png')
+    })
+    await peer.mouse.move(handle.x + 150, handle.y + 52, { steps: 4 })
+    await new Promise((r) => setTimeout(r, 150))
+    assert.equal(users[0].service.getSnapshot().current.seq, seqBefore)
     await peer.mouse.up()
+
     await page.waitForFunction(
       (x) =>
         window.fixture.registry
@@ -683,7 +739,7 @@ if (process.argv.includes('--serve')) {
     })
     assert.equal(await peer.locator('[data-shared-discussion]').count(), 0)
     console.log(
-      'UI_FLOWS_PASSED favorite/create/invite/accept/open/presence/edit/drag/submit-unavailable/reload/viewer/collapse/update-hover/account-id/cancel'
+      'UI_FLOWS_PASSED favorite/create/invite-role-version/revoke-live/reinvite/accept/open/presence/edit/held-drag-preview-final-only/submit-unavailable/reload/viewer/collapse/update-hover/account-id/cancel'
     )
   } catch (e) {
     await page.screenshot({

@@ -40,10 +40,10 @@ export async function patchResearchBoardConversation(source) {
     }
     const end = source.indexOf(END)
     if (end < 0) throw Error('Incomplete research boards patch')
-    return (
+    return gesturePatch(
       source.slice(0, source.indexOf(START)) +
-      bundle +
-      source.slice(end + END.length)
+        bundle +
+        source.slice(end + END.length)
     )
   }
   source = replace(
@@ -264,8 +264,8 @@ export async function patchResearchBoardConversation(source) {
             (0,react.useEffect)(()=>{
                 if(!sherlockShared(sessionId)||!sherlockBoardsAdapter)return;
                 const root=rootRef.current;if(!root)return;let last=0;
-                const move=e=>{if(Date.now()-last<100)return;last=Date.now();const s=workspace.getSnapshot(),r=root.getBoundingClientRect();void sherlockBoardsAdapter.call("presence.update",{boardId:sherlockBoardsAdapter.getView(sessionId)?.boardId,cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)}).catch(()=>{});};
-                const leave=()=>{const v=sherlockBoardsAdapter.getView(sessionId);if(v)void sherlockBoardsAdapter.call("presence.update",{boardId:v.boardId,cursor:null,selectedIds:[]}).catch(()=>{});};root.addEventListener("pointermove",move);root.addEventListener("pointerleave",leave);return()=>{root.removeEventListener("pointermove",move);root.removeEventListener("pointerleave",leave);leave();};
+                const move=e=>{if(Date.now()-last<100)return;last=Date.now();const s=workspace.getSnapshot(),r=root.getBoundingClientRect();void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});};
+                const leave=()=>{const v=sherlockBoardsAdapter.getView(sessionId);if(v)sherlockBoardsAdapter.clearPresence(sessionId);};root.addEventListener("pointermove",move);root.addEventListener("pointerleave",leave);window.addEventListener("blur",leave);root.addEventListener("pointercancel",leave);return()=>{window.removeEventListener("blur",leave);root.removeEventListener("pointercancel",leave);root.removeEventListener("pointermove",move);root.removeEventListener("pointerleave",leave);leave();};
             },[sessionId,workspace]);`
   )
   // The existing mutation handlers remain, but capture guards cover native input before side effects.
@@ -289,6 +289,58 @@ export async function patchResearchBoardConversation(source) {
     'const result = await Promise.resolve(window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);',
     `const result = await Promise.resolve(sherlockShared(sessionId) ? window.dshDesktop?.researchBoards?.invoke?.("file.open",{boardId:sherlockBoardsAdapter?.getView(sessionId)?.boardId,localSessionId:sessionId,nodeId:node.id}) : window.dshDesktop?.researchClipboard?.open?.({ assetId: node.assetId })).catch(() => null);`
   )
+  return gesturePatch(source)
+}
+function gesturePatch(source) {
+  if (source.includes('/* SHERLOCK_BOARD_GESTURE_V1 */')) return source
+  source = replace(
+    source,
+    'let collaborationWritable = false;',
+    'let collaborationWritable = false; let collaborationGesture=false; /* SHERLOCK_BOARD_GESTURE_V1 */'
+  )
+  for (const anchor of [
+    'moveNodes(selectedIds, delta, scale, persist = true) {',
+    'resizeNode(nodeId, corner, delta, scale, persist = true) {'
+  ])
+    source = replace(
+      source,
+      anchor,
+      anchor +
+        'if(sherlockShared(sessionId)&&!persist&&collaborationCanWrite())collaborationGesture=true;'
+    )
+  source = replace(
+    source,
+    'persist() { finalizeHistoryTransaction(); persistSnapshot(); },',
+    'isCollaborationGesture() {return collaborationGesture;},\n                persist() { finalizeHistoryTransaction(); persistSnapshot(); if(collaborationGesture){collaborationGesture=false;sherlockBoardsAdapter?.finishGesture(sessionId);} },'
+  )
+  source = replace(
+    source,
+    'cancelTransient() {',
+    'cancelTransient() {collaborationGesture=false;sherlockBoardsAdapter?.clearPresence(sessionId);'
+  )
+  const oldMove =
+    'void sherlockBoardsAdapter.call("presence.update",{boardId:sherlockBoardsAdapter.getView(sessionId)?.boardId,cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)}).catch(()=>{});'
+  if (source.includes(oldMove))
+    source = replace(
+      source,
+      oldMove,
+      'void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});'
+    )
+  const oldLeave =
+    'if(v)void sherlockBoardsAdapter.call("presence.update",{boardId:v.boardId,cursor:null,selectedIds:[]}).catch(()=>{});'
+  if (source.includes(oldLeave))
+    source = replace(
+      source,
+      oldLeave,
+      'if(v)sherlockBoardsAdapter.clearPresence(sessionId);'
+    )
+  const oldListeners = 'root.addEventListener("pointerleave",leave);return()=>{'
+  if (source.includes(oldListeners))
+    source = replace(
+      source,
+      oldListeners,
+      'root.addEventListener("pointerleave",leave);window.addEventListener("blur",leave);root.addEventListener("pointercancel",leave);return()=>{window.removeEventListener("blur",leave);root.removeEventListener("pointercancel",leave);'
+    )
   return source
 }
 export function patchResearchBoardSidebar(source) {

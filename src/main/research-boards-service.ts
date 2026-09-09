@@ -13,7 +13,8 @@ import {
 import {
   fromBase64,
   toBase64,
-  LIMITS
+  LIMITS,
+  validatePresenceHints
 } from 'dsh-research-collaboration/protocol'
 import {
   CollaborationClient,
@@ -584,6 +585,9 @@ export class ResearchBoardsService {
           })
         : [],
       members: read ? copy(r.snapshot.members) : [],
+      pendingInvitations: permission.manage
+        ? copy(r.snapshot.pendingInvitations ?? [])
+        : [],
       presence: read ? copy(r.presence) : [],
       pendingCount:
         account?.pending.filter((p) => p.boardId === boardId).length ?? 0,
@@ -865,6 +869,29 @@ export class ResearchBoardsService {
         const old = map.get(n.notificationId)
         if (!old || n.eventVersion >= old.eventVersion)
           map.set(n.notificationId, copy(n))
+      }
+      // Events have distinct notification IDs but share authoritative invitation state.
+      const invitations = new Map<
+        string,
+        NonNullable<Notification['invitation']>
+      >()
+      for (const row of [...a.notifications.notifications, ...map.values()]) {
+        const invite = row.invitation,
+          id = invite?.invitationId ?? invite?.id
+        if (!invite || !id) continue
+        const old = invitations.get(id)
+        if (
+          !old ||
+          invite.version > old.version ||
+          (invite.version === old.version &&
+            (invite.status !== 'pending' || old.status === 'pending'))
+        )
+          invitations.set(id, invite)
+      }
+      for (const row of map.values()) {
+        const id = row.invitation?.invitationId ?? row.invitation?.id
+        if (id && invitations.has(id))
+          row.invitation = copy(invitations.get(id)!)
       }
       a.notifications = {
         notifications: [...map.values()]
@@ -2225,29 +2252,31 @@ export class ResearchBoardsService {
         return this.store.account(ctx.userId).notifications
       }
       case 'presence.update': {
-        const p = exact(input, ['boardId'], ['cursor', 'selectedIds'])
+        const p = exact(
+          input,
+          ['boardId'],
+          ['cursor', 'selectedIds', 'previews']
+        )
         const boardId = safeId(p.boardId)
-        this.requireBoard(boardId)
+        const r = this.requireBoard(boardId)
         if (boardId !== this.currentBoard)
           throw new ResearchBoardsError('INVALID_REQUEST')
-        if (p.cursor !== undefined && p.cursor !== null) {
-          const c = exact(p.cursor, ['x', 'y'])
-          if (!Number.isFinite(c.x) || !Number.isFinite(c.y))
-            throw new ResearchBoardsError('INVALID_REQUEST')
+        const hints = {
+          cursor: p.cursor ?? null,
+          selectedIds: p.selectedIds ?? [],
+          previews: p.previews ?? []
         }
-        if (
-          p.selectedIds !== undefined &&
-          (!Array.isArray(p.selectedIds) || p.selectedIds.length > 100)
-        )
+        if (Array.isArray(hints.previews) && hints.previews.length)
+          this.requireBoard(boardId, undefined, true)
+        try {
+          validatePresenceHints(hints, projectDocument(r.doc))
+        } catch {
           throw new ResearchBoardsError('INVALID_REQUEST')
-        this.client.sendPresence(boardId, {
-          ...(p.cursor !== undefined
-            ? { cursor: p.cursor as { x: number; y: number } | null }
-            : {}),
-          ...(p.selectedIds
-            ? { selectedIds: (p.selectedIds as unknown[]).map(safeId) }
-            : {})
-        })
+        }
+        this.client.sendPresence(
+          boardId,
+          hints as Parameters<CollaborationClient['sendPresence']>[1]
+        )
         return { ok: true }
       }
       case 'recovery.saveDraft': {

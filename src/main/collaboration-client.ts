@@ -430,7 +430,7 @@ export class CollaborationClient {
   }
   sendPresence(
     boardId: string,
-    value: { cursor?: { x: number; y: number } | null; selectedIds?: string[] }
+    value: import('dsh-research-collaboration/protocol').PresenceHints
   ) {
     const socket = this.sockets.get(boardId)
     if (socket?.readyState === 1)

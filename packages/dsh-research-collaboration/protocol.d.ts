@@ -36,3 +36,20 @@ export type CollaborationError = {
   retryable: boolean
   details?: unknown
 }
+
+export type PresenceHints = {
+  cursor?: { x: number; y: number } | null
+  selectedIds?: string[]
+  previews?: Array<{
+    collection: 'files' | 'artifacts'
+    nodeId: string
+    x: number
+    y: number
+    width: number
+    height: number
+  }>
+}
+export function validatePresenceHints(
+  value: unknown,
+  canvas: { files: Array<{ id: string }>; artifacts: Array<{ id: string }> }
+): void
