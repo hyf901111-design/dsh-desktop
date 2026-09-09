@@ -2729,7 +2729,8 @@ export class ResearchBoardsService {
   }
   async applyTaskCanvas(accountId: string, boardId: string, canvas: Canvas) {
     const a = this.taskAuthority(accountId, boardId, undefined, true),
-      r = this.requireBoard(boardId, undefined, true)
+      baseRevision = this.requireBoard(boardId, undefined, true).revision
+    // Keep the captured canvas paired with its base while assets materialize.
     if (!a.localSessionId) throw new ResearchBoardsError('BINDING_CONFLICT')
     // Materialized local representation preserves the existing projection/asset guard.
     const local = this.options.hooks?.materializeBoard
@@ -2745,7 +2746,7 @@ export class ResearchBoardsService {
     return this.applyCanvas({
       boardId,
       localSessionId: a.localSessionId,
-      baseRevision: r.revision,
+      baseRevision,
       clientMutationId: randomUUID(),
       canvas: local
     })

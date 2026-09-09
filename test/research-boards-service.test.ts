@@ -1623,7 +1623,7 @@ import {
   FileResearchPreviewAuthorizationStorage
 } from '../src/main/state/research-file-preview'
 import { readFileSync, realpathSync } from 'node:fs'
-it.each(['preview-file', 'nonpreview-file', 'artifact'])(
+it.each(['preview-file', 'nonpreview-file', 'artifact', 'concurrent-file'])(
   'restores deleted %s through production materialization without reimporting cloud assets',
   async (kind) => {
     const hooks: ResearchBoardHooks = {}
@@ -1667,7 +1667,7 @@ it.each(['preview-file', 'nonpreview-file', 'artifact'])(
           id: 'f',
           name: 'cloud.txt',
           assetId: 'cloud-asset',
-          previewEligible: kind === 'preview-file',
+          previewEligible: kind === 'preview-file' || kind === 'concurrent-file',
           x: 0,
           y: 0,
           width: 200,
@@ -1694,13 +1694,62 @@ it.each(['preview-file', 'nonpreview-file', 'artifact'])(
       localSessionId: 'shared-session'
     })
     expect(undo.error.code).toBe('DELETION_RECOVERY_REQUIRED')
-    const restored: any = await t.service.invoke('recovery.restoreDeletion', {
+    let releaseMaterialization!: () => void
+    let enteredMaterialization!: () => void
+    const held = new Promise<void>((resolve) => {
+      releaseMaterialization = resolve
+    })
+    const entered = new Promise<void>((resolve) => {
+      enteredMaterialization = resolve
+    })
+    if (kind === 'concurrent-file') {
+      const materialize = hooks.materializeBoard!
+      let holdOnce = true
+      hooks.materializeBoard = async (input) => {
+        if (holdOnce) {
+          holdOnce = false
+          enteredMaterialization()
+          await held
+        }
+        return materialize(input)
+      }
+    }
+    const restoration = t.service.invoke('recovery.restoreDeletion', {
       boardId: 'board',
       recoveryId: undo.error.details.recoveryId
     })
+    if (kind === 'concurrent-file') {
+      await entered
+      // The restore has captured its canvas; a teammate now changes both
+      // an existing field and canvas membership during asset materialization.
+      await t.remote((next) => {
+        next.artifacts[0].excerpt = 'teammate edit during restoration'
+        next.artifacts.push({
+          id: 'teammate-new',
+          kind: 'pasted-text',
+          title: 'New shared note',
+          excerpt: 'teammate new node'
+        })
+      })
+      releaseMaterialization()
+    }
+    const restored: any = await restoration
     expect(restored.ok, JSON.stringify(restored)).toBe(true)
     await t.service.flush()
     const canonical = projectDocument(t.doc)
+    if (kind === 'concurrent-file')
+      expect(canonical.artifacts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'n',
+            excerpt: 'teammate edit during restoration'
+          }),
+          expect.objectContaining({
+            id: 'teammate-new',
+            excerpt: 'teammate new node'
+          })
+        ])
+      )
     expect(canonical[collection]).toHaveLength(1)
     expect(canonical[collection][0]!.id).not.toBe(oldId)
     expect(canonical.files[0]!.assetId).toBe('cloud-asset')
