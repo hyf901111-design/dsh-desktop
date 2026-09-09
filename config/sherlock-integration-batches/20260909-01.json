@@ -12,7 +12,7 @@
         "featureName": "研究看板收藏、独立共享与可撤销实时协作",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "d09e03e7cdd128bff832031468ebb9b64c40ce4a",
-        "tipCommit": "670742008597fd633e0d7742d080a8d17ff9c706",
+        "tipCommit": "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
         "commits": [
           {
             "commit": "00480c0cc33047756afcc3b4ff0c9d58c6ab4550",
@@ -168,6 +168,13 @@
               "75a6bcf1ee5fe4adf09ce3b19740515a0eb7288f"
             ],
             "subject": "固定删除恢复的原始画布版本以保留并发成员修改"
+          },
+          {
+            "commit": "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
+            "parents": [
+              "670742008597fd633e0d7742d080a8d17ff9c706"
+            ],
+            "subject": "补齐研究协作模块的本地打包入口声明"
           }
         ],
         "boundaryParents": [
@@ -458,73 +465,25 @@
         "checks": [
           {
             "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "最终干净提交实际执行：精确包来源、双基线、两次转换及模块/包执行通过。 /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/.worktrees/research-board-design-20260909/output/research-collaboration-e2e/run-qpOKjg/results.json",
-            "verifiedCommit": "670742008597fd633e0d7742d080a8d17ff9c706",
-            "completedAt": "2026-09-09T10:17:57.526Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "最终干净提交实际执行：双客户端、同会话重登、真实身份隔离、倒序回答分组、独立副本再共享和离线撤权恢复通过。 /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/.worktrees/research-board-design-20260909/output/research-collaboration-e2e/run-MHYE5d/results.json",
-            "verifiedCommit": "670742008597fd633e0d7742d080a8d17ff9c706",
-            "completedAt": "2026-09-09T10:18:25.891Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
               "git",
               "diff",
               "--exit-code",
-              "75a6bcf1ee5fe4adf09ce3b19740515a0eb7288f",
               "670742008597fd633e0d7742d080a8d17ff9c706",
+              "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
               "--",
               ".",
-              ":!src/main/research-boards-service.ts",
-              ":!test/research-boards-service.test.ts"
+              ":!packages/dsh-research-collaboration/package.json"
             ],
             "outcome": "passed",
-            "summary": "最后修正仅包含恢复版本配对及其直接回归；其余此前80项回归对应输入未变。最后业务改动另经4项恢复用例、类型检查与最终浏览器验证；保留实际运行时间，不声称80或338项在最终提交重跑。",
-            "verifiedCommit": "670742008597fd633e0d7742d080a8d17ff9c706",
-            "completedAt": "2026-09-09T10:21:24Z",
-            "timeoutMs": 10000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--exit-code",
-              "646abc37920baab866ba83ccef4faf9c6091f6f6",
-              "670742008597fd633e0d7742d080a8d17ff9c706",
-              "--",
-              "services",
-              "packages",
-              "package.json",
-              "package-lock.json",
-              "scripts/test-collaboration-worker.mjs",
-              "test/research-board-document.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "最终修复未改变Worker、package或依赖输入，早前Worker/dry-run保留原SHA；这是范围核对，不是重跑。",
-            "verifiedCommit": "670742008597fd633e0d7742d080a8d17ff9c706",
-            "completedAt": "2026-09-09T10:21:24Z",
+            "summary": "Only collaboration package main declaration changed. Real localDependencyProblems check, four existing local-dependency tests, and typecheck passed on this exact content before commit. Prior renderer/browser/functional evidence is retained at6707420; unchanged source proved by this scope check. Native package verification will be performed in the integration checkout.",
+            "verifiedCommit": "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
+            "completedAt": "2026-09-09T11:11:26.452897+00:00",
             "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium生产Research组件宿主、主进程与本地Miniflare双账户联调。常用入口、通知、在场头像、独立副本、撤权恢复、账号隔离和回答归组通过。未打包原生客户端；fixture账户栏为固定资料，真实Research身份由main/Worker userId验证。"
+          "summary": "Prior real renderer evidence at6707420 remains applicable to unchanged frontend input; only package main entry declaration changed. Native app validation belongs to integration batch20260909-01."
         },
         "acceptanceCriteria": [
           "常用研究入口固定在工作区上方；共享创建独立副本，包含经授权冻结的画布、保存历史与文件。",
@@ -538,7 +497,7 @@
           "验证按改动范围组合；原338项聚合和首次最终修复browser失败记录保留，不称一次全部重跑通过。",
           "超过协议限额或不支持的嵌入式历史附件会明确拒绝；原恢复基线失效时要求重试，避免覆盖新修改。"
         ],
-        "generatedAt": "2026-09-09T10:26:02.909784+00:00"
+        "generatedAt": "2026-09-09T11:11:26.452897+00:00"
       }
     }
   ],
