@@ -9,248 +9,45 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究看板收藏、独立共享与可撤销实时协作",
+        "featureName": "修复真实双客户端测试发现的协作生成失败并澄清共享文案",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "d09e03e7cdd128bff832031468ebb9b64c40ce4a",
-        "tipCommit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
+        "baseCommit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
+        "tipCommit": "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff",
         "commits": [
           {
-            "commit": "00480c0cc33047756afcc3b4ff0c9d58c6ab4550",
+            "commit": "4d8692299dcde536677b55af55326b3fd2ca7844",
             "parents": [
-              "335fae8a555a65ea48fcc42c79f03940cb263898"
+              "4a0a5153e535149e6b0bdccfea45e7e2387babda"
             ],
-            "subject": "文档：规划研究看板副本协作与用户邀请通知"
+            "subject": "记录研究看板云端部署与真实双账户协作验证"
           },
           {
-            "commit": "cd0b262c3c7595d323c94b72d551c747bd8fc575",
+            "commit": "0caf5904cec3673ee98fc55c0f0f878134cd5ca0",
             "parents": [
-              "00480c0cc33047756afcc3b4ff0c9d58c6ab4550"
+              "4d8692299dcde536677b55af55326b3fd2ca7844"
             ],
-            "subject": "文档：补充协作头像与取消共享后的访问和恢复规则"
+            "subject": "澄清共享画板实时同步与原个人研究的独立关系"
           },
           {
-            "commit": "d9a5e7f0aa831801129f60520c3f4142a4281e76",
+            "commit": "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff",
             "parents": [
-              "cd0b262c3c7595d323c94b72d551c747bd8fc575",
-              "d09e03e7cdd128bff832031468ebb9b64c40ce4a"
+              "0caf5904cec3673ee98fc55c0f0f878134cd5ca0"
             ],
-            "subject": "集成：同步 0.9.4 最新主线用于研究看板开发"
-          },
-          {
-            "commit": "58fca936025d79e42d66f7bea97781047a3be567",
-            "parents": [
-              "d9a5e7f0aa831801129f60520c3f4142a4281e76"
-            ],
-            "subject": "文档：制定研究看板协作分阶段实施计划"
-          },
-          {
-            "commit": "9b2181fdc731aa1941e08b506c2efc58d75a58f4",
-            "parents": [
-              "58fca936025d79e42d66f7bea97781047a3be567"
-            ],
-            "subject": "实现研究看板协作服务与细粒度共享文档"
-          },
-          {
-            "commit": "81dd03469fe277a08a1172b43f6b2ab76bd9e34b",
-            "parents": [
-              "9b2181fdc731aa1941e08b506c2efc58d75a58f4"
-            ],
-            "subject": "修复协作素材独占激活与共享文档隐藏数据校验"
-          },
-          {
-            "commit": "d607aa0f1c19f588678b346ba172d6e0f1448e7b",
-            "parents": [
-              "81dd03469fe277a08a1172b43f6b2ab76bd9e34b"
-            ],
-            "subject": "实现研究看板客户端持久化同步与权限恢复"
-          },
-          {
-            "commit": "0dd18bf216768c6940b5b9b1d0763daf7d5c6b92",
-            "parents": [
-              "d607aa0f1c19f588678b346ba172d6e0f1448e7b"
-            ],
-            "subject": "修复共享看板撤权时序与创建重试恢复"
-          },
-          {
-            "commit": "f9438e6c7cfe8de39c0581769c7995e9b95dee23",
-            "parents": [
-              "0dd18bf216768c6940b5b9b1d0763daf7d5c6b92"
-            ],
-            "subject": "修复已过期看板激活请求的失败返回"
-          },
-          {
-            "commit": "edfcc87820d8ca611861692b0541c533ad96c7f8",
-            "parents": [
-              "f9438e6c7cfe8de39c0581769c7995e9b95dee23"
-            ],
-            "subject": "实现研究看板协作界面与权限安全适配"
-          },
-          {
-            "commit": "aaa48293db7341a707b20fb933f69d8e014dfa7d",
-            "parents": [
-              "edfcc87820d8ca611861692b0541c533ad96c7f8"
-            ],
-            "subject": "修复协作账号隔离与邀请及拖动同步"
-          },
-          {
-            "commit": "5dbc9c15d6833b76c4d4ddfca0e3c687dbbe447e",
-            "parents": [
-              "aaa48293db7341a707b20fb933f69d8e014dfa7d"
-            ],
-            "subject": "保留旧同步确认后的未提交拖动恢复内容"
-          },
-          {
-            "commit": "1b1d078bae69ab3a52f749ed0559040573541b8f",
-            "parents": [
-              "5dbc9c15d6833b76c4d4ddfca0e3c687dbbe447e"
-            ],
-            "subject": "接通共享研究资料快照、独立副本与单发起执行"
-          },
-          {
-            "commit": "c78dc9d02b1a2a78f84e9120833c0116e3281523",
-            "parents": [
-              "1b1d078bae69ab3a52f749ed0559040573541b8f"
-            ],
-            "subject": "修复共享执行取消竞态与个人副本资料边界"
-          },
-          {
-            "commit": "28f64251bde848d44a17d5ee3a30b41a8ededf88",
-            "parents": [
-              "c78dc9d02b1a2a78f84e9120833c0116e3281523"
-            ],
-            "subject": "修复共享引用版本与大小字段的数值保留"
-          },
-          {
-            "commit": "d9bc37832c09ff54e5a1da6077c123fb4946a8ac",
-            "parents": [
-              "28f64251bde848d44a17d5ee3a30b41a8ededf88"
-            ],
-            "subject": "完成研究协作端到端验收与来源运维交接并修复授权后同步恢复"
-          },
-          {
-            "commit": "12289bba018341bdf9e7fe6bd6a8b23e882c41bf",
-            "parents": [
-              "d9bc37832c09ff54e5a1da6077c123fb4946a8ac"
-            ],
-            "subject": "使用真实研究侧栏宿主验收长历史滚动与底部输入框"
-          },
-          {
-            "commit": "de2253b91996902b188992f0d7755d45ffc6832a",
-            "parents": [
-              "12289bba018341bdf9e7fe6bd6a8b23e882c41bf"
-            ],
-            "subject": "校正长历史验收的实际消息滚动宿主"
-          },
-          {
-            "commit": "646abc37920baab866ba83ccef4faf9c6091f6f6",
-            "parents": [
-              "de2253b91996902b188992f0d7755d45ffc6832a"
-            ],
-            "subject": "按共享副本实际节点身份验收离线文字恢复"
-          },
-          {
-            "commit": "fb8be20e5691df661906149ba02ba402bb96d638",
-            "parents": [
-              "646abc37920baab866ba83ccef4faf9c6091f6f6"
-            ],
-            "subject": "修复协作恢复授权、请求落盘与账号隔离及回答归组"
-          },
-          {
-            "commit": "75a6bcf1ee5fe4adf09ce3b19740515a0eb7288f",
-            "parents": [
-              "fb8be20e5691df661906149ba02ba402bb96d638"
-            ],
-            "subject": "补齐账号切换浏览器回归的预览请求收敛等待"
-          },
-          {
-            "commit": "670742008597fd633e0d7742d080a8d17ff9c706",
-            "parents": [
-              "75a6bcf1ee5fe4adf09ce3b19740515a0eb7288f"
-            ],
-            "subject": "固定删除恢复的原始画布版本以保留并发成员修改"
-          },
-          {
-            "commit": "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
-            "parents": [
-              "670742008597fd633e0d7742d080a8d17ff9c706"
-            ],
-            "subject": "补齐研究协作模块的本地打包入口声明"
-          },
-          {
-            "commit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
-            "parents": [
-              "f9b2b351b840abbdcb5960bcfcdf92086c15f8da"
-            ],
-            "subject": "修复已安装协作界面补丁的重复校验与入口漂移检查"
+            "subject": "修复协作组件生成的格式规范与一次自动恢复"
           }
-        ],
-        "boundaryParents": [
-          "335fae8a555a65ea48fcc42c79f03940cb263898"
         ],
         "files": [
           {
             "status": "A",
-            "path": ".superpowers/sdd/2026-09-09-research-boards-collaboration/CLIENT-CONTRACT.md"
+            "path": "docs/research-collaboration-cloud-20260909.md"
           },
           {
-            "status": "A",
-            "path": ".superpowers/sdd/2026-09-09-research-boards-collaboration/task-1-report.md"
-          },
-          {
-            "status": "A",
-            "path": ".superpowers/sdd/2026-09-09-research-boards-collaboration/task-2-report.md"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/sherlock-research-collaboration-operations.md"
           },
           {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-09-09-research-boards-collaboration.md"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/specs/2026-09-09-research-boards-collaboration-design.md"
-          },
-          {
-            "status": "M",
-            "path": "package-lock.json"
-          },
-          {
-            "status": "M",
-            "path": "package.json"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/context.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/context.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/document.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/document.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/package.json"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/protocol.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/protocol.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/board-runtime.js"
           },
           {
             "status": "M",
@@ -258,211 +55,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/patch-research-board-client.d.mts"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/test-collaboration-worker.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/test-research-boards-browser.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/test-research-collaboration-e2e.mjs"
-          },
-          {
-            "status": "A",
-            "path": "services/accounts/migrations/0002_research_boards.sql"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/PROTOCOL.md"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/http.js"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/notifications.js"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/repository.js"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/room.js"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/validation.js"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/worker.js"
-          },
-          {
-            "status": "A",
-            "path": "services/collaboration/wrangler.jsonc"
-          },
-          {
-            "status": "M",
-            "path": "src/main/account-service.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/collaboration-client.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/research-board-integration.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/research-boards-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/runtime/harness-runtime.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/state/research-board-assets.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/state/research-board-request-journal.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/state/research-board-snapshot.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/state/research-boards-store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-clipboard.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-context-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-file-preview.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/account-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/research-board-notifications-ui.ts"
-          },
-          {
-            "status": "A",
             "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/research-boards.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/research-boards.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/account-service.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/collaboration-client.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/research-boards-browser.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/ipc-trust.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-assets.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-client-adapter.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-document.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-runtime.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-snapshot.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-tasks.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-boards-service.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-boards-store.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-boards-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-clipboard.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-context-bridge.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-file-preview.test.ts"
           },
           {
             "status": "M",
@@ -472,114 +65,34 @@
         "checks": [
           {
             "argv": [
-              "git",
-              "diff",
-              "--exit-code",
-              "670742008597fd633e0d7742d080a8d17ff9c706",
-              "4a0a5153e535149e6b0bdccfea45e7e2387babda",
-              "--",
-              ".",
-              ":!packages/dsh-research-collaboration/package.json",
-              ":!scripts/lib/patch-research-board-client.mjs",
-              ":!test/research-board-client-adapter.test.js"
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-board-runtime.test.js",
+              "test/research-board-tasks.test.ts",
+              "test/research-boards-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "Only package entry declaration and already-patched input anchor validation changed. Real dependency check, four local dependency cases and typecheck passed; drift reproduced RED, then all25 adapter cases passed before commit. Other functionality and rendering source unchanged. Full declared integration checks and native packaging remain required.",
-            "verifiedCommit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
-            "completedAt": "2026-09-09T11:15:31.753054+00:00",
-            "timeoutMs": 10000
+            "summary": "真实失败先复现；122项相关检查通过。类型检查也通过。",
+            "verifiedCommit": "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff",
+            "completedAt": "2026-09-09T12:18:14.558Z",
+            "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "Existing real renderer evidence retained; 25 direct adapter checks verify idempotent transformed input and drift rejection after the correction. Integration batch will execute fresh source and browser verification."
+          "outcome": "not-applicable",
+          "summary": "本次运行时格式契约修复通过直接检查；真实双客户端已复现问题并完成邀请、在线头像、双向拖动和文字同步。修复后的原生生成待集成打包后验证，不声称已通过。共享文案通过7项直接UI检查。"
         },
         "acceptanceCriteria": [
-          "常用研究入口固定在工作区上方；共享创建独立副本，包含经授权冻结的画布、保存历史与文件。",
-          "按公开ID邀请、消息中心及在场头像可用；编辑/查看角色和取消共享由服务端执行。",
-          "双客户端修改合并；恢复文件保留期间同事修改；账号切换不泄露本人恢复记录，回答按请求归组。",
-          "所有已报告问题均已核验关闭；证据保留各自真实执行版本。"
+          "协作生成复用完整组件格式规范，HTML采用html字段。",
+          "格式错误最多进行一次无工具恢复；中断或失败不发布部分结果。",
+          "原个人研究与共享副本独立，所有共享成员的修改实时同步。"
         ],
         "risks": [
-          "尚未合入main、构建或替换共享客户端，未部署Cloudflare服务；未记录用户尚未作出的集成接受。",
-          "未进行付费模型、生产云服务、10人/1GiB容量或原生分发包验收。",
-          "验证按改动范围组合；原338项聚合和首次最终修复browser失败记录保留，不称一次全部重跑通过。",
-          "超过协议限额或不支持的嵌入式历史附件会明确拒绝；原恢复基线失效时要求重试，避免覆盖新修改。"
+          "修复后的签名原生包尚待构建和两账号实际模型生成验收。",
+          "当前批次未被用户接受或晋升main，不对外发布。"
         ],
-        "generatedAt": "2026-09-09T11:15:31.753054+00:00"
-      },
-      "merged": {
-        "mergeCommit": "51a0cb5cc2880182760a9fb216f8fe158b63c203",
-        "verificationCommit": "51a0cb5cc2880182760a9fb216f8fe158b63c203",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "51a0cb5cc2880182760a9fb216f8fe158b63c203",
-            "completedAt": "2026-09-09T11:19:02.894Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "51a0cb5cc2880182760a9fb216f8fe158b63c203",
-            "completedAt": "2026-09-09T11:19:02.894Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "51a0cb5cc2880182760a9fb216f8fe158b63c203",
-            "completedAt": "2026-09-09T11:19:02.894Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "51a0cb5cc2880182760a9fb216f8fe158b63c203",
-            "completedAt": "2026-09-09T11:19:02.894Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "51a0cb5cc2880182760a9fb216f8fe158b63c203",
-            "completedAt": "2026-09-09T11:19:02.894Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-09T11:19:02.894Z"
+        "generatedAt": "2026-09-09T12:18:14.558Z"
       }
     }
   ],
