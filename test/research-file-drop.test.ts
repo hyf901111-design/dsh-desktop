@@ -3151,10 +3151,27 @@ describe('Chat sent file tags', () => {
     const controller = new AbortController()
     const paths = ['/Users/test/中文 文件.png', '/Users/test/a`b.pdf']
     const refs = await Promise.all(paths.map((path) => client.chatFileReferenceCodec.serialize(client.chatFileReference(path).ref, controller.signal)))
-    const html = renderToStaticMarkup(React.createElement(client.UserStyleBubble, {
+    const openFile = vi.fn()
+    const bubbleProps = {
+      openFile,
       content: [{ type: 'text', text: `比较 ${refs.join(' 和 ')} 的内容` }],
       t: (key: string) => key
-    }))
+    }
+    const html = renderToStaticMarkup(React.createElement(client.UserStyleBubble, bubbleProps))
+    const buttons: any[] = []
+    function visit(element: any): void {
+      if (Array.isArray(element)) { element.forEach(visit); return }
+      if (!element || typeof element !== 'object') return
+      if (typeof element.type === 'function') { visit(element.type(element.props)); return }
+      if (element.type === 'button' && element.props['data-ref-chip'] === 'research-file') buttons.push(element)
+      visit(element.props?.children)
+    }
+    visit(client.UserStyleBubble(bubbleProps))
+    expect(buttons).toHaveLength(2)
+    buttons[1].props.onClick()
+    expect(openFile).toHaveBeenCalledWith(paths[1])
+    expect(html).toContain('data-research-inline="true"')
+    expect(html).toContain('<span style="white-space:pre-wrap">比较 </span>')
     expect(html).not.toContain('/Users/test')
     expect(html).not.toContain('📎')
     expect(html).toContain('中文 文件.png')

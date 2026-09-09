@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..a7461d9 100644
+index 1dd0e89..c09524a 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -1336,7 +1336,7 @@ index 1dd0e89..a7461d9 100644
  		const css$15 = ".gdEzaW_userRow{flex-direction:column;align-items:flex-end;gap:6px;display:flex}.gdEzaW_userStack{flex-direction:column;align-items:flex-end;gap:8px;min-width:0;max-width:min(525px,82%);display:flex}.gdEzaW_bubble{background:var(--dsw-specific-bubble);max-width:100%;color:var(--dsw-alias-label-primary);border-radius:22px;padding:10px 16px;font-size:16px;line-height:24px}.gdEzaW_contextRow,.gdEzaW_compactionRow{padding:2px 0}.gdEzaW_compactionButton{width:100%;min-width:0;height:24px;color:inherit;font:inherit;text-align:left;background:0 0;border:none;border-radius:6px;align-items:center;padding:0;display:flex}.gdEzaW_compactionButton:not(:disabled){cursor:pointer}.gdEzaW_compactionButton:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover)}.gdEzaW_compactionLeading{width:16px;height:16px;color:var(--dsw-alias-label-secondary);flex:none;place-items:center;margin-right:6px;display:inline-grid}.gdEzaW_compactionContextIcon,.gdEzaW_compactionDisclosureIcon{grid-area:1/1;justify-content:center;align-items:center;display:inline-flex}.gdEzaW_compactionDisclosureIcon,.gdEzaW_compactionButton:not(:disabled):hover .gdEzaW_compactionContextIcon,.gdEzaW_compactionButton:not(:disabled):focus-visible .gdEzaW_compactionContextIcon{opacity:0}.gdEzaW_compactionButton:not(:disabled):hover .gdEzaW_compactionDisclosureIcon,.gdEzaW_compactionButton:not(:disabled):focus-visible .gdEzaW_compactionDisclosureIcon{opacity:1}.gdEzaW_compactionTitle{color:var(--dsw-alias-label-primary-dimmed);flex:none;font-size:14px;line-height:24px}.gdEzaW_compactionSep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.gdEzaW_compactionSummary{min-width:0;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:auto;font-size:14px;line-height:24px;overflow:hidden}.gdEzaW_compactionBody{color:var(--dsw-alias-label-tertiary);padding:4px 0 4px 22px;font-size:14px;line-height:24px}.gdEzaW_retryRow{color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:20px}.gdEzaW_retrySummary{width:fit-content;color:inherit;cursor:pointer;user-select:none;border-radius:3px;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex}.gdEzaW_retrySummary::-webkit-details-marker{display:none}.gdEzaW_retrySummary:after{content:\"\";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg)}.gdEzaW_retrySummary:hover{color:var(--dsw-alias-label-secondary)}.gdEzaW_retrySummary:focus-visible{outline:1.5px solid var(--dsw-alias-button-info-fill);outline-offset:2px}.gdEzaW_retryText{color:inherit}.gdEzaW_retryRow[data-active] .gdEzaW_retryText{background:linear-gradient(90deg, var(--dsw-alias-label-tertiary) 0%, var(--dsw-alias-label-tertiary) 40%, var(--dsw-alias-label-secondary) 50%, var(--dsw-alias-label-tertiary) 60%, var(--dsw-alias-label-tertiary) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite gdEzaW_retry-shimmer}.gdEzaW_retryRow[open] .gdEzaW_retrySummary:after{transform:rotate(45deg)}.gdEzaW_retryDetails{overflow-wrap:anywhere;gap:2px;margin-top:3px;padding-left:14px;font-size:12px;line-height:18px;display:grid}.gdEzaW_retryDetailLabel{color:var(--dsw-alias-label-secondary)}.gdEzaW_turnErrorRow{grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;font-size:13px;line-height:20px;display:grid}.gdEzaW_turnErrorDot{margin-top:5px}.gdEzaW_turnErrorCopy{overflow-wrap:anywhere;min-width:0}.gdEzaW_turnErrorTitle{color:var(--dsw-alias-state-error-primary);margin-right:6px;font-weight:600}.gdEzaW_turnErrorMessage{color:var(--dsw-alias-label-secondary)}.gdEzaW_turnErrorCode{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-markdown-code-block-small)}.gdEzaW_maxTokensTitle{color:var(--dsw-alias-state-warn-primary);margin-right:6px;font-weight:600}@keyframes gdEzaW_retry-shimmer{0%{background-position:100%}to{background-position:0}}@media (prefers-reduced-motion:reduce){.gdEzaW_retryRow[data-active] .gdEzaW_retryText{color:inherit;background:0 0;animation:none}}.gdEzaW_refChip{color:var(--dsw-alias-label-primary);white-space:nowrap;vertical-align:baseline;background:#6187d838;border-radius:6px;margin:0 2px;padding:0 8px;font-size:.85em;line-height:1.6;display:inline-block}";
  		const tagId$15 = "@deepseek-ai/dsh-client-ui-conversation/MessageItem.module.css";
 +		const sherlockLightUserBubbleCss = "body:not([data-ds-dark-theme]) .gdEzaW_bubble{background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-primary)}";
-+		const sherlockCompactSentReferenceCss = ".gdEzaW_userStack{max-width:min(640px,92%)}.gdEzaW_userStack[data-research-inline]{width:92%;max-width:640px}.gdEzaW_bubble{padding:8px 12px}.gdEzaW_bubble[data-research-inline]{box-sizing:border-box;width:max-content}.gdEzaW_bubble [data-research-message-files=\"inline\"]{max-width:100%;display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px}.gdEzaW_refChip{box-sizing:border-box;width:136px;min-width:136px;max-width:136px;height:24px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-module-platform);border:1px solid var(--dsw-alias-border-l3);border-radius:7px;margin:0;padding:0 8px;font:inherit;font-size:14px;line-height:22px;text-align:left;vertical-align:middle;appearance:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:flex-start;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gdEzaW_refChip:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}.gdEzaW_refChip>.uV2eYG_fileReferenceIcon{flex:none}.gdEzaW_refChipLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}";
++		const sherlockCompactSentReferenceCss = ".gdEzaW_userStack{max-width:min(640px,92%)}.gdEzaW_userStack[data-research-inline]{width:92%;max-width:640px}.gdEzaW_bubble{padding:8px 12px}.gdEzaW_bubble[data-research-inline]{box-sizing:border-box;width:fit-content;max-width:100%;line-height:28px}.gdEzaW_bubble [data-research-message-files=\"inline\"]{max-width:100%;display:inline;line-height:28px}.gdEzaW_refChip{box-sizing:border-box;width:136px;min-width:136px;max-width:136px;height:24px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-module-platform);border:1px solid var(--dsw-alias-border-l3);border-radius:7px;margin:0;padding:0 8px;font:inherit;font-size:14px;line-height:22px;text-align:left;vertical-align:middle;appearance:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:flex-start;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gdEzaW_refChip:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}.gdEzaW_refChip>.uV2eYG_fileReferenceIcon{flex:none}.gdEzaW_refChipLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$15) + "]") === null) {
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
@@ -1377,37 +1377,54 @@ index 1dd0e89..a7461d9 100644
  		* scan as the composer, minus the lexicon: sent tokens were validated at
  		* compose time, so shape alone decorates).
  		*/
-+		function projectChatFileText(text) {
+-		function projectUserText(text) {
++		function projectChatFileText(text, openFile) {
 +			const re = /📎 文件：`((?:\\`|[^`])+)`/g;
 +			const parts = [];
 +			let cursor = 0;
 +			for (const match of text.matchAll(re)) {
-+				if (match.index > cursor) parts.push(projectUserText(text.slice(cursor, match.index)));
++				if (match.index > cursor) parts.push(projectUserText(text.slice(cursor, match.index), openFile));
 +				const path = match[1].replaceAll("\\`", "`");
-+				parts.push((0, react_jsx_runtime.jsx)(ResearchMessageFileChip, { file: { id: `chat-file-${match.index}`, name: researchPromptBasename(path), path } }, match.index));
++				parts.push((0, react_jsx_runtime.jsx)(ResearchMessageFileChip, { file: { id: `chat-file-${match.index}`, name: researchPromptBasename(path), path }, openFile }, match.index));
 +				cursor = match.index + match[0].length;
 +			}
 +			if (cursor === 0) return null;
-+			if (cursor < text.length) parts.push(projectUserText(text.slice(cursor)));
++			if (cursor < text.length) parts.push(projectUserText(text.slice(cursor), openFile));
 +			return (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: parts });
 +		}
- 		function projectUserText(text) {
-+			const chatFiles = projectChatFileText(text);
++		function projectUserText(text, openFile) {
++			const chatFiles = projectChatFileText(text, openFile);
 +			if (chatFiles !== null) return chatFiles;
  			const re = /(^|\s)([/@][\w-]+)(?=\s|$)/g;
  			const parts = [];
  			let cursor = 0;
-@@ -5094,17 +5929,82 @@ window.__ModuleLoader__.load({
- 			if (cursor < text.length) parts.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MessageText, { text: text.slice(cursor) }, cursor));
+@@ -5082,7 +5917,7 @@ window.__ModuleLoader__.load({
+ 			while ((m = re.exec(text)) !== null) {
+ 				const tokenStart = m.index + (m[1]?.length ?? 0);
+ 				const label = m[2] ?? "";
+-				if (tokenStart > cursor) parts.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MessageText, { text: text.slice(cursor, tokenStart) }, cursor));
++				if (tokenStart > cursor) parts.push((0, react_jsx_runtime.jsx)("span", { style: { whiteSpace: "pre-wrap" }, children: text.slice(cursor, tokenStart) }, cursor));
+ 				parts.push((0, react_jsx_runtime.jsx)("span", {
+ 					className: MessageItem_module_css_default.refChip,
+ 					"data-ref-chip": label.startsWith("@") ? "subagent" : "skill",
+@@ -5090,21 +5925,87 @@ window.__ModuleLoader__.load({
+ 				}, tokenStart));
+ 				cursor = tokenStart + label.length;
+ 			}
+-			if (parts.length === 0) return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MessageText, { text });
+-			if (cursor < text.length) parts.push((0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MessageText, { text: text.slice(cursor) }, cursor));
++			if (parts.length === 0) return (0, react_jsx_runtime.jsx)("span", { style: { whiteSpace: "pre-wrap" }, children: text });
++			if (cursor < text.length) parts.push((0, react_jsx_runtime.jsx)("span", { style: { whiteSpace: "pre-wrap" }, children: text.slice(cursor) }, cursor));
  			return (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: parts });
  		}
-+		function ResearchMessageFileChip({ file }) {
++		function ResearchMessageFileChip({ file, openFile }) {
 +			return (0, react_jsx_runtime.jsxs)("button", {
 +				type: "button",
 +				className: MessageItem_module_css_default.refChip,
 +				"data-ref-chip": "research-file",
 +				"data-research-message-file": file.id,
-+				"data-research-reference-node-id": file.id,
++				"data-research-reference-node-id": openFile ? void 0 : file.id,
++				onClick: openFile && file.path ? () => openFile(file.path) : void 0,
 +				title: file.name,
 +				children: [(0, react_jsx_runtime.jsx)(FileReferenceIcon, {
 +					name: file.name
@@ -1432,7 +1449,7 @@ index 1dd0e89..a7461d9 100644
 +				})]
 +			});
 +		}
-+		function projectResearchUserText(research) {
++		function projectResearchUserText(research, openFile) {
 +			const artifacts = Array.isArray(research.artifacts) ? research.artifacts : [];
 +			const fileOccurrences = Array.isArray(research.occurrences) ? research.occurrences : [];
 +			const artifactOccurrences = Array.isArray(research.artifactOccurrences) ? research.artifactOccurrences : [];
@@ -1440,7 +1457,7 @@ index 1dd0e89..a7461d9 100644
 +				"data-research-message-files": "",
 +				style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: research.text === "" ? 0 : 8 },
 +				children: [research.files.map((file) => (0, react_jsx_runtime.jsx)(ResearchMessageFileChip, { file }, file.id)), artifacts.map((artifact) => (0, react_jsx_runtime.jsx)(ResearchMessageArtifactChip, { artifact }, artifact.id))]
-+			}), research.text !== "" && projectUserText(research.text)] });
++			}), research.text !== "" && projectUserText(research.text, openFile)] });
 +			const fileById = /* @__PURE__ */ new Map(research.files.map((file) => [file.id, file]));
 +			const artifactById = /* @__PURE__ */ new Map(artifacts.map((artifact) => [artifact.id, artifact]));
 +			const references = [
@@ -1453,21 +1470,22 @@ index 1dd0e89..a7461d9 100644
 +				const { type, occurrence } = references[index];
 +				const reference = type === "file" ? fileById.get(occurrence.fileId) : artifactById.get(occurrence.artifactId);
 +				if (reference === void 0) continue;
-+				if (occurrence.offset > cursor) parts.push((0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: projectUserText(research.text.slice(cursor, occurrence.offset)) }, `text-${cursor}`));
++				if (occurrence.offset > cursor) parts.push((0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: projectUserText(research.text.slice(cursor, occurrence.offset), openFile) }, `text-${cursor}`));
 +				parts.push(type === "file" ? (0, react_jsx_runtime.jsx)(ResearchMessageFileChip, { file: reference }, `file-${reference.id}-${index}`) : (0, react_jsx_runtime.jsx)(ResearchMessageArtifactChip, { artifact: reference }, `artifact-${reference.id}-${index}`));
 +				cursor = occurrence.offset;
 +			}
-+			if (cursor < research.text.length) parts.push((0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: projectUserText(research.text.slice(cursor)) }, `text-${cursor}`));
++			if (cursor < research.text.length) parts.push((0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: projectUserText(research.text.slice(cursor), openFile) }, `text-${cursor}`));
 +			return (0, react_jsx_runtime.jsx)("span", {
 +				"data-research-message-files": "inline",
 +				children: parts
 +			});
 +		}
  		/** Right-aligned bubble shared by user and steering rows. */
- 		function UserStyleBubble({ content, imageLoader, actions, pending = false, t }) {
+-		function UserStyleBubble({ content, imageLoader, actions, pending = false, t }) {
++		function UserStyleBubble({ content, imageLoader, actions, openFile, pending = false, t }) {
  			const { text, images, rest } = contentParts(content);
 +			const research = parseResearchPrompt(text);
-+			const inlineResearch = (research.occurrences?.length ?? 0) > 0 || (research.artifactOccurrences?.length ?? 0) > 0;
++			const inlineResearch = text.includes("📎 文件：`") || (research.occurrences?.length ?? 0) > 0 || (research.artifactOccurrences?.length ?? 0) > 0;
  			const truncated = (total) => t("json.truncated", { total });
 -			const showBubble = text !== "" || rest.length > 0;
 +			const showBubble = research.text !== "" || research.files.length > 0 || (research.artifacts?.length ?? 0) > 0 || research.canvasContext !== void 0 || rest.length > 0;
@@ -1481,13 +1499,13 @@ index 1dd0e89..a7461d9 100644
  					children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_attachment.ImageGallery, {
  						images,
  						load: imageLoader,
-@@ -5112,13 +6012,19 @@ window.__ModuleLoader__.load({
+@@ -5112,13 +6013,19 @@ window.__ModuleLoader__.load({
  						labels: messageImageLabels(t)
  					}), showBubble && (0, react_jsx_runtime.jsxs)("div", {
  						className: MessageItem_module_css_default.bubble,
 -						children: [projectUserText(text), rest.map((block, i) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
 +						"data-research-inline": inlineResearch || void 0,
-+						children: [projectResearchUserText(research), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {
++						children: [projectResearchUserText(research, openFile), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {
 +							"data-research-context-provenance": "",
 +							style: { marginTop: research.text === "" ? 0 : 6, fontSize: 11, lineHeight: "16px", color: "var(--dsw-alias-label-tertiary)" },
 +							title: `${t("research.context.initialSources")}: ${research.canvasContext.initialSourceIds.join(", ") || t("research.context.noInitialSources")}`,
@@ -1503,7 +1521,20 @@ index 1dd0e89..a7461d9 100644
  			});
  		}
  		/**
-@@ -5209,7 +6115,7 @@ window.__ModuleLoader__.load({
+@@ -5142,10 +6049,11 @@ window.__ModuleLoader__.load({
+ 			});
+ 		}
+ 		/** User and admitted-steering keyed Chat renderer. */
+-		const UserMessageNodeView = (0, react.memo)(function UserMessageNodeView({ node, loadImage, t }) {
++		const UserMessageNodeView = (0, react.memo)(function UserMessageNodeView({ node, loadImage, openFile, t }) {
+ 			const data = node.data;
+ 			return (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+ 				content: data.content,
++				openFile,
+ 				imageLoader: loadImage,
+ 				t,
+ 				actions: (text) => (0, react_jsx_runtime.jsx)(MessageIconActions, {
+@@ -5209,7 +6117,7 @@ window.__ModuleLoader__.load({
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/ChatView.module.css.mjs
@@ -1512,7 +1543,7 @@ index 1dd0e89..a7461d9 100644
  		const tagId$11 = "@deepseek-ai/dsh-client-ui-conversation/ChatView.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -5218,9 +6124,28 @@ window.__ModuleLoader__.load({
+@@ -5218,9 +6126,28 @@ window.__ModuleLoader__.load({
  			tag.textContent = css$11;
  			document.head.appendChild(tag);
  		}
@@ -1543,7 +1574,7 @@ index 1dd0e89..a7461d9 100644
  			"callRow": "Md3f7G_callRow",
  			"hint": "Md3f7G_hint",
  			"root": "Md3f7G_root",
-@@ -5228,16 +6153,45 @@ window.__ModuleLoader__.load({
+@@ -5228,16 +6155,45 @@ window.__ModuleLoader__.load({
  			"older": "Md3f7G_older",
  			"flowItem": "Md3f7G_flowItem",
  			"toBottomSlot": "Md3f7G_toBottomSlot",
@@ -1591,7 +1622,7 @@ index 1dd0e89..a7461d9 100644
  			const routedNode = node;
  			const owner = (0, react.useMemo)(() => node === void 0 ? null : {
  				selectedCallId,
-@@ -5267,7 +6221,7 @@ window.__ModuleLoader__.load({
+@@ -5267,7 +6223,7 @@ window.__ModuleLoader__.load({
  				"data-chat-anchor-key": routedNode.key,
  				"data-chat-flow-key": routedNode.key,
  				"data-chat-flow-kind": routedNode.kind,
@@ -1600,7 +1631,7 @@ index 1dd0e89..a7461d9 100644
  					entryKey: routedNode.kind,
  					hookContext: nodeKey,
  					fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
-@@ -5275,27 +6229,167 @@ window.__ModuleLoader__.load({
+@@ -5275,26 +6231,166 @@ window.__ModuleLoader__.load({
  						payload: routedNode.data,
  						truncatedLabel: (total) => t("json.truncated", { total })
  					})
@@ -1631,7 +1662,6 @@ index 1dd0e89..a7461d9 100644
  		}
 -		/** Select a visible stable node/call identity, falling back only when layout
 -		* has not exposed a visible box yet. */
--		function pagingAnchor(list, scrollport) {
 +		/** One turn-level status row whose disclosure owns all process detail. */
 +		const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {
 +			const [expanded, setExpanded] = (0, react.useState)(false);
@@ -1782,11 +1812,10 @@ index 1dd0e89..a7461d9 100644
 +		}
 +		/** Select a visible stable node/call identity, falling back only when layout
 +		* has not exposed a visible box yet. */
-+		function pagingAnchor(list, scrollport) {
+ 		function pagingAnchor(list, scrollport) {
  			const viewport = scrollport.getBoundingClientRect();
  			const visibleBottom = scrollport.querySelector("[data-composer-seat]")?.getBoundingClientRect().top ?? viewport.bottom;
- 			if (typeof document.elementsFromPoint === "function" && visibleBottom > viewport.top) {
-@@ -5332,35 +6426,606 @@ window.__ModuleLoader__.load({
+@@ -5332,35 +6428,606 @@ window.__ModuleLoader__.load({
  				scrollTop: scrollport.scrollTop
  			};
  		}
@@ -2417,7 +2446,7 @@ index 1dd0e89..a7461d9 100644
  				})]
  			});
  		}
-@@ -5374,6 +7039,11 @@ window.__ModuleLoader__.load({
+@@ -5374,6 +7041,11 @@ window.__ModuleLoader__.load({
  			const timeline = useSession((s) => s.chat.timeline);
  			const inbox = useSession((s) => s.queue);
  			const cwd = useSessions((s) => s.byId[sessionId]?.cwd);
@@ -2429,7 +2458,7 @@ index 1dd0e89..a7461d9 100644
  			const running = useSession((s) => s.running);
  			const openState = useSession((s) => s.openState);
  			const openError = useSession((s) => s.openError);
-@@ -5381,11 +7051,61 @@ window.__ModuleLoader__.load({
+@@ -5381,11 +7053,61 @@ window.__ModuleLoader__.load({
  			const loadingOlder = useSession((s) => s.loadingOlder);
  			const selectedCallId = useStore((s) => s.selection?.callId);
  			const pendingSteering = (0, react.useMemo)(() => inbox.filter((item) => item.placement === "steering"), [inbox]);
@@ -2492,7 +2521,7 @@ index 1dd0e89..a7461d9 100644
  			/** Last position delivered or written on the main thread. */
  			const observedTopRef = (0, react.useRef)(0);
  			/** Paging anchor: semantic row/position at click, updated by reader scrolls
-@@ -5394,7 +7114,9 @@ window.__ModuleLoader__.load({
+@@ -5394,7 +7116,9 @@ window.__ModuleLoader__.load({
  			const firstSeqRef = (0, react.useRef)(null);
  			const openedRef = (0, react.useRef)(false);
  			const lastKeyRef = (0, react.useRef)(null);
@@ -2502,7 +2531,7 @@ index 1dd0e89..a7461d9 100644
  			/** Flow tip signature — follow-scroll only when this moves, never on a
  			*  scroll-driven at-bottom chrome re-render (which would snap inertial
  			*  scrolls the rest of the way to the floor). */
-@@ -5402,26 +7124,37 @@ window.__ModuleLoader__.load({
+@@ -5402,26 +7126,37 @@ window.__ModuleLoader__.load({
  			const firstKey = order[0];
  			const firstSeq = firstKey === void 0 ? null : nodeStore.get(firstKey)?.anchorSeq ?? null;
  			const lastKey = order.at(-1) ?? null;
@@ -2544,7 +2573,7 @@ index 1dd0e89..a7461d9 100644
  					else {
  						el.scrollTop = saved.scrollTop;
  						const row = anchorElement(local, saved.anchorKey);
-@@ -5436,6 +7169,7 @@ window.__ModuleLoader__.load({
+@@ -5436,6 +7171,7 @@ window.__ModuleLoader__.load({
  					}
  					firstSeqRef.current = firstSeq;
  					lastKeyRef.current = lastKey;
@@ -2552,7 +2581,7 @@ index 1dd0e89..a7461d9 100644
  					lastSteeringIdRef.current = lastSteeringId;
  					followSigRef.current = followSig;
  					return;
-@@ -5449,18 +7183,26 @@ window.__ModuleLoader__.load({
+@@ -5449,18 +7185,26 @@ window.__ModuleLoader__.load({
  					firstSeqRef.current = firstSeq;
  					/* v8 ignore next -- ?? arm: a prepend adds nodes, so the flow list here is never empty. */
  					lastKeyRef.current = lastKey;
@@ -2581,7 +2610,7 @@ index 1dd0e89..a7461d9 100644
  			});
  			const onScrollRef = (0, react.useRef)(() => {});
  			onScrollRef.current = () => {
-@@ -5468,6 +7210,7 @@ window.__ModuleLoader__.load({
+@@ -5468,6 +7212,7 @@ window.__ModuleLoader__.load({
  				/* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
  				if (local === null) return;
  				const el = scrollerOf(local);
@@ -2589,7 +2618,7 @@ index 1dd0e89..a7461d9 100644
  				const floor = Math.max(0, el.scrollHeight - el.clientHeight);
  				const movedByReader = Math.abs(el.scrollTop - Math.min(observedTopRef.current, floor)) > .5;
  				const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;
-@@ -5487,6 +7230,10 @@ window.__ModuleLoader__.load({
+@@ -5487,6 +7232,10 @@ window.__ModuleLoader__.load({
  				else if (position !== null) chatScroll.save(position);
  				observedTopRef.current = el.scrollTop;
  			};
@@ -2600,7 +2629,7 @@ index 1dd0e89..a7461d9 100644
  			(0, react.useEffect)(() => {
  				const local = listRef.current;
  				/* v8 ignore next -- ref-null guard: effect runs after the list node commits. */
-@@ -5514,11 +7261,13 @@ window.__ModuleLoader__.load({
+@@ -5514,11 +7263,13 @@ window.__ModuleLoader__.load({
  				const column = columnRef.current;
  				const local = listRef.current;
  				if (column === null || local === null || typeof ResizeObserver === "undefined") return;
@@ -2615,7 +2644,7 @@ index 1dd0e89..a7461d9 100644
  				if (composer !== null) observer.observe(composer);
  				return () => {
  					observer.disconnect();
-@@ -5540,9 +7289,29 @@ window.__ModuleLoader__.load({
+@@ -5540,9 +7291,29 @@ window.__ModuleLoader__.load({
  				}
  				loadOlder();
  			};
@@ -2646,7 +2675,7 @@ index 1dd0e89..a7461d9 100644
  					ref: listRef,
  					className: ChatView_module_css_default.scroll,
  					children: [(0, react_jsx_runtime.jsxs)("div", {
-@@ -5570,28 +7339,27 @@ window.__ModuleLoader__.load({
+@@ -5570,28 +7341,27 @@ window.__ModuleLoader__.load({
  									children: loadingOlder ? t("loading") : t("chat.loadOlder")
  								})
  							}),
@@ -2696,7 +2725,7 @@ index 1dd0e89..a7461d9 100644
  						]
  					}), !atBottom && (0, react_jsx_runtime.jsx)("div", {
  						className: ChatView_module_css_default.toBottomSlot,
-@@ -5607,7 +7375,7 @@ window.__ModuleLoader__.load({
+@@ -5607,7 +7377,7 @@ window.__ModuleLoader__.load({
  							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
  						})
  					})]
@@ -2705,7 +2734,7 @@ index 1dd0e89..a7461d9 100644
  			});
  		}
  		//#endregion
-@@ -5816,6 +7584,33 @@ window.__ModuleLoader__.load({
+@@ -5816,6 +7586,33 @@ window.__ModuleLoader__.load({
  		/** Simplified Chinese dictionary (the key-set source of truth). */
  		const zh = {
  			"view.chat": "对话",
@@ -2739,7 +2768,7 @@ index 1dd0e89..a7461d9 100644
  			"hint.plan": PLAN_NEXT_ACTION_ZH,
  			"hint.goal": "输入目标，智能体将持续执行",
  			"hint.goal.active": "当前目标进行中。可输入 edit 修改 / pause 暂停 / resume 继续 / clear 清除",
-@@ -5870,12 +7665,15 @@ window.__ModuleLoader__.load({
+@@ -5870,12 +7667,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "仅在智能体运行时生效；Cmd/Ctrl+Enter 使用另一行为",
  			"settings.enter.queue": "排队发送",
  			"settings.enter.steer": "插话发送",
@@ -2759,7 +2788,7 @@ index 1dd0e89..a7461d9 100644
  			"hero.preview": "预览版",
  			"hero.chooseWorkspace": "选择工作区",
  			"session.hierarchy": "会话层级",
-@@ -5896,6 +7694,46 @@ window.__ModuleLoader__.load({
+@@ -5896,6 +7696,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "历史加载失败：{message}（{code}）",
  			"chat.loadOlder": "加载更早",
  			"chat.toBottom": "回到底部",
@@ -2806,7 +2835,7 @@ index 1dd0e89..a7461d9 100644
  			"message.extraBlock": "附加内容块",
  			"message.contextInjection": "上下文注入",
  			"message.contextRecall": "跨会话召回",
-@@ -5981,6 +7819,33 @@ window.__ModuleLoader__.load({
+@@ -5981,6 +7821,33 @@ window.__ModuleLoader__.load({
  		/** English dictionary, checked complete against the zh key set. */
  		const en = {
  			"view.chat": "Chat",
@@ -2840,7 +2869,7 @@ index 1dd0e89..a7461d9 100644
  			"hint.plan": PLAN_NEXT_ACTION_EN,
  			"hint.goal": "describe the objective for a long-running task",
  			"hint.goal.active": "goal active — edit / pause / resume / clear",
-@@ -6035,12 +7900,15 @@ window.__ModuleLoader__.load({
+@@ -6035,12 +7902,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "Busy only; Cmd/Ctrl+Enter uses the other behavior",
  			"settings.enter.queue": "Queue",
  			"settings.enter.steer": "Steer",
@@ -2857,7 +2886,7 @@ index 1dd0e89..a7461d9 100644
  			"hero.preview": "Preview",
  			"hero.chooseWorkspace": "Choose workspace",
  			"session.hierarchy": "Session hierarchy",
-@@ -6061,6 +7929,46 @@ window.__ModuleLoader__.load({
+@@ -6061,6 +7931,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "Failed to load history: {message} ({code})",
  			"chat.loadOlder": "Load earlier",
  			"chat.toBottom": "Back to bottom",
@@ -2904,7 +2933,7 @@ index 1dd0e89..a7461d9 100644
  			"message.extraBlock": "Extra content block",
  			"message.contextInjection": "Context injection",
  			"message.contextRecall": "Session recall",
-@@ -6383,7 +8291,11 @@ window.__ModuleLoader__.load({
+@@ -6383,7 +8293,11 @@ window.__ModuleLoader__.load({
  		*/
  		function QueueDock({ useSession, updateQueue, notify, t }) {
  			const inbox = useSession((s) => s.queue);
@@ -2917,7 +2946,7 @@ index 1dd0e89..a7461d9 100644
  			const running = useSession((s) => s.running);
  			const queueMutable = useSession((s) => s.subagent === null);
  			const [editing, setEditing] = (0, react.useState)(null);
-@@ -6532,7 +8444,7 @@ window.__ModuleLoader__.load({
+@@ -6532,7 +8446,7 @@ window.__ModuleLoader__.load({
  												type: "button",
  												className: QueueDock_module_css_default.action,
  												"aria-label": t("queue.edit"),
@@ -2926,7 +2955,7 @@ index 1dd0e89..a7461d9 100644
  												disabled: busy !== null || row.text === null,
  												onClick: () => {
  													if (row.text !== null) setEditing({
-@@ -6627,7 +8539,7 @@ window.__ModuleLoader__.load({
+@@ -6627,7 +8541,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$7;
@@ -2935,7 +2964,7 @@ index 1dd0e89..a7461d9 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,40 +8663,7202 @@ window.__ModuleLoader__.load({
+@@ -6751,40 +8665,7202 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -8735,7 +8764,7 @@ index 1dd0e89..a7461d9 100644
 +		const defaultResearchWorkspaces = new ResearchWorkspaceRegistry();
 +		/** Theme-aware infinite dotted canvas. The resident conversation shell continues to own the composer. */
 +		const researchVoiceCss = ".rScV5Q_voiceFeedback{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);width:252px;max-width:calc(100vw - 48px);height:44px;box-sizing:border-box;padding:5px;display:flex;align-items:center;gap:8px;border:1px solid var(--dsw-alias-border-l2);border-radius:24px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);box-shadow:0 3px 12px #0002;cursor:auto}.rScV5Q_voiceFeedback[data-state=error]{width:320px;height:auto;min-height:44px;border-radius:18px}.rScV5Q_voiceCenter{flex:1;min-width:0;display:flex;justify-content:center;align-items:center}.rScV5Q_voiceLabel{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary);white-space:nowrap}.rScV5Q_voiceError{font-size:12px;line-height:18px;overflow-wrap:anywhere;white-space:normal}.rScV5Q_voiceWave{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;flex:1;color:var(--dsw-alias-label-primary)}.rScV5Q_voiceWave>span{display:block;flex:none;width:2px;border-radius:2px;background:currentColor;transition:height .09s ease-out}.rScV5Q_voiceFeedback>button{display:flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.rScV5Q_voiceFeedback>button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.rScV5Q_voiceFeedback>button[data-research-voice-finish]{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-2)}.rScV5Q_voiceFeedback>button[data-research-voice-finish]:hover:not(:disabled){background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-2);opacity:.85}.rScV5Q_voiceFeedback>button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.rScV5Q_globalToolbar>button[data-research-global-voice][aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover)}.rScV5Q_voiceAccessible{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(prefers-reduced-motion:reduce){.rScV5Q_voiceWave>span{transition:none}}";
-+		if (typeof document !== "undefined") { const style = document.createElement("style"); style.setAttribute("data-research-compact-style", ""); style.textContent = "\n/* Card surface follows shadcn/ui; canvas geometry never animates. */\n[data-research-compact-chrome]{--odyssey-card:#fff;--odyssey-card-border:#e5e5e5;--odyssey-card-text:#171717;padding:0;margin:0;max-width:none;max-height:none;overflow:visible;display:flex;border-radius:14px;background:var(--odyssey-card)!important;color:var(--odyssey-card-text);border:1px solid var(--odyssey-card-border)!important;outline:0!important;box-shadow:none;transition:box-shadow 180ms ease!important}\nbody[data-ds-dark-theme] [data-research-compact-chrome]{--odyssey-card:#171717;--odyssey-card-border:#303030;--odyssey-card-text:#fafafa}\n[data-research-compact-chrome][data-selected]{box-shadow:0 0 0 2px #60a5fa66,0 0 20px 3px #3b82f640!important}\n[data-research-compact-chrome] .rScV5Q_generatedContainer{background:var(--odyssey-card)}\n[data-research-container-type]:not([data-research-container-type=html]):not([data-research-container-type=web])>.rScV5Q_containerContent{align-items:flex-start}\n[data-research-compact-chrome]>.rScV5Q_nodeTitle{position:relative;inset:auto;flex:0 0 64px;box-sizing:border-box;height:64px;min-height:64px;padding:0 120px 0 24px;border:0;border-radius:13px 13px 0 0;background:var(--odyssey-card);overflow:visible;z-index:4;display:flex;align-items:center;cursor:grab;user-select:none;touch-action:none;pointer-events:auto}\n[data-research-compact-chrome] .rScV5Q_nodeTitleText{display:block;min-width:0;max-width:100%;font-size:18px;font-weight:600;line-height:24px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;cursor:inherit}\n[data-research-compact-chrome] .rScV5Q_nodeTitleText:has(input){overflow:visible;flex:1;cursor:text}\n[data-research-compact-chrome][data-node-dragging]>.rScV5Q_nodeTitle{cursor:grabbing}\n[data-research-compact-chrome] .rScV5Q_nodeTitleActions{position:absolute;right:32px;top:17px;display:flex;gap:6px;opacity:0;transform:translateY(-3px);pointer-events:none;transition:opacity 180ms ease,transform 180ms ease}\n[data-research-compact-chrome]:is(:hover,[data-research-content-hover],[open]) .rScV5Q_nodeTitleActions,[data-research-compact-chrome] .rScV5Q_nodeTitleActions:focus-within{opacity:1;transform:translateY(0);pointer-events:auto}\n[data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand){display:grid;place-items:center;box-sizing:border-box;width:30px;height:30px;padding:0;border:1px solid var(--odyssey-card-border);border-radius:9px;background:var(--odyssey-card);color:var(--odyssey-card-text);cursor:pointer;transition:background-color 150ms ease,border-color 150ms ease}\n[data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand):hover{background:color-mix(in srgb,var(--odyssey-card-text) 6%,var(--odyssey-card));border-color:color-mix(in srgb,var(--odyssey-card-text) 22%,var(--odyssey-card-border))}\n.rScV5Q_containerExpand:focus-visible,[data-research-compact-chrome] .rScV5Q_resizeHandle:focus-visible{outline:2px solid #60a5fa;outline-offset:3px}\n[data-research-compact-chrome]>.rScV5Q_previewBody{flex:1 1 auto;min-height:0;height:calc(100% - 64px);border:0;box-shadow:none;background:var(--odyssey-card);border-radius:0 0 13px 13px;overflow:hidden;clip-path:inset(0 round 0 0 13px 13px)}\n[data-research-compact-chrome]>.rScV5Q_resizeHandle[data-research-resize-handle=se]{box-sizing:border-box;width:56px;height:56px;right:-4px;bottom:-4px;left:auto;top:auto;padding:0;border:0;border-radius:0;color:#60a5fa;background:transparent;box-shadow:none;transform:none;opacity:0;pointer-events:auto;transition:opacity 180ms ease;cursor:nwse-resize}\n[data-research-compact-chrome]>.rScV5Q_resizeHandle:is(:hover,:focus-visible),[data-research-compact-chrome][data-node-resizing]>.rScV5Q_resizeHandle{opacity:1}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup{background:var(--odyssey-card);color:var(--odyssey-card-text);border:1px solid var(--odyssey-card-border);border-radius:12px;box-shadow:0 8px 24px #0002;opacity:1;transform:translateY(0);transform-origin:top right;transition:opacity 180ms ease,transform 180ms ease}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup[data-state=closed]{opacity:0;transform:translateY(-4px);pointer-events:none}\n@starting-style{[data-research-compact-chrome] .rScV5Q_containerMenuPopup[data-state=open]{opacity:0;transform:translateY(-4px)}}\n[data-research-compact-chrome][open]{position:fixed!important;inset:32px!important;width:calc(100vw - 64px)!important;height:calc(100vh - 64px)!important;transform:none!important;box-shadow:0 24px 80px #0006}\n[data-research-compact-chrome][open]::backdrop{background:#0008;backdrop-filter:blur(5px)}\n[data-research-compact-chrome][open]>.rScV5Q_nodeTitle{cursor:default}\n\n@media(prefers-reduced-motion:reduce){[data-research-compact-chrome],[data-research-compact-chrome] *{transition:none!important}}\n\n[data-research-compact-chrome]>.rScV5Q_resizeHandle>svg{position:absolute;right:0;bottom:0;pointer-events:none}\n\n[data-research-compact-chrome] :is(.rScV5Q_webFrame,.rScV5Q_webFrameViewport,.rScV5Q_htmlPreview,.rScV5Q_mindMap,.rScV5Q_generationProcess,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_containerDraft textarea),[data-research-compact-chrome][data-research-generated-mind-map] .rScV5Q_artifactBody{background:var(--odyssey-card)!important}\n[data-research-compact-chrome] .rScV5Q_artifactBody{color:var(--odyssey-card-text)}\n[data-research-compact-chrome] a[href],[data-research-compact-chrome] a[href]:visited{color:#2563eb;text-underline-offset:3px}\nbody[data-ds-dark-theme] [data-research-compact-chrome] a[href],body[data-ds-dark-theme] [data-research-compact-chrome] a[href]:visited{color:#60a5fa}\n[data-research-compact-chrome]>.rScV5Q_previewBody>.rScV5Q_artifactBody:not(:has(.rScV5Q_generatedContainer)):not(:has(.rScV5Q_webFrameShell)):not(:has(.rScV5Q_mindMap)){padding:0 24px 20px}\n[data-research-compact-chrome] .rScV5Q_containerMenu{position:relative}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup[aria-hidden=true]{opacity:0;transform:translateY(-4px);pointer-events:none}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup[role=menu]:not([aria-hidden=true]){@starting-style{opacity:0;transform:translateY(-4px)}}\n"; style.textContent += "[data-research-compact-chrome]>.rScV5Q_previewBody>.rScV5Q_artifactBody:has(.rScV5Q_containerDraft){padding:0!important}[data-research-compact-chrome] .rScV5Q_containerDraft{padding:0 20px 20px;gap:12px}[data-research-compact-chrome] .rScV5Q_containerDraft textarea{background:#f5f5f5!important;border-color:var(--odyssey-card-border);padding:12px 14px;font-size:14px;line-height:22px;min-height:112px}[data-research-compact-chrome] .rScV5Q_containerDraftFooter{display:flex;width:100%}[data-research-compact-chrome] .rScV5Q_containerDraftFooter button{width:100%;height:36px;font-size:14px}[data-research-compact-chrome] .rScV5Q_containerDraftFooter span:empty{display:none}body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_containerDraft textarea{background:#242424!important}[data-research-compact-chrome] .rScV5Q_generationProcess{font-family:var(--dsw-font-family);padding:12px 20px 20px}[data-research-compact-chrome] .rScV5Q_generationTerminal{font-size:14px;line-height:23px}[data-research-compact-chrome] .rScV5Q_generationHeader,[data-research-compact-chrome] .rScV5Q_generationFooter{font-size:12px;line-height:18px}[data-research-compact-chrome] .rScV5Q_generationStamp{font-size:11px}"; style.textContent += researchComponentScrollbarCss('[data-research-compact-chrome]', 'body[data-ds-dark-theme] [data-research-compact-chrome]'); document.head.appendChild(style); }
++		if (typeof document !== "undefined") { const style = document.createElement("style"); style.setAttribute("data-research-compact-style", ""); style.textContent = "\n/* Card surface follows shadcn/ui; canvas geometry never animates. */\n[data-research-compact-chrome]{--odyssey-card:#fff;--odyssey-card-border:#e5e5e5;--odyssey-card-text:#171717;padding:0;margin:0;max-width:none;max-height:none;overflow:visible;display:flex;border-radius:14px;background:var(--odyssey-card)!important;color:var(--odyssey-card-text);border:1px solid var(--odyssey-card-border)!important;outline:0!important;box-shadow:none;transition:box-shadow 180ms ease!important}\nbody[data-ds-dark-theme] [data-research-compact-chrome]{--odyssey-card:#171717;--odyssey-card-border:#303030;--odyssey-card-text:#fafafa}\n[data-research-compact-chrome][data-selected]{box-shadow:0 0 0 2px #60a5fa66,0 0 20px 3px #3b82f640!important}\n[data-research-compact-chrome] .rScV5Q_generatedContainer{background:var(--odyssey-card)}\n[data-research-container-type]:not([data-research-container-type=html]):not([data-research-container-type=web])>.rScV5Q_containerContent{align-items:flex-start}\n[data-research-compact-chrome]>.rScV5Q_nodeTitle{position:relative;inset:auto;flex:0 0 64px;box-sizing:border-box;height:64px;min-height:64px;padding:0 120px 0 24px;border:0;border-radius:13px 13px 0 0;background:var(--odyssey-card);overflow:visible;z-index:4;display:flex;align-items:center;cursor:grab;user-select:none;touch-action:none;pointer-events:auto}\n[data-research-compact-chrome] .rScV5Q_nodeTitleText{display:block;min-width:0;max-width:100%;font-size:18px;font-weight:600;line-height:24px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;cursor:inherit}\n[data-research-compact-chrome] .rScV5Q_nodeTitleText:has(input){overflow:visible;flex:1;cursor:text}\n[data-research-compact-chrome][data-node-dragging]>.rScV5Q_nodeTitle{cursor:grabbing}\n[data-research-compact-chrome] .rScV5Q_nodeTitleActions{position:absolute;right:32px;top:17px;display:flex;gap:6px;opacity:0;transform:translateY(-3px);pointer-events:none;transition:opacity 180ms ease,transform 180ms ease}\n[data-research-compact-chrome]:is(:hover,[data-research-content-hover],[open]) .rScV5Q_nodeTitleActions,[data-research-compact-chrome] .rScV5Q_nodeTitleActions:focus-within{opacity:1;transform:translateY(0);pointer-events:auto}\n[data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand){display:grid;place-items:center;box-sizing:border-box;width:30px;height:30px;padding:0;border:1px solid var(--odyssey-card-border);border-radius:9px;background:var(--odyssey-card);color:var(--odyssey-card-text);cursor:pointer;transition:background-color 150ms ease,border-color 150ms ease}\n[data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand):hover{background:color-mix(in srgb,var(--odyssey-card-text) 6%,var(--odyssey-card));border-color:color-mix(in srgb,var(--odyssey-card-text) 22%,var(--odyssey-card-border))}\n.rScV5Q_containerExpand:focus-visible,[data-research-compact-chrome] .rScV5Q_resizeHandle:focus-visible{outline:2px solid #60a5fa;outline-offset:3px}\n[data-research-compact-chrome]>.rScV5Q_previewBody{flex:1 1 auto;min-height:0;height:calc(100% - 64px);border:0;box-shadow:none;background:var(--odyssey-card);border-radius:0 0 13px 13px;overflow:hidden;clip-path:inset(0 round 0 0 13px 13px)}\n[data-research-compact-chrome]>.rScV5Q_resizeHandle[data-research-resize-handle=se]{box-sizing:border-box;width:56px;height:56px;right:-4px;bottom:-4px;left:auto;top:auto;padding:0;border:0;border-radius:0;color:#60a5fa;background:transparent;box-shadow:none;transform:none;opacity:0;pointer-events:auto;transition:opacity 180ms ease;cursor:nwse-resize}\n[data-research-compact-chrome]>.rScV5Q_resizeHandle:is(:hover,:focus-visible),[data-research-compact-chrome][data-node-resizing]>.rScV5Q_resizeHandle{opacity:1}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup{background:var(--odyssey-card);color:var(--odyssey-card-text);border:1px solid var(--odyssey-card-border);border-radius:12px;box-shadow:0 8px 24px #0002;opacity:1;transform:translateY(0);transform-origin:top right;transition:opacity 180ms ease,transform 180ms ease}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup[data-state=closed]{opacity:0;transform:translateY(-4px);pointer-events:none}\n@starting-style{[data-research-compact-chrome] .rScV5Q_containerMenuPopup[data-state=open]{opacity:0;transform:translateY(-4px)}}\n[data-research-compact-chrome][open]{position:fixed!important;inset:32px!important;width:calc(100vw - 64px)!important;height:calc(100vh - 64px)!important;transform:none!important;box-shadow:0 24px 80px #0006}\n[data-research-compact-chrome][open]::backdrop{background:#0008;backdrop-filter:blur(5px)}\n[data-research-compact-chrome][open]>.rScV5Q_nodeTitle{cursor:default}\n\n@media(prefers-reduced-motion:reduce){[data-research-compact-chrome],[data-research-compact-chrome] *{transition:none!important}}\n\n[data-research-compact-chrome]>.rScV5Q_resizeHandle>svg{position:absolute;right:0;bottom:0;pointer-events:none}\n\n[data-research-compact-chrome] :is(.rScV5Q_webFrame,.rScV5Q_webFrameViewport,.rScV5Q_htmlPreview,.rScV5Q_mindMap,.rScV5Q_generationProcess,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_containerDraft textarea),[data-research-compact-chrome][data-research-generated-mind-map] .rScV5Q_artifactBody{background:var(--odyssey-card)!important}\n[data-research-compact-chrome] .rScV5Q_artifactBody{color:var(--odyssey-card-text)}\n[data-research-compact-chrome] a[href],[data-research-compact-chrome] a[href]:visited{color:#2563eb;text-underline-offset:3px}\nbody[data-ds-dark-theme] [data-research-compact-chrome] a[href],body[data-ds-dark-theme] [data-research-compact-chrome] a[href]:visited{color:#60a5fa}\n[data-research-compact-chrome]>.rScV5Q_previewBody>.rScV5Q_artifactBody:not(:has(.rScV5Q_generatedContainer)):not(:has(.rScV5Q_webFrameShell)):not(:has(.rScV5Q_mindMap)){padding:0 24px 20px}\n[data-research-compact-chrome] .rScV5Q_containerMenu{position:relative}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup[aria-hidden=true]{opacity:0;transform:translateY(-4px);pointer-events:none}\n[data-research-compact-chrome] .rScV5Q_containerMenuPopup[role=menu]:not([aria-hidden=true]){@starting-style{opacity:0;transform:translateY(-4px)}}\n"; style.textContent += "[data-research-compact-chrome]>.rScV5Q_previewBody>.rScV5Q_artifactBody:has(.rScV5Q_containerDraft){padding:0!important}[data-research-compact-chrome] .rScV5Q_containerDraft{padding:0 20px 20px;gap:12px}[data-research-compact-chrome] .rScV5Q_containerDraft textarea{background:#f5f5f5!important;border-color:var(--odyssey-card-border);padding:12px 14px;font-size:14px;line-height:22px;min-height:112px}[data-research-compact-chrome] .rScV5Q_containerDraftFooter{display:flex;width:100%}[data-research-compact-chrome] .rScV5Q_containerDraftFooter button{width:100%;height:36px;font-size:14px}[data-research-compact-chrome] .rScV5Q_containerDraftFooter span:empty{display:none}body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_containerDraft textarea{background:#242424!important}[data-research-compact-chrome] .rScV5Q_generationProcess{font-family:var(--dsw-font-family);padding:12px 20px 20px}[data-research-compact-chrome] .rScV5Q_generationTerminal{font-size:14px;line-height:23px}[data-research-compact-chrome] .rScV5Q_generationHeader,[data-research-compact-chrome] .rScV5Q_generationFooter{font-size:12px;line-height:18px}[data-research-compact-chrome] .rScV5Q_generationStamp{font-size:11px}"; style.textContent += ".rScV5Q_fileRichNode[data-research-compact-chrome] .rScV5Q_nodeTitleText{font-size:13px;line-height:20px;font-weight:550}.rScV5Q_fileCard[data-research-compact-chrome]{padding:12px 16px;gap:10px}"; style.textContent += researchComponentScrollbarCss('[data-research-compact-chrome]', 'body[data-ds-dark-theme] [data-research-compact-chrome]'); document.head.appendChild(style); }
 +		function ResearchVoiceControl({ sessionId, disabled, onCommand }) {
 +			const bridge = window.dshDesktop?.researchVoice;
 +			(0, react.useEffect)(() => {
@@ -10170,7 +10199,7 @@ index 1dd0e89..a7461d9 100644
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css.mjs
  		const css$6 = ".wSkVaW_root{background:var(--dsw-alias-bg-base);--dsh-chat-content-width:748px;--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:16px;--dsh-composer-dock-inset:8px;flex-direction:column;min-width:0;height:100%;display:flex}.wSkVaW_header{border-bottom:1px solid #0000;flex:none;padding:12px 28px 0 20px;position:relative}.wSkVaW_header:after{content:\"\";z-index:0;background:var(--dsw-alias-border-l2);pointer-events:none;height:1px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_headerHidden{display:none}.wSkVaW_titleRow{align-items:center;gap:0;min-height:32px;display:flex}.wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0;display:flex}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;display:flex;overflow:hidden}.wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}.wSkVaW_crumbSep{color:var(--dsw-alias-label-caption);font-size:14px;line-height:20px}.wSkVaW_crumb{max-width:220px;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:none;border-radius:12px;padding:4px 8px;font-size:14px;line-height:20px;overflow:hidden}.wSkVaW_crumb:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.wSkVaW_crumbCurrent{color:var(--dsw-alias-label-primary);cursor:default;font-weight:500}.wSkVaW_headerActions{flex:none;align-items:center;gap:8px;display:flex}.wSkVaW_headerUtilities{flex:none;align-items:center;gap:8px;margin-left:20px;display:flex}.wSkVaW_headerUtilities:empty{display:none}.wSkVaW_tabs{z-index:1;gap:36px;margin-top:4px;padding-left:8px;display:flex;position:relative}.wSkVaW_tab{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;padding:0 0 11px;font-size:13px;font-weight:500;line-height:16px;position:relative}.wSkVaW_tab:after{content:\"\";background:0 0;border-radius:2px;height:2px;position:absolute;bottom:1px;left:0;right:0}.wSkVaW_tabActive{color:var(--dsw-alias-state-business-primary)}.wSkVaW_tabActive:after{background:var(--dsw-alias-state-business-primary)}.wSkVaW_viewArea{flex-direction:column;flex:1;min-height:0;display:flex}.wSkVaW_composerStack{--dsh-composer-stack-gap:6px;gap:var(--dsh-composer-stack-gap);flex-direction:column;display:flex}.wSkVaW_composerSeat{--dsh-composer-text-max-height:336px;flex-direction:column;flex:none;display:flex}.wSkVaW_root[data-phase=active]{overflow:hidden}.wSkVaW_root[data-phase=active] .wSkVaW_header{flex:none}.wSkVaW_scrollBody{scrollbar-gutter:stable;flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden auto}.wSkVaW_root[data-phase=active] .wSkVaW_viewArea{flex:1 0 auto;min-height:auto}.wSkVaW_root[data-phase=active] .wSkVaW_composerSeat{z-index:7;background:linear-gradient(180deg, color-mix(in srgb, var(--dsw-alias-bg-base) 0%, transparent) 0px, var(--dsw-alias-bg-base) 36px);position:sticky;bottom:0}.wSkVaW_scrollBody:has([data-conversation-composer-overlay]){scrollbar-gutter:auto;position:relative;overflow:hidden auto}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>[data-slot=conversation\\.session]>.wSkVaW_viewArea{flex:1 1 0;min-height:0;overflow:hidden}.wSkVaW_scrollBody:has([data-conversation-composer-overlay])>.wSkVaW_composerSeat{right:var(--dsh-scrollbar-width);position:absolute;bottom:0;left:0}.wSkVaW_composerHero{width:min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);z-index:1;align-self:center;gap:8px;padding-bottom:32px;position:relative}.wSkVaW_heroGlow{z-index:-1;aspect-ratio:1051/468;pointer-events:none;width:135.438%;position:absolute;bottom:92px;left:50%;transform:translate(-50%,50%)}.wSkVaW_heroWorkspaceRow{align-items:center;gap:2px;min-width:0;margin-top:4px;padding-left:20px;display:flex}.wSkVaW_root[data-phase=hero] .wSkVaW_scrollBody{justify-content:center;overflow-y:auto}.wSkVaW_root[data-phase=settling] .wSkVaW_composerSeat{visibility:hidden}";
-@@ -6793,7 +15867,17 @@ window.__ModuleLoader__.load({
+@@ -6793,7 +15869,17 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$6;
@@ -10189,7 +10218,7 @@ index 1dd0e89..a7461d9 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15906,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15908,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -10549,7 +10578,7 @@ index 1dd0e89..a7461d9 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +16267,202 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +16269,202 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -10756,7 +10785,7 @@ index 1dd0e89..a7461d9 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +16472,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +16474,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -10768,7 +10797,7 @@ index 1dd0e89..a7461d9 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +16482,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16484,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -10776,7 +10805,7 @@ index 1dd0e89..a7461d9 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +16514,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16516,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -10786,7 +10815,7 @@ index 1dd0e89..a7461d9 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +16533,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16535,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10891,7 +10920,7 @@ index 1dd0e89..a7461d9 100644
  				})]
  			});
  		}
-@@ -6951,6 +16615,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16617,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10923,7 +10952,7 @@ index 1dd0e89..a7461d9 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +16669,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16671,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10944,7 +10973,7 @@ index 1dd0e89..a7461d9 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +16691,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16693,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10968,7 +10997,7 @@ index 1dd0e89..a7461d9 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +16748,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16750,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -10986,7 +11015,7 @@ index 1dd0e89..a7461d9 100644
  				})] })
  			});
  		}
-@@ -7053,14 +16758,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16760,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -11065,7 +11094,7 @@ index 1dd0e89..a7461d9 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16838,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16840,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -11082,7 +11111,7 @@ index 1dd0e89..a7461d9 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16861,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16863,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -11091,7 +11120,7 @@ index 1dd0e89..a7461d9 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16914,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16916,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -11109,7 +11138,7 @@ index 1dd0e89..a7461d9 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16950,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16952,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -11117,7 +11146,7 @@ index 1dd0e89..a7461d9 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17842,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17844,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -11148,7 +11177,7 @@ index 1dd0e89..a7461d9 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17887,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17889,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -11173,7 +11202,7 @@ index 1dd0e89..a7461d9 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18841,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18843,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -11182,7 +11211,7 @@ index 1dd0e89..a7461d9 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18931,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18933,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -11224,7 +11253,7 @@ index 1dd0e89..a7461d9 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +19140,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +19142,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -11241,7 +11270,7 @@ index 1dd0e89..a7461d9 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +19310,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +19312,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -11251,7 +11280,7 @@ index 1dd0e89..a7461d9 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +19352,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +19354,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -11266,7 +11295,7 @@ index 1dd0e89..a7461d9 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +19370,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +19372,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -11279,7 +11308,7 @@ index 1dd0e89..a7461d9 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +19419,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +19421,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -11293,7 +11322,7 @@ index 1dd0e89..a7461d9 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +19457,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +19459,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -11303,7 +11332,7 @@ index 1dd0e89..a7461d9 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,9 +19589,13 @@ window.__ModuleLoader__.load({
+@@ -9764,10 +19591,19 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -11316,9 +11345,15 @@ index 1dd0e89..a7461d9 100644
 +							cwd: sessions.list.getSnapshot().byId[sessionId]?.cwd
 +						}),
  						openFile: (path) => {
++							if (researchSidebar.service?.openFile) {
++								researchSidebar.service.openFile({ sessionId }, path);
++								researchSidebar.service.setPanelState?.({ open: true }, { sessionId });
++								return;
++							}
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
-@@ -9776,6 +19605,8 @@ window.__ModuleLoader__.load({
+ 						},
+@@ -9776,6 +19612,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -11327,7 +11362,7 @@ index 1dd0e89..a7461d9 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +19629,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19636,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -11336,7 +11371,7 @@ index 1dd0e89..a7461d9 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +19655,153 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19662,153 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
