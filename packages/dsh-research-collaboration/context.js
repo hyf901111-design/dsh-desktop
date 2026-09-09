@@ -87,7 +87,7 @@ export function portableReferences(refs = []) {
     for (const k of ['nodeVersion', 'assetVersion', 'size'])
       if (r[k] !== undefined) {
         if (!Number.isSafeInteger(r[k]) || r[k] < 0) fail('INVALID_REFERENCE')
-        out[k] = assertPortableHistoryText(r[k])
+        out[k] = r[k]
       }
     return out
   })

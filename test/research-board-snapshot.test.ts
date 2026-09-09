@@ -513,3 +513,57 @@ it.each([true, false])(
     }
   }
 )
+
+it('preserves numeric accepted reference provenance through portable snapshots while rejecting invalid values and private strings', async () => {
+  const { resolveRequestContext, portableReferences } = await import(
+    '../packages/dsh-research-collaboration/context.js'
+  )
+  const { freezeSnapshot } = await import(
+    '../packages/dsh-research-collaboration/document.js'
+  )
+  const context = resolveRequestContext(
+    {
+      scope: 'references',
+      references: [{ collection: 'files', nodeId: 'f' }]
+    },
+    {
+      files: [
+        { id: 'f', name: 'evidence.txt', assetId: 'asset', assetVersion: 2 }
+      ],
+      artifacts: []
+    },
+    { 'files:f': 1 }
+  )
+  const reference = { ...context.references[0]!, size: 3 }
+  expect(portableReferences([reference])).toEqual([reference])
+  const snapshot = freezeSnapshot({
+    canvas: { files: [], artifacts: [] },
+    history: [
+      { id: 'h', role: 'user', text: '已保存的引用', references: [reference] }
+    ]
+  })
+  expect(snapshot.history[0]!.references).toEqual([reference])
+  for (const key of ['nodeVersion', 'assetVersion', 'size']) {
+    expect(typeof (snapshot.history[0]!.references![0] as any)[key]).toBe(
+      'number'
+    )
+    expect(portableReferences([{ ...reference, [key]: 0 }])[0]).toMatchObject(
+      { [key]: 0 }
+    )
+    for (const value of ['1', -1, 1.5, NaN, Infinity, null, {}]) {
+      expect(() =>
+        portableReferences([{ ...reference, [key]: value }])
+      ).toThrow('INVALID_REFERENCE')
+    }
+  }
+  for (const key of ['name', 'text', 'kind', 'assetId', 'contentType']) {
+    expect(() => portableReferences([{ ...reference, [key]: 3 }])).toThrow(
+      'INVALID_REFERENCE'
+    )
+    expect(() =>
+      portableReferences([
+        { ...reference, [key]: '/private/tmp/private.txt' }
+      ])
+    ).toThrow('PRIVATE_PATH_IN_HISTORY')
+  }
+})
