@@ -9,49 +9,78 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复真实双客户端测试发现的协作生成失败并澄清共享文案",
+        "featureName": "完善研究协作界面、组件工具栏、编辑时间与账户菜单",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
-        "tipCommit": "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff",
+        "baseCommit": "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff",
+        "tipCommit": "36997c54af69ab565f8af3cc634e40bd8bb8a7a5",
         "commits": [
           {
-            "commit": "4d8692299dcde536677b55af55326b3fd2ca7844",
+            "commit": "c17e8860be7c77b2a46e139b4acd5edb7ed528de",
             "parents": [
-              "4a0a5153e535149e6b0bdccfea45e7e2387babda"
+              "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff"
             ],
-            "subject": "记录研究看板云端部署与真实双账户协作验证"
+            "subject": "完善研究看板协作界面并修复生成组件工具栏及编辑时间"
           },
           {
-            "commit": "0caf5904cec3673ee98fc55c0f0f878134cd5ca0",
+            "commit": "36997c54af69ab565f8af3cc634e40bd8bb8a7a5",
             "parents": [
-              "4d8692299dcde536677b55af55326b3fd2ca7844"
+              "c17e8860be7c77b2a46e139b4acd5edb7ed528de"
             ],
-            "subject": "澄清共享画板实时同步与原个人研究的独立关系"
-          },
-          {
-            "commit": "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff",
-            "parents": [
-              "0caf5904cec3673ee98fc55c0f0f878134cd5ca0"
-            ],
-            "subject": "修复协作组件生成的格式规范与一次自动恢复"
+            "subject": "将账户菜单首行改为用户资料并支持详情复制专有ID"
           }
         ],
         "files": [
           {
+            "status": "M",
+            "path": "packages/dsh-research-collaboration/protocol.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-collaboration-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-collaboration-e2e.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/room.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-boards-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
             "status": "A",
-            "path": "docs/research-collaboration-cloud-20260909.md"
-          },
-          {
-            "status": "M",
-            "path": "docs/sherlock-research-collaboration-operations.md"
-          },
-          {
-            "status": "M",
-            "path": "docs/superpowers/specs/2026-09-09-research-boards-collaboration-design.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "src/preload/research-board-presentation.ts"
           },
           {
             "status": "M",
@@ -59,7 +88,23 @@
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "src/shared/research-boards.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/research-boards-browser.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-polish.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-service.test.ts"
           }
         ],
         "checks": [
@@ -67,47 +112,17 @@
             "argv": [
               "node_modules/.bin/vitest",
               "run",
-              "test/research-task-runtime.test.js",
-              "test/research-board-runtime.test.js",
-              "test/research-board-tasks.test.ts",
+              "test/research-board-polish.test.ts",
+              "test/research-board-client-adapter.test.js",
+              "test/research-boards-service.test.ts",
+              "test/research-boards-store.test.ts",
               "test/research-boards-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "真实失败先复现；122项相关检查通过。类型检查也通过。",
-            "verifiedCommit": "dd08b0ee98b4bee6aecbfb0d2401d95085dfa5ff",
-            "completedAt": "2026-09-09T12:18:14.558Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "本次运行时格式契约修复通过直接检查；真实双客户端已复现问题并完成邀请、在线头像、双向拖动和文字同步。修复后的原生生成待集成打包后验证，不声称已通过。共享文案通过7项直接UI检查。"
-        },
-        "acceptanceCriteria": [
-          "协作生成复用完整组件格式规范，HTML采用html字段。",
-          "格式错误最多进行一次无工具恢复；中断或失败不发布部分结果。",
-          "原个人研究与共享副本独立，所有共享成员的修改实时同步。"
-        ],
-        "risks": [
-          "修复后的签名原生包尚待构建和两账号实际模型生成验收。",
-          "当前批次未被用户接受或晋升main，不对外发布。"
-        ],
-        "generatedAt": "2026-09-09T12:18:14.558Z"
-      },
-      "merged": {
-        "mergeCommit": "7200c14dc760bd5caf69b3444bd99693be00e1a1",
-        "verificationCommit": "7200c14dc760bd5caf69b3444bd99693be00e1a1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "7200c14dc760bd5caf69b3444bd99693be00e1a1",
-            "completedAt": "2026-09-09T12:18:35.803Z",
-            "timeoutMs": 600000
+            "summary": "85项聚焦检查通过。",
+            "verifiedCommit": "36997c54af69ab565f8af3cc634e40bd8bb8a7a5",
+            "completedAt": "2026-09-09T13:56:39.114800+00:00",
+            "timeoutMs": 300000
           },
           {
             "argv": [
@@ -116,27 +131,10 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7200c14dc760bd5caf69b3444bd99693be00e1a1",
-            "completedAt": "2026-09-09T12:18:35.803Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "7200c14dc760bd5caf69b3444bd99693be00e1a1",
-            "completedAt": "2026-09-09T12:18:35.803Z",
-            "timeoutMs": 180000
+            "summary": "类型检查通过。",
+            "verifiedCommit": "36997c54af69ab565f8af3cc634e40bd8bb8a7a5",
+            "completedAt": "2026-09-09T13:56:39.114800+00:00",
+            "timeoutMs": 300000
           },
           {
             "argv": [
@@ -146,9 +144,9 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "7200c14dc760bd5caf69b3444bd99693be00e1a1",
-            "completedAt": "2026-09-09T12:18:35.803Z",
+            "summary": "清洁依赖基线双次补丁及打包检查通过，包含工作区模块。",
+            "verifiedCommit": "36997c54af69ab565f8af3cc634e40bd8bb8a7a5",
+            "completedAt": "2026-09-09T13:56:39.114800+00:00",
             "timeoutMs": 300000
           },
           {
@@ -159,13 +157,38 @@
               "browser"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "7200c14dc760bd5caf69b3444bd99693be00e1a1",
-            "completedAt": "2026-09-09T12:18:35.803Z",
+            "summary": "双账号真实渲染流程通过，包括生成组件工具栏、管理弹窗、账户首行与ID复制。",
+            "verifiedCommit": "36997c54af69ab565f8af3cc634e40bd8bb8a7a5",
+            "completedAt": "2026-09-09T13:56:39.114800+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-collaboration-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "D1/DO/WebSocket聚焦验证通过，包括编辑者时间及心跳不更新时间。",
+            "verifiedCommit": "36997c54af69ab565f8af3cc634e40bd8bb8a7a5",
+            "completedAt": "2026-09-09T13:56:39.114800+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-09T12:18:35.803Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "双账号浏览器检查通过，检查浅色邀请与管理弹窗、深色组件选中工具栏、用户菜单和详情ID复制；原生签名客户端仍待集成后构建验证。"
+        },
+        "acceptanceCriteria": [
+          "完成生成组件显示选择工具栏，生成来源可读取HTML和表格内容。",
+          "研究看板与工作区标题右侧折叠，行尾显示实际最后编辑时间，协作管理集中至头像右侧。",
+          "消息和协作管理布局统一，账户菜单首行展示用户名和专有ID并进入可复制ID的账户详情。"
+        ],
+        "risks": [
+          "旧画板没有历史编辑时间字段，首次新编辑后开始显示云端权威时间。",
+          "未打开的共享画板在可见客户端每30秒刷新列表时间，当前画板通过WebSocket实时更新。",
+          "原生包验证待集成后执行；不接受或晋升main，不公开发布。"
+        ],
+        "generatedAt": "2026-09-09T13:56:39.114800+00:00"
       }
     }
   ],
