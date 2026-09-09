@@ -153,7 +153,7 @@ describe('Sherlock standard agent preset policy', () => {
       'utf8'
     )
 
-    expect(source).toContain('.cubgiG_picker{min-width:420px}')
+    expect(source).toContain('.cubgiG_picker{display:inline-flex;min-width:0;flex:none;-webkit-app-region:no-drag}')
     expect(source).toContain('.cubgiG_item{box-sizing:border-box;flex-direction:column;gap:1px;width:376px')
     expect(source).toContain(
       '.cubgiG_itemDesc{color:var(--dsw-alias-label-tertiary);white-space:normal;overflow-wrap:anywhere;font-size:12px;line-height:17px}'
