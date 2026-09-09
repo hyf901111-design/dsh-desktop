@@ -6,6 +6,40 @@ const id = (v) =>
 const fail = (code) => {
   throw new Error(code)
 }
+// Network URLs may legitimately contain /var/... route segments. Exclude only
+// explicit network URLs; file URLs and recognizable machine roots stay private.
+export function assertPortableHistoryText(text) {
+  const withoutUrls = text.replace(/\b(?:https?|ftp):\/\/[^\s<>"']+/gi, '')
+  if (
+    /file:\/\//i.test(withoutUrls) ||
+    /(?:^|[^a-z0-9_])(?:[a-z]:[\\/]|\\\\[^\\\s]+\\|~[\\/]|\/(?:Users|home|private|tmp|var|Volumes|Applications|Library|System|etc|opt|usr|mnt|media|workspace|workspaces|root)\/)/i.test(
+      withoutUrls
+    )
+  )
+    fail('PRIVATE_PATH_IN_HISTORY')
+  return text
+}
+function attachmentDiagnostic(message, event, index, attachment) {
+  const record = id(message?.id)
+    ? message.id
+    : `event-${Number.isSafeInteger(event.seq) ? event.seq : index}`
+  const rawName =
+    attachment.name ??
+    attachment.fileName ??
+    attachment.filename ??
+    attachment.title
+  const name =
+    typeof rawName === 'string'
+      ? rawName
+          .split(/[\\/]/)
+          .pop()
+          .split(/[?#]/)[0]
+          .replace(/[^\p{L}\p{N} ._()（）-]/gu, '')
+          .slice(0, 80)
+          .trim()
+      : ''
+  return `HISTORY_UNSUPPORTED_ATTACHMENT: 消息 ${record}；类型 ${attachment.type}；材料 ${name || '未命名资料'}`
+}
 export function normalizeRequestContext(
   value = { scope: 'board', references: [] }
 ) {
@@ -46,18 +80,14 @@ export function portableReferences(refs = []) {
     const out = { collection: r.collection, nodeId: r.nodeId }
     for (const k of ['name', 'text', 'kind', 'assetId', 'contentType'])
       if (r[k] !== undefined) {
-        if (
-          typeof r[k] !== 'string' ||
-          r[k].length > 16000 ||
-          /(?:file:\/\/|\/Users\/|\/home\/)/.test(r[k])
-        )
+        if (typeof r[k] !== 'string' || r[k].length > 16000)
           fail('INVALID_REFERENCE')
-        out[k] = r[k]
+        out[k] = assertPortableHistoryText(r[k])
       }
     for (const k of ['nodeVersion', 'assetVersion', 'size'])
       if (r[k] !== undefined) {
         if (!Number.isSafeInteger(r[k]) || r[k] < 0) fail('INVALID_REFERENCE')
-        out[k] = r[k]
+        out[k] = assertPortableHistoryText(r[k])
       }
     return out
   })
@@ -118,8 +148,7 @@ function unwrap(text) {
       body += match[1] === 'FILE_REFERENCE_V1' ? file(value) : artifact(value)
     cursor = end + 1
   }
-  if (/(?:file:\/\/|\/Users\/|\/home\/)/.test(body))
-    fail('PRIVATE_PATH_IN_HISTORY')
+  assertPortableHistoryText(body)
   return { text: body, references: portableReferences(refs) }
 }
 export function exportHumanHistory(events) {
@@ -134,12 +163,11 @@ export function exportHumanHistory(events) {
       message = e.data?.message
       role = 'assistant'
     } else continue
-    if (
-      (message?.content ?? []).some((b) =>
-        ['image', 'audio', 'video', 'file'].includes(b?.type)
-      )
+    const attachment = (message?.content ?? []).find((b) =>
+      ['image', 'audio', 'video', 'file'].includes(b?.type)
     )
-      fail('HISTORY_UNSUPPORTED_ATTACHMENT')
+    if (attachment)
+      fail(attachmentDiagnostic(message, e, result.length, attachment))
     const text = (message?.content ?? [])
       .filter((b) => b?.type === 'text' && typeof b.text === 'string')
       .map((b) => b.text)

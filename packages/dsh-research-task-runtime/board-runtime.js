@@ -11,6 +11,7 @@ export class SharedExecutionRuntime {
     this.tasks = {}
     this.controllers = new Map()
     this.flights = new Map()
+    this.disposed = false
   }
   async restore() {
     this.tasks = (await this.storage.load()) ?? {}
@@ -22,6 +23,7 @@ export class SharedExecutionRuntime {
     await this.storage.save(this.tasks)
   }
   async start(request) {
+    if (this.disposed) throw Error('RUNTIME_STOPPED')
     const { taskId, sessionId, kind, prompt } = request
     if (
       !/^[\w:.-]{1,128}$/.test(taskId) ||
@@ -39,33 +41,49 @@ export class SharedExecutionRuntime {
       return this.inspect(taskId)
     }
     const task = { taskId, sessionId, kind, fingerprint, status: 'queued' }
-    this.tasks[taskId] = task
-    await this.storage.save(this.tasks)
     const controller = new AbortController()
+    this.tasks[taskId] = task
     this.controllers.set(taskId, controller)
-    task.status = 'running'
-    await this.storage.save(this.tasks)
-    const run = (async () => {
-      try {
-        const text = await this.execute(request, controller.signal)
-        if (controller.signal.aborted) return
-        if (typeof text !== 'string' || !text.trim())
-          throw Error('EMPTY_OUTPUT')
-        task.text = text
-        task.status = 'completed'
-      } catch (error) {
-        if (task.status === 'running') {
-          task.status = 'failed'
-          task.error = error instanceof Error ? error.message : '执行失败'
+    const owns = (status) =>
+      !this.disposed &&
+      !controller.signal.aborted &&
+      this.tasks[taskId] === task &&
+      this.controllers.get(taskId) === controller &&
+      task.status === status
+    let launched = false
+    try {
+      await this.storage.save(this.tasks)
+      if (!owns('queued')) return this.inspect(taskId)
+      task.status = 'running'
+      await this.storage.save(this.tasks)
+      if (!owns('running')) return this.inspect(taskId)
+      const run = (async () => {
+        try {
+          const text = await this.execute(request, controller.signal)
+          if (!owns('running')) return
+          if (typeof text !== 'string' || !text.trim())
+            throw Error('EMPTY_OUTPUT')
+          task.text = text
+          task.status = 'completed'
+        } catch (error) {
+          if (owns('running')) {
+            task.status = 'failed'
+            task.error = error instanceof Error ? error.message : '执行失败'
+          }
+        } finally {
+          if (this.controllers.get(taskId) === controller)
+            this.controllers.delete(taskId)
+          await this.storage.save(this.tasks)
         }
-      } finally {
+      })()
+      launched = true
+      this.flights.set(taskId, run)
+      void run.finally(() => this.flights.delete(taskId))
+      return this.inspect(taskId)
+    } finally {
+      if (!launched && this.controllers.get(taskId) === controller)
         this.controllers.delete(taskId)
-        await this.storage.save(this.tasks)
-      }
-    })()
-    this.flights.set(taskId, run)
-    void run.finally(() => this.flights.delete(taskId))
-    return this.inspect(taskId)
+    }
   }
   inspect(id) {
     const t = this.tasks[id]
@@ -84,6 +102,7 @@ export class SharedExecutionRuntime {
     return this.inspect(id)
   }
   async dispose() {
+    this.disposed = true
     for (const id of this.controllers.keys()) await this.cancel(id)
     await Promise.allSettled(this.flights.values())
   }

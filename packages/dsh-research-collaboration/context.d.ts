@@ -34,3 +34,5 @@ export function resolveRequestContext(
 export function historyAssetIds(history?: any[]): string[]
 
 export function portableAssetIds(value: unknown): string[]
+
+export function assertPortableHistoryText(text: string): string

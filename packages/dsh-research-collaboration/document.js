@@ -1,4 +1,4 @@
-import { portableReferences } from './context.js'
+import { portableReferences, assertPortableHistoryText } from './context.js'
 import * as Y from 'yjs'
 import { LIMITS } from './protocol.js'
 const collections = ['files', 'artifacts']
@@ -268,7 +268,7 @@ export function freezeSnapshot(input) {
   const history = (input.history ?? []).map((m, i) => ({
     id: String(m.id ?? `history-${i}`),
     role: m.role === 'assistant' ? 'assistant' : 'user',
-    text: String(m.text ?? ''),
+    text: assertPortableHistoryText(String(m.text ?? '')),
     ...(m.references ? { references: portableReferences(m.references) } : {}),
     ...(typeof m.authorName === 'string' ? { authorName: m.authorName } : {}),
     ...(typeof m.createdAt === 'number' ? { createdAt: m.createdAt } : {})

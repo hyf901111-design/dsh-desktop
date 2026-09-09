@@ -119,7 +119,7 @@ export class ResearchBoardIntegration {
           RESOURCE_UNAVAILABLE: '引用资料无法授权或已丢失',
           HISTORY_TOO_LARGE: '完整研究对话超过共享上限，未截断上传',
           HISTORY_UNSUPPORTED_ATTACHMENT:
-            '研究对话含暂不支持共享的附件，未遗漏上传',
+            '研究对话含暂不支持共享的附件，整份研究未上传。请将所需附件加入画板文件，并改用纯文本研究后共享',
           HISTORY_UNSAVED: '研究对话尚未完整保存',
           ASSET_SIZE_LIMIT: '引用文件超过 50 MiB 上限',
           SOURCE_CHANGED: '原研究在保存期间改变，请重新预览',

@@ -200,3 +200,54 @@ it('legacy shared session authority rejects before model work, including histori
     await new Promise((r) => server.close(r))
   }
 })
+
+for (const boundary of [1, 2])
+  for (const action of ['cancel', 'dispose']) {
+    it(`never executes after ${action} during startup save ${boundary}`, async () => {
+      let saves = 0,
+        release,
+        reached,
+        calls = 0
+      const atBoundary = new Promise((r) => (reached = r))
+      const gate = new Promise((r) => (release = r))
+      const runtime = new SharedExecutionRuntime({
+        storage: {
+          load: async () => ({}),
+          save: async () => {
+            if (++saves === boundary) {
+              reached()
+              await gate
+            }
+          }
+        },
+        execute: async () => {
+          calls++
+          return 'must not execute'
+        }
+      })
+      const start = runtime.start({
+        taskId: 'race',
+        sessionId: 's',
+        kind: 'qa',
+        prompt: 'question'
+      })
+      await atBoundary
+      const cancelled =
+        action === 'cancel' ? runtime.cancel('race') : runtime.dispose()
+      const statusAfterCancel = runtime.inspect('race').status
+      release()
+      await Promise.all([start, cancelled])
+      expect(statusAfterCancel).toBe('interrupted')
+      expect(calls).toBe(0)
+      expect(runtime.inspect('race').status).toBe('interrupted')
+      await runtime
+        .start({
+          taskId: 'race',
+          sessionId: 's',
+          kind: 'qa',
+          prompt: 'question'
+        })
+        .catch(() => {})
+      expect(calls).toBe(0)
+    })
+  }

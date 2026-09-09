@@ -6,7 +6,7 @@ import {
   writeFileSync,
   renameSync
 } from 'node:fs'
-import { join } from 'node:path'
+import { join, extname } from 'node:path'
 import { stat } from 'node:fs/promises'
 import { FrozenBoardFiles, type FrozenFile } from './research-board-assets'
 import { digest } from './research-board-request-journal'
@@ -20,6 +20,45 @@ import type {
   Snapshot,
   BoardSnapshot
 } from '../../shared/research-boards'
+function copiedAssetName(response: Response, references: any[]): string {
+  const disposition = response.headers.get('content-disposition') ?? ''
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1]
+  let assetName: string | undefined
+  if (encoded) {
+    try {
+      assetName = decodeURIComponent(encoded.trim())
+    } catch {}
+  }
+  if (!assetName) assetName = /filename="([^"\r\n]+)"/i.exec(disposition)?.[1]
+  // Asset metadata is authoritative; canvas filenames precede display-only
+  // generation-source titles. One owned file serves every reference to its ID.
+  const names = [assetName, ...references.flatMap((n) => [n.name, n.title])]
+    .filter((name): name is string => typeof name === 'string')
+    .map((name) =>
+      name
+        .split(/[\\/]/)
+        .pop()!
+        .replace(/[\x00-\x1f]/g, '')
+        .trim()
+    )
+    .filter((name) => name && name !== '.' && name !== '..')
+  const original = names.find((name) => extname(name).length > 1)
+  if (original) return original
+  const contentType = response.headers
+    .get('content-type')
+    ?.split(';')[0]
+    ?.trim()
+  const suffix: Record<string, string> = {
+    'text/plain': '.txt',
+    'text/csv': '.csv',
+    'text/markdown': '.md',
+    'application/json': '.json',
+    'application/pdf': '.pdf',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+      '.pptx'
+  }
+  return (names[0] ?? '研究资料') + (suffix[contentType ?? ''] ?? '')
+}
 type Options = {
   root: string
   readCanvas(sessionId: string): Canvas
@@ -335,11 +374,11 @@ export class ResearchBoardSnapshots {
       }
       const assets: Record<string, FrozenFile> = {}
       const refs = [
+        ...snap.canvas.files,
+        ...snap.history.flatMap((h: any) => h.references ?? []),
         ...snap.canvas.artifacts.flatMap(
           (n: any) => n.generationSources ?? []
-        ),
-        ...snap.canvas.files,
-        ...snap.history.flatMap((h: any) => h.references ?? [])
+        )
       ]
       for (const n of refs) {
         if (!n.assetId || assets[String(n.assetId)]) continue
@@ -352,7 +391,10 @@ export class ResearchBoardSnapshots {
         this.options.authorize(input.accountId, input.boardId, epoch)
         assets[String(n.assetId)] = await this.files.download(
           response,
-          String(n.name ?? '研究资料'),
+          copiedAssetName(
+            response,
+            refs.filter((ref: any) => ref.assetId === n.assetId)
+          ),
           input.signal
         )
       }
