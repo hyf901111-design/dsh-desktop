@@ -17,6 +17,11 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '0.9.4',
+      date: '2026-09-09',
+      items: ["历史消息将文件显示为行内标签，与句子自然排列和换行，隐藏文件路径", "点击历史文件标签可展开右侧侧边屏并预览会话已附带的文件", "统一模式标签与菜单图标，已有聊天和研究顶部支持在任务空闲时切换模式", "缩小拖入研究画板的文件组件标题字号，改善长文件名显示", "增加无法预览文件卡片的图标留白，将组件右上角操作按钮向右调整", "隐藏研究组件及内嵌内容的滚动条，保留正常滚动操作"]
+    },
+    {
       version: '0.9.3',
       date: '2026-09-08',
       items: ["画布容器和语音创建接入金融查数工具，可按需求查询股票、指数、ETF 和基金数据", "金融组件优先使用结构化行情数据，明确行情时间、数据口径及缺失或暂不支持的能力", "模式选择菜单增加图标，优化当前选中项的背景与布局", "缩小发送按钮，优化输入区域的视觉比例", "优化智能容器表单，提亮输入框背景、收紧间距并使用通栏创建按钮", "移除容器组件顶部的派生功能栏，增大组件生成过程的状态文字"]
@@ -234,6 +239,11 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '0.9.4',
+      date: '2026-09-09',
+      items: ["Display attached files as inline history tags with natural text wrapping and no file paths", "Open attached history files in the right sidebar for preview", "Match mode icons and enable mode switching in existing chats and Research while idle", "Reduce title size for files dropped onto the Research canvas", "Improve unsupported file card padding and move component actions to the right", "Hide Research component scrollbars while preserving content scrolling"]
+    },
     {
       version: '0.9.3',
       date: '2026-09-08',
