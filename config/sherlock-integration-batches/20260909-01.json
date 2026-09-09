@@ -12,7 +12,7 @@
         "featureName": "研究看板收藏、独立共享与可撤销实时协作",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "d09e03e7cdd128bff832031468ebb9b64c40ce4a",
-        "tipCommit": "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
+        "tipCommit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
         "commits": [
           {
             "commit": "00480c0cc33047756afcc3b4ff0c9d58c6ab4550",
@@ -175,6 +175,13 @@
               "670742008597fd633e0d7742d080a8d17ff9c706"
             ],
             "subject": "补齐研究协作模块的本地打包入口声明"
+          },
+          {
+            "commit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
+            "parents": [
+              "f9b2b351b840abbdcb5960bcfcdf92086c15f8da"
+            ],
+            "subject": "修复已安装协作界面补丁的重复校验与入口漂移检查"
           }
         ],
         "boundaryParents": [
@@ -469,21 +476,23 @@
               "diff",
               "--exit-code",
               "670742008597fd633e0d7742d080a8d17ff9c706",
-              "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
+              "4a0a5153e535149e6b0bdccfea45e7e2387babda",
               "--",
               ".",
-              ":!packages/dsh-research-collaboration/package.json"
+              ":!packages/dsh-research-collaboration/package.json",
+              ":!scripts/lib/patch-research-board-client.mjs",
+              ":!test/research-board-client-adapter.test.js"
             ],
             "outcome": "passed",
-            "summary": "Only collaboration package main declaration changed. Real localDependencyProblems check, four existing local-dependency tests, and typecheck passed on this exact content before commit. Prior renderer/browser/functional evidence is retained at6707420; unchanged source proved by this scope check. Native package verification will be performed in the integration checkout.",
-            "verifiedCommit": "f9b2b351b840abbdcb5960bcfcdf92086c15f8da",
-            "completedAt": "2026-09-09T11:11:26.452897+00:00",
+            "summary": "Only package entry declaration and already-patched input anchor validation changed. Real dependency check, four local dependency cases and typecheck passed; drift reproduced RED, then all25 adapter cases passed before commit. Other functionality and rendering source unchanged. Full declared integration checks and native packaging remain required.",
+            "verifiedCommit": "4a0a5153e535149e6b0bdccfea45e7e2387babda",
+            "completedAt": "2026-09-09T11:15:31.753054+00:00",
             "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Prior real renderer evidence at6707420 remains applicable to unchanged frontend input; only package main entry declaration changed. Native app validation belongs to integration batch20260909-01."
+          "summary": "Existing real renderer evidence retained; 25 direct adapter checks verify idempotent transformed input and drift rejection after the correction. Integration batch will execute fresh source and browser verification."
         },
         "acceptanceCriteria": [
           "常用研究入口固定在工作区上方；共享创建独立副本，包含经授权冻结的画布、保存历史与文件。",
@@ -497,7 +506,7 @@
           "验证按改动范围组合；原338项聚合和首次最终修复browser失败记录保留，不称一次全部重跑通过。",
           "超过协议限额或不支持的嵌入式历史附件会明确拒绝；原恢复基线失效时要求重试，避免覆盖新修改。"
         ],
-        "generatedAt": "2026-09-09T11:11:26.452897+00:00"
+        "generatedAt": "2026-09-09T11:15:31.753054+00:00"
       }
     }
   ],
