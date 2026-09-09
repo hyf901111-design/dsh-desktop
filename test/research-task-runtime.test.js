@@ -1834,6 +1834,11 @@ it('default shared executor uses the production subagent adapter for QA and nati
         'web_search'
       ])
       expect(request.persona).toContain(kind === 'qa' ? '直接回答' : '画布')
+      if (kind === 'container') {
+        // The model must receive the accepted HTML field and sandbox contract.
+        expect(request.prompt[0].text).toContain('"type": "html", "title": "标题", "html":');
+        expect(request.prompt[0].text).toContain('innerHTML');
+      }
       expect(parent.prompt).not.toHaveBeenCalled()
       expect(parent.session.events).toHaveLength(0)
       expect(run.dispose).toHaveBeenCalledTimes(1)
@@ -1841,4 +1846,54 @@ it('default shared executor uses the production subagent adapter for QA and nati
       await executor.dispose()
     }
   }
+})
+
+it('shared component generation repairs a malformed HTML response once without repeating research', async () => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  const parent = { id: 'shared-parent', session: { events: [] } }
+  const child = { id: 'child', session: { id: 'child', events: [] } }
+  const html = '<!doctype html><html><body><p>协作计数器</p><button>加一</button></body></html>'
+  const valid = JSON.stringify({ version: 1, type: 'html', title: '计数器', html })
+  const malformed = JSON.stringify({ version: 1, type: 'html', title: '计数器', content: html })
+  const run = (text) => ({ id: 'child', localAgent: child, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text }] }), dispose: vi.fn(async () => {}) })
+  const first = run(malformed), second = run(valid)
+  const ctx = sessionEventContext(parent, child, first)
+  ctx.subagents.start.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+  const executor = createSharedBoardExecutor(ctx)
+  try {
+    expect(JSON.parse(await executor.execute({ sessionId: parent.id, kind: 'container', prompt: '生成一个离线计数器', files: [] }, new AbortController().signal))).toMatchObject({ type: 'html', html })
+    expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
+    const repair = ctx.subagents.start.mock.calls[1][1]
+    expect(repair.toolFilter.allow).toEqual([])
+    expect(repair.prompt[0].text).toContain(JSON.stringify(malformed))
+    expect(first.dispose).toHaveBeenCalledTimes(1)
+    expect(second.dispose).toHaveBeenCalledTimes(1)
+  } finally { await executor.dispose() }
+})
+
+it('shared component generation stops after one invalid repair and does not return malformed content', async () => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  const parent = { id: 'shared-parent', session: { events: [] } }
+  const child = { id: 'child', session: { id: 'child', events: [] } }
+  const run = { id: 'child', localAgent: child, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: '{"version":1,"type":"html","content":"broken"}' }] }), dispose: vi.fn(async () => {}) }
+  const ctx = sessionEventContext(parent, child, run)
+  const executor = createSharedBoardExecutor(ctx)
+  try {
+    await expect(executor.execute({ sessionId: parent.id, kind: 'container', prompt: '创建组件', files: [] }, new AbortController().signal)).rejects.toMatchObject({ code: 'INVALID_OUTPUT' })
+    expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
+  } finally { await executor.dispose() }
+})
+
+it.each(['aborted', 'error'])('shared generation does not repair or publish %s responses with partial content', async (stopReason) => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  const parent = { id: 'shared-parent', session: { events: [] } }
+  const child = { id: 'child', session: { id: 'child', events: [] } }
+  const run = { id: 'child', localAgent: child, result: Promise.resolve({ stopReason, output: [{ type: 'text', text: '{"version":1,"type":"markdown","title":"部分结果","content":"尚未完成"}' }] }), dispose: vi.fn(async () => {}) }
+  const ctx = sessionEventContext(parent, child, run)
+  const executor = createSharedBoardExecutor(ctx)
+  try {
+    await expect(executor.execute({ sessionId: parent.id, kind: 'container', prompt: '创建组件', files: [] }, new AbortController().signal)).rejects.toThrow('EXECUTION_INTERRUPTED')
+    expect(ctx.subagents.start).toHaveBeenCalledTimes(1)
+    expect(run.dispose).toHaveBeenCalledTimes(1)
+  } finally { await executor.dispose() }
 })
