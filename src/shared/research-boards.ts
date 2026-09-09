@@ -25,7 +25,7 @@ export type Member = {
   version?: number
 }
 export type Presence = Member & {
-  cursor?: { x: number; y: number }
+  cursor?: { x: number; y: number } | null
   selectedIds?: string[]
 }
 export type SharedMessage = {

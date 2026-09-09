@@ -48,3 +48,32 @@ Used an already-cached Prettier executable with single quotes, no semicolons and
 - Undo history and deletion node payloads live only in the authorized main-process runtime. Deletion undo returns `DELETION_RECOVERY_REQUIRED`; explicit recovery restores fresh IDs/remaps copied-node relations. After restart only the durable own deletion description remains, so an old runtime's node-payload recovery returns `RECOVERY_UNAVAILABLE` rather than pretending to resurrect a tombstoned ID. Pending authored changes and ordinary recovery journals are durable across restart.
 - Revision retention is bounded (128 issued states, 256 in-memory mutation replies). Unknown old bases return STALE_CANVAS_REVISION; persisted duplicate mutations whose prior reply was evicted return MUTATION_ALREADY_APPLIED. The page must preserve its draft rather than retry against an unrelated merged revision.
 - No deployment, shared-client installation, production account access or user acceptance is claimed. This commit is ready for the controller's Task 2 review.
+
+
+## Bounded review fixes — 2026-09-09
+
+Review base: `d607aa0f1c19f588678b346ba172d6e0f1448e7b`. Addressed all four Important findings from `task-2-review.md` in one scoped round, without Task 3/4 implementation or changes to the accepted server protocol.
+
+- Added per-board access generations captured before HTTP loads and ACK checkpoint reads. Revocation and revalidation invalidate coalesced loads and old callbacks before awaiting work. A stale response cannot restore runtime content, write a revoked checkpoint, or retire newer authorization. Independently initiated successful reauthorization remains possible, even while a previous load is still pending.
+- Kept revalidating/revoked or aborted runtimes fail-closed after network errors in both verification and refresh. Ordinary offline state is only used for a still-authorized lifetime; reads and edits additionally require a live board signal.
+- Added a latest activation token incremented on every activation, including null. Superseded activation returns null and cannot override a later board or create a stale presence subscription. Event subscriptions also carry account, access and activation lifetimes.
+- Resumed an asset-backed create whose successful response was lost by probing the existing staged upload and replaying the persisted frozen board.create body when upload.create returns boardId. This does not recapture a changed original or attempt an upload into UPLOAD_CLOSED.
+- Aligned presence with the accepted worker contract: cursor can be null and selectedIds is capped at 100 transient hints. The 1000 canvas-node limit is unchanged.
+
+### RED / GREEN evidence
+
+Tool-clock timestamps on 2026-09-09:
+
+- 13:07:13: service suite had **7 new failing / 18 existing passing** tests. Realistic triggers covered a held pre-revoke board GET, held ACK checkpoint GET, failed access verification followed by failed refresh, sibling pre-revalidation GET, delayed A then null, delayed A then B, and successful asset create with lost response.
+- 13:09:25: authority/activation changes yielded **24 passing / 1 remaining failing** (asset-create resume).
+- 13:10:32: frozen staged-create resume yielded **25 passing**.
+- 13:11:14: added presence-boundary test failed because cursor:null was rejected.
+- 13:11:44 final focused run: **2 files / 29 tests passed**; Node TypeScript check and whitespace diff check passed. The authority tests also prove that a later explicitly valid authorization succeeds after the stale response is discarded; the activation tests assert only the latest board retains an open presence watcher.
+
+```sh
+node_modules/.bin/vitest run test/research-boards-service.test.ts test/collaboration-client.test.ts
+node_modules/.bin/tsc --noEmit -p tsconfig.node.json
+git diff --check
+```
+
+Used the existing cached formatter on the four changed TypeScript files. Contract/report changes followed validation and do not change execution. No full suite, dependency change, application build/launch, push or deploy was performed. This fix commit is ready for scoped re-review of the four findings and related presence cleanup.

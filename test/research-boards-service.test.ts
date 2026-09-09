@@ -45,6 +45,11 @@ function make(hooks?: ResearchBoardHooks) {
   let seq = 0
   let revoked = false
   const listeners = new Set<(e: any) => void>()
+  const watches: Array<{
+    scope: any
+    listener: (event: any) => void
+    closed: boolean
+  }> = []
   const accountListeners = new Set<() => void>()
   const receipts = new Map<string, any>()
   const sent: any[] = []
@@ -145,9 +150,14 @@ function make(hooks?: ResearchBoardHooks) {
       }
       throw Error('Unexpected endpoint ' + e.kind)
     },
-    watch: (_scope: any, fn: (e: any) => void) => {
+    watch: (scope: any, fn: (e: any) => void) => {
+      const watch = { scope, listener: fn, closed: false }
+      watches.push(watch)
       listeners.add(fn)
-      return () => listeners.delete(fn)
+      return () => {
+        watch.closed = true
+        listeners.delete(fn)
+      }
     },
     stop: () => {},
     sendPresence: () => {}
@@ -170,6 +180,10 @@ function make(hooks?: ResearchBoardHooks) {
     account,
     snapshot,
     listeners,
+    watches,
+    allow: () => {
+      revoked = false
+    },
     accountListeners,
     dir,
     setRole: (r: 'owner' | 'editor' | 'viewer') => {
@@ -847,4 +861,314 @@ it('aborts board resource hooks on revocation and rejects their late completion'
     error: { code: 'ACCESS_DENIED' }
   })
   expect(t.sent).toHaveLength(0)
+})
+
+it('rejects a pre-revocation GET and permits independently requested later reauthorization', async () => {
+  const t = make()
+  await ready(t)
+  const base = t.client.request
+  let release!: (value: any) => void
+  let hold = true
+  t.client.request = async (e) => {
+    const response = await base(e)
+    if (hold && e.kind === 'board.get') {
+      hold = false
+      return new Promise((r) => {
+        release = () => r(response)
+      })
+    }
+    return response
+  }
+  const opening = t.service.invoke('board.open', { boardId: 'board' })
+  await new Promise((r) => setImmediate(r))
+  t.revoke()
+  await t.service.refresh()
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
+  expect(t.store.account('u').checkpoints.board).toBeUndefined()
+  t.allow()
+  expect((await t.service.invoke('board.open', { boardId: 'board' })).ok).toBe(
+    true
+  )
+  release(null)
+  expect(await opening).toMatchObject({
+    ok: false,
+    error: { code: 'BOARD_ACCESS_CHANGED' }
+  })
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(true)
+  expect(t.store.account('u').checkpoints.board!.board.sharingEpoch).toBe(2)
+})
+
+it('discards an ACK checkpoint read produced before membership revocation', async () => {
+  const t = make()
+  const view = await ready(t)
+  const base = t.client.request
+  let commandAccepted = false
+  let held = false
+  let release!: (value: any) => void
+  t.client.request = async (e) => {
+    const response = await base(e)
+    if (e.kind === 'board.command') commandAccepted = true
+    else if (e.kind === 'board.get' && commandAccepted && !held) {
+      held = true
+      return new Promise((r) => {
+        release = () => r(response)
+      })
+    }
+    return response
+  }
+  const canvas = structuredClone(view.canvas)
+  canvas.artifacts[0]!.excerpt = 'abc own'
+  await t.service.invoke('canvas.apply', {
+    boardId: 'board',
+    localSessionId: 'shared-session',
+    baseRevision: view.canvasRevision,
+    clientMutationId: 'ack-revoke',
+    canvas
+  })
+  for (let i = 0; i < 30 && !held; i++)
+    await new Promise((r) => setImmediate(r))
+  expect(held).toBe(true)
+  t.revoke()
+  // Refresh retires access before it waits on the already-running flush.
+  const refreshing = t.service.refresh()
+  for (
+    let i = 0;
+    i < 30 && t.service.getSnapshot().current!.permissions.read;
+    i++
+  )
+    await new Promise((r) => setImmediate(r))
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
+  release(null)
+  await t.service.flush()
+  await refreshing
+  expect(t.store.account('u').checkpoints.board).toBeUndefined()
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
+  t.allow()
+  expect((await t.service.invoke('board.open', { boardId: 'board' })).ok).toBe(
+    true
+  )
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(true)
+})
+
+it('keeps revalidation fail-closed across permission GET and scheduled refresh network failures', async () => {
+  const t = make()
+  await ready(t)
+  t.setOnline(false)
+  const watch = t.watches.find((w) => w.scope.scope === 'board' && !w.closed)!
+  watch.listener({ type: 'accessRevoked', reason: 'ACCESS_DENIED' })
+  await new Promise((r) => setImmediate(r))
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
+  await t.service.refresh()
+  expect(t.service.getSnapshot().current).toMatchObject({
+    connection: 'revalidating',
+    permissions: { read: false, edit: false },
+    canvas: { files: [], artifacts: [] }
+  })
+  t.setOnline(true)
+  expect((await t.service.invoke('board.open', { boardId: 'board' })).ok).toBe(
+    true
+  )
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(true)
+})
+
+it('invalidates older loads when a new permission revalidation begins', async () => {
+  const t = make()
+  await ready(t)
+  const base = t.client.request
+  let release!: (value: any) => void
+  let hold = true
+  t.client.request = async (e) => {
+    const response = await base(e)
+    if (hold && e.kind === 'board.get') {
+      hold = false
+      return new Promise((r) => {
+        release = () => r(response)
+      })
+    }
+    return response
+  }
+  const opening = t.service.invoke('board.open', { boardId: 'board' })
+  await new Promise((r) => setImmediate(r))
+  t.setOnline(false)
+  t.watches
+    .find((w) => w.scope.scope === 'board' && !w.closed)!
+    .listener({ type: 'accessRevoked', reason: 'ACCESS_DENIED' })
+  await new Promise((r) => setImmediate(r))
+  release(null)
+  expect(await opening).toMatchObject({
+    ok: false,
+    error: { code: 'BOARD_ACCESS_CHANGED' }
+  })
+  expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
+})
+
+it('a delayed activation cannot override a later leave or leak a presence socket', async () => {
+  const t = make()
+  await ready(t)
+  const base = t.client.request
+  let release!: (value: any) => void
+  t.client.request = async (e) => {
+    const response = await base(e)
+    if (e.kind === 'board.get')
+      return new Promise((r) => {
+        release = () => r(response)
+      })
+    return response
+  }
+  const activating = t.service.invoke('board.activate', {
+    localSessionId: 'shared-session'
+  })
+  await new Promise((r) => setImmediate(r))
+  await t.service.invoke('board.activate', { localSessionId: null })
+  release(null)
+  await activating
+  expect(t.service.getSnapshot().current).toBe(null)
+  expect(
+    t.watches.filter((w) => w.scope.scope === 'board' && !w.closed)
+  ).toHaveLength(0)
+})
+
+it('a delayed A activation cannot override the newer B activation', async () => {
+  const t = make()
+  await ready(t)
+  const base = t.client.request
+  let holdA = false
+  let release!: (value: any) => void
+  t.client.request = async (e) => {
+    if (e.kind === 'board.get' && e.boardId === 'board-b')
+      return {
+        ...t.snapshot(),
+        board: { ...t.snapshot().board, boardId: 'board-b' }
+      } as any
+    const response = await base(e)
+    if (holdA && e.kind === 'board.get' && e.boardId === 'board')
+      return new Promise((r) => {
+        release = () => r(response)
+      })
+    return response
+  }
+  const opened: any = await t.service.invoke('board.open', {
+    boardId: 'board-b'
+  })
+  await t.service.invoke('board.bind', {
+    boardId: 'board-b',
+    reservationId: opened.value.reservationId,
+    localSessionId: 'session-b'
+  })
+  holdA = true
+  const a = t.service.invoke('board.activate', {
+    localSessionId: 'shared-session'
+  })
+  await new Promise((r) => setImmediate(r))
+  await t.service.invoke('board.activate', { localSessionId: 'session-b' })
+  release(null)
+  await a
+  expect(t.service.getSnapshot().current!.boardId).toBe('board-b')
+  expect(
+    t.watches
+      .filter((w) => w.scope.scope === 'board' && !w.closed)
+      .map((w) => w.scope.boardId)
+  ).toEqual(['board-b'])
+})
+
+it('resumes a committed staged creation after losing its ACK without reopening its frozen source or closed upload', async () => {
+  let captures = 0
+  const assetId = '00000000-0000-4000-8000-000000000001'
+  const t = make({
+    captureOriginal: async () => {
+      captures++
+      if (captures > 1) throw Error('Original source no longer available')
+      return {
+        sourceRevision: 'frozen-assets',
+        capturedAt: '2026-09-09T00:00:00.000Z',
+        snapshot: {
+          canvas: {
+            files: [{ id: 'file', name: 'document.txt', assetId }],
+            artifacts: []
+          },
+          history: []
+        },
+        assets: [
+          {
+            assetId,
+            name: 'document.txt',
+            contentType: 'text/plain',
+            size: 4,
+            open: async () => new Blob(['data'])
+          }
+        ]
+      }
+    }
+  })
+  const base = t.client.request
+  let committed = false
+  let stageCount = 0
+  const bodies: any[] = []
+  t.client.request = async (e) => {
+    if (e.kind === 'upload.create')
+      return {
+        uploadId: 'upload',
+        boardId: committed ? 'created-board' : null
+      } as any
+    if (e.kind === 'asset.stage') {
+      stageCount++
+      if (committed)
+        throw Object.assign(Error('closed'), {
+          code: 'UPLOAD_CLOSED',
+          status: 409
+        })
+      return { assetId } as any
+    }
+    if (e.kind === 'board.create') {
+      bodies.push(structuredClone(e.body))
+      if (!committed) {
+        committed = true
+        throw Object.assign(Error('lost response'), {
+          code: 'NETWORK_ERROR',
+          retryable: true
+        })
+      }
+      return {
+        board: { ...t.snapshot().board, boardId: 'created-board' }
+      } as any
+    }
+    return base(e)
+  }
+  await t.service.start()
+  const favorite = t.store.addFavorite({
+    sessionId: 'original',
+    title: 'Original'
+  })
+  expect(
+    (
+      await t.service.invoke('board.create', {
+        favoriteId: favorite.favoriteId
+      })
+    ).ok
+  ).toBe(false)
+  expect(
+    await t.service.invoke('board.create', { favoriteId: favorite.favoriteId })
+  ).toMatchObject({ ok: true, value: { board: { boardId: 'created-board' } } })
+  expect(captures).toBe(1)
+  expect(stageCount).toBe(1)
+  expect(bodies[1]).toEqual(bodies[0])
+  expect(t.store.account('u').creates[favorite.favoriteId]).toBeUndefined()
+})
+
+it('accepts a cleared presence cursor and enforces the 100-node transient selection hint limit', async () => {
+  const t = make()
+  await ready(t)
+  expect(
+    await t.service.invoke('presence.update', {
+      boardId: 'board',
+      cursor: null,
+      selectedIds: Array.from({ length: 100 }, (_, i) => `n-${i}`)
+    })
+  ).toMatchObject({ ok: true })
+  expect(
+    await t.service.invoke('presence.update', {
+      boardId: 'board',
+      selectedIds: Array.from({ length: 101 }, (_, i) => `n-${i}`)
+    })
+  ).toMatchObject({ ok: false, error: { code: 'INVALID_REQUEST' } })
 })

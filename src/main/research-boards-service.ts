@@ -59,6 +59,12 @@ type IdentityAccount = Pick<
   CollaborationAccount,
   'generation' | 'authenticated' | 'subscribeSessionChanged'
 >
+type BoardAccessContext = {
+  generation: number
+  userId: string
+  boardId: string
+  accessGeneration: number
+}
 export type CapturedAsset = {
   assetId: string
   name: string
@@ -352,6 +358,7 @@ export class ResearchBoardsService {
   readonly client: CollaborationClient
   private accountView: AccountView
   private readonly boards = new Map<string, RuntimeBoard>()
+  private readonly boardAccessGenerations = new Map<string, number>()
   private readonly listeners = new Set<(event: ResearchBoardsEvent) => void>()
   private readonly reservations = new Map<
     string,
@@ -360,6 +367,7 @@ export class ResearchBoardsService {
   private readonly opening = new Map<string, Promise<RuntimeBoard>>()
   private readonly creating = new Map<string, Promise<unknown>>()
   private currentBoard: string | null = null
+  private activationVersion = 0
   private activeDispose?: () => void
   private notificationsDispose?: () => void
   private accountDispose: () => void
@@ -458,6 +466,69 @@ export class ResearchBoardsService {
     )
       throw new ResearchBoardsError('SESSION_CHANGED')
   }
+  private boardContext(boardId: string): BoardAccessContext {
+    return {
+      ...this.context(),
+      boardId,
+      accessGeneration: this.boardAccessGenerations.get(boardId) ?? 0
+    }
+  }
+  private checkBoard(context: BoardAccessContext) {
+    this.check(context)
+    if (
+      context.accessGeneration !==
+      (this.boardAccessGenerations.get(context.boardId) ?? 0)
+    ) {
+      throw new ResearchBoardsError(
+        'BOARD_ACCESS_CHANGED',
+        '看板访问状态已变化，请重新打开。'
+      )
+    }
+  }
+  private invalidateBoardAccess(boardId: string) {
+    const generation = (this.boardAccessGenerations.get(boardId) ?? 0) + 1
+    this.boardAccessGenerations.set(boardId, generation)
+    this.opening.delete(boardId)
+    this.reservations.delete(boardId)
+    if (this.currentBoard === boardId) {
+      this.activeDispose?.()
+      this.activeDispose = undefined
+    }
+    return generation
+  }
+  private markOffline(r: RuntimeBoard) {
+    if (
+      r.connection === 'revoked' ||
+      r.connection === 'revalidating' ||
+      r.abort.signal.aborted
+    )
+      return
+    r.connection = 'offline'
+    r.presence = []
+  }
+  private watchCurrentBoard(
+    boardId: string,
+    activation = this.activationVersion
+  ) {
+    if (activation !== this.activationVersion || this.currentBoard !== boardId)
+      return
+    const ctx = this.boardContext(boardId)
+    this.activeDispose?.()
+    this.activeDispose = this.client.watch(
+      { scope: 'board', boardId },
+      (event) => {
+        if (
+          activation !== this.activationVersion ||
+          this.currentBoard !== boardId ||
+          ctx.accessGeneration !==
+            (this.boardAccessGenerations.get(boardId) ?? 0)
+        )
+          return
+        if (ctx.generation === this.options.account.generation)
+          void this.boardEvent(boardId, event, ctx)
+      }
+    )
+  }
   private localSession(boardId: string) {
     const id = this.accountView.user?.userId
     return id ? (this.store.account(id).bindings[boardId] ?? null) : null
@@ -466,6 +537,7 @@ export class ResearchBoardsService {
     const read =
       r.connection !== 'revoked' &&
       r.connection !== 'revalidating' &&
+      !r.abort.signal.aborted &&
       !!this.accountView.user
     const edit =
       read &&
@@ -560,6 +632,7 @@ export class ResearchBoardsService {
     else this.emitState()
   }
   private resetAccount() {
+    this.activationVersion++
     const oldId = this.accountView.user?.userId
     this.generationAbort.abort()
     this.generationAbort = new AbortController()
@@ -577,6 +650,7 @@ export class ResearchBoardsService {
       r.doc.destroy()
     }
     this.boards.clear()
+    this.boardAccessGenerations.clear()
     this.currentBoard = null
     this.reservations.clear()
     this.opening.clear()
@@ -659,11 +733,11 @@ export class ResearchBoardsService {
       } catch (error) {
         if (generation !== this.options.account.generation || this.stopped)
           return
+        if (errorCode(error) === 'BOARD_ACCESS_CHANGED') return
         this.accountView.status = this.accountView.user
           ? 'ready'
           : 'unavailable'
-        for (const r of this.boards.values())
-          if (r.connection !== 'revoked') r.connection = 'offline'
+        for (const r of this.boards.values()) this.markOffline(r)
         this.emitState()
         this.retry()
       }
@@ -857,22 +931,22 @@ export class ResearchBoardsService {
     replace = false
   ): Promise<RuntimeBoard> {
     const existing = this.boards.get(boardId)
-    if (existing && !force && existing.connection !== 'revoked') return existing
+    if (existing && !force && this.permissions(existing).read) return existing
     if (!replace && this.opening.has(boardId)) return this.opening.get(boardId)!
-    const ctx = this.context()
+    const ctx = this.boardContext(boardId)
     const task = (async () => {
       try {
         const snapshot = await this.client.request<BoardSnapshot>({
           kind: 'board.get',
           boardId
         })
-        this.check(ctx)
-        await this.receiveBoard(boardId, snapshot, replace)
-        this.check(ctx)
+        this.checkBoard(ctx)
+        await this.receiveBoard(boardId, snapshot, replace, ctx)
+        this.checkBoard(ctx)
         return this.boards.get(boardId)!
       } catch (error) {
         if (denied(error)) {
-          this.check(ctx)
+          this.checkBoard(ctx)
           await this.revoke(boardId, errorCode(error))
         }
         throw error
@@ -888,9 +962,10 @@ export class ResearchBoardsService {
   async receiveBoard(
     boardId: string,
     snapshot: BoardSnapshot,
-    replace = false
+    replace = false,
+    ctx = this.boardContext(boardId)
   ): Promise<void> {
-    const ctx = this.context()
+    this.checkBoard(ctx)
     if (
       snapshot.board.boardId !== boardId ||
       !Array.isArray(snapshot.tombstones) ||
@@ -901,6 +976,8 @@ export class ResearchBoardsService {
       throw new ResearchBoardsError('INVALID_RESPONSE')
     validateCanvas(snapshot.snapshot.canvas)
     let r = this.boards.get(boardId)
+    const wasBlocked =
+      r?.connection === 'revoked' || r?.connection === 'revalidating'
     if (r && snapshot.seq < r.snapshot.seq) return
     const previousEpoch = r?.snapshot.board.sharingEpoch
     if (
@@ -913,6 +990,15 @@ export class ResearchBoardsService {
         previousEpoch !== snapshot.board.sharingEpoch) ||
       snapshot.board.role === 'viewer' ||
       snapshot.board.lifecycle === 'archived'
+    if (
+      r &&
+      (previousEpoch !== snapshot.board.sharingEpoch ||
+        r.snapshot.board.role !== snapshot.board.role ||
+        r.snapshot.board.lifecycle !== snapshot.board.lifecycle ||
+        r.snapshot.board.sharingState !== snapshot.board.sharingState)
+    ) {
+      ctx.accessGeneration = this.invalidateBoardAccess(boardId)
+    }
     if (retired) {
       if (r) {
         r.abort.abort()
@@ -921,9 +1007,10 @@ export class ResearchBoardsService {
       }
       await this.retirePending(boardId, 'PERMISSION_CHANGED', false)
     }
-    this.check(ctx)
+    this.checkBoard(ctx)
     r = this.boards.get(boardId)
     if (r && snapshot.seq < r.snapshot.seq) return
+    if (wasBlocked) ctx.accessGeneration = this.invalidateBoardAccess(boardId)
     if (
       !r ||
       retired ||
@@ -986,7 +1073,9 @@ export class ResearchBoardsService {
       else a.boards.push(copy(snapshot.board))
     })
     await this.materialize(r, ctx)
-    this.check(ctx)
+    this.checkBoard(ctx)
+    if (this.currentBoard === boardId && !this.activeDispose)
+      this.watchCurrentBoard(boardId)
     this.emitBoard(boardId, 'remote')
   }
   private async materialize(r: RuntimeBoard, ctx = this.context()) {
@@ -1088,7 +1177,8 @@ export class ResearchBoardsService {
     }
   }
   private async revoke(boardId: string, reason: string) {
-    const ctx = this.context()
+    const ctx = this.boardContext(boardId)
+    ctx.accessGeneration = this.invalidateBoardAccess(boardId)
     const r = this.boards.get(boardId)
     const epoch = r?.snapshot.board.sharingEpoch ?? 0
     const localSessionId = this.localSession(boardId)
@@ -1126,7 +1216,7 @@ export class ResearchBoardsService {
     })
     this.emitState()
     await this.retirePending(boardId, reason, true)
-    this.check(ctx)
+    this.checkBoard(ctx)
     this.store.updateAccount(ctx.userId, (a) => {
       a.boards = a.boards.filter((b) => b.boardId !== boardId)
     })
@@ -1377,11 +1467,13 @@ export class ResearchBoardsService {
     op: PendingOperation,
     ctx: { generation: number; userId: string }
   ) {
+    const access = this.boardContext(op.boardId)
     const snapshot = await this.client.request<BoardSnapshot>({
       kind: 'board.get',
       boardId: op.boardId
     })
     this.check(ctx)
+    this.checkBoard(access)
     if (snapshot.board.boardId !== op.boardId)
       throw new ResearchBoardsError('INVALID_RESPONSE')
     validateCanvas(snapshot.snapshot.canvas)
@@ -1393,8 +1485,8 @@ export class ResearchBoardsService {
       )
         a.checkpoints[op.boardId] = copy(snapshot)
     })
-    await this.receiveBoard(op.boardId, snapshot)
-    this.check(ctx)
+    await this.receiveBoard(op.boardId, snapshot, false, access)
+    this.checkBoard(access)
   }
   private async flushPending() {
     if (!this.accountView.user || this.stopped) return
@@ -1471,6 +1563,7 @@ export class ResearchBoardsService {
       } catch (error) {
         if (ctx.generation !== this.options.account.generation || this.stopped)
           return
+        if (errorCode(error) === 'BOARD_ACCESS_CHANGED') return
         if (denied(error)) {
           await this.confirmAccessFailure(op.boardId, errorCode(error))
           continue
@@ -1501,7 +1594,7 @@ export class ResearchBoardsService {
           await this.loadBoard(op.boardId, true, true).catch(() => {})
         } else {
           const r = this.boards.get(op.boardId)
-          if (r && r.connection !== 'revoked') r.connection = 'offline'
+          if (r) this.markOffline(r)
           this.retry()
         }
         this.emitState()
@@ -1578,17 +1671,46 @@ export class ResearchBoardsService {
       return result
     } catch (error) {
       this.check(ctx)
+      if (errorCode(error) === 'BOARD_ACCESS_CHANGED') throw error
       if (denied(error))
         await this.confirmAccessFailure(boardId, errorCode(error))
       else {
         const current = this.boards.get(boardId)
-        if (current && current.connection !== 'revoked')
-          current.connection = 'offline'
+        if (current) this.markOffline(current)
         this.retry()
         this.emitState()
       }
       throw error
     }
+  }
+  private async finishCreation(
+    ctx: { generation: number; userId: string },
+    favorite: Favorite,
+    body: Record<string, unknown>,
+    expectedBoardId?: string
+  ) {
+    const reply = await this.client.request<{ board: Board }>({
+      kind: 'board.create',
+      body
+    })
+    this.check(ctx)
+    if (
+      expectedBoardId !== undefined &&
+      reply.board.boardId !== expectedBoardId
+    )
+      throw new ResearchBoardsError('INVALID_RESPONSE')
+    this.store.updateAccount(ctx.userId, (a) => {
+      delete a.creates[favorite.favoriteId]
+      if (!a.boards.some((b) => b.boardId === reply.board.boardId))
+        a.boards.push(reply.board)
+      a.sources[reply.board.boardId] = {
+        favoriteId: favorite.favoriteId,
+        sessionId: favorite.sessionId
+      }
+      a.hidden = a.hidden.filter((id) => id !== reply.board.boardId)
+    })
+    this.emitState()
+    return { board: reply.board }
   }
   private async createBoard(
     favoriteId: string,
@@ -1601,11 +1723,6 @@ export class ResearchBoardsService {
       .snapshot()
       .favorites.find((f) => f.favoriteId === favoriteId)
     if (!favorite) throw new ResearchBoardsError('NOT_FAVORITED')
-    if (!this.options.hooks?.captureOriginal)
-      throw new ResearchBoardsError(
-        'CAPTURE_UNAVAILABLE',
-        '完整研究捕获尚未就绪。'
-      )
     const operation = (async () => {
       const saved = this.store.account(ctx.userId).creates[favoriteId] ?? {
         operationId: randomUUID()
@@ -1613,6 +1730,25 @@ export class ResearchBoardsService {
       this.store.updateAccount(ctx.userId, (a) => {
         a.creates[favoriteId] = saved
       })
+      // An activated upload is immutable/closed. Recover its original creation
+      // receipt from the persisted frozen manifest, without reading source files.
+      if (typeof saved.body?.uploadId === 'string') {
+        const upload = await this.client.request<{
+          uploadId: string
+          boardId: string | null
+        }>({ kind: 'upload.create', operationId: saved.operationId })
+        this.check(ctx)
+        if (upload.boardId) {
+          if (upload.uploadId !== saved.body.uploadId)
+            throw new ResearchBoardsError('INVALID_RESPONSE')
+          return this.finishCreation(ctx, favorite, saved.body, upload.boardId)
+        }
+      }
+      if (!this.options.hooks?.captureOriginal)
+        throw new ResearchBoardsError(
+          'CAPTURE_UNAVAILABLE',
+          '完整研究捕获尚未就绪。'
+        )
       const captured = await this.options.hooks!.captureOriginal!({
         sessionId: favorite.sessionId,
         accountId: ctx.userId,
@@ -1651,47 +1787,35 @@ export class ResearchBoardsService {
           a.creates[favoriteId] = { ...saved, body: copy(body) }
         })
         if (assets.length) {
-          const upload = await this.client.request<{ uploadId: string }>({
+          const upload = await this.client.request<{
+            uploadId: string
+            boardId: string | null
+          }>({
             kind: 'upload.create',
             operationId: saved.operationId
           })
           this.check(ctx)
-          for (const asset of assets) {
-            const data = await asset.open()
-            this.check(ctx)
-            await this.client.request({
-              kind: 'asset.stage',
-              uploadId: upload.uploadId,
-              assetId: asset.assetId,
-              name: asset.name,
-              size: asset.size,
-              contentType: asset.contentType,
-              data
-            })
-            this.check(ctx)
-          }
+          if (!upload.boardId)
+            for (const asset of assets) {
+              const data = await asset.open()
+              this.check(ctx)
+              await this.client.request({
+                kind: 'asset.stage',
+                uploadId: upload.uploadId,
+                assetId: asset.assetId,
+                name: asset.name,
+                size: asset.size,
+                contentType: asset.contentType,
+                data
+              })
+              this.check(ctx)
+            }
           body.uploadId = upload.uploadId
           this.store.updateAccount(ctx.userId, (a) => {
             a.creates[favoriteId]!.body = copy(body)
           })
         }
-        const reply = await this.client.request<{ board: Board }>({
-          kind: 'board.create',
-          body
-        })
-        this.check(ctx)
-        this.store.updateAccount(ctx.userId, (a) => {
-          delete a.creates[favoriteId]
-          if (!a.boards.some((b) => b.boardId === reply.board.boardId))
-            a.boards.push(reply.board)
-          a.sources[reply.board.boardId] = {
-            favoriteId,
-            sessionId: favorite.sessionId
-          }
-          a.hidden = a.hidden.filter((id) => id !== reply.board.boardId)
-        })
-        this.emitState()
-        return { board: reply.board }
+        return await this.finishCreation(ctx, favorite, body)
       } finally {
         await captured.dispose?.()
       }
@@ -1847,6 +1971,7 @@ export class ResearchBoardsService {
       }
       case 'board.activate': {
         const p = exact(input, ['localSessionId'])
+        const activation = ++this.activationVersion
         this.activeDispose?.()
         this.activeDispose = undefined
         this.currentBoard = null
@@ -1862,14 +1987,9 @@ export class ResearchBoardsService {
         const ctx = this.context()
         const r = await this.loadBoard(binding.boardId, true)
         this.check(ctx)
+        if (activation !== this.activationVersion) return null
         this.currentBoard = binding.boardId
-        this.activeDispose = this.client.watch(
-          { scope: 'board', boardId: binding.boardId },
-          (event) => {
-            if (ctx.generation === this.options.account.generation)
-              void this.boardEvent(binding.boardId, event, ctx)
-          }
-        )
+        this.watchCurrentBoard(binding.boardId, activation)
         this.emitBoard(binding.boardId, 'open')
         return this.view(r)
       }
@@ -2047,18 +2167,20 @@ export class ResearchBoardsService {
         this.requireBoard(boardId)
         if (boardId !== this.currentBoard)
           throw new ResearchBoardsError('INVALID_REQUEST')
-        if (p.cursor !== undefined) {
+        if (p.cursor !== undefined && p.cursor !== null) {
           const c = exact(p.cursor, ['x', 'y'])
           if (!Number.isFinite(c.x) || !Number.isFinite(c.y))
             throw new ResearchBoardsError('INVALID_REQUEST')
         }
         if (
           p.selectedIds !== undefined &&
-          (!Array.isArray(p.selectedIds) || p.selectedIds.length > 1000)
+          (!Array.isArray(p.selectedIds) || p.selectedIds.length > 100)
         )
           throw new ResearchBoardsError('INVALID_REQUEST')
         this.client.sendPresence(boardId, {
-          ...(p.cursor ? { cursor: p.cursor as { x: number; y: number } } : {}),
+          ...(p.cursor !== undefined
+            ? { cursor: p.cursor as { x: number; y: number } | null }
+            : {}),
           ...(p.selectedIds
             ? { selectedIds: (p.selectedIds as unknown[]).map(safeId) }
             : {})
@@ -2188,20 +2310,28 @@ export class ResearchBoardsService {
   private async boardEvent(
     boardId: string,
     event: CollaborationEvent,
-    ctx: { generation: number; userId: string }
+    ctx: BoardAccessContext
   ) {
     try {
-      this.check(ctx)
+      this.checkBoard(ctx)
       if (this.currentBoard !== boardId) return
       if (event.type === 'welcome' || event.type === 'boardChanged') {
-        await this.receiveBoard(boardId, event as unknown as BoardSnapshot)
-        this.check(ctx)
+        const access = { ...ctx }
+        await this.receiveBoard(
+          boardId,
+          event as unknown as BoardSnapshot,
+          false,
+          access
+        )
+        this.checkBoard(access)
         if (event.presence) this.updatePresence(boardId, event.presence)
         void this.flush()
       } else if (event.type === 'presence')
         this.updatePresence(boardId, event.presence)
       else if (event.type === 'accessRevoked') {
         // A role/archive change can retain reads; confirm before purging.
+        const activation = this.activationVersion
+        this.invalidateBoardAccess(boardId)
         const current = this.boards.get(boardId)
         if (current) {
           current.abort.abort()
@@ -2214,15 +2344,9 @@ export class ResearchBoardsService {
         try {
           await this.loadBoard(boardId, true)
           this.check(ctx)
-          if (this.currentBoard === boardId)
-            this.activeDispose = this.client.watch(
-              { scope: 'board', boardId },
-              (event) => {
-                if (ctx.generation === this.options.account.generation)
-                  void this.boardEvent(boardId, event, ctx)
-              }
-            )
+          if (!this.activeDispose) this.watchCurrentBoard(boardId, activation)
         } catch (error) {
+          if (errorCode(error) === 'BOARD_ACCESS_CHANGED') return
           if (!denied(error)) {
             const r = this.boards.get(boardId)
             if (r) r.connection = 'revalidating'
@@ -2232,14 +2356,13 @@ export class ResearchBoardsService {
         }
       } else if (event.type === 'offline') {
         const r = this.boards.get(boardId)
-        if (r && r.connection !== 'revoked') {
-          r.connection = 'offline'
-          r.presence = []
+        if (r) {
+          this.markOffline(r)
           this.emitBoard(boardId, 'offline')
         }
       }
-    } catch {
-      this.retry()
+    } catch (error) {
+      if (errorCode(error) !== 'BOARD_ACCESS_CHANGED') this.retry()
     }
   }
   private updatePresence(boardId: string, value: unknown) {
