@@ -1002,73 +1002,137 @@ it('invalidates older loads when a new permission revalidation begins', async ()
   expect(t.service.getSnapshot().current!.permissions.read).toBe(false)
 })
 
-it('a delayed activation cannot override a later leave or leak a presence socket', async () => {
+it.each(['resolve', 'reject'])(
+  'a delayed activation (%s) cannot override a later leave or leak a presence socket',
+  async (outcome) => {
+    const t = make()
+    await ready(t)
+    const base = t.client.request
+    let release!: (value: any) => void
+    t.client.request = async (e) => {
+      const response = await base(e)
+      if (e.kind === 'board.get')
+        return new Promise((r, reject) => {
+          release = () =>
+            outcome === 'reject'
+              ? reject(
+                  Object.assign(Error('offline'), { code: 'NETWORK_ERROR' })
+                )
+              : r(response)
+        })
+      return response
+    }
+    const activating = t.service.invoke('board.activate', {
+      localSessionId: 'shared-session'
+    })
+    await new Promise((r) => setImmediate(r))
+    await t.service.invoke('board.activate', { localSessionId: null })
+    release(null)
+    expect(await activating).toEqual({ ok: true, value: null })
+    expect(t.service.getSnapshot().current).toBe(null)
+    expect(
+      t.watches.filter((w) => w.scope.scope === 'board' && !w.closed)
+    ).toHaveLength(0)
+  }
+)
+
+it.each(['resolve', 'reject'])(
+  'a delayed A activation (%s) cannot override the newer B activation',
+  async (outcome) => {
+    const t = make()
+    await ready(t)
+    const base = t.client.request
+    let holdA = false
+    let release!: (value: any) => void
+    t.client.request = async (e) => {
+      if (e.kind === 'board.get' && e.boardId === 'board-b')
+        return {
+          ...t.snapshot(),
+          board: { ...t.snapshot().board, boardId: 'board-b' }
+        } as any
+      const response = await base(e)
+      if (holdA && e.kind === 'board.get' && e.boardId === 'board')
+        return new Promise((r, reject) => {
+          release = () =>
+            outcome === 'reject'
+              ? reject(
+                  Object.assign(Error('offline'), { code: 'NETWORK_ERROR' })
+                )
+              : r(response)
+        })
+      return response
+    }
+    const opened: any = await t.service.invoke('board.open', {
+      boardId: 'board-b'
+    })
+    await t.service.invoke('board.bind', {
+      boardId: 'board-b',
+      reservationId: opened.value.reservationId,
+      localSessionId: 'session-b'
+    })
+    holdA = true
+    const a = t.service.invoke('board.activate', {
+      localSessionId: 'shared-session'
+    })
+    await new Promise((r) => setImmediate(r))
+    await t.service.invoke('board.activate', { localSessionId: 'session-b' })
+    release(null)
+    expect(await a).toEqual({ ok: true, value: null })
+    expect(t.service.getSnapshot().current!.boardId).toBe('board-b')
+    expect(
+      t.watches
+        .filter((w) => w.scope.scope === 'board' && !w.closed)
+        .map((w) => w.scope.boardId)
+    ).toEqual(['board-b'])
+  }
+)
+
+it.each(['NETWORK_ERROR', 'ACCESS_DENIED'])(
+  'the latest activation preserves its real %s failure',
+  async (code) => {
+    const t = make()
+    await ready(t)
+    const base = t.client.request
+    t.client.request = async (e) => {
+      if (e.kind === 'board.get') throw Object.assign(Error(code), { code })
+      return base(e)
+    }
+    expect(
+      await t.service.invoke('board.activate', {
+        localSessionId: 'shared-session'
+      })
+    ).toMatchObject({ ok: false, error: { code } })
+    expect(t.service.getSnapshot().current).toBe(null)
+    if (code === 'ACCESS_DENIED')
+      expect(() => t.service.readSharedCanvas('shared-session')).toThrow(
+        'ACCESS_DENIED'
+      )
+  }
+)
+
+it('a rejected superseded activation still reports an account lifetime change', async () => {
   const t = make()
   await ready(t)
   const base = t.client.request
-  let release!: (value: any) => void
+  let reject!: (error: Error) => void
   t.client.request = async (e) => {
-    const response = await base(e)
     if (e.kind === 'board.get')
-      return new Promise((r) => {
-        release = () => r(response)
+      return new Promise((_, fail) => {
+        reject = fail
       })
-    return response
+    return base(e)
   }
   const activating = t.service.invoke('board.activate', {
     localSessionId: 'shared-session'
   })
   await new Promise((r) => setImmediate(r))
   await t.service.invoke('board.activate', { localSessionId: null })
-  release(null)
-  await activating
-  expect(t.service.getSnapshot().current).toBe(null)
-  expect(
-    t.watches.filter((w) => w.scope.scope === 'board' && !w.closed)
-  ).toHaveLength(0)
-})
-
-it('a delayed A activation cannot override the newer B activation', async () => {
-  const t = make()
-  await ready(t)
-  const base = t.client.request
-  let holdA = false
-  let release!: (value: any) => void
-  t.client.request = async (e) => {
-    if (e.kind === 'board.get' && e.boardId === 'board-b')
-      return {
-        ...t.snapshot(),
-        board: { ...t.snapshot().board, boardId: 'board-b' }
-      } as any
-    const response = await base(e)
-    if (holdA && e.kind === 'board.get' && e.boardId === 'board')
-      return new Promise((r) => {
-        release = () => r(response)
-      })
-    return response
-  }
-  const opened: any = await t.service.invoke('board.open', {
-    boardId: 'board-b'
+  t.account.generation++
+  reject(Object.assign(Error('offline'), { code: 'NETWORK_ERROR' }))
+  expect(await activating).toMatchObject({
+    ok: false,
+    error: { code: 'SESSION_CHANGED' }
   })
-  await t.service.invoke('board.bind', {
-    boardId: 'board-b',
-    reservationId: opened.value.reservationId,
-    localSessionId: 'session-b'
-  })
-  holdA = true
-  const a = t.service.invoke('board.activate', {
-    localSessionId: 'shared-session'
-  })
-  await new Promise((r) => setImmediate(r))
-  await t.service.invoke('board.activate', { localSessionId: 'session-b' })
-  release(null)
-  await a
-  expect(t.service.getSnapshot().current!.boardId).toBe('board-b')
-  expect(
-    t.watches
-      .filter((w) => w.scope.scope === 'board' && !w.closed)
-      .map((w) => w.scope.boardId)
-  ).toEqual(['board-b'])
 })
 
 it('resumes a committed staged creation after losing its ACK without reopening its frozen source or closed upload', async () => {

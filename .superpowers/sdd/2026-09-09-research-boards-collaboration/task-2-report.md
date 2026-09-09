@@ -77,3 +77,20 @@ git diff --check
 ```
 
 Used the existing cached formatter on the four changed TypeScript files. Contract/report changes followed validation and do not change execution. No full suite, dependency change, application build/launch, push or deploy was performed. This fix commit is ready for scoped re-review of the four findings and related presence cleanup.
+
+
+## Superseded activation error path — 2026-09-09
+
+Scoped re-review base: `0dd18bf216768c6940b5b9b1d0763daf7d5c6b92`. The four previous Important findings were accepted; this round fixes only the new stale activation rejection finding in `task-2-rereview.md`.
+
+The board.activate load failure handler now checks the captured account lifetime before checking whether the activation was superseded. Within the same account lifetime, delayed rejected A returns null after either null or B wins. Latest activation errors remain visible, and loadBoard still performs its existing authorization/revocation handling. An account lifetime change returns SESSION_CHANGED even if that activation was superseded. The contract explicitly states this boundary.
+
+RED at 13:23:03: three failures (stale rejected A after null, stale rejected A after B, and account lifetime priority), four passing activation checks. An initial test assertion for readSharedCanvas was corrected to its established throwing contract before this recorded RED. GREEN at 13:23:18: **7 activation checks passed**, 24 unrelated checks skipped; Node typecheck and diffcheck passed. Both existing delayed-success tests now also run rejected-load variants; additional cases retain latest NETWORK_ERROR and ACCESS_DENIED, with denied reads still rejected.
+
+```sh
+node_modules/.bin/vitest run test/research-boards-service.test.ts -t 'activation'
+node_modules/.bin/tsc --noEmit -p tsconfig.node.json
+git diff --check
+```
+
+No other task behavior, Task 3/4 implementation, dependencies, app build, full suite, push or deployment changed. Ready for scoped re-review.

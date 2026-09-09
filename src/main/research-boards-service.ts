@@ -1985,7 +1985,14 @@ export class ResearchBoardsService {
           return null
         }
         const ctx = this.context()
-        const r = await this.loadBoard(binding.boardId, true)
+        let r: RuntimeBoard
+        try {
+          r = await this.loadBoard(binding.boardId, true)
+        } catch (error) {
+          this.check(ctx)
+          if (activation !== this.activationVersion) return null
+          throw error
+        }
         this.check(ctx)
         if (activation !== this.activationVersion) return null
         this.currentBoard = binding.boardId
