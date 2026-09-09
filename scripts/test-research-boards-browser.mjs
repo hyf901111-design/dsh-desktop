@@ -1582,7 +1582,9 @@ if (process.argv.includes('--serve')) {
     for (const socket of networks[1].sockets) socket.close(1000)
     await peer.evaluate(() => {
       const f = window.fixture, w = f.registry.for(f.sessions.list.getSnapshot().current)
-      w.setArtifacts(w.getSnapshot().artifacts.map(n => n.id === 'note' ? { ...n, excerpt: n.excerpt + ' 本人离线补充。' } : n))
+      const note = w.getSnapshot().artifacts.find(n => n.kind === 'pasted-text')
+      if (!note) throw Error('Expected an authorized copied text node')
+      w.setArtifacts(w.getSnapshot().artifacts.map(n => n.id === note.id ? { ...n, excerpt: n.excerpt + ' 本人离线补充。' } : n))
     })
     await peer.locator('.fixture-discussion textarea').last().fill('本人未发送草稿。')
     await until(() => users[1].service.store.account('u1').pending.some(p => p.action === 'update'), 'offline own update persisted')
