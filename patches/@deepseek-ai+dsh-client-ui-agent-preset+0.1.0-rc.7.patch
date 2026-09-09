@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
-index 259765c..7617bc7 100644
+index 259765c..e9c81f2 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js
 @@ -20,7 +20,7 @@ window.__ModuleLoader__.load({
@@ -88,7 +88,37 @@ index 259765c..7617bc7 100644
  		};
  		const BUILT_IN_PRESET_KEYS = {
  			standard: {
-@@ -333,7 +383,7 @@ window.__ModuleLoader__.load({
+@@ -188,23 +238,12 @@ window.__ModuleLoader__.load({
+ 		* @param props - composed slot props.
+ 		* @returns the label, or null when the session records no preset.
+ 		*/
+-		function AgentPresetLabel({ sessionId, useSessions, useAgentPresets, load, t }) {
+-			const preset = useSessions((state) => state.byId[sessionId]?.agentPreset);
+-			const options = useAgentPresets((state) => state.options);
+-			(0, react.useEffect)(() => {
+-				if (preset !== void 0) load();
+-			}, [preset, load]);
+-			if (preset === void 0) return null;
+-			const option = options.find((entry) => entry.id === preset);
+-			const text = option === void 0 ? void 0 : presetDisplayText(option, t);
+-			return (0, react_jsx_runtime.jsxs)("span", {
+-				className: AgentPresetLabel_module_css_default.label,
+-				title: text?.description ?? t("headerHint"),
+-				children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutline16, {
+-					size: 14,
+-					className: AgentPresetLabel_module_css_default.icon
+-				}), text?.name ?? preset]
+-			});
++		function AgentPresetLabel({ sessionId, useSessions, ...props }) {
++			const session = useSessions((state) => state.byId[sessionId]);
++			return (0, react_jsx_runtime.jsx)(AgentPresetSeat, { ...props, current: session?.agentPreset, locked: session?.blank === false });
++		}
++		function ModeIcon({ id = "standard", className, size = 16 }) {
++			return (0, react_jsx_runtime.jsx)("svg", { className, width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true, "data-mode-icon": id, children: (0, react_jsx_runtime.jsx)("path", { d: id === "build" ? "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" : "m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18" }) });
+ 		}
+ 		//#endregion
+ 		//#region lib/types/client/PresetMenu.js
+@@ -333,7 +372,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-agent-preset/src/client/AgentPresetSeat.module.css.mjs
@@ -97,7 +127,7 @@ index 259765c..7617bc7 100644
  		const tagId$1 = "@deepseek-ai/dsh-client-ui-agent-preset/AgentPresetSeat.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -346,6 +396,21 @@ window.__ModuleLoader__.load({
+@@ -346,6 +385,21 @@ window.__ModuleLoader__.load({
  			"seatIcon": "cubgiG_seatIcon",
  			"introChar": "cubgiG_introChar",
  			"chevron": "cubgiG_chevron",
@@ -119,7 +149,19 @@ index 259765c..7617bc7 100644
  			"itemName": "cubgiG_itemName",
  			"introIcon": "cubgiG_introIcon",
  			"itemDesc": "cubgiG_itemDesc",
-@@ -419,7 +484,21 @@ window.__ModuleLoader__.load({
+@@ -388,8 +442,9 @@ window.__ModuleLoader__.load({
+ 		* @param props - composed slot props.
+ 		* @returns the chip, or null when the deployment composes no presets.
+ 		*/
+-		function AgentPresetSeat({ load, select, introduced, useAgentPresetSeat, t }) {
+-			const state = useAgentPresetSeat((snapshot) => snapshot);
++		function AgentPresetSeat({ load, select, introduced, useAgentPresetSeat, t, current, locked = false }) {
++			const snapshot = useAgentPresetSeat((snapshot) => snapshot);
++			const state = { ...snapshot, current: current ?? snapshot.current };
+ 			const [open, setOpen] = (0, react.useState)(false);
+ 			(0, react.useEffect)(() => {
+ 				load();
+@@ -419,7 +474,21 @@ window.__ModuleLoader__.load({
  				label,
  				introduced
  			]);
@@ -128,13 +170,13 @@ index 259765c..7617bc7 100644
 +				type: "button",
 +				className: AgentPresetSeat_module_css_default.seat,
 +				"data-agent-preset-fallback": "",
-+				title: state.error ?? t("seatHint"),
-+				disabled: state.busy,
++				title: locked ? t("headerHint") : state.error ?? t("seatHint"),
++				disabled: state.busy || locked,
 +				onClick: () => {
 +					load();
 +				},
 +				children: [
-+					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutline16, { className: AgentPresetSeat_module_css_default.seatIcon }),
++					(0, react_jsx_runtime.jsx)(ModeIcon, { id: state.current || "standard", className: AgentPresetSeat_module_css_default.seatIcon }),
 +					(0, react_jsx_runtime.jsx)("span", { children: t("presetStandardName") }),
 +					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: AgentPresetSeat_module_css_default.chevron })
 +				]
@@ -142,7 +184,7 @@ index 259765c..7617bc7 100644
  			const characters = Array.from(label);
  			const stagger = introStaggerMs(characters.length);
  			const shownLabel = introducing ? (0, react_jsx_runtime.jsx)("span", {
-@@ -430,34 +509,38 @@ window.__ModuleLoader__.load({
+@@ -430,46 +499,50 @@ window.__ModuleLoader__.load({
  					children: character
  				}, index))
  			}) : label;
@@ -154,7 +196,7 @@ index 259765c..7617bc7 100644
 +						className: `${AgentPresetSeat_module_css_default.item} ${option.id === state.current ? AgentPresetSeat_module_css_default.selectedItem : ""}`,
 +						children: [(0, react_jsx_runtime.jsx)("span", {
 +							className: AgentPresetSeat_module_css_default.itemName,
-+							children: [(0, react_jsx_runtime.jsx)("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true, "data-mode-icon": option.id, children: (0, react_jsx_runtime.jsx)("path", { d: option.id === "build" ? "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" : "m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18" }) }), text.name]
++							children: [(0, react_jsx_runtime.jsx)(ModeIcon, { id: option.id, size: 18 }), text.name]
 +						}), (0, react_jsx_runtime.jsx)("span", {
 +							className: AgentPresetSeat_module_css_default.itemDesc,
 +							children: text.description ?? t("noDescription")
@@ -197,7 +239,22 @@ index 259765c..7617bc7 100644
  				anchor: (0, react_jsx_runtime.jsxs)("button", {
  					type: "button",
  					className: AgentPresetSeat_module_css_default.seat,
-@@ -488,6 +571,7 @@ window.__ModuleLoader__.load({
+ 					"aria-haspopup": "menu",
+ 					"aria-expanded": open,
+-					title: state.error ?? t("seatHint"),
+-					disabled: state.busy,
++					title: locked ? t("headerHint") : state.error ?? t("seatHint"),
++					disabled: state.busy || locked,
+ 					onClick: () => {
+ 						setOpen((value) => !value);
+ 					},
+ 					children: [
+-						(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutline16, { className: introducing ? `${AgentPresetSeat_module_css_default.seatIcon} ${AgentPresetSeat_module_css_default.introIcon}` : AgentPresetSeat_module_css_default.seatIcon }),
++						(0, react_jsx_runtime.jsx)(ModeIcon, { id: state.current || "standard", className: introducing ? `${AgentPresetSeat_module_css_default.seatIcon} ${AgentPresetSeat_module_css_default.introIcon}` : AgentPresetSeat_module_css_default.seatIcon }),
+ 						shownLabel,
+ 						(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: AgentPresetSeat_module_css_default.chevron })
+ 					]
+@@ -488,6 +561,7 @@ window.__ModuleLoader__.load({
  		*/
  		/** The agent-preset settings namespace on the host wire. */
  		const AGENT_PRESET_SETTINGS_NS = "agent-presets";
@@ -205,7 +262,7 @@ index 259765c..7617bc7 100644
  		/**
  		* Human text for a rejected wire call. A transport failure rejects with an
  		* Error; a host or a runtime can reject with anything, and the surface still
-@@ -520,6 +604,31 @@ window.__ModuleLoader__.load({
+@@ -520,6 +594,31 @@ window.__ModuleLoader__.load({
  			}
  			return response.result.ok ? void 0 : response.result.error.message;
  		}
@@ -237,7 +294,7 @@ index 259765c..7617bc7 100644
  		/**
  		* Read the roster, folding both refusal shapes into one message.
  		*
-@@ -625,9 +734,10 @@ window.__ModuleLoader__.load({
+@@ -625,9 +724,10 @@ window.__ModuleLoader__.load({
  			* @returns once the snapshot reflects the host.
  			*/
  			async load() {
@@ -251,7 +308,7 @@ index 259765c..7617bc7 100644
  				const [first] = presets;
  				if (first === void 0) {
  					this.set({
-@@ -641,7 +751,7 @@ window.__ModuleLoader__.load({
+@@ -641,7 +741,7 @@ window.__ModuleLoader__.load({
  					const described = await this.api.settings.describe({});
  					this.set({
  						status: "ready",
@@ -260,7 +317,7 @@ index 259765c..7617bc7 100644
  						writable: described.result.ok && described.result.value.writable,
  						options: presetOptions(presets),
  						currentValue: presets.find((preset) => preset.isDefault)?.id ?? first.id
-@@ -707,6 +817,8 @@ window.__ModuleLoader__.load({
+@@ -707,6 +807,8 @@ window.__ModuleLoader__.load({
  			rows: [],
  			copy: null,
  			view: null,
@@ -269,7 +326,7 @@ index 259765c..7617bc7 100644
  			pendingDelete: null,
  			deleting: false,
  			revealedPaths: {}
-@@ -724,6 +836,13 @@ window.__ModuleLoader__.load({
+@@ -724,6 +826,13 @@ window.__ModuleLoader__.load({
  			if (!PRESET_ID.test(draft.id)) return "idInvalid";
  			if (rows.some((row) => row.id === draft.id)) return "idTaken";
  		}
@@ -283,7 +340,7 @@ index 259765c..7617bc7 100644
  		/** Reads the roster and drives the copy dialog, viewer, and location reveals. */
  		var AgentPresetSectionController = class {
  			api;
-@@ -755,9 +874,10 @@ window.__ModuleLoader__.load({
+@@ -755,9 +864,10 @@ window.__ModuleLoader__.load({
  			* @returns once the snapshot reflects the host.
  			*/
  			async load() {
@@ -297,7 +354,7 @@ index 259765c..7617bc7 100644
  				if (presets.length === 0) {
  					this.set({
  						status: "unavailable",
-@@ -773,7 +893,7 @@ window.__ModuleLoader__.load({
+@@ -773,7 +883,7 @@ window.__ModuleLoader__.load({
  				const kept = Object.fromEntries(Object.entries(revealed).filter(([id]) => presets.some((preset) => preset.id === id)));
  				this.set({
  					status: "ready",
@@ -306,7 +363,7 @@ index 259765c..7617bc7 100644
  					authorable,
  					hasDocument,
  					rows: presets.map((preset) => ({ ...preset })),
-@@ -911,6 +1031,143 @@ window.__ModuleLoader__.load({
+@@ -911,6 +1021,143 @@ window.__ModuleLoader__.load({
  					this.set({ error: messageOf(error) });
  				}
  			}
@@ -450,7 +507,7 @@ index 259765c..7617bc7 100644
  			/**
  			* Ask for confirmation before deleting one preset.
  			* @param id - the preset to delete, or null to dismiss the confirmation.
-@@ -974,16 +1231,25 @@ window.__ModuleLoader__.load({
+@@ -974,16 +1221,25 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-agent-preset/src/client/AgentPresetSection.module.css.mjs
@@ -478,7 +535,7 @@ index 259765c..7617bc7 100644
  			"brokenBadge": "rtSEdW_brokenBadge",
  			"inUse": "rtSEdW_inUse",
  			"cards": "rtSEdW_cards",
-@@ -1104,6 +1370,84 @@ window.__ModuleLoader__.load({
+@@ -1104,6 +1360,84 @@ window.__ModuleLoader__.load({
  				})
  			});
  		}
@@ -563,7 +620,7 @@ index 259765c..7617bc7 100644
  		/**
  		* Render one card's description, clamped by CSS and offered in full on hover.
  		* The tooltip is attached only while the text is actually cut off, so a short
-@@ -1191,9 +1535,12 @@ window.__ModuleLoader__.load({
+@@ -1191,9 +1525,12 @@ window.__ModuleLoader__.load({
  			return (0, react_jsx_runtime.jsxs)("div", {
  				className: AgentPresetSection_module_css_default.section,
  				children: [
@@ -579,7 +636,7 @@ index 259765c..7617bc7 100644
  					}),
  					(0, react_jsx_runtime.jsx)("p", {
  						className: AgentPresetSection_module_css_default.intro,
-@@ -1267,52 +1614,7 @@ window.__ModuleLoader__.load({
+@@ -1267,52 +1604,7 @@ window.__ModuleLoader__.load({
  													})
  												]
  											}),
@@ -633,7 +690,7 @@ index 259765c..7617bc7 100644
  												className: AgentPresetSection_module_css_default.revealedPath,
  												children: [(0, react_jsx_runtime.jsx)("span", {
  													className: AgentPresetSection_module_css_default.revealedPathLabel,
-@@ -1329,13 +1631,22 @@ window.__ModuleLoader__.load({
+@@ -1329,13 +1621,22 @@ window.__ModuleLoader__.load({
  					(0, react_jsx_runtime.jsx)(CopyDialog, {
  						state,
  						t,
@@ -659,7 +716,7 @@ index 259765c..7617bc7 100644
  					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
  						open: state.view !== null,
  						onClose: () => {
-@@ -1444,12 +1755,13 @@ window.__ModuleLoader__.load({
+@@ -1444,12 +1745,13 @@ window.__ModuleLoader__.load({
  						this.set({ error: response.result.error.message });
  						return;
  					}
@@ -676,7 +733,16 @@ index 259765c..7617bc7 100644
  					});
  				} catch (error) {
  					this.set({ error: messageOf(error) });
-@@ -1689,6 +2001,15 @@ window.__ModuleLoader__.load({
+@@ -1655,7 +1957,7 @@ window.__ModuleLoader__.load({
+ 						id: "agent-preset",
+ 						order: -10,
+ 						locale: "settings.agentPreset",
+-						inject: labelInjected
++						inject: seatInjected
+ 					}, AgentPresetLabel);
+ 					return () => {
+ 						stop();
+@@ -1689,6 +1991,15 @@ window.__ModuleLoader__.load({
  				},
  				confirmCopy: () => section.confirmCopy(),
  				openLocation: (id) => section.openLocation(id),
@@ -692,7 +758,7 @@ index 259765c..7617bc7 100644
  				...creatorDraft === void 0 ? {} : { startCreatorDraft: creatorDraft },
  				confirmDelete: (id) => {
  					section.confirmDelete(id);
-@@ -1714,6 +2035,9 @@ window.__ModuleLoader__.load({
+@@ -1714,6 +2025,9 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		exports.AGENT_PRESET_SETTINGS_NS = AGENT_PRESET_SETTINGS_NS;

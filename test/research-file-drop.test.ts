@@ -3137,3 +3137,30 @@ describe('Research canvas file drops', () => {
     expect(restored.selection.selectedNodeIds).toEqual([container.id])
   })
 })
+
+describe('Chat sent file tags', () => {
+  it('renders serialized file references as research-style filename tags in historical bubbles', async () => {
+    const { renderToStaticMarkup } = requireModule('react-dom/server')
+    const React = requireModule('react')
+    const client = await loadClientBundle('dsh-client-ui-conversation', {
+      '@deepseek-ai/dsh-client-ui-primitives': {
+        MessageText: ({ text }: { text: string }) => React.createElement('span', null, text)
+      },
+      '@deepseek-ai/dsh-client-ui-attachment': { ImageGallery: () => null }
+    })
+    const controller = new AbortController()
+    const paths = ['/Users/test/中文 文件.png', '/Users/test/a`b.pdf']
+    const refs = await Promise.all(paths.map((path) => client.chatFileReferenceCodec.serialize(client.chatFileReference(path).ref, controller.signal)))
+    const html = renderToStaticMarkup(React.createElement(client.UserStyleBubble, {
+      content: [{ type: 'text', text: `比较 ${refs.join(' 和 ')} 的内容` }],
+      t: (key: string) => key
+    }))
+    expect(html).not.toContain('/Users/test')
+    expect(html).not.toContain('📎')
+    expect(html).toContain('中文 文件.png')
+    expect(html).toContain('a`b.pdf')
+    expect(html.match(/data-ref-chip="research-file"/g)).toHaveLength(2)
+    expect(html).toContain('比较 ')
+    expect(html).toContain(' 的内容')
+  })
+})
