@@ -1491,7 +1491,7 @@ if (process.argv.includes('--serve')) {
     const secondLayout = await page.evaluate(() => {
       const rect = element => { const r = element.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height } }
       const panel = document.querySelector('.fixture-discussion')
-      const scroll = panel.querySelector('[data-conversation-scroll]')
+      const scroll = panel.querySelector('[data-research-conversation-host]')
       const messages = panel.querySelectorAll('[data-shared-discussion] article')
       return { panel: rect(panel), scroll: rect(scroll), scrollHeight: scroll.scrollHeight,
         scrollTop: scroll.scrollTop, flow: rect(panel.querySelector('[data-shared-discussion]')),
