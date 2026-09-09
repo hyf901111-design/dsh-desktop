@@ -1,0 +1,73 @@
+diff --git a/node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js
+index c99eb37..a58df7c 100644
+--- a/node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js
++++ b/node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js
+@@ -705,6 +705,12 @@ window.__ModuleLoader__.load({
+ 		* @param props - injected face (the menu store and the pick route); `t` rides the standard locale seat.
+ 		* @returns the dropdown while open; null while closed.
+ 		*/
++		function commandMenuText(source, item, field, t) {
++			if (source !== "command") return item[field];
++			const key = `command.${item.name}.${field}`;
++			const translated = t(key);
++			return translated === key ? item[field] : translated;
++		}
+ 		function MenuView({ menu, onPick, onDismiss, t }) {
+ 			const state = (0, react.useSyncExternalStore)((fn) => menu.subscribe(fn), () => menu.getSnapshot());
+ 			const listRef = (0, react.useRef)(null);
+@@ -766,11 +772,11 @@ window.__ModuleLoader__.load({
+ 								}),
+ 								(0, react_jsx_runtime.jsx)("span", {
+ 									className: MenuView_module_css_default.itemName,
+-									children: item.name
++									children: commandMenuText(group.source, item, "name", t)
+ 								}),
+ 								item.description !== void 0 && (0, react_jsx_runtime.jsx)("span", {
+ 									className: MenuView_module_css_default.itemDescription,
+-									children: item.description
++									children: commandMenuText(group.source, item, "description", t)
+ 								})
+ 							]
+ 						}, `${group.source}:${item.name}`);
+@@ -787,6 +793,20 @@ window.__ModuleLoader__.load({
+ 		*/
+ 		/** Simplified Chinese dictionary (the key-set source of truth). */
+ 		const zh = {
++			"command.compact.name": "压缩历史",
++			"command.compact.description": "压缩较早的对话历史",
++			"command.export.name": "导出会话",
++			"command.export.description": "将本会话记录下载为 ZIP 压缩包",
++			"command.feedback.name": "反馈",
++			"command.feedback.description": "记录对此会话的反馈",
++			"command.goal.name": "任务目标",
++			"command.goal.description": "设置或查看长期任务的目标",
++			"command.permission.name": "权限",
++			"command.permission.description": "切换权限模式与操作审批策略",
++			"command.plan.name": "计划模式",
++			"command.plan.description": "进入或退出计划模式",
++			"command.model.name": "模型",
++			"command.model.description": "选择本会话使用的模型",
+ 			"command": "命令",
+ 			"skill": "技能",
+ 			"subagent": "子智能体",
+@@ -795,6 +815,20 @@ window.__ModuleLoader__.load({
+ 		};
+ 		/** English dictionary, checked complete against the zh key set. */
+ 		const en = {
++			"command.compact.name": "compact",
++			"command.compact.description": "Compact older conversation history",
++			"command.export.name": "export",
++			"command.export.description": "Download this session log as a ZIP archive",
++			"command.feedback.name": "feedback",
++			"command.feedback.description": "Record feedback about this session",
++			"command.goal.name": "goal",
++			"command.goal.description": "Set or view the goal for a long-running task",
++			"command.permission.name": "permission",
++			"command.permission.description": "Switch the permission preset (sandbox mode + approval policy)",
++			"command.plan.name": "plan",
++			"command.plan.description": "Enter or leave plan mode",
++			"command.model.name": "model",
++			"command.model.description": "Select the model used by this session",
+ 			"command": "Commands",
+ 			"skill": "Skills",
+ 			"subagent": "Subagents",
