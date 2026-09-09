@@ -1669,17 +1669,17 @@ if (process.argv.includes('--serve')) {
     await page
       .getByRole('button', { name: '林研究员，打开账户菜单', exact: true })
       .click()
-    await page
-      .getByRole('menuitem', { name: '复制我的 ID', exact: true })
-      .click()
-    await page.waitForFunction(
-      async () => (await navigator.clipboard.readText()) === '0000000001'
-    )
-    await page.screenshot({
-      animations: 'disabled',
-      path: join(out, 'account-menu-dark.png')
-    })
-    await page.mouse.click(850, 400)
+    await page.locator('.sherlock-account-menu-profile small').getByText('ID 0000 0000 01',{exact:true}).waitFor()
+    assert.equal(await page.getByRole('menuitem',{name:'账户信息',exact:true}).count(),0)
+    assert.equal(await page.getByRole('menuitem',{name:'复制我的 ID',exact:true}).count(),0)
+    await page.screenshot({animations:'disabled',path:join(out,'account-menu-dark.png')})
+    await page.getByRole('menuitem',{name:'林研究员，查看账户信息',exact:true}).click()
+    await page.locator('.sherlock-account-profile').getByText('ID 0000 0000 01',{exact:true}).waitFor()
+    await page.getByRole('button',{name:'复制 ID',exact:true}).click()
+    await page.waitForFunction(async () => (await navigator.clipboard.readText()) === '0000000001')
+    await page.getByRole('button',{name:'已复制 ID',exact:true}).waitFor()
+    await page.screenshot({animations:'disabled',path:join(out,'account-details-id-dark.png')})
+    await page.getByRole('button',{name:'← 返回应用',exact:true}).click()
     assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'editor' })).ok, true)
     await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === true)
     networks[1].offline = true
