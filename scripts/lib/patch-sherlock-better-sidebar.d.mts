@@ -1,2 +1,4 @@
 export declare function patchBetterSidebarClient(source: string): string
 export declare function patchBetterSidebarPackage(packageRoot: string): Promise<void>
+export declare function sherlockSessionHasChatFile(session: { events?: Array<{ type: string; data?: { source?: { kind: string }; content?: Array<{ type: string; text?: string }> } }> } | undefined, targetPath: string): boolean
+export declare function patchBetterSidebarServer(source: string): string

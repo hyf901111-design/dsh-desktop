@@ -221,8 +221,35 @@ export async function patchBetterSidebarPackage(packageRoot) {
       `Unsupported Better Sidebar package for Sherlock patch: ${manifest.name}@${manifest.version}`
     )
   }
+  const serverPath = path.join(packageRoot, 'lib', 'index.js')
+  const serverSource = await readFile(serverPath, 'utf8')
+  const serverPatched = patchBetterSidebarServer(serverSource)
+  if (serverPatched !== serverSource) await writeFile(serverPath, serverPatched, 'utf8')
   const clientPath = path.join(packageRoot, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
   const patched = patchBetterSidebarClient(source)
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
+}
+
+// An external media file is readable only when this exact path was attached by
+// the user in this session. Assistant output and arbitrary request paths do not
+// confer file access. The route retains its origin fence and media size checks.
+export function sherlockSessionHasChatFile(session, targetPath) {
+  for (const event of session?.events ?? []) {
+    if (event.type !== 'user/message' || event.data?.source?.kind !== 'user') continue
+    const text = (event.data.content ?? []).filter((block) => block.type === 'text' && typeof block.text === 'string').map((block) => block.text).join('')
+    for (const match of text.matchAll(/📎 文件：`((?:\\`|[^`])+)`/g)) {
+      if (match[1].replaceAll('\\`', '`') === targetPath) return true
+    }
+  }
+  return false
+}
+
+export function patchBetterSidebarServer(source) {
+  const marker = '/* sherlock:session-attached-media:v1 */'
+  if (source.includes(marker)) return source
+  const guard = 'if (!isWithin(cwd, path)) throw new SidebarError("fs-error", "media path outside the session working directory", 403);'
+  return `${marker}\n${sherlockSessionHasChatFile.toString()}\n` + replaceExact(source, guard,
+    'if (!isWithin(cwd, path) && !sherlockSessionHasChatFile(ctx.sessions.get(sessionId), path)) throw new SidebarError("fs-error", "media path outside the session working directory", 403);',
+    'session attached media scope')
 }
