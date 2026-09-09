@@ -278,8 +278,94 @@ export function freezeSnapshot(input) {
     throw Error('HISTORY_TOO_LARGE')
   return freeze({ canvas, history })
 }
+function validateSharedStructure(doc) {
+  const seen = new Set()
+  function visit(value, depth = 0) {
+    if (depth > 20) throw Error('INVALID_DOCUMENT')
+    if (value instanceof Y.AbstractType) {
+      if (seen.has(value)) return
+      seen.add(value)
+      if (value.constructor === Y.Map) {
+        for (const [key, child] of value) {
+          if (forbidden.test(key)) throw Error('FORBIDDEN_FIELD')
+          visit(child, depth + 1)
+        }
+      } else if (value.constructor === Y.Array) {
+        for (const child of value.toArray()) visit(child, depth + 1)
+      } else if (value.constructor === Y.Text) {
+        if (Object.keys(value.getAttributes()).length)
+          throw Error('FORBIDDEN_TEXT_ATTRIBUTES')
+        for (const delta of value.toDelta())
+          if (
+            typeof delta.insert !== 'string' ||
+            Object.keys(delta.attributes ?? {}).length
+          )
+            throw Error('FORBIDDEN_TEXT_FORMAT_OR_EMBED')
+        safe(value.toString(), depth)
+      } else throw Error('FORBIDDEN_SHARED_TYPE')
+    } else safe(value, depth)
+  }
+  for (const name of collections) {
+    const root = doc.getMap(name)
+    for (const node of root.values()) visit(node)
+  }
+  // toDelta/toJSON omit formatting that was subsequently cleared and historical
+  // map values. Inspect every retained struct that encodeStateAsUpdate will send.
+  // Plain-text collaboration never needs format/embed/binary/subdocument structs.
+  for (const structs of doc.store.clients.values())
+    for (const struct of structs) {
+      if (struct instanceof Y.GC) continue
+      if (!(struct instanceof Y.Item)) throw Error('FORBIDDEN_SHARED_STRUCT')
+      const content = struct.content
+      if (
+        content instanceof Y.ContentFormat ||
+        content instanceof Y.ContentEmbed ||
+        content instanceof Y.ContentBinary ||
+        content instanceof Y.ContentDoc
+      )
+        throw Error('FORBIDDEN_ENCODED_CONTENT')
+      if (
+        struct.parentSub !== null &&
+        forbidden.test(struct.parentSub) &&
+        !collections.some((name) => struct.parent === doc.getMap(name))
+      )
+        throw Error('FORBIDDEN_FIELD')
+      if (content instanceof Y.ContentType) visit(content.type)
+      else if (
+        content instanceof Y.ContentAny ||
+        content instanceof Y.ContentJSON
+      )
+        for (const value of content.getContent()) safe(value)
+      else if (content instanceof Y.ContentString) safe(content.str)
+      else if (!(content instanceof Y.ContentDeleted))
+        throw Error('FORBIDDEN_ENCODED_CONTENT')
+    }
+}
 export function mergeDocumentUpdate(doc, bytes, tombstones = new Set()) {
   if (bytes.length > LIMITS.updateBytes) throw Error('UPDATE_TOO_LARGE')
+  // Inspect incoming history before Yjs GC can discard cleared formatting.
+  // Reject it rather than accepting an update with private embedded metadata.
+  let incoming
+  try {
+    incoming = Y.decodeUpdate(bytes)
+  } catch {
+    throw Error('INVALID_DOCUMENT')
+  }
+  for (const struct of incoming.structs) {
+    const content = struct.content
+    if (
+      content instanceof Y.ContentFormat ||
+      content instanceof Y.ContentEmbed ||
+      content instanceof Y.ContentBinary ||
+      content instanceof Y.ContentDoc
+    )
+      throw Error('FORBIDDEN_ENCODED_CONTENT')
+    if (
+      content instanceof Y.ContentType &&
+      ![Y.Map, Y.Array, Y.Text].includes(content.type.constructor)
+    )
+      throw Error('FORBIDDEN_SHARED_TYPE')
+  }
   const candidate = decodeDocument(encodeDocument(doc))
   Y.applyUpdate(candidate, bytes)
   if ([...candidate.share.keys()].some((k) => !collections.includes(k)))
@@ -293,6 +379,7 @@ export function mergeDocumentUpdate(doc, bytes, tombstones = new Set()) {
         throw Error('INVALID_NODE')
     }
   }
+  validateSharedStructure(candidate)
   for (const key of tombstones) {
     const colon = key.indexOf(':')
     candidate.getMap(key.slice(0, colon)).delete(key.slice(colon + 1))

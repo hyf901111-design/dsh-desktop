@@ -269,6 +269,20 @@ export async function cleanup(env) {
     ).all()
   ).results
   for (const upload of abandoned) {
+    // Persist a cleanup claim before any external R2 delete. A competing
+    // activation uses the same unique key and cannot pass its D1 batch.
+    await sql(
+      env,
+      "INSERT OR IGNORE INTO research_upload_claims(upload_id,kind,board_id) SELECT id,'cleanup',NULL FROM research_uploads WHERE id=? AND board_id IS NULL AND expires_at<?",
+      upload.id,
+      Date.now()
+    ).run()
+    const claim = await sql(
+      env,
+      'SELECT kind FROM research_upload_claims WHERE upload_id=?',
+      upload.id
+    ).first()
+    if (claim?.kind !== 'cleanup') continue
     const assets = (
       await sql(
         env,
@@ -282,6 +296,11 @@ export async function cleanup(env) {
       sql(
         env,
         'DELETE FROM research_assets WHERE upload_id=? AND board_id IS NULL',
+        upload.id
+      ),
+      sql(
+        env,
+        "DELETE FROM research_upload_claims WHERE upload_id=? AND kind='cleanup'",
         upload.id
       ),
       sql(

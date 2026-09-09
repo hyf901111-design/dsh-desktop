@@ -13,6 +13,7 @@ CREATE TABLE research_notification_outbox (id TEXT PRIMARY KEY, notification_id 
 CREATE TABLE research_receipts (board_id TEXT NOT NULL REFERENCES research_boards(id), user_id TEXT NOT NULL, operation_id TEXT NOT NULL, seq INTEGER NOT NULL, epoch INTEGER NOT NULL, response TEXT NOT NULL, PRIMARY KEY(board_id,user_id,operation_id));
 CREATE TABLE research_tickets (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, session_hash TEXT NOT NULL, scope TEXT NOT NULL, board_id TEXT, epoch INTEGER, expires_at INTEGER NOT NULL);
 CREATE TABLE research_uploads (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), operation_id TEXT NOT NULL, board_id TEXT, expires_at INTEGER NOT NULL, UNIQUE(user_id,operation_id));
+CREATE TABLE research_upload_claims (upload_id TEXT NOT NULL PRIMARY KEY REFERENCES research_uploads(id), kind TEXT NOT NULL CHECK(kind IN ('activation','cleanup')), board_id TEXT REFERENCES research_boards(id), CHECK((kind='activation' AND board_id IS NOT NULL) OR (kind='cleanup' AND board_id IS NULL)));
 CREATE TABLE research_assets (id TEXT NOT NULL, upload_id TEXT NOT NULL REFERENCES research_uploads(id), board_id TEXT, object_key TEXT NOT NULL UNIQUE, name TEXT NOT NULL, content_type TEXT NOT NULL, size INTEGER NOT NULL, content_hash TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(upload_id,id));
 CREATE UNIQUE INDEX research_assets_board ON research_assets(board_id,id) WHERE board_id IS NOT NULL;
 CREATE TABLE research_limits (key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires_at INTEGER NOT NULL);

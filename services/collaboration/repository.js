@@ -2,6 +2,36 @@ import { hash } from '../accounts/auth.js'
 import { fail, publicId } from './validation.js'
 export const sql = (env, text, ...values) =>
   env.ACCOUNTS_DB.prepare(text).bind(...values)
+// A unique claim is shared by all board DOs and by cleanup. Its NOT NULL/PK
+// constraints deliberately abort the surrounding D1 batch when a claim loses.
+export function activateUploadStatements(env, uploadId, userId, boardId) {
+  return [
+    sql(
+      env,
+      "INSERT INTO research_upload_claims(upload_id,kind,board_id) VALUES ((SELECT id FROM research_uploads WHERE id=? AND user_id=? AND board_id IS NULL AND expires_at>?), 'activation', ?)",
+      uploadId,
+      userId,
+      Date.now(),
+      boardId
+    ),
+    sql(
+      env,
+      "UPDATE research_uploads SET board_id=? WHERE id=? AND board_id IS NULL AND EXISTS (SELECT 1 FROM research_upload_claims WHERE upload_id=? AND kind='activation' AND board_id=?)",
+      boardId,
+      uploadId,
+      uploadId,
+      boardId
+    ),
+    sql(
+      env,
+      "UPDATE research_assets SET board_id=? WHERE upload_id=? AND board_id IS NULL AND EXISTS (SELECT 1 FROM research_upload_claims WHERE upload_id=? AND kind='activation' AND board_id=?)",
+      boardId,
+      uploadId,
+      uploadId,
+      boardId
+    )
+  ]
+}
 export async function liveUser(env, identity) {
   if (!identity?.session_hash) fail('LOGIN_REQUIRED', 401)
   const user = await sql(

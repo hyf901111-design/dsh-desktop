@@ -83,6 +83,12 @@ export function json(value, status = 200) {
   })
 }
 export function errorResponse(error) {
+  if (
+    /(?:UNIQUE|NOT NULL) constraint failed: research_upload_claims\.upload_id/.test(
+      error.message
+    )
+  )
+    error = new CollaborationError('UPLOAD_ALREADY_CLAIMED_OR_EXPIRED', 409)
   const known = error instanceof CollaborationError
   const code = known
     ? error.code

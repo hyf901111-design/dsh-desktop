@@ -17,6 +17,7 @@ import {
 } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   sql,
+  activateUploadStatements,
   liveUser,
   identity,
   lookup,
@@ -286,26 +287,16 @@ export class ResearchBoardRoom {
           input.user,
           input.operationId,
           { asset: { ...asset, boardId: input.boardId } },
-          [
-            sql(
-              this.env,
-              'UPDATE research_uploads SET board_id=? WHERE id=?',
-              input.boardId,
-              uploadId
-            ),
-            sql(
-              this.env,
-              'UPDATE research_assets SET board_id=? WHERE upload_id=?',
-              input.boardId,
-              uploadId
-            )
-          ]
+          activateUploadStatements(
+            this.env,
+            uploadId,
+            input.user.id,
+            input.boardId
+          )
         )
       } catch (e) {
-        return {
-          __error: await errorResponse(e).json(),
-          __status: e.status ?? 503
-        }
+        const response = errorResponse(e)
+        return { __error: await response.json(), __status: response.status }
       }
     })
   }
@@ -417,18 +408,7 @@ export class ResearchBoardRoom {
         user.id,
         now()
       ),
-      sql(
-        this.env,
-        'UPDATE research_uploads SET board_id=? WHERE id=?',
-        boardId,
-        uploadId
-      ),
-      sql(
-        this.env,
-        'UPDATE research_assets SET board_id=? WHERE upload_id=?',
-        boardId,
-        uploadId
-      )
+      ...activateUploadStatements(this.env, uploadId, user.id, boardId)
     ])
     await this.checkpoint(current)
     return { board, created: true }

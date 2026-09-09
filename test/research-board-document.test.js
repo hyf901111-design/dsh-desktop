@@ -174,6 +174,62 @@ describe('shared research document', () => {
     expect(copy.canvas.artifacts[0].generationError).toBe('复制时未完成')
     expect(JSON.stringify(copy)).not.toMatch(/private-task|private-session/)
   })
+  it.each([
+    [
+      'text formatting',
+      (node) =>
+        node.get('title').format(0, 1, {
+          apiKey: 'synthetic-private-key',
+          localPath: '/Users/synthetic/private'
+        })
+    ],
+    [
+      'cleared historical formatting',
+      (node) => {
+        node.doc.gc = false
+        node.get('title').format(0, 1, { apiKey: 'synthetic-private-key' })
+        node.get('title').format(0, 1, { apiKey: null })
+      }
+    ],
+    [
+      'text block attributes',
+      (node) =>
+        node.get('title').setAttribute('apiKey', 'synthetic-private-key')
+    ],
+    [
+      'text embeds',
+      (node) =>
+        node.get('title').insertEmbed(0, { apiKey: 'synthetic-private-key' })
+    ],
+    [
+      'unsupported XML types',
+      (node) => {
+        const xml = new Y.XmlElement('p')
+        xml.setAttribute('apiKey', 'synthetic-private-key')
+        node.set('data', xml)
+      }
+    ]
+  ])(
+    'rejects encoded %s without replacing valid shared identities',
+    (_label, attack) => {
+      const room = createDocument(initial),
+        original = encodeDocument(room),
+        node = room.getMap('artifacts').get('a'),
+        title = node.get('title')
+      const malicious = decodeDocument(original)
+      attack(malicious.getMap('artifacts').get('a'))
+      expect(() =>
+        mergeDocumentUpdate(room, encodeDocument(malicious))
+      ).toThrow()
+      expect(encodeDocument(room)).toEqual(original)
+      expect(room.getMap('artifacts').get('a')).toBe(node)
+      expect(node.get('title')).toBe(title)
+      const honest = decodeDocument(original)
+      honest.getMap('artifacts').get('a').get('title').insert(0, '共同')
+      mergeDocumentUpdate(room, encodeDocument(honest))
+      expect(title.toString()).toBe('共同金价')
+    }
+  )
   it('rejects unauthorized shared shapes and oversized documents at merge boundary', () => {
     const room = createDocument(initial),
       evil = decodeDocument(encodeDocument(room))

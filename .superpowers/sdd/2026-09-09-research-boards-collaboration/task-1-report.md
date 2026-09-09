@@ -45,7 +45,7 @@
 
 新增行为测试后的修改均重新运行直接相关聚焦命令。阶段中另定位并修复 workerd 的 R2 FixedLengthStream 要求，以及读取流不能被 DO input gate 持续阻塞的问题。
 
-## 最终 GREEN（2026-09-09 11:47 UTC 这次执行）
+## 最终 GREEN（2026-09-09 本地 Asia/Shanghai 11:47，即 UTC 03:47 这次执行）
 
 1. `node_modules/.bin/vitest run test/research-board-document.test.js test/account-service.test.ts`
    - 2 个文件，13 个测试通过，exit 0；其中共享文档 7 个、既有账户兼容 6 个。
@@ -72,3 +72,31 @@
 - 未构建或替换共享客户端、未运行全功能测试、未 bump 版本、未修改公开更新源、未推送源码/标签、未触碰 canonical node_modules。Electron IPC、前端交互、真实共享文件捕获和多客户端 UI 验收属于后续任务。
 
 本任务提交包含上述所有 Task 1 文件及本报告；提交信息为「实现研究看板协作服务与细粒度共享文档」。提交哈希由 Git 日志和最终交接消息提供，避免报告自引用哈希。
+
+## Fresh review 修复轮（基线 9b2181fdc731aa1941e08b506c2efc58d75a58f4）
+
+范围仅为 review 两项 Important、有效邀请竞争测试、依赖版本和文档更正；没有新增产品功能或扩大测试范围。
+
+### 修复内容
+
+1. **跨 board DO 的 staging 独占激活与清理。** 在尚未上线的增量迁移 0002 中新增 `research_upload_claims`，以 upload_id 的 NOT NULL/唯一约束作为跨 DO 的事务仲裁。`activateUploadStatements` 在同一 D1 batch 中按当前用户、未分配状态和有效期插入 activation claim，再仅向该 claim 对应的 board 分配 upload 和 asset。后到者的 claim 失败会使整个 batch 回滚，包括先执行的 board/member 插入；返回 `UPLOAD_ALREADY_CLAIMED_OR_EXPIRED` / 409。新增素材入板也复用该事务合同。cleanup 在删除任何 R2 bytes 前持久化同一唯一键的 cleanup claim，下一轮可继续已取得的清理 claim；它和 activation 不可能同时拥有同一 upload。
+2. **实际 Yjs 编码结构边界。** 在 apply 前检查输入 update 的编码 struct，拒绝 formatting/embed/binary/subdocument/XML 类型；在候选文档中递归验证实际 Y.Map/Y.Array/plain Y.Text、块属性、delta 和所有将被 encode 保留的 struct。只读 JSON 投影不再承担唯一校验责任。恶意更新被拒绝时原文档编码和共享对象身份均保持不变；随后合法文本增量仍可合并到原 Y.Text。
+3. **有效邀请竞争。** accept/cancel 竞争改用当前 invitation version 2，检查拒绝分支为 INVITATION_UNAVAILABLE（不再是过期版本）、epoch 恰好前进一次，最终仅 owner 保持 active membership；接受先完成或取消先完成两种顺序都保持权限边界。
+4. **版本与时区。** 初次选择 13.6.27 没有具体兼容性理由，是未与计划 pin 对齐的实现偏差。本轮根 package、共享包、lockfile 和 worktree 私有安装统一到计划的 **13.6.32**；`npm ls yjs --all` 显示两处均为同一 13.6.32 deduped。原报告的“11:47 UTC”已更正为本地 Asia/Shanghai 11:47，即 UTC 03:47。
+5. **Minor 取舍只补文档。** task CAS 仍基于整个节点版本；生成期间移动/缩放可使结果进入 pendingResult，保留当前几何及生成结果供显式应用。这一轮没有重设计 content/geometry revision。
+
+### RED 证据
+
+- `node_modules/.bin/vitest run test/research-board-document.test.js`：原实现 5 条新攻击用例全部失败（`expected [Function] to throw an error`），分别是 text format、已清除历史 format、text block attribute、embed、XML shared type。
+- `node scripts/test-collaboration-worker.mjs`：确定性屏障令两个不同 board DO **都完成同一 upload 的素材验证之后**，才放行任一 activation batch。旧实现返回 `[200,200]`，预期 `[200,409]`。屏障仅存在于测试 esbuild stdin 的 DO 子类/辅助 DO，生产类、配置和协议没有测试 hook；不依赖计时碰运气。
+- 更新依赖后，历史格式 fixture 显式关闭来源文档 GC，确保已清除的私有格式值仍在输入编码中；`vitest ... -t 'cleared historical'` 再次 RED。随后增加 apply 前编码检查，使该用例也 GREEN。此过程没有将 Yjs 自动 GC 已去掉的无敏感内容误记为数据泄漏。
+
+### 最终 GREEN（本地 Asia/Shanghai 2026-09-09 12:06:55，即 UTC 04:06:55）
+
+- `node_modules/.bin/vitest run test/research-board-document.test.js test/account-service.test.ts`：**18 tests passed / 2 files / exit 0**（共享文档 12 + 既有账户 6）。既有文本/字段/嵌套单元格收敛与身份检查继续通过。
+- `node scripts/test-collaboration-worker.mjs`：**exit 0**，原有真实 D1/DO/R2、WebSocket、重启、任务/通知检查继续通过；新增 deterministic two-room activation 验证唯一成功、失败 board 完全不存在、upload/asset 同属赢家、赢家仍能下载原字节。
+- 同一真实 Miniflare 测试另用屏障暂停已完成素材验证的创建，在测试端使 staging 过期并执行 cleanup，然后恢复创建：创建 409、无半成品 board，并确认另一个已激活赢家的素材仍可读。这是确定性 cleanup/activation 交错验证。
+- `npm ls yjs --all`：**exit 0**，root 与 file package 共享 **13.6.32**。
+- `git diff --check`：**exit 0**。
+
+这一轮未重复生产部署/dry-run、共享客户端构建、全套测试或负载测试；此前报告的未测范围及保守行大小限制保持有效。修复提交只包含 Task 1 自有文件和本报告，提交后停止，等待 scoped re-review。

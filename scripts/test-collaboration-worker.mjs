@@ -19,11 +19,31 @@ import {
   fromBase64
 } from '../packages/dsh-research-collaboration/protocol.js'
 const built = await build({
-  entryPoints: [
-    fileURLToPath(
-      new URL('../services/collaboration/worker.js', import.meta.url)
-    )
-  ],
+  // Test-only DO subclass holds both distinct board rooms after complete asset
+  // validation and before either activation transaction. Production has no hook.
+  stdin: {
+    resolveDir: fileURLToPath(new URL('..', import.meta.url)),
+    sourcefile: 'collaboration-race-test-entry.js',
+    contents: `
+      import worker from './services/collaboration/worker.js';
+      import {ResearchBoardRoom as BaseRoom} from './services/collaboration/room.js';
+      export {ResearchNotifications} from './services/collaboration/notifications.js';
+      export class ResearchBoardRoom extends BaseRoom {
+        async validateAssets(canvas,assets,verifyObjects){
+          await super.validateAssets(canvas,assets,verifyObjects);
+          if(verifyObjects && canvas.files.some(n=>n.id==='activation-race-file'||n.id==='activation-cleanup-race-file')) {
+            const barrier=this.env.ACTIVATION_BARRIER.get(this.env.ACTIVATION_BARRIER.idFromName(assets[0].upload_id));
+            await barrier.fetch('https://test.internal/arrive');
+          }
+        }
+      }
+      export class ActivationBarrier {
+        constructor(){this.arrivals=0;this.ready=new Promise(resolve=>this.release=resolve);this.first=new Promise(resolve=>this.arrived=resolve)}
+        async fetch(request){const path=new URL(request.url).pathname;if(path==='/await-first'){await this.first;return Response.json({arrivals:this.arrivals})}if(path==='/release'){this.release();return Response.json({released:true})}this.arrivals++;this.arrived();if(this.arrivals===2)this.release();await this.ready;return Response.json({arrivals:this.arrivals})}
+      }
+      export default worker;
+    `
+  },
   bundle: true,
   write: false,
   format: 'esm',
@@ -41,6 +61,7 @@ const options = convertV4MiniflareOptions({
       compatibilityFlags: ['nodejs_compat'],
       d1Databases: { ACCOUNTS_DB: 'test-collaboration' },
       durableObjects: {
+        ACTIVATION_BARRIER: { className: 'ActivationBarrier', useSQLite: true },
         RESEARCH_ROOMS: { className: 'ResearchBoardRoom', useSQLite: true },
         RESEARCH_NOTIFICATIONS: {
           className: 'ResearchNotifications',
@@ -627,6 +648,159 @@ try {
     [200, 409],
     'same asset ID must remain immutable under concurrent uploads'
   )
+  const exclusiveUpload = await ok(
+    call(0, '/uploads', { operationId: 'exclusive-activation-upload' })
+  )
+  await ok(
+    mf.dispatchFetch(
+      `https://collab.local/v1/collaboration/uploads/${exclusiveUpload.uploadId}/assets/exclusive-file`,
+      {
+        method: 'PUT',
+        headers: {
+          authorization: `Bearer ${tokens[0]}`,
+          'X-Asset-Name': 'exclusive.txt',
+          'X-Asset-Size': '9',
+          'content-type': 'text/plain'
+        },
+        body: 'exclusive'
+      }
+    )
+  )
+  const exclusiveInput = {
+    title: 'Exclusive activation',
+    sourceRevision: 'exclusive-revision',
+    capturedAt: new Date().toISOString(),
+    uploadId: exclusiveUpload.uploadId,
+    snapshot: {
+      canvas: {
+        files: [
+          {
+            id: 'activation-race-file',
+            assetId: 'exclusive-file',
+            name: 'exclusive.txt',
+            source: 'computer',
+            x: 0,
+            y: 0
+          }
+        ],
+        artifacts: []
+      }
+    }
+  }
+  const activations = await Promise.all(
+    ['activate-a', 'activate-b'].map((operationId) =>
+      call(0, '/boards', { ...exclusiveInput, operationId })
+    )
+  )
+  assert.deepEqual(
+    activations.map((r) => r.status).sort(),
+    [200, 409],
+    'two board DOs must not both claim one validated staging upload'
+  )
+  const winner = await activations.find((r) => r.status === 200).json()
+  assert.equal(
+    await (
+      await call(0, `/boards/${winner.board.boardId}/assets/exclusive-file`)
+    ).text(),
+    'exclusive'
+  )
+  const exclusiveOwner = await db
+    .prepare('SELECT board_id FROM research_uploads WHERE id=?')
+    .bind(exclusiveUpload.uploadId)
+    .first()
+  assert.equal(exclusiveOwner.board_id, winner.board.boardId)
+  assert.equal(
+    (
+      await db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM research_boards WHERE create_operation IN ('activate-a','activate-b')"
+        )
+        .first()
+    ).n,
+    1
+  )
+  const exclusiveAsset = await db
+    .prepare('SELECT board_id FROM research_assets WHERE upload_id=?')
+    .bind(exclusiveUpload.uploadId)
+    .first()
+  assert.equal(exclusiveAsset.board_id, winner.board.boardId)
+  console.log(
+    'PASS: deterministic two-room staging activation has one winner and preserves winner assets'
+  )
+  const cleanupUpload = await ok(
+    call(0, '/uploads', { operationId: 'cleanup-versus-activation' })
+  )
+  await ok(
+    mf.dispatchFetch(
+      `https://collab.local/v1/collaboration/uploads/${cleanupUpload.uploadId}/assets/cleanup-file`,
+      {
+        method: 'PUT',
+        headers: {
+          authorization: `Bearer ${tokens[0]}`,
+          'X-Asset-Name': 'cleanup.txt',
+          'X-Asset-Size': '1',
+          'content-type': 'text/plain'
+        },
+        body: 'x'
+      }
+    )
+  )
+  const delayedCreation = call(0, '/boards', {
+    ...exclusiveInput,
+    operationId: 'activation-loses-to-cleanup',
+    uploadId: cleanupUpload.uploadId,
+    snapshot: {
+      canvas: {
+        files: [
+          {
+            id: 'activation-cleanup-race-file',
+            assetId: 'cleanup-file',
+            name: 'cleanup.txt',
+            source: 'computer',
+            x: 0,
+            y: 0
+          }
+        ],
+        artifacts: []
+      }
+    }
+  })
+  const barriers = await mf.getDurableObjectNamespace('ACTIVATION_BARRIER'),
+    cleanupBarrier = barriers.get(barriers.idFromName(cleanupUpload.uploadId))
+  await cleanupBarrier.fetch('https://test.internal/await-first')
+  await db
+    .prepare('UPDATE research_uploads SET expires_at=0 WHERE id=?')
+    .bind(cleanupUpload.uploadId)
+    .run()
+  await cleanup({
+    ACCOUNTS_DB: db,
+    RESEARCH_ASSETS: await mf.getR2Bucket('RESEARCH_ASSETS'),
+    RESEARCH_NOTIFICATIONS: await mf.getDurableObjectNamespace(
+      'RESEARCH_NOTIFICATIONS'
+    )
+  })
+  await cleanupBarrier.fetch('https://test.internal/release')
+  assert.equal((await delayedCreation).status, 409)
+  assert.equal(
+    (
+      await db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM research_boards WHERE create_operation='activation-loses-to-cleanup'"
+        )
+        .first()
+    ).n,
+    0
+  )
+  assert.equal(
+    await (
+      await call(0, `/boards/${winner.board.boardId}/assets/exclusive-file`)
+    ).text(),
+    'exclusive'
+  )
+  console.log(
+    'PASS: cleanup claims defeat stale validated activation without touching active winner assets'
+  )
+
   const stagingInput = {
     operationId: 'stage-board',
     title: '材料副本',
@@ -723,10 +897,11 @@ try {
     paginationCursor = page.cursor
   }
   assert.equal(paginationCursor, pendingBefore.cursor)
+  const preRaceEpoch = epoch
   const race = await Promise.all([
     call(2, `/invitations/${atomicInvite.invitation.invitationId}/respond`, {
       operationId: 'race-accept',
-      version: 1,
+      version: revisedInvite.invitation.version,
       decision: 'accept'
     }),
     command(0, 'cancel')
@@ -734,6 +909,23 @@ try {
   assert.ok([200, 409].includes(race[0].status))
   assert.equal(race[1].status, 200)
   epoch = (await race[1].json()).board.sharingEpoch
+  assert.equal(epoch, preRaceEpoch + 1)
+  if (race[0].status === 409)
+    assert.equal(
+      (await race[0].clone().json()).error.code,
+      'INVITATION_UNAVAILABLE'
+    )
+  assert.deepEqual(
+    (
+      await db
+        .prepare(
+          "SELECT user_id FROM board_members WHERE board_id=? AND status='active'"
+        )
+        .bind(boardId)
+        .all()
+    ).results.map((r) => r.user_id),
+    ['u0']
+  )
   assert.equal((await call(2, `/boards/${boardId}`)).status, 403)
   const hugeCanvas = {
     files: [],
