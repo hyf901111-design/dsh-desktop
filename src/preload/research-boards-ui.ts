@@ -79,6 +79,8 @@ const canvasOf = (w: Workspace): Canvas => {
 const signature = (v: unknown) => JSON.stringify(v)
 const uuid = () => crypto.randomUUID()
 type EditState = {
+  accountId: string
+  generation: number
   workspace: Workspace
   unsubscribe: () => void
   view: BoardView
@@ -130,7 +132,11 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       timer?: ReturnType<typeof setTimeout>
     }
   >()
-  const ownRecovery = new Map<string, { boardId: string; text: string }>()
+  const ownRecovery = new Map<
+    string,
+    { boardId: string; text: string; accountId: string }
+  >()
+  let recoveryOwner: string | undefined
   const sends = new Map<
       string,
       {
@@ -255,6 +261,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const prior = ownRecovery.get(key)?.text ?? ''
       ownRecovery.set(key, {
         boardId,
+        accountId: recoveryOwner ?? '',
         text: (prior + '\n' + additions.join('\n')).slice(-65536)
       })
     }
@@ -309,6 +316,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (!e) {
       const workspace = deps.researchWorkspaces.for(v.localSessionId)
       e = {
+        accountId: state.account.user?.userId ?? '',
+        generation: state.account.generation,
         workspace,
         unsubscribe: () => {},
         view: v,
@@ -323,7 +332,13 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       e.unsubscribe = workspace.subscribe(() => {
         const next = canvasOf(workspace),
           sig = signature(next)
-        if (editor.applying || sig === editor.observed) return
+        if (
+          editor.applying ||
+          sig === editor.observed ||
+          editor.generation !== state.account.generation ||
+          editor.accountId !== state.account.user?.userId
+        )
+          return
         const before = JSON.parse(editor.observed) as Canvas
         editor.observed = sig
         if (!editor.view.permissions.edit) return
@@ -343,6 +358,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   async function drain(e: EditState) {
     if (
       disposed ||
+      e.generation !== state.account.generation ||
+      e.accountId !== state.account.user?.userId ||
       e.busy ||
       e.paused ||
       (!e.queued && !e.mutation) ||
@@ -517,7 +534,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const boardId =
         editors.get(id)?.view.boardId ??
         state.boards.find((b) => b.localSessionId === id)?.boardId
-      if (text && boardId) ownRecovery.set(`draft:${id}`, { boardId, text })
+      if (text && boardId)
+        ownRecovery.set(`draft:${id}`, {
+          boardId,
+          text,
+          accountId: recoveryOwner ?? ''
+        })
       shell.setDraft?.('')
       shell.setResearchContextPreparing?.(false)
     }
@@ -576,12 +598,16 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return
     if (next.account.generation !== state.account.generation) {
       clearEditors()
+      activeSession = null
       navigation++
-      if (
-        next.account.user?.userId &&
-        state.account.user?.userId !== next.account.user.userId
-      )
-        ownRecovery.clear()
+    }
+    // Identity arrives after loading/null at the same generation. Keep the last
+    // recovery owner through logout, and retire it when a different user resolves.
+    const nextOwner = next.account.user?.userId
+    if (nextOwner && nextOwner !== recoveryOwner) {
+      ownRecovery.clear()
+      doc.querySelectorAll('.srb-dialog').forEach((dialog) => dialog.remove())
+      recoveryOwner = nextOwner
     }
     eventSeq = next.eventSeq
     state = next
@@ -766,7 +792,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const draft = d,
       generation = state.account.generation,
       key = `draft:${id}`
-    if (text) ownRecovery.set(key, { boardId: v.boardId, text })
+    if (text)
+      ownRecovery.set(key, {
+        boardId: v.boardId,
+        text,
+        accountId: recoveryOwner ?? ''
+      })
     else ownRecovery.delete(key)
     // Begin the IPC write in this input turn; local own text survives access loss before settlement.
     const pending = call('recovery.saveDraft', {
@@ -897,6 +928,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     shell?.setResearchContextPreparing?.(true)
     try {
       await flushCanvas(sessionId)
+      if (generation !== state.account.generation) return
       const reply = await call<RequestReply>('request.submit', {
         boardId: v.boardId,
         text,
@@ -1108,7 +1140,14 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     },
     editorError: (id: string) => editors.get(id)?.error,
     localRecovery: () =>
-      [...ownRecovery.entries()].map(([id, value]) => ({ id, ...value })),
+      [...ownRecovery.entries()]
+        .filter(
+          ([, value]) =>
+            value.accountId === recoveryOwner &&
+            (!state.account.user ||
+              state.account.user.userId === value.accountId)
+        )
+        .map(([id, value]) => ({ id, ...value })),
     dismissLocalRecovery: (id: string) => {
       ownRecovery.delete(id)
       notify()
@@ -1897,120 +1936,171 @@ export function ResearchBoardDiscussion({
       h('p', null, '画板内容已隐藏。你的未发送内容可从恢复记录中查看。'),
       h('button', { onClick: () => showRecovery(page) }, '查看我的恢复记录')
     )
-  const rows = [
-    ...(v.history ?? []).map((m: any) => ({ ...m, imported: true })),
-    ...v.messages
+  const live = [
+    ...new Map(v.messages.map((m: any) => [m.id, m])).values()
+  ] as any[]
+  const requestIds = new Set(
+    live.filter((m) => m.role === 'user').map((m) => m.id)
+  )
+  const linked = (m: any) =>
+    m.role === 'assistant' && requestIds.has(m.requestMessageId)
+  const groups = [
+    ...(v.history ?? []).map((m: any) => ({
+      key: 'history:' + m.id,
+      rows: [{ ...m, imported: true }],
+      requestId: undefined
+    })),
+    ...live
+      .filter((m) => !linked(m))
+      .map((m) => ({
+        key: 'message:' + m.id,
+        requestId: m.role === 'user' ? m.id : undefined,
+        rows: [
+          m,
+          ...live.filter(
+            (answer) => linked(answer) && answer.requestMessageId === m.id
+          )
+        ]
+      }))
   ]
-  return h(
-    'div',
-    { className: 'srb-discussion', 'data-shared-discussion': sessionId },
-    !rows.length &&
-      h('p', { className: 'srb-status' }, '围绕这份画板继续研究。'),
-    ...rows.map((m: any, i) =>
+  const renderMessage = (m: any, i: number) =>
+    h(
+      'article',
+      {
+        className: 'srb-message',
+        'data-role': m.role,
+        'data-message-id': m.id,
+        key: `${m.imported ? 'history' : 'message'}:${m.id ?? i}`
+      },
       h(
-        'article',
-        {
-          className: 'srb-message',
-          'data-role': m.role,
-          key: `${m.imported ? 'history' : 'message'}:${m.id ?? i}`
-        },
-        h(
-          'small',
-          null,
-          m.role === 'assistant'
-            ? '研究助手' +
-                (m.author?.username ? ' · ' + m.author.username : '')
-            : (m.author?.username ?? m.authorName ?? '成员'),
-          m.imported ? ' · 复制时的已保存对话' : ''
+        'small',
+        null,
+        m.role === 'assistant'
+          ? '研究助手' + (m.author?.username ? ' · ' + m.author.username : '')
+          : (m.author?.username ?? m.authorName ?? '成员'),
+        m.imported ? ' · 复制时的已保存对话' : ''
+      ),
+      MarkdownText ? h(MarkdownText, { text: m.text }) : h('p', null, m.text)
+    )
+  const renderControls = (requestId?: string) => {
+    const belongs = (id: unknown) =>
+      requestId ? id === requestId : !requestIds.has(id)
+    return h(
+      React.Fragment,
+      null,
+      ...pendingRequests
+        .filter((r: any) => belongs(r.requestMessageId))
+        .filter(
+          (r: any) =>
+            r.state === 'taskCreateFailed' ||
+            r.state === 'messageAccepted' ||
+            r.runtimeState === 'interrupted' ||
+            r.runtimeState === 'uncertain'
+        )
+        .map((r: any) =>
+          h(
+            'div',
+            { className: 'srb-status', key: r.clientMutationId },
+            r.runtimeState
+              ? '执行已中断或结果未确认；不会自动重复调用模型。'
+              : '消息已保存，任务尚未启动。',
+            h(
+              'button',
+              {
+                onClick: () =>
+                  void page
+                    .call('request.retry', {
+                      boardId: v.boardId,
+                      clientMutationId: r.clientMutationId
+                    })
+                    .catch(page.showError)
+              },
+              r.runtimeState === 'uncertain'
+                ? '明确重新执行这条请求（可能已有一次执行）'
+                : r.runtimeState
+                  ? '重新执行这条请求'
+                  : '重试这条研究任务'
+            )
+          )
         ),
-        MarkdownText
-          ? h(MarkdownText, { text: m.text })
-          : h('p', null, m.text)
-      )
-    ),
-    ...pendingRequests
-      .filter(
-        (r: any) =>
-          r.state === 'taskCreateFailed' ||
-          r.state === 'messageAccepted' ||
-          r.runtimeState === 'interrupted' ||
-          r.runtimeState === 'uncertain'
-      )
-      .map((r: any) =>
-        h(
-          'div',
-          { className: 'srb-status', key: r.clientMutationId },
-          r.runtimeState
-            ? '执行已中断或结果未确认；不会自动重复调用模型。'
-            : '消息已保存，任务尚未启动。',
+      ...v.tasks
+        .filter((t: any) => belongs(t.requestMessageId))
+        .filter(
+          (t: any) =>
+            t.resultState === 'pendingResult' ||
+            t.resultState === 'targetDeleted'
+        )
+        .map((t: any) =>
           h(
             'button',
             {
+              key: 'apply-' + t.taskId,
               onClick: () =>
                 void page
-                  .call('request.retry', {
+                  .call('task.applyResult', {
                     boardId: v.boardId,
-                    clientMutationId: r.clientMutationId
+                    taskId: t.taskId
                   })
                   .catch(page.showError)
             },
-            r.runtimeState === 'uncertain'
-              ? '明确重新执行这条请求（可能已有一次执行）'
-              : r.runtimeState
-                ? '重新执行这条请求'
-                : '重试这条研究任务'
+            t.resultState === 'targetDeleted'
+              ? '将结果恢复为新组件'
+              : '应用保留的研究结果'
+          )
+        ),
+      page.retryRequest(sessionId) &&
+        belongs(page.retryRequest(sessionId)?.reply?.requestMessageId) &&
+        !pendingRequests.some(
+          (r: any) => r.clientMutationId === page.retryRequest(sessionId)?.id
+        ) &&
+        h(
+          'div',
+          { className: 'srb-status' },
+          '消息已保存，研究任务尚未启动。',
+          h(
+            'button',
+            {
+              disabled: page.retryRequest(sessionId)?.busy,
+              onClick: () => void page.retryRequest(sessionId)?.retry?.()
+            },
+            '重试这条研究任务'
+          )
+        ),
+      ...v.tasks
+        .filter((t: any) => belongs(t.requestMessageId))
+        .filter(
+          (t) => !['completed', 'failed', 'cancelled'].includes(t.status)
+        )
+        .map((t) =>
+          h(
+            'p',
+            { key: t.taskId, className: 'srb-status' },
+            t.status === 'running' ? '正在研究…' : '研究任务等待执行'
           )
         )
-      ),
-    ...v.tasks
-      .filter(
-        (t: any) =>
-          t.resultState === 'pendingResult' ||
-          t.resultState === 'targetDeleted'
-      )
-      .map((t: any) =>
-        h(
-          'button',
-          {
-            key: 'apply-' + t.taskId,
-            onClick: () =>
-              void page
-                .call('task.applyResult', {
-                  boardId: v.boardId,
-                  taskId: t.taskId
-                })
-                .catch(page.showError)
-          },
-          t.resultState === 'targetDeleted'
-            ? '将结果恢复为新组件'
-            : '应用保留的研究结果'
-        )
-      ),
-    page.retryRequest(sessionId) &&
+    )
+  }
+  return h(
+    'div',
+    { className: 'srb-discussion', 'data-shared-discussion': sessionId },
+    !groups.length &&
+      h('p', { className: 'srb-status' }, '围绕这份画板继续研究。'),
+    ...groups.map((group) =>
       h(
-        'div',
-        { className: 'srb-status' },
-        '消息已保存，研究任务尚未启动。',
-        h(
-          'button',
-          {
-            disabled: page.retryRequest(sessionId)?.busy,
-            onClick: () => void page.retryRequest(sessionId)?.retry?.()
-          },
-          '重试这条研究任务'
-        )
-      ),
-    ...v.tasks
-      .filter((t) => !['completed', 'failed', 'cancelled'].includes(t.status))
-      .map((t) =>
-        h(
-          'p',
-          { key: t.taskId, className: 'srb-status' },
-          t.status === 'running' ? '正在研究…' : '研究任务等待执行'
-        )
+        'section',
+        {
+          key: group.key,
+          className: 'srb-request-group',
+          'data-request-message-id': group.requestId
+        },
+        ...group.rows.map(renderMessage),
+        group.requestId && renderControls(group.requestId)
       )
+    ),
+    renderControls()
   )
 }
+
 function showRecovery(page: ResearchBoardsPage) {
   const d = boardDialog(document, '我的恢复记录')
   for (const r of page.localRecovery()) {
@@ -2018,9 +2108,12 @@ function showRecovery(page: ResearchBoardsPage) {
     notice.textContent = '当前窗口保留的未确认内容，请先复制保存。'
     d.body.append(
       notice,
-      boardButton(document, '复制这条恢复内容', () =>
-        navigator.clipboard.writeText(r.text)
-      )
+      boardButton(document, '复制这条恢复内容', () => {
+        const current = page.localRecovery().find(
+          (row) => row.id === r.id && row.accountId === r.accountId
+        )
+        if (current) return navigator.clipboard.writeText(current.text)
+      })
     )
     const pre = document.createElement('pre')
     pre.textContent = r.text

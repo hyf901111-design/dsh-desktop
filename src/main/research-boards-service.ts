@@ -2564,13 +2564,11 @@ export class ResearchBoardsService {
               node[field] = ids.get(node[field])
           canvas[d.collection].push(node)
         }
-        const reply = await this.applyCanvas({
+        const reply = await this.applyTaskCanvas(
+          this.userId(),
           boardId,
-          localSessionId: this.localSession(boardId),
-          baseRevision: r.revision,
-          clientMutationId: randomUUID(),
           canvas
-        })
+        )
         r.deletionRecovery.delete(id)
         this.store.updateAccount(this.userId(), (a) => {
           a.recoveries = a.recoveries.filter((x) => x.recoveryId !== id)

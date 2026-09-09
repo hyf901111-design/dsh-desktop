@@ -126,6 +126,8 @@ const sessions: any = {
   list,
   open: (id: string) => {
     const old = list.getSnapshot().current
+    // Actual Sessions.select keeps an already-selected session mounted.
+    if (old === id) return
     hub.setResearchActive(old, false)
     list.set({ ...list.getSnapshot(), current: id })
     hub.setResearchActive(id, true)

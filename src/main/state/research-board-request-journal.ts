@@ -20,13 +20,14 @@ export class ResearchRequestJournal {
     if (existsSync(this.path))
       this.value = JSON.parse(readFileSync(this.path, 'utf8'))
   }
-  private save() {
+  private save(candidate: Record<string, any>) {
     const tmp = this.path + '.tmp'
-    const data = JSON.stringify(this.value)
+    const data = JSON.stringify(candidate)
     if (Buffer.byteLength(data) > 64 * 1024 * 1024)
       throw Error('STORAGE_UNAVAILABLE')
     writeFileSync(tmp, data, { mode: 0o600 })
     renameSync(tmp, this.path)
+    this.value = candidate
   }
   prepare(
     accountId: string,
@@ -40,17 +41,17 @@ export class ResearchRequestJournal {
     if (old && old.intentHash !== digest(intent))
       throw Error('REQUEST_ID_REUSED')
     if (!old) {
-      this.value[key] = {
+      const record = {
         accountId,
         boardId,
         mutation,
-        intent,
+        intent: structuredClone(intent),
         intentHash: digest(intent),
         epoch,
         steps: {},
         createdAt: Date.now()
       }
-      this.save()
+      this.save({ ...this.value, [key]: record })
     }
     return key
   }
@@ -66,8 +67,10 @@ export class ResearchRequestJournal {
       .map(([key, r]) => ({ key, ...structuredClone(r) }))
   }
   update(key: string, patch: Record<string, unknown>) {
-    Object.assign(this.value[key], patch)
-    this.save()
+    this.save({
+      ...this.value,
+      [key]: { ...this.value[key], ...structuredClone(patch) }
+    })
   }
   step(
     key: string,
@@ -96,8 +99,7 @@ export class ResearchRequestJournal {
           body: structuredClone(body),
           hash: digest(body)
         }
-        r.steps[stepKey] = step
-        this.save()
+        this.update(key, { steps: { ...r.steps, [stepKey]: step } })
       }
       const reply = await send({
         ...step.body,
@@ -114,8 +116,12 @@ export class ResearchRequestJournal {
         throw Error('INVALID_RESPONSE')
       // Claim secrets are never written into ordinary application state.
       if (action !== 'taskClaim') {
-        step.reply = structuredClone(reply)
-        this.save()
+        this.update(key, {
+          steps: {
+            ...this.value[key].steps,
+            [stepKey]: { ...step, reply: structuredClone(reply) }
+          }
+        })
       }
       return reply
     })()

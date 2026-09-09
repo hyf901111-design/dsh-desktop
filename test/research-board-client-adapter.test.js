@@ -994,3 +994,171 @@ it('does not automatically replay an uncertain canvas mutation when read authori
     expect(f.page.editorError('shared')).toBe('ACK lost')
   } finally { f.dispose() }
 })
+
+it.each(['u', 'other'])(
+  'retires activation across null account states and isolates recovery for ready %s',
+  async (userId) => {
+    const f = await pageFixture()
+    const shell = {
+      snapshot: { draft: 'A private recovery' },
+      setDraft(text) {
+        this.snapshot.draft = text
+      },
+      setResearchContextPreparing() {}
+    }
+    f.hub.shells.set('shared', shell)
+    f.bridge.invoke.mockImplementation(async (action) => ({
+      ok: true,
+      value:
+        action === 'board.open'
+          ? { localSessionId: 'shared' }
+          : action === 'board.activate'
+            ? f.view
+            : null
+    }))
+    const emitAccount = (status, generation, user) =>
+      f.emit({
+        type: 'state',
+        accountGeneration: generation,
+        state: {
+          ...f.page.getState(),
+          eventSeq: f.page.getState().eventSeq + 1,
+          account: { status, generation, user },
+          current: null
+        }
+      })
+    try {
+      await f.page.activate('shared', true)
+      emitAccount('signedOut', 2, null)
+      expect(f.page.localRecovery().map((r) => r.text)).toContain(
+        'A private recovery'
+      )
+      emitAccount('loading', 3, null)
+      const dialog = f.window.document.createElement('dialog')
+      dialog.className = 'srb-dialog'
+      dialog.textContent = 'A private recovery'
+      f.window.document.body.append(dialog)
+      emitAccount('ready', 3, {
+        userId,
+        publicId: '0000000001',
+        username: userId
+      })
+      if (userId !== 'u') {
+        expect(f.page.localRecovery()).toEqual([])
+        expect(dialog.isConnected).toBe(false)
+      } else {
+        expect(f.page.localRecovery().map((r) => r.text)).toContain(
+          'A private recovery'
+        )
+        await f.page.openBoard('board')
+        expect(
+          f.bridge.invoke.mock.calls.filter(
+            ([action, p]) =>
+              action === 'board.activate' && p.localSessionId === 'shared'
+          )
+        ).toHaveLength(2)
+        expect(f.sessions.open).toHaveBeenCalledWith('shared')
+        expect(f.page.getView('shared').permissions.edit).toBe(true)
+      }
+    } finally {
+      f.dispose()
+    }
+  }
+)
+
+it('renders reversed same-author answers and task controls under their durable request identities', async () => {
+  const { ResearchBoardDiscussion } =
+    await import('../src/preload/research-boards-ui.ts')
+  const React = require('react'),
+    { renderToStaticMarkup } = require('react-dom/server')
+  const w = new Window()
+  const author = { username: '同一个提问者' }
+  const view = {
+    boardId: 'board',
+    permissions: { read: true },
+    history: [{ id: 'q1', role: 'user', text: 'imported baseline' }],
+    messages: [
+      { id: 'q1', role: 'user', text: 'Q1', author },
+      { id: 'q2', role: 'user', text: 'Q2', author },
+      {
+        id: 'a2',
+        role: 'assistant',
+        text: 'A2',
+        requestMessageId: 'q2',
+        author
+      },
+      {
+        id: 'a1',
+        role: 'assistant',
+        text: 'A1',
+        requestMessageId: 'q1',
+        author
+      },
+      {
+        id: 'orphan',
+        role: 'assistant',
+        text: 'orphan answer',
+        requestMessageId: 'missing'
+      }
+    ],
+    tasks: [
+      { taskId: 't1', requestMessageId: 'q1', status: 'running' },
+      {
+        taskId: 't2',
+        requestMessageId: 'q2',
+        status: 'completed',
+        resultState: 'pendingResult'
+      }
+    ]
+  }
+  const page = {
+    subscribe: () => () => {},
+    version: () => 1,
+    getView: () => view,
+    getState: () => ({}),
+    retryRequest: () => null
+  }
+  w.document.body.innerHTML = renderToStaticMarkup(
+    React.createElement(ResearchBoardDiscussion, { page, sessionId: 's' })
+  )
+  expect(
+    [...w.document.querySelectorAll('.srb-message p')].map(
+      (el) => el.textContent
+    )
+  ).toEqual(['imported baseline', 'Q1', 'A1', 'Q2', 'A2', 'orphan answer'])
+  expect(
+    w.document.querySelector('[data-request-message-id="q1"]').textContent
+  ).toContain('正在研究')
+  expect(
+    w.document.querySelector('[data-request-message-id="q2"]').textContent
+  ).toContain('应用保留')
+  expect(w.document.querySelectorAll('[data-message-id="a1"]')).toHaveLength(
+    1
+  )
+  w.happyDOM.abort()
+})
+
+it('does not let old-account queued edits or draft ACKs repopulate recovery after ready B', async () => {
+  const f = await pageFixture(), w = f.registry.for('shared')
+  let settleCanvas, settleDraft
+  const calls = []
+  f.bridge.invoke.mockImplementation((action, p) => {
+    calls.push(action)
+    if (action === 'canvas.apply') return new Promise(resolve => { settleCanvas = () => resolve({ ok: true, value: { canvas: p.canvas, localBranchRevision: 'old', canvasRevision: 'old', seq: 2, pendingCount: 0 } }) })
+    if (action === 'recovery.saveDraft') return new Promise(resolve => { settleDraft = () => resolve({ ok: true, value: {} }) })
+    return Promise.resolve({ ok: true, value: null })
+  })
+  try {
+    f.page.saveDraft('shared', 'A private late draft')
+    w.setArtifacts([{ ...f.view.canvas.artifacts[0], excerpt: 'first own edit' }])
+    await new Promise(r => setTimeout(r, 120))
+    w.setArtifacts([{ ...f.view.canvas.artifacts[0], excerpt: 'second queued own edit' }])
+    for (const [status, generation, user] of [['signedOut', 2, null], ['loading', 3, null], ['ready', 3, { userId: 'B' }]])
+      f.emit({ type: 'state', accountGeneration: generation, state: { ...f.page.getState(), eventSeq: f.page.getState().eventSeq + 1, account: { status, generation, user }, current: null } })
+    settleCanvas(); settleDraft()
+    await new Promise(r => setTimeout(r, 140))
+    expect(calls.filter(a => a === 'canvas.apply')).toHaveLength(1)
+    expect(f.page.localRecovery()).toEqual([])
+    expect(w.getSnapshot().artifacts).toEqual([])
+  } finally { f.dispose() }
+})

@@ -359,3 +359,84 @@ it('updates the active bubble to latest permission and cancelled status without 
     w.happyDOM.abort()
   }
 })
+
+it.each([false, true])(
+  'marks 101 unread rows in bounded batches with visible failure=%s and keeps pending independent',
+  async (fail) => {
+    const w = new Window({ url: 'http://localhost/' })
+    const state: any = {
+      version: 1,
+      eventSeq: 1,
+      account: { status: 'ready', generation: 1, user: { userId: 'u' } },
+      favorites: [],
+      boards: [],
+      current: null,
+      recoveries: [],
+      notifications: {
+        cursor: 101,
+        unreadCount: 101,
+        pendingCount: 101,
+        notifications: Array.from({ length: 101 }, (_, i) => ({
+          notificationId: 'n' + i,
+          eventVersion: 1,
+          type: 'invitation',
+          boardId: 'b',
+          boardTitle: '研究',
+          createdAt: 1,
+          readAt: null,
+          invitation: { invitationId: 'i' + i, version: 1, status: 'pending' }
+        }))
+      }
+    }
+    const batches: string[][] = []
+    const bridge: any = {
+      isSharedSession: () => false,
+      getSnapshot: async () => state,
+      subscribe: () => () => {},
+      invoke: async (action: string, input: any) => {
+        if (action === 'notifications.read') {
+          batches.push(input.notificationIds)
+          if (input.notificationIds.length > 100 || fail)
+            return {
+              ok: false,
+              error: { code: 'NETWORK_ERROR', message: '标记失败，请重试' }
+            }
+          for (const n of state.notifications.notifications)
+            if (input.notificationIds.includes(n.notificationId)) n.readAt = 2
+          state.notifications.unreadCount =
+            state.notifications.notifications.filter(
+              (n: any) => n.readAt === null
+            ).length
+        }
+        return { ok: true, value: state.notifications }
+      }
+    }
+    const host = w.document.createElement('div')
+    host.dataset.researchBoardBellHost = ''
+    w.document.body.append(host)
+    const dispose = mountResearchBoardNotifications(w.document as any, bridge)
+    try {
+      await new Promise((r) => setTimeout(r, 5))
+      host.querySelector('button')!.click()
+      await new Promise((r) => setTimeout(r, 10))
+      expect(batches.every((ids) => ids.length <= 100)).toBe(true)
+      if (fail)
+        expect(
+          w.document.querySelector('.srb-notifications')!.textContent
+        ).toContain('标记失败')
+      else {
+        expect(batches.map((ids) => ids.length)).toEqual([100, 1])
+        expect(state.notifications.unreadCount).toBe(0)
+      }
+      expect(state.notifications.pendingCount).toBe(101)
+      expect(
+        state.notifications.notifications.every(
+          (n: any) => n.invitation.status === 'pending'
+        )
+      ).toBe(true)
+    } finally {
+      dispose()
+      w.happyDOM.abort()
+    }
+  }
+)

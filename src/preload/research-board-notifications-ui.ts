@@ -132,7 +132,8 @@ export function mountResearchBoardNotifications(
     row.dataset.notificationId = n.notificationId
     const title = doc.createElement('p')
     title.textContent = n.boardTitle
-    const actor = n.actor as { username?: string; userId?: string } | undefined
+    const actor = n.actor as
+      { username?: string; userId?: string } | undefined
     const subtitle = doc.createElement('p')
     const ownResult = actor?.userId === state?.account.user?.userId
     const result =
@@ -381,10 +382,34 @@ export function mountResearchBoardNotifications(
       state?.notifications.notifications
         .filter((n) => n.readAt === null)
         .map((n) => n.notificationId) ?? []
-    if (ids.length)
-      void call('notifications.read', { notificationIds: ids })
-        .then(refresh)
-        .catch(() => {})
+    if (ids.length) {
+      const openedPanel = panel,
+        owner = account,
+        generation = state?.account.generation
+      void (async () => {
+        for (let start = 0; start < ids.length; start += 100) {
+          if (owner !== account || generation !== state?.account.generation)
+            return
+          await call('notifications.read', {
+            notificationIds: ids.slice(start, start + 100)
+          })
+        }
+        if (owner === account && generation === state?.account.generation)
+          await refresh()
+      })().catch((error) => {
+        if (
+          panel !== openedPanel ||
+          owner !== account ||
+          generation !== state?.account.generation
+        )
+          return
+        const status = doc.createElement('p')
+        status.role = 'alert'
+        status.textContent =
+          (error as Error).message || '标记已读失败，请重新打开消息中心重试。'
+        panel.append(status)
+      })
+    }
   }
   function reconcile() {
     if (disposed) return
@@ -424,15 +449,17 @@ export function mountResearchBoardNotifications(
       try {
         shown = new Map(
           JSON.parse(
-            win.localStorage.getItem(`sherlock.boards.displayed.${account}`) ??
-              '[]'
+            win.localStorage.getItem(
+              `sherlock.boards.displayed.${account}`
+            ) ?? '[]'
           )
         )
       } catch {}
     }
     state = next
     const fresh = next.notifications.notifications.filter(
-      (n) => pending(n) && (shown.get(n.notificationId) ?? -1) < n.eventVersion
+      (n) =>
+        pending(n) && (shown.get(n.notificationId) ?? -1) < n.eventVersion
     )
     if (id && !initialized) {
       aggregate = fresh.length

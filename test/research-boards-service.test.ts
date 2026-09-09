@@ -1616,3 +1616,103 @@ it('retires durable former-editor writes when the first cold-start snapshot is v
     'unsent editor intent'
   )
 })
+
+import { ResearchBoardIntegration } from '../src/main/research-board-integration'
+import {
+  ResearchFilePreviewRegistry,
+  FileResearchPreviewAuthorizationStorage
+} from '../src/main/state/research-file-preview'
+import { readFileSync, realpathSync } from 'node:fs'
+it.each(['preview-file', 'nonpreview-file', 'artifact'])(
+  'restores deleted %s through production materialization without reimporting cloud assets',
+  async (kind) => {
+    const hooks: ResearchBoardHooks = {}
+    const t = make(hooks)
+    const registry = new ResearchFilePreviewRegistry({
+      storage: new FileResearchPreviewAuthorizationStorage(t.dir)
+    })
+    const originalRequest = t.client.request
+    const assets: string[] = []
+    t.client.request = async (e: any) => {
+      if (e.kind === 'asset.get') {
+        assets.push(e.assetId)
+        return new Response('authorized cloud bytes', {
+          headers: { 'content-type': 'text/plain' }
+        }) as any
+      }
+      if (e.kind === 'asset.add') throw Error('RESTORE_MUST_NOT_REUPLOAD')
+      return originalRequest(e)
+    }
+    let opened = ''
+    const integration = new ResearchBoardIntegration({
+      root: join(realpathSync(t.dir), 'integration'),
+      storage: t.storage,
+      registry,
+      clipboard: () => undefined,
+      client: t.client as any,
+      service: () => t.service,
+      runtimeUrl: () => null,
+      runtimeToken: 'fixture',
+      revealFile: (path) => {
+        opened = path
+      },
+      invalidate() {}
+    })
+    Object.assign(hooks, integration.hooks)
+    const initial = projectDocument(t.doc)
+    applyCanvasDiff(t.doc, initial, {
+      ...initial,
+      files: [
+        {
+          id: 'f',
+          name: 'cloud.txt',
+          assetId: 'cloud-asset',
+          previewEligible: kind === 'preview-file',
+          x: 0,
+          y: 0,
+          width: 200,
+          height: 100
+        }
+      ]
+    })
+    const view = await ready(t)
+    const canvas = structuredClone(view.canvas)
+    const collection = kind === 'artifact' ? 'artifacts' : 'files'
+    const oldId = canvas[collection][0]!.id
+    canvas[collection] = []
+    const removed: any = await t.service.invoke('canvas.apply', {
+      boardId: 'board',
+      localSessionId: 'shared-session',
+      baseRevision: view.canvasRevision,
+      clientMutationId: 'delete-file',
+      canvas
+    })
+    expect(removed.ok).toBe(true)
+    await t.service.flush()
+    const undo: any = await t.service.invoke('canvas.undo', {
+      boardId: 'board',
+      localSessionId: 'shared-session'
+    })
+    expect(undo.error.code).toBe('DELETION_RECOVERY_REQUIRED')
+    const restored: any = await t.service.invoke('recovery.restoreDeletion', {
+      boardId: 'board',
+      recoveryId: undo.error.details.recoveryId
+    })
+    expect(restored.ok, JSON.stringify(restored)).toBe(true)
+    await t.service.flush()
+    const canonical = projectDocument(t.doc)
+    expect(canonical[collection]).toHaveLength(1)
+    expect(canonical[collection][0]!.id).not.toBe(oldId)
+    expect(canonical.files[0]!.assetId).toBe('cloud-asset')
+    expect(canonical[collection].some((n) => n.id === oldId)).toBe(false)
+    const fileId = canonical.files[0]!.id
+    const openedResult = await t.service.invoke('file.open', {
+      boardId: 'board',
+      localSessionId: 'shared-session',
+      nodeId: fileId
+    })
+    expect(openedResult.ok).toBe(true)
+    expect(readFileSync(opened, 'utf8')).toBe('authorized cloud bytes')
+    expect(assets).toEqual(['cloud-asset'])
+  }
+)

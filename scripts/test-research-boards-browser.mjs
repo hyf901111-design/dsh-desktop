@@ -182,6 +182,7 @@ for (let i = 0; i < 2; i++) {
     store = new ResearchBoardsStore(dir),
     storage = new ResearchCanvasStorage(dir)
   const accountListeners = new Set()
+  let activeToken = tokens[i]
   const account = {
     generation: 1,
     authenticated: true,
@@ -195,7 +196,7 @@ for (let i = 0; i < 2; i++) {
       const spec = collaborationRequestSpec(endpoint)
       const r = await mf.dispatchFetch('http://127.0.0.1' + spec.path, {
         method: spec.method,
-        headers: { ...spec.headers, authorization: 'Bearer ' + tokens[i] },
+        headers: { ...spec.headers, authorization: 'Bearer ' + activeToken },
         ...(spec.body ? { body: spec.body, duplex: 'half' } : {}),
         signal
       })
@@ -387,6 +388,12 @@ for (let i = 0; i < 2; i++) {
   await service.invoke('boards.refresh', {})
   users.push({
     account,
+    signIn: (identity = i) => {
+      activeToken = tokens[identity]
+      account.authenticated = true
+      account.generation++
+      for (const f of accountListeners) f()
+    },
     signOut: () => {
       account.authenticated = false
       account.generation++
@@ -1331,6 +1338,91 @@ if (process.argv.includes('--serve')) {
     assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'viewer' })).ok, true)
     await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === false)
     console.log('TASK5_SECOND_AUTHOR_PASSED distinct-author-message-task-context/receiver-zero-delta/reload-no-execute')
+    // Same selected session stays mounted across actual main null/loading states.
+    const selectedBeforeLogin = await peer.evaluate(() => window.fixture.sessions.list.getSnapshot().current)
+    const lifecycleModelCalls = users.map(u => u.modelCalls())
+    users[1].signOut()
+    await peer.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
+    assert.equal(users[1].service.getSnapshot().current, null)
+    users[1].signIn()
+    await peer.waitForFunction(() => window.fixture.page.getState().account.status === 'ready')
+    assert.equal(await peer.evaluate(() => window.fixture.sessions.list.getSnapshot().current), selectedBeforeLogin)
+    await peer.evaluate(boardId => window.fixture.page.openBoard(boardId), boardId)
+    await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.read === true)
+    await until(() => users[1].service.getSnapshot().current?.presence.some(p => p.userId === 'u0'), 'same-session live presence after login')
+    assert.deepEqual(users.map(u => u.modelCalls()), lifecycleModelCalls)
+    await peer.screenshot({ path: join(out, 'same-session-account-reactivation.png') })
+    console.log('FINAL_FIX_ACCOUNT_LIFECYCLE_PASSED selected-session-preserved/null-loading-ready/fresh-main-activation/live-presence/no-execution')
+
+    // Actual main identity resolution: A -> null -> loading/null -> ready B.
+    await page.evaluate(() => {
+      const id = window.fixture.sessions.list.getSnapshot().current
+      window.fixture.hub.shells.get(id).setDraft('仅属于林研究员的未发送恢复文本')
+      window.recoveryCopies = []
+      navigator.clipboard.writeText = async text => { window.recoveryCopies.push(text) }
+    })
+    users[0].signOut()
+    await page.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
+    await page.getByRole('button', { name: '查看我的恢复记录', exact: true }).click()
+    await page.getByRole('button', { name: '复制这条恢复内容', exact: true }).first().click()
+    await page.evaluate(() => { window.retiredRecoveryCopy = [...document.querySelectorAll('.srb-dialog button')].find(b => b.textContent === '复制这条恢复内容') })
+    assert.ok((await page.evaluate(() => window.recoveryCopies)).some(t => t.includes('仅属于林研究员')))
+    users[0].signIn(1)
+    await page.waitForFunction(() => window.fixture.page.getState().account.user?.userId === 'u1')
+    assert.deepEqual(await page.evaluate(() => window.fixture.page.localRecovery()), [])
+    assert.equal(await page.locator('.srb-dialog').count(), 0)
+    const copyCount = await page.evaluate(() => window.recoveryCopies.length)
+    await page.evaluate(() => window.retiredRecoveryCopy.click())
+    assert.equal(await page.evaluate(() => window.recoveryCopies.length), copyCount)
+    await page.getByRole('button', { name: '查看我的恢复记录', exact: true }).click()
+    assert.equal(await page.locator('.srb-dialog').getByText('仅属于林研究员', { exact: false }).count(), 0)
+    await page.screenshot({ path: join(out, 'account-recovery-isolation.png') })
+    users[0].signOut()
+    await page.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
+    users[0].signIn()
+    await page.waitForFunction(() => window.fixture.page.getState().account.user?.userId === 'u0')
+    await page.evaluate(boardId => window.fixture.page.openBoard(boardId), boardId)
+    await page.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === true)
+    assert.deepEqual(users.map(u => u.modelCalls()), lifecycleModelCalls)
+    console.log('FINAL_FIX_RECOVERY_ISOLATION_PASSED actual-main-null-transition/different-ready-identity/list-dialog-copy-isolated/no-execution')
+
+    // Deliberately hold Q1 while Q2 finishes first, with the SAME authenticated author.
+    const concurrentCalls = users.map(u => u.modelCalls())
+    users[0].control.hold = true
+    users[0].control.release = null
+    const askConcurrent = text => users[0].service.invoke('request.submit', { boardId, text, clientMutationId: randomUUID(), context: { scope: 'board', references: [] } })
+    const q1 = await askConcurrent('并发问题一：先发后完成')
+    assert.equal(q1.ok, true, JSON.stringify(q1))
+    await until(() => !!users[0].control.release, 'first concurrent executor held')
+    const releaseFirst = users[0].control.release
+    users[0].control.release = null
+    const q2 = await askConcurrent('并发问题二：后发先完成')
+    assert.equal(q2.ok, true, JSON.stringify(q2))
+    await until(() => users[0].service.getSnapshot().current?.tasks.some(t => t.taskId === q2.value.taskId && t.status === 'completed'), 'second concurrent result first')
+    assert.equal(users[0].service.getSnapshot().current.tasks.find(t => t.taskId === q1.value.taskId).status, 'running')
+    releaseFirst()
+    await until(() => users[0].service.getSnapshot().current?.tasks.some(t => t.taskId === q1.value.taskId && t.status === 'completed'), 'first concurrent result last')
+    const concurrentState = users[0].service.getSnapshot().current
+    const a1 = concurrentState.messages.find(m => m.requestMessageId === q1.value.requestMessageId && m.role === 'assistant')
+    const a2 = concurrentState.messages.find(m => m.requestMessageId === q2.value.requestMessageId && m.role === 'assistant')
+    assert.ok(concurrentState.messages.indexOf(a2) < concurrentState.messages.indexOf(a1))
+    for (const clientPage of [page, peer]) {
+      await clientPage.waitForFunction(({ q1, q2, a1, a2 }) => {
+        const group1 = document.querySelector(`[data-request-message-id="${q1}"]`)
+        const group2 = document.querySelector(`[data-request-message-id="${q2}"]`)
+        return group1?.querySelector(`[data-message-id="${a1}"]`) && group2?.querySelector(`[data-message-id="${a2}"]`)
+      }, { q1: q1.value.requestMessageId, q2: q2.value.requestMessageId, a1: a1.id, a2: a2.id })
+      const displayed = await clientPage.locator('.srb-message').evaluateAll(nodes => nodes.map(n => n.getAttribute('data-message-id')))
+      assert.equal(displayed.filter(id => id === a1.id).length, 1)
+      assert.equal(displayed.filter(id => id === a2.id).length, 1)
+      assert.ok(displayed.indexOf(q1.value.requestMessageId) < displayed.indexOf(a1.id))
+      assert.ok(displayed.indexOf(a1.id) < displayed.indexOf(q2.value.requestMessageId))
+      assert.ok(displayed.indexOf(q2.value.requestMessageId) < displayed.indexOf(a2.id))
+    }
+    assert.deepEqual(users.map(u => u.modelCalls()), [concurrentCalls[0] + 2, concurrentCalls[1]])
+    await page.locator(`[data-request-message-id="${q2.value.requestMessageId}"]`).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: join(out, 'same-author-reversed-answer-groups.png') })
+    console.log('FINAL_FIX_REQUEST_GROUPING_PASSED Q2-finishes-first/same-author/durable-message-ids/both-renderers/no-duplicate/receiver-zero-execution')
     const copy = await users[1].service.invoke('board.copyPersonal', {
       boardId
     })
