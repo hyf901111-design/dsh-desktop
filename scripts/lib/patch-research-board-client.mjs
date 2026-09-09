@@ -483,7 +483,7 @@ function polishPatch(source) {
   return source + '\n/* SHERLOCK_BOARD_POLISH_V1 */'
 }
 export function patchResearchBoardWorkspace(source) {
-  if (source.includes('/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')) return source
+  if (source.includes('/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')) return patchWorkspaceSelection(source)
   source = replace(
     source,
     'const [query, setQuery] = (0, react.useState)("");',
@@ -511,5 +511,26 @@ export function patchResearchBoardWorkspace(source) {
     'className: WorkspaceBrowser_module_css_default.listArea,',
     'className: WorkspaceBrowser_module_css_default.listArea, "data-srb-workspace-list":"", hidden:wide && sectionCollapsed && !searchExpanded,'
   )
-  return source + '\n/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */'
+  return patchWorkspaceSelection(source + '\n/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')
+}
+
+function patchWorkspaceSelection(source) {
+  if (source.includes('/* SHERLOCK_WORKSPACE_SELECTION_V1 */')) return source
+  source = replace(source, 'function SearchResultItem({ result, currentId, onOpen, t }) {', `
+        function useSidebarBoardSelection() {
+            return (0, react.useSyncExternalStore)(
+                (listener)=>{document.addEventListener("sherlock-sidebar-selection",listener);return ()=>document.removeEventListener("sherlock-sidebar-selection",listener);},
+                ()=>document.documentElement.dataset.srbSelectedSession || ""
+            );
+        }
+        function clearSidebarBoardSelection() {
+            delete document.documentElement.dataset.srbSelectedSession;
+            document.dispatchEvent(new Event("sherlock-sidebar-selection"));
+        }
+        function SearchResultItem({ result, currentId, onOpen, t }) {`)
+  source = replace(source, 'const selected = result.id === currentId;', 'const boardSelection = useSidebarBoardSelection(); const selected = result.id === currentId && boardSelection !== result.id;')
+  source = replace(source, 'const selected = node.id === currentId;', 'const boardSelection = useSidebarBoardSelection(); const selected = node.id === currentId && boardSelection !== node.id;')
+  source = replace(source, 'onOpen(result.id);', 'clearSidebarBoardSelection(); onOpen(result.id);')
+  source = replace(source, 'onOpen(node.id);', 'clearSidebarBoardSelection(); onOpen(node.id);')
+  return source + '\n/* SHERLOCK_WORKSPACE_SELECTION_V1 */'
 }

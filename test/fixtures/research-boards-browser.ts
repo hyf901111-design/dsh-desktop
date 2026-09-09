@@ -68,7 +68,7 @@ const loaded: Record<string, any> = {
   '@deepseek-ai/dsh-client-ui-primitives': primitives,
   '@deepseek-ai/dsh-client-ui-slots': slotModule
 }
-for (const name of ['runtime', 'conversation', 'sidebar']) {
+for (const name of ['runtime', 'conversation', 'sidebar', 'workspace']) {
   ;(0, eval)(await (await fetch('/' + name + '.js')).text())
   const mod = descriptor.factory((id: string) => loaded[id] ?? fallback)
   loaded[name] = mod
@@ -312,7 +312,11 @@ function App() {
                 'div',
                 { className: 'fixture-workspaces', hidden: !owner.wide },
                 '工作区',
-                h('p', null, '研究资料')
+                h('p', null, '研究资料'),
+                ...Object.values(list.getSnapshot().byId).map((node: any) => h(loaded.workspace.__SessionNodeItem, {
+                  key: node.id, node: { ...node, runningSubagentCount: 0, updatedAt: Date.now() - 60000 },
+                  currentId: id, now: Date.now(), onOpen: sessions.open, onRename: () => {}, onFork: () => {}, onArchive: () => {}, flat: true, t
+                }))
               )
             : name === 'sidebar.settings'
               ? h(
