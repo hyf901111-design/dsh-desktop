@@ -2,6 +2,7 @@
   "name": "dsh-research-collaboration",
   "version": "1.0.0",
   "type": "module",
+  "main": "./document.js",
   "exports": {
     "./document": {
       "types": "./document.d.ts",
