@@ -4,12 +4,141 @@ import { join } from 'node:path'
 import { createServer, type Server } from 'node:http'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
+import {
+  collaborationOrigin,
+  collaborationRequestSpec,
+  type CollaborationEndpoint
+} from './collaboration-client'
+import { ResearchBoardsError } from '../shared/research-boards'
 const ORIGIN = 'https://updates.evanarts.com'
 export class AccountService {
   private token?: string
   private server?: Server
   private serial: Promise<unknown> = Promise.resolve()
-  constructor(private directory: string) {}
+  private sessionGeneration = 0
+  private suspended = false
+  private sessionAbort = new AbortController()
+  private readonly listeners = new Set<() => void>()
+  constructor(
+    private directory: string,
+    private readonly collaborationOptions: {
+      origin?: string
+      fetch?: typeof fetch
+    } = {}
+  ) {
+    collaborationOrigin(collaborationOptions.origin)
+  }
+  get generation() {
+    return this.sessionGeneration
+  }
+  get authenticated() {
+    return !!this.token && !this.suspended
+  }
+  subscribeSessionChanged(listener: () => void) {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+  private changed() {
+    this.sessionGeneration++
+    this.sessionAbort.abort()
+    this.sessionAbort = new AbortController()
+    for (const listener of this.listeners) {
+      try {
+        listener()
+      } catch {}
+    }
+  }
+  async collaborationRequest(
+    endpoint: CollaborationEndpoint,
+    signal?: AbortSignal
+  ): Promise<unknown> {
+    const spec = collaborationRequestSpec(endpoint)
+    if (!this.authenticated)
+      throw new ResearchBoardsError(
+        'LOGIN_REQUIRED',
+        '请先登录账户。',
+        false,
+        undefined,
+        401
+      )
+    const generation = this.generation
+    const current = () => {
+      if (generation !== this.generation)
+        throw new ResearchBoardsError('SESSION_CHANGED')
+    }
+    try {
+      const response = await (this.collaborationOptions.fetch ?? fetch)(
+        `${collaborationOrigin(this.collaborationOptions.origin)}${spec.path}`,
+        {
+          method: spec.method,
+          redirect: 'error',
+          headers: { ...spec.headers, authorization: `Bearer ${this.token}` },
+          ...(spec.body === undefined
+            ? {}
+            : { body: spec.body, duplex: 'half' }),
+          signal: AbortSignal.any([
+            this.sessionAbort.signal,
+            AbortSignal.timeout(
+              ['asset.stage', 'asset.add', 'asset.get'].includes(endpoint.kind)
+                ? 120_000
+                : 25_000
+            ),
+            ...(signal ? [signal] : [])
+          ])
+        } as RequestInit
+      )
+      current()
+      if (spec.raw && response.ok) return response
+      const reader = response.body?.getReader()
+      const chunks: Uint8Array[] = []
+      let bytes = 0
+      if (reader) {
+        for (;;) {
+          const part = await reader.read()
+          current()
+          if (part.done) break
+          bytes += part.value.byteLength
+          if (bytes > 6 * 1024 * 1024) {
+            await reader.cancel()
+            throw new ResearchBoardsError('RESPONSE_TOO_LARGE')
+          }
+          chunks.push(part.value)
+        }
+      }
+      const value = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
+        error?: {
+          code: string
+          message?: string
+          retryable?: boolean
+          details?: unknown
+        }
+      }
+      current()
+      if (!response.ok) {
+        if (response.status === 401 && value.error?.code === 'LOGIN_REQUIRED')
+          await this.clear()
+        throw new ResearchBoardsError(
+          value.error?.code ?? 'COLLABORATION_UNAVAILABLE',
+          value.error?.message,
+          value.error?.retryable ?? response.status >= 500,
+          value.error?.details,
+          response.status
+        )
+      }
+      return value
+    } catch (error) {
+      if (generation !== this.generation)
+        throw new ResearchBoardsError('SESSION_CHANGED')
+      if (error instanceof ResearchBoardsError) throw error
+      throw new ResearchBoardsError(
+        'NETWORK_ERROR',
+        '网络暂时不可用，本人的修改已保留。',
+        true
+      )
+    }
+  }
   async start() {
     try {
       if (safeStorage.isEncryptionAvailable())
@@ -17,6 +146,7 @@ export class AccountService {
           await readFile(join(this.directory, 'account-session'))
         )
     } catch {}
+    if (this.token) this.changed()
     const secret = randomBytes(32).toString('hex')
     this.server = createServer((req, res) => {
       void (async () => {
@@ -82,6 +212,7 @@ export class AccountService {
     }
   }
   stop() {
+    this.sessionAbort.abort()
     this.server?.close()
     this.server?.closeAllConnections()
   }
@@ -92,6 +223,8 @@ export class AccountService {
   }
   private async clear() {
     this.token = undefined
+    this.suspended = false
+    this.changed()
     await rm(join(this.directory, 'account-session'), { force: true })
   }
   private async perform(action: string, input: unknown): Promise<unknown> {
@@ -103,6 +236,11 @@ export class AccountService {
       return { error: { code: 'INVALID_REQUEST' } }
     if (!this.token && ['me', 'usage'].includes(action)) return { user: null }
     if (!this.token && action === 'logout') return { ok: true }
+    const suspend = action === 'logout' || action === 'password'
+    if (suspend) {
+      this.suspended = true
+      this.changed()
+    }
     try {
       const response = await fetch(`${ORIGIN}/v1/account/${action}`, {
         method: ['me', 'usage'].includes(action) ? 'GET' : 'POST',
@@ -126,7 +264,9 @@ export class AccountService {
         if (action === 'logout') return { ok: true }
       }
       if (!response.ok)
-        return { error: value.error ?? { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } }
+        return {
+          error: value.error ?? { code: 'ACCOUNT_SERVICE_UNAVAILABLE' }
+        }
       if (action === 'logout' || action === 'password') await this.clear()
       if (value.token) {
         if (!/^[a-f0-9]{64}$/.test(value.token)) throw Error('Invalid session')
@@ -139,11 +279,18 @@ export class AccountService {
         })
         await rename(`${file}.tmp`, file)
         this.token = value.token
+        this.suspended = false
+        this.changed()
       }
       const { token: _token, ...publicValue } = value
       return publicValue
     } catch {
       return { error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } }
+    } finally {
+      if (suspend && this.suspended) {
+        this.suspended = false
+        this.changed()
+      }
     }
   }
 }

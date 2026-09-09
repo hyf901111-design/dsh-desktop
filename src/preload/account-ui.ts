@@ -1,3 +1,5 @@
+import { publicIdLabel, installBoardUiStyles } from './research-board-dialogs'
+import type { ResearchBoardsBridge } from '../shared/research-boards'
 import sherlockLogo from '../../build/sherlock-logo.svg?raw'
 import accountAvatar from '../../build/sherlock-account-avatar.svg?raw'
 import accountBackground from '../../build/sherlock-account-background.png?url&inline'
@@ -9,8 +11,10 @@ type Reply = {
 }
 export function mountAccountUi(
   document: Document,
-  invoke: (action: string, input?: unknown) => Promise<Reply>
+  invoke: (action: string, input?: unknown) => Promise<Reply>,
+  boards?: ResearchBoardsBridge
 ) {
+  installBoardUiStyles(document)
   const style = document.createElement('style')
   // Keep the settings shell below the shared portaled menus (z-index 1100).
   style.textContent = `
@@ -143,11 +147,7 @@ export function mountAccountUi(
     }
     const label = document.createElement('span')
     label.textContent = user?.username ?? '登录 EWork Odyssey'
-    const chevron = document.createElement('span')
-    chevron.className = 'sherlock-account-chevron'
-    chevron.textContent = '⌃'
-    chevron.setAttribute('aria-hidden', 'true')
-    trigger.append(avatar, label, chevron)
+    trigger.append(avatar, label)
     trigger.setAttribute('aria-label', `${label.textContent}，打开账户菜单`)
   }
   let authDialog: HTMLDialogElement | undefined
@@ -481,6 +481,7 @@ export function mountAccountUi(
         })
     }
     root.querySelector('.VOzbGW_content')?.append(page)
+    if (user && boards) void boards.getSnapshot().then(s => { if (!s.account.user || !page.isConnected) return; const idRow = document.createElement('div'); idRow.className = 'sherlock-account-card'; idRow.textContent = 'ID ' + publicIdLabel(s.account.user.publicId); idRow.append(button('复制 ID', () => { void document.defaultView?.navigator.clipboard.writeText(s.account.user!.publicId) })); page.prepend(idRow) })
     if (!user) page.querySelector('input')?.focus()
   }
   function reconcile() {
@@ -519,6 +520,7 @@ export function mountAccountUi(
                 })
               })
             )
+          if (boards) menu.append(button('复制我的 ID', () => { void boards.getSnapshot().then(async s => { if (s.account.user) await document.defaultView?.navigator.clipboard.writeText(s.account.user.publicId); else open(true) }) }))
           for (const b of menu.querySelectorAll('button')) b.role = 'menuitem'
           document.body.append(menu)
           const rect = trigger!.getBoundingClientRect()
@@ -531,7 +533,12 @@ export function mountAccountUi(
       )
       trigger.setAttribute('aria-haspopup', 'menu')
       trigger.setAttribute('aria-expanded', 'false')
-      original.before(trigger)
+      const controls = document.createElement('div')
+      controls.className = 'srb-account-controls'
+      const bellHost = document.createElement('div')
+      bellHost.dataset.researchBoardBellHost = ''
+      controls.append(trigger, bellHost)
+      original.before(controls)
       updateTrigger()
     }
     const root = panel()
@@ -618,6 +625,8 @@ export function mountAccountUi(
     },
     true
   )
+  const openFromBoards = () => open(true)
+  document.defaultView?.addEventListener('sherlock:account-open', openFromBoards)
   const observer = new MutationObserver(reconcile)
   observer.observe(document.documentElement, { childList: true, subtree: true })
   reconcile()
@@ -632,6 +641,8 @@ export function mountAccountUi(
     observer.disconnect()
     closeMenu()
     style.remove()
+    document.defaultView?.removeEventListener('sherlock:account-open', openFromBoards)
+    trigger?.closest('.srb-account-controls')?.remove()
     trigger?.remove()
   }
 }

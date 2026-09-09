@@ -1,4 +1,6 @@
+import { mountResearchBoardNotifications } from './research-board-notifications-ui'
 import { mountAccountUi } from './account-ui'
+import { createResearchBoardsBridge } from './research-boards'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { UpdateStatus } from '../shared/contracts'
 import { developerModeEnabledFromArguments } from '../shared/developer-mode'
@@ -122,7 +124,9 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
 })
 
 function initializeUi(): void {
-  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input))
+  const boards = createResearchBoardsBridge(ipcRenderer)
+  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards)
+  mountResearchBoardNotifications(document, boards)
   mountDeveloperModeUi()
   if (process.platform === 'win32') {
     mountWindowsTitlebar({ document, ipcRenderer, locale })
@@ -165,6 +169,7 @@ contextBridge.exposeInMainWorld(
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
+    researchBoards: createResearchBoardsBridge(ipcRenderer),
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
     showItemInFolder: (path: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('filesystem:show-item-in-folder', path),

@@ -56,7 +56,7 @@ describe('main-window IPC trust', () => {
     }
 
     expect(() => assertTrustedMainWindowEvent(childEvent, window)).toThrow(
-      'main Sherlock window'
+      'main EWork Odyssey window'
     )
   })
 
@@ -112,7 +112,7 @@ describe('main-window IPC trust', () => {
       const handler = invokeHandlers.get(channel)
       expect(handler, channel).toBeTypeOf('function')
       await expect(Promise.resolve().then(() => handler?.(childEvent, ...args))).rejects.toThrow(
-        'main Sherlock window'
+        'main EWork Odyssey window'
       )
     }
 

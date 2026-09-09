@@ -267,6 +267,9 @@ export class ResearchCanvasClipboard {
       } catch (error) { throw new Error(error instanceof Error && !('code' in error) ? error.message : '剪贴板资源已失效或不可用，请重新复制。') }
     })
   }
+  async resolveExportAsset(assetId:string):Promise<{path:string;name:string;contentType:string}|null> {
+    try { const asset=await this.loadAsset(assetId);return {path:asset.path,name:asset.manifest.name,contentType:asset.manifest.mimeType} } catch { return null }
+  }
   async admit(value: unknown): Promise<ResearchClipboardAdmission | null> {
     try {
       const input = record(value)

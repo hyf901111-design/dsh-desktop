@@ -89,13 +89,15 @@
     "cheerio": "^1.2.0",
     "dsh-desktop-market-installer": "file:packages/dsh-desktop-market-installer",
     "dsh-fund-research-runtime": "file:packages/dsh-fund-research-runtime",
+    "dsh-research-collaboration": "file:packages/dsh-research-collaboration",
     "dsh-research-task-runtime": "file:packages/dsh-research-task-runtime",
     "dsh-web-search-session-model": "file:packages/dsh-web-search-session-model",
     "electron-updater": "^6.8.9",
     "node": "24.9.0",
     "pnpm": "10.34.5",
     "qrcode": "^1.5.4",
-    "sanitize-html": "^2.17.7"
+    "sanitize-html": "^2.17.7",
+    "yjs": "13.6.32"
   },
   "devDependencies": {
     "@types/node": "24.10.1",

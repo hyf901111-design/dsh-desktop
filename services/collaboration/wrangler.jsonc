@@ -1,0 +1,46 @@
+{
+  "name": "sherlock-research-collaboration",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "d5e49bcb8e44fb51208bd0023bb9ee01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "updates.evanarts.com/v1/collaboration/*",
+      "zone_id": "6f467b786713bdf33ed46e8a89d780d9"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "ACCOUNTS_DB",
+      "database_name": "sherlock-accounts",
+      "database_id": "1a60b58b-7926-4287-b6ff-c6e84e12827d",
+      "migrations_dir": "../accounts/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "RESEARCH_ASSETS",
+      "bucket_name": "sherlock-research-private"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "RESEARCH_ROOMS", "class_name": "ResearchBoardRoom" },
+      {
+        "name": "RESEARCH_NOTIFICATIONS",
+        "class_name": "ResearchNotifications"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "research-collaboration-v1",
+      "new_sqlite_classes": ["ResearchBoardRoom", "ResearchNotifications"]
+    }
+  ],
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "observability": { "enabled": false }
+}

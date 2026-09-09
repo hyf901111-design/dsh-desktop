@@ -965,6 +965,11 @@ export class ResearchFilePreviewRegistry {
     return verified ? this.issue(record) : null
   }
 
+  async resolveSessionNodeSource(sessionId:string,nodeId:string):Promise<{path:string;name:string}|null> {
+    const records=[...this.authorizations.values()].filter(r=>r.sessionId===sessionId&&r.nodeId===nodeId)
+    if(records.length!==1)return null
+    return this.resolveExportSource({sessionId,nodeId,authorizationId:records[0]!.authorizationId})
+  }
   async resolveExportSource(value: unknown): Promise<{ path: string; name: string } | null> {
     if (!this.validRestoreRequest(value) || Object.keys(value).length !== 3) return null
     const record = this.authorizations.get(value.authorizationId)

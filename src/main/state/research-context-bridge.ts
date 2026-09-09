@@ -14,6 +14,9 @@ type Source = { id: string; title: string; kind: string; text: string; status: s
 type Canvas = { files: unknown[]; artifacts: unknown[] }
 type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes: number }
 type Options = {
+  canReadSession?(sessionId: string): boolean
+  isSharedSession?(sessionId:string):boolean
+  additionalSources?(sessionId:string):Source[]|Promise<Source[]>
   readCanvas(sessionId: string): Canvas | Promise<Canvas>
   resolveFile(value: { sessionId: string; nodeId: string; authorizationId: string }): Promise<{ path: string; name: string } | null>
   now?: () => number
@@ -114,7 +117,7 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (req.url !== '/snapshot' || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/board-authority'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
       try {
         const chunks: Buffer[] = []
         let size = 0
@@ -124,10 +127,12 @@ export class ResearchContextBridge {
           if (size > MAX_BODY_BYTES) throw new Error()
           chunks.push(chunk)
         }
-        const input = exact(JSON.parse(Buffer.concat(chunks).toString('utf8')), ['sessionId', 'captureId'])
+        const raw=JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if(req.url==='/board-authority'){const input=exact(raw,['sessionId']);return send(200,{shared:this.options.isSharedSession?.(String(input.sessionId))===true})}
+        const input = exact(raw, ['sessionId', 'captureId'])
         this.purge()
         const capture = this.captures.get(input.captureId as string)
-        if (!capture || capture.sessionId !== input.sessionId || this.stopped) return send(404, { error: '资料捕获已失效。' })
+        if (!capture || capture.sessionId !== input.sessionId || this.stopped || this.options.canReadSession?.(capture.sessionId) === false) return send(404, { error: '资料捕获已失效。' })
         send(200, { sources: capture.sources })
       } catch { send(400, { error: '资料请求无效。' }) }
     })
@@ -147,13 +152,14 @@ export class ResearchContextBridge {
 
   private async captureStored(value: unknown): Promise<{ captureId: string; totalSources: number }> {
     const { sessionId } = exact(value, ['sessionId']) as { sessionId: string }
+    if (this.options.canReadSession?.(sessionId) === false) throw new Error('资料捕获已失效。')
     if (this.stopped) throw new Error('资料服务已停止。')
     const createdAt = this.now()
     const raw = await this.options.readCanvas(sessionId)
     // Freeze the entire stored canvas before the first asynchronous file check.
     const canvas: Canvas = JSON.parse(JSON.stringify(raw))
     if (!Array.isArray(canvas.files) || !Array.isArray(canvas.artifacts) || canvas.files.length + canvas.artifacts.length > 1000) throw new Error('画板资料过多。')
-    const sources: Source[] = []
+    const sources: Source[] = await this.options.additionalSources?.(sessionId)??[]
     const seen = new Set<string>()
     for (const rawNode of [...canvas.files, ...canvas.artifacts]) {
       if (!rawNode || typeof rawNode !== 'object' || Array.isArray(rawNode)) continue
@@ -195,7 +201,7 @@ export class ResearchContextBridge {
       }
       sources.push(source)
     }
-    if (this.stopped || this.now() - createdAt > CAPTURE_TTL_MS) throw new Error('资料捕获已失效。')
+    if (this.stopped || this.options.canReadSession?.(sessionId) === false || this.now() - createdAt > CAPTURE_TTL_MS) throw new Error('资料捕获已失效。')
     this.purge()
     const bytes = Buffer.byteLength(JSON.stringify(sources))
     if (bytes > this.maxStoredBytes) throw new Error('画板资料超过存储上限。')
@@ -214,6 +220,9 @@ export class ResearchContextBridge {
   }
   private purge(): void {
     for (const [key, capture] of this.captures) if (this.now() - capture.createdAt > CAPTURE_TTL_MS) this.captures.delete(key)
+  }
+  invalidateSession(sessionId: string): void {
+    for (const [captureId, capture] of this.captures) if (capture.sessionId === sessionId) this.captures.delete(captureId)
   }
   async stop(): Promise<void> {
     this.stopped = true
