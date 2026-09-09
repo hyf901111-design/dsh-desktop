@@ -71,6 +71,45 @@ const roster = {
 }
 
 describe('Sherlock standard agent preset policy', () => {
+  it('switches an existing conversation and keeps its selected mode', async () => {
+    const client = await loadAgentPresetClient()
+    const select = vi.fn(async () => ({ result: { ok: true, value: { agentPreset: 'build' } } }))
+    const applied = vi.fn()
+    const Seat = client.AgentPresetSeatController as new (...args: unknown[]) => {
+      select(id: string): Promise<void>
+      store: SnapshotStore<Record<string, unknown>>
+    }
+    const seat = new Seat({ agentPresets: { select } }, () => ({
+      id: 'existing-session', blank: false, agentPreset: 'standard'
+    }), applied)
+    await seat.select('build')
+    expect(select).toHaveBeenCalledWith({ sessionId: 'existing-session', agentPreset: 'build' })
+    expect(applied).toHaveBeenCalledWith('existing-session', 'build')
+    expect(seat.store.getSnapshot()).toMatchObject({ current: 'build', busy: false, error: null })
+  })
+
+  it('allows the server to recompose an idle historical session but protects an active turn', async () => {
+    const source = await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js', 'utf8')
+    const start = source.indexOf('async select(request) {', source.indexOf('async list(request) {', source.indexOf('The imported preset failed validation')))
+    const end = source.indexOf('async read(request)', start)
+    const method = source.slice(start, end).trim().replace(/,$/, '')
+    const append = vi.fn()
+    const agent = { status: 'idle', ctx: {}, session: { events: [{ type: 'user/message' }], append } }
+    const recompose = vi.fn(async () => ({ id: 'build' }))
+    const select = runInNewContext(`({ ${method} }).select`, {
+      ctx: { get: () => ({ recompose }) }, agentFor: async () => ({ agent }),
+      ok: (_r: unknown, value: unknown) => ({ ok: true, value }),
+      err: (_r: unknown, error: unknown) => ({ ok: false, error }),
+      presetSwitches: new Map(), presetFailure: () => undefined
+    })
+    const request = { payload: { sessionId: 'existing-session', agentPreset: 'build' } }
+    expect(await select(request)).toMatchObject({ ok: true, value: { agentPreset: 'build' } })
+    expect(append).toHaveBeenCalledWith('agent-preset/selected', { agentPreset: 'build' })
+    agent.status = 'running'
+    expect(await select(request)).toMatchObject({ ok: false, error: { code: 'agent-preset-locked' } })
+    expect(recompose).toHaveBeenCalledTimes(1)
+  })
+
   it('instructs the agent to provide concise user-facing progress during long work', async () => {
     const source = await readFile(
       'node_modules/@deepseek-ai/dsh/config/sherlock-agent-presets/standard/agent.cordis.yml',
