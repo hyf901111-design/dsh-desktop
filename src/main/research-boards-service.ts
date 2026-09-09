@@ -1530,8 +1530,7 @@ export class ResearchBoardsService {
     const stack = redo ? r.undo.redoStack : r.undo.undoStack
     const item = stack.at(-1)
     const deleted = item?.meta.get('deleted') as
-      | Array<{ collection: 'files' | 'artifacts'; node: CanvasNode }>
-      | undefined
+      Array<{ collection: 'files' | 'artifacts'; node: CanvasNode }> | undefined
     if (deleted?.length) {
       const recoveryId = randomUUID()
       r.deletionRecovery.set(recoveryId, copy(deleted))
@@ -2089,6 +2088,26 @@ export class ResearchBoardsService {
           this.userId(),
           safeId(p.boardId),
           action === 'board.pin'
+        )
+        this.emitState()
+        return this.getSnapshot()
+      }
+      case 'boards.listRefresh': {
+        exact(input, [])
+        const ctx = this.context()
+        const list = await this.client.request<{ boards: Board[] }>({
+          kind: 'boards.list'
+        })
+        this.check(ctx)
+        if (!Array.isArray(list.boards))
+          throw new ResearchBoardsError('INVALID_RESPONSE')
+        const cached = this.store.account(ctx.userId).boards
+        this.store.setBoards(
+          ctx.userId,
+          list.boards.map((board) => {
+            const recent = cached.find((b) => b.boardId === board.boardId)
+            return recent && recent.seq > board.seq ? recent : board
+          })
         )
         this.emitState()
         return this.getSnapshot()
@@ -2786,7 +2805,19 @@ export class ResearchBoardsService {
   }
   writeCanvasStorage(key: unknown, value: unknown): boolean {
     if (this.storageBinding(key)?.binding) return false
-    return this.options.storage.setItem(key, value)
+    const before = this.options.storage.getItem(key)
+    const saved = this.options.storage.setItem(key, value)
+    const match =
+      typeof key === 'string' &&
+      key.match(/^sherlock\.research\.canvas\.(?:files|artifacts)\.v1:(.+)$/)
+    if (saved && before !== value && match) {
+      try {
+        if (this.store.touchFavorite(match[1]!)) this.emitState()
+      } catch {
+        /* Canvas was saved; a full metadata store must not discard it. */
+      }
+    }
+    return saved
   }
   stop() {
     if (this.stopped) return

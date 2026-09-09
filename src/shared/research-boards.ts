@@ -15,6 +15,7 @@ export type ResearchIdentity = {
 }
 export type Favorite = ResearchIdentity & {
   favoriteId: string
+  updatedAt?: number
   createdAt: number
 }
 export type Member = {

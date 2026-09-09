@@ -383,7 +383,9 @@ export class ResearchBoardRoom {
       schemaVersion: 1,
       refreshPaused: false,
       capturedAt: input.capturedAt,
-      createdAt: now()
+      createdAt: now(),
+      updatedAt: now(),
+      updatedBy: { userId: user.id, username: user.username }
     }
     const current = {
       board,
@@ -558,6 +560,12 @@ export class ResearchBoardRoom {
     action = 'assetWrite'
   ) {
     current.board.seq++
+    // Presence, invitations and lease heartbeats are not content edits.
+    if (['update', 'rename', 'message', 'taskApplyResult', 'assetWrite'].includes(action) ||
+        (action === 'taskResult' && result.task?.status === 'completed')) {
+      current.board.updatedAt = now()
+      current.board.updatedBy = { userId: user.id, username: user.username }
+    }
     const response = {
       action,
       operationId: op,

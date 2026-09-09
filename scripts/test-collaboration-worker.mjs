@@ -362,7 +362,13 @@ try {
     })
   )
   assert.equal((await ack).requestId, 'edit')
-  assert.equal((await changed).snapshot.canvas.artifacts[0].title, '共同结论')
+  const edited = await changed
+  assert.equal(edited.snapshot.canvas.artifacts[0].title, '共同结论')
+  assert.ok(edited.board.updatedAt > state.board.updatedAt)
+  assert.deepEqual(edited.board.updatedBy, { userId: 'u1', username: 'user1' })
+  const listed = await ok(call(0, '/boards'))
+  assert.equal(listed.boards.find(b => b.boardId === boardId).updatedAt, edited.board.updatedAt)
+  assert.equal(state.board.updatedBy.userId, 'u0', 'presence/invitations must not count as editing')
   const message = await ok(command(1, 'message', { text: '继续研究' }))
   const task = await ok(
     command(1, 'taskCreate', {
@@ -379,9 +385,12 @@ try {
     ).status,
     403
   )
+  const beforeLease = (await ok(call(1, `/boards/${boardId}`))).board.updatedAt
   const claim = await ok(
     command(1, 'taskClaim', { taskId: task.task.taskId, executorId: 'device' })
   )
+  await ok(command(1, 'taskHeartbeat', {taskId:task.task.taskId,leaseToken:claim.leaseToken}))
+  assert.equal((await ok(call(0, `/boards/${boardId}`))).board.updatedAt, beforeLease, 'lease traffic must preserve edit time')
   assert.equal(
     (
       await command(1, 'taskResult', {

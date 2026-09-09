@@ -28,6 +28,8 @@ export type Board = {
   schemaVersion: 1
   capturedAt: string
   createdAt: number
+  updatedAt?: number
+  updatedBy?: { userId: string; username: string }
   role?: BoardRole
 }
 export type CollaborationError = {

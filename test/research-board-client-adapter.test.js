@@ -5,7 +5,8 @@ import { Window } from 'happy-dom'
 import { describe, it, expect, vi } from 'vitest'
 import {
   patchResearchBoardConversation,
-  patchResearchBoardSidebar
+  patchResearchBoardSidebar,
+  patchResearchBoardWorkspace
 } from '../scripts/lib/patch-research-board-client.mjs'
 const require = createRequire(import.meta.url)
 async function load(shared = true) {
@@ -1166,4 +1167,51 @@ it('does not let old-account queued edits or draft ACKs repopulate recovery afte
     expect(f.page.localRecovery()).toEqual([])
     expect(w.getSnapshot().artifacts).toEqual([])
   } finally { f.dispose() }
+})
+
+it('workspace section collapse survives reapplying the actual module patch', async () => {
+  const raw = await readFile(
+    'node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js',
+    'utf8'
+  )
+  const patched = patchResearchBoardWorkspace(raw)
+  expect(patchResearchBoardWorkspace(patched)).toBe(patched)
+  expect(patched).toContain('"aria-expanded":!sectionCollapsed')
+  expect(patched).toContain(
+    'hidden:wide && sectionCollapsed && !searchExpanded'
+  )
+})
+it('completed generated HTML and table provide real content to selection tools', async () => {
+  const { exports, window } = await load(false)
+  for (const spec of [
+    { version: 1, type: 'html', title: '计数器', html: '<p>研究结果</p>' },
+    {
+      version: 1,
+      type: 'table',
+      title: '表格',
+      columns: ['项目', '结果'],
+      rows: [['邀请', '已验证']]
+    }
+  ]) {
+    const sources = exports.researchGenerationSources(
+      {
+        files: [],
+        artifacts: [
+          {
+            id: 'n',
+            title: spec.title,
+            kind: 'generated-container',
+            generationStatus: 'completed',
+            containerSpec: spec
+          }
+        ]
+      },
+      ['n'],
+      true
+    )
+    expect(sources?.[0]?.text).toContain(
+      spec.type === 'html' ? '研究结果' : '已验证'
+    )
+  }
+  window.happyDOM.abort()
 })

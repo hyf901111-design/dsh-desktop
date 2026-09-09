@@ -67,7 +67,18 @@ async function executeModule(path, kind) {
 async function sources() {
   const inventory = JSON.parse(await readFile(join(root, 'output/research-boards-source-inputs-20260909/verified-inputs.json'), 'utf8'))
   const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'))
-  const names = ['dsh-client-ui-conversation', 'dsh-client-ui-sidebar', 'dsh-client-ui-primitives', 'dsh-web-frontend']
+  // Workspace collapse is now part of the patched client surface. Verify the
+  // additional clean input against the exact lockfile, just like the prior four.
+  const workspaceName = '@deepseek-ai/dsh-client-ui-workspace'
+  if (!inventory.some(p => p.name === workspaceName)) {
+    const metadata = lock.packages['node_modules/' + workspaceName]
+    const response = await fetch(metadata.resolved)
+    assert.ok(response.ok, 'locked workspace package download')
+    const archive = join(runDir, 'workspace-locked.tgz')
+    await writeFile(archive, Buffer.from(await response.arrayBuffer()))
+    inventory.push({name:workspaceName,version:metadata.version,archive,integrity:metadata.integrity,resolved:metadata.resolved})
+  }
+  const names = ['dsh-client-ui-conversation', 'dsh-client-ui-sidebar', 'dsh-client-ui-workspace', 'dsh-client-ui-primitives', 'dsh-web-frontend']
   assert.deepEqual(inventory.map(p => p.name.split('/')[1]).sort(), [...names].sort())
   for (const p of inventory) {
     assert.equal(p.version, '0.1.0-rc.7')
@@ -96,7 +107,7 @@ async function sources() {
     const once = await treeHashes(join(fixture, 'node_modules'))
     run([process.execPath, join(root, 'scripts/patch-web-frontend-loading.mjs')], { cwd: fixture })
     assert.deepEqual(await treeHashes(join(fixture, 'node_modules')), once, baseline + ' second transform changes bytes')
-    for (const kind of ['conversation', 'sidebar']) await executeModule(join(fixture, 'node_modules/@deepseek-ai/dsh-client-ui-' + kind + '/lib/client.js'), kind)
+    for (const kind of ['conversation', 'sidebar', 'workspace']) await executeModule(join(fixture, 'node_modules/@deepseek-ai/dsh-client-ui-' + kind + '/lib/client.js'), kind)
     baselines.push({ baseline, fixture, hashes: once, factoryExecution: 'passed' })
   }
   const installed = join(runDir, 'installed-local-packages')

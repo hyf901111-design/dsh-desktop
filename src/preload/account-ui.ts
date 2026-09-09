@@ -58,6 +58,8 @@ export function mountAccountUi(
  .sherlock-account-avatar{display:grid;place-items:center;background:transparent;color:var(--dsw-alias-label-primary);border-radius:50%;width:23px;height:23px;flex:none;font:11px system-ui}
  .sherlock-account-menu{position:fixed;z-index:3000;width:240px;padding:8px;border-radius:16px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);border:1px solid var(--dsw-alias-border-l2,#555);box-shadow:0 12px 40px #0003;font:13px system-ui}
  .sherlock-account-menu button{display:flex;align-items:center;gap:10px;width:100%}
+ .sherlock-account-menu .sherlock-account-menu-profile{padding:10px 12px 12px;gap:10px;min-height:60px;margin-bottom:6px;position:relative}.sherlock-account-menu-profile:after{content:'';position:absolute;left:12px;right:12px;bottom:-3px;height:1px;background:var(--dsw-alias-border-l2,#555)}.sherlock-account-menu-profile .sherlock-account-avatar{width:30px;height:30px;font-size:12px}.sherlock-account-menu-identity{display:grid;gap:4px;min-width:0;flex:1}.sherlock-account-menu-identity strong{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sherlock-account-menu-identity small{font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary,#999);font-variant-numeric:tabular-nums}
+ .sherlock-account-profile{display:grid;gap:14px}.sherlock-account-profile strong{font-weight:500}.sherlock-account-id-row{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--dsw-alias-border-l2,#555);padding-top:14px;font-size:13px;color:var(--dsw-alias-label-secondary,#999)}.sherlock-account-id-row span{user-select:text;font-variant-numeric:tabular-nums}.sherlock-account-id-row button{padding:6px 12px;font-size:12px}.sherlock-account-id-row button:disabled{cursor:default}
  .sherlock-account-menu-icon{width:18px;height:18px;flex:none;color:var(--dsw-alias-label-secondary,currentColor)}
  .sherlock-account-nav{color:var(--dsw-alias-label-primary)}
  [data-account-nav][aria-current=page]{background:var(--dsw-specific-sidebar-nav-item-active,#ffffff14)}
@@ -303,8 +305,32 @@ export function mountAccountUi(
     let passwordToggle: HTMLButtonElement | undefined
     if (user) {
       const card = document.createElement('div')
-      card.className = 'sherlock-account-card'
-      card.textContent = user.username
+      card.className = 'sherlock-account-card sherlock-account-profile'
+      const name = document.createElement('strong')
+      name.textContent = user.username
+      card.append(name)
+      const accountId = user.id
+      if (boards) {
+        const row = document.createElement('div'), id = document.createElement('span')
+        row.className = 'sherlock-account-id-row'
+        id.textContent = '正在获取用户 ID…'
+        let publicId: string | undefined
+        const copy = button('复制 ID', () => {
+          if (!publicId || user?.id !== accountId) return
+          void document.defaultView!.navigator.clipboard.writeText(publicId).then(()=>{copy.textContent='已复制';copy.setAttribute('aria-label','已复制 ID');setTimeout(()=>{if(copy.isConnected){copy.textContent='复制 ID';copy.setAttribute('aria-label','复制 ID')}},2000)}).catch(()=>{copy.textContent='复制失败，请重试'})
+        })
+        copy.disabled = true
+        row.append(id, copy)
+        card.append(row)
+        void boards.getSnapshot().then(snapshot=>{
+          if(!card.isConnected || user?.id!==accountId) return
+          const identity=snapshot.account.user
+          if(identity?.userId!==accountId){id.textContent='用户 ID 暂时不可用';return}
+          publicId=identity.publicId
+          id.textContent='ID '+publicIdLabel(publicId)
+          copy.disabled=false
+        }).catch(()=>{if(card.isConnected)id.textContent='用户 ID 暂时不可用'})
+      }
       page.append(card)
       const security = document.createElement('div')
       security.className = 'sherlock-account-card sherlock-account-security'
@@ -481,7 +507,6 @@ export function mountAccountUi(
         })
     }
     root.querySelector('.VOzbGW_content')?.append(page)
-    if (user && boards) void boards.getSnapshot().then(s => { if (!s.account.user || !page.isConnected) return; const idRow = document.createElement('div'); idRow.className = 'sherlock-account-card'; idRow.textContent = 'ID ' + publicIdLabel(s.account.user.publicId); idRow.append(button('复制 ID', () => { void document.defaultView?.navigator.clipboard.writeText(s.account.user!.publicId) })); page.prepend(idRow) })
     if (!user) page.querySelector('input')?.focus()
   }
   function reconcile() {
@@ -498,10 +523,25 @@ export function mountAccountUi(
           menu = document.createElement('div')
           menu.className = 'sherlock-account-menu'
           menu.role = 'menu'
-          menu.append(
-            menuButton(user ? '账户信息' : '登录 / 注册', 'account', () => open(true)),
-            menuButton('设置', 'settings', () => open(false))
-          )
+          if(user) {
+            const profile=button('',()=>open(true),'sherlock-account-menu-profile')
+            profile.setAttribute('aria-label',user.username+'，查看账户信息')
+            const avatar=trigger!.querySelector('.sherlock-account-avatar')?.cloneNode(true)
+            const identity=document.createElement('span'), name=document.createElement('strong'), id=document.createElement('small')
+            identity.className='sherlock-account-menu-identity'
+            name.textContent=user.username
+            id.textContent=boards?'正在获取用户 ID…':'用户 ID 暂时不可用'
+            identity.append(name,id)
+            if(avatar)profile.append(avatar)
+            profile.append(identity)
+            menu.append(profile)
+            const accountId=user.id
+            if(boards)void boards.getSnapshot().then(snapshot=>{
+              if(!profile.isConnected || user?.id!==accountId) return
+              id.textContent=snapshot.account.user?.userId===accountId?'ID '+publicIdLabel(snapshot.account.user.publicId):'用户 ID 暂时不可用'
+            }).catch(()=>{if(profile.isConnected)id.textContent='用户 ID 暂时不可用'})
+          }else menu.append(menuButton('登录 / 注册','account',()=>open(true)))
+          menu.append(menuButton('设置', 'settings', () => open(false)))
           if (user)
             menu.append(
               menuButton('退出登录', 'logout', () => {
@@ -520,7 +560,6 @@ export function mountAccountUi(
                 })
               })
             )
-          if (boards) menu.append(button('复制我的 ID', () => { void boards.getSnapshot().then(async s => { if (s.account.user) await document.defaultView?.navigator.clipboard.writeText(s.account.user.publicId); else open(true) }) }))
           for (const b of menu.querySelectorAll('button')) b.role = 'menuitem'
           document.body.append(menu)
           const rect = trigger!.getBoundingClientRect()

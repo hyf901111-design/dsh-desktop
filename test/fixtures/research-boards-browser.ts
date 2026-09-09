@@ -258,6 +258,7 @@ function App() {
   React.useSyncExternalStore(list.subscribe, list.getSnapshot)
   React.useSyncExternalStore(page.subscribe, page.version)
   const [collapsed, setCollapsed] = React.useState(false)
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
   const id = list.getSnapshot().current
   const shell = hub.shell(id),
     workspace = registry.for(id)
@@ -288,6 +289,10 @@ function App() {
   return h(
     'div',
     { className: 'fixture-shell', 'data-sidebar-collapsed': collapsed },
+    settingsOpen && h('div',{className:'VOzbGW_overlay',style:{position:'fixed',inset:0}},h('div',{className:'VOzbGW_panel',style:{display:'flex'}},
+      h('nav',{className:'VOzbGW_nav'},h('div',{className:'VOzbGW_navList'})),
+      h('div',{className:'VOzbGW_content',style:{flex:1}},h('div',{className:'VOzbGW_header'}),h('div',{className:'VOzbGW_options'})),
+      h('button',{className:'VOzbGW_close',onClick:()=>setSettingsOpen(false)},'关闭设置'))),
     h(
       'aside',
       {
@@ -313,7 +318,7 @@ function App() {
               ? h(
                   'div',
                   { 'data-slot': 'sidebar.settings' },
-                  h('button', { className: 'VOzbGW_trigger' }, '设置')
+                  h('button', { className: 'VOzbGW_trigger', onClick:()=>setSettingsOpen(true) }, '设置')
                 )
               : renderSlot(name, owner)
       })
