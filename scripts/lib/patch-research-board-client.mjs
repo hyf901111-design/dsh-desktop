@@ -553,6 +553,14 @@ function canvasInteractionPatch(source) {
       'node.kind === "web-link" || ["html", "web", "mind-map", "chart"].includes(node.containerSpec?.type)')
     source += '\n/* SHERLOCK_CHART_ARRANGE_STABLE_V1 */'
   }
+  if (!source.includes('/* SHERLOCK_ARRANGE_BORDER_STABLE_V1 */')) {
+    // A viewport-filling table reports the current inner frame height. Do not
+    // count its border as two new content pixels and grow every row peer.
+    source = replace(source,
+      "measured.set(node.id, { ...before, width, height: Math.min(maxHeight, Math.max(RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight, naturalHeight + RESEARCH_CANVAS_TITLE_HEIGHT + 2)), sizeMode: 'manual' });",
+      "const measuredHeight = Math.min(maxHeight, Math.max(RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight, naturalHeight + RESEARCH_CANVAS_TITLE_HEIGHT + 2));\n                    const height = measuredHeight > before.height && measuredHeight - before.height <= 2 ? before.height : measuredHeight;\n                    measured.set(node.id, { ...before, width, height, sizeMode: 'manual' });")
+    source += '\n/* SHERLOCK_ARRANGE_BORDER_STABLE_V1 */'
+  }
   if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return source
   source = replace(source,
     'const interactivePreview = event.target?.closest?.("[data-research-preview-interactive],[data-research-selection-actions],[data-research-create-popover]");',
