@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "稳定图表重复整理尺寸",
+        "featureName": "消除表格测量边框累积",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "b3de326326e4c4ed0941e13358384ae4c40d4276",
-        "tipCommit": "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af",
+        "baseCommit": "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af",
+        "tipCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
         "commits": [
           {
-            "commit": "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af",
+            "commit": "7c5fbc414a0c46f108634447326ce6e11a317529",
             "parents": [
-              "b3de326326e4c4ed0941e13358384ae4c40d4276"
+              "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af"
             ],
-            "subject": "修复图表重复整理时高度累积并更新紧凑布局回归"
+            "subject": "消除表格整理测量的边框误差和同行组件累积增高"
           }
         ],
         "files": [
@@ -39,12 +39,12 @@
               "run",
               "test/sherlock-composer-workspace-ui.test.ts",
               "-t",
-              "keeps chart geometry stable|organizes mixed canvas|arranges legacy native|organizes completed HTML"
+              "viewport-filling content|organizes mixed canvas|arranges legacy native|organizes completed HTML"
             ],
             "outcome": "passed",
-            "summary": "四项整理交互回归通过",
-            "verifiedCommit": "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af",
-            "completedAt": "2026-09-10T08:13:47.208948+00:00",
+            "summary": "五项渲染画布整理交互回归通过",
+            "verifiedCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
+            "completedAt": "2026-09-10T08:29:01.669453+00:00",
             "timeoutMs": 300000
           },
           {
@@ -55,94 +55,21 @@
             ],
             "outcome": "passed",
             "summary": "工作台聚焦回归通过",
-            "verifiedCommit": "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af",
-            "completedAt": "2026-09-10T08:13:47.208948+00:00",
+            "verifiedCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
+            "completedAt": "2026-09-10T08:29:01.669453+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "原生发现重复整理每次增加2px，回归已复现并修复，等待最终包复验"
+          "outcome": "passed",
+          "summary": "渲染画布中连续整理图表与表格四次，尺寸稳定；混合组件无重叠且结果保留。最终原生包待复验。"
         },
         "acceptanceCriteria": [
           "图表重复整理不累积边框高度",
           "所有类型统一排列、内容保留且无重叠"
         ],
         "risks": [],
-        "generatedAt": "2026-09-10T08:13:47.208948+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7336ae0b39463be1cc63e7eb3277a90e3dc0ecfb",
-        "verificationCommit": "7336ae0b39463be1cc63e7eb3277a90e3dc0ecfb",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "7336ae0b39463be1cc63e7eb3277a90e3dc0ecfb",
-            "completedAt": "2026-09-10T08:15:02.008Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7336ae0b39463be1cc63e7eb3277a90e3dc0ecfb",
-            "completedAt": "2026-09-10T08:15:02.008Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "7336ae0b39463be1cc63e7eb3277a90e3dc0ecfb",
-            "completedAt": "2026-09-10T08:15:02.008Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "7336ae0b39463be1cc63e7eb3277a90e3dc0ecfb",
-            "completedAt": "2026-09-10T08:15:02.008Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "7336ae0b39463be1cc63e7eb3277a90e3dc0ecfb",
-            "completedAt": "2026-09-10T08:15:02.008Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T08:15:02.008Z"
+        "generatedAt": "2026-09-10T08:29:01.669453+00:00"
       }
     }
   ],
