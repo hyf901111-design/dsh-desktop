@@ -937,6 +937,14 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
+  it('keeps explicit retrieval enabled when the user forbids example data', async () => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start('必须本次实际调用网页搜索工具 web_search 查询国家药监局最近60天公告，不得复用画布旧结果或示例数据。')
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['financial_query', 'web_search'])
+    expect(fixture.ctx.web.search).toHaveBeenCalled()
+    await handle.dispose()
+  })
+
   it('bounds a stuck research child and carries only its search evidence into recovery', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     vi.useFakeTimers()

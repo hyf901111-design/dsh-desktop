@@ -17,6 +17,8 @@ export function extractArtifactObjects(text) {
 export function acceptArtifactOutput(text) {
  const candidates=extractArtifactObjects(text);
  for(const candidate of candidates.reverse()) {
+  const chartWithNotes=preserveLongChartCaption(candidate);
+  if(chartWithNotes)return JSON.stringify(chartWithNotes);
   const spec=parseResearchContainerSpec(renderInteractiveArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
@@ -25,6 +27,37 @@ export function acceptArtifactOutput(text) {
   return JSON.stringify(spec);
  }
  return undefined;
+}
+
+// The native chart schema has a short title but no description field. Preserve
+// an otherwise valid chart whose model put source/date notes into that title as
+// an offline figure, rather than discard its data or silently truncate the notes.
+function preserveLongChartCaption(candidate) {
+ if(candidate?.type!=='chart'||typeof candidate.title!=='string'||candidate.title.length<=256||candidate.title.length>8000)return;
+ const title=(candidate.title.split(/[｜|\n]/u)[0].trim()||'研究图表').slice(0,96);
+ const chart=parseResearchContainerSpec({...candidate,title});
+ if(!chart)return;
+ const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const values=chart.series.flatMap(s=>s.values),min=Math.min(...values),max=Math.max(...values),range=max-min||1;
+ const low=chart.variant==='bar'?Math.min(0,min):min-range*.08;
+ const high=chart.variant==='bar'?Math.max(0,max):max+range*.08;
+ const y=v=>260-(v-low)/(high-low||1)*220;
+ const step=540/Math.max(1,chart.labels.length),x=i=>55+step*(i+.5);
+ const series=chart.series.map((s,si)=>{
+  const color=`var(--sherlock-chart-${si+1})`;
+  const marks=s.values.map((v,i)=>{
+   const hint=`<title>${esc(chart.labels[i])} · ${esc(s.name)}：${v}</title>`;
+   if(chart.variant==='line')return `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${color}">${hint}</circle>`;
+   const width=step*.75/chart.series.length;
+   return `<rect x="${x(i)-step*.375+si*width}" y="${Math.min(y(v),y(0))}" width="${Math.max(.5,width-2)}" height="${Math.max(.5,Math.abs(y(v)-y(0)))}" fill="${color}">${hint}</rect>`;
+  }).join('');
+  return (chart.variant==='line'?`<polyline points="${s.values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>`:'')+marks;
+ }).join('');
+ const ticks=[0,1,2,3,4].map(i=>{const v=low+(high-low)*i/4;return `<line x1="55" x2="605" y1="${y(v)}" y2="${y(v)}" stroke="var(--sherlock-border)" stroke-dasharray="4 4"/><text x="48" y="${y(v)+4}" text-anchor="end">${esc(Number(v.toPrecision(5)))}</text>`}).join('');
+ const dates=chart.labels.map((l,i)=>i===0||i===chart.labels.length-1||i%Math.max(1,Math.ceil(chart.labels.length/5))===0?`<text x="${x(i)}" y="283" text-anchor="middle">${esc(l)}</text>`:'').join('');
+ const rows=chart.labels.map((l,i)=>`<tr><td>${esc(l)}</td>${chart.series.map(s=>`<td>${s.values[i]}</td>`).join('')}</tr>`).join('');
+ const html=`<style>body{padding:20px;font:14px/1.6 var(--sherlock-font-sans)}figure{margin:0}svg{display:block;width:100%;height:auto;color:var(--sherlock-text)}svg text{fill:currentColor;font-size:10px}figcaption{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--sherlock-muted)}summary{cursor:pointer}.legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}</style><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 305" role="img" aria-label="${esc(title)}">${ticks}${series}${dates}</svg><div class="legend">${chart.series.map((s,i)=>`<span style="color:var(--sherlock-chart-${i+1})">● ${esc(s.name)}</span>`).join('')}</div><figcaption>${esc(candidate.title)}</figcaption></figure><details><summary>查看全部数据</summary><table><thead><tr><th>日期</th>${chart.series.map(s=>`<th>${esc(s.name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></details>`;
+ return parseResearchContainerSpec({version:1,type:'html',title,html})??undefined;
 }
 
 // Recovery preserves only actual delivered content, never reasoning, prompts, or fabricated data.
