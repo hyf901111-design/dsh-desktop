@@ -19,6 +19,44 @@ async function clientArtifacts(nodes: any[]) {
   return client.parseResearchCanvasArtifactNodes(JSON.stringify(nodes))
 }
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }) })
+it('creates a leased workbench for an editor from the shared composer, reusing the request and preserving peer nodes', async () => {
+  const { integration, service, canvas, runtimeRequest } = await fixture()
+  const doc = createDocument(canvas), messages: any[] = [], tasks: any[] = [], commands: any[] = []
+  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks, snapshot: { canvas: projectDocument(doc) } } })) as any
+  ;(integration as any).options.client.request = async ({ body }: any) => {
+    commands.push(body)
+    const reply: any = { action: body.action, operationId: body.operationId, seq: commands.length }
+    if (body.action === 'update') mergeDocumentUpdate(doc, fromBase64(body.update), new Set())
+    if (body.action === 'message') { reply.message = { id: 'request', text: body.text, context: body.context }; messages.push(reply.message) }
+    if (body.action === 'taskCreate') { reply.task = { ...body, taskId: 'task-' + tasks.length }; tasks.push(reply.task) }
+    if (body.action === 'taskClaim') { reply.leaseToken = 'lease'; reply.task = { contextSnapshot: { canvas: projectDocument(doc), messages, history: [] } } }
+    return reply
+  }
+  const plan = { requestId: 'planner-id', title: '医药工作台', panels: [
+    { title: '行业概览', type: 'dashboard', size: 'small', prompt: '生成行业概览，注明数据日期' },
+    { title: '政策动态', type: 'news', size: 'medium', prompt: '生成政策动态，附可点击来源' }
+  ] }
+  runtimeRequest.mockImplementation(async (_action, body) => ({ status: 'completed', text: body.kind === 'board' ? JSON.stringify({ type: 'workbench-plan', plan }) : JSON.stringify({ version: 1, type: 'markdown', title: '面板结果', content: '带来源的研究结果' }) }) as any)
+  const input = { accountId: 'editor', boardId: 'board', clientMutationId: 'workbench-request', text: '构建医药行业研究工作台', context: { scope: 'board', references: [] }, signal: new AbortController().signal }
+  await integration.submit(input)
+  await vi.waitFor(() => expect(commands.filter(c => c.action === 'taskResult')).toHaveLength(3))
+  expect(runtimeRequest.mock.calls[0]![1]).toMatchObject({ kind: 'board', query: input.text })
+  expect(messages).toHaveLength(1)
+  expect(tasks).toHaveLength(3)
+  expect(tasks.every(t => t.requestMessageId === 'request')).toBe(true)
+  const created = projectDocument(doc).artifacts.filter((n: any) => n.workbenchId)
+  expect(created).toHaveLength(2)
+  expect((await clientArtifacts(created)).map((n: any) => n.id)).toEqual(created.map((n: any) => n.id))
+  expect(created[0]!.y).toBe(created[1]!.y)
+  expect(projectDocument(doc).artifacts.find(n => n.id === 'node')).toEqual(canvas.artifacts[0])
+  const results = commands.filter(c => c.action === 'taskResult' && c.node)
+  expect(results).toHaveLength(2)
+  expect(results.every(c => c.leaseToken === 'lease' && c.node.generationStatus === 'completed')).toBe(true)
+  await integration.submit(input)
+  expect(runtimeRequest).toHaveBeenCalledTimes(3)
+  doc.destroy()
+})
+
 async function fixture(tasks: any[] = []) {
   const root = await mkdtemp(join(tmpdir(), 'board-generation-')); roots.push(root)
   const node = { id: 'node', kind: 'generated-container', generationStatus: 'completed', containerSpec: { version: 1, type: 'markdown', title: '已有内容', content: '上一次成功生成的研究内容。' } }
@@ -33,6 +71,19 @@ async function fixture(tasks: any[] = []) {
   } as any)
   return { integration, runtimeRequest, commands, canvas, service }
 }
+
+it('rechecks edit authority after planning and never creates panels after access is revoked', async () => {
+  const { integration, service, runtimeRequest, commands } = await fixture()
+  const task = { taskId: 'planner', requestMessageId: 'message', status: 'running' }
+  const key = integration.journal.prepare('editor', 'board', 'revoked-plan', { text: '创建工作台' }, 1)
+  runtimeRequest.mockImplementation(async () => {
+    service.taskAuthority = () => { throw Error('ACCESS_REVOKED') }
+    return { status: 'completed', text: JSON.stringify({ type: 'workbench-plan', plan: { requestId: 'p', title: '工作台', panels: [0,1].map(i => ({ title: `面板${i}`, prompt: '创建离线组件', type: 'html', size: 'small' })) } }) }
+  })
+  await (integration as any).execute(key, task, new AbortController().signal)
+  expect(commands.some(c => c.action === 'update' || c.action === 'taskCreate' || c.action === 'taskResult')).toBe(false)
+  expect(integration.journal.get(key).runtimeError).toBe('ACCESS_REVOKED')
+})
 
 it('sends only the current request as the retrieval query and publishes typed failure without raw error text', async () => {
   const task = { taskId: 'task', targetId: 'node', targetCollection: 'artifacts', requestMessageId: 'message', status: 'running' }

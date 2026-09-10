@@ -261,6 +261,9 @@ for (let i = 0; i < 2; i++) {
       const evidence = []
       for (const file of request.files ?? [])
         evidence.push(await readFile(file.path, 'utf8'))
+      if (request.kind === 'board' && request.query === '协作编辑成员工作台验收') return JSON.stringify({
+        type: 'workbench-plan', plan: { requestId: 'editor-plan', title: '编辑成员工作台', panels: [0, 1].map(i => ({ title: `编辑面板${i + 1}`, prompt: '仅依据冻结资料生成简短组件，无需联网', type: 'markdown', size: 'small' })) }
+      })
       return request.kind === 'container'
         ? JSON.stringify({
             version: 1,
@@ -1781,7 +1784,24 @@ if (process.argv.includes('--serve')) {
     assert.equal(await readFile(ownedText.path, 'utf8'), '预览后仅本机资料。')
     assert.deepEqual(users.map(u => u.modelCalls()), reshareCalls)
     await page.getByText('副本中的新问题', { exact: true }).waitFor()
-    await page.getByText('副本中的新问题', { exact: true }).scrollIntoViewIfNeeded()
+    await page.waitForFunction(() => {
+      const port = document.querySelector('[data-research-conversation-host]')
+      return port.scrollHeight - port.clientHeight - port.scrollTop < 2
+    })
+    await page.evaluate(() => {
+      const port = document.querySelector('[data-research-conversation-host]')
+      port.scrollTop = 0
+      port.dispatchEvent(new Event('scroll'))
+    })
+    await page.waitForFunction(() => document.querySelector('[data-research-conversation-host]').scrollTop === 0)
+    await page.evaluate(() => window.fixture.setResearchPanelActive(false))
+    await page.locator('[data-research-conversation-panel]').getAttribute('aria-hidden').then(v => assert.equal(v, 'true'))
+    await page.evaluate(() => window.fixture.setResearchPanelActive(true))
+    await page.waitForFunction(() => {
+      const port = document.querySelector('[data-research-conversation-host]')
+      return port.scrollHeight - port.clientHeight - port.scrollTop < 2
+    })
+    console.log('RESEARCH_ENTRY_SCROLL_PASSED long-history/entry/manual-reading/reentry/native-panel')
     await page.waitForFunction(() => window.fixture.page.getState().current?.presence.length === 2)
     const secondLayout = await page.evaluate(() => {
       const rect = element => { const r = element.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height } }
@@ -1799,6 +1819,22 @@ if (process.argv.includes('--serve')) {
     assert.ok(secondLayout.lastMessage.top >= secondLayout.scroll.top && secondLayout.lastMessage.bottom <= secondLayout.composer.top, 'last message can scroll fully above composer')
     assert.ok(secondLayout.composer.bottom >= secondLayout.panel.bottom - 32 && secondLayout.composer.bottom <= secondLayout.panel.bottom + 1, 'long shared history keeps composer at panel bottom')
     await page.screenshot({ path: join(out, 'second-generation-cloud-history.png') })
+    const editorModelCalls = users.map(u => u.modelCalls())
+    await page.locator('.fixture-discussion textarea').last().fill('协作编辑成员工作台验收')
+    await page.locator('.fixture-discussion textarea').last().press('Enter')
+    await until(() => users[0].service.getSnapshot().current?.tasks.filter(t => t.targetId && t.status === 'completed').length === 2, 'editor workbench child generation')
+    const editorBuilt = await users[0].client.request({ kind: 'board.get', boardId: secondBoardId })
+    const editorPanels = editorBuilt.snapshot.canvas.artifacts.filter(n => n.workbenchId)
+    assert.equal(editorPanels.length, 2)
+    assert.ok(editorPanels.every(n => n.containerSpec?.type === 'markdown'))
+    assert.equal(editorBuilt.messages.filter(m => m.role === 'user' && m.text === '协作编辑成员工作台验收').length, 1)
+    assert.equal(users[0].modelCalls() - editorModelCalls[0], 3)
+    assert.equal(users[1].modelCalls() - editorModelCalls[1], 0)
+    for (const clientPage of [page, peer]) await clientPage.waitForFunction(() => {
+      const id = window.fixture.page.current()
+      return window.fixture.registry.for(id).getSnapshot().artifacts.filter(n => n.workbenchId && n.containerSpec).length === 2
+    })
+    console.log('SHARED_EDITOR_WORKBENCH_PASSED native-composer/editor-authority/one-request/two-panels/leased-results/peer-zero-execution')
     await page.evaluate(id => window.fixture.page.openBoard(id), boardId)
     console.log('TASK5_SECOND_GENERATION_PASSED favorite/reviewed-capture/independent-cloud-activation/other-account-history-refs-bytes/frozen-after-private-edit/no-execute')
 
