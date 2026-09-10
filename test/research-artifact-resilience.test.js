@@ -74,3 +74,26 @@ describe('evidence-preserving synthesis retries',()=>{
   const text=researchSearchEvidence(event,new Set(['search']));expect(text).toContain('有效摘要');expect(text).not.toContain('PRIVATE');
  });
 });
+
+it('recovers a private container from a confirmed local deadline using its existing evidence',async()=>{
+ const firstDispose=vi.fn(async()=>{}),valid=JSON.stringify(spec)
+ const start=vi.fn(async()=>{
+  if(start.mock.calls.length===2)expect(firstDispose).toHaveBeenCalledOnce()
+  return {childSessionId:'c'+start.mock.calls.length,dispose:start.mock.calls.length===1?firstDispose:async()=>{},result:Promise.resolve(start.mock.calls.length===1?{stopReason:'timeout',localDeadlineExceeded:true,output:[],researchEvidence:'甲公司收入12，离线验收资料。'}:{stopReason:'completed',output:[{type:'text',text:valid}]})}
+ })
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'task'})
+ try {
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'离线数据对比'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(2);expect(start.mock.calls[1][0].synthesisOnly).toBe(true)
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toBe(valid)
+ }finally{await runtime.dispose()}
+})
+
+it('preserves financial values, dates and quality without transport identifiers in recovery evidence',async()=>{
+ const {researchSearchEvidence}=await import('../packages/dsh-research-task-runtime/index.js')
+ const value={schema_version:'financial-1',request_hash:'TRANSPORT_HASH',status:'partial',received_at:'2026-09-10',records:[{evidence_id:'TRANSPORT_ID',instrument:'000933.SH',metric:'收盘价',value:12.34,unit:'点',as_of:'2026-09-09',quality_state:'dated',price_basis:'不复权',source_url:'https://example.org/source'}],limitations:['更早区间暂缺']}
+ const text=researchSearchEvidence({type:'tool/result',data:{message:{content:[{type:'tool-result',toolCallId:'finance',content:[{type:'text',text:JSON.stringify(value)}]}]}}},new Set(['finance']))
+ for(const expected of ['partial','2026-09-09','000933.SH','收盘价','12.34 点','dated','不复权','https://example.org/source','更早区间暂缺'])expect(text).toContain(expected)
+ expect(text).not.toContain('TRANSPORT_')
+})
