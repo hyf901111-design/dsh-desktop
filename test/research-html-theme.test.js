@@ -2,7 +2,7 @@ import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
 import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { buildResearchHtmlPreview, parseResearchHtmlArtifact } from '../packages/dsh-research-task-runtime/html-artifact.js'
+import { buildResearchHtmlPreview, parseResearchHtmlArtifact, researchComponentTypographyCss } from '../packages/dsh-research-task-runtime/html-artifact.js'
 
 function runtime(html, { standalone = false, systemDark = false, configure } = {}) {
   const window = new Window({ settings: { disableJavaScriptEvaluation: true } })
@@ -25,7 +25,7 @@ function runtime(html, { standalone = false, systemDark = false, configure } = {
   configure?.(window)
   const media = { matches: systemDark, addEventListener: vi.fn(), removeEventListener: vi.fn() }
   const context = vm.createContext({
-    window, document: window.document, parent,
+    window, document: window.document, parent, Blob: window.Blob,
     trustedTypes: { isHTML: () => true }, matchMedia: () => media,
     CustomEvent: window.CustomEvent, getComputedStyle: window.getComputedStyle.bind(window),
     addEventListener: window.addEventListener.bind(window),
@@ -40,6 +40,54 @@ function runtime(html, { standalone = false, systemDark = false, configure } = {
 const themeMessage = (colorScheme) => ({ type: 'sherlock-theme', colorScheme })
 
 describe('offline HTML component theme runtime', () => {
+  it('keeps runtime previews small while default exports retain their self-contained font', () => {
+    const html = '<p>黄金多因子 123ABC</p>'
+    const preview = buildResearchHtmlPreview(html, '字体', 'light', { notoFont: 'runtime' })
+    expect(Buffer.byteLength(preview)).toBeLessThan(200_000)
+    expect(preview).not.toContain('data:font/woff2;base64,')
+    expect(buildResearchHtmlPreview(html)).toContain('data:font/woff2;base64,')
+    expect(researchComponentTypographyCss('html', { notoFont: 'local' })).toContain('url("/fonts/NotoSansSC.woff2")')
+    const outer = runtime(preview)
+    for (const document of [preview, outer.childHtml()]) {
+      expect(document).toContain("font-src data:")
+      expect(document).toContain("connect-src 'none'")
+      expect(document).toContain("frame-src 'none'")
+      expect(document).not.toContain('allow-same-origin')
+    }
+    expect(outer.childHtml().indexOf('function researchHtmlInnerFontRuntime')).toBeLessThan(outer.childHtml().indexOf('<body>'))
+    expect(outer.childHtml()).toContain("require-trusted-types-for 'script'; trusted-types 'none'")
+  })
+
+  it('relays only the fixed font from its exact parent and requests from its exact child', () => {
+    const outer = runtime(buildResearchHtmlPreview('<p>字体</p>', '字体', 'light', { notoFont: 'runtime' }))
+    const request = { type: 'sherlock-font-request', font: 'noto-sc' }
+    outer.send(request, {})
+    outer.send({ ...request, font: 'arbitrary' }, outer.frame.contentWindow)
+    outer.send({ ...request, url: 'https://example.com' }, outer.frame.contentWindow)
+    expect(outer.parentMessages).toHaveLength(0)
+    outer.send(request, outer.frame.contentWindow)
+    expect(outer.parentMessages.at(-1).data).toEqual(request)
+    const data = { type: 'sherlock-font-data', font: 'noto-sc', blob: new outer.window.Blob(['font']) }
+    const before = outer.messages.length
+    outer.send(data, {})
+    outer.send({ ...data, blob: { size: 4 } })
+    outer.send({ ...data, blob: new outer.window.Blob([]) })
+    outer.send({ ...data, url: 'https://example.com' })
+    expect(outer.messages).toHaveLength(before)
+    outer.send(data)
+    expect(outer.messages.at(-1).data).toEqual(data)
+    outer.send(request, outer.frame.contentWindow)
+    expect(outer.messages.at(-1).data).toEqual(data)
+    expect(outer.parentMessages).toHaveLength(1)
+    const retry = { type: 'sherlock-font-retry', font: 'noto-sc' }
+    outer.send(retry, {})
+    expect(outer.parentMessages).toHaveLength(1)
+    outer.send(retry, outer.frame.contentWindow)
+    expect(outer.parentMessages.at(-1).data).toEqual(retry)
+    outer.send({ type: 'sherlock-font-failed', font: 'noto-sc' })
+    expect(outer.messages.at(-1).data).toEqual({ type: 'sherlock-font-failed', font: 'noto-sc' })
+  })
+
   it('lets the host own a leading title while preserving descriptions, section headings and inputs', () => {
     const inner = runtime(runtime(buildResearchHtmlPreview('<main><h2>原标题</h2><p>数据说明</p><input value="保留输入"><h3>明细分组</h3></main>')).childHtml())
     const input = inner.window.document.querySelector('input')

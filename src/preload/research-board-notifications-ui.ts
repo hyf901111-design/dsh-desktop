@@ -1,3 +1,7 @@
+import type { UpdateStatus } from '../shared/contracts'
+import { installSidebarNoticeStyles, noticeIcon, positionSidebarNotice } from './sidebar-notice'
+import { updateMessage } from './update-view'
+import { normalizeUpdateNotification, readUpdateNotification, saveUpdateNotification, updateNotificationVersionInstalled } from './update-notification-store'
 import { boardEditTime } from './research-board-presentation'
 import type {
   Notification,
@@ -17,6 +21,7 @@ export function mountResearchBoardNotifications(
 ) {
   const win = doc.defaultView!
   installBoardUiStyles(doc)
+  installSidebarNoticeStyles(doc)
   let state: ResearchBoardsState | undefined,
     bell: HTMLButtonElement | undefined,
     panel: HTMLElement | undefined,
@@ -31,6 +36,10 @@ export function mountResearchBoardNotifications(
     burst = 0,
     aggregate = 0
   let activeNotification: Notification | undefined
+  let latestUpdate = readUpdateNotification(win.localStorage)
+  let liveUpdatePhase: UpdateStatus['phase'] | undefined
+  let updateReadVersion = ''
+  try { updateReadVersion = win.localStorage.getItem('ework.update.read') ?? '' } catch {}
   let countdown: ReturnType<typeof setTimeout> | undefined,
     remaining = 10000,
     started = 0,
@@ -47,6 +56,7 @@ export function mountResearchBoardNotifications(
     } catch {}
   }
   function anchor(el: HTMLElement) {
+    if (el.classList.contains('ework-sidebar-notice')) { positionSidebarNotice(doc, el); return }
     const r = bell?.getBoundingClientRect()
     if (!r) return
     el.style.left = `${Math.max(12, Math.min(r.left, win.innerWidth - 372))}px`
@@ -71,7 +81,7 @@ export function mountResearchBoardNotifications(
     }
   }
   function resume() {
-    if (hover || focused || !bubble || countdown) return
+    if (hover || focused || !bubble || countdown || ['downloading', 'downloaded', 'installing'].includes(liveUpdatePhase ?? '')) return
     started = Date.now()
     countdown = setTimeout(() => closeBubble(), remaining)
   }
@@ -86,7 +96,12 @@ export function mountResearchBoardNotifications(
     const status = doc.createElement('p')
     status.role = 'status'
     root.append(status)
-    status.textContent = '处理中…'
+    status.textContent = decision === 'accept' ? '加入中…' : '处理中…'
+    if (root.closest('.srb-bubble')) {
+      status.hidden = true
+      const action = buttons[decision === 'accept' ? buttons.length - 1 : 0]
+      if (action) action.textContent = status.textContent
+    }
     try {
       const result = await call<{ invitation: { status: string } }>(
         'invitation.respond',
@@ -101,6 +116,10 @@ export function mountResearchBoardNotifications(
           result.invitation?.status ??
           (decision === 'accept' ? 'accepted' : 'declined')
       status.textContent = decision === 'accept' ? '已加入' : '已拒绝'
+      if (root.closest('.srb-bubble')) {
+        root.replaceWith(record(n, true))
+        setBubbleHeading(n)
+      }
       root.querySelector('.srb-notification-actions')?.remove()
       if (decision === 'accept')
         root.append(
@@ -120,6 +139,7 @@ export function mountResearchBoardNotifications(
         n.invitation.status = e.details.invitation.status
         root.querySelector('.srb-notification-actions')?.remove()
       }
+      status.hidden = false
       status.textContent = e.message
       buttons.forEach((b) => (b.disabled = false))
     } finally {
@@ -127,7 +147,7 @@ export function mountResearchBoardNotifications(
       resume()
     }
   }
-  function record(n: Notification) {
+  function record(n: Notification, compact = false) {
     const row = doc.createElement('article')
     row.className = 'srb-notification'
     row.dataset.notificationId = n.notificationId
@@ -166,7 +186,12 @@ export function mountResearchBoardNotifications(
     const time = doc.createElement('small')
     time.textContent = boardEditTime(n.createdAt)
     time.title = new Date(n.createdAt).toLocaleString()
-    row.append(title, subtitle, time)
+    if (compact) {
+      title.textContent = pending(n) ? `${actor?.username ?? '成员'} · ${n.boardTitle}` : `${n.boardTitle} · 协作`
+      subtitle.textContent = pending(n) ? `${boardRoleLabel(String(n.invitation?.role ?? 'editor'))} · ${boardEditTime(n.createdAt)}` : subtitle.textContent
+      row.append(title)
+      if (pending(n)) row.append(subtitle)
+    } else row.append(title, subtitle, time)
     if (pending(n)) {
       const controls = doc.createElement('div')
       controls.className = 'srb-notification-actions'
@@ -190,7 +215,8 @@ export function mountResearchBoardNotifications(
       status.className = 'srb-notification-status'
       const footer = doc.createElement('div')
       footer.className = 'srb-notification-footer'
-      footer.append(status)
+      if (!compact || n.invitation?.status !== 'accepted') footer.append(status)
+      footer.classList.add('ework-notice-actions')
       row.append(footer)
       if (n.invitation?.status === 'accepted')
         footer.append(
@@ -199,6 +225,26 @@ export function mountResearchBoardNotifications(
           )
         )
     }
+    return row
+  }
+  function updateRecord() {
+    const row = doc.createElement('article')
+    row.className = 'srb-notification'
+    row.dataset.updateNotification = latestUpdate?.availableVersion ?? ''
+    const title = doc.createElement('p')
+    title.className = 'srb-notification-title'
+    title.textContent = `版本更新 · ${latestUpdate?.availableVersion ?? ''}`
+    const message = doc.createElement('p')
+    message.textContent = latestUpdate && liveUpdatePhase === latestUpdate.phase ? updateMessage(latestUpdate, 'zh') : ''
+    row.append(title, message)
+    const actions = doc.createElement('div')
+    actions.className = 'srb-notification-actions'
+    actions.append(boardButton(doc, '详情', () => {
+      panel?.remove(); panel = undefined; bell?.setAttribute('aria-expanded', 'false')
+      doc.dispatchEvent(new win.Event('ework-open-about'))
+    }))
+    if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : '重新下载', () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
+    row.append(actions)
     return row
   }
   function renderPanel() {
@@ -219,6 +265,7 @@ export function mountResearchBoardNotifications(
       )
     )
     panel.append(header)
+    if (latestUpdate && filter === 'all') panel.append(updateRecord())
     if (
       state?.account.status === 'loading' ||
       state?.account.status === 'unavailable'
@@ -270,7 +317,7 @@ export function mountResearchBoardNotifications(
     )
     const list = doc.createElement('div')
     list.className = 'srb-notification-list'
-    if (!items.length) {
+    if (!items.length && !(latestUpdate && filter === 'all')) {
       const empty = doc.createElement('div')
       empty.className = 'srb-notification-empty'
       empty.textContent = filter === 'pending' ? '没有待处理的邀请' : '暂无消息'
@@ -293,25 +340,32 @@ export function mountResearchBoardNotifications(
     }
     activeNotification = n
     bubble = doc.createElement('aside')
-    bubble.className = 'srb-bubble'
+    bubble.className = 'srb-bubble ework-sidebar-notice'
     bubble.setAttribute('aria-live', 'polite')
     bubble.setAttribute('aria-label', n ? '新的协作邀请' : '协作邀请提醒')
     const head = doc.createElement('header')
-    head.append(
-      doc.createTextNode(
-        n ? '新的研究看板协作邀请' : `${aggregate} 条待处理协作邀请`
-      ),
-      boardButton(doc, '×', () => closeBubble(), '关闭提醒')
-    )
+    const title = doc.createElement('strong')
+    title.textContent = n ? '收到协作邀请' : `还有 ${aggregate} 条协作邀请`
+    const close = boardButton(doc, '', () => closeBubble(), '关闭提醒')
+    close.className = 'ework-notice-close'
+    close.append(noticeIcon(doc, 'close'))
+    head.append(noticeIcon(doc, 'users'), title, close)
     bubble.append(head)
     if (n) {
       burst++
       shown.set(n.notificationId, n.eventVersion)
       persist()
-      bubble.append(record(n))
+      bubble.append(record(n, true))
     } else {
       aggregate = 0
-      bubble.append(
+      const description = doc.createElement('p')
+      description.textContent = '前往消息中心统一处理。'
+      description.className = 'ework-notice-description'
+      bubble.append(description)
+      const actions = doc.createElement('div')
+      actions.className = 'ework-notice-actions'
+      bubble.append(actions)
+      actions.append(
         boardButton(doc, '查看消息', () => {
           closeBubble(false)
           openPanel()
@@ -349,6 +403,12 @@ export function mountResearchBoardNotifications(
     })
     resume()
   }
+  function setBubbleHeading(n: Notification) {
+    const title = bubble?.querySelector('header strong')
+    if (title) title.textContent = pending(n) ? '收到协作邀请' : n.invitation?.status === 'accepted' ? '已加入协作看板' : '协作邀请已处理'
+    const icon = bubble?.querySelector('header .ework-notice-icon')
+    if (icon && !pending(n)) icon.replaceWith(noticeIcon(doc, 'check'))
+  }
   function reconcileActiveBubble() {
     if (!bubble || !activeNotification) return
     const next = state?.notifications.notifications.find(
@@ -364,7 +424,8 @@ export function mountResearchBoardNotifications(
     pause()
     if (next) {
       activeNotification = next
-      const row = record(next)
+      const row = record(next, true)
+      setBubbleHeading(next)
       previous.replaceWith(row)
       if (hadFocus) {
         const target =
@@ -388,6 +449,10 @@ export function mountResearchBoardNotifications(
       panel = undefined
       bell?.setAttribute('aria-expanded', 'false')
       return
+    }
+    if (latestUpdate?.availableVersion) {
+      updateReadVersion = latestUpdate.availableVersion
+      try { win.localStorage.setItem('ework.update.read', updateReadVersion) } catch {}
     }
     panel = doc.createElement('section')
     panel.className = 'srb-notifications'
@@ -443,9 +508,8 @@ export function mountResearchBoardNotifications(
       host.append(bell)
     }
     bell.dataset.unread = String(
-      !!state &&
-        (state.notifications.unreadCount > 0 ||
-          state.notifications.pendingCount > 0)
+      (!!latestUpdate?.availableVersion && latestUpdate.availableVersion !== updateReadVersion) ||
+      (!!state && (state.notifications.unreadCount > 0 || state.notifications.pendingCount > 0))
     )
     showNext()
   }
@@ -519,6 +583,25 @@ export function mountResearchBoardNotifications(
   async function refresh() {
     receive(await bridge.getSnapshot())
   }
+  const receiveUpdate = () => {
+    try {
+      const update = JSON.parse(doc.documentElement.dataset.eworkUpdateStatus ?? 'null') as UpdateStatus | null
+      liveUpdatePhase = update?.phase
+      const next = normalizeUpdateNotification(update) ?? (['error', 'up-to-date'].includes(update?.phase ?? '') && latestUpdate ? normalizeUpdateNotification({ ...update, availableVersion: latestUpdate.availableVersion }) : undefined)
+      if (next) { latestUpdate = next; saveUpdateNotification(win.localStorage, next) }
+      else if (latestUpdate?.availableVersion && update?.currentVersion && updateNotificationVersionInstalled(update.currentVersion, latestUpdate.availableVersion)) {
+        latestUpdate = { currentVersion: update.currentVersion, availableVersion: latestUpdate.availableVersion, phase: 'up-to-date', manual: false }
+        liveUpdatePhase = 'up-to-date'
+        saveUpdateNotification(win.localStorage, latestUpdate)
+      }
+      if (['downloading', 'downloaded', 'installing'].includes(update?.phase ?? '')) pause()
+      else resume()
+      reconcile()
+      renderPanel()
+    } catch {}
+  }
+  doc.addEventListener('ework-update-status', receiveUpdate)
+  receiveUpdate()
   const off = bridge.subscribe((event) => {
     if (event.type === 'state') receive(event.state)
   })
@@ -551,6 +634,7 @@ export function mountResearchBoardNotifications(
     panel?.remove()
     bell?.remove()
     doc.removeEventListener('pointerdown', outside)
+    doc.removeEventListener('ework-update-status', receiveUpdate)
     win.removeEventListener('resize', resize)
   }
 }

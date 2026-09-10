@@ -1,3 +1,4 @@
+import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { installResearchBoardClientPatches } from './lib/patch-research-board-client.mjs'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -96,3 +97,6 @@ patchJavaScript(asset('.js'))
 patchStyles(asset('.css'))
 
 await installResearchBoardClientPatches()
+
+const layoutPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js')
+writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')))

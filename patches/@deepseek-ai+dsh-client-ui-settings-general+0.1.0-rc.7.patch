@@ -1,18 +1,19 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js
+index 6797c5c..4c1eb16 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js
-@@ -73,6 +73,10 @@
- 		/** Nav glyph by section id; unknown ids fall back to the settings gear. */
- 		function navIcon(id) {
- 			if (id === "models") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDataOutline16, {
-+				className: SettingsRoot_module_css_default.navIcon,
-+				size: 16
-+			});
-+			if (id === "about") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutline14, {
+@@ -76,6 +76,10 @@ window.__ModuleLoader__.load({
  				className: SettingsRoot_module_css_default.navIcon,
  				size: 16
  			});
-@@ -133,6 +137,7 @@
++			if (id === "about") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutline14, {
++				className: SettingsRoot_module_css_default.navIcon,
++				size: 16
++			});
+ 			if (id === "agent-presets") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutline16, {
+ 				className: SettingsRoot_module_css_default.navIcon,
+ 				size: 16
+@@ -133,6 +137,7 @@ window.__ModuleLoader__.load({
  							children: rows.map((row) => (0, react_jsx_runtime.jsxs)("button", {
  								type: "button",
  								className: clsx(SettingsRoot_module_css_default.navCell, row.id === active && SettingsRoot_module_css_default.active),
@@ -20,13 +21,23 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
  								"aria-current": row.id === active ? "true" : void 0,
  								onClick: () => {
  									onSelect(row.id);
-@@ -297,6 +302,168 @@
- 			return (0, react_jsx_runtime.jsx)("div", {
- 				className: GeneralSection_module_css_default.section,
+@@ -186,6 +191,11 @@ window.__ModuleLoader__.load({
+ 				setActiveId(id);
+ 				setOpen(true);
+ 			}, []);
++			(0, react.useEffect)(() => {
++				const showAbout = () => openSection("about");
++				document.addEventListener("ework-open-about", showAbout);
++				return () => document.removeEventListener("ework-open-about", showAbout);
++			}, [openSection]);
+ 			const rows = useSections((s) => s);
+ 			const onboardingSteps = useOnboardingSteps((s) => s);
+ 			const onboardingActive = useSessions((state) => state.phase === "ready" && (state.current === void 0 || state.byId[state.current]?.blank === true));
+@@ -299,6 +309,91 @@ window.__ModuleLoader__.load({
  				children: renderSlot("settings.general.item", {})
-+			});
-+		}
-+		const sherlockAboutCss = ".sherlock-about-logo{display:block;width:136px;height:45px;background:#000;mask:url(/sherlock-logo.svg) center/contain no-repeat;-webkit-mask:url(/sherlock-logo.svg) center/contain no-repeat}body[data-ds-dark-theme] .sherlock-about-logo{background:#fff}.sherlock-about{box-sizing:border-box;color:var(--dsw-alias-label-primary);flex-direction:column;width:100%;display:flex}.sherlock-about-hero{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:16px;padding:16px 0 28px;display:flex}.sherlock-about-product-info{flex:1;min-width:0}.sherlock-about-product{letter-spacing:.02em;margin:0 0 12px;font-size:24px;font-weight:650;line-height:32px}.sherlock-about-version-row{align-items:center;gap:10px;display:flex;flex-wrap:wrap}.sherlock-about-check.sherlock-about-update{background:#1677ff;color:#fff;border-color:transparent}.sherlock-about-check.sherlock-about-update:hover:not(:disabled){background:#0f6fe8}.sherlock-about-version{color:var(--dsw-alias-label-secondary);margin:4px 0 0;font-size:13px;line-height:20px}.sherlock-about-check{color:var(--dsw-alias-label-primary);cursor:pointer;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:7px;margin-top:4px;padding:4px 10px;font-size:12px;line-height:18px}.sherlock-about-check:hover:not(:disabled){background:var(--dsw-alias-bg-layer-3)}.sherlock-about-check:disabled{cursor:default;opacity:.55}.sherlock-about-check-state{color:var(--dsw-alias-label-secondary);margin:6px 0 0;font-size:12px;line-height:18px}.sherlock-about-check-state[data-error=true]{color:var(--dsw-alias-state-error-primary)}.sherlock-about-changelog{padding-top:24px}.sherlock-about-title{margin:0 0 8px;font-size:16px;font-weight:600;line-height:24px}.sherlock-about-release{border-bottom:1px solid var(--dsw-alias-border-l2);padding:14px 0 18px}.sherlock-about-release:last-child{border-bottom:none}.sherlock-about-release-header{justify-content:space-between;align-items:center;gap:16px;display:flex}.sherlock-about-release-version{font-size:14px;font-weight:600;line-height:22px}.sherlock-about-release-date{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:20px}.sherlock-about-release-items{color:var(--dsw-alias-label-secondary);flex-direction:column;gap:7px;margin:11px 0 0;padding-left:20px;font-size:13px;line-height:21px;display:flex}.sherlock-about-state{color:var(--dsw-alias-label-secondary);padding:28px 0;font-size:14px;line-height:22px}";
+ 			});
+ 		}
++		const sherlockAboutCss = ".sherlock-about{--about-text:#292b2d;--about-muted:#808080;--about-items:#646464;--about-button:rgba(0,0,0,.05);--about-list:rgba(255,255,255,.76);--about-border:rgba(0,0,0,.07);--about-divider:rgba(0,0,0,.06);box-sizing:border-box;display:flex;flex-direction:column;gap:24px;width:100%;max-width:760px;margin:0 auto;color:var(--about-text);font-family:\"Noto Sans SC\",sans-serif}\n.sherlock-about p,.sherlock-about h1,.sherlock-about h2,.sherlock-about h3{margin:0}.sherlock-about-heading{font-size:24px;font-weight:500;line-height:34px}.sherlock-about-hero{box-sizing:border-box;display:flex;align-items:center;gap:32px;min-height:152px;padding:24px}.sherlock-about-product-info{display:flex;flex:1;flex-direction:column;align-items:flex-start;gap:16px;min-width:0}.sherlock-about-logo{display:block;width:132px;height:43.154px;background:#000;mask:url(/sherlock-logo.svg) center/contain no-repeat;-webkit-mask:url(/sherlock-logo.svg) center/contain no-repeat}.sherlock-about-tagline{font-size:15px;line-height:24px;color:var(--about-muted)}.sherlock-about-version-row{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:188px}.sherlock-about-version{font-size:15px;font-weight:500;line-height:24px}.sherlock-about-check-state{font-size:12px;line-height:20px;color:var(--about-muted);text-align:right;max-width:300px}.sherlock-about-check-state[data-error=true]{color:#bc574f}.sherlock-about-check{box-sizing:border-box;appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:8px;background:var(--about-button);color:var(--about-text);height:32px;min-width:108px;padding:0 12px;font:400 13px/20px \"Noto Sans SC\",sans-serif;cursor:pointer;white-space:nowrap}.sherlock-about-check:hover:not(:disabled){filter:brightness(.95)}.sherlock-about-check:disabled{opacity:.6;cursor:default}.sherlock-about-check:focus-visible{outline:1.5px solid #6b96d9;outline-offset:2px}.sherlock-about-action-icon{display:block;width:14px;height:14px;flex:0 0 14px;background:currentColor;mask:url(\"data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiB2aWV3Qm94PSIwIDAgMTYgMTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSImIzIyOTsmIzE1NTsmIzE5MDsmIzIzMDsmIzE2MDsmIzEzNTsgLyB1cGRhdGUiPgo8cGF0aCBpZD0iVmVjdG9yIiBkPSJNMTMuMzMzMyA1LjMzMzMzQzEzLjA4NjYgNC4zNzMxOSAxMi41NzcxIDMuNTAwODMgMTEuODYyIDIuODE0MTdDMTEuMTQ3IDIuMTI3NTIgMTAuMjU0NyAxLjY1Mzc0IDkuMjg1MzggMS40NDYwMkM4LjMxNjAzIDEuMjM4MzEgNy4zMDc5OCAxLjMwNDg3IDYuMzc0MzcgMS42MzgyNUM1LjQ0MDc1IDEuOTcxNjIgNC42MTg1MyAyLjU1ODYxIDQgMy4zMzMzM0wyIDUuMzMzMzNNNS4zMzMzMyA1LjMzMzMzSDJWMk0yLjY2NjY3IDEwLjY2NjdDMi45MTM0NCAxMS42MjY4IDMuNDIyOTUgMTIuNDk5MiA0LjEzNzk4IDEzLjE4NThDNC44NTMwMSAxMy44NzI1IDUuNzQ1MjggMTQuMzQ2MyA2LjcxNDYyIDE0LjU1NEM3LjY4Mzk3IDE0Ljc2MTcgOC42OTIwMiAxNC42OTUxIDkuNjI1NjMgMTQuMzYxOEMxMC41NTkyIDE0LjAyODQgMTEuMzgxNSAxMy40NDE0IDEyIDEyLjY2NjdMMTQgMTAuNjY2N00xMC42NjY3IDEwLjY2NjdIMTRWMTQiIHN0cm9rZT0iIzc0Nzc3QiIgc3Ryb2tlLXdpZHRoPSIxLjEzMzMzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9nPgo8L3N2Zz4K\") center/contain no-repeat;-webkit-mask:url(\"data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiB2aWV3Qm94PSIwIDAgMTYgMTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSImIzIyOTsmIzE1NTsmIzE5MDsmIzIzMDsmIzE2MDsmIzEzNTsgLyB1cGRhdGUiPgo8cGF0aCBpZD0iVmVjdG9yIiBkPSJNMTMuMzMzMyA1LjMzMzMzQzEzLjA4NjYgNC4zNzMxOSAxMi41NzcxIDMuNTAwODMgMTEuODYyIDIuODE0MTdDMTEuMTQ3IDIuMTI3NTIgMTAuMjU0NyAxLjY1Mzc0IDkuMjg1MzggMS40NDYwMkM4LjMxNjAzIDEuMjM4MzEgNy4zMDc5OCAxLjMwNDg3IDYuMzc0MzcgMS42MzgyNUM1LjQ0MDc1IDEuOTcxNjIgNC42MTg1MyAyLjU1ODYxIDQgMy4zMzMzM0wyIDUuMzMzMzNNNS4zMzMzMyA1LjMzMzMzSDJWMk0yLjY2NjY3IDEwLjY2NjdDMi45MTM0NCAxMS42MjY4IDMuNDIyOTUgMTIuNDk5MiA0LjEzNzk4IDEzLjE4NThDNC44NTMwMSAxMy44NzI1IDUuNzQ1MjggMTQuMzQ2MyA2LjcxNDYyIDE0LjU1NEM3LjY4Mzk3IDE0Ljc2MTcgOC42OTIwMiAxNC42OTUxIDkuNjI1NjMgMTQuMzYxOEMxMC41NTkyIDE0LjAyODQgMTEuMzgxNSAxMy40NDE0IDEyIDEyLjY2NjdMMTQgMTAuNjY2N00xMC42NjY3IDEwLjY2NjdIMTRWMTQiIHN0cm9rZT0iIzc0Nzc3QiIgc3Ryb2tlLXdpZHRoPSIxLjEzMzMzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9nPgo8L3N2Zz4K\") center/contain no-repeat}.sherlock-about-action-icon[data-loading=true]{mask-image:url(\"data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiB2aWV3Qm94PSIwIDAgMTYgMTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSImIzIyOTsmIzE1NjsmIzEzNDsmIzIzMTsmIzE0MjsmIzE3NTsgTG9hZGluZyAmIzE5NDsmIzE4MzsgJiMyMzA7JiMxNDA7JiMxMjk7JiMyMzE7JiMxODc7JiMxNzM7JiMyMzA7JiMxNTE7JiMxMzk7JiMyMzI7JiMxODk7JiMxNzI7Ij4KPHBhdGggaWQ9IiYjMjI5OyYjMTU2OyYjMTM0OyYjMjMxOyYjMTQyOyYjMTc1OyYjMjI5OyYjMTg2OyYjMTQ5OyYjMjMyOyYjMTg5OyYjMTY4OyIgZD0iTTE1IDhDMTUgMTEuODY2IDExLjg2NiAxNSA4IDE1QzQuMTM0MDEgMTUgMSAxMS44NjYgMSA4QzEgNC4xMzQwMSA0LjEzNDAxIDEgOCAxQzExLjg2NiAxIDE1IDQuMTM0MDEgMTUgOFpNMi42OCA4QzIuNjggMTAuOTM4MiA1LjA2MTg1IDEzLjMyIDggMTMuMzJDMTAuOTM4MiAxMy4zMiAxMy4zMiAxMC45MzgyIDEzLjMyIDhDMTMuMzIgNS4wNjE4NSAxMC45MzgyIDIuNjggOCAyLjY4QzUuMDYxODUgMi42OCAyLjY4IDUuMDYxODUgMi42OCA4WiIgZmlsbD0iIzc0Nzc3QiIgZmlsbC1vcGFjaXR5PSIwLjIyIi8+CjxwYXRoIGlkPSImIzIzMDsmIzE1MTsmIzEzOTsmIzIzMjsmIzE4OTsmIzE3MjsmIzIyOTsmIzE4ODsmIzE2NzsgJiMxOTQ7JiMxODM7IDkwMG1zICYjMjMxOyYjMTg2OyYjMTkxOyYjMjMwOyYjMTI4OyYjMTY3OyYjMjI5OyYjMTkwOyYjMTcwOyYjMjMxOyYjMTQyOyYjMTc1OyIgZD0iTTggMUM5LjE5NzcgMSAxMC4zNzU0IDEuMzA3MzEgMTEuNDIwMyAxLjg5MjUzQzEyLjQ2NTMgMi40Nzc3NSAxMy4zNDI3IDMuMzIxMzEgMTMuOTY4NSA0LjM0MjUxQzE0LjU5NDMgNS4zNjM3MSAxNC45NDc2IDYuNTI4NDEgMTQuOTk0NiA3LjcyNTE4QzE1LjA0MTYgOC45MjE5NiAxNC43ODA4IDEwLjExMDggMTQuMjM3IDExLjE3NzlDMTMuNjkzMyAxMi4yNDUxIDEyLjg4NDggMTMuMTU0OSAxMS44ODkgMTMuODIwM0MxMC44OTMxIDE0LjQ4NTcgOS43NDMyMiAxNC44ODQ1IDguNTQ5MjEgMTQuOTc4NEM3LjM1NTIxIDE1LjA3MjQgNi4xNTcwNiAxNC44NTg0IDUuMDY5MzggMTQuMzU3QzMuOTgxNyAxMy44NTU2IDMuMDQwODcgMTMuMDgzNSAyLjMzNjg4IDEyLjExNDVMMy42OTYwMyAxMS4xMjdDNC4yMzEwNiAxMS44NjM0IDQuOTQ2MDkgMTIuNDUwMiA1Ljc3MjczIDEyLjgzMTNDNi41OTkzNyAxMy4yMTI0IDcuNTA5OTYgMTMuMzc1IDguNDE3NCAxMy4zMDM2QzkuMzI0ODUgMTMuMjMyMiAxMC4xOTg4IDEyLjkyOTEgMTAuOTU1NiAxMi40MjM0QzExLjcxMjUgMTEuOTE3NyAxMi4zMjY5IDExLjIyNjMgMTIuNzQwMiAxMC40MTUyQzEzLjE1MzQgOS42MDQxOSAxMy4zNTE2IDguNzAwNjkgMTMuMzE1OSA3Ljc5MTE0QzEzLjI4MDIgNi44ODE1OSAxMy4wMTE2IDUuOTk2NDIgMTIuNTM2IDUuMjIwMzFDMTIuMDYwNCA0LjQ0NDE5IDExLjM5MzcgMy44MDMwOSAxMC41OTk1IDMuMzU4MzJDOS44MDUyOCAyLjkxMzU1IDguOTEwMjUgMi42OCA4IDIuNjhMOCAxWiIgZmlsbD0iIzc0Nzc3QiIvPgo8L2c+Cjwvc3ZnPgo=\");-webkit-mask-image:url(\"data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiB2aWV3Qm94PSIwIDAgMTYgMTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSImIzIyOTsmIzE1NjsmIzEzNDsmIzIzMTsmIzE0MjsmIzE3NTsgTG9hZGluZyAmIzE5NDsmIzE4MzsgJiMyMzA7JiMxNDA7JiMxMjk7JiMyMzE7JiMxODc7JiMxNzM7JiMyMzA7JiMxNTE7JiMxMzk7JiMyMzI7JiMxODk7JiMxNzI7Ij4KPHBhdGggaWQ9IiYjMjI5OyYjMTU2OyYjMTM0OyYjMjMxOyYjMTQyOyYjMTc1OyYjMjI5OyYjMTg2OyYjMTQ5OyYjMjMyOyYjMTg5OyYjMTY4OyIgZD0iTTE1IDhDMTUgMTEuODY2IDExLjg2NiAxNSA4IDE1QzQuMTM0MDEgMTUgMSAxMS44NjYgMSA4QzEgNC4xMzQwMSA0LjEzNDAxIDEgOCAxQzExLjg2NiAxIDE1IDQuMTM0MDEgMTUgOFpNMi42OCA4QzIuNjggMTAuOTM4MiA1LjA2MTg1IDEzLjMyIDggMTMuMzJDMTAuOTM4MiAxMy4zMiAxMy4zMiAxMC45MzgyIDEzLjMyIDhDMTMuMzIgNS4wNjE4NSAxMC45MzgyIDIuNjggOCAyLjY4QzUuMDYxODUgMi42OCAyLjY4IDUuMDYxODUgMi42OCA4WiIgZmlsbD0iIzc0Nzc3QiIgZmlsbC1vcGFjaXR5PSIwLjIyIi8+CjxwYXRoIGlkPSImIzIzMDsmIzE1MTsmIzEzOTsmIzIzMjsmIzE4OTsmIzE3MjsmIzIyOTsmIzE4ODsmIzE2NzsgJiMxOTQ7JiMxODM7IDkwMG1zICYjMjMxOyYjMTg2OyYjMTkxOyYjMjMwOyYjMTI4OyYjMTY3OyYjMjI5OyYjMTkwOyYjMTcwOyYjMjMxOyYjMTQyOyYjMTc1OyIgZD0iTTggMUM5LjE5NzcgMSAxMC4zNzU0IDEuMzA3MzEgMTEuNDIwMyAxLjg5MjUzQzEyLjQ2NTMgMi40Nzc3NSAxMy4zNDI3IDMuMzIxMzEgMTMuOTY4NSA0LjM0MjUxQzE0LjU5NDMgNS4zNjM3MSAxNC45NDc2IDYuNTI4NDEgMTQuOTk0NiA3LjcyNTE4QzE1LjA0MTYgOC45MjE5NiAxNC43ODA4IDEwLjExMDggMTQuMjM3IDExLjE3NzlDMTMuNjkzMyAxMi4yNDUxIDEyLjg4NDggMTMuMTU0OSAxMS44ODkgMTMuODIwM0MxMC44OTMxIDE0LjQ4NTcgOS43NDMyMiAxNC44ODQ1IDguNTQ5MjEgMTQuOTc4NEM3LjM1NTIxIDE1LjA3MjQgNi4xNTcwNiAxNC44NTg0IDUuMDY5MzggMTQuMzU3QzMuOTgxNyAxMy44NTU2IDMuMDQwODcgMTMuMDgzNSAyLjMzNjg4IDEyLjExNDVMMy42OTYwMyAxMS4xMjdDNC4yMzEwNiAxMS44NjM0IDQuOTQ2MDkgMTIuNDUwMiA1Ljc3MjczIDEyLjgzMTNDNi41OTkzNyAxMy4yMTI0IDcuNTA5OTYgMTMuMzc1IDguNDE3NCAxMy4zMDM2QzkuMzI0ODUgMTMuMjMyMiAxMC4xOTg4IDEyLjkyOTEgMTAuOTU1NiAxMi40MjM0QzExLjcxMjUgMTEuOTE3NyAxMi4zMjY5IDExLjIyNjMgMTIuNzQwMiAxMC40MTUyQzEzLjE1MzQgOS42MDQxOSAxMy4zNTE2IDguNzAwNjkgMTMuMzE1OSA3Ljc5MTE0QzEzLjI4MDIgNi44ODE1OSAxMy4wMTE2IDUuOTk2NDIgMTIuNTM2IDUuMjIwMzFDMTIuMDYwNCA0LjQ0NDE5IDExLjM5MzcgMy44MDMwOSAxMC41OTk1IDMuMzU4MzJDOS44MDUyOCAyLjkxMzU1IDguOTEwMjUgMi42OCA4IDIuNjhMOCAxWiIgZmlsbD0iIzc0Nzc3QiIvPgo8L2c+Cjwvc3ZnPgo=\");animation:sherlock-about-spin 900ms linear infinite}\n.sherlock-about-changelog{display:flex;flex-direction:column;gap:12px}.sherlock-about-title{font-size:16px;line-height:24px;font-weight:500}.sherlock-about-release-list{background:var(--about-list);border:1px solid var(--about-border);border-radius:14px;padding:0 24px}.sherlock-about-release{display:flex;gap:24px;padding:20px 0;border-bottom:1px solid var(--about-divider)}.sherlock-about-release:last-child{border-bottom:0}.sherlock-about-release-header{display:flex;flex:0 0 104px;flex-direction:column;align-items:flex-start;gap:4px}.sherlock-about-release-version{font-size:18px;line-height:26px;font-weight:500}.sherlock-about-release-date{font-size:12px;line-height:20px;color:var(--about-muted)}.sherlock-about-current{background:rgba(82,116,165,.10);color:#5274a5;border-radius:5px;padding:2px 10px;font-size:11px;line-height:18px}.sherlock-about-release-content{min-width:0;flex:1}.sherlock-about-release-content h3{font-size:15px;line-height:24px;font-weight:500;margin-bottom:4px}.sherlock-about-release-items{display:flex;flex-direction:column;gap:4px;margin:0;padding:0 0 0 20px;list-style:disc;color:var(--about-items);font-size:14px;line-height:24px}.sherlock-about-release-items li{overflow-wrap:anywhere}.sherlock-about-state{font-size:14px;line-height:22px;color:var(--about-muted)}body[data-ds-dark-theme] .sherlock-about{--about-text:#e9e9e9;--about-muted:#a6a6a6;--about-items:#aaa;--about-button:rgba(255,255,255,.09);--about-list:rgba(49,49,49,.76);--about-border:rgba(255,255,255,.07);--about-divider:rgba(255,255,255,.06)}body[data-ds-dark-theme] .sherlock-about-logo{background:#fff}body[data-ds-dark-theme] .sherlock-about-current{color:#91b2ef;background:rgba(135,171,255,.12)}@keyframes sherlock-about-spin{to{transform:rotate(360deg)}}@media(max-width:800px){.sherlock-about-hero{padding:24px 0;gap:16px}.sherlock-about-version-row{min-width:150px}.sherlock-about-release{gap:16px}.sherlock-about-release-header{flex-basis:80px}}\n";
 +		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=\"sherlock-about\"]") === null) {
 +			const tag = document.createElement("style");
 +			tag.dataset.plugin = "sherlock";
@@ -35,128 +46,51 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +			document.head.appendChild(tag);
 +		}
 +		function SherlockAboutContent({ info, t }) {
-+			const [checkState, setCheckState] = (0, react.useState)({ status: "idle" });
-+			const [actionState, setActionState] = (0, react.useState)(null);
++			const [update, setUpdate] = (0, react.useState)({ phase: "idle" });
++			const [busy, setBusy] = (0, react.useState)(false);
 +			const actionPending = (0, react.useRef)(false);
 +			(0, react.useEffect)(() => {
-+				let active = true;
-+				let received = false;
-+				const accept = (update) => {
-+					if (!active) return;
-+					received = true;
-+					setCheckState({ status: "result", update });
-+					if (update.phase === "error") { actionPending.current = false; setActionState(null); }
-+				};
++				let active = true, received = false;
++				const accept = (next) => { if (active && next) { received = true; setUpdate(next); } };
 +				const dispose = window.sherlockAbout?.onUpdateStatusChanged?.(accept);
-+				window.sherlockAbout?.getUpdateStatus?.().then((update) => { if (!received) accept(update); }).catch(() => {});
++				window.sherlockAbout?.getUpdateStatus?.().then((next) => { if (!received) accept(next); }).catch(() => {});
 +				return () => { active = false; dispose?.(); };
 +			}, []);
-+			const performUpdate = async (kind) => {
++			const performAction = async () => {
 +				if (actionPending.current) return;
-+				actionPending.current = true;
-+				setActionState(kind);
++				actionPending.current = true; setBusy(true);
++				const downloading = update.phase === "available";
++				if (!downloading) setUpdate({ ...update, phase: "checking" });
 +				try {
-+					if (kind === "download") {
-+						const update = await window.sherlockAbout.downloadUpdate();
-+						setCheckState({ status: "result", update });
-+						actionPending.current = false;
-+						setActionState(null);
-+					} else await window.sherlockAbout.installUpdate();
-+				} catch {
-+					actionPending.current = false;
-+					setActionState(null);
-+					setCheckState({ status: "error" });
-+				}
++					const next = await (downloading ? window.sherlockAbout.downloadUpdate() : window.sherlockAbout.checkForUpdates());
++					if (next) setUpdate(next);
++				} catch (error) { setUpdate({ ...update, phase: "error", message: error?.message }); }
++				finally { actionPending.current = false; setBusy(false); }
 +			};
-+			const checkForUpdates = async () => {
-+				const check = window.sherlockAbout?.checkForUpdates;
-+				if (typeof check !== "function") {
-+					setCheckState({ status: "error" });
-+					return;
-+				}
-+				setCheckState({ status: "checking" });
-+				try {
-+					setCheckState({ status: "result", update: await check() });
-+				} catch {
-+					setCheckState({ status: "error" });
-+				}
-+			};
-+			let checkMessage = null;
-+			if (checkState.status === "checking") checkMessage = t("about.checking");
-+			else if (checkState.status === "error") checkMessage = t("about.checkFailed");
-+			else if (checkState.status === "result") {
-+				const update = checkState.update;
-+				if (update.phase === "up-to-date") checkMessage = t("about.upToDate");
-+				else if (update.phase === "available") checkMessage = t("about.updateAvailable").replace("{version}", update.availableVersion ?? "");
-+				else if (update.phase === "downloading") { checkMessage = t("about.downloading").replace("{percent}", String(Math.round(update.percent ?? 0))); const bytes = (n) => { const units = ["B", "KB", "MB", "GB"]; const i = Math.min(3, Math.floor(Math.log10(Math.max(1, n)) / 3)); return (n / 1000 ** i).toFixed(i === 0 ? 0 : 1) + " " + units[i]; }; if (Number.isFinite(update.transferredBytes) && update.transferredBytes >= 0 && Number.isFinite(update.totalBytes) && update.totalBytes > 0) checkMessage += " · " + bytes(update.transferredBytes) + " / " + bytes(update.totalBytes); }
-+				else if (update.phase === "installing") checkMessage = t("about.preparingInstall"); else if (update.phase === "downloaded") checkMessage = t(actionState === "install" ? "about.restarting" : "about.ready");
-+				else if (update.phase === "error" || update.phase === "unsupported") checkMessage = t("about.checkFailed");
-+				else if (update.phase === "checking") checkMessage = t("about.checking");
-+			}
-+			return (0, react_jsx_runtime.jsxs)("div", {
-+				className: "sherlock-about",
-+				children: [(0, react_jsx_runtime.jsxs)("div", {
-+					className: "sherlock-about-hero",
-+					children: [(0, react_jsx_runtime.jsxs)("div", {
-+						className: "sherlock-about-product-info",
-+						children: [(0, react_jsx_runtime.jsx)("h2", {
-+						className: "sherlock-about-product",
-+						children: (0, react_jsx_runtime.jsx)("span", { className: "sherlock-about-logo", role: "img", "aria-label": info.productName })
-+					}), (0, react_jsx_runtime.jsxs)("div", {
-+						className: "sherlock-about-version-row",
-+						children: [(0, react_jsx_runtime.jsx)("p", {
-+							className: "sherlock-about-version",
-+							children: `${t("about.version")} ${info.version}`
-+						}), (0, react_jsx_runtime.jsx)("button", {
-+							type: "button",
-+							className: "sherlock-about-check",
-+							"data-about-check-update": "true",
-+							disabled: checkState.status === "checking" || actionState !== null || ["downloading", "installing"].includes(checkState.update?.phase),
-+							onClick: () => void checkForUpdates(),
-+							children: checkState.status === "checking" ? t("about.checking") : t("about.check")
-+						}), checkState.update?.phase === "available" ? (0, react_jsx_runtime.jsx)("button", {
-+							type: "button", className: "sherlock-about-check sherlock-about-update",
-+							"data-about-download-update": "true", disabled: actionState !== null,
-+							onClick: () => void performUpdate("download"), children: t("about.download")
-+						}) : checkState.update?.phase === "downloaded" ? (0, react_jsx_runtime.jsx)("button", {
-+							type: "button", className: "sherlock-about-check sherlock-about-update",
-+							"data-about-install-update": "true", disabled: actionState !== null,
-+							onClick: () => void performUpdate("install"), children: t(actionState === "install" ? "about.installing" : "about.install")
-+						}) : null]
-+					}), checkMessage === null ? null : (0, react_jsx_runtime.jsx)("p", {
-+						className: "sherlock-about-check-state",
-+						"data-error": checkState.status === "error" || checkState.status === "result" && (checkState.update.phase === "error" || checkState.update.phase === "unsupported"),
-+						role: checkState.status === "error" ? "alert" : "status",
-+						children: checkMessage
-+					})]
-+					})]
-+				}), (0, react_jsx_runtime.jsxs)("section", {
-+					className: "sherlock-about-changelog",
-+					children: [(0, react_jsx_runtime.jsx)("h3", {
-+						className: "sherlock-about-title",
-+						children: t("about.changelog")
-+					}), info.releaseNotes.length === 0 ? (0, react_jsx_runtime.jsx)("p", {
-+						className: "sherlock-about-state",
-+						children: t("about.empty")
-+					}) : info.releaseNotes.map((note) => (0, react_jsx_runtime.jsxs)("article", {
-+						className: "sherlock-about-release",
-+						children: [(0, react_jsx_runtime.jsxs)("div", {
-+							className: "sherlock-about-release-header",
-+							children: [(0, react_jsx_runtime.jsx)("span", {
-+								className: "sherlock-about-release-version",
-+								children: `v${note.version}`
-+							}), (0, react_jsx_runtime.jsx)("time", {
-+								className: "sherlock-about-release-date",
-+								dateTime: note.date,
-+								children: note.date
-+							})]
-+						}), (0, react_jsx_runtime.jsx)("ul", {
-+							className: "sherlock-about-release-items",
-+							children: note.items.map((item) => (0, react_jsx_runtime.jsx)("li", { children: item }, item))
-+						})]
-+					}, note.version))]
-+				})]
-+			});
++			const verifying = update.phase === "downloaded" || update.phase === "installing";
++			const checking = update.phase === "checking";
++			const downloading = update.phase === "downloading";
++			const error = update.phase === "error" || update.phase === "unsupported";
++			const active = checking || downloading || verifying;
++			const percent = Math.max(0, Math.min(100, Math.round(update.percent ?? 0)));
++			const message = verifying ? t("about.verifying") : checking ? t("about.checking") : downloading ? t("about.downloadStatus") : update.phase === "available" ? t("about.updateAvailable").replace("{version}", update.availableVersion ?? "") : update.phase === "up-to-date" ? t("about.upToDate") : error ? update.message || t("about.checkFailed") : "";
++			const label = verifying ? t("about.verifyingButton") : checking ? t("about.checkingButton") : downloading ? t("about.downloadingButton").replace("{percent}", String(percent)) : update.phase === "available" ? t("about.download") : t("about.check");
++			const jsx = react_jsx_runtime.jsx, jsxs = react_jsx_runtime.jsxs;
++			return jsxs("div", { className: "sherlock-about", "data-about-update-phase": update.phase, children: [
++				jsx("h1", { className: "sherlock-about-heading", children: t("about.nav") }),
++				jsxs("div", { className: "sherlock-about-hero", children: [
++					jsxs("div", { className: "sherlock-about-product-info", children: [jsx("span", { className: "sherlock-about-logo", role: "img", "aria-label": info.productName }), jsx("p", { className: "sherlock-about-tagline", children: t("about.tagline") })] }),
++					jsxs("div", { className: "sherlock-about-version-row", children: [
++						jsx("p", { className: "sherlock-about-version", children: `${t("about.version")} ${info.version}` }),
++						jsx("p", { className: "sherlock-about-check-state", "data-error": error, role: error ? "alert" : "status", title: verifying ? t("about.autoRestart") : undefined, children: message || "\u00a0" }),
++						jsxs("button", { type: "button", className: "sherlock-about-check", "data-about-check-update": update.phase === "available" ? undefined : "true", "data-about-download-update": update.phase === "available" ? "true" : undefined, "aria-busy": active, disabled: busy || active || update.phase === "unsupported", onClick: () => void performAction(), children: [downloading ? null : jsx("span", { className: "sherlock-about-action-icon", "data-loading": active, "aria-hidden": "true" }), jsx("span", { children: label })] })
++					] })
++				] }),
++				jsxs("section", { className: "sherlock-about-changelog", children: [jsx("h2", { className: "sherlock-about-title", children: t("about.changelog") }), info.releaseNotes.length === 0 ? jsx("p", { className: "sherlock-about-state", children: t("about.empty") }) : jsx("div", { className: "sherlock-about-release-list", children: info.releaseNotes.map((note) => jsxs("article", { className: "sherlock-about-release", children: [
++					jsxs("div", { className: "sherlock-about-release-header", children: [jsx("span", { className: "sherlock-about-release-version", children: `v${note.version}` }), jsx("time", { className: "sherlock-about-release-date", dateTime: note.date, children: note.date }), note.version === info.version ? jsx("span", { className: "sherlock-about-current", children: t("about.current") }) : null] }),
++					jsxs("div", { className: "sherlock-about-release-content", children: [note.title ? jsx("h3", { children: note.title }) : null, jsx("ul", { className: "sherlock-about-release-items", children: note.items.map((item) => jsx("li", { children: item }, item)) })] })
++				] }, note.version)) })] })
++			] });
 +		}
 +		function SherlockAboutSection({ t }) {
 +			const [state, setState] = (0, react.useState)({ status: "loading" });
@@ -186,42 +120,60 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +				className: "sherlock-about-state",
 +				role: state.status === "error" ? "alert" : "status",
 +				children: t(state.status === "error" ? "about.error" : "about.loading")
- 			});
- 		}
++			});
++		}
  		//#endregion
-@@ -442,7 +609,24 @@
+ 		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-settings-general/src/client/SettingsDocumentAction.module.css.mjs
+ 		const css = ".me01iq_action{align-items:center;gap:8px;min-width:0;display:flex}.me01iq_error{max-width:180px;color:var(--dsw-alias-state-error-primary);text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;overflow:hidden}";
+@@ -442,7 +537,32 @@ window.__ModuleLoader__.load({
  			"close": "关闭",
  			"openDocument": "打开配置文件",
  			"openDocument.error": "无法打开配置文件",
 -			"general.nav": "通用设置"
 +			"general.nav": "通用设置",
 +			"about.nav": "关于",
++			"about.downloadingButton": "下载中 {percent}%",
++			"about.downloadStatus": "正在下载更新",
++			"about.checkingButton": "检查中…",
++			"about.verifyingButton": "校验中…",
++			"about.autoRestart": "正在校验更新文件，完成后将自动重启",
++			"about.verifying": "正在校验更新文件",
++			"about.current": "当前版本",
++			"about.tagline": "探索更远，洞见更深",
 +			"about.version": "当前版本",
 +			"about.changelog": "更新日志",
 +			"about.loading": "正在读取版本信息…",
 +			"about.error": "暂时无法读取版本信息",
 +			"about.empty": "暂无更新日志",
 +			"about.check": "检查更新",
-+			"about.checking": "正在检查更新…",
++			"about.checking": "正在检查最新版本…",
 +			"about.upToDate": "EWork Odyssey 已是最新版本",
 +			"about.updateAvailable": "发现新版本 {version}",
 +			"about.preparingInstall": "正在解压并校验更新文件，完成后将自动更新重启", "about.downloading": "正在下载更新 {percent}%",
 +			"about.restarting": "正在准备安装，完成后将重新启动…",
-+			"about.download": "下载更新",
++			"about.download": "更新",
 +			"about.install": "重启并安装",
 +			"about.installing": "正在准备安装…",
-+			"about.ready": "更新已下载，可重启安装",
++			"about.ready": "正在校验更新文件，完成后将自动重启",
 +			"about.checkFailed": "检查更新失败"
  		};
  		/** English dictionary, checked complete against the zh key set. */
  		const en = {
-@@ -451,7 +635,24 @@
+@@ -451,7 +571,32 @@ window.__ModuleLoader__.load({
  			"close": "Close",
  			"openDocument": "Open configuration file",
  			"openDocument.error": "Could not open configuration file",
 -			"general.nav": "General"
 +			"general.nav": "General",
 +			"about.nav": "About",
++			"about.downloadingButton": "Downloading {percent}%",
++			"about.downloadStatus": "Downloading update",
++			"about.checkingButton": "Checking\u2026",
++			"about.verifyingButton": "Verifying\u2026",
++			"about.autoRestart": "Verifying update files; the app will restart automatically",
++			"about.verifying": "Verifying update files",
++			"about.current": "Current",
++			"about.tagline": "Explore further. See deeper.",
 +			"about.version": "Current version",
 +			"about.changelog": "Release notes",
 +			"about.loading": "Loading version information…",
@@ -233,15 +185,15 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +			"about.updateAvailable": "Version {version} is available",
 +			"about.preparingInstall": "Unpacking and verifying the update; EWork Odyssey will restart automatically…", "about.downloading": "Downloading update {percent}%",
 +			"about.restarting": "Preparing installation. EWork Odyssey will restart when ready…",
-+			"about.download": "Download update",
++			"about.download": "Update",
 +			"about.install": "Restart and install",
 +			"about.installing": "Preparing installation…",
-+			"about.ready": "Update downloaded. Ready to restart and install",
++			"about.ready": "Verifying update files; the app will restart automatically",
 +			"about.checkFailed": "Could not check for updates"
  		};
  		//#endregion
  		//#region lib/types/client/index.js
-@@ -575,13 +776,6 @@
+@@ -575,13 +720,6 @@ window.__ModuleLoader__.load({
  				name: "settings.header",
  				locale: NS
  			}, HeaderContent));
@@ -255,12 +207,10 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
  			ctx.slots.inject("settings.close", () => ctx.slots.register({
  				name: "settings.close",
  				locale: NS
-@@ -597,8 +791,17 @@
+@@ -597,8 +735,17 @@ window.__ModuleLoader__.load({
  					scope: "root"
  				} }
  			}, GeneralSection));
--		}
--		//#endregion
 +			ctx.slots.inject("settings.section", () => ctx.slots.register({
 +				name: "settings.section",
 +				id: "about",
@@ -268,8 +218,8 @@ diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client
 +				label: () => t("about.nav"),
 +				locale: NS
 +			}, SherlockAboutSection));
-+		}
-+		//#endregion
+ 		}
+ 		//#endregion
 +		exports.SherlockAboutContent = SherlockAboutContent;
 +		exports.SherlockAboutSection = SherlockAboutSection;
  		exports.SettingsDocumentStore = SettingsDocumentStore;

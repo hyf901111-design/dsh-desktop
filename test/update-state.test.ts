@@ -53,11 +53,13 @@ describe('desktop update state', () => {
 
  it('carries actual transfer bytes and clears stale sizes on reset or missing counters', () => {
   const initial = initialUpdateStatus('1.0.0')
-  const progress = reduceUpdateStatus(initial, { type: 'progress', percent: 42, transferredBytes: 42000000, totalBytes: 100000000 })
+  const progress = reduceUpdateStatus(initial, { type: 'progress', percent: 42, transferredBytes: 42000000, totalBytes: 100000000, bytesPerSecond: 3600000 })
   expect(progress.transferredBytes).toBe(42000000)
   expect(progress.totalBytes).toBe(100000000)
+  expect(progress.bytesPerSecond).toBe(3600000)
   expect(reduceUpdateStatus(progress, {type:'reset'}).totalBytes).toBeUndefined()
-  const unknown = reduceUpdateStatus(progress, {type:'progress',percent:0, transferredBytes:NaN,totalBytes:-1})
+  const unknown = reduceUpdateStatus(progress, {type:'progress',percent:0, transferredBytes:NaN,totalBytes:-1,bytesPerSecond:NaN})
   expect(unknown.totalBytes).toBeUndefined()
   expect(unknown.transferredBytes).toBeUndefined()
+  expect(unknown.bytesPerSecond).toBeUndefined()
  })

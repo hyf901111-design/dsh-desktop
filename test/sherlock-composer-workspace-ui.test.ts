@@ -2032,7 +2032,7 @@ describe('Sherlock workspace and composer controls', () => {
     })
     expect(calls[1]).toEqual({
       name: 'setPanelState',
-      args: [{ open: true, width: 420 }, { sessionId: 'research-session' }]
+      args: [{ open: true, width: 340 }, { sessionId: 'research-session' }]
     })
 
     coordinator.leave('research-session')
@@ -2097,7 +2097,7 @@ describe('Sherlock workspace and composer controls', () => {
     coordinator.attach(service, (key: string) => key)
 
     coordinator.enter('research-session')
-    expect(panelStates.at(-1)).toEqual({ open: true, width: 420 })
+    expect(panelStates.at(-1)).toEqual({ open: true, width: 340 })
 
     state.width = 384
     coordinator.leave('research-session')
@@ -7931,9 +7931,9 @@ describe('Sherlock workspace and composer controls', () => {
       expect(detailMenu?.getAttribute('role')).toBe('menu')
       expect(Array.from(detailMenu?.querySelectorAll('[role="menuitem"]') ?? [])
         .map((item) => item.textContent)).toEqual([
-          '简要不超过 3 层，高度概括',
-          '常规平衡阅读效率与内容理解',
-          '详细充分展开内容关系细节'
+          '简要保留核心主题',
+          '常规覆盖重点与主要关系',
+          '详细展开细节与依据'
         ])
       const brief = host.querySelector('[data-research-mind-map-detail="brief"]')
       expect(brief).not.toBeNull()
@@ -7954,10 +7954,10 @@ describe('Sherlock workspace and composer controls', () => {
         sourceNodeIds: ['file-a', 'file-b'],
         title: '思维导图',
         // Keep the new card inside the 800px canvas instead of off its right edge.
-        x: 528,
-        y: 162,
-        width: 520,
-        height: 300,
+        x: 460,
+        y: 240,
+        width: 656,
+        height: 456,
         sizeMode: 'auto'
       }])
       expect(workspace.getSnapshot().selection.selectedNodeIds).toEqual([
@@ -12559,7 +12559,7 @@ describe('Sherlock workspace and composer controls', () => {
       const workspaceRow = mounted.detailsPortalHost.querySelector('[data-research-empty-workspace-row]')
       const composer = mounted.detailsPortalHost.querySelector('[data-test-composer-bar]')
       expect(emptyState?.textContent).toContain('探索更远，洞见更深。')
-      expect(emptyState?.textContent).toContain('预览版')
+      expect(emptyState?.textContent).not.toContain('预览版')
       expect(workspaceRow).not.toBeNull()
       expect(composer).not.toBeNull()
       if (workspaceRow === null || composer === null) return
@@ -12579,7 +12579,7 @@ describe('Sherlock workspace and composer controls', () => {
       })
 
       expect(mounted.detailsPortalHost.querySelector('[data-research-empty-state]')).toBeNull()
-      expect(mounted.detailsPortalHost.querySelector('[data-research-empty-workspace-row]')).toBeNull()
+      expect(mounted.detailsPortalHost.querySelector('.wSkVaW_heroWorkspaceRow')).not.toBeNull()
       expect(composer?.getAttribute('data-test-composer-has-accessory')).toBe('false')
     } finally {
       await mounted.cleanup()
@@ -13064,7 +13064,7 @@ describe('Research voice toolbar', () => {
 })
 
 describe('generated component theme', () => {
-  it('smoothly fits a generated HTML frame from its own bounded measurements without reloading or moving its top-left corner', async () => {
+  it('caps oversized HTML at L and presents a summary while retaining the full source for expanded reading', async () => {
     const html = '<main><h1>长图表</h1><svg width="1200" height="1200"></svg><p>最后一行</p></main>'
     const mounted = await mountResearchCanvas({ sessionId: 'html-autofit', artifacts: [{
       id: 'html-auto', kind: 'generated-container', messageId: 'html-auto', title: '长图表', excerpt: '长图表', x: 500, y: 400, width: 960, height: 680, sizeMode: 'auto',
@@ -13091,11 +13091,12 @@ describe('generated component theme', () => {
       expect(card.hasAttribute('data-research-content-hover')).toBe(false)
       await send({ type: 'sherlock-content-size', width: 1200, height: 1300 })
       const fitted = mounted.workspace.getSnapshot().artifacts[0] as any
-      expect(fitted).toMatchObject({ width: 1202, height: 1366, sizeMode: 'auto' })
+      expect(fitted).toMatchObject({ width: 656, height: 456, sizeMode: 'auto' })
       expect(fitted.x - fitted.width / 2).toBe(20)
       expect(fitted.y - fitted.height / 2).toBe(60)
-      expect(mounted.host.querySelector('[data-research-html-artifact]')).toBe(frame)
-      expect(frame.getAttribute('srcdoc')).toBe(originalSrc)
+      expect(mounted.host.querySelector('[data-component-summary=true]')).not.toBeNull()
+      expect(fitted.containerSpec.html).toBe(html)
+      expect(originalSrc).toContain('最后一行')
       await send({ type: 'sherlock-content-size', width: 1300, height: 1400 })
       await send({ type: 'sherlock-content-size', width: 1400, height: 1500 })
       const settled = mounted.workspace.getSnapshot().artifacts[0]
@@ -13115,10 +13116,10 @@ describe('generated component theme', () => {
       const workspace = mounted.workspace as any
       const fit = (source: string, width: number, height: number) => workspace.fitHtmlContent('html-guard', source, { width, height })
       expect(fit('<main>旧页面</main>', 1200, 1300)).toBe(false)
-      expect(fit(html, 800, 600)).toBe(false)
+      await act(async () => { expect(fit(html, 800, 600)).toBe(true) })
       expect(fit(html, Infinity, 1300)).toBe(false)
-      await act(async () => { expect(fit(html, 1100, 4200)).toBe(true) })
-      expect(workspace.getSnapshot().artifacts[0].height).toBe(1440)
+      await act(async () => { expect(fit(html, 1100, 4200)).toBe(false) })
+      expect(workspace.getSnapshot().artifacts[0].height).toBe(456)
       await act(async () => { workspace.updateNodeGeometry('html-guard', { width: 700, height: 500, sizeMode: 'manual' }) })
       expect(fit(html, 1500, 1500)).toBe(false)
       expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 700, height: 500, sizeMode: 'manual' })

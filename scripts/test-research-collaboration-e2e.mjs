@@ -17,7 +17,10 @@ const runDir = await mkdtemp(join(output, 'run-'))
 const selected = process.argv.slice(2)
 assert.ok(selected.length === 0 || (selected.length === 2 && selected[0] === '--stage' && ['sources', 'browser', 'worker', 'focused', 'typecheck', 'dry-run'].includes(selected[1])), 'Usage: node scripts/test-research-collaboration-e2e.mjs [--stage sources|browser|worker|focused|typecheck|dry-run]')
 const stages = selected.length ? [selected[1]] : ['focused', 'typecheck', 'worker', 'sources', 'browser', 'dry-run']
-const result = { startedAt: new Date().toISOString(), root, runDir, stages: [], exclusions: ['native packaged client', 'paid provider', 'live Cloudflare', 'capacity/load test'] }
+const browserFocus = process.env.SHERLOCK_COLLABORATION_BROWSER_FOCUS === 'figma-final'
+const browserScope = browserFocus ? 'figma-final-collaboration-focus' : 'full-collaboration-browser'
+const focusedExclusions = ['file clipboard and personal-copy round trip', 'task recovery and multi-author generation', 'account recovery isolation', 'legacy iframe inner-scroll and generation geometry']
+const result = { scope: { browser: browserScope }, startedAt: new Date().toISOString(), root, runDir, stages: [], exclusions: ['native packaged client', 'paid provider', 'live Cloudflare', 'capacity/load test', ...(browserFocus ? focusedExclusions : [])] }
 const require = createRequire(import.meta.url)
 function run(argv, { cwd = root, env = {}, timeoutMs = 180000 } = {}) {
   const r = spawnSync(argv[0], argv.slice(1), { cwd, env: { ...process.env, ...env }, timeout: timeoutMs, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 })
@@ -67,18 +70,17 @@ async function executeModule(path, kind) {
 async function sources() {
   const inventory = JSON.parse(await readFile(join(root, 'output/research-boards-source-inputs-20260909/verified-inputs.json'), 'utf8'))
   const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'))
-  // Workspace collapse is now part of the patched client surface. Verify the
-  // additional clean input against the exact lockfile, just like the prior four.
-  const workspaceName = '@deepseek-ai/dsh-client-ui-workspace'
-  if (!inventory.some(p => p.name === workspaceName)) {
-    const metadata = lock.packages['node_modules/' + workspaceName]
+  // Workspace collapse and final sidebar width patch both participate in clean installs.
+  for (const packageName of ['@deepseek-ai/dsh-client-ui-workspace', '@deepseek-ai/dsh-client-ui-layout']) {
+    if (inventory.some(p => p.name === packageName)) continue
+    const metadata = lock.packages['node_modules/' + packageName]
     const response = await fetch(metadata.resolved)
-    assert.ok(response.ok, 'locked workspace package download')
-    const archive = join(runDir, 'workspace-locked.tgz')
+    assert.ok(response.ok, 'locked package download: ' + packageName)
+    const archive = join(runDir, packageName.split('/')[1] + '-locked.tgz')
     await writeFile(archive, Buffer.from(await response.arrayBuffer()))
-    inventory.push({name:workspaceName,version:metadata.version,archive,integrity:metadata.integrity,resolved:metadata.resolved})
+    inventory.push({name:packageName,version:metadata.version,archive,integrity:metadata.integrity,resolved:metadata.resolved})
   }
-  const names = ['dsh-client-ui-conversation', 'dsh-client-ui-sidebar', 'dsh-client-ui-workspace', 'dsh-client-ui-primitives', 'dsh-web-frontend']
+  const names = ['dsh-client-ui-conversation', 'dsh-client-ui-sidebar', 'dsh-client-ui-workspace', 'dsh-client-ui-layout', 'dsh-client-ui-primitives', 'dsh-web-frontend']
   assert.deepEqual(inventory.map(p => p.name.split('/')[1]).sort(), [...names].sort())
   for (const p of inventory) {
     assert.equal(p.version, '0.1.0-rc.7')
@@ -156,8 +158,11 @@ try {
           : name === 'typecheck' ? ['npm', 'run', 'typecheck']
           : name === 'worker' ? [process.execPath, 'scripts/test-collaboration-worker.mjs']
           : name === 'dry-run' ? [join(root, 'node_modules/.bin/wrangler'), 'deploy', '--dry-run', '--config', 'services/collaboration/wrangler.jsonc']
-          : [process.execPath, 'scripts/test-research-boards-browser.mjs']
+          : [process.execPath, 'scripts/test-research-boards-browser.mjs', ...(browserFocus ? ['--figma-collaboration-focus'] : [])]
         if (name === 'browser') {
+          stage.scope = browserScope
+          stage.exclusions = browserFocus ? focusedExclusions : []
+          stage.focusEnvironment = browserFocus ? 'SHERLOCK_COLLABORATION_BROWSER_FOCUS=figma-final' : null
           const manifest = JSON.parse(await readFile(join(output, 'latest-sources.json'), 'utf8'))
           assert.equal(manifest.featureTip, result.featureTip, 'Regenerate clean inputs after source commit changes')
           assert.equal(manifest.mainTip, result.mainTip, 'Regenerate clean inputs after main advances')

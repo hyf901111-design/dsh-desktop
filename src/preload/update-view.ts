@@ -6,19 +6,16 @@ export type UpdateAction =
   | { kind: 'hidden' }
   | { kind: 'download'; version: string }
   | { kind: 'progress'; percent: number }
-  | { kind: 'install'; version: string }
+  | { kind: 'verifying' }
   | { kind: 'retry'; message: string }
 
 export function updateAction(status: UpdateStatus): UpdateAction {
   if (status.phase === 'available' && status.availableVersion) {
     return { kind: 'download', version: status.availableVersion }
   }
-  if (status.phase === 'installing') return { kind: 'progress', percent: 100 }
+  if (status.phase === 'installing' || status.phase === 'downloaded') return { kind: 'verifying' }
   if (status.phase === 'downloading') {
     return { kind: 'progress', percent: status.percent ?? 0 }
-  }
-  if (status.phase === 'downloaded') {
-    return { kind: 'install', version: status.availableVersion ?? status.currentVersion }
   }
   if (status.manual && status.phase === 'error') {
     return { kind: 'retry', message: status.message ?? '' }
@@ -53,9 +50,9 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
       return zh ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`
     }
     case 'installing':
-      return zh ? '正在准备安装，完成后将自动重启…' : 'Preparing installation; EWork Odyssey will restart automatically…'
+      return zh ? '正在校验更新文件，完成后将自动重启' : 'Verifying update files; EWork Odyssey will restart automatically'
     case 'downloaded':
-      return zh ? `EWork Odyssey${version} 已下载完成` : `EWork Odyssey${version} is ready to install`
+      return zh ? '正在校验更新文件，完成后将自动重启' : 'Verifying update files; EWork Odyssey will restart automatically'
     case 'up-to-date':
       return zh ? 'EWork Odyssey 已是最新版本' : 'EWork Odyssey is up to date'
     case 'unsupported':
@@ -65,4 +62,12 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
     case 'idle':
       return ''
   }
+}
+
+export function updateTransferMessage(status: UpdateStatus): string {
+  const mb = (bytes: number) => (bytes / 1_000_000).toFixed(1).replace(/\.0$/, '')
+  if (!Number.isFinite(status.transferredBytes) || !Number.isFinite(status.totalBytes) || (status.totalBytes ?? 0) <= 0) return ''
+  let text = `${mb(status.transferredBytes!)} / ${mb(status.totalBytes!)} MB`
+  if (Number.isFinite(status.bytesPerSecond) && status.bytesPerSecond! > 0) text += ` · ${mb(status.bytesPerSecond!)} MB/s`
+  return text
 }

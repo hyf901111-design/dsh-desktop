@@ -1,13 +1,11 @@
 import type { UpdateStatus } from '../shared/contracts'
-import { updateAction, updateMessage, type UpdateLocale } from './update-view'
+import { updateAction, updateMessage, updateTransferMessage, type UpdateLocale } from './update-view'
+import { installSidebarNoticeStyles, noticeIcon, positionSidebarNotice } from './sidebar-notice'
 
 const BUTTON_ID = 'sherlock-sidebar-update-button'
 const PANEL_ID = 'sherlock-sidebar-update-panel'
-const STYLE_ID = 'sherlock-sidebar-update-style'
 const FOOTER_SELECTOR = '[data-dsh-sidebar-footer]'
-const SETTINGS_SLOT_SELECTOR =
-  '[data-dsh-sidebar-root] [data-slot="sidebar.settings"]'
-const UPDATE_FOOTER_ATTRIBUTE = 'data-sherlock-update-footer'
+const SETTINGS_SLOT_SELECTOR = '[data-dsh-sidebar-root] [data-slot="sidebar.settings"]'
 
 export interface SidebarUpdateCallbacks {
   download(): void | Promise<unknown>
@@ -19,367 +17,163 @@ export class SidebarUpdateControl {
   private button?: HTMLButtonElement
   private panel?: HTMLElement
   private status?: UpdateStatus
+  private dismissed = ''
+  private pending = false
+  private observed = false
 
-  constructor(
-    private readonly document: Document,
-    private readonly locale: UpdateLocale,
-    private readonly callbacks: SidebarUpdateCallbacks
-  ) {}
+  constructor(private readonly document: Document, private readonly locale: UpdateLocale, private readonly callbacks: SidebarUpdateCallbacks) {}
 
   mount(): boolean {
-    const footer = this.resolveFooter()
+    const footer = this.document.querySelector<HTMLElement>(FOOTER_SELECTOR)
+      ?? this.document.querySelector<HTMLElement>(SETTINGS_SLOT_SELECTOR)?.parentElement
     if (!footer) return false
-
-    if (this.button?.isConnected && this.button.parentElement === footer) return true
-
+    if (this.button?.isConnected && this.button.parentElement === footer) {
+      if (this.panel && !this.panel.hidden) positionSidebarNotice(this.document, this.panel)
+      return true
+    }
     this.button?.remove()
     this.panel?.remove()
-    this.ensureStyles()
-
+    installSidebarNoticeStyles(this.document)
+    footer.setAttribute('data-sherlock-update-footer', '')
+    // The compact control is only used while the navigation is collapsed or the notice is dismissed.
     const button = this.document.createElement('button')
     button.id = BUTTON_ID
     button.type = 'button'
-    button.className = 'sherlock-sidebar-update-button'
     button.hidden = true
-    button.addEventListener('click', () => this.activate())
-
+    button.addEventListener('click', () => {
+      this.dismissed = ''
+      if (this.status) this.render(this.status)
+    })
     const panel = this.document.createElement('aside')
     panel.id = PANEL_ID
-    panel.className = 'sherlock-sidebar-update-panel'
+    panel.className = 'ework-sidebar-notice'
     panel.hidden = true
     panel.setAttribute('aria-live', 'polite')
-
-    footer.append(panel, button)
+    this.document.body.append(panel)
+    footer.append(button)
     this.button = button
     this.panel = panel
-
+    if (!this.document.getElementById('sherlock-sidebar-update-style')) {
+      const style = this.document.createElement('style')
+      style.id = 'sherlock-sidebar-update-style'
+      style.textContent = `#${BUTTON_ID}{appearance:none;width:28px;height:28px;padding:6px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}#${BUTTON_ID}[hidden]{display:none!important}#${BUTTON_ID}:hover{background:var(--dsw-alias-interactive-bg-hover)}#${BUTTON_ID}:focus-visible{outline:1.5px solid #6b96d9;outline-offset:2px}[data-sherlock-update-footer]:has(#${BUTTON_ID}:not([hidden])) .srb-account-controls{width:calc(100% - 28px)}#${PANEL_ID}[data-collapsed=true]{z-index:1502}body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=downloaded]):not([data-phase=installing]){visibility:hidden}body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice{visibility:hidden}`
+      this.document.head.append(style)
+    }
+    if (!this.observed) {
+      this.observed = true
+      const win = this.document.defaultView!
+      win.addEventListener('resize', () => { if (this.panel) positionSidebarNotice(this.document, this.panel) })
+      this.document.addEventListener('ework-update-action', (event) => {
+        const action = (event as CustomEvent).detail
+        if (action === 'download') void this.invoke(this.callbacks.download)
+        else if (action === 'retry') void this.retryDownload()
+        else if (action === 'show') { this.dismissed = ''; if (this.status) this.render(this.status) }
+      })
+    }
     if (this.status) this.render(this.status)
     return true
-  }
-
-  private resolveFooter(): HTMLElement | null {
-    const explicitFooter = this.document.querySelector<HTMLElement>(FOOTER_SELECTOR)
-    if (explicitFooter) {
-      explicitFooter.setAttribute(UPDATE_FOOTER_ATTRIBUTE, '')
-      return explicitFooter
-    }
-
-    const settingsSlot = this.document.querySelector<HTMLElement>(
-      SETTINGS_SLOT_SELECTOR
-    )
-    const settingsArea = settingsSlot?.parentElement
-    if (!settingsArea) return null
-
-    settingsArea.setAttribute(UPDATE_FOOTER_ATTRIBUTE, '')
-    return settingsArea
   }
 
   render(status: UpdateStatus): void {
     this.status = status
     if (!this.mount() || !this.button || !this.panel) return
-
-    const action = updateAction(status)
-    const button = this.button
-    const panel = this.panel
-
-    button.hidden = action.kind === 'hidden'
-    button.disabled = false
+    const doc = this.document, panel = this.panel, button = this.button
+    const action = updateAction(status), zh = this.locale === 'zh'
+    const phaseKey = `${status.availableVersion ?? status.currentVersion}:${status.phase}`
+    const active = ['downloading', 'downloaded', 'installing'].includes(status.phase)
     button.dataset.action = action.kind
-    button.removeAttribute('role')
-    button.removeAttribute('aria-valuemin')
-    button.removeAttribute('aria-valuemax')
-    button.removeAttribute('aria-valuenow')
-    button.style.removeProperty('--sherlock-update-progress')
-    button.removeAttribute('title')
-    panel.hidden = true
-    panel.replaceChildren()
-    panel.removeAttribute('role')
-
-    switch (action.kind) {
-      case 'hidden':
-        button.removeAttribute('aria-label')
-        button.replaceChildren()
-        return
-      case 'download':
-        button.dataset.action = 'download'
-        button.setAttribute(
-          'aria-label',
-          this.locale === 'zh'
-            ? `下载 EWork Odyssey ${action.version} 更新`
-            : `Download EWork Odyssey ${action.version} update`
-        )
-        button.title = button.getAttribute('aria-label') ?? ''
-        button.innerHTML = `${downloadIcon}<span class="sherlock-sidebar-update-label">${
-          this.locale === 'zh' ? '下载更新' : 'Download'
-        }</span>`
-        return
-      case 'progress': {
-        const percent = Math.max(0, Math.min(100, Math.round(action.percent)))
-        button.dataset.action = 'progress'
-        button.disabled = true
-        button.setAttribute('role', 'progressbar')
-        button.setAttribute('aria-valuemin', '0')
-        button.setAttribute('aria-valuemax', '100')
-        button.setAttribute('aria-valuenow', String(percent))
-        button.setAttribute(
-          'aria-label',
-          updateMessage(status, this.locale)
-        )
-        button.style.setProperty('--sherlock-update-progress', `${percent}%`)
-        button.innerHTML = progressRing(percent)
-        if (status.phase === 'installing') {
-          button.removeAttribute('aria-valuenow')
-          button.title = updateMessage(status, this.locale)
-          panel.hidden = false
-          panel.setAttribute('role', 'status')
-          const loading = this.document.createElement('span')
-          loading.className = 'sherlock-update-loading'
-          loading.setAttribute('aria-hidden', 'true')
-          const message = this.document.createElement('p')
-          message.className = 'sherlock-sidebar-update-message'
-          message.textContent = this.locale === 'zh'
-            ? '正在解压并校验更新文件，完成后将自动更新重启'
-            : 'Unpacking and verifying update files. EWork Odyssey will update and restart automatically.'
-          panel.append(loading, message)
-        }
-        return
+    button.replaceChildren(noticeIcon(doc, active ? 'loading' : 'update'))
+    button.setAttribute('aria-label', updateMessage(status, this.locale) || (zh ? '查看更新' : 'View update'))
+    button.title = button.getAttribute('aria-label')!
+    const collapsed = !!doc.querySelector('[data-sidebar-collapsed=true]') && !doc.querySelector('.VOzbGW_panel')
+    button.hidden = action.kind === 'hidden' || (!collapsed && this.dismissed !== phaseKey)
+    panel.dataset.phase = status.phase
+    panel.dataset.collapsed = String(collapsed)
+    panel.hidden = action.kind === 'hidden' || this.dismissed === phaseKey
+    if (action.kind === 'hidden') { this.broadcast(status); return }
+    const header = doc.createElement('header')
+    const title = doc.createElement('strong')
+    const checking = status.phase === 'downloaded' || status.phase === 'installing'
+    const failedChecksum = status.phase === 'error' && /checksum|sha.?512|校验|signature/i.test(status.message ?? '')
+    header.append(noticeIcon(doc, checking ? 'loading' : status.phase === 'downloading' ? 'download' : status.phase === 'error' ? 'warning' : 'update'), title)
+    title.textContent = checking ? (zh ? '正在校验更新文件' : 'Verifying update files')
+      : status.phase === 'downloading' ? (zh ? `正在下载更新 · ${Math.round(status.percent ?? 0)}%` : `Downloading update · ${Math.round(status.percent ?? 0)}%`)
+      : status.phase === 'error' ? (zh ? failedChecksum ? '更新文件校验失败' : '下载未完成' : 'Update failed')
+      : (zh ? `发现新版本 ${status.availableVersion}` : `Version ${status.availableVersion} is available`)
+    if (!checking) {
+      const close = this.action('', () => { this.dismissed = phaseKey; this.render(status) })
+      close.className = 'ework-notice-close'
+      close.setAttribute('aria-label', zh ? '关闭更新提醒' : 'Dismiss update notice')
+      close.append(noticeIcon(doc, 'close'))
+      header.append(close)
+    }
+    const description = doc.createElement('p')
+    description.className = 'ework-notice-description'
+    const children: Node[] = [header]
+    if (status.phase === 'downloading') {
+      const progress = doc.createElement('div')
+      progress.className = 'ework-notice-progress'
+      progress.setAttribute('role', 'progressbar')
+      progress.setAttribute('aria-label', zh ? '下载进度' : 'Download progress')
+      progress.setAttribute('aria-valuemin', '0')
+      progress.setAttribute('aria-valuemax', '100')
+      progress.setAttribute('aria-valuenow', String(Math.max(0, Math.min(100, Math.round(status.percent ?? 0)))))
+      progress.style.setProperty('--notice-progress', `${Math.max(0, Math.min(100, status.percent ?? 0))}%`)
+      progress.append(doc.createElement('span'))
+      children.push(progress)
+      description.textContent = updateTransferMessage(status)
+    } else description.textContent = checking ? (zh ? '完成后将自动重启应用。' : 'The app will restart automatically.')
+      : status.phase === 'error' ? (status.message || (zh ? '更新失败，请重新下载。' : 'Please retry the download.'))
+      : (zh ? '优化研究体验，修复已知问题。' : 'Research improvements and fixes.')
+    if (description.textContent) children.push(description)
+    if (status.phase === 'available' || status.phase === 'error') {
+      const actions = doc.createElement('div')
+      actions.className = 'ework-notice-actions'
+      if (status.phase === 'available') {
+        actions.append(this.action(zh ? '详情' : 'Details', () => doc.dispatchEvent(new doc.defaultView!.Event('ework-open-about'))))
+        const download = this.action(zh ? '更新' : 'Update', () => this.invoke(this.callbacks.download))
+        download.dataset.updateDownload = ''
+        download.className = 'ework-notice-primary'
+        actions.append(download)
+      } else {
+        const retry = this.action(zh ? '重新下载' : 'Retry download', () => this.retryDownload())
+        retry.className = 'ework-notice-primary'
+        actions.append(retry)
       }
-      case 'install':
-        button.dataset.action = 'install'
-        button.setAttribute(
-          'aria-label',
-          this.locale === 'zh'
-            ? `安装 EWork Odyssey ${action.version} 更新`
-            : `Install EWork Odyssey ${action.version} update`
-        )
-        button.title = button.getAttribute('aria-label') ?? ''
-        button.innerHTML = downloadIcon
-        this.renderInstallPanel(status)
-        return
-      case 'retry':
-        button.dataset.action = 'retry'
-        button.setAttribute(
-          'aria-label',
-          this.locale === 'zh' ? '重新检查 EWork Odyssey 更新' : 'Check for EWork Odyssey updates again'
-        )
-        button.innerHTML = retryIcon
-        return
+      children.push(actions)
     }
+    panel.replaceChildren(...children)
+    if (checking) panel.setAttribute('role', 'status')
+    else panel.removeAttribute('role')
+    positionSidebarNotice(doc, panel)
+    this.broadcast(status)
   }
 
-  private activate(): void {
-    const action = this.button?.dataset.action
-    if (action === 'download') {
-      this.invoke(this.callbacks.download)
-    } else if (action === 'install') {
-      if (this.panel) this.panel.hidden = !this.panel.hidden
-    } else if (action === 'retry') {
-      this.invoke(this.callbacks.retry)
-    }
+  private action(label: string, callback: () => unknown): HTMLButtonElement {
+    const button = this.document.createElement('button')
+    button.type = 'button'
+    button.textContent = label
+    button.addEventListener('click', () => { void callback() })
+    return button
   }
 
-  private renderInstallPanel(status: UpdateStatus): void {
-    if (!this.panel) return
-
-    const message = this.document.createElement('p')
-    message.className = 'sherlock-sidebar-update-message'
-    message.textContent = updateMessage(status, this.locale)
-
-    const actions = this.document.createElement('div')
-    actions.className = 'sherlock-sidebar-update-actions'
-
-    const confirm = this.document.createElement('button')
-    confirm.type = 'button'
-    confirm.dataset.updateConfirm = 'true'
-    confirm.textContent = this.locale === 'zh' ? '重新启动并安装' : 'Restart and install'
-    confirm.addEventListener('click', () => {
-      confirm.disabled = true
-      confirm.textContent = this.locale === 'zh' ? '正在准备安装…' : 'Preparing installation…'
-      this.invoke(this.callbacks.install)
-    })
-
-    const later = this.document.createElement('button')
-    later.type = 'button'
-    later.dataset.updateLater = 'true'
-    later.textContent = this.locale === 'zh' ? '稍后' : 'Later'
-    later.addEventListener('click', () => {
-      if (this.panel) this.panel.hidden = true
-    })
-
-    actions.append(confirm, later)
-    this.panel.append(message, actions)
+  private broadcast(status: UpdateStatus): void {
+    const serialized = JSON.stringify(status)
+    if (this.document.documentElement.dataset.eworkUpdateStatus === serialized) return
+    this.document.documentElement.dataset.eworkUpdateStatus = serialized
+    this.document.dispatchEvent(new this.document.defaultView!.CustomEvent('ework-update-status', { detail: serialized }))
   }
 
-  private invoke(callback: () => void | Promise<unknown>): void {
-    try {
-      void Promise.resolve(callback()).catch((error: unknown) => {
-        console.error('[updater] sidebar update action failed', error)
-      })
-    } catch (error) {
-      console.error('[updater] sidebar update action failed', error)
-    }
+  private async retryDownload(): Promise<void> {
+    await this.invoke(async () => { await this.callbacks.retry(); if (this.status?.phase === 'available') await this.callbacks.download() })
   }
 
-  private ensureStyles(): void {
-    if (this.document.getElementById(STYLE_ID)) return
-    const style = this.document.createElement('style')
-    style.id = STYLE_ID
-    style.textContent = styles
-    ;(this.document.head || this.document.documentElement).appendChild(style)
+  private async invoke(callback: () => void | Promise<unknown>): Promise<void> {
+    if (this.pending) return
+    this.pending = true
+    this.panel?.querySelectorAll('button').forEach(button => { button.disabled = true })
+    try { await callback() } catch (error) {
+      if (this.status) this.render({ ...this.status, phase: 'error', manual: true, message: error instanceof Error ? error.message : String(error) })
+    } finally { this.pending = false }
   }
 }
-
-const downloadIcon = `
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" />
-  </svg>`
-
-const retryIcon = `
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M19 8a8 8 0 1 0 .5 7M19 4v4h-4" />
-  </svg>`
-
-function progressRing(percent: number): string {
-  return `
-    <svg data-update-progress-ring viewBox="0 0 36 36" aria-hidden="true">
-      <circle class="sherlock-update-ring-track" cx="18" cy="18" r="15.9155" />
-      <circle class="sherlock-update-ring-value" cx="18" cy="18" r="15.9155"
-        stroke-dasharray="100" stroke-dashoffset="${100 - percent}" />
-    </svg>`
-}
-
-const styles = `
-  #${BUTTON_ID}[hidden], #${PANEL_ID}[hidden] { display: none !important; }
-  [${UPDATE_FOOTER_ATTRIBUTE}] {
-    display: flex !important;
-    align-items: center;
-    position: relative;
-  }
-  #${BUTTON_ID} {
-    appearance: none;
-    box-sizing: border-box;
-    width: 28px;
-    height: 28px;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1;
-    display: grid;
-    place-items: center;
-    border: 0;
-    border-radius: 8px;
-    color: #fff;
-    background: #1677ff;
-    box-shadow: none;
-    cursor: pointer;
-    overflow: hidden;
-    white-space: nowrap;
-    transition: width 160ms ease, transform 150ms ease, background-color 150ms ease;
-  }
-  #${BUTTON_ID}[data-action="download"]:hover:not(:disabled) { width: 88px; }
-  #${BUTTON_ID}:hover:not(:disabled) {
-    transform: translateY(calc(-50% - 1px));
-    background: #0f6fe8;
-  }
-  #${BUTTON_ID}:active:not(:disabled) { transform: translateY(-50%) scale(.96); }
-  #${BUTTON_ID}:focus-visible { outline: 2px solid #69a7ff; outline-offset: 2px; }
-  #${BUTTON_ID}:disabled { cursor: default; }
-  #${BUTTON_ID}[data-action="progress"] {
-    border: 0;
-    background: #1677ff;
-  }
-  #${BUTTON_ID} svg {
-    width: 15px;
-    height: 15px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.9;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-  #${BUTTON_ID} .sherlock-sidebar-update-label {
-    display: none;
-    padding: 0 10px;
-    font: 600 12px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-  #${BUTTON_ID}[data-action="download"]:hover svg { display: none; }
-  #${BUTTON_ID}[data-action="download"]:hover .sherlock-sidebar-update-label { display: inline; }
-  [data-sidebar-collapsed="true"] [${UPDATE_FOOTER_ATTRIBUTE}]:has(#${BUTTON_ID}:not([hidden])) {
-    flex-direction: column;
-    height: auto;
-    gap: 8px;
-  }
-  [data-sidebar-collapsed="true"] #${BUTTON_ID} {
-    position: relative;
-    right: auto;
-    top: auto;
-    transform: none;
-    flex-shrink: 0;
-    order: -1;
-  }
-  [data-sidebar-collapsed="true"] #${BUTTON_ID}:hover:not(:disabled) { transform: none; }
-  [data-sidebar-collapsed="true"] #${BUTTON_ID}[data-action="download"]:hover:not(:disabled) { width: 28px; }
-  [data-sidebar-collapsed="true"] #${BUTTON_ID}[data-action="download"]:hover svg { display: block; }
-  [data-sidebar-collapsed="true"] #${BUTTON_ID}[data-action="download"]:hover .sherlock-sidebar-update-label { display: none; }
-  [data-sidebar-collapsed="true"] #${PANEL_ID} { left: 0; right: auto; bottom: 76px; }
-  #${BUTTON_ID} [data-update-progress-ring] {
-    width: 17px;
-    height: 17px;
-    transform: rotate(-90deg);
-  }
-  #${BUTTON_ID} [data-update-progress-ring] circle {
-    fill: none;
-    stroke-width: 3;
-  }
-  #${BUTTON_ID} .sherlock-update-ring-track { stroke: rgba(255,255,255,.28); }
-  #${BUTTON_ID} .sherlock-update-ring-value {
-    stroke: #fff;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 120ms linear;
-  }
-  #${PANEL_ID} {
-    box-sizing: border-box;
-    position: absolute;
-    right: 0;
-    bottom: 60px;
-    /* Below settings (2000) and the account menu (3000). */
-    z-index: 1500;
-    width: 260px;
-    padding: 13px;
-    color: var(--dsw-alias-label-primary, #f3f4f6);
-    background: var(--dsw-alias-bg-layer-2, rgba(38, 38, 41, .98));
-    border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, .14));
-    border-radius: 12px;
-    box-shadow: none;
-    font: 500 13px/19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-  #${PANEL_ID}[role="status"] { display: flex; align-items: flex-start; gap: 10px; }
-  #${PANEL_ID}[hidden] { display: none; }
-  .sherlock-update-loading {
-    box-sizing: border-box; width: 16px; height: 16px; flex: 0 0 16px; margin-top: 2px;
-    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
-    animation: sherlock-update-spin .85s linear infinite;
-  }
-  @keyframes sherlock-update-spin { to { transform: rotate(360deg); } }
-  .sherlock-sidebar-update-message { margin: 0; }
-  .sherlock-sidebar-update-actions { display: flex; gap: 8px; margin-top: 11px; }
-  .sherlock-sidebar-update-actions button {
-    appearance: none;
-    min-height: 30px;
-    padding: 5px 10px;
-    border: 0;
-    border-radius: 8px;
-    font: 600 12px/18px inherit;
-    cursor: pointer;
-  }
-  .sherlock-sidebar-update-actions [data-update-confirm] { color: #fff; background: #1677ff; }
-  .sherlock-sidebar-update-actions [data-update-later] {
-    color: inherit;
-    background: rgba(127, 127, 127, .15);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    #${BUTTON_ID} { transition: none; }
-    .sherlock-update-loading { animation: none; }
-  }
-`

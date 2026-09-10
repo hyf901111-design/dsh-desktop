@@ -1,209 +1,78 @@
 import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { SidebarUpdateControl } from '../src/preload/sidebar-update-control'
+import type { UpdateStatus } from '../src/shared/contracts'
 
-function fixture(): Document {
-  const window = new Window()
-  window.document.body.innerHTML = `
-    <aside data-dsh-sidebar-root>
-      <footer data-dsh-sidebar-footer><button id="settings">设置</button></footer>
-    </aside>`
-  return window.document as unknown as Document
+function fixture() {
+  const win = new Window({url:'https://ework.local'})
+  win.document.body.innerHTML = '<aside data-dsh-sidebar-root><footer data-dsh-sidebar-footer><button id="settings">设置</button></footer></aside>'
+  const document = win.document as unknown as Document
+  const callbacks = {download: vi.fn(),install:vi.fn(),retry:vi.fn()}
+  const control = new SidebarUpdateControl(document,'zh',callbacks)
+  return {document,control,callbacks}
 }
+const available:UpdateStatus = {phase:'available',currentVersion:'0.9.5',availableVersion:'0.9.6',manual:true}
+const panel = (d:Document) => d.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
 
-function currentHarnessFixture(): Document {
-  const window = new Window()
-  window.document.body.innerHTML = `
-    <aside data-dsh-sidebar-root>
-      <div class="hHd-Xa_footArea">
-        <div class="hHd-Xa_footerActions">
-          <div data-slot="sidebar.footer.action" style="display: contents"></div>
-        </div>
-        <div class="hHd-Xa_settingsArea">
-          <div data-slot="sidebar.settings" style="display: contents">
-            <button id="settings">设置</button>
-          </div>
-        </div>
-      </div>
-    </aside>`
-  return window.document as unknown as Document
-}
-
-function actions() {
-  return {
-    download: vi.fn(),
-    install: vi.fn(),
-    retry: vi.fn()
-  }
-}
-
-describe('EWork Odyssey sidebar update control', () => {
-  it('mounts one hidden control at the end of the sidebar footer', () => {
-    const document = fixture()
-    const control = new SidebarUpdateControl(document, 'zh', actions())
-
-    expect(control.mount()).toBe(true)
-    expect(control.mount()).toBe(true)
-
-    const footer = document.querySelector('[data-dsh-sidebar-footer]')!
-    const button = footer.lastElementChild as HTMLButtonElement
-    expect(button.id).toBe('sherlock-sidebar-update-button')
-    expect(button.hidden).toBe(true)
+describe('Figma sidebar update states', () => {
+  it('mounts once and keeps the compact footer control hidden in expanded navigation', () => {
+    const {document,control}=fixture()
+    expect(control.mount()).toBe(true);expect(control.mount()).toBe(true)
     expect(document.querySelectorAll('#sherlock-sidebar-update-button')).toHaveLength(1)
-    expect(footer.firstElementChild?.id).toBe('settings')
+    expect(document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')?.hidden).toBe(true)
+    expect(document.querySelector('#settings')).not.toBeNull()
   })
-
-  it('mounts beside Settings in the current Harness sidebar structure', () => {
-    const document = currentHarnessFixture()
-    const control = new SidebarUpdateControl(document, 'zh', actions())
-
-    expect(control.mount()).toBe(true)
-
-    const settingsArea = document.querySelector('.hHd-Xa_settingsArea')!
-    const button = settingsArea.lastElementChild as HTMLButtonElement
-    expect(settingsArea.hasAttribute('data-sherlock-update-footer')).toBe(true)
-    expect(button.id).toBe('sherlock-sidebar-update-button')
-    expect(settingsArea.querySelector('#settings')).not.toBeNull()
-  })
-
-  it('centers a compact update control on the Harness Settings row', () => {
-    const document = currentHarnessFixture()
-    const control = new SidebarUpdateControl(document, 'zh', actions())
-
-    control.mount()
-
-    const styles = document.querySelector<HTMLStyleElement>(
-      '#sherlock-sidebar-update-style'
-    )!.textContent
-    expect(styles).toMatch(
-      /#sherlock-sidebar-update-button\s*\{[^}]*width:\s*28px;[^}]*height:\s*28px;[^}]*position:\s*absolute;[^}]*right:\s*0;[^}]*top:\s*50%;[^}]*transform:\s*translateY\(-50%\);/s
-    )
-    expect(styles).toMatch(
-      /#sherlock-sidebar-update-button\s*\{[^}]*border-radius:\s*8px;[^}]*box-shadow:\s*none;/s
-    )
-    expect(styles).toMatch(
-      /#sherlock-sidebar-update-button\[data-action="download"\]:hover[^}]*width:\s*88px;/s
-    )
-  })
-
-  it('shows the blue download action only for an available update', () => {
-    const document = fixture()
-    const callbacks = actions()
-    const control = new SidebarUpdateControl(document, 'zh', callbacks)
-    control.mount()
-
-    control.render({
-      phase: 'available',
-      currentVersion: '0.5.0',
-      availableVersion: '0.6.0',
-      manual: false
-    })
-
-    const button = document.querySelector<HTMLButtonElement>(
-      '#sherlock-sidebar-update-button'
-    )!
-    expect(button.hidden).toBe(false)
-    expect(button.dataset.action).toBe('download')
-    expect(button.getAttribute('aria-label')).toBe('下载 EWork Odyssey 0.6.0 更新')
-    expect(button.querySelector('.sherlock-sidebar-update-label')?.textContent).toBe('下载更新')
-    expect(button.innerHTML).toContain('M12 3v11')
-    button.click()
+  it('presents the available notice with functional details and one download call', () => {
+    const {document,control,callbacks}=fixture()
+    const details=vi.fn();document.addEventListener('ework-open-about',details)
+    control.render(available)
+    expect(panel(document).hidden).toBe(false)
+    expect(panel(document).textContent).toContain('发现新版本 0.9.6')
+    panel(document).querySelector<HTMLButtonElement>('.ework-notice-actions button')!.click()
+    expect(details).toHaveBeenCalledOnce()
+    const download=panel(document).querySelector<HTMLButtonElement>('[data-update-download]')!
+    download.click();download.click()
     expect(callbacks.download).toHaveBeenCalledOnce()
-  })
-
-  it('renders determinate download progress on the same control', () => {
-    const document = fixture()
-    const control = new SidebarUpdateControl(document, 'zh', actions())
-    control.mount()
-
-    control.render({
-      phase: 'downloading',
-      currentVersion: '0.5.0',
-      availableVersion: '0.6.0',
-      percent: 42.6,
-      manual: false
-    })
-
-    const button = document.querySelector<HTMLButtonElement>(
-      '#sherlock-sidebar-update-button'
-    )!
-    expect(button.dataset.action).toBe('progress')
-    expect(button.getAttribute('role')).toBe('progressbar')
-    expect(button.getAttribute('aria-valuenow')).toBe('43')
-    expect(button.disabled).toBe(true)
-    expect(button.innerHTML).not.toContain('M12 3v11')
-    expect(button.querySelector('[data-update-progress-ring]')).not.toBeNull()
-    expect(
-      button.querySelector('.sherlock-update-ring-value')?.getAttribute('stroke-dashoffset')
-    ).toBe('57')
-    expect(button.style.getPropertyValue('--sherlock-update-progress')).toBe('43%')
-
-    const styles = document.querySelector<HTMLStyleElement>(
-      '#sherlock-sidebar-update-style'
-    )!.textContent
-    expect(styles).not.toContain('conic-gradient')
-  })
-
-  it('offers restart after download and waits for confirmation', () => {
-    const document = fixture()
-    const callbacks = actions()
-    const control = new SidebarUpdateControl(document, 'zh', callbacks)
-    control.mount()
-
-    control.render({
-      phase: 'downloaded',
-      currentVersion: '0.5.0',
-      availableVersion: '0.6.0',
-      manual: false
-    })
-
-    const button = document.querySelector<HTMLButtonElement>(
-      '#sherlock-sidebar-update-button'
-    )!
-    expect(button.dataset.action).toBe('install')
-    expect(button.disabled).toBe(false)
-    button.click()
-    const panel = document.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
-    expect(panel.hidden).toBe(false)
     expect(callbacks.install).not.toHaveBeenCalled()
-    panel.querySelector<HTMLButtonElement>('[data-update-later]')!.click()
-    expect(panel.hidden).toBe(true)
-    button.click()
-    panel.querySelector<HTMLButtonElement>('[data-update-confirm]')!.click()
-    expect(callbacks.install).toHaveBeenCalledOnce()
   })
-
-  it('remounts after Harness replaces the sidebar footer', () => {
-    const document = fixture()
-    const control = new SidebarUpdateControl(document, 'zh', actions())
-    control.mount()
-    control.render({
-      phase: 'available',
-      currentVersion: '0.5.0',
-      availableVersion: '0.6.0',
-      manual: false
-    })
-
-    document.querySelector('[data-dsh-sidebar-root]')!.innerHTML = `
-      <footer data-dsh-sidebar-footer><button id="new-settings">设置</button></footer>`
-
+  it('dismisses a version notice and restores it via the compact control', () => {
+    const {document,control}=fixture();control.render(available)
+    panel(document).querySelector<HTMLButtonElement>('.ework-notice-close')!.click()
+    expect(panel(document).hidden).toBe(true)
+    document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.click()
+    expect(panel(document).hidden).toBe(false)
+  })
+  it('uses actual percentage, bytes and transfer speed for the downloading state', () => {
+    const {document,control}=fixture()
+    control.render({...available,phase:'downloading',percent:64,transferredBytes:76800000,totalBytes:120000000,bytesPerSecond:3600000})
+    expect(panel(document).textContent).toContain('正在下载更新 · 64%')
+    expect(panel(document).textContent).toContain('76.8 / 120 MB · 3.6 MB/s')
+    expect(panel(document).querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('64')
+    control.render({...available,phase:'downloading',percent:0})
+    expect(panel(document).textContent).not.toContain('MB')
+  })
+  it.each(['downloaded','installing'] as const)('shows indeterminate verification for %s without a second installation click', phase => {
+    const {document,control,callbacks}=fixture();control.render({...available,phase,percent:100})
+    expect(panel(document).hidden).toBe(false)
+    expect(panel(document).textContent).toContain('正在校验更新文件')
+    expect(panel(document).textContent).toContain('完成后将自动重启应用。')
+    expect(panel(document).querySelector('[data-notice-icon=loading]')).not.toBeNull()
+    expect(panel(document).querySelector('button')).toBeNull()
+    expect(panel(document).querySelector('[aria-valuenow]')).toBeNull()
+    expect(callbacks.install).not.toHaveBeenCalled()
+  })
+  it('preserves state when the real sidebar footer is replaced', () => {
+    const {document,control}=fixture();control.render(available)
+    document.querySelector('aside')!.innerHTML='<div><div data-slot="sidebar.settings"><button>设置</button></div></div>'
     expect(control.mount()).toBe(true)
-    const button = document.querySelector<HTMLButtonElement>(
-      '#sherlock-sidebar-update-button'
-    )!
-    expect(button.hidden).toBe(false)
-    expect(button.dataset.action).toBe('download')
+    expect(document.querySelectorAll('#sherlock-sidebar-update-panel')).toHaveLength(1)
+    expect(panel(document).textContent).toContain('0.9.6')
   })
-})
-
-it('shows installation preparation without requiring hover or another confirmation', () => {
-  const document = fixture()
-  const control = new SidebarUpdateControl(document, 'zh', { download: vi.fn(), install: vi.fn(), retry: vi.fn() })
-  control.render({ currentVersion: '0.8.6', availableVersion: '0.8.7', phase: 'installing', manual: true })
-  const panel = document.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
-  expect(panel.hidden).toBe(false)
-  expect(panel.textContent).toContain('正在解压并校验更新文件')
-  expect(panel.textContent).toContain('自动更新重启')
-  expect(panel.querySelector('button')).toBeNull()
-  expect(document.querySelector('button[data-action="progress"]')?.hasAttribute('disabled')).toBe(true)
+  it('shows the actual error and uses retry without invoking installation', async () => {
+    const {document,control,callbacks}=fixture();control.render({...available,phase:'error',message:'更新文件校验失败'})
+    expect(panel(document).textContent).toContain('更新文件校验失败')
+    panel(document).querySelector<HTMLButtonElement>('.ework-notice-primary')!.click()
+    await Promise.resolve()
+    expect(callbacks.retry).toHaveBeenCalledOnce();expect(callbacks.install).not.toHaveBeenCalled()
+  })
 })

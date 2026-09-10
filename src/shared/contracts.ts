@@ -31,6 +31,7 @@ export interface UpdateStatus {
   percent?: number
   transferredBytes?: number
   totalBytes?: number
+  bytesPerSecond?: number
   message?: string
   manual: boolean
 }

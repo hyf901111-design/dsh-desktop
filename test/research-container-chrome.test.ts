@@ -307,7 +307,7 @@ describe('Research generation event retention', () => {
 
 
 describe('completed container content sizing', () => {
-  it('fits native report content on completion even when its loading placeholder was resized', async () => {
+  it('caps native report content at L on completion and preserves later manual resizing', async () => {
     const mounted = await mountContainer({ containerSpec: undefined, generationStatus: 'running', generationTaskId: 'task-native', generationLastSeq: 1, width: 640, height: 420, sizeMode: 'manual' })
     const prototype = mounted.browserWindow.HTMLElement.prototype
     const previous = Object.getOwnPropertyDescriptor(prototype, 'scrollHeight')
@@ -316,7 +316,7 @@ describe('completed container content sizing', () => {
       await act(async () => {
         mounted.workspace.applyGenerationInspection('html', { taskId: 'task-native', canvasNodeId: 'html', state: 'completed', lastSeq: 2, finalOutput: JSON.stringify({ version: 1, type: 'markdown', title: '黄金报告', content: '# 黄金报告\n完整研究内容' }), events: [] })
       })
-      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'auto', height: 1440, generationStatus: 'completed' })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'auto', height: 456, generationStatus: 'completed' })
       await act(async () => { mounted.workspace.updateNodeGeometry('html', { height: 500, sizeMode: 'manual' }) })
       expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ sizeMode: 'manual', height: 500 })
     } finally {
@@ -370,3 +370,33 @@ describe('component focus view', () => {
     } finally { await mounted.cleanup() }
   })
 })
+
+
+describe('Figma component content hierarchy', () => {
+  it('summarizes a narrow short table while its expanded reader restores every row and column', async () => {
+    const spec={version:1,type:'table',title:'数据表',columns:['名称','数值','变化','来源'],rows:Array.from({length:8},(_,i)=>['项目'+i,i,i+'%','[完整市场研究数据与出处说明](https://example.com/market/source)'])};
+    const mounted=await mountContainer({containerSpec:spec,width:320,height:220,sizeMode:'manual'});
+    try {
+      expect(mounted.host.querySelectorAll('thead th')).toHaveLength(2);
+      expect(mounted.host.querySelectorAll('tbody tr')).toHaveLength(3);
+      expect(mounted.host.querySelector('[data-component-summary=true]')).not.toBeNull();
+      expect(mounted.host.querySelector('tbody a')?.getAttribute('href')).toBe('https://example.com/market/source');
+      expect(mounted.workspace.getSnapshot().artifacts[0].containerSpec.rows).toHaveLength(8);
+      await mounted.click('[data-research-container-expand]');
+      expect(mounted.host.querySelectorAll('thead th')).toHaveLength(4);
+      expect(mounted.host.querySelectorAll('tbody tr')).toHaveLength(8);
+      expect(mounted.host.querySelector('[data-component-summary=true]')).toBeNull();
+    } finally {await mounted.cleanup()}
+  });
+  it('shows actual generation steps, starts with a collapsed process and exposes stopping', async () => {
+    const mounted=await mountContainer({containerSpec:undefined,generationStatus:'running',generationTaskId:'running',width:656,height:456,sizeMode:'auto'});
+    try {
+      expect(mounted.host.querySelector('[data-research-generation-process]')?.getAttribute('aria-busy')).toBe('true');
+      expect(mounted.host.querySelector('[data-research-generation-toggle]')?.getAttribute('aria-expanded')).toBe('false');
+      expect(mounted.host.querySelector('.odyssey-generation-skeleton')).not.toBeNull();
+      await mounted.click('[data-research-generation-toggle]');
+      expect(mounted.host.querySelector('.odyssey-generation-skeleton')).toBeNull();
+      expect(mounted.host.querySelector('.odyssey-generation-records')).not.toBeNull();
+    } finally {await mounted.cleanup()}
+  });
+});

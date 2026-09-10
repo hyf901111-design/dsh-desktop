@@ -56,9 +56,9 @@ describe('secure sidebar update wiring', () => {
     expect(preload).toContain("ipcRenderer.invoke('updates:install')")
     expect(preload).toContain('new SidebarUpdateControl(document, locale')
     expect(sidebarControl).toContain("'[data-dsh-sidebar-footer]'")
-    expect(sidebarControl).toContain('width: 28px')
-    expect(sidebarControl).toContain('width: 88px')
-    expect(sidebarControl).toContain('background: #1677ff')
+    expect(sidebarControl).toContain('width:28px')
+    expect(sidebarControl).toContain('installSidebarNoticeStyles')
+    expect(sidebarControl).not.toContain('data-update-confirm')
   })
 })
 

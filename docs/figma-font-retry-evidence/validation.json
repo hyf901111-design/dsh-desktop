@@ -1,0 +1,359 @@
+{
+  "panels": [
+    {
+      "theme": "light",
+      "panel": "404:588",
+      "states": [
+        {
+          "state": 0,
+          "frame": "404:594",
+          "card": "404:596",
+          "overlay": "404:599",
+          "button": "404:601"
+        },
+        {
+          "state": 1,
+          "frame": "404:604",
+          "card": "404:606",
+          "overlay": "404:609",
+          "button": "404:611"
+        },
+        {
+          "state": 2,
+          "frame": "404:614",
+          "card": "404:616",
+          "overlay": null,
+          "button": null
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "panel": "404:627",
+      "states": [
+        {
+          "state": 0,
+          "frame": "404:633",
+          "card": "404:635",
+          "overlay": "404:638",
+          "button": "404:640"
+        },
+        {
+          "state": 1,
+          "frame": "404:643",
+          "card": "404:645",
+          "overlay": "404:648",
+          "button": "404:650"
+        },
+        {
+          "state": 2,
+          "frame": "404:653",
+          "card": "404:655",
+          "overlay": null,
+          "button": null
+        }
+      ]
+    }
+  ],
+  "created": [
+    "404:588",
+    "404:589",
+    "404:590",
+    "404:591",
+    "404:592",
+    "404:593",
+    "404:594",
+    "404:595",
+    "404:596",
+    "404:597",
+    "404:598",
+    "404:599",
+    "404:600",
+    "404:601",
+    "404:602",
+    "404:603",
+    "404:604",
+    "404:605",
+    "404:606",
+    "404:607",
+    "404:608",
+    "404:609",
+    "404:610",
+    "404:611",
+    "404:612",
+    "404:613",
+    "404:614",
+    "404:615",
+    "404:616",
+    "404:617",
+    "404:618",
+    "404:619",
+    "404:620",
+    "404:621",
+    "404:622",
+    "404:623",
+    "404:624",
+    "404:625",
+    "404:626",
+    "404:627",
+    "404:628",
+    "404:629",
+    "404:630",
+    "404:631",
+    "404:632",
+    "404:633",
+    "404:634",
+    "404:635",
+    "404:636",
+    "404:637",
+    "404:638",
+    "404:639",
+    "404:640",
+    "404:641",
+    "404:642",
+    "404:643",
+    "404:644",
+    "404:645",
+    "404:646",
+    "404:647",
+    "404:648",
+    "404:649",
+    "404:650",
+    "404:651",
+    "404:652",
+    "404:653",
+    "404:654",
+    "404:655",
+    "404:656",
+    "404:657",
+    "404:658",
+    "404:659",
+    "404:660",
+    "404:661",
+    "404:662",
+    "404:663",
+    "404:664",
+    "404:665"
+  ],
+  "oldNodesUnchanged": true,
+  "checkedOldCount": 53,
+  "items": [
+    {
+      "id": "404:588",
+      "name": "47 补充交互 · 字体加载失败与重试 / 浅色 / 2026-09-10",
+      "x": 40,
+      "y": 31260,
+      "width": 1580,
+      "height": 1100,
+      "cornerRadius": 0,
+      "effects": [],
+      "overflowChildren": [
+        "404:589"
+      ]
+    },
+    {
+      "id": "404:627",
+      "name": "47 补充交互 · 字体加载失败与重试 / 深色 / 2026-09-10",
+      "x": 1648,
+      "y": 31260,
+      "width": 1580,
+      "height": 1100,
+      "cornerRadius": 0,
+      "effects": [],
+      "overflowChildren": [
+        "404:628"
+      ]
+    },
+    {
+      "id": "404:596",
+      "name": "S 组件 · 字体失败",
+      "x": 0,
+      "y": 48,
+      "width": 320,
+      "height": 220,
+      "cornerRadius": 12,
+      "effects": [],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:606",
+      "name": "S 组件 · 字体重试中",
+      "x": 0,
+      "y": 48,
+      "width": 320,
+      "height": 220,
+      "cornerRadius": 12,
+      "effects": [],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:616",
+      "name": "S 组件 · 字体恢复",
+      "x": 0,
+      "y": 48,
+      "width": 320,
+      "height": 220,
+      "cornerRadius": 12,
+      "effects": [],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:635",
+      "name": "S 组件 · 字体失败",
+      "x": 0,
+      "y": 48,
+      "width": 320,
+      "height": 220,
+      "cornerRadius": 12,
+      "effects": [],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:645",
+      "name": "S 组件 · 字体重试中",
+      "x": 0,
+      "y": 48,
+      "width": 320,
+      "height": 220,
+      "cornerRadius": 12,
+      "effects": [],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:655",
+      "name": "S 组件 · 字体恢复",
+      "x": 0,
+      "y": 48,
+      "width": 320,
+      "height": 220,
+      "cornerRadius": 12,
+      "effects": [],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:599",
+      "name": "字体加载失败 / 重试",
+      "x": 12,
+      "y": 174,
+      "width": 130,
+      "height": 34,
+      "cornerRadius": 8,
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "radius": 8,
+          "boundVariables": {},
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0.06666667014360428
+          },
+          "offset": {
+            "x": 0,
+            "y": 2
+          },
+          "spread": 0,
+          "blendMode": "NORMAL",
+          "showShadowBehindNode": true
+        }
+      ],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:609",
+      "name": "正在加载字体… / 重试禁用",
+      "x": 12,
+      "y": 174,
+      "width": 142,
+      "height": 34,
+      "cornerRadius": 8,
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "radius": 8,
+          "boundVariables": {},
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0.06666667014360428
+          },
+          "offset": {
+            "x": 0,
+            "y": 2
+          },
+          "spread": 0,
+          "blendMode": "NORMAL",
+          "showShadowBehindNode": true
+        }
+      ],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:638",
+      "name": "字体加载失败 / 重试",
+      "x": 12,
+      "y": 174,
+      "width": 130,
+      "height": 34,
+      "cornerRadius": 8,
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "radius": 8,
+          "boundVariables": {},
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0.06666667014360428
+          },
+          "offset": {
+            "x": 0,
+            "y": 2
+          },
+          "spread": 0,
+          "blendMode": "NORMAL",
+          "showShadowBehindNode": true
+        }
+      ],
+      "overflowChildren": []
+    },
+    {
+      "id": "404:648",
+      "name": "正在加载字体… / 重试禁用",
+      "x": 12,
+      "y": 174,
+      "width": 142,
+      "height": 34,
+      "cornerRadius": 8,
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "radius": 8,
+          "boundVariables": {},
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0.06666667014360428
+          },
+          "offset": {
+            "x": 0,
+            "y": 2
+          },
+          "spread": 0,
+          "blendMode": "NORMAL",
+          "showShadowBehindNode": true
+        }
+      ],
+      "overflowChildren": []
+    }
+  ],
+  "newMissingFonts": []
+}

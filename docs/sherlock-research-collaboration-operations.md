@@ -16,13 +16,22 @@ node scripts/test-research-collaboration-e2e.mjs
 
 修复失败后可只运行覆盖阶段：`--stage focused`、`typecheck`、`worker`、`sources`、`browser`、`dry-run`。`browser` 要求最近的 clean-input manifest 与当前 feature/main SHA 一致；源代码或 main 变化后先运行 `sources`。正式交接只引用源码干净、绑定最终提交的结果。浏览器截图与 console.json 在 ignored `output/playwright/research-boards/`。仅确证的原始 DshChipCell 内嵌字体 URL 的 SHA256 与相同 ERR_INVALID_URL 被排除；新增 pageerror、其他 console error、失败请求均使验收失败。
 
+2026-09-10 Figma 最终界面改造的聚焦验收可显式运行：
+
+```bash
+node scripts/test-research-collaboration-e2e.mjs --stage sources
+SHERLOCK_COLLABORATION_BROWSER_FOCUS=figma-final node scripts/test-research-collaboration-e2e.mjs --stage browser
+```
+
+仅环境值恰好为 `figma-final` 时，浏览器阶段传入 `--figma-collaboration-focus`。默认完整流程保持不变。聚焦模式验证导航、邀请接受/拒绝/撤销、角色权限、两成员文字与拖动同步、重挂载、退出重入、取消共享及恢复专用菜单；跳过文件剪贴板/个人复制回环、任务恢复/多作者生成、账户恢复隔离及旧 iframe 内滚动/生成几何后段。结果 JSON 的 scope、exclusions、focusEnvironment 明确记录范围，不能将此结果称作完整浏览器验收。
+
 浏览器采用两个隔离账户和真实 Session 保存记录：并发独立文字/位置修改；第二作者显式请求与接收者零额外执行；独立个人副本重新收藏、审阅快照后实际创建第二代云板、邀请另一账户读取历史/引用/资产字节；预览后的个人修改仍留在个人会话；短暂断网时本人编辑/草稿遇到所有者取消，重连仅恢复本人未同步贡献；退出登录后个人副本/常用记录仍可用。每项都有持久数据断言，不只依赖截图。
 
 Worker 层另覆盖三角色、邀请拒绝/到期/撤销、重复接受、会话与 epoch、通知补发、R2、任务租约、归档/恢复、真实 workerd 重启。字段合并/undo、迟到回包、所有受限快捷入口、max5+N 等更细边界由直接相关 focused 检查覆盖；两人截图不代表验证了 10 人负载。
 
 ### 包来源与复现边界
 
-四个注册表输入固定为 `@deepseek-ai/dsh-client-ui-conversation`、`dsh-client-ui-sidebar`、`dsh-client-ui-primitives`、`dsh-web-frontend` 的 `0.1.0-rc.7`。当前缓存归档路径记录在 ignored `output/research-boards-source-inputs-20260909/verified-inputs.json`。脚本重新验证每个 SHA512 与 package-lock 的 integrity/resolved URL；缺失或不匹配就失败，不下载其他版本或改写 lock。
+基础四个注册表输入固定为 `@deepseek-ai/dsh-client-ui-conversation`、`dsh-client-ui-sidebar`、`dsh-client-ui-primitives`、`dsh-web-frontend` 的 `0.1.0-rc.7`。当前缓存归档路径记录在 ignored `output/research-boards-source-inputs-20260909/verified-inputs.json`。sources 另从相同 lock 的精确 resolved URL 补齐 workspace 与 layout 的 0.1.0-rc.7 归档，共六个 clean-input 包。脚本重新验证每个 SHA512 与 package-lock 的 integrity/resolved URL；缺失或不匹配就失败，不下载其他版本或改写 lock。
 
 迁移到其他工作目录时先从相同 lock 的精确 resolved tgz URL 执行 `npm pack <resolved-url> --offline --ignore-scripts --pack-destination <private-output>`，重建带 name/version/archive/resolved/integrity 的 inventory，并校验 tarball SHA512。不按 npm 缓存 basename 或更新时间选择包。inventory 与所有解包目录均只属于本地测试输出。
 

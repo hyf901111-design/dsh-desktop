@@ -1,0 +1,119 @@
+/* Figma 284:396, final groups 22–46. Values describe the application, not its presentation board. */
+@font-face { font-family: "Noto Sans SC"; src: url('/fonts/NotoSansSC.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: block; }
+:root,body {
+  --odyssey-font-ui: "Noto Sans SC", sans-serif;
+  --odyssey-workspace: rgb(241.715 241.715 241.715);
+  --odyssey-canvas: rgb(238.43 238.43 238.43);
+  --odyssey-shell: rgb(228.79 228.79 228.79 / .67);
+  --odyssey-glass: rgb(255 255 255 / .62);
+  --odyssey-glass-border: rgb(255 255 255 / .6);
+  --odyssey-panel-shadow: -4px 0 20px rgb(0 0 0 / .07);
+  --odyssey-input: rgb(255 255 255 / .94);
+  --odyssey-input-shadow: 0 4px 16px rgb(0 0 0 / .09);
+  --odyssey-text: #252525;
+  --odyssey-muted: #777;
+  --odyssey-active: #477ef3;
+  --odyssey-active-fill: #fff;
+  --odyssey-dot: rgb(82 88 98 / .16);
+  --odyssey-input-chip: #f3f4f5;
+}
+[data-ds-dark-theme] {
+  --odyssey-workspace: rgb(30.503 30.503 30.503);
+  --odyssey-canvas: rgb(36.29 36.29 36.29);
+  --odyssey-shell: rgb(24 24 24 / .67);
+  --odyssey-glass: rgb(16.575 17.85 19.125 / .62);
+  --odyssey-glass-border: rgb(255 255 255 / .1);
+  --odyssey-panel-shadow: -4px 0 20px rgb(0 0 0 / .16);
+  --odyssey-input: rgb(48 48 48 / .86);
+  --odyssey-input-shadow: 0 4px 16px rgb(0 0 0 / .2);
+  --odyssey-text: #e5e5e5;
+  --odyssey-muted: #a0a0a0;
+  --odyssey-active: #94b4ff;
+  --odyssey-active-fill: rgb(255 255 255 / .09);
+  --odyssey-dot: rgb(151 157 168 / .16);
+  --odyssey-input-chip: #393a3d;
+}
+.pI_x6G_frame { background: var(--odyssey-shell) !important; backdrop-filter: blur(16px); }
+.pI_x6G_sidebarCol { background: transparent !important; border: 0; }
+.pI_x6G_centerCol { margin:10px 12px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
+.wSkVaW_root { background:var(--odyssey-workspace); }
+.wSkVaW_header,.wSkVaW_tabs,.wSkVaW_titleRow,.sRp_root,.srb-section,.srb-dialog,.srb-presence,.srb-actions { font-family:var(--odyssey-font-ui); }
+.wSkVaW_header { box-sizing:border-box; padding:8px 20px 0; min-height:82px; }
+.wSkVaW_titleRow { min-height:30px; }
+.wSkVaW_titleCluster { gap:6px; }
+.wSkVaW_crumb { padding:0; border-radius:0; font-size:14px; line-height:21px; }
+.wSkVaW_tabs { gap:6px; margin-top:6px; padding-left:0; height:30px; }
+.wSkVaW_tab { box-sizing:border-box; min-width:56px; height:28px; padding:4px 15px; border-radius:7px; font:400 13px/20px var(--odyssey-font-ui); }
+.wSkVaW_tabActive { background:var(--odyssey-active-fill); color:var(--odyssey-active); font-weight:500; }
+.wSkVaW_tab:after { display:none; }
+.rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
+.sRp_root,.sRp_body { background:transparent !important; }
+.sRp_conversation { display:flex; flex-direction:column; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
+.sRp_messages { flex:1 1 0; min-height:0; overflow:auto; }
+.sRp_composer { position:relative; flex:0 0 auto; bottom:auto; background:transparent; }
+.sRp_root { --dsh-composer-side-clearance:0px; --dsh-composer-dock-inset:0px; }
+.sRp_composer .wSkVaW_composerStack { --dsh-composer-stack-gap:4px; }
+.sRp_composer .wSkVaW_heroWorkspaceRow { height:24px; gap:8px; margin:0; padding:0; }
+.sRp_composer .uV2eYG_root { padding:0; }
+.sRp_composer .uV2eYG_card { min-height:150px; border:0; border-radius:10.5px; padding-top:12px; gap:8px; background:var(--odyssey-input); backdrop-filter:blur(12px); box-shadow:var(--odyssey-input-shadow); font:400 14px/22px var(--odyssey-font-ui); }
+.sRp_composer .uV2eYG_scroll { flex:1 1 auto; }
+.sRp_composer .uV2eYG_input,.sRp_composer .uV2eYG_mirror,.sRp_composer .uV2eYG_backdrop { padding:4px 17px 0; }
+.sRp_composer .uV2eYG_row { flex-wrap:nowrap; gap:4px; padding:0 8px 8px; }
+.sRp_composer .uV2eYG_tools { flex:1 1 auto; gap:6px; overflow:visible; }
+.sRp_composer .uV2eYG_modes { gap:4px; }
+.sRp_composer .uV2eYG_select { padding-left:2px; padding-right:14px; max-width:100%; font-size:12px; font-weight:400; }
+.sRp_composer .uV2eYG_primary { width:30px; height:30px; transform:none; background:#65686e; }
+.sRp_composer .uV2eYG_chip { background:var(--odyssey-input-chip); border:1px solid var(--odyssey-glass-border); }
+.sRp_composer .uV2eYG_chipLabel { font:400 12px/20px var(--odyssey-font-ui); }
+.sRp_emptyState { min-height:0; display:flex; align-items:center; justify-content:center; font:500 19px/1.55 var(--odyssey-font-ui); color:var(--odyssey-text); text-align:center; }
+.sRp_emptyState .pXSMma_root { padding:0; }
+.sRp_messages .Md3f7G_scroll { padding-inline:0; }
+.gdEzaW_userRow { justify-content:flex-end; }
+.gdEzaW_userStack { width:fit-content !important; max-width:100%; margin-left:auto; align-items:flex-end; }
+.gdEzaW_bubble { width:fit-content !important; max-width:100%; text-align:left !important; box-sizing:border-box; }
+.gdEzaW_bubble :is(p,[data-research-message-files]) { text-align:left; }
+.srb-message[data-role=user] { width:fit-content; max-width:100%; margin-left:auto; }
+.sherlock-account-avatar[data-authenticated=true] { background-image:url('/figma-self-avatar.png') !important; }
+/* Tooltips are intrinsic-width messages, including canvas arrange feedback. */
+[data-research-arrange-feedback] { width:max-content; max-width:calc(100% - 32px); display:inline-flex; padding:8px 12px; gap:6px; }
+
+.t8lSSG_panel { top:12px; bottom:12px; right:12px; padding-top:0; border:1px solid var(--odyssey-glass-border); border-radius:12px; background:transparent; box-shadow:var(--odyssey-panel-shadow); isolation:isolate; }
+.t8lSSG_panel:before { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-2; pointer-events:none; background: url('/figma-glass-light-mesh.png') center/1136px 1136px, url('/figma-glass-light-base.png') right center/1088px 880px; }
+.t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(16px); }
+[data-ds-dark-theme] .t8lSSG_panel:before { background: url('/figma-glass-dark-overlay.png') right center/1122px 1122px, url('/figma-glass-dark-mesh.png') right center/1202px 1202px, url('/figma-glass-dark-base.png') right center/1088px 880px; }
+.t8lSSG_panel .t8lSSG_tabBar { height:44px; box-sizing:border-box; padding:7px 8px; background:transparent; border-bottom:0; gap:4px; }
+.t8lSSG_panel .t8lSSG_tab { border:0; min-width:46px; height:30px; border-radius:7px; padding:0 6px 0 8px; font:400 12px/20px var(--odyssey-font-ui); }
+.t8lSSG_panel .t8lSSG_tabActive { background:var(--odyssey-active-fill); font-weight:500; }
+.t8lSSG_panel .t8lSSG_tabList { gap:4px; }
+
+@font-face{font-family:OdysseyChipCell;src:url(data:font/ttf;base64,AAEAAAAKAIAAAwAgT1MvMkaMd4AAAAEoAAAAYGNtYXAADQBPAAABkAAAADRnbHlmAAAAAAAAAcwAAAABaGVhZCymksgAAACsAAAANmhoZWEETjP3AAAA5AAAACRobXR4NSAAAAAAAYgAAAAIbG9jYQAAAAAAAAHEAAAABm1heHAAAwACAAABCAAAACBuYW1lBJTnOQAAAdAAAAEmcG9zdMva0kkAAAL4AAAAMAABAAAAAQAAq1arZF8PPPUAAwV4AAAAAObIKCwAAAAA5sgoLAAAAAAAAAAAAAAAAwACAAAAAAAAAAEAAARM/tQAADUgAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAACAAEAAAACAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAzUgAZAABQAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAPz8/PwAA//z//ARM/tQAAARMASwAAAAAAAAAAAAAAAAAAAAgAAAAAAAANSAAAAAAAAIAAAADAAAAFAADAAEAAAAUAAQAIAAAAAQABAABAAD//P//AAD//P//AAUAAQAAAAAAAAAAAAAAAAAAAAAAAAAKAH4AAQAAAAAAAQARAAAAAQAAAAAAAgAHABEAAQAAAAAAAwARABgAAQAAAAAABAARAAAAAQAAAAAABgAPACkAAwABBAkAAQAiADgAAwABBAkAAgAOAFoAAwABBAkAAwAiAGgAAwABBAkABAAiADgAAwABBAkABgAeAIpPZHlzc2V5IENoaXAgQ2VsbFJlZ3VsYXJPZHlzc2V5Q2hpcENlbGwxNE9keXNzZXlDaGlwQ2VsbABPAGQAeQBzAHMAZQB5ACAAQwBoAGkAcAAgAEMAZQBsAGwAUgBlAGcAdQBsAGEAcgBPAGQAeQBzAHMAZQB5AEMAaABpAHAAQwBlAGwAbAAxADQATwBkAHkAcwBzAGUAeQBDAGgAaQBwAEMAZQBsAGwAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAECCXJlZmVyZW5jZQ==) format("truetype");unicode-range:U+FFFC;}
+.sRp_composer .uV2eYG_input,.sRp_composer .uV2eYG_mirror,.sRp_composer .uV2eYG_backdrop{font-family:"OdysseyChipCell","Noto Sans SC",sans-serif;}
+
+/* The plugin portal is attached to the viewport. Research keeps the canvas beneath the panel. */
+#root:has(.rScV5Q_root) { width:100%; margin-right:0; }
+.pI_x6G_centerCol { min-height:0; height:calc(100% - 20px); overflow:hidden; }
+body:has(.rScV5Q_root) .t8lSSG_panel { top:22px; bottom:22px; right:24px; box-sizing:border-box; }
+.t8lSSG_panelBody { border-radius:0 0 12px 12px; overflow:hidden; }
+.t8lSSG_panel:before { z-index:0; }
+.t8lSSG_panel:after { z-index:0; }
+.t8lSSG_panel>.t8lSSG_tabBar,.t8lSSG_panel>.t8lSSG_panelBody { position:relative; z-index:1; }
+body:has(.rScV5Q_root) .t8lSSG_toggleCluster { top:30px; right:32px; }
+
+.t8lSSG_panel .t8lSSG_pane { background:transparent; }
+.t8lSSG_panel .t8lSSG_tabBar { border-radius:12px 12px 0 0; }
+body:has(.rScV5Q_root) .t8lSSG_toggleCluster { top:30px !important; right:32px; }
+
+.t8lSSG_panel { border:0; outline:1px solid var(--odyssey-glass-border); outline-offset:-1px; }
+body:has(.rScV5Q_root) .wSkVaW_header { padding-right:calc(var(--dsh-sidebar-width, 0px) + 44px); }
+body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none; }
+[data-sidebar-collapsed=true] .srb-account-controls .srb-bell { order:-1; }
+/* Figma 286:469–477: workspace session typography shares the measured navigation baseline. */
+[data-dsh-sidebar-root] .YDXeBa_title { font-size:14px; line-height:21px; }
+[data-dsh-sidebar-root] .YDXeBa_time { font-size:11px; line-height:17px; }
+
+/* Figma 361:5988/5989: preserve the source texture rotation and crop before the glass layer. */
+.t8lSSG_panel { background:url('/figma-glass-light-base.png') right -12px top -12px/1088px 880px no-repeat; overflow:clip; }
+.t8lSSG_panel:before { inset:auto; left:-760px; top:-140px; width:1136px; height:1136px; border-radius:0; transform:rotate(90deg); background:url('/figma-glass-light-mesh.png') center/contain no-repeat; }
+[data-ds-dark-theme] .t8lSSG_panel { background-image:url('/figma-glass-dark-base.png'); }
+[data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background:url('/figma-glass-dark-overlay.png') -753px -133px/1122px 1122px no-repeat, url('/figma-glass-dark-mesh.png') -793px -173px/1202px 1202px no-repeat; }
+.t8lSSG_panel .t8lSSG_panelResize { left:0; width:6px; }
