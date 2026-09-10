@@ -56,12 +56,12 @@ export function patchFigmaFinalCanvas(source) {
   source=block(source,'function researchGenerationSizedNode(', 'function researchGenerationAutoGeometry(',`function researchGenerationSizedNode(node, geometry, snapshot = null) {
     if(geometry===null)return node;
     const next={...node,...geometry};
-    if(node.sizeMode!=='manual'&&['generated-container','generated-summary','generated-mind-map'].includes(node.kind)){
+    if(node.sizeMode!=='manual'&&['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result'].includes(node.kind)){
       // Automatic growth selects a complete preset, including both dimensions.
       const preset=researchBentoSize(next,next),size=RESEARCH_BENTO_SIZES[preset];
       next.width=size.width;next.height=size.height;next.containerSizePreset=preset;
     }
-    if(node.sizeMode!=='manual'&&(['generated-container','generated-summary','generated-mind-map'].includes(node.kind)||node.creationMode==='selection')){
+    if(node.sizeMode!=='manual'&&(['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result'].includes(node.kind)||node.creationMode==='selection')){
       const before=normalizeResearchCanvasNodeGeometry(node),after=normalizeResearchCanvasNodeGeometry(next);
       next.x=node.x+(after.width-before.width)/2;next.y=node.y+(after.height-before.height)/2;
     }
@@ -75,6 +75,9 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('if(node.height<456)workspace.updateNodeGeometry', 'if(node.height!==456||node.width!==656)workspace.updateNodeGeometry');
 
   source=source.replace(`}) : node.kind === "pasted-text" || node.kind === "assistant-result" || node.kind === "generated-summary" && node.generationStatus === 'completed' ?`, `}) : node.kind === 'generated-summary'&&node.generationStatus==='completed'?(0,react_jsx_runtime.jsx)(ResearchDerivedSummary,{node,onUpgradeSize:onExpandGeneration}):node.kind === "pasted-text" || node.kind === "assistant-result" ?`);
+  source=source.replace('node.kind === "pasted-text" || node.kind === "assistant-result" ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {\n\t\t\t\t\t\ttext: node.excerpt,\n\t\t\t\t\t\tstreaming: false\n\t\t\t\t\t})', 'node.kind === "pasted-text" || node.kind === "assistant-result" ? (0,react_jsx_runtime.jsx)(ResearchDerivedSummary,{node,onUpgradeSize:onExpandGeneration})');
+  source=source.replace('function ResearchContainerBody({ node, sessionId, visible, onHtmlSize })', 'function ResearchContainerBody({ node, sessionId, visible, onHtmlSize, preserveHeading = false })');
+  source=source.replace('text: spec.content.replace(', 'text: preserveHeading ? spec.content : spec.content.replace(');
   source=block(source,source.includes('function ResearchDerivedSummary(')?'function ResearchDerivedSummary(':'function ResearchMindMap({', 'function researchGenerationPresentation(',derivedSource);
   const displayStart=source.indexOf('function ResearchMindMapDisplayNode('),displayEnd=source.indexOf('function ResearchMindMapBranches(',displayStart);
   if(displayStart>=0&&displayEnd>displayStart){const display=source.slice(displayStart,displayEnd).replace('children: node.label', 'children: node.displayLabel ?? node.label');source=source.slice(0,displayStart)+display+source.slice(displayEnd);}
@@ -187,8 +190,9 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
 }
 
 function capDerivedNodes(source) {
+  source=source.replace("['generated-summary','generated-mind-map'].includes(node.kind)){if", "['generated-summary','generated-mind-map','pasted-text','assistant-result'].includes(node.kind)){if");
   if(source.includes("includes(node.kind)){if(node.height>456||node.width>656)onAutoHeight"))return source;
-  source=source.replace('if (node.sizeMode === "manual" || node.kind === "generated-container" || node.kind === "web-link"', `if(node.sizeMode!=='manual'&&['generated-summary','generated-mind-map'].includes(node.kind)){if(node.height>456||node.width>656)onAutoHeight?.(node,Math.min(456,node.height));return;}
+  source=source.replace('if (node.sizeMode === "manual" || node.kind === "generated-container" || node.kind === "web-link"', `if(node.sizeMode!=='manual'&&['generated-summary','generated-mind-map','pasted-text','assistant-result'].includes(node.kind)){if(node.height>456||node.width>656)onAutoHeight?.(node,Math.min(456,node.height));return;}
                 if (node.sizeMode === "manual" || node.kind === "generated-container" || node.kind === "web-link"`);
   return source;
 }
@@ -202,7 +206,7 @@ const placementSource = `function researchCanvasVisibleArea(snapshot) {
   return {width:size.availableWidth>0?Math.min(size.width,size.availableWidth):size.width,height:Math.max(0,(size.height??0)-88)};
 }
 function researchCanvasContainedAutoNode(snapshot,node) {
-  if(!snapshot||node.sizeMode==='manual'||node.workbenchId||!['generated-container','generated-summary','generated-mind-map','web-link'].includes(node.kind))return node;
+  if(!snapshot||node.sizeMode==='manual'||node.workbenchId||!['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result','web-link'].includes(node.kind))return node;
   const area=researchCanvasVisibleArea(snapshot),view=snapshot.viewport??{x:0,y:0,scale:1},scale=view.scale>0?view.scale:1;
   if(!(area.width>64&&area.height>64)||node.width*scale>area.width-64+1e-6||node.height*scale>area.height-64+1e-6)return node;
   const clamp=(center,size,offset,extent)=>{const min=(32-offset)/scale+size/2,max=(extent-32-offset)/scale-size/2;return max>=min?Math.max(min,Math.min(max,center)):(extent/2-offset)/scale;};
@@ -217,7 +221,7 @@ function researchCanvasFittedViewport(snapshot,node) {
 }
 function researchCanvasFitAutomaticUpdate(snapshot,patch) {
   if(!patch.artifacts)return patch;
-  const changed=patch.artifacts.filter(node=>{const prior=snapshot.artifacts.find(old=>old.id===node.id);return node.sizeMode!=='manual'&&prior?.sizeMode!=='manual'&&!node.workbenchId&&['generated-container','generated-summary','generated-mind-map','web-link'].includes(node.kind)&&(!prior||node.kind!=='web-link'&&(prior.width!==node.width||prior.height!==node.height));});
+  const changed=patch.artifacts.filter(node=>{const prior=snapshot.artifacts.find(old=>old.id===node.id);return node.sizeMode!=='manual'&&prior?.sizeMode!=='manual'&&!node.workbenchId&&['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result','web-link'].includes(node.kind)&&(!prior||node.kind!=='web-link'&&(prior.width!==node.width||prior.height!==node.height));});
   let viewport=patch.viewport??snapshot.viewport;
   for(const node of changed){const fitted=researchCanvasFittedViewport({...snapshot,viewport},node);if(fitted)viewport=fitted;}
   if(viewport===(patch.viewport??snapshot.viewport))return patch;
@@ -271,7 +275,7 @@ const generatedPlacementSource = `function researchCanvasGeneratedPlacement(node
 
 const derivedSource = `function ResearchDerivedSummary({node,onUpgradeSize}) {
   const spec={version:1,type:'markdown',title:node.title,content:node.excerpt};
-  return (0,react_jsx_runtime.jsx)('div',{'data-research-derived-summary':'',className:'odyssey-derived-summary',children:(0,react_jsx_runtime.jsx)(ResearchContainerContent,{node:{...node,height:Math.max(100,node.height-24),containerSpec:spec},onUpgradeSize})});
+  return (0,react_jsx_runtime.jsx)('div',{'data-research-derived-summary':'',className:'odyssey-derived-summary',children:(0,react_jsx_runtime.jsx)(ResearchContainerContent,{node:{...node,height:Math.max(100,node.height-24),containerSpec:spec},preserveHeading:['pasted-text','assistant-result'].includes(node.kind),onUpgradeSize})});
 }
 function researchMindMapFitTree(tree,budget,labelLimit) {
   let remaining=Math.max(1,budget)-1,shortened=false;
@@ -324,7 +328,8 @@ const responsiveSource = `function ResearchContainerContent(props) {
           setKpiFit(previous=>JSON.stringify(previous)===JSON.stringify(next)?previous:next);
         }
       }
-      if(element.scrollHeight>element.clientHeight+1)setFitRatio(previous=>Math.max(.05,Math.min(previous-.05,previous*element.clientHeight/element.scrollHeight*.9)));};const Observer=element.ownerDocument.defaultView?.ResizeObserver;const observer=Observer?new Observer(measure):null;observer?.observe(element);for(const child of element.children)observer?.observe(child);element.ownerDocument.fonts?.ready.then(measure);measure();return()=>{active=false;observer?.disconnect();};},[node.id,node.width,node.height,node.containerSpec,frameState.expanded,fitRatio]);
+      const primary=element.querySelector('.odyssey-component-primary'),overflows=element.scrollHeight>element.clientHeight+1||primary?.clientHeight>0&&primary.scrollHeight>primary.clientHeight+1;
+      if(overflows){const ratio=Math.min(element.clientHeight/element.scrollHeight,primary?.clientHeight>0?primary.clientHeight/Math.max(primary.clientHeight,primary.scrollHeight):1);setFitRatio(previous=>Math.max(.05,Math.min(previous-.05,previous*ratio*.9)));}};const Observer=element.ownerDocument.defaultView?.ResizeObserver;const observer=Observer?new Observer(measure):null;observer?.observe(element);for(const child of element.children)observer?.observe(child);element.ownerDocument.fonts?.ready.then(measure);measure();return()=>{active=false;observer?.disconnect();};},[node.id,node.width,node.height,node.containerSpec,frameState.expanded,fitRatio]);
   (0,react.useLayoutEffect)(()=>{const card=ref.current?.closest('[data-research-node-id]');if(!card)return;const update=()=>setFrameState({expanded:card.hasAttribute('open'),overflow:card.hasAttribute('data-research-content-overflow')});update();const Observer=card.ownerDocument.defaultView?.MutationObserver;if(!Observer)return;const observer=new Observer(update);observer.observe(card,{attributes:true,attributeFilter:['open','data-research-content-overflow']});return()=>observer.disconnect();},[node.id]);
   let spec=node.containerSpec, summary=false;
   const width=node.width??656,height=node.height??456;
@@ -341,7 +346,7 @@ const responsiveSource = `function ResearchContainerContent(props) {
     if(spec.type==='kpi'){const columns=width<480?2:4,rows=Math.max(1,Math.floor((height-70)/76*fitRatio)),maximum=(kpiFit.some(item=>item.fullWidth)?1:columns)*rows;summary=spec.items.length>maximum||kpiFit.some(item=>item.shortened);spec={...spec,items:spec.items.slice(0,maximum).map((item,index)=>({...item,...kpiFit[index]}))};}
     if(spec.type==='markdown'||spec.type==='html'&&frameState.overflow){const text=spec.type==='html'?researchHtmlText(spec.html):spec.content;const maxChars=Math.max(24,Math.floor(Math.floor((width-36)/13)*Math.max(2,Math.floor((height-108)/21))*fitRatio));if(text.length>maxChars||spec.type==='html'||fitRatio<1){const sentences=text.split(/(?<=[。！？.!?])\\s*|\\n+/);let excerpt='';for(const sentence of sentences){if(excerpt.length+sentence.length>maxChars)break;excerpt+=(excerpt?'\\n':'')+sentence;}spec={version:1,type:'markdown',title:spec.title,content:(excerpt||text.slice(0,maxChars)+'…').replace(/^\\s{0,3}#{1,6}\\s+/gm,'').replace(/\\n+/g,' ').replace(/[*_]/g,'')};summary=true;}}
   }
-  (0,react.useLayoutEffect)(()=>{if(!frameState.expanded&&node.sizeMode!=='manual'&&(node.containerSpec.type==='kpi'||node.kind==='generated-summary')&&summary&&(width<656||height<456))props.onUpgradeSize?.();},[node.id,node.sizeMode,node.containerSpec.type,width,height,summary,frameState.expanded,props.onUpgradeSize]);
+  (0,react.useLayoutEffect)(()=>{if(!frameState.expanded&&node.sizeMode!=='manual'&&(node.containerSpec.type==='kpi'||['generated-summary','pasted-text','assistant-result'].includes(node.kind))&&summary&&(width<656||height<456))props.onUpgradeSize?.();},[node.id,node.sizeMode,node.containerSpec.type,width,height,summary,frameState.expanded,props.onUpgradeSize]);
   const htmlSummary=node.containerSpec.type==='html'&&spec.type==='markdown';
   return (0,react_jsx_runtime.jsxs)('div',{ref,className:'odyssey-component-content','data-component-expanded':frameState.expanded,'data-component-summary':summary,'data-component-width':width<480?'narrow':width<760?'medium':'wide',children:[
     (0,react_jsx_runtime.jsx)('div',{className:'odyssey-component-primary',inert:htmlSummary?true:void 0,'aria-hidden':htmlSummary?true:void 0,style:{display:htmlSummary?'none':'flex'},children:(0,react_jsx_runtime.jsx)(ResearchContainerBody,{...props,node:node.containerSpec.type==='html'||spec===node.containerSpec?node:{...node,containerSpec:spec}})}),
@@ -379,6 +384,7 @@ body[data-ds-dark-theme] [data-research-compact-chrome][data-selected=true]{box-
 [data-research-compact-chrome] .rScV5Q_containerTableScroll :is(th,td){height:33px;padding:6px 0;line-height:21px;border:0;border-bottom:1px solid var(--odyssey-card-border);overflow-wrap:anywhere}
 [data-research-compact-chrome] .rScV5Q_containerTableScroll th{font-size:11px;line-height:19px;font-weight:400}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown{padding:0 18px 12px;overflow:visible;font-size:13px;line-height:21px}
+[data-research-compact-chrome] .rScV5Q_containerMarkdown>:first-child{font:inherit;color:inherit;overflow-wrap:anywhere}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown p{margin:0 0 8px}
 [data-research-compact-chrome] .rScV5Q_containerChart{padding:0 18px 16px;flex:1;justify-content:flex-start}
 [data-research-compact-chrome] .rScV5Q_containerChart svg{flex:1;width:100%;height:100%;max-height:none;min-height:0}

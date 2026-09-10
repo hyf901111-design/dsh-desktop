@@ -1,0 +1,62 @@
+{
+  "boundary": "controlled-production-glyphs, not Electron",
+  "metrics": [
+    {
+      "key": "research",
+      "node": "361:5806",
+      "width": 16,
+      "height": 16,
+      "alphaDifference": 0
+    },
+    {
+      "key": "chevron",
+      "node": "286:411",
+      "width": 12,
+      "height": 12,
+      "alphaDifference": 0
+    },
+    {
+      "key": "bell",
+      "node": "361:5815",
+      "width": 16,
+      "height": 16,
+      "alphaDifference": 0
+    },
+    {
+      "key": "search",
+      "node": "286:415",
+      "width": 16,
+      "height": 16,
+      "alphaDifference": 0.000018229166666666668
+    },
+    {
+      "key": "collapse",
+      "node": "361:5799",
+      "width": 16,
+      "height": 16,
+      "alphaDifference": 0.00005606617647058824
+    },
+    {
+      "key": "chat",
+      "node": "361:5801",
+      "width": 16,
+      "height": 16,
+      "alphaDifference": 0.00004901960784313725
+    },
+    {
+      "key": "project",
+      "node": "361:5803",
+      "width": 16,
+      "height": 16,
+      "alphaDifference": 0.0004909620098039215
+    },
+    {
+      "key": "more",
+      "node": "287:867",
+      "width": 16,
+      "height": 16,
+      "alphaDifference": 0.000006893382352941177
+    }
+  ],
+  "errors": []
+}

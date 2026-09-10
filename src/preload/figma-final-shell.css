@@ -20,7 +20,7 @@
 [data-ds-dark-theme] {
   --odyssey-workspace: rgb(30.503 30.503 30.503);
   --odyssey-canvas: rgb(36.29 36.29 36.29);
-  --odyssey-shell: rgb(24 24 24 / .67);
+  --odyssey-shell: rgb(8.574 8.574 8.574 / .78);
   --odyssey-glass: rgb(16.575 17.85 19.125 / .62);
   --odyssey-glass-border: rgb(255 255 255 / .1);
   --odyssey-panel-shadow: -4px 0 20px rgb(0 0 0 / .16);
@@ -33,7 +33,11 @@
   --odyssey-dot: rgb(151 157 168 / .16);
   --odyssey-input-chip: #393a3d;
 }
-.pI_x6G_frame { background: var(--odyssey-shell) !important; backdrop-filter: blur(16px); }
+.pI_x6G_frame { background: var(--odyssey-shell) !important; backdrop-filter: blur(16px); border-radius:12px; }
+/* Figma 284:400 / 767 inherits the single window material. The legacy sidebar tint must not compound its opacity. */
+.hHd-Xa_root { background:transparent !important; }
+.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(255 255 255 / .6); border:0; box-shadow:none; }
+body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(39.575 39.575 39.575); }
 .pI_x6G_sidebarCol { background: transparent !important; border: 0; }
 .pI_x6G_centerCol { margin:10px 12px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
 .wSkVaW_root { background:var(--odyssey-workspace); }
@@ -46,6 +50,8 @@
 .wSkVaW_tab { box-sizing:border-box; min-width:56px; height:28px; padding:4px 15px; border-radius:7px; font:400 13px/20px var(--odyssey-font-ui); }
 .wSkVaW_tabActive { background:var(--odyssey-active-fill); color:var(--odyssey-active); font-weight:500; }
 .wSkVaW_tab:after { display:none; }
+/* Figma 284:513 / 880: the Research header has no divider stroke. */
+.wSkVaW_root:has(.rScV5Q_root) .wSkVaW_header:after { display:none; }
 .rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
 .sRp_root,.sRp_body { background:transparent !important; }
 .sRp_conversation { display:flex; flex-direction:column; gap:4px; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
@@ -81,7 +87,7 @@
 .t8lSSG_panel:before { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-2; pointer-events:none; background: url('/figma-glass-light-mesh.png') center/1136px 1136px, url('/figma-glass-light-base.png') right center/1088px 880px; }
 .t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(16px); }
 [data-ds-dark-theme] .t8lSSG_panel:before { background: url('/figma-glass-dark-overlay.png') right center/1122px 1122px, url('/figma-glass-dark-mesh.png') right center/1202px 1202px, url('/figma-glass-dark-base.png') right center/1088px 880px; }
-.t8lSSG_panel .t8lSSG_tabBar { height:44px; box-sizing:border-box; padding:7px 8px; background:transparent; border-bottom:0; gap:4px; }
+.t8lSSG_panel .t8lSSG_tabBar { height:44px; box-sizing:border-box; padding:7px 8px; background:transparent; border-bottom:0; gap:6px; }
 .t8lSSG_panel .t8lSSG_tab { border:0; min-width:46px; height:30px; border-radius:7px; padding:0 6px 0 8px; font:400 12px/20px var(--odyssey-font-ui); }
 .t8lSSG_panel .t8lSSG_tabActive { background:var(--odyssey-active-fill); font-weight:500; }
 .t8lSSG_panel .t8lSSG_tabList { gap:4px; }
@@ -123,3 +129,22 @@ body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none
    preserving its tabs/draft and preventing guardAnchor reattachment from
    covering settings. Other settings popovers remain available. */
 body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlock-settings-panel]:not([hidden])) [data-dsh-panel-host] { display:none !important; }
+
+/* Figma 374:588–603 and 361:5991–6008: intrinsic controls within a fixed 24 px context row. */
+.sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_workspace { box-sizing:border-box; height:24px; min-height:24px; padding:0 6px 0 4px; gap:6px; border-radius:0; font:400 12px/14px var(--odyssey-font-ui); }
+.sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seat { box-sizing:border-box; height:24px; min-height:24px; min-width:112px; padding:0 0 0 7px; gap:6px; border-radius:7px; font:400 13px/20px var(--odyssey-font-ui); }
+.sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_chevron { width:10px; height:10px; }
+.sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon { width:16px; height:16px; }
+.sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
+.sRp_composer .FJxK0a_root { display:none; }
+.t8lSSG_panel .t8lSSG_tabBar { padding-top:6px; padding-bottom:6px; }
+.t8lSSG_panel .t8lSSG_tabList { height:32px; align-items:flex-start; }
+.t8lSSG_panel .t8lSSG_tabBar>:has(>.t8lSSG_tabBarPlus) { flex:0 0 28px; align-self:center; }
+.t8lSSG_panel .t8lSSG_tabBarPlus { width:28px; height:28px; border-radius:7px; background:transparent; }
+
+/* Figma 284:710–713 / 1078–1081: conversation text retains Noto, independently of DIN component numerals. */
+.sRp_messages .gdEzaW_bubble { padding:13px 14px; border-radius:14px; background:rgb(234.3 234.3 234.3); font:400 14px/24px var(--odyssey-font-ui) !important; letter-spacing:0; }
+body[data-ds-dark-theme] .sRp_messages .gdEzaW_bubble { background:rgb(44.72 44.72 44.72); color:rgb(229.15 229.15 229.15); }
+.sRp_messages .gdEzaW_bubble p { margin:0; font:inherit; }
+.sRp_messages [class^="_markdown_"] { font:400 14px/24px var(--odyssey-font-ui) !important; letter-spacing:0; }
+.t8lSSG_panel .t8lSSG_tabBarPlus>svg { width:16px; height:16px; }
