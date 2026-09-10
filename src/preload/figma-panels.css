@@ -90,7 +90,7 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
 [data-ds-dark-theme]
   [data-dsh-panel-host][data-odyssey-panel-right="closed"]
   [data-odyssey-panel-entry="right"]:not(:hover):not(:focus-visible) {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 [data-ds-dark-theme]
