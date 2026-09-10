@@ -9,27 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一侧栏及顶栏协作控件并收紧消息排版",
+        "featureName": "修复重新开启协作后的旧任务重试与待邀请圆环",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
-        "tipCommit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
+        "baseCommit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
+        "tipCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
         "commits": [
           {
-            "commit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
+            "commit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
             "parents": [
-              "2474603ade552117a739c35f27c8e3b7f60cc92c"
+              "4064843ba1b044010cea06fe88ae4bbf434dffdb"
             ],
-            "subject": "统一侧栏图标与顶栏协作按钮并优化消息执行记录"
+            "subject": "修复协作重开后旧任务重试并缩小待邀请圆环"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-boards-browser.mjs"
+            "path": "src/main/research-board-integration.ts"
           },
           {
             "status": "M",
@@ -37,23 +33,15 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-presentation.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/research-boards-ui.ts"
           },
           {
             "status": "M",
-            "path": "src/shared/research-boards.ts"
+            "path": "test/research-board-generation.test.ts"
           },
           {
             "status": "M",
-            "path": "test/fixtures/research-boards-browser.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-polish.test.ts"
+            "path": "test/research-boards-ui.test.ts"
           }
         ],
         "checks": [
@@ -65,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过",
-            "verifiedCommit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
-            "completedAt": "2026-09-10T02:31:47.801250+00:00",
+            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
+            "completedAt": "2026-09-10T02:57:54.557435+00:00",
             "timeoutMs": 300000
           },
           {
@@ -78,8 +66,8 @@
             ],
             "outcome": "passed",
             "summary": "清洁依赖补丁及幂等检查通过",
-            "verifiedCommit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
-            "completedAt": "2026-09-10T02:31:47.801250+00:00",
+            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
+            "completedAt": "2026-09-10T02:57:54.557435+00:00",
             "timeoutMs": 300000
           },
           {
@@ -90,112 +78,40 @@
               "browser"
             ],
             "outcome": "passed",
-            "summary": "真实工作区组件对齐、顶栏居中和拖选、历史记录展开、双账号协作流程通过",
-            "verifiedCommit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
-            "completedAt": "2026-09-10T02:31:47.801250+00:00",
+            "summary": "真实工作区组件与协作界面聚焦流程通过",
+            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
+            "completedAt": "2026-09-10T02:57:54.557435+00:00",
             "timeoutMs": 300000
           },
           {
             "argv": [
               "node_modules/.bin/vitest",
               "run",
+              "test/research-board-generation.test.ts",
               "test/research-board-polish.test.ts",
               "test/research-boards-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "11 项相关状态及界面检查通过",
-            "verifiedCommit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
-            "completedAt": "2026-09-10T02:31:47.801250+00:00",
+            "summary": "18 项生成重试、权限及提示检查通过",
+            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
+            "completedAt": "2026-09-10T02:57:54.557435+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器复用真实工作区与顶栏组件验证通过，搜索排序新建的 x 坐标完全一致；头像按钮与顶栏中心误差 0.5px。真实双端 BTC 生成此前均成功，云端序号均为 300。"
+          "summary": "浏览器协作流程通过；权限报错在正文显示中文说明，待邀请圆环缩至 12px。原生旧任务重试待集成构建复核。"
         },
         "acceptanceCriteria": [
-          "侧栏与顶栏禁用拖选文字，输入框继续可编辑",
-          "两组目录搜索排序新建图标对齐",
-          "协作头像按整块顶栏居中，创建协作有明确按钮外观",
-          "协作消息正文作者和状态层级规整，旧重试记录折叠保存且不掩盖保留结果应用入口"
+          "显式重试在当前授权下创建新请求，不复用旧共享版本操作",
+          "原组件已移除时创建新组件，连续点击及回复丢失不会重复启动",
+          "权限撤销仍阻止执行，原始记录和操作版本保持不变",
+          "错误弹窗显示中文正文，待邀请圆环缩小并居中"
         ],
         "risks": [
-          "本地原生界面待集成构建后复核，不公开发布，不晋升 main。"
+          "仅本地测试，不公开发布、不晋升 main；不涉及服务端修改。"
         ],
-        "generatedAt": "2026-09-10T02:31:47.801250+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1ce79e645894af95729765faf59f5432e933a97e",
-        "verificationCommit": "1ce79e645894af95729765faf59f5432e933a97e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "1ce79e645894af95729765faf59f5432e933a97e",
-            "completedAt": "2026-09-10T02:33:16.764Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1ce79e645894af95729765faf59f5432e933a97e",
-            "completedAt": "2026-09-10T02:33:16.764Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "1ce79e645894af95729765faf59f5432e933a97e",
-            "completedAt": "2026-09-10T02:33:16.764Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "1ce79e645894af95729765faf59f5432e933a97e",
-            "completedAt": "2026-09-10T02:33:16.764Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "1ce79e645894af95729765faf59f5432e933a97e",
-            "completedAt": "2026-09-10T02:33:16.764Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T02:33:16.764Z"
+        "generatedAt": "2026-09-10T02:57:54.557435+00:00"
       }
     }
   ],
