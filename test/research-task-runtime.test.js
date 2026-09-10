@@ -953,6 +953,13 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it('distinguishes an offline deliverable from an explicit retrieval request', async () => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start('实际调用 financial_query 查询沪深300ETF最近行情，再创建离线HTML交互组件，不得使用示例数据。')
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['financial_query', 'web_search'])
+    await handle.dispose()
+  })
+
   it('bounds a stuck research child and carries only its search evidence into recovery', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     vi.useFakeTimers()
