@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补全被删除组件的协作重试与结果回写",
+        "featureName": "补齐协作组件显示契约并恢复已有生成内容",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
-        "tipCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
+        "baseCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
+        "tipCommit": "ef0de7afed38bcac6760dd79bf296959de39734f",
         "commits": [
           {
-            "commit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
+            "commit": "ef0de7afed38bcac6760dd79bf296959de39734f",
             "parents": [
-              "b1c42ea8702abc4ba5d34f5277d67d7f90427b77"
+              "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d"
             ],
-            "subject": "补全旧组件删除后的协作重试创建与结果回写"
+            "subject": "补齐协作生成组件显示字段并恢复已有生成结果"
           }
         ],
         "files": [
@@ -41,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过",
-            "verifiedCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
-            "completedAt": "2026-09-10T03:13:52.497173+00:00",
+            "verifiedCommit": "ef0de7afed38bcac6760dd79bf296959de39734f",
+            "completedAt": "2026-09-10T03:32:22.115284+00:00",
             "timeoutMs": 300000
           },
           {
@@ -54,8 +54,8 @@
             ],
             "outcome": "passed",
             "summary": "清洁依赖补丁及幂等检查通过",
-            "verifiedCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
-            "completedAt": "2026-09-10T03:13:52.497173+00:00",
+            "verifiedCommit": "ef0de7afed38bcac6760dd79bf296959de39734f",
+            "completedAt": "2026-09-10T03:32:22.115284+00:00",
             "timeoutMs": 300000
           },
           {
@@ -67,98 +67,25 @@
               "test/research-boards-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "19 项聚焦检查通过，覆盖新节点创建、组件生成、回写和权限状态",
-            "verifiedCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
-            "completedAt": "2026-09-10T03:13:52.497173+00:00",
+            "summary": "20 项聚焦检查通过，含真实客户端组件解析与历史内容恢复",
+            "verifiedCommit": "ef0de7afed38bcac6760dd79bf296959de39734f",
+            "completedAt": "2026-09-10T03:32:22.115284+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "前一构建原生路径发现无目标被路由到问答；新增真实文档更新与任务结果回写回归检查通过，原生复核待新构建。"
+          "summary": "客户端实际组件解析器验证新建节点及生成结果可见，旧缺失字段组件可恢复且不重复调用模型。最终原生显示待构建复核。"
         },
         "acceptanceCriteria": [
-          "重试被删除组件时先以持久化操作创建新组件，再使用组件生成通道",
-          "旧版本误转问答的重试仍可重新发起正确的组件任务",
-          "生成结果包含新组件节点，现有节点保留不被覆盖"
+          "新建组件包含渲染器必需的消息标识、摘要、刷新配置等字段",
+          "历史已完成组件补齐显示元数据，保留生成内容且不再次调用模型",
+          "真实客户端解析器同时接受生成中节点与已完成节点"
         ],
         "risks": [
           "仅本地测试，不公开发布、不晋升 main；不涉及服务端修改。"
         ],
-        "generatedAt": "2026-09-10T03:13:52.497173+00:00"
-      },
-      "merged": {
-        "mergeCommit": "555501624fd540eb8fc66ae18ae64fdf3e863728",
-        "verificationCommit": "555501624fd540eb8fc66ae18ae64fdf3e863728",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "555501624fd540eb8fc66ae18ae64fdf3e863728",
-            "completedAt": "2026-09-10T03:15:19.291Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "555501624fd540eb8fc66ae18ae64fdf3e863728",
-            "completedAt": "2026-09-10T03:15:19.291Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "555501624fd540eb8fc66ae18ae64fdf3e863728",
-            "completedAt": "2026-09-10T03:15:19.291Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "555501624fd540eb8fc66ae18ae64fdf3e863728",
-            "completedAt": "2026-09-10T03:15:19.291Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "555501624fd540eb8fc66ae18ae64fdf3e863728",
-            "completedAt": "2026-09-10T03:15:19.291Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T03:15:19.291Z"
+        "generatedAt": "2026-09-10T03:32:22.115284+00:00"
       }
     }
   ],
