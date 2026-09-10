@@ -33,7 +33,7 @@
   --odyssey-dot: rgb(151 157 168 / .16);
   --odyssey-input-chip: #393a3d;
 }
-.pI_x6G_frame { background: var(--odyssey-shell) !important; backdrop-filter: blur(32px); }
+.pI_x6G_frame { background: var(--odyssey-shell) !important; backdrop-filter: blur(16px); }
 .pI_x6G_sidebarCol { background: transparent !important; border: 0; }
 .pI_x6G_centerCol { margin:10px 12px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
 .wSkVaW_root { background:var(--odyssey-workspace); }
@@ -55,7 +55,7 @@
 .sRp_composer .wSkVaW_composerStack { --dsh-composer-stack-gap:4px; }
 .sRp_composer .wSkVaW_heroWorkspaceRow { height:24px; gap:8px; margin:0; padding:0; }
 .sRp_composer .uV2eYG_root { padding:0; }
-.sRp_composer .uV2eYG_card { min-height:150px; border:0; border-radius:10.5px; padding-top:12px; gap:8px; background:var(--odyssey-input); backdrop-filter:blur(24px); box-shadow:var(--odyssey-input-shadow); font:400 14px/22px var(--odyssey-font-ui); }
+.sRp_composer .uV2eYG_card { min-height:150px; border:0; border-radius:10.5px; padding-top:12px; gap:8px; background:var(--odyssey-input); backdrop-filter:blur(12px); box-shadow:var(--odyssey-input-shadow); font:400 14px/22px var(--odyssey-font-ui); }
 .sRp_composer .uV2eYG_scroll { flex:1 1 auto; }
 .sRp_composer .uV2eYG_input,.sRp_composer .uV2eYG_mirror,.sRp_composer .uV2eYG_backdrop { padding:4px 17px 0; }
 .sRp_composer .uV2eYG_row { flex-wrap:nowrap; gap:4px; padding:0 8px 8px; }
@@ -79,7 +79,7 @@
 
 .t8lSSG_panel { top:12px; bottom:12px; right:12px; padding-top:0; border:1px solid var(--odyssey-glass-border); border-radius:12px; background:transparent; box-shadow:var(--odyssey-panel-shadow); isolation:isolate; }
 .t8lSSG_panel:before { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-2; pointer-events:none; background: url('/figma-glass-light-mesh.png') center/1136px 1136px, url('/figma-glass-light-base.png') right center/1088px 880px; }
-.t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(32px); }
+.t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(16px); }
 [data-ds-dark-theme] .t8lSSG_panel:before { background: url('/figma-glass-dark-overlay.png') right center/1122px 1122px, url('/figma-glass-dark-mesh.png') right center/1202px 1202px, url('/figma-glass-dark-base.png') right center/1088px 880px; }
 .t8lSSG_panel .t8lSSG_tabBar { height:44px; box-sizing:border-box; padding:7px 8px; background:transparent; border-bottom:0; gap:4px; }
 .t8lSSG_panel .t8lSSG_tab { border:0; min-width:46px; height:30px; border-radius:7px; padding:0 6px 0 8px; font:400 12px/20px var(--odyssey-font-ui); }
@@ -107,3 +107,13 @@ body:has(.rScV5Q_root) .t8lSSG_toggleCluster { top:30px !important; right:32px; 
 body:has(.rScV5Q_root) .wSkVaW_header { padding-right:calc(var(--dsh-sidebar-width, 0px) + 44px); }
 body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none; }
 [data-sidebar-collapsed=true] .srb-account-controls .srb-bell { order:-1; }
+/* Figma 286:469–477: workspace session typography shares the measured navigation baseline. */
+[data-dsh-sidebar-root] .YDXeBa_title { font-size:14px; line-height:21px; }
+[data-dsh-sidebar-root] .YDXeBa_time { font-size:11px; line-height:17px; }
+
+/* Figma 361:5988/5989: preserve the source texture rotation and crop before the glass layer. */
+.t8lSSG_panel { background:url('/figma-glass-light-base.png') right -12px top -12px/1088px 880px no-repeat; overflow:clip; }
+.t8lSSG_panel:before { inset:auto; left:-760px; top:-140px; width:1136px; height:1136px; border-radius:0; transform:rotate(90deg); background:url('/figma-glass-light-mesh.png') center/contain no-repeat; }
+[data-ds-dark-theme] .t8lSSG_panel { background-image:url('/figma-glass-dark-base.png'); }
+[data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background:url('/figma-glass-dark-overlay.png') -753px -133px/1122px 1122px no-repeat, url('/figma-glass-dark-mesh.png') -793px -173px/1202px 1202px no-repeat; }
+.t8lSSG_panel .t8lSSG_panelResize { left:0; width:6px; }

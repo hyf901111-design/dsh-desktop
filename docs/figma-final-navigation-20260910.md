@@ -16,7 +16,7 @@ Figma 文件 `Jkyr5rMvgM8GNH6E68xnqd`，页面 `111:683`，主画板 `284:396`�
 | 添加协作者 | 294:920、294:1376 | 520×334，14 垂直间距 |
 | 11 人成员浮层 | 305:568、305:614 | 340×524，内边距 16，行距 12，搜索 32，成员列表最高 328，成员行 48 |
 
-浮层与菜单浅色为 `#FCFCFC / 97%`、边界 `#DFE0E2 / 90%`；深色为 `#272727 / 97%`、边界 `#3D3D3D / 90%`。Figma 背景模糊半径 24，阴影 `(0,12,32,-6)`，浅色黑色 14%、深色 30%。弹窗圆角 14。界面字体为 Noto Sans SC；本模块未将组件 DINPro 规范误用到导航文案。
+浮层与菜单浅色为 `#FCFCFC / 97%`、边界 `#DFE0E2 / 90%`；深色为 `#272727 / 97%`、边界 `#3D3D3D / 90%`。Figma 背景模糊原始 radius 24 按设计上下文换算为 CSS `backdrop-filter: blur(12px)`；背景模糊采用原始 radius 的一半，阴影的 CSS blur 保持原始 radius，不混用两种规则。阴影 `(0,12,32,-6)`，浅色黑色 14%、深色 30%。弹窗圆角 14。界面字体为 Noto Sans SC；本模块未将组件 DINPro 规范误用到导航文案。
 
 ## 已实现
 
@@ -38,7 +38,7 @@ Figma 文件 `Jkyr5rMvgM8GNH6E68xnqd`，页面 `111:683`，主画板 `284:396`�
 
 ## 视觉证据与边界
 
-浏览器直接 bundle 当前生产 React/DOM 组件与真实样式；只将服务层替换为测试数据，用于设计对照，不替代实际产品实现。每次调整后重新运行并截图，确认 Noto Sans SC 已加载、`backdrop-filter: blur(24px)`、成员区域实际产生滚动、页面无异常。CDP `CSS.getPlatformFontsForNode` 对弹窗中文标题返回 `NotoSansSC-Thin_Medium`、`isCustomFont: true`、4 个实际字形，确认使用已加载的 Noto 可变字体，而非只检测 CSS 字体声明。
+浏览器直接 bundle 当前生产 React/DOM 组件与真实样式；只将服务层替换为测试数据，用于设计对照，不替代实际产品实现。每次调整后重新运行并截图，确认 Noto Sans SC 已加载、`backdrop-filter: blur(12px)`、成员区域实际产生滚动、页面无异常。CDP `CSS.getPlatformFontsForNode` 对弹窗中文标题返回 `NotoSansSC-Thin_Medium`、`isCustomFont: true`、4 个实际字形，确认使用已加载的 Noto 可变字体，而非只检测 CSS 字体声明。
 
 输出：`output/playwright/figma-final-navigation/`
 
