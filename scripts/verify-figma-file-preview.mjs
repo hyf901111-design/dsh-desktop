@@ -1,20 +1,23 @@
 // Production Research frame/readers with controlled local documents and bridge replies.
 // No application build, real attachment authorization, account, or external request.
 import { build } from 'esbuild'
+import { createRequire } from 'node:module'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join } from 'node:path'
 import assert from 'node:assert/strict'
 import { patchFigmaFilePreview } from './lib/figma-file-preview-client.mjs'
 
-const interactionOnly = process.argv.includes('--interaction-only')
-const root = process.cwd(), out = join(root, 'output/figma-file-preview-20260910', ...(interactionOnly ? ['reader-interaction'] : []))
+const electronReader = process.argv.includes('--electron-reader')
+const crossOriginReader = process.argv.includes('--cross-origin-reader') || electronReader
+const interactionOnly = process.argv.includes('--interaction-only') || crossOriginReader
+const root = process.cwd(), out = join(root, 'output/figma-file-preview-20260910', ...(electronReader ? ['reader-electron-focus'] : crossOriginReader ? ['reader-cross-origin-focus'] : interactionOnly ? ['reader-interaction'] : []))
 const clientSource = patchFigmaFilePreview(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
 const entry = String.raw`
 import React from 'react';import {MarkdownText} from '@deepseek-ai/dsh-client-ui-primitives';import * as jsx from 'react/jsx-runtime';import * as reactDOM from 'react-dom';import {createRoot} from 'react-dom/client';
 function fake(){let value;value=new Proxy(function(){},{get:()=>value,apply:()=>value,construct:()=>({})});return value}
 const root=createRoot(document.getElementById('host'));let client,current;
-window.requests=[];window.submitted=[];window.dshDesktop={researchPreview:{restore:async request=>{window.requests.push(request);await new Promise(resolve=>setTimeout(resolve,current.delay??80));return current.fail?null:{authorizationId:request.authorizationId,capabilityToken:'local-fixture',url:location.origin+'/document/'+current.format}},release:()=>{}},researchLinkFrame:{authorize:async request=>{window.requests.push(request);await new Promise(resolve=>setTimeout(resolve,current.delay??80));return current.fail?null:{url:request.url,frameName:'sherlock-research-link-'+('a'.repeat(32))}},release:()=>{},inspect:async()=>({scrollWidth:1800,clientWidth:320})}};
+window.requests=[];window.submitted=[];window.dshDesktop={researchPreview:{restore:async request=>{window.requests.push(request);await new Promise(resolve=>setTimeout(resolve,current.delay??80));return current.fail?null:{authorizationId:request.authorizationId,capabilityToken:'local-fixture',url:(current.format==='html'&&window.crossOriginReader?location.origin.replace('127.0.0.1','reader.localhost'):location.origin)+'/document/'+current.format}},release:()=>{}},researchLinkFrame:{authorize:async request=>{window.requests.push(request);await new Promise(resolve=>setTimeout(resolve,current.delay??80));return current.fail?null:{url:request.url,frameName:'sherlock-research-link-'+('a'.repeat(32))}},release:()=>{},inspect:async()=>({scrollWidth:1800,clientWidth:320})}};
 function render(){root.render(React.createElement(current.node.kind?client.ResearchCanvasArtifactCard:client.ResearchCanvasFileCard,{key:current.node.id,node:current.node,sessionId:'file-visual-qa',visible:true,onNaturalSize:(w,h)=>{const next=client.researchPdfGeometryForPage(current.node,w,h);if(next){current.node={...current.node,...next};render()}},onSubmitContainer:(node,prompt)=>window.submitted.push({id:node.id,prompt}),onSetContainerRefresh:(node,minutes)=>{current.node={...current.node,refreshMinutes:minutes};render()},onFrameAction:()=>{}}))}
 window.showFile=(format,options={})=>{const id='local-'+Date.now()+'-'+Math.random();const isWeb=format==='web';current={format,fail:!!options.fail,delay:options.delay,node:{id,name:'指数研究报告.'+format,displayName:'指数研究报告',source:'computer',authorizationId:'local-fixture-authorization',contentType:format==='txt'?'text/plain':format==='md'?'text/markdown':format==='pdf'?'application/pdf':format==='html'?'text/html':'application/octet-stream',x:350,y:260,...(isWeb?{kind:'web-link',messageId:id,title:'市场概览与成交结构分析',url:location.origin+'/document/web',excerpt:'近期走势与成交结构。关注核心指标、历史变化和数据明细。',width:656,height:220}:{}),...options.node}};render();return id};
 window.__ModuleLoader__={load:descriptor=>{client=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?reactDOM:id==='@deepseek-ai/dsh-client-ui-primitives'?{MarkdownText}:fake());window.showFile('pdf')}};
@@ -44,18 +47,27 @@ const server = createServer(async (req, res) => {
     else if (path === '/client.js') { res.setHeader('Content-Type', 'application/javascript'); res.end(clientSource) }
     else if (path === '/document/pdf') { res.setHeader('Content-Type', 'application/pdf'); res.end(samplePdf()) }
     else if (path === '/document/events.js') { res.setHeader('Content-Type', 'application/javascript'); res.end("document.getElementById('count').addEventListener('click',function(){this.textContent=Number(this.textContent)+1})") }
-    else if (path === '/document/html' || path === '/document/web') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'"); res.end(webDocument) }
+    else if (path === '/document/html' || path === '/document/web') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'unsafe-inline'; frame-ancestors http://127.0.0.1:*"); res.end(webDocument) }
     else if (path === '/document/txt' || path === '/document/md') { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.end(Array.from({ length: 80 }, (_, index) => `${index + 1}. 第 ${index + 1} 条：${paragraph}`).join('\n')) }
     else if (path.startsWith('/sherlock-pdfjs/') && !path.includes('..')) { res.setHeader('Content-Type', path.endsWith('.js') ? 'application/javascript' : 'application/octet-stream'); res.end(await readFile(join(root, 'node_modules/@deepseek-ai/dsh-web-frontend/dist', path))) }
     else if (path === '/fonts/NotoSansSC.woff2') { res.setHeader('Content-Type', 'font/woff2'); res.end(await readFile(join(root, 'build/fonts/NotoSansSC.woff2'))) }
-    else if (path === '/') res.end(`<!doctype html><meta charset="utf-8"><style>@font-face{font-family:'Noto Sans SC';src:url('/fonts/NotoSansSC.woff2');font-weight:100 900}body{margin:0;background:#eee}body[data-ds-dark-theme]{background:#242424}#host{height:900px;position:relative}</style><link rel="stylesheet" href="/harness.css"><main id="host"></main><script src="/harness.js"></script><script src="/client.js"></script>`)
+    else if (path === '/') res.end(`<!doctype html><meta charset="utf-8"><style>@font-face{font-family:'Noto Sans SC';src:url('/fonts/NotoSansSC.woff2');font-weight:100 900}body{margin:0;background:#eee}body[data-ds-dark-theme]{background:#242424}#host{height:900px;position:relative}</style><link rel="stylesheet" href="/harness.css"><main id="host"></main><script>window.crossOriginReader=${crossOriginReader}</script><script src="/harness.js"></script><script src="/client.js"></script>`)
     else { res.statusCode = 404; res.end() }
   } catch (error) { res.statusCode = 500; res.end(String(error)) }
 })
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
 const playwright = await import(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright')
-const browser = await (playwright.chromium ?? playwright.default.chromium).launch(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {})
-const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+await mkdir(out, { recursive: true })
+let browser, page
+if (electronReader) {
+  const bootstrap = join(out, 'electron-reader-harness.cjs')
+  await writeFile(bootstrap, `const {app,BrowserWindow}=require('electron');const path=require('node:path');app.setPath('userData',path.join(require('node:os').tmpdir(),'odyssey-reader-qa-'+process.pid));app.commandLine.appendSwitch('site-per-process');app.commandLine.appendSwitch('host-resolver-rules','MAP reader.localhost 127.0.0.1');app.whenReady().then(()=>{const w=new BrowserWindow({width:1380,height:900,useContentSize:true,show:false,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});w.loadURL(process.env.EWORK_READER_TEST_URL)});app.on('window-all-closed',()=>app.quit());`)
+  browser = await (playwright._electron ?? playwright.default._electron).launch({ executablePath: createRequire(import.meta.url)('electron'), args: [bootstrap], env: {...process.env,EWORK_READER_TEST_URL:`http://127.0.0.1:${server.address().port}`} })
+  page = await browser.firstWindow()
+} else {
+  browser = await (playwright.chromium ?? playwright.default.chromium).launch({ ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}), ...(crossOriginReader ? { args: ['--site-per-process', '--host-resolver-rules=MAP reader.localhost 127.0.0.1'] } : {}) })
+  page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+}
 const errors = []; page.on('pageerror', error => errors.push(error.message))
 const metrics = [], readers = [], fonts = []
 const cdp = await page.context().newCDPSession(page); await cdp.send('DOM.enable'); await cdp.send('CSS.enable')
@@ -77,7 +89,7 @@ async function snapshot(name) {
   const value = await page.locator('[data-research-file-presentation]').evaluate(element => {
     const entry = element.querySelector('[data-research-file-entry]'), title = element.querySelector('.rScV5Q_nodeTitleText'), box = element.getBoundingClientRect(), label = title.getBoundingClientRect()
     const style = getComputedStyle(element), actions = getComputedStyle(element.querySelector('.rScV5Q_nodeTitleActions'));
-    return { material: { background: style.backgroundColor, borderColor: style.borderColor, radius: style.borderRadius, shadow: style.boxShadow }, actionsOpacity: actions.opacity, active: document.activeElement?.outerHTML?.slice(0, 240), hovered: element.matches(':hover'), focusWithin: element.matches(':focus-within'), open: element.open, width: box.width, height: box.height, entryClient: [entry.clientWidth, entry.clientHeight], entryScroll: [entry.scrollWidth, entry.scrollHeight], title: { x: label.x - box.x, y: label.y - box.y, font: getComputedStyle(title).font }, text: entry.innerText, visibleReaders: [...element.querySelectorAll('iframe,[data-research-pdf-scroll],[data-research-text-preview]')].filter(node => node.getClientRects().length > 0).length }
+    return { material: { background: style.backgroundColor, borderColor: style.borderColor, radius: style.borderRadius, shadow: style.boxShadow }, actionsOpacity: actions.opacity, active: document.activeElement?.outerHTML?.slice(0, 240), hovered: element.matches(':hover'), focusWithin: element.matches(':focus-within'), open: element.open, width: box.width, height: box.height, entryClient: [entry.clientWidth, entry.clientHeight], entryScroll: [entry.scrollWidth, entry.scrollHeight], title: { x: label.x - box.x, y: label.y - box.y, font: getComputedStyle(title).font }, text: entry.innerText, visibleReaders: [...element.querySelectorAll('iframe,[data-research-pdf-scroll],[data-research-text-preview]')].filter(node => node.getClientRects().length > 0 && getComputedStyle(node).visibility !== 'hidden').length }
   })
   assert.deepEqual(value.entryScroll, value.entryClient, name + ' closed entry must fit semantically')
   assert.equal(value.visibleReaders, 0)
@@ -101,8 +113,8 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`)
   await page.locator('[data-research-file-entry]').waitFor()
   if (interactionOnly) {
-    const interactionMetrics = []
-    for (const format of ['html', 'pdf', 'web', 'txt', 'md']) {
+    const interactionMetrics = []; let focusLifecycle
+    for (const format of (crossOriginReader ? ['html'] : ['html', 'pdf', 'web', 'txt', 'md'])) {
       await showFile(format); await toggleReader()
       const iframeSelector = format === 'html' ? '[data-research-html-preview]' : format === 'web' ? '[data-research-web-frame]' : null
       const scrollSelector = format === 'pdf' ? '[data-research-pdf-scroll]' : format === 'txt' ? '[data-research-text-preview]' : '[data-research-markdown-scroll]'
@@ -120,6 +132,7 @@ try {
       if (frame) {
         await frame.locator('input').click(); await frame.locator('input').fill('关闭后保留87.5%')
         await frame.locator('#count').click(); assert.equal(await frame.locator('#count').innerText(), '1')
+        if (crossOriginReader) await frame.locator('input').click()
       }
       const scrollState = async () => frame
         ? await frame.locator('html').evaluate(e => { const s = e.ownerDocument.scrollingElement; return { top: s.scrollTop, client: s.clientHeight, height: s.scrollHeight } })
@@ -134,14 +147,30 @@ try {
         assert.equal(endVisible, true)
       }
       await page.screenshot({ path: join(out, format + '-reader-wheel-end.png') })
-      await toggleReader(); await toggleReader()
+      if (crossOriginReader) {
+        const frameState = () => frame.locator('html').evaluate(e => ({active:e.ownerDocument.activeElement?.tagName,top:e.ownerDocument.scrollingElement.scrollTop,width:innerWidth,height:innerHeight}))
+        const beforeClose = await frameState()
+        await page.locator('[data-research-container-expand]').dispatchEvent('click'); await page.waitForTimeout(1800)
+        const hidden = await frameState()
+        const clip = await page.locator('[data-research-original-reader]').evaluate(e => ({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height,inert:e.hasAttribute('inert'),ariaHidden:e.getAttribute('aria-hidden'),visibility:getComputedStyle(e).visibility,bodyClient:[e.parentElement.parentElement.clientWidth,e.parentElement.parentElement.clientHeight],bodyScroll:[e.parentElement.parentElement.scrollWidth,e.parentElement.parentElement.scrollHeight]}))
+        assert.equal(clip.width, 0); assert.equal(clip.height, 0); assert.equal(clip.inert, true); assert.equal(clip.ariaHidden, 'true'); assert.equal(clip.visibility, 'hidden'); assert.deepEqual(clip.bodyScroll, clip.bodyClient)
+        const {root:domRoot}=await cdp.send('DOM.getDocument'),{nodeId}=await cdp.send('DOM.querySelector',{nodeId:domRoot.nodeId,selector:iframeSelector})
+        const accessibility = await cdp.send('Accessibility.getPartialAXTree',{nodeId,fetchRelatives:false})
+        assert(accessibility.nodes.length > 0 && accessibility.nodes.every(node=>node.ignored), 'closed reader must stay excluded from the accessibility tree')
+        assert.equal(hidden.width,beforeClose.width); assert.equal(hidden.height,beforeClose.height); assert.equal(hidden.top,beforeClose.top)
+        await page.locator('[data-research-container-expand]').dispatchEvent('click'); await page.waitForTimeout(300)
+        focusLifecycle={beforeClose,hidden,reopened:await scrollState(),clip,closedReaderIgnoredByAX:true,targets:(await cdp.send('Target.getTargets')).targetInfos.filter(t=>t.type==='iframe').map(t=>({type:t.type,url:t.url}))}
+        assert(focusLifecycle.targets.some(t=>t.url.includes('reader.localhost')), 'the test must use an actual cross-site OOPIF')
+        console.log(JSON.stringify(focusLifecycle))
+      } else { await toggleReader(); await toggleReader() }
       const reopened = await scrollState(); assert.equal(reopened.top, end.top)
+      if (crossOriginReader) await page.screenshot({ path: join(out, format + '-reader-reopened-end.png') })
       if (frame) { assert.equal(await frame.locator('input').inputValue(), '关闭后保留87.5%'); assert.equal(await frame.locator('#count').innerText(), '1') }
       interactionMetrics.push({ format, hit, end, reopened, physicalWheelReachedEnd: true, interactionPreserved: true })
       await toggleReader(); await page.evaluate(() => document.getElementById('host').removeAttribute('data-command-pressed'))
     }
     assert.deepEqual(errors, [])
-    await writeFile(join(out, 'results.json'), JSON.stringify({ evidence: 'controlled Chromium; production frame/CSS and original readers; real pointer and wheel under retained canvas command state; local HTML uses external script under CSP excluding inline scripts', interactionMetrics, errors }, null, 2))
+    await writeFile(join(out, 'results.json'), JSON.stringify({ evidence: (electronReader ? 'isolated Electron; cross-site OOPIF' : 'controlled Chromium') + '; production frame/CSS and original readers; real pointer and wheel under retained canvas command state; local HTML uses external script under CSP excluding inline scripts', runtime:electronReader?'isolated Electron '+createRequire(import.meta.url)('electron/package.json').version:'Chromium',focusLifecycle,interactionMetrics,errors }, null, 2))
     console.log(JSON.stringify({ passed: true, output: out, readers: interactionMetrics.length, physicalWheelReachedEnd: true, errors }, null, 2))
   } else {
   for (const theme of ['light', 'dark']) {

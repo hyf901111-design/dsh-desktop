@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-const iconData = Object.fromEntries(['branch','chevron','summary','plus','check','more'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/'+name+'.svg',import.meta.url)).toString('base64')]));
+const iconData = Object.fromEntries(['branch','chevron','summary','plus','check','more','global-link-light','global-container-light','global-voice-light','global-link-dark','global-container-dark','global-voice-dark'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/'+name+'.svg',import.meta.url)).toString('base64')]));
 const bentoSource = readFileSync(new URL('../../packages/dsh-research-task-runtime/bento-layout.js', import.meta.url), 'utf8').replace(/^export /gm, '').replace(/^\/\/[^\n]*\n/,'')
 function exact(source, anchor, replacement) {
   const start = source.indexOf(anchor)
@@ -11,7 +11,59 @@ function block(source, startAnchor, endAnchor, replacement) {
   if (start < 0 || end < start) throw Error('Figma canvas block missing: ' + startAnchor)
   return source.slice(0, start) + replacement + '\n' + source.slice(end)
 }
+// Figma 361:5855 / 361:6148: short round-capped 0.07px lines, not radial fills.
+// Cache one row and reuse it; panning updates only a group transform.
+export function researchCanvasDotMetrics(canvasSize, viewport) {
+  const scale = Number.isFinite(viewport.scale) && viewport.scale > 0 ? viewport.scale : 1;
+  const step = 13.71 * scale;
+  const phase = (value, offset) => ((value + offset * scale) % step + step) % step - step;
+  return { scale, columns: Math.ceil(Math.max(0, canvasSize.width || 0) / step) + 2,
+    rows: Math.ceil(Math.max(0, canvasSize.height || 0) / step) + 2,
+    x: phase(viewport.x || 0, 12.5499), y: phase(viewport.y || 0, 7.6871) };
+}
+export function researchCanvasDotRowPath(columns) {
+  return Array.from({ length: columns }, (_, column) => 'M' + (6.855 + column * 13.71).toFixed(5) + ' 6.855h.07').join('');
+}
+function ResearchCanvasDotGrid({ viewport, canvasSize }) {
+  const id = 'odyssey-dots-' + (0, react.useId)().replaceAll(':', '');
+  const geometry = researchCanvasDotMetrics(canvasSize, viewport);
+  const row = (0, react.useMemo)(() => researchCanvasDotRowPath(geometry.columns), [geometry.columns]);
+  const rows = (0, react.useMemo)(() => Array.from({ length: geometry.rows }, (_, index) =>
+    (0, react_jsx_runtime.jsx)('use', { href: '#' + id, y: index * 13.71 }, index)), [geometry.rows, id]);
+  return (0, react_jsx_runtime.jsxs)('svg', { className: 'odyssey-canvas-dots', 'aria-hidden': true,
+    'data-research-dot-grid': '', focusable: false, children: [
+      (0, react_jsx_runtime.jsx)('defs', { children: (0, react_jsx_runtime.jsx)('path', { id, d: row }) }),
+      (0, react_jsx_runtime.jsx)('g', { transform: 'translate(' + geometry.x + ' ' + geometry.y + ') scale(' + geometry.scale + ')', fill: 'none', stroke: 'currentColor', strokeWidth: 1.35, strokeLinecap: 'round', children: rows })
+    ] });
+}
+function patchCanvasGraphicPrimitives(source) {
+  const definitions = researchCanvasDotMetrics.toString().replace('export ', '') + '\n' + researchCanvasDotRowPath.toString().replace('export ', '') + '\n' + ResearchCanvasDotGrid.toString();
+  if (source.includes('function researchCanvasDotMetrics(')) source = block(source, 'function researchCanvasDotMetrics(', 'function ResearchCanvas({', definitions);
+  else source = exact(source, 'function ResearchCanvas({', definitions + '\nfunction ResearchCanvas({');
+  if (!source.includes('children: [(0,react_jsx_runtime.jsx)(ResearchCanvasDotGrid,')) {
+    const start = source.indexOf('"data-canvas-scale": viewport.scale.toFixed(3)');
+    const children = source.indexOf('children: [', start);
+    if (start < 0 || children < start || children - start > 600) throw Error('Figma dot grid children anchor missing');
+    source = source.slice(0, children) + source.slice(children).replace('children: [', 'children: [(0,react_jsx_runtime.jsx)(ResearchCanvasDotGrid,{viewport,canvasSize:snapshot.canvasSize}),');
+  }
+  for (const [label, key] of [['链接', 'link'], ['容器', 'container']]) {
+    // Match the single existing one-line icon immediately before this fixed label.
+    const line = source.split('\n').find(line => line.includes('children: [(0, react_jsx_runtime.jsx)("svg",') && line.includes('children: "' + label + '"'));
+    if (line) {
+      const iconStart = line.indexOf('(0, react_jsx_runtime.jsx)("svg",');
+      const iconEnd = line.indexOf(', (0, react_jsx_runtime.jsx)("span", { children: "' + label + '" })', iconStart);
+      if (iconEnd < 0) throw Error('Figma toolbar icon boundary missing: ' + key);
+      source = exact(source, line, line.slice(0, iconStart) + "(0,react_jsx_runtime.jsx)('span',{className:'odyssey-global-icon odyssey-global-" + key + "','aria-hidden':true})" + line.slice(iconEnd));
+    } else if (!source.includes("className:'odyssey-global-icon odyssey-global-" + key + "'")) throw Error('Figma toolbar icon anchor missing: ' + key);
+  }
+  const voiceAnchor = 'icon("M6.5 5a2.5 2.5 0 0 1 5 0v4a2.5 2.5 0 0 1-5 0V5ZM4.5 8.5V9a4.5 4.5 0 0 0 9 0v-.5M9 13.5V16M6.5 16h5")';
+  if (source.includes(voiceAnchor)) source = exact(source, voiceAnchor, "(0,react_jsx_runtime.jsx)('span',{className:'odyssey-global-icon odyssey-global-voice','aria-hidden':true})");
+  else if (!source.includes("className:'odyssey-global-icon odyssey-global-voice'")) throw Error('Figma toolbar icon anchor missing: voice');
+  return source;
+}
+
 export function patchFigmaFinalCanvas(source) {
+  source=patchCanvasGraphicPrimitives(source);
   for(const [icon,key] of [['IconBranchOutline16','branch'],['IconChevronDownOutline14','chevron'],['IconListPenOutline16','summary']]) {
     const old='(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.'+icon+', { size: '+(key==='chevron'?14:16)+' })';
     const start=source.indexOf('\"aria-label\": \"选中组件操作\"');
@@ -355,7 +407,12 @@ const responsiveSource = `function ResearchContainerContent(props) {
 }`
 
 export const canvasCss = `
-.rScV5Q_root{--sherlock-research-dot:rgba(139,139,139,.4)!important;background-image:radial-gradient(circle,var(--sherlock-research-dot) .675px,transparent .8px)!important}body[data-ds-dark-theme] .rScV5Q_root{--sherlock-research-dot:rgba(184,184,184,.46)!important}
+.rScV5Q_root{--sherlock-research-dot:rgba(139,139,139,.4)!important;background-image:none!important}body[data-ds-dark-theme] .rScV5Q_root{--sherlock-research-dot:rgba(184,184,184,.46)!important}
+.rScV5Q_root>.odyssey-canvas-dots{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;color:var(--sherlock-research-dot)}
+.odyssey-global-icon{display:inline-block;width:16px;height:16px;flex:0 0 16px;background:center/16px 16px no-repeat}
+.odyssey-global-link{background-image:url('${iconData['global-link-light']}')}body[data-ds-dark-theme] .odyssey-global-link{background-image:url('${iconData['global-link-dark']}')}
+.odyssey-global-container{background-image:url('${iconData['global-container-light']}')}body[data-ds-dark-theme] .odyssey-global-container{background-image:url('${iconData['global-container-dark']}')}
+.odyssey-global-voice{background-image:url('${iconData['global-voice-light']}')}body[data-ds-dark-theme] .odyssey-global-voice{background-image:url('${iconData['global-voice-dark']}')}
 .rScV5Q_globalToolbar[data-research-global-toolbar]{box-sizing:border-box;width:272px;height:48px;bottom:24px;padding:6px;gap:4px;border:0;outline:1px solid #0000001a;outline-offset:-1px;border-radius:14px;background:#ffffffeb;backdrop-filter:blur(12px);box-shadow:0 6px 20px #0000001a}
 .rScV5Q_globalToolbar[data-research-global-toolbar]>button,.rScV5Q_globalToolbar[data-research-global-toolbar] .rScV5Q_globalToolSlot>button{width:84px;height:36px;padding:0;justify-content:center;gap:8px;border-radius:9px;background:#00000008;font:13px/20px 'Noto Sans SC',sans-serif;color:#333}
 body[data-ds-dark-theme] .rScV5Q_globalToolbar[data-research-global-toolbar]{background:#242424db;outline-color:#ffffff1f;box-shadow:0 6px 20px #0000003d}body[data-ds-dark-theme] .rScV5Q_globalToolbar[data-research-global-toolbar] button{background:#ffffff08;color:#dedede}

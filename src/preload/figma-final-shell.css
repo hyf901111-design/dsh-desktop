@@ -148,3 +148,9 @@ body[data-ds-dark-theme] .sRp_messages .gdEzaW_bubble { background:rgb(44.72 44.
 .sRp_messages .gdEzaW_bubble p { margin:0; font:inherit; }
 .sRp_messages [class^="_markdown_"] { font:400 14px/24px var(--odyssey-font-ui) !important; letter-spacing:0; }
 .t8lSSG_panel .t8lSSG_tabBarPlus>svg { width:16px; height:16px; }
+
+/* Figma 44 / 361:6013, 6018, 6307, 6312: only the two panel toggle glyphs. */
+.t8lSSG_toggleButton:not(:hover):not(:focus-visible)>[data-odyssey-panel-toggle] { color:#777; }
+.t8lSSG_toggleButton:not(:hover):not(:focus-visible)>[data-odyssey-panel-active="true"] { color:#697078; }
+[data-ds-dark-theme] .t8lSSG_toggleButton:not(:hover):not(:focus-visible)>[data-odyssey-panel-toggle] { color:#a0a0a0; }
+[data-ds-dark-theme] .t8lSSG_toggleButton:not(:hover):not(:focus-visible)>[data-odyssey-panel-active="true"] { color:#b9b9b9; }

@@ -60,8 +60,35 @@ function patchTabBarMenuLayout(source) {
  * by Research mode. The transform is deliberately exact so a plugin upgrade
  * fails packaging instead of silently shipping a half-compatible sidebar.
  */
+function patchPanelToggleGlyphs(source) {
+  const marker = '/* sherlock:figma-panel-toggle-glyphs:v1 */'
+  if (source.includes(marker)) return source
+  const outer = 'M12 2.66602H4C2.89543 2.66602 2 3.56145 2 4.66602V11.3327C2 12.4373 2.89543 13.3327 4 13.3327H12C13.1046 13.3327 14 12.4373 14 11.3327V4.66602C14 3.56145 13.1046 2.66602 12 2.66602Z'
+  for (const [name, direction, divider] of [
+    ['IconPanelRightOutline16', 'right', 'M10.6666 2.66602V13.3327'],
+    ['IconPanelBottomOutline16', 'bottom', 'M2 10H14']
+  ]) {
+    const pattern = new RegExp('const ' + name + ' = [\\s\\S]*?\\n\\t\\t\\}\\);')
+    if ((source.match(new RegExp('const ' + name + ' = ', 'g')) || []).length !== 1 || !pattern.test(source)) throw new Error('Unable to patch Figma panel glyph ' + name)
+    source = source.replace(pattern, `const ${name} = ({ size = 16, className, active = false }) => (0, react_jsx_runtime.jsxs)("svg", {
+      width: size, height: size, className, viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg",
+      "data-odyssey-panel-toggle": "${direction}", "data-odyssey-panel-active": active,
+      children: [${[outer,divider].map(d => `(0, react_jsx_runtime.jsx)("path", {d: ${JSON.stringify(d)}, stroke: "currentColor", strokeWidth: "1", strokeLinecap: "round", strokeLinejoin: "round"})`).join(',')}]
+    });`)
+  }
+  for (const [icon, field] of [['IconPanelRightOutline16', 'panelOpen'], ['IconPanelBottomOutline16', 'bottomOpen']]) {
+    const anchor = '(0, react_jsx_runtime.jsx)(' + icon + ', {})'
+    if (source.split(anchor).length !== 3) throw new Error('Unable to patch Figma panel glyph state ' + icon)
+    const last = source.lastIndexOf(anchor)
+    source = source.slice(0, last) + anchor.replace(', {})', ', { active: state.' + field + ' })') + source.slice(last + anchor.length)
+  }
+  source = source.replace('a frame with a filled strip\n\t\t* along its RIGHT edge, in the app\'s outline style (1.5px stroke,\n\t\t* currentColor).', 'Figma 44 frame with a right divider, 1px round stroke.\n\t\t* Original SVG: docs/figma-panel-icon-evidence/361-6018.svg.')
+  source = source.replace('a frame with a filled strip\n\t\t* along its BOTTOM edge, in the app\'s outline style.', 'Figma 44 frame with a bottom divider, 1px round stroke.\n\t\t* Original SVG: docs/figma-panel-icon-evidence/361-6013.svg.')
+  return marker + '\n' + source
+}
+
 export function patchBetterSidebarClient(source) {
-  let next = source
+  let next = patchPanelToggleGlyphs(source)
 
   if (!next.includes(RESEARCH_GENERATION_FOCUS_PATCH_MARKER)) {
     next = replaceExact(next,
