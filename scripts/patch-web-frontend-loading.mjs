@@ -1,5 +1,6 @@
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels } from './lib/figma-settings-client.mjs'
+import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
 import { installResearchBoardClientPatches } from './lib/patch-research-board-client.mjs'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -99,11 +100,14 @@ patchStyles(asset('.css'))
 
 await installResearchBoardClientPatches()
 
+const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
+writeFileSync(conversationPath, patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8')))
+
 const layoutPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js')
 writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')))
 
 for (const [name, patch] of [
-  ['dsh-client-ui-settings-general', patchFigmaSettingsGeneral],
+  ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', patchFigmaSettingsModels]
 ]) {
   const clientPath = join(process.cwd(), 'node_modules', '@deepseek-ai', name, 'lib/client.js')

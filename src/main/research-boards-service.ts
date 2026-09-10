@@ -1610,6 +1610,16 @@ export class ResearchBoardsService {
       if (this.flushing === work) this.flushing = undefined
     }
   }
+  async prepareForUpdateRestart(): Promise<void> {
+    if (this.stopped) throw Error('研究服务已停止，无法确认保存状态。')
+    if (!this.accountView.user) return
+    const ctx = this.context()
+    await this.flushAuxiliary()
+    await this.flush()
+    this.check(ctx)
+    const account = this.store.account(ctx.userId)
+    if (account.pending.length || account.auxiliary.length) throw Error('研究更改尚未确认，请恢复连接后重试更新。')
+  }
   private async acknowledge(
     op: PendingOperation,
     ctx: { generation: number; userId: string }

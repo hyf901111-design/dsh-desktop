@@ -75,3 +75,33 @@ it('keeps the original app running when the rename guard cannot start', async ()
   expect(updater.quitAndInstall).not.toHaveBeenCalled()
   expect(updater.listenerCount('update-downloaded')).toBe(0)
 })
+it('does not restart after a native error while asynchronous research saving is pending', async () => {
+  const updater = native(), cancel = vi.fn()
+  let finish!: () => void
+  const saved = new Promise<void>(resolve => { finish = resolve })
+  const result = expect(prepareNativeMacInstall(updater, 120_000, async () => { await saved; return cancel })).rejects.toThrow('native failed')
+  updater.emit('update-downloaded')
+  expect(() => updater.emit('error', Error('native failed'))).not.toThrow()
+  await result
+  finish(); await Promise.resolve(); await Promise.resolve()
+  expect(updater.quitAndInstall).not.toHaveBeenCalled()
+  expect(cancel).toHaveBeenCalledOnce()
+})
+it('aborts the pending preparation before an expired attempt can record a restart', async () => {
+  vi.useFakeTimers()
+  const updater = native(), recordRestart = vi.fn()
+  let finish!: () => void
+  const saved = new Promise<void>(resolve => { finish = resolve })
+  const result = expect(prepareNativeMacInstall(updater, 100, async signal => {
+    await saved
+    signal.throwIfAborted()
+    recordRestart()
+    return undefined
+  })).rejects.toThrow('超时')
+  updater.emit('update-downloaded')
+  await vi.advanceTimersByTimeAsync(100)
+  await result
+  finish(); await Promise.resolve(); await Promise.resolve()
+  expect(recordRestart).not.toHaveBeenCalled()
+  expect(updater.quitAndInstall).not.toHaveBeenCalled()
+})

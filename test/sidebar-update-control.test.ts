@@ -15,6 +15,21 @@ const available:UpdateStatus = {phase:'available',currentVersion:'0.9.5',availab
 const panel = (d:Document) => d.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
 
 describe('Figma sidebar update states', () => {
+  it.each([['preparing','正在准备安装'],['saving','正在保存研究状态'],['restarting','正在重启应用']] as const)('shows the real %s stage without another action or fake percent', (installStage, title) => {
+    const {document,control}=fixture(); control.render({...available,phase:'installing',installStage})
+    expect(panel(document).textContent).toContain(title)
+    expect(panel(document).querySelector('button')).toBeNull()
+    expect(panel(document).querySelector('[role=progressbar]')).toBeNull()
+  })
+  it('acknowledges a verified post-restart completion without checking or downloading', () => {
+    const {document,control,callbacks}=fixture(); control.render({...available,phase:'updated',currentVersion:'0.9.6'})
+    expect(panel(document).hidden).toBe(false)
+    expect(panel(document).textContent).toContain('已更新至 0.9.6')
+    expect(panel(document).textContent).toContain('知道了')
+    panel(document).querySelector<HTMLButtonElement>('.ework-notice-actions button')!.click()
+    expect(panel(document).hidden).toBe(true)
+    expect(callbacks.download).not.toHaveBeenCalled();expect(callbacks.retry).not.toHaveBeenCalled()
+  })
   it('mounts once and keeps the compact footer control hidden in expanded navigation', () => {
     const {document,control}=fixture()
     expect(control.mount()).toBe(true);expect(control.mount()).toBe(true)

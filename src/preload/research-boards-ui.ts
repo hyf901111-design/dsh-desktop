@@ -165,6 +165,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         timer?: ReturnType<typeof setTimeout>
         text: string
         chain: Promise<unknown>
+        error?: unknown
       }
     >()
   const favoriteWatches = new Map<string, () => void>()
@@ -858,12 +859,14 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       text,
       clientMutationId: draft.id
     })
-    draft.chain = pending.then(
+    // Keep every already-started write in the drain, even if IPC replies arrive out of order.
+    draft.chain = Promise.all([draft.chain, pending]).then(
       () => {
+        draft.error = undefined
         if (generation === state.account.generation && draft.text === text)
           ownRecovery.delete(key)
       },
-      () => {}
+      (error) => { draft.error = error }
     )
   }
 
@@ -881,6 +884,36 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
     if (e.view.pendingCount) throw Error('画板更改尚未由云端确认')
     return e.view
+  }
+  let updateLocked = false, priorInert = false
+  const resumeAfterUpdate = () => {
+    if (updateLocked) doc.body.inert = priorInert
+    updateLocked = false
+  }
+  win.addEventListener('sherlock:boards:update-resume', resumeAfterUpdate)
+  cleanups.push(() => { resumeAfterUpdate(); win.removeEventListener('sherlock:boards:update-resume', resumeAfterUpdate) })
+  async function prepareForUpdate() {
+    if (disposed) throw Error('研究页面已关闭，无法保存。')
+    if (!updateLocked) { priorInert = doc.body.inert; doc.body.inert = true; updateLocked = true }
+    const generation = state.account.generation
+    try {
+      for (const id of Object.keys(deps.sessions.list.getSnapshot().byId)) {
+        const workspace = deps.researchWorkspaces.for(id)
+        if (workspace.isCollaborationGesture?.()) throw Error('请先完成当前拖动或缩放，再重试更新。')
+        if (isShared(id)) {
+          if (editors.get(id)?.view.permissions.edit) await flushCanvas(id)
+        } else {
+          if (typeof workspace.prepareForUpdate !== 'function') throw Error('研究保存入口尚未就绪，请稍后重试更新。')
+          await workspace.prepareForUpdate()
+        }
+      }
+      for (const draft of drafts.values()) {
+        let pending: Promise<unknown>
+        do { pending = draft.chain; await pending } while (pending !== draft.chain)
+        if (draft.error) throw Error('研究草稿保存失败，请稍后重试更新。')
+      }
+      if (disposed || generation !== state.account.generation) throw Error('研究账户或页面已改变，已停止自动重启。')
+    } catch (error) { resumeAfterUpdate(); throw error }
   }
   const generationFlights = new Map<string, { fingerprint: string; taskId?: string; promise: Promise<{ ok: boolean; taskId: string }> }>()
   function retainedResult(sessionId: string, nodeId: string) {
@@ -1102,9 +1135,13 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       !p ||
       typeof p.requestId !== 'string' ||
       p.requestId.length > 128 ||
-      !['open', 'login'].includes(p.action)
+      !['open', 'login', 'prepare-update'].includes(p.action)
     )
       return
+    if (p.action === 'prepare-update') {
+      void prepareForUpdate().then(() => response(p.requestId, true), (error) => response(p.requestId, false, error.message))
+      return
+    }
     if (p.action === 'login') {
       win.dispatchEvent(new win.CustomEvent('sherlock:account-open'))
       response(p.requestId, true)
@@ -1139,6 +1176,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     openBoard,
     submitShared,
     flushCanvas,
+    prepareForUpdate,
     generateShared,
     hasRetainedResult: (sessionId: string, nodeId: string) => !!retainedResult(sessionId, nodeId),
     applyRetainedResult,

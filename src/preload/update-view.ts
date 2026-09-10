@@ -7,9 +7,11 @@ export type UpdateAction =
   | { kind: 'download'; version: string }
   | { kind: 'progress'; percent: number }
   | { kind: 'verifying' }
+  | { kind: 'completed' }
   | { kind: 'retry'; message: string }
 
 export function updateAction(status: UpdateStatus): UpdateAction {
+  if (status.phase === 'updated') return { kind: 'completed' }
   if (status.phase === 'available' && status.availableVersion) {
     return { kind: 'download', version: status.availableVersion }
   }
@@ -50,11 +52,14 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
       return zh ? `正在下载更新 ${percent}%` : `Downloading update ${percent}%`
     }
     case 'installing':
+      if (status.installStage) { const copy = updateInstallCopy(status, locale); return `${copy.title} · ${copy.description}` }
       return zh ? '正在校验更新文件，完成后将自动重启' : 'Verifying update files; EWork Odyssey will restart automatically'
     case 'downloaded':
       return zh ? '正在校验更新文件，完成后将自动重启' : 'Verifying update files; EWork Odyssey will restart automatically'
     case 'up-to-date':
       return zh ? 'EWork Odyssey 已是最新版本' : 'EWork Odyssey is up to date'
+    case 'updated':
+      return zh ? `已更新至${version}，当前已是最新版本。` : `Updated to${version}. You are up to date.`
     case 'unsupported':
       return zh ? '当前版本不支持自动更新' : 'Automatic updates are unavailable in this build'
     case 'error':
@@ -70,4 +75,15 @@ export function updateTransferMessage(status: UpdateStatus): string {
   let text = `${mb(status.transferredBytes!)} / ${mb(status.totalBytes!)} MB`
   if (Number.isFinite(status.bytesPerSecond) && status.bytesPerSecond! > 0) text += ` · ${mb(status.bytesPerSecond!)} MB/s`
   return text
+}
+
+export function updateInstallCopy(status: UpdateStatus, locale: UpdateLocale): { title: string; description: string } {
+  const zh = locale === 'zh'
+  const stage = status.phase === 'installing' ? status.installStage : undefined
+  switch (stage) {
+    case 'preparing': return { title: zh ? '正在准备安装' : 'Preparing installation', description: zh ? '校验通过，随后自动重启。' : 'Verification passed. The app will restart automatically.' }
+    case 'saving': return { title: zh ? '正在保存研究状态' : 'Saving research state', description: zh ? '保存完成后将自动重启。' : 'The app will restart automatically after saving.' }
+    case 'restarting': return { title: zh ? '正在重启应用' : 'Restarting the app', description: zh ? '更新安装中，请稍候。' : 'Installing the update. Please wait.' }
+    default: return { title: zh ? '正在校验更新文件' : 'Verifying update files', description: zh ? '完成后将自动重启应用。' : 'The app will restart automatically.' }
+  }
 }

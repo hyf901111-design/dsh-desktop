@@ -5,6 +5,15 @@ import {
 } from '../src/main/update/update-state'
 
 describe('desktop update state', () => {
+  it('keeps observable installation stages and the failed target without inventing progress', () => {
+    let status = reduceUpdateStatus(initialUpdateStatus('1.0.0'), { type: 'downloaded', version: '1.1.0' })
+    for (const stage of ['preparing', 'saving', 'restarting'] as const) {
+      status = reduceUpdateStatus(status, { type: 'install', stage })
+      expect(status).toMatchObject({ phase: 'installing', installStage: stage, availableVersion: '1.1.0' })
+      expect(status.percent).toBeUndefined()
+    }
+    expect(reduceUpdateStatus(status, { type: 'error', message: '保存失败' })).toMatchObject({ phase: 'error', availableVersion: '1.1.0', message: '保存失败' })
+  })
   it('tracks an automatic download from discovery through completion', () => {
     let status = initialUpdateStatus('1.0.0')
     status = reduceUpdateStatus(status, { type: 'check', manual: false })

@@ -7,6 +7,7 @@ import settingsCss from './figma-settings.css?raw'
 import authCss from './figma-auth.css?raw'
 import authBackground from './figma-settings-assets/ancient-harbor.png?url&inline'
 import authClose from './figma-settings-assets/auth-close.svg?raw'
+import { createSettingsBackgroundController } from './settings-background'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   user?: Account | null
@@ -18,6 +19,7 @@ export function mountAccountUi(
   invoke: (action: string, input?: unknown) => Promise<Reply>,
   boards?: ResearchBoardsBridge
 ) {
+  const settingsBackground = createSettingsBackgroundController(document)
   installBoardUiStyles(document)
   const style = document.createElement('style')
   // Keep the settings shell below the shared portaled menus (z-index 1100).
@@ -310,28 +312,6 @@ export function mountAccountUi(
       const avatar = trigger?.querySelector('.sherlock-account-avatar')?.cloneNode(true)
       if (avatar) card.append(avatar)
       card.append(name)
-      const accountId = user.id
-      if (boards) {
-        const row = document.createElement('div'), id = document.createElement('span')
-        row.className = 'sherlock-account-id-row'
-        id.textContent = '正在获取用户 ID…'
-        let publicId: string | undefined
-        const copy = button('复制 ID', () => {
-          if (!publicId || user?.id !== accountId) return
-          void document.defaultView!.navigator.clipboard.writeText(publicId).then(()=>{copy.textContent='已复制';copy.setAttribute('aria-label','已复制 ID');setTimeout(()=>{if(copy.isConnected){copy.textContent='复制 ID';copy.setAttribute('aria-label','复制 ID')}},2000)}).catch(()=>{copy.textContent='复制失败，请重试'})
-        })
-        copy.disabled = true
-        row.append(id, copy)
-        card.append(row)
-        void boards.getSnapshot().then(snapshot=>{
-          if(!card.isConnected || user?.id!==accountId) return
-          const identity=snapshot.account.user
-          if(identity?.userId!==accountId){id.textContent='用户 ID 暂时不可用';return}
-          publicId=identity.publicId
-          id.textContent='ID '+publicIdLabel(publicId)
-          copy.disabled=false
-        }).catch(()=>{if(card.isConnected)id.textContent='用户 ID 暂时不可用'})
-      }
       const group = document.createElement('section')
       group.className = 'sherlock-settings-group'
       const heading = document.createElement('h2')
@@ -699,8 +679,9 @@ export function mountAccountUi(
   )
   const openFromBoards = () => open(true)
   document.defaultView?.addEventListener('sherlock:account-open', openFromBoards)
-  const observer = new MutationObserver(reconcile)
+  const observer = new MutationObserver(() => { settingsBackground.reconcile(); reconcile() })
   observer.observe(document.documentElement, { childList: true, subtree: true })
+  settingsBackground.reconcile()
   reconcile()
   void invoke('me')
     .then((reply) => {
@@ -711,6 +692,7 @@ export function mountAccountUi(
   return () => {
     authDialog?.close()
     observer.disconnect()
+    settingsBackground.dispose()
     closeMenu()
     style.remove()
     document.defaultView?.removeEventListener('sherlock:account-open', openFromBoards)

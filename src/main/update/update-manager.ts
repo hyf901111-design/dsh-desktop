@@ -1,5 +1,6 @@
 import { app, autoUpdater as nativeUpdater, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import { prepareNativeMacInstall } from './native-install'
+import { cancelUpdateRestartReceipt, consumeUpdateRestartReceipt, writeUpdateRestartReceipt } from './restart-receipt'
 import { armMacRenameRecovery, repairRenamedMacDock } from './mac-update-recovery'
 import electronUpdater from 'electron-updater'
 import type { UpdateStatus } from '../../shared/contracts'
@@ -35,6 +36,11 @@ let installRequested = false
 let installing = false
 let started = false
 let handlersRegistered = false
+let prepareForRestart: (() => Promise<void>) | undefined
+
+export function setUpdateRestartPreparation(prepare: () => Promise<void>): void {
+  prepareForRestart = prepare
+}
 
 export function getUpdateStatus(): UpdateStatus {
   return { ...status }
@@ -75,6 +81,8 @@ export function startUpdateManager(): void {
 
   void repairRenamedMacDock().catch(error => console.warn('[updater] Dock migration deferred', error))
   configureUpdater()
+  const completed = consumeUpdateRestartReceipt(app.getPath('userData'), app.getVersion())
+  if (completed) { status = completed; broadcast() }
   startupTimer = setTimeout(
     () => void checkForUpdates(),
     UPDATE_STARTUP_DELAY_MS + Math.random() * UPDATE_STARTUP_JITTER_MS
@@ -144,13 +152,29 @@ async function completeUpdate(): Promise<void> {
       }
       if (latest.phase !== 'downloaded') return
       installing = true
-      transition({ type: 'install' }, true)
-      if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater, 120_000, () => armMacRenameRecovery(downloadedVersion!))
-      else autoUpdater.quitAndInstall(false, true)
+      transition({ type: 'install', stage: 'preparing' }, true)
+      const beforeQuit = async (signal?: AbortSignal) => {
+        if (!prepareForRestart) throw Error('研究状态保存入口尚未就绪，应用尚未退出。')
+        transition({ type: 'install', stage: 'saving' }, true)
+        await prepareForRestart()
+        signal?.throwIfAborted()
+        const cancelRecovery = process.platform === 'darwin' ? await armMacRenameRecovery(downloadedVersion!) : undefined
+        if (signal?.aborted) { cancelRecovery?.(); signal.throwIfAborted() }
+        try { writeUpdateRestartReceipt(app.getPath('userData'), app.getVersion(), downloadedVersion!) }
+        catch (error) { cancelRecovery?.(); throw error }
+        transition({ type: 'install', stage: 'restarting' }, true)
+        return () => { cancelRecovery?.(); cancelUpdateRestartReceipt(app.getPath('userData')) }
+      }
+      if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater, 120_000, beforeQuit)
+      else {
+        const cancel = await beforeQuit()
+        try { autoUpdater.quitAndInstall(false, true) } catch (error) { cancel(); throw error }
+      }
       return
     }
   } catch (error) {
     installing = false
+    cancelUpdateRestartReceipt(app.getPath('userData'))
     // Keep the actionable failure visible until the user retries.
     transition({ type: 'error', message: errorMessage(error) }, true)
   } finally {
@@ -213,7 +237,11 @@ function transition(event: UpdateStateEvent, manualOverride?: boolean): void {
   status = reduceUpdateStatus(status, event)
   if (manualOverride !== undefined) status.manual = manualOverride
 
-  console.info('[updater] status', status.phase, status.percent ?? '')
+  broadcast()
+}
+
+function broadcast(): void {
+  console.info('[updater] status', status.phase, status.installStage ?? status.percent ?? '')
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.webContents.send('updates:status-changed', getUpdateStatus())
   }

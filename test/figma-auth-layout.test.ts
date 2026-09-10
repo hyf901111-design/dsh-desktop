@@ -8,8 +8,10 @@ async function setup(user: {id:string;username:string;createdAt:number} | null =
   for (const name of ['document','DOMParser','MutationObserver','HTMLElement','HTMLButtonElement','FormData']) vi.stubGlobal(name, name === 'document' ? window.document : window[name as keyof Window])
   const document = window.document
   document.body.innerHTML = '<button class="VOzbGW_trigger">设置</button>'
+  if (user) document.body.insertAdjacentHTML('beforeend', '<div class="VOzbGW_overlay"><div class="VOzbGW_panel"><nav class="VOzbGW_nav"><div class="VOzbGW_navList"></div></nav><div class="VOzbGW_content"></div></div></div>')
   const invoke = vi.fn(async (action: string) => action === 'me' ? {user} : action === 'usage' ? {usage:[{capability:'fund-research',requests:50,succeeded:49}]} : {error:{code:'INVALID_CREDENTIALS'}})
-  dispose = mountAccountUi(document as unknown as Document, invoke)
+  const boards = { getSnapshot: vi.fn(async () => ({account:{user:{userId:user?.id, publicId:'123456789012'}}})) }
+  dispose = mountAccountUi(document as unknown as Document, invoke, boards as never)
   await window.happyDOM.waitUntilComplete()
   document.querySelector<HappyButton>('.sherlock-account-button')!.click()
   document.querySelector<HappyButton>('.sherlock-account-menu button')!.click()
@@ -17,6 +19,18 @@ async function setup(user: {id:string;username:string;createdAt:number} | null =
   return {window,document,invoke}
 }
 describe('real account auth rendering', () => {
+  it('shows only the designed profile and password controls while preserving real account services', async () => {
+    const { document, invoke } = await setup({id:'account',username:'hyf90',createdAt:1})
+    const page = document.querySelector('.sherlock-account-page')!
+    expect(page.querySelector('.sherlock-account-profile')?.textContent).toContain('hyf90')
+    expect(page.querySelector('.sherlock-account-id-row')).toBeNull()
+    expect(page.textContent).not.toContain('复制 ID')
+    expect(page.textContent).toContain('基金研究')
+    expect(page.textContent).toContain('50')
+    page.querySelector<HappyButton>('.sherlock-account-security button')!.click()
+    expect(page.querySelector('form')?.hasAttribute('hidden')).toBe(false)
+    expect(invoke.mock.calls.every(call => ['me','usage'].includes(call[0]))).toBe(true)
+  })
   it('switches login/register without submitting credentials and closes cleanly', async () => {
     const {window, document, invoke} = await setup()
     expect(document.querySelector('dialog')?.getAttribute('open')).not.toBeNull()

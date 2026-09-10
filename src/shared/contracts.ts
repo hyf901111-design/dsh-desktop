@@ -20,12 +20,14 @@ export type UpdatePhase =
   | 'downloading'
   | 'downloaded'
   | 'installing'
+  | 'updated'
   | 'up-to-date'
   | 'error'
   | 'unsupported'
 
 export interface UpdateStatus {
   phase: UpdatePhase
+  installStage?: 'preparing' | 'saving' | 'restarting'
   currentVersion: string
   availableVersion?: string
   percent?: number

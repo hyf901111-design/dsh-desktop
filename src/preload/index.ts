@@ -17,6 +17,7 @@ import {
 import { isPluginLoadError } from './plugin-error-view'
 import { mountDesktopShellStyles } from './shell-style'
 import { SidebarUpdateControl } from './sidebar-update-control'
+import { requestUpdatePagePreparation } from './update-preparation'
 import { mountNativeThemeSync, mountWindowsTitlebar } from './windows-titlebar'
 import {
   createResearchPreviewBridge,
@@ -318,8 +319,17 @@ function showDeveloperModeNotice(enabled: boolean): void {
 }
 
 function applyStatus(status: UpdateStatus): void {
+  if (status.phase === 'error') window.dispatchEvent(new Event('sherlock:boards:update-resume'))
   sidebarUpdateControl.render(status)
 }
+
+ipcRenderer.on('updates:prepare', (_event, requestId: unknown) => {
+  if (typeof requestId !== 'string' || requestId.length > 128) return
+  void requestUpdatePagePreparation(document).then(
+    () => ipcRenderer.send('updates:prepared', requestId),
+    (error: unknown) => ipcRenderer.send('updates:prepared', requestId, error instanceof Error ? error.message : String(error))
+  )
+})
 
 ipcRenderer.on('updates:status-changed', (_event, status: UpdateStatus) => {
   receivedStatusEvent = true
