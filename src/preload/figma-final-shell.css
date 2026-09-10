@@ -51,7 +51,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .wSkVaW_tabActive { background:var(--odyssey-active-fill); color:var(--odyssey-active); font-weight:500; }
 .wSkVaW_tab:after { display:none; }
 /* Figma 284:513 / 880: the Research header has no divider stroke. */
-.wSkVaW_root:has([data-odyssey-page="research"]) .wSkVaW_header:after { display:none; }
+.wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header:after { display:none; }
 .rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
 .sRp_root,.sRp_body { background:transparent !important; }
 .sRp_conversation { display:flex; flex-direction:column; gap:4px; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
