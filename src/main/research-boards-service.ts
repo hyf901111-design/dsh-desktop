@@ -410,6 +410,8 @@ export class ResearchBoardsService {
   readonly client: CollaborationClient
   private accountView: AccountView
   private readonly boards = new Map<string, RuntimeBoard>()
+  private readonly localTaskProgress = new Map<string, any>()
+  private readonly progressTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly boardAccessGenerations = new Map<string, number>()
   private readonly listeners = new Set<(event: ResearchBoardsEvent) => void>()
   private readonly reservations = new Map<
@@ -616,13 +618,25 @@ export class ResearchBoardsService {
     const account = id ? this.store.account(id) : undefined
     const permission = this.permissions(r)
     const read = permission.read
+    const canvas = read ? copy(r.materialized ?? emptyCanvas()) : emptyCanvas()
+    for (const node of canvas.artifacts) {
+      const task = r.snapshot.tasks.filter(t => t.targetId === node.id).at(-1)
+      if (!task || !['pending', 'running'].includes(task.status)) continue
+      node.generationStartedAt = task.createdAt
+      const progress = this.localTaskProgress.get(`${id}:${boardId}:${task.taskId}`)
+      if (progress) {
+        node.generationEvents = copy(progress.events)
+        node.generationLastActivityAt = progress.lastActivityAt
+        node.generationOutputChars = progress.outputChars
+      }
+    }
     return {
       boardId,
       localSessionId: this.localSession(boardId),
       board: copy(r.snapshot.board),
       connection: r.connection,
       permissions: permission,
-      canvas: read ? copy(r.materialized ?? emptyCanvas()) : emptyCanvas(),
+      canvas,
       canvasRevision: r.materializedRevision ?? r.revision,
       seq: r.snapshot.seq,
       epoch: r.snapshot.board.sharingEpoch,
@@ -695,6 +709,9 @@ export class ResearchBoardsService {
     else this.emitState()
   }
   private resetAccount() {
+    for (const timer of this.progressTimers.values()) clearTimeout(timer)
+    this.progressTimers.clear()
+    this.localTaskProgress.clear()
     this.activationVersion++
     const oldId = this.accountView.user?.userId
     this.generationAbort.abort()
@@ -2772,6 +2789,25 @@ export class ResearchBoardsService {
       signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
     }
   }
+  setLocalTaskProgress(accountId: string, boardId: string, taskId: string, progress: any) {
+    const a = this.taskAuthority(accountId, boardId)
+    const task = a.snapshot.tasks.find(t => t.taskId === taskId)
+    if (!task || !['pending', 'running'].includes(task.status)) return
+    if (!progress || !Array.isArray(progress.events) || !Number.isFinite(progress.lastActivityAt) || !Number.isFinite(progress.outputChars)) return
+    const key = `${accountId}:${boardId}:${taskId}`
+    const value = { events: progress.events.slice(-12), lastActivityAt: progress.lastActivityAt, outputChars: progress.outputChars }
+    if (JSON.stringify(this.localTaskProgress.get(key)) === JSON.stringify(value)) return
+    this.localTaskProgress.set(key, copy(value))
+    if (this.localTaskProgress.size > 100) this.localTaskProgress.delete(this.localTaskProgress.keys().next().value!)
+    if (!this.progressTimers.has(boardId)) {
+      const timer = setTimeout(() => {
+        this.progressTimers.delete(boardId)
+        if (!this.stopped) this.emitBoard(boardId, 'progress')
+      }, 500)
+      timer.unref?.()
+      this.progressTimers.set(boardId, timer)
+    }
+  }
   async applyTaskCanvas(accountId: string, boardId: string, canvas: Canvas) {
     const a = this.taskAuthority(accountId, boardId, undefined, true),
       baseRevision = this.requireBoard(boardId, undefined, true).revision
@@ -2846,6 +2882,8 @@ export class ResearchBoardsService {
     return saved
   }
   stop() {
+    for (const timer of this.progressTimers.values()) clearTimeout(timer)
+    this.progressTimers.clear()
     if (this.stopped) return
     this.stopped = true
     this.generationAbort.abort()

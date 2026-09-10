@@ -1475,7 +1475,7 @@ describe('Sherlock workspace and composer controls', () => {
     expect(chipStyle.textOverflow).toBe('ellipsis')
   })
 
-  it('focuses workspace search after the collapsed sidebar remounts as expanded', async () => {
+  it('shows workspace search only after the sidebar expands and focuses it when activated', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     const restoreGlobals = installBrowserGlobals(browserWindow)
     const primitives = new Proxy(
@@ -1581,6 +1581,8 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => {
         renderBrowser(false)
       })
+      expect(container.querySelector('button[aria-label="search.sessions.aria"]')).toBeNull()
+      await act(async () => { renderBrowser(true) })
       const searchButton = container.querySelector(
         'button[aria-label="search.sessions.aria"]'
       ) as HappyDOMHTMLElement | null
@@ -8500,9 +8502,9 @@ describe('Sherlock workspace and composer controls', () => {
         { seq: 1, type: 'started' }, { seq: 2, type: 'tool-started', tool: '检索网页' }, { seq: 3, type: 'tool-finished' }
       ] }
       await act(async () => { root.render(createElement(client.__testGenerationProcess, { node, onCancel })) })
-      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(1)
+      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(2)
       for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(260) })
-      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(1)
+      expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(2)
       expect(host.querySelector('[data-research-generation-visual]')?.getAttribute('aria-hidden')).toBe('true')
       expect(host.querySelector('[role="status"]')?.textContent).toBe('正在整理资料')
       const building = { ...node, generationLastSeq: 4, generationEvents: [...node.generationEvents, { seq: 4, type: 'assistant-delta', text: '<main><style>private-code' }] }
@@ -8597,7 +8599,7 @@ describe('Sherlock workspace and composer controls', () => {
       const cardSelector = `[data-research-artifact-card="${String(target.id)}"]`
       const runningCard = mounted.host.querySelector(cardSelector)
       expect(runningCard?.getAttribute('data-research-generation-state')).toBe('running')
-      expect(runningCard?.querySelector('[data-research-node-title]')?.textContent).toBe('思维导图')
+      expect(runningCard?.querySelector('.rScV5Q_nodeTitleText')?.textContent).toBe('思维导图')
       expect(runningCard?.querySelector('[data-research-generation-process]')?.textContent)
         .toContain('正在绘制组件')
       expect(runningCard?.querySelector('[data-research-generation-process]')?.textContent)
@@ -9993,8 +9995,8 @@ describe('Sherlock workspace and composer controls', () => {
         kind: 'generated-container',
         title: '核心经营指标',
         generationStatus: 'completed',
-        width: 720,
-        height: 600,
+        width: 640,
+        height: 420,
         lastSuccessfulAt: 1_000,
         containerSpec: {
           version: 1,

@@ -1076,8 +1076,7 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 9, type: 'tool/result', data: {} });
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 10, type: 'tool/result', data: {} });
     expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search', 'financial_query'] });
-    expect(fixture.ctx.child.steer).toHaveBeenCalledTimes(1);
-    expect(fixture.ctx.child.steer.mock.calls[0][0].content[0].text).toContain('已经取得');
+    expect(fixture.ctx.child.steer).not.toHaveBeenCalled();
     await handle.dispose();
     expect(lift).toHaveBeenCalledTimes(1);
   });
@@ -2039,4 +2038,56 @@ it('caps the streaming extension even if a child keeps emitting text indefinitel
   for(let seq=1;seq<=30;seq++){ctx.emit(child,{type:'assistant/chunk',seq,data:{chunk:{type:'text-delta',text:'输出片段'}}});await vi.advanceTimersByTimeAsync(10000)}
   expect(await handle.result).toMatchObject({stopReason:'timeout',localDeadlineExceeded:true})
  }finally{await handle?.dispose();vi.useRealTimers()}
+})
+
+
+it('does not enqueue a new turn when the retrieval timer expires while a chart is being finalized', async () => {
+ const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers()
+ const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}},steer:vi.fn()},result=Promise.withResolvers()
+ const run={id:'child',localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
+ const chart=JSON.stringify({version:1,type:'chart',title:'半年走势',variant:'line',labels:['2026-03-10','2026-09-10'],series:[{name:'指数',values:[8085.32,7683.18]}]})
+ let handle
+ try{
+  handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'000933.SH半年历史行情',prompt:'生成折线图',signal:new AbortController().signal,onSessionEvent:()=>{}})
+  await vi.advanceTimersByTimeAsync(120001)
+  expect(child.ctx.tools.restrict).toHaveBeenCalledWith({deny:['web_search','financial_query']})
+  expect(child.steer).not.toHaveBeenCalled()
+  await vi.advanceTimersByTimeAsync(32000)
+  result.resolve({stopReason:'completed',output:[{type:'text',text:chart}]})
+  expect(await handle.result).toMatchObject({stopReason:'completed',output:[{type:'text',text:chart}]})
+  expect(ctx.subagents.start).toHaveBeenCalledOnce()
+ }finally{await handle?.dispose();vi.useRealTimers()}
+})
+
+it('retains a completed validated chart across a subsequent empty step and deadline', async () => {
+ const {createSharedBoardExecutor}=await runtimeModule();vi.useFakeTimers()
+ const parent={id:'parent'},child={id:'child',session:{events:[]}},run={id:'child',localAgent:child,result:new Promise(()=>{}),dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
+ const chart=JSON.stringify({version:1,type:'chart',title:'已完成走势',variant:'line',labels:['2026-09-01','2026-09-02'],series:[{name:'指数',values:[10,12]}]})
+ const executor=createSharedBoardExecutor(ctx)
+ try{
+  const pending=executor.execute({sessionId:'parent',kind:'container',query:'已有行情生成图表',prompt:'生成'},new AbortController().signal);void pending.catch(()=>{})
+  await vi.advanceTimersByTimeAsync(152000)
+  ctx.emit(child,{type:'assistant/message',seq:1,data:{message:{content:[{type:'text',text:chart}]}}})
+  ctx.emit(child,{type:'step/start',seq:2,data:{}})
+  await vi.advanceTimersByTimeAsync(28001)
+  expect(await pending).toBe(chart)
+  expect(ctx.subagents.start).toHaveBeenCalledOnce();expect(run.dispose).toHaveBeenCalledOnce()
+ }finally{await executor.dispose();vi.useRealTimers()}
+})
+
+it('reports real tool and output activity without copying code, arguments or reasoning into progress', async () => {
+ const {createSharedBoardExecutor}=await runtimeModule()
+ const parent={id:'parent'},child={id:'child',session:{events:[]}},result=Promise.withResolvers()
+ const run={id:'child',localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run),updates=[]
+ const executor=createSharedBoardExecutor(ctx)
+ const pending=executor.execute({sessionId:'parent',kind:'container',query:'000933.SH行情',prompt:'生成图表'},new AbortController().signal,p=>updates.push(structuredClone(p)))
+ await vi.waitFor(()=>expect(ctx.subagents.start).toHaveBeenCalledOnce())
+ ctx.emit(child,{seq:1,type:'assistant/chunk',data:{chunk:{type:'reasoning-delta',text:'PRIVATE_REASONING'}}})
+ ctx.emit(child,{seq:2,type:'tool/call',data:{name:'financial_query',arguments:'{"token":"PRIVATE_TOKEN"}'}})
+ ctx.emit(child,{seq:3,type:'assistant/chunk',data:{chunk:{type:'text-delta',text:'{"version":1,"type":"html","html":"PRIVATE_RAW_HTML"}'}}})
+ ctx.emit(child,{seq:4,type:'tool/result',data:{}})
+ const progress=updates.at(-1);expect(progress.outputChars).toBeGreaterThan(0);expect(progress.events.some(e=>e.tool==='查询金融数据')).toBe(true)
+ expect(JSON.stringify(updates)).not.toMatch(/PRIVATE_REASONING|PRIVATE_TOKEN|PRIVATE_RAW_HTML/)
+ result.resolve({stopReason:'completed',output:[{type:'text',text:'{"version":1,"type":"markdown","title":"结果","content":"已完成"}'}]})
+ await pending;await executor.dispose()
 })

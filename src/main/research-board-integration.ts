@@ -1236,6 +1236,7 @@ export class ResearchBoardIntegration {
         })
         this.authority(r.accountId, r.boardId, r.epoch, true)
         local = await this.runtime('inspect', { taskId: localTaskId }, signal)
+        if (local.progress) this.options.service().setLocalTaskProgress?.(r.accountId, r.boardId, task.taskId, local.progress)
       }
       if (local.status !== 'completed') {
         if (local.status === 'failed') failureCode = taskFailureMessage(local.errorCode) ? local.errorCode : 'GENERATION_FAILED'
