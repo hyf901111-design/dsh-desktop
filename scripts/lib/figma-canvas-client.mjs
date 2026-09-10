@@ -53,9 +53,20 @@ export function patchFigmaFinalCanvas(source) {
     if(node?.sizeMode==='manual'||node?.workbenchId||node?.containerSizePreset)return null;
     const {width,height}=RESEARCH_BENTO_SIZES[researchBentoSize(node)];return {width,height};
   }`);
-  source=source.replace("['generated-summary','generated-mind-map'].includes(node.kind)){next.width", "['generated-container','generated-summary','generated-mind-map'].includes(node.kind)){next.width");
-  const sizedStart=source.indexOf('function researchGenerationSizedNode('),sizedEnd=source.indexOf('function researchGenerationAutoGeometry(',sizedStart);
-  if(sizedStart>=0&&sizedEnd>sizedStart){const sized=source.slice(sizedStart,sizedEnd).replace('return next;', 'return researchCanvasContainedAutoNode(snapshot,next);').replace('// Selection outputs grow', "if(node.sizeMode!=='manual'&&['generated-container','generated-summary','generated-mind-map'].includes(node.kind)){next.width=Math.min(656,next.width);next.height=Math.min(456,next.height); }\n            // Figma derived outputs grow");source=source.slice(0,sizedStart)+sized+source.slice(sizedEnd);}
+  source=block(source,'function researchGenerationSizedNode(', 'function researchGenerationAutoGeometry(',`function researchGenerationSizedNode(node, geometry, snapshot = null) {
+    if(geometry===null)return node;
+    const next={...node,...geometry};
+    if(node.sizeMode!=='manual'&&['generated-container','generated-summary','generated-mind-map'].includes(node.kind)){
+      // Automatic growth selects a complete preset, including both dimensions.
+      const preset=researchBentoSize(next,next),size=RESEARCH_BENTO_SIZES[preset];
+      next.width=size.width;next.height=size.height;next.containerSizePreset=preset;
+    }
+    if(node.sizeMode!=='manual'&&(['generated-container','generated-summary','generated-mind-map'].includes(node.kind)||node.creationMode==='selection')){
+      const before=normalizeResearchCanvasNodeGeometry(node),after=normalizeResearchCanvasNodeGeometry(next);
+      next.x=node.x+(after.width-before.width)/2;next.y=node.y+(after.height-before.height)/2;
+    }
+    return researchCanvasContainedAutoNode(snapshot,next);
+  }`);
   source=source.replace('...queued, containerSizePreset: researchComponentSize(current), ...(current.containerSpec || current.sizeMode === "manual" ? {} : { width: RESEARCH_BENTO_SIZES[researchComponentSize(current)].width, height: RESEARCH_BENTO_SIZES[researchComponentSize(current)].height }),', '...queued, ...(current.containerSpec || current.sizeMode === "manual" ? {} : researchContainerPlannedGeometry(snapshot,current,prompt)),');
   source=source.replace('...queued, containerSizePreset: researchComponentSize(current), ...(current.containerSpec || current.sizeMode === "manual" ? {} : { width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)] }),', '...queued, ...(current.containerSpec || current.sizeMode === "manual" ? {} : researchContainerPlannedGeometry(snapshot,current,prompt)),');
   source=source.replace('onCancel: onCancelGeneration\n', 'onCancel: onCancelGeneration, onExpand: onExpandGeneration\n');
