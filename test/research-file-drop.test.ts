@@ -377,7 +377,7 @@ describe('Research canvas file drops', () => {
     expect(workspace.getSnapshot().artifacts).toMatchObject([
       {
         kind: 'assistant-result', messageId: 'message-1', excerpt: markdown,
-        width: 520, sizeMode: 'auto'
+        width: 320, sizeMode: 'auto'
       },
       {
         kind: 'assistant-excerpt', messageId: 'message-2', excerpt: 'margin expanded'
@@ -1578,7 +1578,7 @@ describe('Research canvas file drops', () => {
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'assistant', kind: 'assistant-result', messageId: 'm1', title: 'Answer',
       excerpt: 'Evidence', x: 0, y: 0
-    })).toEqual({ width: 520, height: 300, sizeMode: 'auto', resizable: true })
+    })).toEqual({ width: 320, height: 220, sizeMode: 'auto', resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'image', name: 'chart.png', mediaType: 'image/png', source: 'computer', x: 0, y: 0
     })).toEqual({ width: 320, height: 306, sizeMode: 'auto', aspectRatio: 4 / 3, resizable: true })
@@ -1598,7 +1598,7 @@ describe('Research canvas file drops', () => {
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'assistant', kind: 'assistant-result', width: -1, height: Number.NaN,
       sizeMode: 'broken', x: 0, y: 0
-    })).toEqual({ width: 520, height: 300, sizeMode: 'auto', resizable: true })
+    })).toEqual({ width: 320, height: 220, sizeMode: 'auto', resizable: true })
     expect(client.normalizeResearchCanvasNodeGeometry({
       id: 'assistant', kind: 'assistant-result', width: 9000, height: 8000,
       sizeMode: 'manual', x: 0, y: 0
@@ -1632,7 +1632,7 @@ describe('Research canvas file drops', () => {
     expect(client.resizeResearchCanvasNode(node, 'se', { x: 80, y: 40 }, 2))
       .toMatchObject({ x: 20, y: 10, width: 400, height: 260, sizeMode: 'manual' })
     expect(client.resizeResearchCanvasNode({ ...node, x: 100, y: 100 }, 'nw', { x: 40, y: 20 }, 2))
-      .toMatchObject({ x: 100, y: 105, width: 360, height: 230, sizeMode: 'manual' })
+      .toMatchObject({ x: 110, y: 105, width: 340, height: 230, sizeMode: 'manual' })
     expect(client.resizeResearchCanvasNode(node, 'ne', { x: 80, y: -40 }, 2))
       .toMatchObject({ x: 20, y: -10, width: 400, height: 260, sizeMode: 'manual' })
     expect(client.resizeResearchCanvasNode(node, 'sw', { x: -80, y: 40 }, 2))
@@ -1895,7 +1895,7 @@ describe('Research canvas file drops', () => {
     expect(artifacts).toEqual([
       {
         id: 'a1', kind: 'assistant-result', messageId: 'm1', title: 'Answer',
-        excerpt: 'Text', x: 1, y: 2, width: 520, height: 300, sizeMode: 'auto'
+        excerpt: 'Text', x: 1, y: 2, width: 320, height: 220, sizeMode: 'auto'
       }
     ])
     expect(client.parseResearchCanvasArtifactNodes('bad-json')).toEqual([])
@@ -1971,14 +1971,14 @@ describe('Research canvas file drops', () => {
     expect(placed).toEqual([{
       id: 'artifact-1', messageId: 'm1', kind: 'assistant-result',
       title: 'Answer', excerpt: 'Evidence', x: 120, y: 80,
-      width: 520, height: 300, sizeMode: 'auto'
+      width: 320, height: 220, sizeMode: 'auto'
     }])
     expect(client.placeResearchCanvasArtifact(
       placed, { ...payload, title: 'Revised' }, { x: 240, y: 160 }, () => 'unused'
     )).toEqual([{
       id: 'artifact-1', messageId: 'm1', kind: 'assistant-result',
       title: 'Answer', excerpt: 'Evidence', x: 240, y: 160,
-      width: 520, height: 300, sizeMode: 'auto'
+      width: 320, height: 220, sizeMode: 'auto'
     }])
   })
 
@@ -2783,7 +2783,9 @@ describe('Research canvas file drops', () => {
     const original = JSON.stringify(nodes)
     const place = client.researchCanvasGeneratedPlacement as any
     const result = place(nodes, ['a'], kind)
-    expect(result).toMatchObject({ x: 652, y: 100, width: 520, height: 300 })
+    // Figma defaults: a short summary is S; a derived map or component starts at L.
+    const dimensions = kind === 'summary' ? { width: 320, height: 220 } : { width: 656, height: 456 }
+    expect(result).toMatchObject({ x: 360 + 32 + dimensions.width / 2, y: 100, ...dimensions })
     expect(JSON.stringify(nodes)).toBe(original)
   })
 
@@ -2791,10 +2793,15 @@ describe('Research canvas file drops', () => {
     const client = await loadConversationClient()
     const nodes = [{ id: 'a', kind: 'assistant-result', x: 1800, y: 1000, width: 520, height: 300 }]
     const context = { viewport: { x: -400, y: -100, scale: 0.5 }, canvasSize: { width: 600, height: 500 } }
-    // Source is at screen (500, 400). Its right neighbor is off-screen;
-    // the left neighbor fits without changing the viewport or existing geometry.
-    expect(client.researchCanvasGeneratedPlacement(nodes, ['a'], kind, 'standard', context))
-      .toMatchObject({ x: 1248, y: 1000 })
+    // The old left neighbor also enters the reserved bottom toolbar region now.
+    // Reposition within the 32 px inset of the usable canvas, retaining the current zoom.
+    const result = client.researchCanvasGeneratedPlacement(nodes, ['a'], kind, 'standard', context)
+    const rect = client.researchNodeViewportRect({ ...result, kind: kind === 'summary' ? 'generated-summary' : 'generated-mind-map' }, context.viewport)
+    expect(rect.left).toBeGreaterThanOrEqual(32)
+    expect(rect.right).toBeLessThanOrEqual(568)
+    expect(rect.top).toBeGreaterThanOrEqual(32)
+    expect(rect.bottom).toBeLessThanOrEqual(380)
+    expect(result.viewport).toBeUndefined()
   })
 
   it('keeps a large multi-selection result in the visible canvas instead of beyond the group', async () => {
@@ -2802,10 +2809,16 @@ describe('Research canvas file drops', () => {
     const nodes = [{ id: 'a', kind: 'assistant-result', x: -1000, y: -1000, width: 520, height: 300 }, { id: 'b', kind: 'assistant-result', x: 3000, y: 3000, width: 520, height: 300 }]
     const context = { viewport: { x: 0, y: 0, scale: 1 }, canvasSize: { width: 600, height: 400 } }
     const result = client.researchCanvasGeneratedPlacement(nodes, ['a', 'b'], 'create', 'standard', context)
-    expect(result.x - result.width / 2).toBeGreaterThanOrEqual(12)
-    expect(result.x + result.width / 2).toBeLessThanOrEqual(588)
-    expect(result.y - result.height / 2).toBeGreaterThanOrEqual(12)
-    expect(result.y + result.height / 2).toBeLessThanOrEqual(388)
+    // L cannot fit at 1x in 600×400. Keep 656×456 world dimensions and fit the
+    // canvas view; neither squeezing content nor allowing right/bottom clipping is valid.
+    expect(result).toMatchObject({ width: 656, height: 456 })
+    expect(result.viewport.scale).toBeCloseTo((400 - 88 - 64) / 456)
+    const rect = client.researchNodeViewportRect({ ...result, kind: 'generated-container' }, result.viewport)
+    expect(rect.left).toBeGreaterThanOrEqual(32 - 1e-6)
+    expect(rect.right).toBeLessThanOrEqual(568 + 1e-6)
+    expect(rect.top).toBeGreaterThanOrEqual(32 - 1e-6)
+    expect(rect.bottom).toBeLessThanOrEqual(280 + 1e-6)
+    expect(context.viewport).toEqual({ x: 0, y: 0, scale: 1 })
   })
 
   it.each(['mind-map', 'summary', 'create'])('preserves the visible leading corner as %s grows through task completion', async (kind) => {
@@ -2825,7 +2838,15 @@ describe('Research canvas file drops', () => {
     workspace.updateNodeGeometry(created.id, { height: completed.height + 100, sizeMode: 'auto' })
     const measured = workspace.getSnapshot().artifacts.find((node: any) => node.id === created.id)
     expect(measured.y - measured.height / 2).toBe(corner.top)
-    expect(workspace.getSnapshot().viewport).toEqual(snapshot.viewport)
+    expect(measured.width).toBe(656)
+    expect(measured.height).toBe(456)
+    const view = workspace.getSnapshot().viewport
+    expect(view.scale).toBeCloseTo((600 - 88 - 64) / 456)
+    const rect = client.researchNodeViewportRect(measured, view)
+    expect(rect.left).toBeGreaterThanOrEqual(32 - 1e-6)
+    expect(rect.right).toBeLessThanOrEqual(768 + 1e-6)
+    expect(rect.top).toBeGreaterThanOrEqual(32 - 1e-6)
+    expect(rect.bottom).toBeLessThanOrEqual(480 + 1e-6)
   })
 
   it.each([90, 1_000_000])('creates above an existing stack of %i and preserves it through undo, redo and reload', async (stackOrder) => {
@@ -2876,7 +2897,7 @@ describe('Research canvas file drops', () => {
     expect(client.parseResearchContainerSpec(spec)).toEqual(spec)
     expect(workspace.applyGenerationInspection(target.id, { taskId: 'html-task', canvasNodeId: target.id, state: 'completed', lastSeq: 2, finalOutput: JSON.stringify(spec) })).toBe(true)
     const node = workspace.getSnapshot().artifacts.find((n: any) => n.id === target.id)
-    expect(node).toMatchObject({ generationStatus: 'completed', containerSpec: spec, width: 960, height: 680 })
+    expect(node).toMatchObject({ generationStatus: 'completed', containerSpec: spec, width: 656, height: 456 })
     const evidence = client.researchGenerationSources(workspace.getSnapshot(), [target.id], true)
     expect(evidence[0].text).toContain('9月8日 & 广州')
     expect(evidence[0].text).not.toMatch(/privateCode|private-css|onclick|<html/)
@@ -3058,7 +3079,7 @@ describe('Research canvas file drops', () => {
     }
 
     expect(client.researchCanvasViewportPlacement(snapshot, 'web-link', 0))
-      .toEqual({ x: 1_000, y: 612, width: 720, height: 480, sizeMode: 'auto' })
+      .toEqual({ x: 1_000, y: 612, width: 656, height: 456, sizeMode: 'auto' })
     expect(client.researchCanvasViewportPlacement(snapshot, 'generated-container', 8))
       .toEqual({ x: 1_144, y: 756, width: 656, height: 220, sizeMode: 'auto' })
     expect(client.researchCanvasViewportPlacement(snapshot, 'unknown', 0)).toBeNull()
@@ -3091,6 +3112,17 @@ describe('Research canvas file drops', () => {
     })).toBe(false)
   })
 
+  it('retains stored web-link dimensions when the new-link default changes to L', async () => {
+    const client = await loadConversationClient()
+    for (const sizeMode of ['auto', 'manual']) {
+      const node = { id: 'legacy-link', kind: 'web-link', messageId: 'legacy-link', title: 'example.com', excerpt: 'https://example.com/', url: 'https://example.com/', x: 1100, y: 1200, width: 720, height: 480, sizeMode }
+      const storage = memoryStorage({ 'sherlock.research.canvas.artifacts.v1:legacy-link-session': JSON.stringify([node]) })
+      const workspace = new client.ResearchWorkspaceRegistry(storage).for('legacy-link-session')
+      workspace.setCanvasSize({ width: 800, height: 600 })
+      expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ x: 1100, y: 1200, width: 720, height: 480, sizeMode })
+    }
+  })
+
   it('creates, updates, selects, and restores global-toolbar artifacts through the workspace', async () => {
     const client = await loadClientBundle('dsh-client-ui-conversation')
     const storage = memoryStorage({})
@@ -3109,9 +3141,10 @@ describe('Research canvas file drops', () => {
     const link = workspace.createWebLink('https://Example.com/dashboard')
     expect(link).toMatchObject({
       kind: 'web-link', title: 'example.com', url: 'https://example.com/dashboard',
-      x: 400, y: 300, width: 720, height: 480
+      x: 400, y: 256, width: 656, height: 456
     })
     expect(workspace.getSnapshot().selection.selectedNodeIds).toEqual([link.id])
+    expect(workspace.getSnapshot().viewport.scale).toBeCloseTo((600 - 88 - 64) / 456)
     expect(workspace.updateWebLink(link.id, 'javascript:alert(1)')).toBe(false)
     expect(workspace.updateWebLink(link.id, 'https://example.org/next')).toBe(true)
 
@@ -3119,7 +3152,7 @@ describe('Research canvas file drops', () => {
     expect(container).toMatchObject({
       kind: 'generated-container', generationStatus: 'draft',
       containerPrompt: '', refreshMinutes: 0,
-      x: 424, y: 324, width: 520, height: 300
+      x: 400 + 24 / workspace.getSnapshot().viewport.scale, y: 256 + 24 / workspace.getSnapshot().viewport.scale, width: 656, height: 220
     })
     expect(workspace.updateContainerDraft(container.id, '  ')).toBe(false)
     expect(workspace.updateContainerDraft(container.id, '制作月度收入柱状图')).toBe(true)

@@ -47,8 +47,15 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replaceAll('researchGenerationSizedNode(next, geometry);','researchGenerationSizedNode(next, geometry, snapshot);');
   source=source.replace('researchGenerationSizedNode(node, geometry) :','researchGenerationSizedNode(node, geometry, snapshot) :');
   source=source.replace('researchCanvasContainedAutoNode(snapshot,{...current,containerSizePreset:researchContainerPromptPreset(prompt),...RESEARCH_BENTO_SIZES[researchContainerPromptPreset(prompt)]})','researchContainerPlannedGeometry(snapshot,current,prompt)');
+  source=source.replace('const update = (patch, persist) => publish({ ...snapshot, ...patch }, persist);', 'const update = (patch, persist) => publish({ ...snapshot, ...researchCanvasFitAutomaticUpdate(snapshot,patch) }, persist);');
+  source=block(source,'function researchCanvasGeneratedPlacement(', 'function researchCanvasRaisedNodes(',generatedPlacementSource);
+  source=block(source,'function researchGenerationAutoGeometry(', 'function researchGenerationFinalGeometry(',`function researchGenerationAutoGeometry(node) {
+    if(node?.sizeMode==='manual'||node?.workbenchId||node?.containerSizePreset)return null;
+    const {width,height}=RESEARCH_BENTO_SIZES[researchBentoSize(node)];return {width,height};
+  }`);
+  source=source.replace("['generated-summary','generated-mind-map'].includes(node.kind)){next.width", "['generated-container','generated-summary','generated-mind-map'].includes(node.kind)){next.width");
   const sizedStart=source.indexOf('function researchGenerationSizedNode('),sizedEnd=source.indexOf('function researchGenerationAutoGeometry(',sizedStart);
-  if(sizedStart>=0&&sizedEnd>sizedStart){const sized=source.slice(sizedStart,sizedEnd).replace('return next;', 'return researchCanvasContainedAutoNode(snapshot,next);').replace('// Selection outputs grow', "if(node.sizeMode!=='manual'&&['generated-summary','generated-mind-map'].includes(node.kind)){next.width=Math.min(656,next.width);next.height=Math.min(456,next.height); }\n            // Figma derived outputs grow");source=source.slice(0,sizedStart)+sized+source.slice(sizedEnd);}
+  if(sizedStart>=0&&sizedEnd>sizedStart){const sized=source.slice(sizedStart,sizedEnd).replace('return next;', 'return researchCanvasContainedAutoNode(snapshot,next);').replace('// Selection outputs grow', "if(node.sizeMode!=='manual'&&['generated-container','generated-summary','generated-mind-map'].includes(node.kind)){next.width=Math.min(656,next.width);next.height=Math.min(456,next.height); }\n            // Figma derived outputs grow");source=source.slice(0,sizedStart)+sized+source.slice(sizedEnd);}
   source=source.replace('...queued, containerSizePreset: researchComponentSize(current), ...(current.containerSpec || current.sizeMode === "manual" ? {} : { width: RESEARCH_BENTO_SIZES[researchComponentSize(current)].width, height: RESEARCH_BENTO_SIZES[researchComponentSize(current)].height }),', '...queued, ...(current.containerSpec || current.sizeMode === "manual" ? {} : researchContainerPlannedGeometry(snapshot,current,prompt)),');
   source=source.replace('...queued, containerSizePreset: researchComponentSize(current), ...(current.containerSpec || current.sizeMode === "manual" ? {} : { width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)] }),', '...queued, ...(current.containerSpec || current.sizeMode === "manual" ? {} : researchContainerPlannedGeometry(snapshot,current,prompt)),');
   source=source.replace('onCancel: onCancelGeneration\n', 'onCancel: onCancelGeneration, onExpand: onExpandGeneration\n');
@@ -134,7 +141,7 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
                     if (organized === null) return false;`)
   source = source.replaceAll('width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)]', 'width: RESEARCH_BENTO_SIZES[researchComponentSize(current)].width, height: RESEARCH_BENTO_SIZES[researchComponentSize(current)].height')
   source = source.replace('kind === "generated-container" ? { width: 520, height: 300 }', 'kind === "generated-container" ? { width: 656, height: 220 }')
-  source = exact(source, 'const width = 520;\n\t\t\tconst height = 300;', 'const width = kind === "summary" ? 320 : 656;\n\t\t\tconst height = kind === "summary" ? 220 : 456;')
+  source = source.replace('const width = 520;\n\t\t\tconst height = 300;', 'const width = kind === "summary" ? 320 : 656;\n\t\t\tconst height = kind === "summary" ? 220 : 456;')
   source = block(source, 'function researchContainerFinalGeometry(', 'function researchContainerRefreshDue(', `function researchContainerFinalGeometry(node, spec) {
   if(node?.sizeMode==='manual'||spec===null)return null;
   const {width,height}=RESEARCH_BENTO_SIZES[researchBentoSize({...node,containerSpec:spec})];
@@ -184,11 +191,27 @@ const placementSource = `function researchCanvasVisibleArea(snapshot) {
   return {width:size.availableWidth>0?Math.min(size.width,size.availableWidth):size.width,height:Math.max(0,(size.height??0)-88)};
 }
 function researchCanvasContainedAutoNode(snapshot,node) {
-  if(!snapshot||node.sizeMode==='manual'||node.workbenchId||!['generated-container','generated-summary','generated-mind-map'].includes(node.kind))return node;
+  if(!snapshot||node.sizeMode==='manual'||node.workbenchId||!['generated-container','generated-summary','generated-mind-map','web-link'].includes(node.kind))return node;
   const area=researchCanvasVisibleArea(snapshot),view=snapshot.viewport??{x:0,y:0,scale:1},scale=view.scale>0?view.scale:1;
-  if(!(area.width>64&&area.height>64))return node;
+  if(!(area.width>64&&area.height>64)||node.width*scale>area.width-64+1e-6||node.height*scale>area.height-64+1e-6)return node;
   const clamp=(center,size,offset,extent)=>{const min=(32-offset)/scale+size/2,max=(extent-32-offset)/scale-size/2;return max>=min?Math.max(min,Math.min(max,center)):(extent/2-offset)/scale;};
   return {...node,x:clamp(node.x,node.width,view.x,area.width),y:clamp(node.y,node.height,view.y,area.height)};
+}
+function researchCanvasFittedViewport(snapshot,node) {
+  const area=researchCanvasVisibleArea(snapshot),view=snapshot?.viewport??{x:0,y:0,scale:1};
+  if(!(area.width>64&&area.height>64&&node.width>0&&node.height>0))return null;
+  const scale=Math.min(view.scale>0?view.scale:1,(area.width-64)/node.width,(area.height-64)/node.height);
+  if(scale>=(view.scale>0?view.scale:1)-1e-6)return null;
+  return {scale,x:area.width/2-node.x*scale,y:area.height/2-node.y*scale};
+}
+function researchCanvasFitAutomaticUpdate(snapshot,patch) {
+  if(!patch.artifacts)return patch;
+  const changed=patch.artifacts.filter(node=>{const prior=snapshot.artifacts.find(old=>old.id===node.id);return node.sizeMode!=='manual'&&prior?.sizeMode!=='manual'&&!node.workbenchId&&['generated-container','generated-summary','generated-mind-map','web-link'].includes(node.kind)&&(!prior||node.kind!=='web-link'&&(prior.width!==node.width||prior.height!==node.height));});
+  let viewport=patch.viewport??snapshot.viewport;
+  for(const node of changed){const fitted=researchCanvasFittedViewport({...snapshot,viewport},node);if(fitted)viewport=fitted;}
+  if(viewport===(patch.viewport??snapshot.viewport))return patch;
+  const changedIds=new Set(changed.map(node=>node.id));
+  return {...patch,viewport,artifacts:patch.artifacts.map(node=>changedIds.has(node.id)?researchCanvasContainedAutoNode({...snapshot,viewport},node):node)};
 }
 function researchContainerPromptPreset(prompt) {
   const text=String(prompt);
@@ -202,13 +225,36 @@ function researchContainerPlannedGeometry(snapshot,node,prompt) {
   return {containerSizePreset:preset,width:placed.width,height:placed.height,x:placed.x,y:placed.y};
 }
 function researchCanvasViewportPlacement(snapshot, kind, cascadeIndex = 0) {
-  const dimensions=kind==='web-link'?{width:720,height:480}:kind==='generated-container'?{width:656,height:220}:null;
+  const dimensions=kind==='web-link'?{width:656,height:456}:kind==='generated-container'?{width:656,height:220}:null;
   if(!dimensions)return null;
   const viewport=snapshot?.viewport??{scale:1,x:0,y:0},area=researchCanvasVisibleArea(snapshot),scale=viewport.scale>0?viewport.scale:1;
   const center=researchCanvasWorldPoint(viewport,{x:(area.width>0?area.width:1200)/2,y:(area.height>0?area.height:712)/2});
   const offset=Math.min(3,Math.max(0,Number.isFinite(cascadeIndex)?Math.floor(cascadeIndex):0))*24/scale;
   const placement=researchCanvasContainedAutoNode(snapshot,{kind,x:center.x+offset,y:center.y+offset,...dimensions,sizeMode:'auto'});
   const {kind:_kind,...geometry}=placement;return geometry;
+}
+`;
+
+const generatedPlacementSource = `function researchCanvasGeneratedPlacement(nodes,selectedIds,kind,requestedDetail='standard',context=null) {
+  const bounds=researchCanvasSelectionBounds(nodes,selectedIds);
+  if(!bounds||!['mind-map','summary','create'].includes(kind))return null;
+  const {width,height}=RESEARCH_BENTO_SIZES[kind==='summary'?'small':'large'];
+  const center={x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2};
+  const candidates=[{x:bounds.right+32+width/2,y:center.y},{x:bounds.left-32-width/2,y:center.y},{x:center.x,y:bounds.bottom+32+height/2},{x:center.x,y:bounds.top-32-height/2}];
+  let point=candidates[0],fitted=null;
+  const view=context?.viewport,area=researchCanvasVisibleArea(context);
+  if(view?.scale>0&&Number.isFinite(view.x)&&Number.isFinite(view.y)&&area.width>64&&area.height>64){
+    if(width*view.scale>area.width-64||height*view.scale>area.height-64){
+      point=researchCanvasWorldPoint(view,{x:area.width/2,y:area.height/2});
+      fitted=researchCanvasFittedViewport(context,{...point,width,height});
+    }else{
+      const visible={left:(32-view.x)/view.scale,right:(area.width-32-view.x)/view.scale,top:(32-view.y)/view.scale,bottom:(area.height-32-view.y)/view.scale};
+      const fit=candidates.find(p=>p.x-width/2>=visible.left&&p.x+width/2<=visible.right&&p.y-height/2>=visible.top&&p.y+height/2<=visible.bottom);
+      const clamp=(value,min,max,size)=>Math.max(min+size/2,Math.min(max-size/2,value));
+      point=fit??{x:clamp(point.x,visible.left,visible.right,width),y:clamp(point.y,visible.top,visible.bottom,height)};
+    }
+  }
+  return {...point,width,height,sizeMode:'auto',...(fitted?{viewport:fitted}:{})};
 }
 `;
 
