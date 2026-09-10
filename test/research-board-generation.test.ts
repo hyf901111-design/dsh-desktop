@@ -64,7 +64,7 @@ async function fixture(tasks: any[] = []) {
   const contextSnapshot = { canvas, history: [], messages: [{ id: 'message', text: '比特币实时监控面板', context: { scope: 'board', references: [] } }, { id: 'old', text: '计数器无需联网' }] }
   const commands: any[] = []
   const service = { taskAuthority: () => ({ localSessionId: 'local', snapshot: { tasks, snapshot: { canvas } } }), invoke: vi.fn(async () => {}) }
-  const runtimeRequest = vi.fn(async (_action: string, _body: any, _signal: AbortSignal) => ({ status: 'failed', errorCode: 'EMPTY_OUTPUT', error: '模型没有返回可展示的内容' }))
+  const runtimeRequest = vi.fn(async (_action: string, _body: any, _signal: AbortSignal): Promise<any> => ({ status: 'failed', errorCode: 'EMPTY_OUTPUT', error: '模型没有返回可展示的内容' }))
   const integration = new ResearchBoardIntegration({ root, storage: {}, registry: {}, clipboard: () => undefined,
     service: () => service, runtimeRequest, runtimeUrl: () => null, runtimeToken: 'test', revealFile() {}, invalidate() {},
     client: { request: async ({ body }: any) => { commands.push(body); return { action: body.action, operationId: body.operationId, seq: commands.length, ...(body.action === 'taskClaim' ? { leaseToken: 'lease', task: { contextSnapshot } } : {}) } } }
