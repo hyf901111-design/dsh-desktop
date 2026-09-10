@@ -539,6 +539,7 @@ function generationResultPatch(source) {
   return canvasInteractionPatch(source + '\n/* SHERLOCK_GENERATION_RESULT_V1 */')
 }
 function canvasInteractionPatch(source) {
+  source = generationFeedbackPatch(source)
   if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return source
   source = replace(source,
     'const interactivePreview = event.target?.closest?.("[data-research-preview-interactive],[data-research-selection-actions],[data-research-create-popover]");',
@@ -565,6 +566,38 @@ function canvasInteractionPatch(source) {
                     if (organized === null) return false;
                     organized.viewport = researchWorkbenchViewport([...organized.files, ...organized.artifacts], organized.viewport, snapshot.canvasSize);` + source.slice(end)
   return source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */'
+}
+
+function generationFeedbackPatch(source) {
+  source = generationProgressOverlayPatch(source)
+  if (!source.includes('/* SHERLOCK_GENERATION_PROGRESS_EVENTS_V1 */')) {
+    source = replace(source, 'node[key]=original[key];}', 'node[key]=original[key];if(Array.isArray(original?.generationEvents))node.generationEvents=researchGenerationInspectionEvents(original.generationEvents.map(e=>({...e,taskId:node.generationTaskId,canvasNodeId:node.id})),node.generationTaskId,node.id,0);}')
+    source += '\n/* SHERLOCK_GENERATION_PROGRESS_EVENTS_V1 */'
+  }
+  if (source.includes('/* SHERLOCK_GENERATION_FEEDBACK_V1 */')) return source
+  source = replace(source, 'className: ChatView_module_css_default.column,\n\t\t\t\t\t\t"data-chat-flow": "",', 'className: ChatView_module_css_default.column,\n\t\t\t\t\t\t"data-chat-flow": "", "data-research-task-conversation": researchTaskIdentity ? "" : undefined,')
+  source = replace(source, '"data-research-generation-state": node.generationStatus,', '"data-research-generation-state": node.generationStatus, "data-research-generation-empty": node.kind === "generated-container" && !node.containerSpec ? "" : undefined,')
+  source = replace(source, 'const research = /网页|搜索|检索/.test(lastTool);', 'const research = /网页|搜索|检索|金融|行情/.test(lastTool);')
+  source = replace(source, "if (event?.type === 'tool-started' && event.detail) append(id, `${event.tool}：${event.detail}`);", "if (event?.type === 'tool-started') append(id, event.detail ? `${event.tool}：${event.detail}` : event.tool);\n                    if(event?.type === 'tool-finished' && !event.failed) append(id, '资料已返回，继续核对与整理');")
+  source = replace(source, 'const visible = rows.slice(-5);', `const visible = rows.slice(-3);
+            const outputChars = node.generationOutputChars ?? (node.generationPartialText || '').length;
+            const lastActivity = node.generationLastActivityAt ?? node.generationEvents?.at(-1)?.at;
+            const silence = Number.isFinite(lastActivity) ? Math.max(0, Math.floor((clock-lastActivity)/1000)) : null;
+            const activityStatus = silence === null ? (elapsed < 20 ? '任务运行中，等待模型响应' : '仍在等待模型输出') : silence < 3 ? '刚刚收到响应' : '最近响应 ' + silence + ' 秒前';`)
+  source = replace(source, "timer = setTimeout(tick, document.hidden ? 1000 : 160);", 'timer = setTimeout(tick, 1000);')
+  source = replace(source, "className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,", "className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,")
+  source = replace(source, "}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'", `}), (0,react_jsx_runtime.jsxs)('div', {'data-research-generation-activity':'',children:[outputChars>0?'已接收 '+outputChars.toLocaleString()+' 字 · ':'',activityStatus]}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'`)
+  const css = `[data-research-task-conversation]{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] :is(p,pre,code,details){min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] pre{white-space:pre-wrap;overflow-x:auto}[data-research-generation-empty]:is([data-research-generation-state=queued],[data-research-generation-state=running]):not([open]){height:320px!important;min-height:0!important}[data-research-generation-empty] .rScV5Q_generationProcess{min-height:0;height:100%;padding:12px 20px 16px;gap:10px}[data-research-generation-empty] .rScV5Q_generationTerminal{min-height:0;flex:1;display:flex;align-items:flex-start;overflow:hidden}[data-research-generation-empty] .rScV5Q_generationLog{justify-content:flex-start;gap:6px;width:100%;min-width:0}[data-research-generation-description]{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}[data-research-generation-activity]{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}.rScV5Q_generationLogText{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}`
+  return source + `\n/* SHERLOCK_GENERATION_FEEDBACK_V1 */\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockGenerationFeedback="";style.textContent=${JSON.stringify(css)};document.head.appendChild(style);}\n`
+}
+
+function generationProgressOverlayPatch(source) {
+  if (source.includes('/* SHERLOCK_GENERATION_PROGRESS_OVERLAY_V1 */')) return source
+  source = replace(source, 'let collaborationWritable = false;', 'let collaborationWritable = false; let collaborationAppliedRevision;')
+  source = replace(source, 'const artifacts = boundedResearchCanvasArtifactNodes(canvas.artifacts);', `const artifacts = boundedResearchCanvasArtifactNodes(canvas.artifacts);
+                    for(const node of artifacts){const original=canvas.artifacts.find(n=>n.id===node.id);for(const key of ['generationLastActivityAt','generationOutputChars'])if(Number.isFinite(original?.[key]))node[key]=original[key];}`)
+  source = replace(source, 'pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;', 'if(collaborationAppliedRevision!==metadata.revision){pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;}collaborationAppliedRevision=metadata.revision;')
+  return source + '\n/* SHERLOCK_GENERATION_PROGRESS_OVERLAY_V1 */'
 }
 function chromePatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_CHROME_V1 */')) return source

@@ -1582,7 +1582,33 @@ export function registerResearchTaskRoutes(webServer, runtime) {
 export function createSharedBoardExecutor(ctx) {
   const sharedAdapter = createSubagentAdapter(ctx)
   return {
-    execute: async (request, signal) => {
+    execute: async (request, signal, onProgress = () => {}) => {
+      const progress = { startedAt: Date.now(), lastActivityAt: Date.now(), outputChars: 0, events: [] }
+      let progressSeq = 0, lastProgressAt = 0, outputPrefix = ''
+      const report = event => {
+        signal.throwIfAborted()
+        const now = Date.now()
+        const value = publicEventFromSessionEvent(event)
+        if (event?.type === 'assistant/chunk') progress.lastActivityAt = now
+        if (value?.type === 'assistant-delta') {
+          progress.outputChars += value.text.length
+          outputPrefix = (outputPrefix + value.text).slice(0, 600)
+          const building = /\{\s*"(?:version|type|title)"|<html|```/i.test(outputPrefix)
+          const previous = progress.events.at(-1)
+          if (!previous || previous.type !== 'assistant-delta' || previous.text !== (building ? '{"type":"component"}' : '正在整理已取得的信息'))
+            progress.events.push({ seq: ++progressSeq, at: now, type: 'assistant-delta', text: building ? '{"type":"component"}' : '正在整理已取得的信息' })
+        } else if (value) {
+          progress.lastActivityAt = now
+          progress.events.push({ ...value, seq: ++progressSeq, at: now })
+        }
+        if (event?.type === 'step/start') outputPrefix = ''
+        progress.events = progress.events.slice(-12)
+        if (now - lastProgressAt >= 1000 || value?.type === 'tool-started' || value?.type === 'tool-finished') {
+          lastProgressAt = now
+          onProgress(progress)
+        }
+      }
+      onProgress(progress)
       let prompt = request.prompt
       const load = createFrozenResearchFileLoader(loadResearchFileText, {
         cooperativeCancellation: true
@@ -1610,7 +1636,15 @@ export function createSharedBoardExecutor(ctx) {
         prompt: text,
         synthesisOnly,
         signal,
-        onSessionEvent: () => {},
+        onSessionEvent: report,
+        onProgress: event => {
+          const value = publicEventFromHostProgress(event)
+          if (!value) return
+          progress.events.push({ ...value, seq: ++progressSeq, at: Date.now() })
+          progress.events = progress.events.slice(-12)
+          progress.lastActivityAt = Date.now()
+          onProgress(progress)
+        },
         onWorkbenchPlan: plan => {
           signal.throwIfAborted()
           if (workbenchPlan && JSON.stringify(workbenchPlan) !== JSON.stringify(plan)) throw Error('本轮工作台已规划，请勿重复创建。')

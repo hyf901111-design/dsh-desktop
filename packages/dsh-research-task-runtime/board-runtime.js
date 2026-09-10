@@ -62,7 +62,9 @@ export class SharedExecutionRuntime {
       if (!owns('running')) return this.inspect(taskId)
       const run = (async () => {
         try {
-          const text = await this.execute(request, controller.signal)
+          const text = await this.execute(request, controller.signal, progress => {
+            if (owns('running')) task.progress = structuredClone(progress)
+          })
           if (!owns('running')) return
           if (typeof text !== 'string' || !text.trim())
             throw Error('EMPTY_OUTPUT')

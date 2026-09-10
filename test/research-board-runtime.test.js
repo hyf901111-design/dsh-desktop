@@ -258,3 +258,14 @@ for (const boundary of [1, 2])
       expect(calls).toBe(0)
     })
   }
+
+it('exposes live progress separately from final output and ignores updates after cancellation', async () => {
+ let report,finish
+ const runtime=new SharedExecutionRuntime({storage:{load:async()=>({}),save:async()=>{}},execute:async(_r,_s,onProgress)=>{report=onProgress;return new Promise(r=>{finish=r})}})
+ await runtime.start({taskId:'progress-task',sessionId:'local',kind:'container',prompt:'复杂生成'})
+ report({events:[{type:'tool-started',tool:'查询金融数据'}],lastActivityAt:123,outputChars:0})
+ const current=runtime.inspect('progress-task');expect(current.progress.events[0].tool).toBe('查询金融数据');expect(current.text).toBeUndefined()
+ current.progress.events.length=0;expect(runtime.inspect('progress-task').progress.events).toHaveLength(1)
+ await runtime.cancel('progress-task');report({events:[],lastActivityAt:999,outputChars:500});expect(runtime.inspect('progress-task').progress.lastActivityAt).toBe(123)
+ finish('未应用');await runtime.dispose()
+})

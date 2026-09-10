@@ -1803,3 +1803,17 @@ it('keeps sharing authority and refreshed file materialization when moving a boa
   expect(t.service.getSnapshot().boards[0]?.pinned).toBe(false)
   expect((await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'shared-session', baseRevision: view.canvasRevision, clientMutationId: 'old-session', canvas })).ok).toBe(false)
 })
+
+it('overlays local generation progress without changing the shared document or exposing it across accounts', async () => {
+ const t=make();await ready(t)
+ const snapshot=t.snapshot();snapshot.tasks=[{taskId:'progress',targetId:'n',status:'running',createdAt:123}]
+ await t.service.receiveBoard('board',snapshot)
+ const before=JSON.stringify(t.service.readSharedCanvas('shared-session'))
+ t.service.setLocalTaskProgress('u','board','progress',{events:[{seq:1,type:'tool-started',tool:'查询金融数据'}],lastActivityAt:456,outputChars:1200})
+ const node=t.service.getSnapshot().current!.canvas.artifacts[0]!
+ expect(node.generationEvents).toEqual([{seq:1,type:'tool-started',tool:'查询金融数据'}]);expect(node.generationOutputChars).toBe(1200);expect(node.generationStartedAt).toBe(123)
+ expect(JSON.stringify(t.service.readSharedCanvas('shared-session'))).toBe(before)
+ expect(()=>t.service.setLocalTaskProgress('another-account','board','progress',{events:[],lastActivityAt:999,outputChars:0})).toThrow()
+ snapshot.tasks[0]!.status='completed';await t.service.receiveBoard('board',snapshot)
+ expect(t.service.getSnapshot().current!.canvas.artifacts[0]!.generationEvents).toBeUndefined()
+})

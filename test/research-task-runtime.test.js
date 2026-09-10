@@ -2074,3 +2074,20 @@ it('retains a completed validated chart across a subsequent empty step and deadl
   expect(ctx.subagents.start).toHaveBeenCalledOnce();expect(run.dispose).toHaveBeenCalledOnce()
  }finally{await executor.dispose();vi.useRealTimers()}
 })
+
+it('reports real tool and output activity without copying code, arguments or reasoning into progress', async () => {
+ const {createSharedBoardExecutor}=await runtimeModule()
+ const parent={id:'parent'},child={id:'child',session:{events:[]}},result=Promise.withResolvers()
+ const run={id:'child',localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run),updates=[]
+ const executor=createSharedBoardExecutor(ctx)
+ const pending=executor.execute({sessionId:'parent',kind:'container',query:'000933.SH行情',prompt:'生成图表'},new AbortController().signal,p=>updates.push(structuredClone(p)))
+ await vi.waitFor(()=>expect(ctx.subagents.start).toHaveBeenCalledOnce())
+ ctx.emit(child,{seq:1,type:'assistant/chunk',data:{chunk:{type:'reasoning-delta',text:'PRIVATE_REASONING'}}})
+ ctx.emit(child,{seq:2,type:'tool/call',data:{name:'financial_query',arguments:'{"token":"PRIVATE_TOKEN"}'}})
+ ctx.emit(child,{seq:3,type:'assistant/chunk',data:{chunk:{type:'text-delta',text:'{"version":1,"type":"html","html":"PRIVATE_RAW_HTML"}'}}})
+ ctx.emit(child,{seq:4,type:'tool/result',data:{}})
+ const progress=updates.at(-1);expect(progress.outputChars).toBeGreaterThan(0);expect(progress.events.some(e=>e.tool==='查询金融数据')).toBe(true)
+ expect(JSON.stringify(updates)).not.toMatch(/PRIVATE_REASONING|PRIVATE_TOKEN|PRIVATE_RAW_HTML/)
+ result.resolve({stopReason:'completed',output:[{type:'text',text:'{"version":1,"type":"markdown","title":"结果","content":"已完成"}'}]})
+ await pending;await executor.dispose()
+})
