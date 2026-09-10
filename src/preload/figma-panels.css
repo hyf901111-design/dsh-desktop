@@ -5,10 +5,16 @@
 
 body {
   --odyssey-right-occupancy: 0px;
+  --odyssey-panel-edge:24px;
+}
+
+/* 13 / 17 use the 80 px rail and a 20 px right edge. Home / 15 use 24. */
+body:has([data-dsh-frame][data-sidebar-collapsed="true"]) {
+  --odyssey-panel-edge:20px;
 }
 
 body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {
-  --odyssey-right-occupancy: calc(var(--dsh-sidebar-width, 340px) + 24px);
+  --odyssey-right-occupancy: calc(var(--dsh-sidebar-width, 340px) + var(--odyssey-panel-edge));
 }
 
 /* The one-piece window remains full width. Only the usable content region
@@ -29,7 +35,7 @@ body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {
 body:has([data-odyssey-page]) .t8lSSG_panel {
   box-sizing:border-box;
   top:22px;
-  right:24px;
+  right:var(--odyssey-panel-edge);
   bottom:22px;
 }
 body:has([data-odyssey-page="home"]) .t8lSSG_panel { background:transparent; }
@@ -42,6 +48,10 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
   border-right:0 !important;
   border-radius:12px;
 }
+[data-dsh-panel-host][data-odyssey-panel-bottom="open"] .t8lSSG_bottomPanel {
+  /* The stored 220 is the reserved strip: 4 top + 204 content + 12 bottom. */
+  height:max(104px, calc(var(--dsh-sidebar-height, 220px) - 16px)) !important;
+}
 
 [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleCluster {
   top: 28px !important;
@@ -50,7 +60,7 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
 
 [data-dsh-panel-host][data-odyssey-panel-right="open"] .t8lSSG_toggleCluster {
   top: 29px !important;
-  right: 32px !important;
+  right: calc(var(--odyssey-panel-edge) + 8px) !important;
 }
 
 [data-dsh-panel-host] [data-odyssey-panel-entry] {
