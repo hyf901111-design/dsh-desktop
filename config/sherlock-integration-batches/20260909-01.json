@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复重新开启协作后的旧任务重试与待邀请圆环",
+        "featureName": "补全被删除组件的协作重试与结果回写",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "4064843ba1b044010cea06fe88ae4bbf434dffdb",
-        "tipCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
+        "baseCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
+        "tipCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
         "commits": [
           {
-            "commit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
+            "commit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
             "parents": [
-              "4064843ba1b044010cea06fe88ae4bbf434dffdb"
+              "b1c42ea8702abc4ba5d34f5277d67d7f90427b77"
             ],
-            "subject": "修复协作重开后旧任务重试并缩小待邀请圆环"
+            "subject": "补全旧组件删除后的协作重试创建与结果回写"
           }
         ],
         "files": [
@@ -29,19 +29,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
             "path": "test/research-board-generation.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-boards-ui.test.ts"
           }
         ],
         "checks": [
@@ -53,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过",
-            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
-            "completedAt": "2026-09-10T02:57:54.557435+00:00",
+            "verifiedCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
+            "completedAt": "2026-09-10T03:13:52.497173+00:00",
             "timeoutMs": 300000
           },
           {
@@ -66,21 +54,8 @@
             ],
             "outcome": "passed",
             "summary": "清洁依赖补丁及幂等检查通过",
-            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
-            "completedAt": "2026-09-10T02:57:54.557435+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "真实工作区组件与协作界面聚焦流程通过",
-            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
-            "completedAt": "2026-09-10T02:57:54.557435+00:00",
+            "verifiedCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
+            "completedAt": "2026-09-10T03:13:52.497173+00:00",
             "timeoutMs": 300000
           },
           {
@@ -92,99 +67,25 @@
               "test/research-boards-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "18 项生成重试、权限及提示检查通过",
-            "verifiedCommit": "b1c42ea8702abc4ba5d34f5277d67d7f90427b77",
-            "completedAt": "2026-09-10T02:57:54.557435+00:00",
+            "summary": "19 项聚焦检查通过，覆盖新节点创建、组件生成、回写和权限状态",
+            "verifiedCommit": "aaf19ad9d8967a1ae7d4a59ade81910eb07aab0d",
+            "completedAt": "2026-09-10T03:13:52.497173+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器协作流程通过；权限报错在正文显示中文说明，待邀请圆环缩至 12px。原生旧任务重试待集成构建复核。"
+          "summary": "前一构建原生路径发现无目标被路由到问答；新增真实文档更新与任务结果回写回归检查通过，原生复核待新构建。"
         },
         "acceptanceCriteria": [
-          "显式重试在当前授权下创建新请求，不复用旧共享版本操作",
-          "原组件已移除时创建新组件，连续点击及回复丢失不会重复启动",
-          "权限撤销仍阻止执行，原始记录和操作版本保持不变",
-          "错误弹窗显示中文正文，待邀请圆环缩小并居中"
+          "重试被删除组件时先以持久化操作创建新组件，再使用组件生成通道",
+          "旧版本误转问答的重试仍可重新发起正确的组件任务",
+          "生成结果包含新组件节点，现有节点保留不被覆盖"
         ],
         "risks": [
           "仅本地测试，不公开发布、不晋升 main；不涉及服务端修改。"
         ],
-        "generatedAt": "2026-09-10T02:57:54.557435+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b462962224126a8211adc00d3ad527a6caedb70c",
-        "verificationCommit": "b462962224126a8211adc00d3ad527a6caedb70c",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "b462962224126a8211adc00d3ad527a6caedb70c",
-            "completedAt": "2026-09-10T02:59:14.886Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b462962224126a8211adc00d3ad527a6caedb70c",
-            "completedAt": "2026-09-10T02:59:14.886Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "b462962224126a8211adc00d3ad527a6caedb70c",
-            "completedAt": "2026-09-10T02:59:14.886Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "b462962224126a8211adc00d3ad527a6caedb70c",
-            "completedAt": "2026-09-10T02:59:14.886Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "b462962224126a8211adc00d3ad527a6caedb70c",
-            "completedAt": "2026-09-10T02:59:14.886Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T02:59:14.886Z"
+        "generatedAt": "2026-09-10T03:13:52.497173+00:00"
       }
     }
   ],
