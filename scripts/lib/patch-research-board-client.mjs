@@ -480,13 +480,21 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
-  if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return source
+  if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return chromePatch(source)
   source = replace(
     source,
     'node.kind !== "generated-container" && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)',
     'sherlockBoardsPage.selectionNodeReady(node) && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)'
   )
-  return source + '\n/* SHERLOCK_BOARD_POLISH_V1 */'
+  return chromePatch(source + '\n/* SHERLOCK_BOARD_POLISH_V1 */')
+}
+function chromePatch(source) {
+  if (source.includes('/* SHERLOCK_BOARD_CHROME_V1 */')) return source
+  for (const [property, attribute] of [['titleRow', 'title-row'], ['titleCluster', 'title-cluster'], ['headerUtilities', 'utilities'], ['tabs', 'tabs']]) {
+    source = replace(source, `className: ConversationRoot_module_css_default.${property},`, `className: ConversationRoot_module_css_default.${property}, "data-srb-${attribute}":"",`)
+  }
+  source = replace(source, '"aria-hidden": hideChrome || void 0,', '"aria-hidden": hideChrome || void 0, "data-srb-session-header":"",')
+  return source + '\n/* SHERLOCK_BOARD_CHROME_V1 */'
 }
 export function patchResearchBoardWorkspace(source) {
   if (source.includes('/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')) return patchWorkspaceSelection(source)
@@ -564,6 +572,9 @@ function patchWorkspaceBoardVisibility(source) {
 }
 
 function patchWorkspaceSidebarSkin(source) {
+  if (!source.includes('"data-srb-section-header"')) source = replace(source,
+    'className: WorkspaceBrowser_module_css_default.sectionHeader,',
+    'className: WorkspaceBrowser_module_css_default.sectionHeader, "data-srb-section-header":"",')
   if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')) return source
   if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */')) return source
     .replace('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */', '/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')

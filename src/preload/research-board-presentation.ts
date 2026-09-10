@@ -1,5 +1,13 @@
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 
+/** Retried requests show their current state once; prior attempts remain inspectable. */
+export function boardTaskAttempts<T extends { createdAt?: number }>(tasks: T[]) {
+  const ordered = tasks.map((task, index) => ({ task, index }))
+    .sort((a, b) => (b.task.createdAt ?? 0) - (a.task.createdAt ?? 0) || b.index - a.index)
+    .map(({ task }) => task)
+  return { current: ordered.slice(0, 1), previous: ordered.slice(1) }
+}
+
 export function boardTaskStatus(task: { status: string; failureCode?: unknown }) {
   if (task.status === 'pending') return '研究任务等待执行'
   if (task.status === 'running') return '正在研究…'

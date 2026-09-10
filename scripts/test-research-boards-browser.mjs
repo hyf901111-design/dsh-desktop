@@ -462,7 +462,7 @@ assets.set(
     'exports.__SidebarRoot=SidebarRoot;\n\t\texports.apply = apply;'
   )
 )
-assets.set('/workspace.js', patchResearchBoardWorkspace(await readFile(packagePath('dsh-client-ui-workspace', 'lib/client.js'), 'utf8')).replace('\t\texports.apply = apply;', 'exports.__SessionNodeItem=SessionNodeItem;\n\t\texports.apply = apply;'))
+assets.set('/workspace.js', patchResearchBoardWorkspace(await readFile(packagePath('dsh-client-ui-workspace', 'lib/client.js'), 'utf8')).replace('\t\texports.apply = apply;', 'exports.__WorkspaceBrowser=WorkspaceBrowser; exports.__SessionNodeItem=SessionNodeItem;\n\t\texports.apply = apply;'))
 assets.set(
   '/runtime.js',
   await readFile(
@@ -532,7 +532,7 @@ const cssDir = packagePath('dsh-web-frontend', 'dist/assets'),
     (s) => s.startsWith('index-') && s.endsWith('.css')
   )
 assets.set('/base.css', await readFile(join(cssDir, css), 'utf8'))
-const html = `<!doctype html><html><head><meta charset="utf-8"><title>Sherlock Research Boards UI Fixture</title><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/fixture.css"><style>html,body,#app{height:100%;margin:0}body{--dsw-font-family:system-ui;--dsw-alias-label-primary:#232323;--dsw-alias-label-secondary:#727272;--dsw-alias-bg-base:#fdfdfd;--dsw-alias-bg-layer-2:#fff;--dsw-specific-sidebar-fill:#f5f5f5;--dsw-alias-border-l2:#dedede;--dsw-alias-interactive-bg-hover:#8882}body[data-ds-dark-theme]{--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#999;--dsw-alias-bg-base:#181818;--dsw-alias-bg-layer-2:#222;--dsw-specific-sidebar-fill:#202020;--dsw-alias-border-l2:#393939;background:#181818}.fixture-shell{display:flex;height:100%;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base)}.fixture-sidebar{flex:none;height:100%}.fixture-main{min-width:0;flex:1;display:flex;flex-direction:column;position:relative}.fixture-main>header{margin-right:330px}.fixture-workbench{display:flex;flex:1;min-height:0}.fixture-canvas{position:relative;flex:1;min-width:0}.fixture-canvas>[data-research-canvas]{height:100%;background-color:var(--dsw-alias-bg-base)}.fixture-discussion{position:relative;width:330px;min-width:0;border-left:1px solid var(--dsw-alias-border-l2)}.fixture-workspaces{padding:16px 12px}.fixture-add{display:none;position:absolute;bottom:12px;left:20px;padding:7px 12px;border:1px solid #8883;border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:inherit}@media(max-width:850px){.fixture-discussion{width:280px}.fixture-main>header{margin-right:280px}}</style></head><body><div id="app"></div><script type="module" src="/fixture.js"></script></body></html>`
+const html = `<!doctype html><html><head><meta charset="utf-8"><title>Sherlock Research Boards UI Fixture</title><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/fixture.css"><style>html,body,#app{height:100%;margin:0}body{--dsw-font-family:system-ui;--dsw-alias-label-primary:#232323;--dsw-alias-label-secondary:#727272;--dsw-alias-bg-base:#fdfdfd;--dsw-alias-bg-layer-2:#fff;--dsw-specific-sidebar-fill:#f5f5f5;--dsw-alias-border-l2:#dedede;--dsw-alias-interactive-bg-hover:#8882}body[data-ds-dark-theme]{--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#999;--dsw-alias-bg-base:#181818;--dsw-alias-bg-layer-2:#222;--dsw-specific-sidebar-fill:#202020;--dsw-alias-border-l2:#393939;background:#181818}.fixture-shell{display:flex;height:100%;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base)}.fixture-sidebar{flex:none;height:100%}.fixture-main{min-width:0;flex:1;display:flex;flex-direction:column;position:relative}.fixture-main>header{margin-right:330px}.fixture-workbench{display:flex;flex:1;min-height:0}.fixture-canvas{position:relative;flex:1;min-width:0}.fixture-canvas>[data-research-canvas]{height:100%;background-color:var(--dsw-alias-bg-base)}.fixture-discussion{position:relative;width:330px;min-width:0;border-left:1px solid var(--dsw-alias-border-l2)}.fixture-workspaces{display:flex;flex:1;min-height:0}.fixture-add{display:none;position:absolute;bottom:12px;left:20px;padding:7px 12px;border:1px solid #8883;border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:inherit}@media(max-width:850px){.fixture-discussion{width:280px}.fixture-main>header{margin-right:280px}}</style></head><body><div id="app"></div><script type="module" src="/fixture.js"></script></body></html>`
 const connections = new Set()
 const server = createServer(async (req, res) => {
   try {
@@ -893,6 +893,36 @@ if (process.argv.includes('--serve')) {
     await peer.waitForFunction(
       () => window.fixture.page.getState().current?.presence.length === 2
     )
+    // The actual session header keeps editable fields usable while chrome is not selectable.
+    const chromeGeometry = await page.evaluate(() => {
+      const header = document.querySelector('[data-srb-session-header]'), avatar = document.querySelector('.srb-avatar'), button = document.querySelector('.srb-create-collaboration')
+      const mid = el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2 }
+      return { header: mid(header), avatar: mid(avatar), button: mid(button),
+        buttonBorder: getComputedStyle(button).borderTopWidth,
+        sidebarSelect: getComputedStyle(document.querySelector('.srb-board-title')).userSelect,
+        headerSelect: getComputedStyle(header).userSelect,
+        inputSelect: getComputedStyle(document.querySelector('.srb-section input')).userSelect,
+        sidebarHeaders: [...document.querySelectorAll('[data-srb-section-header]')].map(el => ({
+          buttons: [...el.querySelectorAll('button')].filter(b => b.getAttribute('aria-label') !== '搜索看板名称').map(b => ({label:b.getAttribute('aria-label'),x:b.getBoundingClientRect().x,width:b.getBoundingClientRect().width})),
+          ancestry: [el,el.parentElement,el.parentElement.parentElement,el.parentElement.parentElement.parentElement].map(n=>({cls:n.className,width:n.getBoundingClientRect().width,x:n.getBoundingClientRect().x,padding:getComputedStyle(n).padding,border:getComputedStyle(n).borderWidth}))
+        })) }
+    })
+    console.log('CHROME_GEOMETRY='+JSON.stringify(chromeGeometry))
+    assert.deepEqual(chromeGeometry.sidebarHeaders[0].buttons.slice(-3).map(b=>b.x), chromeGeometry.sidebarHeaders[1].buttons.slice(-3).map(b=>b.x), 'board and workspace action columns align')
+    assert.ok(Math.abs(chromeGeometry.header - chromeGeometry.avatar) < 1, JSON.stringify(chromeGeometry))
+    assert.ok(Math.abs(chromeGeometry.header - chromeGeometry.button) < 1)
+    assert.equal(chromeGeometry.buttonBorder, '1px')
+    assert.equal(chromeGeometry.sidebarSelect, 'none')
+    assert.equal(chromeGeometry.headerSelect, 'none')
+    assert.equal(chromeGeometry.inputSelect, 'text')
+    const headerBox = await page.locator('[data-srb-session-header]').boundingBox()
+    await page.mouse.move(headerBox.x + 10, headerBox.y + 20)
+    await page.mouse.down()
+    await page.mouse.move(headerBox.x + 180, headerBox.y + 50, { steps: 8 })
+    await page.mouse.up()
+    assert.equal(await page.evaluate(() => getSelection()?.toString()), '')
+    await page.screenshot({ path: join(out, 'collaboration-chrome-light.png') })
+    console.log('COLLABORATION_CHROME_PASSED header-center/button/chrome-selection/editable-search')
     const boardId = await page.evaluate(
         () => window.fixture.page.getState().current.boardId
       ),
@@ -1464,6 +1494,13 @@ if (process.argv.includes('--serve')) {
           ),
       retried.value.taskId
     )
+    const retryGroup = page.locator(`[data-request-message-id="${stopping.value.requestMessageId}"]`)
+    await retryGroup.locator('.srb-attempt-history').waitFor()
+    assert.equal(await retryGroup.locator('.srb-attempt-history').getAttribute('open'), null)
+    assert.equal(await retryGroup.locator('.srb-request-statuses > p.srb-status').count(), 0, 'successful retry has no stale error status')
+    await retryGroup.locator('summary').click()
+    await retryGroup.locator('.srb-attempt-history').getByText('研究任务已中断。', { exact: false }).waitFor()
+    await retryGroup.locator('summary').click()
     assert.equal(users[0].modelCalls(), beforeStop + 2)
     assert.equal(users[1].modelCalls(), 0)
     assert.equal(

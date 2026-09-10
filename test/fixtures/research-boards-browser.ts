@@ -92,6 +92,9 @@ function store(initial: any) {
     }
   }
 }
+const fixtureWorkspaceState = { items: [], phase: 'ready', archivedSessionIds: [] }
+const fixtureWorkspaceView = { groupBy: 'flat', orderBy: 'manual', groupExpansion: {}, sessionOrderByAccount: {}, sessionUpdatedAtByAccount: {} }
+const fixtureWorkspaceActions = new Proxy({}, { get: () => () => {} })
 const saved = JSON.parse(localStorage.getItem('fixture-sessions') ?? 'null')
 const list = store(
   saved ?? {
@@ -316,12 +319,17 @@ function App() {
             ? h(
                 'div',
                 { className: 'fixture-workspaces', hidden: !owner.wide },
-                '工作区',
-                h('p', null, '研究资料'),
-                ...Object.values(list.getSnapshot().byId).map((node: any) => h(loaded.workspace.__SessionNodeItem, {
-                  key: node.id, node: { ...node, runningSubagentCount: 0, updatedAt: Date.now() - 60000 },
-                  currentId: id, now: Date.now(), onOpen: sessions.open, onRename: () => {}, onFork: () => {}, onArchive: () => {}, flat: true, t
-                }))
+                h(loaded.workspace.__WorkspaceBrowser, {
+                  wide: owner.wide, expandSidebar: owner.expandSidebar,
+                  useSessions: (select: any) => select(list.getSnapshot()),
+                  useWorkspaces: (select: any) => select(fixtureWorkspaceState),
+                  useStore: (select: any) => select(fixtureWorkspaceView),
+                  useDirectoryFlow: (select: any) => select(true),
+                  actions: fixtureWorkspaceActions, open: sessions.open,
+                  renderSlot: () => null, searchSessions: async () => ({ items: [], hasMore: false }), searchResultLimit: 50,
+                  startSession: () => {}, createWorkspace: () => {}, renameSession: async () => {}, archiveSession: async () => {},
+                  t
+                })
               )
             : name === 'sidebar.settings'
               ? h(
@@ -345,7 +353,7 @@ function App() {
         views: {
           subscribe: () => () => {},
           version: () => 0,
-          list: () => [{ id: 'research', label: '研究' }]
+          list: () => [{ id: 'chat', label: '对话' }, { id: 'research', label: '研究' }]
         },
         open: sessions.open,
         t
