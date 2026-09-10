@@ -135,6 +135,29 @@ describe('Figma file entries and complete readers', () => {
     } finally { await mounted.cleanup() }
   })
 
+  it('keeps a visited HTML reader viewport inside an inert zero-size closed clip', async () => {
+    const mounted = await mount(fixtureFile('html'))
+    try {
+      const reader = mounted.host.querySelector('[data-research-original-reader]') as any
+      expect(reader.hasAttribute('data-research-retained-viewport')).toBe(false)
+      expect(mounted.restore).not.toHaveBeenCalled()
+      Object.defineProperties(reader, { clientWidth: { configurable: true, value: 1314 }, clientHeight: { configurable: true, value: 786 } })
+      await mounted.toggle(); await mounted.settle()
+      const iframe = reader.querySelector('iframe')
+      expect(reader.style.getPropertyValue('--odyssey-reader-width')).toBe('1314px')
+      expect(reader.style.getPropertyValue('--odyssey-reader-height')).toBe('786px')
+      await mounted.toggle()
+      expect(reader.hidden).toBe(true); expect(reader.hasAttribute('inert')).toBe(true)
+      expect(reader.getAttribute('aria-hidden')).toBe('true')
+      const style = mounted.window.getComputedStyle(reader)
+      expect(style.width).toBe('0px'); expect(style.height).toBe('0px'); expect(style.visibility).toBe('hidden')
+      expect(mounted.window.getComputedStyle(iframe).width).toBe('1314px')
+      expect(mounted.window.getComputedStyle(iframe).height).toBe('786px')
+      await mounted.toggle()
+      expect(reader.querySelector('iframe')).toBe(iframe); expect(mounted.restore).toHaveBeenCalledTimes(1)
+    } finally { await mounted.cleanup() }
+  })
+
   it('shows original loading and unavailable states only after opening', async () => {
     let finish!: (value: null) => void
     const restore = vi.fn(() => new Promise(resolve => { finish = resolve }))

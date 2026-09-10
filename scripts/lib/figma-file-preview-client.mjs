@@ -88,8 +88,17 @@ function ResearchFilePreviewPresentation({node,expanded:explicitExpanded,childre
   const ref=(0,react.useRef)(null),readerRef=(0,react.useRef)(null),entryRef=(0,react.useRef)(null);
   (0,react.useLayoutEffect)(()=>{if(typeof explicitExpanded==='boolean')return;const frame=ref.current?.closest('[data-research-node-id]');if(!frame)return;const update=()=>setContainerExpanded(frame.open===true);update();const Observer=frame.ownerDocument.defaultView?.MutationObserver,observer=Observer?new Observer(update):null;observer?.observe(frame,{attributes:true,attributeFilter:['open']});return()=>observer?.disconnect();},[node.id,explicitExpanded]);
   const [visited,setVisited]=(0,react.useState)(expanded),[copy,setCopy]=(0,react.useState)(()=>researchFigmaFileEntryCopy(node,null));
+  const [readerViewport,setReaderViewport]=(0,react.useState)(null);
   const [layout,setLayout]=(0,react.useState)({text:'',url:'',status:'',compact:false,hideKind:false,measured:false});
   (0,react.useLayoutEffect)(()=>{if(expanded)setVisited(true);},[expanded]);
+  // Electron OOPIFs lose their document scroll offset if hidden at the closed card size.
+  // Keep only visited HTML/web reader layout stable inside a zero-size, inert clip.
+  (0,react.useLayoutEffect)(()=>{
+    if(!expanded||!['html','web'].includes(copy.kind))return;
+    const reader=readerRef.current;if(!reader)return;
+    const measure=()=>{if(!reader.closest('[data-research-node-id]')?.open)return;const width=reader.clientWidth,height=reader.clientHeight;if(width<1||height<1)return;setReaderViewport(old=>old?.width===width&&old?.height===height?old:{width,height});};
+    measure();const Observer=reader.ownerDocument.defaultView?.ResizeObserver,observer=Observer?new Observer(measure):null;observer?.observe(reader);return()=>observer?.disconnect();
+  },[expanded,copy.kind,node.id]);
   (0,react.useLayoutEffect)(()=>{
     const reader=readerRef.current,update=()=>{const next=researchFigmaFileEntryCopy(node,reader);setCopy(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);};
     update();const Observer=reader?.ownerDocument.defaultView?.MutationObserver,observer=Observer?new Observer(update):null;
@@ -115,7 +124,7 @@ function ResearchFilePreviewPresentation({node,expanded:explicitExpanded,childre
       (layout.measured?layout.status:copy.status)?(0,react_jsx_runtime.jsx)('span',{className:'odyssey-file-status',role:'status',title:copy.status,children:layout.measured?layout.status:copy.status}):null,
       (layout.measured?layout.url:copy.url)?(0,react_jsx_runtime.jsx)('span',{className:'odyssey-file-source',title:copy.url,children:layout.measured?layout.url:copy.url}):null,
       layout.text?(0,react_jsx_runtime.jsx)('p',{className:'odyssey-file-excerpt',children:layout.text}):null]}),
-    (0,react_jsx_runtime.jsx)('div',{ref:readerRef,className:'odyssey-file-reader','data-research-original-reader':'',hidden:!expanded,inert:!expanded?'':void 0,'aria-hidden':!expanded?true:void 0,children:expanded||visited?children:null})]});
+    (0,react_jsx_runtime.jsx)('div',{ref:readerRef,className:'odyssey-file-reader','data-research-original-reader':'','data-research-retained-viewport':readerViewport&&['html','web'].includes(copy.kind)?true:void 0,style:readerViewport?{'--odyssey-reader-width':readerViewport.width+'px','--odyssey-reader-height':readerViewport.height+'px'}:void 0,hidden:!expanded,inert:!expanded?'':void 0,'aria-hidden':!expanded?true:void 0,children:expanded||visited?children:null})]});
 }
 `
 
@@ -127,6 +136,8 @@ body[data-ds-dark-theme] [data-research-file-presentation]{--odyssey-card-text:#
 .odyssey-file-presentation,.odyssey-file-reader{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;width:100%;height:100%}
 .odyssey-file-entry{box-sizing:border-box;display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;height:100%;padding:0 17px 15px;gap:12px;color:var(--odyssey-card-text,#292b2f);font:13px/21px "EWork DIN Pro","Noto Sans SC",sans-serif;overflow-wrap:anywhere}
 .odyssey-file-entry[hidden],.odyssey-file-reader[hidden]{display:none!important}
+.odyssey-file-reader[hidden][data-research-retained-viewport]{display:block!important;position:absolute;top:0;left:0;flex:none;width:0!important;height:0!important;min-width:0!important;min-height:0!important;overflow:hidden!important;visibility:hidden;pointer-events:none}
+.odyssey-file-reader[hidden][data-research-retained-viewport]>*{flex:none!important;width:var(--odyssey-reader-width)!important;height:var(--odyssey-reader-height)!important;min-height:var(--odyssey-reader-height)!important;max-width:none!important;max-height:none!important}
 /* Expanded RichNodeFrame readers own interaction even when the background canvas retains a gesture modifier. */
 .rScV5Q_richNode[open]>.rScV5Q_previewBody>.rScV5Q_previewShield{display:none!important;pointer-events:none!important}
 .odyssey-file-entry[data-entry-compact=true]{padding:6px 12px;gap:4px}
