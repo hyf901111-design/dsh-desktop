@@ -623,6 +623,10 @@ export class ResearchBoardIntegration {
       // Shared generation state comes from the leased task, not the native
       // private-generation poller or a renderer's stale copy of the node.
       if (old && snapshot.tasks.some((t: any) => t.targetId === n.id)) {
+        if (n.kind === 'generated-container') {
+          if (old.excerpt !== undefined) n.excerpt = old.excerpt
+          else delete n.excerpt
+        }
         for (const key of ['generationStatus', 'generationError', 'generationStartedAt', 'generationCompletedAt', 'lastSuccessfulAt', 'refreshError']) {
           if (old[key] !== undefined) n[key] = old[key]
           else delete n[key]
