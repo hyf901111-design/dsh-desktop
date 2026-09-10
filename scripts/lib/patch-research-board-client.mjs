@@ -574,7 +574,7 @@ function generationFeedbackPatch(source) {
     source = replace(source, 'node[key]=original[key];}', 'node[key]=original[key];if(Array.isArray(original?.generationEvents))node.generationEvents=researchGenerationInspectionEvents(original.generationEvents.map(e=>({...e,taskId:node.generationTaskId,canvasNodeId:node.id})),node.generationTaskId,node.id,0);}')
     source += '\n/* SHERLOCK_GENERATION_PROGRESS_EVENTS_V1 */'
   }
-  if (source.includes('/* SHERLOCK_GENERATION_FEEDBACK_V1 */')) return source
+  if (source.includes('/* SHERLOCK_GENERATION_FEEDBACK_V1 */')) return generationActivityClockPatch(source)
   source = replace(source, 'className: ChatView_module_css_default.column,\n\t\t\t\t\t\t"data-chat-flow": "",', 'className: ChatView_module_css_default.column,\n\t\t\t\t\t\t"data-chat-flow": "", "data-research-task-conversation": researchTaskIdentity ? "" : undefined,')
   source = replace(source, '"data-research-generation-state": node.generationStatus,', '"data-research-generation-state": node.generationStatus, "data-research-generation-empty": node.kind === "generated-container" && !node.containerSpec ? "" : undefined,')
   source = replace(source, 'const research = /网页|搜索|检索/.test(lastTool);', 'const research = /网页|搜索|检索|金融|行情/.test(lastTool);')
@@ -588,7 +588,14 @@ function generationFeedbackPatch(source) {
   source = replace(source, "className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,", "className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,")
   source = replace(source, "}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'", `}), (0,react_jsx_runtime.jsxs)('div', {'data-research-generation-activity':'',children:[outputChars>0?'已接收 '+outputChars.toLocaleString()+' 字 · ':'',activityStatus]}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'`)
   const css = `[data-research-task-conversation]{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] :is(p,pre,code,details){min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] pre{white-space:pre-wrap;overflow-x:auto}[data-research-generation-empty]:is([data-research-generation-state=queued],[data-research-generation-state=running]):not([open]){height:320px!important;min-height:0!important}[data-research-generation-empty] .rScV5Q_generationProcess{min-height:0;height:100%;padding:12px 20px 16px;gap:10px}[data-research-generation-empty] .rScV5Q_generationTerminal{min-height:0;flex:1;display:flex;align-items:flex-start;overflow:hidden}[data-research-generation-empty] .rScV5Q_generationLog{justify-content:flex-start;gap:6px;width:100%;min-width:0}[data-research-generation-description]{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}[data-research-generation-activity]{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}.rScV5Q_generationLogText{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}`
-  return source + `\n/* SHERLOCK_GENERATION_FEEDBACK_V1 */\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockGenerationFeedback="";style.textContent=${JSON.stringify(css)};document.head.appendChild(style);}\n`
+  return generationActivityClockPatch(source + `\n/* SHERLOCK_GENERATION_FEEDBACK_V1 */\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockGenerationFeedback="";style.textContent=${JSON.stringify(css)};document.head.appendChild(style);}\n`)
+}
+
+function generationActivityClockPatch(source) {
+  if (source.includes('/* SHERLOCK_GENERATION_ACTIVITY_CLOCK_V1 */')) return source
+  source = replace(source, "node.generationLastActivityAt ?? node.generationEvents?.at(-1)?.at", "node.generationLastActivityAt || node.generationEvents?.at(-1)?.time || node.generationEvents?.at(-1)?.at")
+  source = replace(source, 'Number.isFinite(lastActivity) ? Math.max', 'Number.isFinite(lastActivity) && lastActivity > 0 ? Math.max')
+  return source + '\n/* SHERLOCK_GENERATION_ACTIVITY_CLOCK_V1 */'
 }
 
 function generationProgressOverlayPatch(source) {

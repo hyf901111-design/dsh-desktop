@@ -8499,7 +8499,7 @@ describe('Sherlock workspace and composer controls', () => {
     const onCancel = vi.fn()
     try {
       const node = { generationTaskId: 'terminal-task', generationStatus: 'running', generationEvents: [
-        { seq: 1, type: 'started' }, { seq: 2, type: 'tool-started', tool: '检索网页' }, { seq: 3, type: 'tool-finished' }
+        { seq: 1, type: 'started' }, { seq: 2, type: 'tool-started', tool: '检索网页' }, { seq: 3, type: 'tool-finished', time: Date.now() }
       ] }
       await act(async () => { root.render(createElement(client.__testGenerationProcess, { node, onCancel })) })
       expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(2)
@@ -8507,6 +8507,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(host.querySelectorAll('[data-research-generation-row]')).toHaveLength(2)
       expect(host.querySelector('[data-research-generation-visual]')?.getAttribute('aria-hidden')).toBe('true')
       expect(host.querySelector('[role="status"]')?.textContent).toBe('正在整理资料')
+      expect(host.querySelector('[data-research-generation-activity]')?.textContent).toContain('刚刚收到响应')
       const building = { ...node, generationLastSeq: 4, generationEvents: [...node.generationEvents, { seq: 4, type: 'assistant-delta', text: '<main><style>private-code' }] }
       await act(async () => { root.render(createElement(client.__testGenerationProcess, { node: building, onCancel })) })
       expect(host.textContent).toContain('编排页面布局与配色')
