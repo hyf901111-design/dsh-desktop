@@ -10,7 +10,7 @@ function toolPanel(n) { const {height, ...p} = panel(n); return {...p, size: hei
 function fake() { const f = new Proxy(function () { }, { get: () => f, apply: () => f }); return f; }
 async function bundle() {
     let descriptor;
-    runInNewContext(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'), { window: { __ModuleLoader__: { load: (d) => descriptor = d } }, TextEncoder, TextDecoder, AbortController, setTimeout, clearTimeout });
+    runInNewContext(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'), { window: { __ModuleLoader__: { load: (d) => descriptor = d } }, URL, TextEncoder, TextDecoder, AbortController, setTimeout, clearTimeout });
     return descriptor.factory(() => fake());
 }
 function store() { const map = new Map(); return { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => { map.set(k, v); return true; } }; }
@@ -153,4 +153,24 @@ it('grows a preset HTML card and moves subsequent rows only by the additional ro
     workspace.resizeNode('fit0','se',{x:0,y:-200},1);
     expect(workspace.fitHtmlContent('fit0',html,{width:720,height:1100})).toBe(false);
     expect(workspace.getSnapshot().artifacts[0].height).toBe(800);
+});
+
+it('arranges links, text and many generated panels together without an empty vertical region', async () => {
+    const client = await bundle(), storage = store();
+    const nodes = Array.from({length: 14}, (_, i) => ({id:`mixed-${i}`,kind:'generated-container',messageId:`m${i}`,title:`面板${i}`,excerpt:'已生成',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'研究',refreshMinutes:0,width:720,height:840,x:360+(i%3)*752,y:4000+Math.floor(i/3)*872,sizeMode:'auto',containerSizePreset:'large',containerSpec:{version:1,type:'html',title:'面板',html:'<p>有效内容</p>'}}));
+    nodes.push({id:'link',kind:'web-link',messageId:'link',title:'网页',url:'https://example.org',excerpt:'网页',x:300,y:420,width:600,height:400});
+    nodes.push({id:'text',kind:'pasted-text',messageId:'text',title:'文字',excerpt:'协作测试记录',x:1866,y:3036,width:724,height:140});
+    storage.setItem('sherlock.research.canvas.artifacts.v1:mixed', JSON.stringify(nodes));
+    const workspace = client.createResearchWorkspaceSession(storage,'mixed');
+    workspace.organizeCanvas();
+    const arranged = workspace.getSnapshot().artifacts;
+    const bands = arranged.map(n=>[n.y-n.height/2,n.y+n.height/2]).sort((a,b)=>a[0]-b[0]);
+    let bottom=bands[0][1];
+    for(const [top,end] of bands.slice(1)){expect(top-bottom).toBeLessThanOrEqual(48);bottom=Math.max(bottom,end);}
+    for(let i=0;i<arranged.length;i++)for(const b of arranged.slice(i+1)){
+        const a=arranged[i]; expect(Math.abs(a.x-b.x)>=(a.width+b.width)/2 || Math.abs(a.y-b.y)>=(a.height+b.height)/2).toBe(true);
+    }
+    expect(arranged.find(n=>n.id==='link').url).toBe('https://example.org/');
+    workspace.organizeCanvas();
+    expect(workspace.getSnapshot().artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height}))).toEqual(arranged.map(({id,x,y,width,height})=>({id,x,y,width,height})));
 });

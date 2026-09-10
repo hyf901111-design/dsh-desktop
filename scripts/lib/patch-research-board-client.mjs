@@ -523,7 +523,7 @@ function entryPatch(source) {
   return generationResultPatch(source + '\n/* SHERLOCK_RESEARCH_ENTRY_V1 */')
 }
 function generationResultPatch(source) {
-  if (source.includes('/* SHERLOCK_GENERATION_RESULT_V1 */')) return source
+  if (source.includes('/* SHERLOCK_GENERATION_RESULT_V1 */')) return canvasInteractionPatch(source)
   source = replace(source,
     'const target = workspace.retryGeneration(node.id);',
     `if (sherlockShared(sessionId) && sherlockBoardsAdapter?.hasRetainedResult(sessionId, node.id)) {
@@ -536,7 +536,35 @@ function generationResultPatch(source) {
   source = replace(source,
     'children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 }), "重试"]',
     `children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 }), (${retained}) ? "应用结果" : "重试"]`)
-  return source + '\n/* SHERLOCK_GENERATION_RESULT_V1 */'
+  return canvasInteractionPatch(source + '\n/* SHERLOCK_GENERATION_RESULT_V1 */')
+}
+function canvasInteractionPatch(source) {
+  if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return source
+  source = replace(source,
+    'const interactivePreview = event.target?.closest?.("[data-research-preview-interactive],[data-research-selection-actions],[data-research-create-popover]");',
+    `const frame = event.target?.closest?.("[data-research-node-id]");
+                    const selected = frame && workspace.getSnapshot().selection.selectedNodeIds.includes(frame.getAttribute("data-research-node-id"));
+                    const interactivePreview = event.target?.closest?.("[data-research-selection-actions],[data-research-create-popover]") || (selected && event.target?.closest?.("[data-research-preview-interactive]"));`)
+  source = replace(source, 'interactivePreview !== null && interactivePreview !== void 0) return;', 'interactivePreview) return;')
+  source = replace(source, 'root.addEventListener("wheel", onWheel, { passive: false });', 'root.addEventListener("wheel", onWheel, { passive: false, capture: true });')
+  source = replace(source, 'root.removeEventListener("wheel", onWheel);', 'root.removeEventListener("wheel", onWheel, true);')
+  // The shield stays above cross-origin frames until the first selection click.
+  // An expanded reader always owns its wheel, regardless of canvas selection.
+  source = replace(source, 'tag.textContent = cssResearchCanvas + ',
+    'tag.textContent = cssResearchCanvas + ".rScV5Q_richNode:not([data-selected=true]):not([open])>.rScV5Q_previewBody:has(iframe)>.rScV5Q_previewShield{pointer-events:auto}" + ')
+  const start = source.indexOf('                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);')
+  const end = source.indexOf('\n\t\t\t\t\tcommitUpdate(organized, true);', start)
+  if (start < 0 || end < 0) throw Error('Canvas arrange anchor missing')
+  source = source.slice(0, start) + `                    // Normalize component row sizes first, then pack every kind once.
+                    // Repositioning only generated cards after packing stranded links/text.
+                    const sized = snapshot.artifacts.map(n => ({ ...n, ...(measured.get(n.id) ?? {}) }));
+                    for (const n of researchAlignComponentPresets(sized)) {
+                        if (n.kind === 'generated-container') measured.set(n.id, { ...normalizeResearchCanvasNodeGeometry(n), sizeMode: 'manual' });
+                    }
+                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
+                    if (organized === null) return false;
+                    organized.viewport = researchWorkbenchViewport([...organized.files, ...organized.artifacts], organized.viewport, snapshot.canvasSize);` + source.slice(end)
+  return source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */'
 }
 function chromePatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_CHROME_V1 */')) return source

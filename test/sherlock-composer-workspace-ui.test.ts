@@ -2960,6 +2960,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(image).not.toBeNull()
       expect(image?.getAttribute('src')).toBe('sherlock-preview://capability-1/revenue.png')
       if (image === null) return
+      await act(async () => { workspace.setSelection({ selectedNodeIds: [...workspace.getSnapshot().files, ...workspace.getSnapshot().artifacts].map(n => String(n.id)), orderedFileIds: workspace.getSnapshot().files.map(n => String(n.id)) }) })
       const viewportBeforeWheel = workspace.getSnapshot().viewport
       image.dispatchEvent(new mounted.browserWindow.WheelEvent('wheel', {
         bubbles: true, cancelable: true, deltaY: 120
@@ -3535,6 +3536,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(preview?.querySelector('code')?.getAttribute('class')).toBe('language-ts')
       expect(mounted.host.querySelector('[data-research-file-card="text-1"]')?.getAttribute('style'))
         .toContain('width: 420px')
+      await act(async () => { mounted.workspace.setSelection({ selectedNodeIds: [...mounted.workspace.getSnapshot().files, ...mounted.workspace.getSnapshot().artifacts].map(n => String(n.id)), orderedFileIds: mounted.workspace.getSnapshot().files.map(n => String(n.id)) }) })
       const viewportBeforeWheel = mounted.workspace.getSnapshot().viewport
       preview?.dispatchEvent(new mounted.browserWindow.WheelEvent('wheel', {
         bubbles: true, cancelable: true, deltaY: 120
@@ -3856,6 +3858,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(harness.renders.map(({ page }) => page)).toEqual([1, 2])
       expect(pdfCanvases.every((canvas) => canvas.width * canvas.height <= 8_000_000)).toBe(true)
       if (pdfBody === null) return
+      await act(async () => { mounted.workspace.setSelection({ selectedNodeIds: [...mounted.workspace.getSnapshot().files, ...mounted.workspace.getSnapshot().artifacts].map(n => String(n.id)), orderedFileIds: mounted.workspace.getSnapshot().files.map(n => String(n.id)) }) })
       const viewportBeforeWheel = mounted.workspace.getSnapshot().viewport
       let bubbledWheels = 0
       mounted.browserWindow.document.addEventListener('wheel', () => { bubbledWheels += 1 })
@@ -4365,6 +4368,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(card.style.width).toBe('480px')
       expect(card.style.height).toBe('360px')
       expect(card.querySelector('[data-research-preview-shield]')).not.toBeNull()
+      await act(async () => { mounted.workspace.setSelection({ selectedNodeIds: [...mounted.workspace.getSnapshot().files, ...mounted.workspace.getSnapshot().artifacts].map(n => String(n.id)), orderedFileIds: mounted.workspace.getSnapshot().files.map(n => String(n.id)) }) })
       const viewportBeforeWheel = mounted.workspace.getSnapshot().viewport
       const htmlWheel = new mounted.browserWindow.WheelEvent('wheel', {
         bubbles: true, cancelable: true, deltaY: 120
@@ -10838,6 +10842,7 @@ describe('Sherlock workspace and composer controls', () => {
       expect(commandListeners.size).toBe(1)
       if (shield === null || iframe === null) return
 
+      await act(async () => { workspace.setSelection({ selectedNodeIds: [iframe.closest('[data-research-node-id]')!.getAttribute('data-research-node-id')!], orderedFileIds: [] }) })
       const initial = workspace.getSnapshot().viewport
       const ordinary = new browserWindow.WheelEvent('wheel', {
         bubbles: true, cancelable: true, deltaY: -100
@@ -13196,3 +13201,21 @@ describe('Workbench staggered reveal and component task descriptions', () => {
     } finally { if (root) await act(async()=>root!.unmount()); vi.useRealTimers(); restore(); await browserWindow.happyDOM.close(); }
   });
 });
+
+it('routes preview wheel to the canvas until that component is selected', async () => {
+  const mounted = await mountResearchCanvas({sessionId:'wheel-selection',artifacts:[{id:'wheel-card',kind:'generated-container',messageId:'wheel-card',title:'组件滚轮',excerpt:'内容',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'离线内容',refreshMinutes:0,x:400,y:300,width:500,height:400,sizeMode:'manual',containerSpec:{version:1,type:'html',title:'组件滚轮',html:'<main style="height:1800px">可滚动页面</main>'}}]})
+  try {
+    const body=mounted.host.querySelector('[data-research-preview-body]')!
+    const before=mounted.workspace.getSnapshot().viewport
+    const wheel=()=>new mounted.browserWindow.WheelEvent('wheel',{bubbles:true,cancelable:true,deltaY:80})
+    let event=wheel()
+    await act(async()=>{body.dispatchEvent(event)})
+    expect(event.defaultPrevented).toBe(true)
+    expect(mounted.workspace.getSnapshot().viewport.y).toBe(before.y-80)
+    await act(async()=>{mounted.workspace.setSelection({selectedNodeIds:['wheel-card'],orderedFileIds:[]})})
+    const selected=mounted.workspace.getSnapshot().viewport
+    event=wheel();await act(async()=>{body.dispatchEvent(event)})
+    expect(event.defaultPrevented).toBe(false)
+    expect(mounted.workspace.getSnapshot().viewport).toEqual(selected)
+  } finally {await mounted.cleanup()}
+})
