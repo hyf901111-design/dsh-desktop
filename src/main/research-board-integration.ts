@@ -441,6 +441,13 @@ export class ResearchBoardIntegration {
       }
     }
     for (const node of canvas.artifacts) {
+      if (node.kind === 'generated-container') {
+        // Older host-created components may predate the renderer's required
+        // metadata. Restore display metadata without changing generated content.
+        node.messageId ||= node.id
+        node.excerpt ||= (node.containerSpec as any)?.title || node.containerPrompt || node.title || '研究组件'
+        node.refreshMinutes ??= 0
+      }
       const schedule =
         this.schedules[i.accountId + ':' + i.boardId + ':' + node.id]
       if (
@@ -825,14 +832,19 @@ export class ResearchBoardIntegration {
           const template = record.generationTarget
           const node = {
             id: randomUUID(),
+            messageId: randomUUID(),
             kind: template?.kind ?? 'generated-container',
             title: template?.title ?? '智能容器',
+            excerpt: '正在准备任务…',
             x: 40,
             y: Math.max(0, ...canvas.artifacts.map(n => Number(n.y ?? 0) + Number(n.height ?? 380))) + 32,
             width: template?.width ?? 520,
             height: template?.height ?? 380,
             containerPrompt: record.intent.text,
-            generationStatus: 'draft'
+            refreshMinutes: 0,
+            sourceNodeIds: template?.sourceNodeIds ?? [],
+            ...(template?.generationSources ? { generationSources: template.generationSources } : {}),
+            generationStatus: 'queued'
           }
           // This update adds only a fresh node. It cannot replace other users'
           // changes, and its bytes/ID are durably reserved with the retry.
@@ -930,7 +942,7 @@ export class ResearchBoardIntegration {
       const target = authority.snapshot.snapshot.canvas[intent.targetCollection as 'artifacts' | 'files']
         .find(n => n.id === intent.targetId)
       if (target) this.journal.update(key, { generationTarget: Object.fromEntries(
-        ['kind', 'title', 'width', 'height'].filter(k => target[k] !== undefined).map(k => [k, target[k]])
+        ['kind', 'title', 'width', 'height', 'sourceNodeIds', 'generationSources'].filter(k => target[k] !== undefined).map(k => [k, target[k]])
       ) })
     }
     if (this.submissions.has(key)) return this.submissions.get(key)
