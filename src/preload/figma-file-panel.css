@@ -1,0 +1,285 @@
+/*
+ * Figma groups 01–03: real Better Sidebar file explorer, editor header, and
+ * new-panel menu. The DOM markers are injected into the pinned 0.14.1 bundle
+ * by patch-sherlock-better-sidebar.mjs. Reader implementations and their
+ * native scroll containers remain owned by Better Sidebar and Office.
+ */
+
+[data-odyssey-file-panel] {
+  min-width:0;
+  min-height:0;
+}
+
+[data-odyssey-file-search] {
+  position:relative;
+  box-sizing:border-box;
+  flex:none;
+  width:100%;
+  height:50px;
+  padding:12px 16px 4px;
+  border:0;
+  gap:0;
+}
+
+[data-odyssey-file-search] > input {
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  height:34px;
+  padding:0 38px 0 40px;
+  border:0;
+  border-radius:8px;
+  outline:0;
+  background:color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);
+  color:var(--dsw-alias-label-primary);
+  font-size:12px;
+  font-weight:400;
+  line-height:20px;
+}
+
+[data-odyssey-file-search] > input:focus-visible {
+  box-shadow:inset 0 0 0 1px var(--dsw-alias-interactive-bg-hover-accent);
+}
+
+[data-odyssey-file-search-icon] {
+  position:absolute;
+  top:21px;
+  left:28px;
+  z-index:1;
+  width:16px;
+  height:16px;
+  pointer-events:none;
+  background:var(--dsw-alias-label-tertiary);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='7' cy='7' r='4.25' fill='none' stroke='black' stroke-width='1.2'/%3E%3Cpath d='m10.2 10.2 3.05 3.05' fill='none' stroke='black' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='7' cy='7' r='4.25' fill='none' stroke='black' stroke-width='1.2'/%3E%3Cpath d='m10.2 10.2 3.05 3.05' fill='none' stroke='black' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+[data-odyssey-file-refresh] {
+  position:absolute;
+  top:15px;
+  right:18px;
+  width:28px;
+  height:28px;
+  opacity:0;
+  pointer-events:none;
+}
+
+[data-odyssey-file-search]:hover [data-odyssey-file-refresh],
+[data-odyssey-file-refresh]:focus-visible {
+  opacity:1;
+  pointer-events:auto;
+}
+
+[data-odyssey-file-panel] [class*="_explorerBody"] {
+  box-sizing:border-box;
+  padding:12px 16px 8px;
+  overflow:auto;
+  overflow-x:hidden;
+}
+
+[data-odyssey-project-root],
+[data-odyssey-file-row] {
+  box-sizing:border-box;
+  width:100%;
+  max-width:100%;
+  padding-right:8px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:var(--dsw-alias-label-primary);
+  text-align:left;
+  white-space:nowrap;
+  animation:none;
+}
+
+[data-odyssey-project-root] {
+  height:28px;
+  margin:0 0 16px;
+  gap:8px;
+  font-size:14px;
+  font-weight:500;
+  line-height:24px;
+}
+
+[data-odyssey-file-row] {
+  height:38px;
+  gap:10px;
+  font-size:13px;
+  font-weight:400;
+  line-height:22px;
+}
+
+[data-odyssey-project-root] > svg,
+[data-odyssey-file-row="directory"] > svg,
+[data-odyssey-file-icon] {
+  flex:none;
+  width:16px;
+  height:16px;
+}
+
+[data-odyssey-file-icon] {
+  display:block;
+  background:currentColor;
+}
+
+[data-odyssey-file-icon="code"] {
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5.4 4 2 8l3.4 4M10.6 4 14 8l-3.4 4M9.3 2.75 6.7 13.25' fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5.4 4 2 8l3.4 4M10.6 4 14 8l-3.4 4M9.3 2.75 6.7 13.25' fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+[data-odyssey-file-icon="file"] {
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 1.75h5l3 3V14H4zM9 1.75V5h3' fill='none' stroke='black' stroke-width='1.1' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 1.75h5l3 3V14H4zM9 1.75V5h3' fill='none' stroke='black' stroke-width='1.1' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+[data-odyssey-file-panel] [class*="_explorerName"] {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+[data-odyssey-file-search-result] {
+  position:relative;
+  box-sizing:border-box;
+  height:38px;
+  padding:8px 8px 8px 48px;
+  border-radius:8px;
+  font-size:13px;
+  line-height:22px;
+}
+
+[data-odyssey-file-search-result]::before {
+  content:"";
+  position:absolute;
+  top:11px;
+  left:22px;
+  width:16px;
+  height:16px;
+  background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 1.75h5l3 3V14H4zM9 1.75V5h3' fill='none' stroke='black' stroke-width='1.1' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 1.75h5l3 3V14H4zM9 1.75V5h3' fill='none' stroke='black' stroke-width='1.1' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+[data-odyssey-file-search-result="code"]::before {
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5.4 4 2 8l3.4 4M10.6 4 14 8l-3.4 4M9.3 2.75 6.7 13.25' fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5.4 4 2 8l3.4 4M10.6 4 14 8l-3.4 4M9.3 2.75 6.7 13.25' fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+[data-odyssey-file-editor="document"] {
+  min-width:0;
+  min-height:0;
+}
+
+[data-odyssey-file-editor-header] {
+  box-sizing:border-box;
+  flex:none;
+  height:50px;
+  padding:12px 16px 6px;
+  border:0;
+  gap:6px;
+}
+
+[data-odyssey-file-editor-header] [class*="_editorPathInput"] {
+  height:32px;
+  min-width:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--dsw-alias-label-primary);
+  font-size:12px;
+  font-weight:400;
+  line-height:20px;
+}
+
+[data-odyssey-file-editor-header] [class*="_editorPathInput"]:focus {
+  border:0;
+  outline:0;
+}
+
+[data-odyssey-file-editor-header] [class*="_editorModeToggle"] {
+  box-sizing:border-box;
+  flex:none;
+  height:32px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  gap:12px;
+  background:transparent;
+}
+
+[data-odyssey-file-editor-header] [class*="_editorModeButton"] {
+  height:32px;
+  padding:6px 0;
+  border-radius:0;
+  background:transparent;
+  font-size:12px;
+  font-weight:400;
+  line-height:20px;
+}
+
+[data-odyssey-file-editor-header] [class*="_editorModeActive"] {
+  color:var(--dsw-alias-label-primary);
+  font-weight:500;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorBody"],
+[data-odyssey-file-editor="document"] [class*="_editorMain"] {
+  min-width:0;
+  min-height:0;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] {
+  box-sizing:border-box;
+  padding:8px 16px 24px;
+  overflow:auto;
+  font-size:13px;
+  line-height:22px;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] h1 {
+  margin:0 0 19px;
+  font-size:24px;
+  font-weight:600;
+  line-height:32px;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] h2 {
+  margin:28px 0 16px;
+  font-size:18px;
+  font-weight:600;
+  line-height:26px;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] p {
+  margin:0 0 16px;
+}
+
+/* The marked label travels with the portaled list, unlike the anchor wrapper. */
+body [role="menu"]:has([data-odyssey-file-menu-label]) {
+  box-sizing:border-box;
+  width:238px;
+  padding:8px 10px;
+  border:0;
+  border-radius:14px;
+  background:var(--dsw-alias-bg-layer-2);
+  box-shadow:0 10px 32px rgb(0 0 0 / 14%);
+}
+
+body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"] {
+  box-sizing:border-box;
+  width:218px;
+  height:42px;
+  padding:0 10px;
+  border-radius:8px;
+  gap:12px;
+  font-size:14px;
+  line-height:22px;
+}
+
+body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"] svg {
+  flex:none;
+  width:18px;
+  height:18px;
+}

@@ -51,7 +51,7 @@ describe('Figma shell patch installation', () => {
     }
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const header = runInNewContext(`${extract('deriveAncestry')}\n${extract('equalBreadcrumbs')}\n${extract('conversationViewTabProps')}\n${extract('ConversationSessionHeader')}\nConversationSessionHeader`, {
-      react: { useSyncExternalStore() {}, useCallback: (fn: unknown) => fn, useRef: () => ({ current: null }), Fragment: 'fragment' },
+      react: { useSyncExternalStore() {}, useCallback: (fn: unknown) => fn, useRef: () => ({ current: 'current' }), Fragment: 'fragment' },
       react_jsx_runtime: { jsx: element, jsxs: element },
       ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => key }),
       clsx: (...values: unknown[]) => values.filter(Boolean).join(' '),
@@ -65,7 +65,8 @@ describe('Figma shell patch installation', () => {
       ['research', true, 'blank', '我的研究', '我的研究', '我的研究'],
       ['research', false, 'active', undefined, '已有研究', '已有研究'],
       ['research', true, 'sending', undefined, '正在研究', '正在研究'],
-      ['chat', false, 'active', undefined, '原对话标题', '原对话标题']
+      ['chat', false, 'active', undefined, '原对话标题', '原对话标题'],
+      ['chat', true, 'blank', undefined, '测试集', null]
     ] as const) {
       const tree = header({
         sessionId: 'current',
@@ -83,7 +84,7 @@ describe('Figma shell patch installation', () => {
         visit(node.props?.children)
       }
       visit(tree)
-      expect(titles).toEqual([expected])
+      expect(titles).toEqual(expected === null ? [] : [expected])
     }
   })
 
