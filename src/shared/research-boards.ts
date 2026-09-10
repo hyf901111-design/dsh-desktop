@@ -62,6 +62,7 @@ export type SharedMessage = {
   [key: string]: unknown
 }
 export type SharedTask = {
+  createdAt?: number
   taskId: string
   status: string
   [key: string]: unknown

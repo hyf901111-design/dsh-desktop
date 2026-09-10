@@ -59,7 +59,7 @@ export type PageDependencies = {
   document?: Document
 }
 export { selectionNodeReady } from './research-board-presentation'
-import { boardEditTime, boardTaskStatus } from './research-board-presentation'
+import { boardEditTime, boardTaskStatus, boardTaskAttempts } from './research-board-presentation'
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   selectedBoardSession,
@@ -1474,7 +1474,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   const B = skin.header
   const classes = (...names: Array<string | false>) => names.filter(Boolean).join(' ')
   return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'aria-label': '研究看板' },
-    h('div', { className: B.sectionHeader },
+    h('div', { className: B.sectionHeader, 'data-srb-section-header': '' },
       h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开研究看板' : '折叠研究看板', 'aria-expanded': !collapsed,
         onClick: () => { setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed)) } },
         '研究看板', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
@@ -2257,20 +2257,22 @@ export function ResearchBoardDiscussion({
       },
       h(
         'small',
-        null,
+        { className: 'srb-message-author' },
         m.role === 'assistant'
           ? '研究助手' + (m.author?.username ? ' · ' + m.author.username : '')
           : (m.author?.username ?? m.authorName ?? '成员'),
         m.imported ? ' · 复制时的已保存对话' : ''
       ),
-      MarkdownText ? h(MarkdownText, { text: m.text }) : h('p', null, m.text)
+      h('div', { className: 'srb-message-body' }, MarkdownText ? h(MarkdownText, { text: m.text }) : h('p', null, m.text))
     )
   const renderControls = (requestId?: string) => {
     const belongs = (id: unknown) =>
       requestId ? id === requestId : !requestIds.has(id)
+    const tasks = v.tasks.filter((t: any) => belongs(t.requestMessageId))
+    const attempts = requestId ? boardTaskAttempts(tasks) : { current: tasks, previous: [] }
     return h(
-      React.Fragment,
-      null,
+      'div',
+      { className: 'srb-request-statuses' },
       ...pendingRequests
         .filter((r: any) => belongs(r.requestMessageId))
         .filter(
@@ -2306,8 +2308,7 @@ export function ResearchBoardDiscussion({
             )
           )
         ),
-      ...v.tasks
-        .filter((t: any) => belongs(t.requestMessageId))
+      ...tasks
         .filter(
           (t: any) =>
             t.resultState === 'pendingResult' ||
@@ -2349,8 +2350,7 @@ export function ResearchBoardDiscussion({
             '重试这条研究任务'
           )
         ),
-      ...v.tasks
-        .filter((t: any) => belongs(t.requestMessageId))
+      ...attempts.current
         .filter(
           (t) => boardTaskStatus(t) && !(['failed', 'interrupted'].includes(t.status) && pendingRequests.some((r: any) => r.taskId === t.taskId && ['interrupted', 'uncertain'].includes(r.runtimeState)))
         )
@@ -2360,7 +2360,12 @@ export function ResearchBoardDiscussion({
             { key: t.taskId, className: 'srb-status' },
             boardTaskStatus(t)
           )
-        )
+        ),
+      attempts.previous.length > 0 && h('details', { className: 'srb-attempt-history' },
+        h('summary', null, `之前的执行记录（${attempts.previous.length}）`),
+        ...attempts.previous.map((t: any) => h('p', { key: t.taskId, className: 'srb-status' },
+          Number.isFinite(t.createdAt) && h('time', { dateTime: new Date(t.createdAt).toISOString() }, new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+          boardTaskStatus(t) ?? '研究任务已完成。')))
     )
   }
   return h(
