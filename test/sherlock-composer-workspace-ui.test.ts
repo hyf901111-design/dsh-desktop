@@ -1475,7 +1475,7 @@ describe('Sherlock workspace and composer controls', () => {
     expect(chipStyle.textOverflow).toBe('ellipsis')
   })
 
-  it('focuses workspace search after the collapsed sidebar remounts as expanded', async () => {
+  it('shows workspace search only after the sidebar expands and focuses it when activated', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     const restoreGlobals = installBrowserGlobals(browserWindow)
     const primitives = new Proxy(
@@ -1581,6 +1581,8 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => {
         renderBrowser(false)
       })
+      expect(container.querySelector('button[aria-label="search.sessions.aria"]')).toBeNull()
+      await act(async () => { renderBrowser(true) })
       const searchButton = container.querySelector(
         'button[aria-label="search.sessions.aria"]'
       ) as HappyDOMHTMLElement | null

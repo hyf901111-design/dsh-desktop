@@ -650,6 +650,7 @@ function patchWorkspaceBoardVisibility(source) {
 }
 
 function patchWorkspaceSidebarSkin(source) {
+  source = patchWorkspaceRailSearch(source)
   if (!source.includes('"data-srb-section-header"')) source = replace(source,
     'className: WorkspaceBrowser_module_css_default.sectionHeader,',
     'className: WorkspaceBrowser_module_css_default.sectionHeader, "data-srb-section-header":"",')
@@ -662,4 +663,12 @@ function patchWorkspaceSidebarSkin(source) {
         window.__sherlockWorkspaceSidebarSkin = {rows: Rows_module_css_default, header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};
         window.dispatchEvent(new window.Event("sherlock-sidebar-skin"));
         \t\texports.apply = apply;`)
+}
+
+function patchWorkspaceRailSearch(source) {
+  if (source.includes('/* SHERLOCK_WORKSPACE_RAIL_SEARCH_REMOVED_V1 */')) return source
+  const start = source.indexOf('!wide && (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: WorkspaceBrowser_module_css_default.search,')
+  const end = source.indexOf('\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: WorkspaceBrowser_module_css_default.listArea,', start)
+  if (start < 0 || end < 0) throw Error('Workspace rail search anchors drifted')
+  return source.slice(0, start) + source.slice(end) + '\n/* SHERLOCK_WORKSPACE_RAIL_SEARCH_REMOVED_V1 */'
 }
