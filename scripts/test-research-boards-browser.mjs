@@ -2097,6 +2097,20 @@ if (process.argv.includes('--serve')) {
     const wheelCard=page.locator('[data-research-node-id="wheel-iframe"]');
     const wheelFrame=wheelCard.frameLocator('iframe').frameLocator('#preview');
     await wheelFrame.locator('#state').waitFor();
+    const typography = await wheelFrame.locator('body').evaluate(async body => {
+      const loaded=await document.fonts.load('400 16px "EWork DIN Pro"','ETF 510300');
+      const label=document.createElement('p');label.textContent='沪深300 ETF 4,575.02';label.style.fontFamily='Arial';body.prepend(label);
+      const context=document.createElement('canvas').getContext('2d');
+      context.font='400 16px "EWork DIN Pro"';const dinWidth=context.measureText('ETF 510300 4,575.02').width;
+      context.font='400 16px Arial';const fallbackWidth=context.measureText('ETF 510300 4,575.02').width;
+      return {loaded:loaded.length,status:loaded.map(f=>f.status),family:getComputedStyle(label).fontFamily,dinWidth,fallbackWidth};
+    });
+    assert.ok(typography.loaded>0);assert.ok(typography.status.every(s=>s==='loaded'));
+    assert.match(typography.family,/EWork DIN Pro/);assert.notEqual(typography.dinWidth,typography.fallbackWidth);
+    assert.doesNotMatch(await page.locator('body').evaluate(e=>getComputedStyle(e).fontFamily),/DIN Pro/);
+    assert.match(await wheelCard.locator('.rScV5Q_containerContent').evaluate(e=>getComputedStyle(e).fontFamily),/DIN Pro/);
+    await page.screenshot({path:join(out,'component-din-pro.png')});
+    console.log('COMPONENT_DIN_PRO_PASSED offline-font-loaded/distinct-latin-glyphs/html-native-only/app-font-unchanged');
     const viewport=()=>page.evaluate(()=>window.fixture.registry.for('original').getSnapshot().viewport);
     const point=async()=>{const b=await wheelCard.locator('[data-research-preview-body]').boundingBox();assert.ok(b);return {x:b.x+b.width/2,y:b.y+Math.min(100,b.height/2)}};
     let p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,80);

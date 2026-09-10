@@ -214,6 +214,10 @@ function containerPromptHasExplicitWebUrl(prompt) {
 function containerAllowsWebSearch(prompt) {
   const value = String(prompt ?? '')
   if (/(?:不需要|无需|不用|不要|不必|禁止)(?:再|去|进行|额外|任何)?(?:联网|上网|搜索|检索|查找|查询|获取外部数据)|不联网|离线(?:页面|模式|运行)?|\b(?:do not|don't|no need to|without)\s+(?:search|searching|browse|browsing|internet|network)\b/iu.test(value)) return false
+  if (/(?:不要|禁止|不得|无需|不用)(?:再|实际)?调用.{0,12}(?:web_search|financial_query|网页搜索|金融数据)/iu.test(value)) return false
+  // An explicit retrieval request is authoritative even when it says that old
+  // results or example data must NOT be used. Those words are not an offline request.
+  if (/(?:调用|使用).{0,16}(?:web_search|financial_query|网页搜索|金融数据)/iu.test(value)) return true
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
   const illustrative = /演示数据|示例数据|示意数据|模拟数据|虚构数据|样例数据|\b(?:sample|demo|mock|synthetic|illustrative)\s+data\b/iu.test(value)
   const supplied = /(?:以下|这些|给定|上述|下列).{0,12}(?:数据|数值)|(?:我|用户)(?:已|已经)?提供的(?:数据|数值)|数据(?:如下|为|是)[：:\s]*|数据[：:]\s*(?:[-+]?\d|[\[{]|\|)|(?:收入|成本|销量|收益率|价格|净值)[：:\s]*[-+]?\d+(?:[、,，]\s*[-+]?\d+){1,}/u.test(value)

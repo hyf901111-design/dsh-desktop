@@ -8,6 +8,15 @@ import { parseResearchContainerSpec } from '../packages/dsh-research-task-runtim
 import { ResearchTaskRuntime } from '../packages/dsh-research-task-runtime/index.js';
 const spec={version:1,type:'table',title:'公司对比',columns:['公司','收入'],rows:[['甲公司',12]]};
 describe('component acceptance and recovery',()=>{
+ it('preserves an overlong chart caption as visible notes without dropping any points',()=>{
+  const title='医药指数趋势｜'+('数据来源和日期说明，静态快照；'.repeat(25));
+  const chart={version:1,type:'chart',title,variant:'line',labels:['2026-08-01','2026-09-01'],series:[{name:'指数',values:[7012.34,7654.32]}]};
+  const output=JSON.parse(acceptArtifactOutput(JSON.stringify(chart)));
+  expect(output.type).toBe('html');expect(output.title).toBe('医药指数趋势');
+  expect(output.html).toContain(title);expect(output.html).toContain('<svg');
+  for(const value of [...chart.labels,...chart.series[0].values])expect(output.html).toContain(String(value));
+  expect(acceptArtifactOutput(JSON.stringify({...chart,series:[{name:'指数',values:[1]}]}))).toBeUndefined();
+ });
  it.each([JSON.stringify(spec),'已经取得数据。\n```json\n'+JSON.stringify(spec)+'\n```','检索受限，缺失数据已标注。\n'+JSON.stringify(spec)])('accepts a complete artifact surrounded by prose',input=>expect(JSON.parse(acceptArtifactOutput(input))).toEqual(spec));
  it('handles braces and quotes in HTML without executing it',()=>{const x={version:1,type:'html',title:'交互',html:'<h1>有效内容</h1><script>const x={a:"}"};</script>'};expect(JSON.parse(acceptArtifactOutput('说明\n'+JSON.stringify(x)))).toEqual(x)});
  it.each([{...spec,rows:[['wrong width']]},{...spec,rows:[]},{version:1,type:'kpi',title:'空',items:[]},{version:1,type:'html',title:'空',html:'<style>body{color:red}</style>'}])('rejects unusable contents',x=>expect(acceptArtifactOutput(JSON.stringify(x))).toBeUndefined());
