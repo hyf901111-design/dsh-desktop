@@ -12,7 +12,7 @@
         "featureName": "EWork Odyssey 全文件还原首批：首页通体框架、面板开关和设置认证",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "d816294d994afb596f30deb14f6e4fd90afc1833",
-        "tipCommit": "bd522f657780c379f267734acc4b7f0f2583c9d8",
+        "tipCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
         "commits": [
           {
             "commit": "30302ea350dff1ec48e1a7eb410d62621930d076",
@@ -41,6 +41,20 @@
               "844d5ece9d22613a8b4e7255c4b78da2d3640e86"
             ],
             "subject": "还原设置各页与登录注册界面并保留动态插件设置"
+          },
+          {
+            "commit": "f1026ae83723c08262617b87b2514d421dfd7d05",
+            "parents": [
+              "bd522f657780c379f267734acc4b7f0f2583c9d8"
+            ],
+            "subject": "补齐设置模块的清洁安装集成夹具"
+          },
+          {
+            "commit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+            "parents": [
+              "f1026ae83723c08262617b87b2514d421dfd7d05"
+            ],
+            "subject": "修正研究页标题栏状态选择器"
           }
         ],
         "files": [
@@ -87,6 +101,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-collaboration-e2e.mjs"
           },
           {
             "status": "M",
@@ -149,8 +167,8 @@
             ],
             "outcome": "passed",
             "summary": "Checked on exact feature tip; 10 focused files / 70 tests passed, TypeScript and dependencies passed.",
-            "verifiedCommit": "bd522f657780c379f267734acc4b7f0f2583c9d8",
-            "completedAt": "2026-09-10T22:29:39.653996+00:00",
+            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+            "completedAt": "2026-09-10T22:37:33.260550+00:00",
             "timeoutMs": 600000
           },
           {
@@ -163,8 +181,8 @@
             ],
             "outcome": "passed",
             "summary": "Checked on exact feature tip; 10 focused files / 70 tests passed, TypeScript and dependencies passed.",
-            "verifiedCommit": "bd522f657780c379f267734acc4b7f0f2583c9d8",
-            "completedAt": "2026-09-10T22:29:39.653996+00:00",
+            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+            "completedAt": "2026-09-10T22:37:33.260550+00:00",
             "timeoutMs": 120000
           },
           {
@@ -185,9 +203,22 @@
             ],
             "outcome": "passed",
             "summary": "Checked on exact feature tip; 10 focused files / 70 tests passed, TypeScript and dependencies passed.",
-            "verifiedCommit": "bd522f657780c379f267734acc4b7f0f2583c9d8",
-            "completedAt": "2026-09-10T22:29:39.653996+00:00",
+            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+            "completedAt": "2026-09-10T22:37:33.260550+00:00",
             "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "sources"
+            ],
+            "outcome": "passed",
+            "summary": "All 8 locked frontend packages validated with SHA512, clean patches, idempotency and settings factories; source stage passed.",
+            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+            "completedAt": "2026-09-10T22:37:33.260550+00:00",
+            "timeoutMs": 300000
           }
         ],
         "uiVerification": {
@@ -204,7 +235,7 @@
           "Native glass and all per-frame geometry require actual package comparison",
           "Only focused tests; no public release, push, version change or user data migration"
         ],
-        "generatedAt": "2026-09-10T22:29:39.653996+00:00"
+        "generatedAt": "2026-09-10T22:37:33.260550+00:00"
       }
     }
   ],
