@@ -11,278 +11,98 @@
         "schemaVersion": 1,
         "featureName": "EWork Odyssey final Figma navigation, collaboration and component redesign",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
-        "tipCommit": "9478088f94101bddd4f7b35431f620920f62129b",
+        "baseCommit": "9478088f94101bddd4f7b35431f620920f62129b",
+        "tipCommit": "857d41743fbe66c0254299c66909ae85b27eb83e",
         "commits": [
           {
-            "commit": "1efc414d985cbce99ecfe91257fd88e7588b229e",
+            "commit": "b2d0fa2292f1a99bd1991ec99dc2903f52990b70",
             "parents": [
-              "7c5fbc414a0c46f108634447326ce6e11a317529"
+              "9478088f94101bddd4f7b35431f620920f62129b"
             ],
-            "subject": "界面：按最终设计还原看板导航与协作管理"
+            "subject": "修复：校准空白研究文案位置与原生消息布局"
           },
           {
-            "commit": "221063b7d88eee9531dba33dd5976eb92bea9f0b",
+            "commit": "6fad4ad1b49e1529820a939cab2a9d66960988aa",
             "parents": [
-              "1efc414d985cbce99ecfe91257fd88e7588b229e"
+              "b2d0fa2292f1a99bd1991ec99dc2903f52990b70"
             ],
-            "subject": "界面：还原通知与检查更新并保留自动安装状态"
+            "subject": "修复：组件生成时保留研究对话和输入框"
           },
           {
-            "commit": "3cf176d792c9ed5de4432a83163792df31284389",
+            "commit": "2fcaf233525d289c6494a775b4120a407771c306",
             "parents": [
-              "221063b7d88eee9531dba33dd5976eb92bea9f0b"
+              "6fad4ad1b49e1529820a939cab2a9d66960988aa"
             ],
-            "subject": "界面：接入最终主界面材质字体与研究输入布局"
+            "subject": "修复：约束派生组件内容并校准画布延迟样式"
           },
           {
-            "commit": "8f3112f5ba54aaf70a9e95a0932c343d3d2ff4e6",
+            "commit": "602b5f5f8104cbfcf1279d52f9cd5ab4bdd959ba",
             "parents": [
-              "3cf176d792c9ed5de4432a83163792df31284389"
+              "2fcaf233525d289c6494a775b4120a407771c306"
             ],
-            "subject": "性能：共享中文字体并保持组件沙箱与离线导出"
+            "subject": "修复：防止研究面板覆盖设置并合并重复更新日志"
           },
           {
-            "commit": "13d097f58848e49b4e56f01985348f34085dc0ed",
+            "commit": "4f4e8a67458dbdffdbdd61089db2b3bccbb610ac",
             "parents": [
-              "8f3112f5ba54aaf70a9e95a0932c343d3d2ff4e6"
+              "602b5f5f8104cbfcf1279d52f9cd5ab4bdd959ba"
             ],
-            "subject": "界面：校准毛玻璃半径纹理与侧栏文字基线"
+            "subject": "文档：统一最终客户端验收证据入口"
           },
           {
-            "commit": "b977e3c19a2ecdbcfbbdc4c107c82ca83db42c4f",
+            "commit": "51a8dd004eb1cc32adaa6b6d81c6272169fe9e46",
             "parents": [
-              "13d097f58848e49b4e56f01985348f34085dc0ed"
+              "4f4e8a67458dbdffdbdd61089db2b3bccbb610ac"
             ],
-            "subject": "界面：实现便当盒组件规格状态与内容自适应"
+            "subject": "修复：纯图片排队消息使用附件提示文案"
           },
           {
-            "commit": "0537c13c087040f4b38adadf916b3405adca173b",
+            "commit": "c24901ab57dd608c178019f45a218a5a1a7f4221",
             "parents": [
-              "b977e3c19a2ecdbcfbbdc4c107c82ca83db42c4f"
+              "51a8dd004eb1cc32adaa6b6d81c6272169fe9e46"
             ],
-            "subject": "修复：持久化版本消息并验证协作权限闭环"
+            "subject": "修复：小视口完整显示标准组件并统一新链接规格"
           },
           {
-            "commit": "169f230cce75660b6f6741ccc066eb188af71a7a",
+            "commit": "857d41743fbe66c0254299c66909ae85b27eb83e",
             "parents": [
-              "0537c13c087040f4b38adadf916b3405adca173b"
+              "c24901ab57dd608c178019f45a218a5a1a7f4221"
             ],
-            "subject": "测试：限定最终设计协作验收并补齐清洁安装输入"
-          },
-          {
-            "commit": "d46a7b737a43b62bcc607e9008713bef6d0c82bb",
-            "parents": [
-              "169f230cce75660b6f6741ccc066eb188af71a7a"
-            ],
-            "subject": "设计：补充浅深色字体加载失败与重试交互"
-          },
-          {
-            "commit": "9478088f94101bddd4f7b35431f620920f62129b",
-            "parents": [
-              "d46a7b737a43b62bcc607e9008713bef6d0c82bb"
-            ],
-            "subject": "修复：处理面板延迟挂载与组件详情内容溢出"
+            "subject": "修复：工作台自动增长使用完整便当盒规格"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "build/brand/figma-check.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-close.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-collaboration-plus.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-favorite-selected.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-favorite.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-glass-dark-base.png"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-glass-dark-mesh.png"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-glass-dark-overlay.png"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-glass-light-base.png"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-glass-light-mesh.png"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-people.svg"
-          },
-          {
-            "status": "C100",
-            "path": "build/brand/figma-self-avatar.png",
-            "previousPath": "build/sherlock-account-background.png"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/branch.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/check.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/chevron.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/more.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/plus.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/summary.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/fonts/NotoSansSC-OFL.txt"
-          },
-          {
-            "status": "A",
-            "path": "build/fonts/NotoSansSC.woff2"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/figma-final-canvas-20260910.md"
           },
           {
-            "status": "A",
-            "path": "docs/figma-final-canvas-evidence/figma-42-selected-light.png"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-final-navigation-20260910.md"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/figma-final-shell-20260910.md"
           },
           {
             "status": "A",
-            "path": "docs/figma-font-retry-evidence/47-font-retry-dark.png"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-font-retry-evidence/47-font-retry-light.png"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-font-retry-evidence/validation.json"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-font-retry-supplement-20260910.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-runtime-font-evidence-20260910.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-update-notifications-20260910.md"
+            "path": "docs/figma-research-generation-focus-20260910.md"
           },
           {
             "status": "M",
-            "path": "docs/sherlock-research-collaboration-operations.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-09-10-figma-final-client.md"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "C050",
-            "path": "packages/dsh-research-task-runtime/component-noto-font.js",
-            "previousPath": "skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-settings-general+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "scripts/install-brand-assets.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/figma-canvas-client.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/patch-figma-final-shell.d.mts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/patch-figma-final-shell.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
+            "path": "scripts/lib/patch-sherlock-better-sidebar.d.mts"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-boards-browser.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-collaboration-e2e.mjs"
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
           },
           {
             "status": "A",
-            "path": "scripts/verify-figma-updates.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/update-manager.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/update-state.ts"
+            "path": "scripts/verify-figma-settings-overlay.mjs"
           },
           {
             "status": "M",
@@ -290,71 +110,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/assets.d.ts"
-          },
-          {
-            "status": "A",
             "path": "src/preload/figma-final-shell.css"
           },
           {
-            "status": "A",
-            "path": "src/preload/figma-notice-assets.ts"
-          },
-          {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-notifications-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-presentation.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/shell-style.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/sidebar-notice.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-update-control.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/update-notification-store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/update-view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/contracts.ts"
-          },
-          {
-            "status": "A",
             "path": "test/figma-final-shell-patch.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-client-adapter.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-navigation-final.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-boards-ui.test.ts"
           },
           {
             "status": "M",
@@ -362,7 +122,15 @@
           },
           {
             "status": "M",
-            "path": "test/research-html-theme.test.js"
+            "path": "test/research-file-drop.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-generation-sidebar-focus.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-queue-final-copy.test.ts"
           },
           {
             "status": "M",
@@ -371,26 +139,6 @@
           {
             "status": "M",
             "path": "test/settings-about.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-update-control.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/update-notification-store.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-state.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-ui.test.ts"
           }
         ],
         "checks": [
@@ -401,8 +149,8 @@
             ],
             "outcome": "passed",
             "summary": "Local dependencies verified",
-            "verifiedCommit": "9478088f94101bddd4f7b35431f620920f62129b",
-            "completedAt": "2026-09-10T10:21:55.895Z",
+            "verifiedCommit": "857d41743fbe66c0254299c66909ae85b27eb83e",
+            "completedAt": "2026-09-10T11:24:50.788Z",
             "timeoutMs": 600000
           },
           {
@@ -415,8 +163,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "9478088f94101bddd4f7b35431f620920f62129b",
-            "completedAt": "2026-09-10T10:21:55.895Z",
+            "verifiedCommit": "857d41743fbe66c0254299c66909ae85b27eb83e",
+            "completedAt": "2026-09-10T11:24:50.788Z",
             "timeoutMs": 120000
           },
           {
@@ -434,12 +182,15 @@
               "test/settings-about.test.ts",
               "test/update-state.test.ts",
               "test/update-ui.test.ts",
-              "test/update-notification-store.test.ts"
+              "test/update-notification-store.test.ts",
+              "test/research-generation-sidebar-focus.test.ts",
+              "test/research-file-drop.test.ts",
+              "test/research-queue-final-copy.test.ts"
             ],
             "outcome": "passed",
             "summary": "Focused final design checks passed; see captured test log",
-            "verifiedCommit": "9478088f94101bddd4f7b35431f620920f62129b",
-            "completedAt": "2026-09-10T10:21:55.895Z",
+            "verifiedCommit": "857d41743fbe66c0254299c66909ae85b27eb83e",
+            "completedAt": "2026-09-10T11:24:50.788Z",
             "timeoutMs": 120000
           }
         ],
@@ -457,80 +208,7 @@
           "Integration browser checks explicitly use SHERLOCK_COLLABORATION_BROWSER_FOCUS=figma-final; unrelated full browser cases are excluded and documented",
           "Arbitrary generated HTML layout still depends on semantic structure; summaries preserve full reading content"
         ],
-        "generatedAt": "2026-09-10T10:21:55.895Z"
-      },
-      "merged": {
-        "mergeCommit": "2f157ce0a66b1b2dc7325c77588ec8253b6f48b0",
-        "verificationCommit": "2f157ce0a66b1b2dc7325c77588ec8253b6f48b0",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "2f157ce0a66b1b2dc7325c77588ec8253b6f48b0",
-            "completedAt": "2026-09-10T10:22:29.407Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2f157ce0a66b1b2dc7325c77588ec8253b6f48b0",
-            "completedAt": "2026-09-10T10:22:29.407Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "2f157ce0a66b1b2dc7325c77588ec8253b6f48b0",
-            "completedAt": "2026-09-10T10:22:29.407Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "2f157ce0a66b1b2dc7325c77588ec8253b6f48b0",
-            "completedAt": "2026-09-10T10:22:29.407Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "2f157ce0a66b1b2dc7325c77588ec8253b6f48b0",
-            "completedAt": "2026-09-10T10:22:29.407Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T10:22:29.407Z"
+        "generatedAt": "2026-09-10T11:24:50.788Z"
       }
     }
   ],
