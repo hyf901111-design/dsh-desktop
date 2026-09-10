@@ -9,27 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复画布滚轮混排和并行组件超时恢复",
+        "featureName": "修复完整组件被后续指令覆盖并完善真实生成进度",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "bed441b649db1e9e5d9e0313d48b9fe7234a5813",
-        "tipCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
+        "baseCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
+        "tipCommit": "0b45483d390a83032f177ba68423df4b977c2f01",
         "commits": [
           {
-            "commit": "237e402c535d7b3d3e257810368a5aee7aadbb47",
+            "commit": "959acce3636ea7908dd3c174d18060bd9e1934a6",
             "parents": [
-              "bed441b649db1e9e5d9e0313d48b9fe7234a5813"
+              "63128969a9ca92b9a510859d4611a1e3876b895a"
             ],
-            "subject": "修复组件生成硬超时丢失结果并复用已有资料恢复"
+            "subject": "修复检索计时追加指令覆盖已完成组件的问题"
           },
           {
-            "commit": "63128969a9ca92b9a510859d4611a1e3876b895a",
+            "commit": "8db2c72e99011183833816852a008fd89fccb466",
             "parents": [
-              "237e402c535d7b3d3e257810368a5aee7aadbb47"
+              "959acce3636ea7908dd3c174d18060bd9e1934a6"
             ],
-            "subject": "修复组件未选中时画布滚动及混合卡片整理留白"
+            "subject": "移除侧边栏收起状态下的搜索按钮"
+          },
+          {
+            "commit": "0b45483d390a83032f177ba68423df4b977c2f01",
+            "parents": [
+              "8db2c72e99011183833816852a008fd89fccb466"
+            ],
+            "subject": "展示协作组件真实生成进度并修正子代理文本溢出"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-runtime.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
@@ -44,15 +55,23 @@
           },
           {
             "status": "M",
-            "path": "test/research-artifact-resilience.test.js"
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-service.test.ts"
           },
           {
             "status": "M",
             "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
           },
           {
             "status": "M",
@@ -68,8 +87,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
-            "completedAt": "2026-09-10T06:02:40.865Z",
+            "verifiedCommit": "0b45483d390a83032f177ba68423df4b977c2f01",
+            "completedAt": "2026-09-10T06:42:08.258017+00:00",
             "timeoutMs": 300000
           },
           {
@@ -78,25 +97,26 @@
               "run",
               "test/research-task-runtime.test.js",
               "test/research-artifact-resilience.test.js",
-              "test/research-board-runtime.test.js"
+              "test/research-board-runtime.test.js",
+              "test/research-boards-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "141项生成超时、资料保留、取消及并行恢复检查通过",
-            "verifiedCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
-            "completedAt": "2026-09-10T06:02:40.865Z",
+            "summary": "193项生成与进度隔离检查通过",
+            "verifiedCommit": "0b45483d390a83032f177ba68423df4b977c2f01",
+            "completedAt": "2026-09-10T06:42:08.258017+00:00",
             "timeoutMs": 300000
           },
           {
             "argv": [
               "node_modules/.bin/vitest",
               "run",
-              "test/research-workbench.test.js",
-              "test/research-board-client-adapter.test.js"
+              "test/research-board-client-adapter.test.js",
+              "test/research-container-chrome.test.ts"
             ],
             "outcome": "passed",
-            "summary": "39项混排布局及页面适配检查通过",
-            "verifiedCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
-            "completedAt": "2026-09-10T06:02:40.865Z",
+            "summary": "46项页面适配与组件操作检查通过",
+            "verifiedCommit": "0b45483d390a83032f177ba68423df4b977c2f01",
+            "completedAt": "2026-09-10T06:42:08.258017+00:00",
             "timeoutMs": 300000
           },
           {
@@ -105,12 +125,12 @@
               "run",
               "test/sherlock-composer-workspace-ui.test.ts",
               "-t",
-              "wheel|scroll|HTML preview|PDF preview|text preview|image preview"
+              "generation|progress|shows workspace search only|subagent|research task input"
             ],
             "outcome": "passed",
-            "summary": "11项直接相关滚轮与预览检查通过",
-            "verifiedCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
-            "completedAt": "2026-09-10T06:02:40.865Z",
+            "summary": "16项直接相关生成与侧栏检查通过",
+            "verifiedCommit": "0b45483d390a83032f177ba68423df4b977c2f01",
+            "completedAt": "2026-09-10T06:42:08.258017+00:00",
             "timeoutMs": 300000
           },
           {
@@ -122,8 +142,8 @@
             ],
             "outcome": "passed",
             "summary": "干净依赖补丁及幂等检查通过",
-            "verifiedCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
-            "completedAt": "2026-09-10T06:02:40.865Z",
+            "verifiedCommit": "0b45483d390a83032f177ba68423df4b977c2f01",
+            "completedAt": "2026-09-10T06:42:08.258017+00:00",
             "timeoutMs": 300000
           },
           {
@@ -132,98 +152,25 @@
               "scripts/test-research-boards-browser.mjs"
             ],
             "outcome": "passed",
-            "summary": "实际原生模块双浏览器检查通过，新增跨iframe滚轮选中/取消选中及状态保留验证",
-            "verifiedCommit": "63128969a9ca92b9a510859d4611a1e3876b895a",
-            "completedAt": "2026-09-10T06:02:40.865Z",
+            "summary": "实际原生模块浏览器验证：320px生成框、完成后展开、真实工具记录与长文本换行通过",
+            "verifiedCommit": "0b45483d390a83032f177ba68423df4b977c2f01",
+            "completedAt": "2026-09-10T06:42:08.258017+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生 React iframe 在真实浏览器中未选中平移、选中内部滚动、取消选中平移，输入状态保留；集成构建后继续真实双客户端验收。"
+          "summary": "真实浏览器中生成框紧凑显示、完成后按内容展开；工具记录和输出字数可见；长代码不超出列宽。集成后继续双客户端验证。"
         },
         "acceptanceCriteria": [
-          "未选中的预览将滚轮交给画布；选中或放大阅读时内部滚动",
-          "混排所有卡片只执行一次布局，不产生额外大段留白，重复整理稳定",
-          "本地超时先结束原任务再复用资料恢复一次；实际取消和传输失败不重放模型"
+          "检索计时器不追加会话指令，保留已校验完整组件",
+          "生成状态显示真实工具活动和输出计数，不展示原始代码或推理",
+          "移除收起侧边栏搜索按钮、修正子代理长文本换行"
         ],
         "risks": [
-          "仅本地客户端更新；协作服务无需修改。真实模型生成时长仍受上游服务影响。"
+          "本机生成细节为临时状态，不写入共享文档；协作端继续显示运行状态和耗时。无需云端部署。"
         ],
-        "generatedAt": "2026-09-10T06:02:40.865Z"
-      },
-      "merged": {
-        "mergeCommit": "156630ea43b595a8fc656bb4e65c213ae5cd8288",
-        "verificationCommit": "156630ea43b595a8fc656bb4e65c213ae5cd8288",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "156630ea43b595a8fc656bb4e65c213ae5cd8288",
-            "completedAt": "2026-09-10T06:03:31.999Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "156630ea43b595a8fc656bb4e65c213ae5cd8288",
-            "completedAt": "2026-09-10T06:03:31.999Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "156630ea43b595a8fc656bb4e65c213ae5cd8288",
-            "completedAt": "2026-09-10T06:03:31.999Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "156630ea43b595a8fc656bb4e65c213ae5cd8288",
-            "completedAt": "2026-09-10T06:03:31.999Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "156630ea43b595a8fc656bb4e65c213ae5cd8288",
-            "completedAt": "2026-09-10T06:03:31.999Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T06:03:31.999Z"
+        "generatedAt": "2026-09-10T06:42:08.258017+00:00"
       }
     }
   ],
