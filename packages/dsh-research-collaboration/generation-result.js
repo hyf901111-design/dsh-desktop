@@ -9,7 +9,12 @@ function stable(value) {
   return value
 }
 export function generationContent(node) {
-  return JSON.stringify(stable(Object.fromEntries(Object.entries(node).filter(([k]) => !layoutFields.has(k) && !runtimeFields.has(k)))))
+  return JSON.stringify(stable(Object.fromEntries(Object.entries(node).filter(([k]) =>
+    !layoutFields.has(k) && !runtimeFields.has(k) &&
+    // Containers render containerSpec; excerpt is a derived placeholder/error
+    // caption. Text cards and mind maps do render excerpt, so keep it for them.
+    !(node.kind === 'generated-container' && k === 'excerpt')
+  ))))
 }
 export function mergeGenerationResult(latest, result) {
   const node = structuredClone(result)

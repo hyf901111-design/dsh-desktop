@@ -86,10 +86,11 @@ it('keeps an acknowledged result completed when refreshing the board fails', asy
 it('does not publish stale renderer execution indicators back to a shared node', async () => {
   const task = { taskId: 'task', targetId: 'node', status: 'completed', resultState: 'applied' }
   const { integration, canvas } = await fixture([task])
+  Object.assign(canvas.artifacts[0]!, { excerpt: '已有内容' })
   const local = structuredClone(canvas)
-  Object.assign(local.artifacts[0]!, { x: 500, generationStatus: 'failed', generationError: '私有轮询器的旧状态' })
+  Object.assign(local.artifacts[0]!, { x: 500, excerpt: '画板更改尚未确认', generationStatus: 'failed', generationError: '私有轮询器的旧状态' })
   const projected = await integration.project({ accountId: 'user', accountGeneration: 1, boardId: 'board', epoch: 1, localSessionId: 'local', canvas: local, signal: new AbortController().signal })
-  expect(projected.artifacts[0]).toMatchObject({ x: 500, generationStatus: 'completed' })
+  expect(projected.artifacts[0]).toMatchObject({ x: 500, excerpt: '已有内容', generationStatus: 'completed' })
   expect(projected.artifacts[0]!.generationError).toBeUndefined()
 })
 
