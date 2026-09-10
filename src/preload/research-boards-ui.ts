@@ -1516,7 +1516,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
         '研究看板', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
       h('div', { className: classes(B.searchSlot, search && B.searchSlotExpanded) },
         h('div', { ref: searchRoot, className: classes(B.search, search && B.searchExpanded), onClick: () => { setSearch(true); searchInput.current?.focus() } },
-          h('button', { className: B.searchButton, 'aria-label': '搜索研究看板', 'aria-expanded': search, title: '搜索研究看板', onClick: () => setSearch(true) }, h(IconSearchOutline16, { size: search ? 11 : 14 })),
+          h('button', { className: B.searchButton, 'aria-label': '搜索研究看板', 'aria-expanded': search, title: '搜索研究看板', onClick: () => setSearch(true) }, h(IconSearchOutline16, { size: search ? 11 : 16 })),
           h('input', { ref: searchInput, className: B.searchInput, value: query, tabIndex: search ? 0 : -1, placeholder: '搜索研究看板…', 'aria-label': '搜索看板名称',
             onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') { setQuery(''); setSearch(false) } } }),
           search && h('button', { className: B.clearButton, 'aria-label': '关闭看板搜索', onClick: (e: React.MouseEvent) => { e.stopPropagation(); setQuery(''); setSearch(false) } }, h(IconCloseFill14)))),

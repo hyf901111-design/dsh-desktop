@@ -427,6 +427,9 @@ function task4Patch(source) {
   return source + '\n/* SHERLOCK_BOARD_EXECUTION_V1 */'
 }
 export function patchResearchBoardSidebar(source) {
+  // Figma 44: the original sidebar icons retain a 16 px frame in either width.
+  source = source.replace('size: wide ? 14 : 18', 'size: 16')
+    .replace('size: wide ? 16 : 18', 'size: 16')
   if (source.includes('"sidebar.researchBoards"')) return patchBoardRegion(source)
   source = replace(
     source,
@@ -688,6 +691,9 @@ function chromePatch(source) {
   return source + '\n/* SHERLOCK_BOARD_CHROME_V1 */'
 }
 export function patchResearchBoardWorkspace(source) {
+  // Figma 22/44: idle search and the collapsed add-project glyph remain 16 px.
+  source = source.replace('size: searchExpanded ? 11 : 14', 'size: searchExpanded ? 11 : 16')
+    .replace('size: wide ? 16 : 18', 'size: 16')
   if (source.includes('/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')) return patchWorkspaceSelection(source)
   source = replace(
     source,
