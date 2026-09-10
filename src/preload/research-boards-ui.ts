@@ -59,7 +59,8 @@ export type PageDependencies = {
   document?: Document
 }
 export { selectionNodeReady } from './research-board-presentation'
-import { boardEditTime } from './research-board-presentation'
+import { boardEditTime, boardTaskStatus } from './research-board-presentation'
+import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   selectedBoardSession,
   selectBoardSession,
@@ -2283,9 +2284,9 @@ export function ResearchBoardDiscussion({
           h(
             'div',
             { className: 'srb-status', key: r.clientMutationId },
-            r.runtimeState
+            taskFailureMessage(r.failureCode) ?? (r.runtimeState
               ? '执行已中断或结果未确认；不会自动重复调用模型。'
-              : '消息已保存，任务尚未启动。',
+              : '消息已保存，任务尚未启动。'),
             h(
               'button',
               {
@@ -2351,13 +2352,13 @@ export function ResearchBoardDiscussion({
       ...v.tasks
         .filter((t: any) => belongs(t.requestMessageId))
         .filter(
-          (t) => !['completed', 'failed', 'cancelled'].includes(t.status)
+          (t) => boardTaskStatus(t) && !(['failed', 'interrupted'].includes(t.status) && pendingRequests.some((r: any) => r.taskId === t.taskId && ['interrupted', 'uncertain'].includes(r.runtimeState)))
         )
         .map((t) =>
           h(
             'p',
             { key: t.taskId, className: 'srb-status' },
-            t.status === 'running' ? '正在研究…' : '研究任务等待执行'
+            boardTaskStatus(t)
           )
         )
     )

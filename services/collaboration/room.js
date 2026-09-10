@@ -18,7 +18,8 @@ import {
   LIMITS,
   toBase64,
   fromBase64,
-  validatePresenceHints
+  validatePresenceHints,
+  taskFailureMessage
 } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   sql,
@@ -1102,8 +1103,14 @@ export class ResearchBoardRoom {
           leaseToken
         }
       } else if (action === 'taskStop') {
+        if (command.failureCode !== undefined) {
+          if (task.initiatorId !== user.id) fail('TASK_INITIATOR_REQUIRED', 403)
+          if (!taskFailureMessage(command.failureCode)) fail('INVALID_REQUEST', 400)
+        }
         if (task.status === 'pending' || task.status === 'running') {
-          task.status = 'interrupted'
+          task.status = command.failureCode ? 'failed' : 'interrupted'
+          if (command.failureCode) task.failureCode = command.failureCode
+          task.completedAt = now()
           delete task.leaseHash
           delete task.sessionHash
         }

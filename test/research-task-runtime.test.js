@@ -949,13 +949,13 @@ describe('Research task Subagent adapter', () => {
       ctx.emit(child, { type: 'tool/call', seq: 1, data: { callId: 'search-1', name: 'web_search' } })
       ctx.emit(child, { type: 'tool/result', seq: 2, data: { message: { content: [{ type: 'tool-result', toolCallId: 'search-1', content: [{ type: 'text', text: '来源摘要：已取得数据' }] }] } } })
       await vi.advanceTimersByTimeAsync(180001)
-      await expect(handle.result).resolves.toMatchObject({ stopReason: 'completed', output: [], researchEvidence: '来源摘要：已取得数据' })
+      await expect(handle.result).resolves.toMatchObject({ stopReason: 'timeout', output: [], researchEvidence: '来源摘要：已取得数据' })
       await handle.dispose()
       expect(run.dispose).toHaveBeenCalledTimes(1)
       const repair = await createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query: '最新医药市场', prompt: '基于已有证据整理', synthesisOnly: true, signal: new AbortController().signal, onSessionEvent: vi.fn() })
       expect(ctx.subagents.start.mock.calls.at(-1)[1].toolFilter.allow).toEqual([])
       await vi.advanceTimersByTimeAsync(90001)
-      await expect(repair.result).resolves.toMatchObject({ stopReason: 'completed', output: [] })
+      await expect(repair.result).resolves.toMatchObject({ stopReason: 'timeout', output: [] })
       await repair.dispose()
     } finally { await handle?.dispose(); vi.useRealTimers() }
   })
@@ -1881,6 +1881,46 @@ it('shared component generation stops after one invalid repair and does not retu
   try {
     await expect(executor.execute({ sessionId: parent.id, kind: 'container', prompt: '创建组件', files: [] }, new AbortController().signal)).rejects.toMatchObject({ code: 'INVALID_OUTPUT' })
     expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
+  } finally { await executor.dispose() }
+})
+
+it('shared current request controls retrieval independently from offline instructions in saved history', async () => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  const parent = { id: 'shared-parent', session: { events: [] } }
+  const child = { id: 'child', session: { id: 'child', events: [] } }
+  const valid = JSON.stringify({ version: 1, type: 'markdown', title: '比特币观察', content: '仅显示有来源的数据，缺失字段明确标注。' })
+  const run = output => ({ id: child.id, localAgent: child, result: Promise.resolve({ stopReason: 'completed', output }), dispose: vi.fn(async () => {}) })
+  const first = run([{ type: 'reasoning', text: 'private reasoning must never become an artifact' }])
+  const second = run([{ type: 'text', text: valid }])
+  const ctx = sessionEventContext(parent, child, first)
+  ctx.subagents.start.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+  const executor = createSharedBoardExecutor(ctx)
+  try {
+    expect(await executor.execute({ sessionId: parent.id, kind: 'container', query: '比特币实时监控面板', prompt: '当前明确请求：比特币实时监控面板\n历史资料：之前的计数器无需联网或读取文件。', files: [] }, new AbortController().signal)).toBe(valid)
+    for (const [, request] of ctx.subagents.start.mock.calls) expect(request.toolFilter.allow).toEqual(['financial_query', 'web_search'])
+    expect(ctx.subagents.start.mock.calls[1][1].prompt[0].text).not.toContain('private reasoning')
+  } finally { await executor.dispose() }
+})
+
+it('shared empty-body recovery preserves host evidence and renders it when synthesis returns no body twice', async () => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  const parent = { id: 'shared-parent', session: { events: [] } }
+  const child = { id: 'child', session: { id: 'child', events: [] } }
+  const run = { id: child.id, localAgent: child, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'reasoning', text: 'private reasoning' }] }), dispose: vi.fn(async () => {}) }
+  const ctx = sessionEventContext(parent, child, run)
+  ctx.agents.withInitiator = (_, work) => work()
+  ctx.web = { search: vi.fn(async () => ({ content: 'Bitcoin 比特币价格 100，测试数据时点 2026-09-10。', sources: [{ title: 'Bitcoin 比特币价格', url: 'https://example.com/btc', snippet: '比特币价格 100，测试资料。' }] })) }
+  const executor = createSharedBoardExecutor(ctx)
+  try {
+    const result = JSON.parse(await executor.execute({ sessionId: parent.id, kind: 'container', query: '比特币实时监控面板', prompt: '创建比特币实时监控面板', files: [] }, new AbortController().signal))
+    expect(result).toMatchObject({ type: 'markdown' })
+    expect(result.content).toContain('比特币价格 100')
+    expect(result.content).toContain('https://example.com/btc')
+    expect(result.content).not.toContain('private reasoning')
+    expect(ctx.web.search).toHaveBeenCalledTimes(1)
+    expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
+    expect(ctx.subagents.start.mock.calls[1][1].toolFilter.allow).toEqual([])
+    expect(ctx.subagents.start.mock.calls[1][1].prompt[0].text).toContain('比特币价格 100')
   } finally { await executor.dispose() }
 })
 
