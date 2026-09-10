@@ -1,10 +1,23 @@
 import { Window } from 'happy-dom'
 import { expect, it, vi } from 'vitest'
 import { mountResearchBoardNotifications } from '../src/preload/research-board-notifications-ui'
+import { boardErrorMessage, showBoardError } from '../src/preload/research-board-dialogs'
 import type {
   ResearchBoardsBridge,
   ResearchBoardsState
 } from '../src/shared/research-boards'
+it('explains access changes in the dialog body without a blank body or raw internal code', () => {
+  const w = new Window({ url: 'http://localhost/' })
+  const d = showBoardError(w.document as unknown as Document, new Error('BOARD_ACCESS_CHANGED'))
+  expect(d.body.textContent).toContain('画板的协作状态已更新')
+  expect(d.dialog.textContent).not.toContain('BOARD_ACCESS_CHANGED')
+  expect(d.status.textContent).toBe('')
+  expect(boardErrorMessage(Object.assign(Error('raw'), { code: 'READ_ONLY' }))).toContain('查看权限')
+  expect(boardErrorMessage(Error('NEW_INTERNAL_FAILURE'))).toBe('操作暂时未完成，请稍后重试。')
+  expect(boardErrorMessage(Error('请选择需要引用的资料。'))).toBe('请选择需要引用的资料。')
+  d.close()
+  w.happyDOM.abort()
+})
 it('mounts a separate bell and keeps pending invitation after read, then accepts exact version', async () => {
   const w = new Window({ url: 'http://localhost/' })
   const state: ResearchBoardsState = {

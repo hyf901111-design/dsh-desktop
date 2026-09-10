@@ -10,6 +10,35 @@ export const publicIdLabel = (id: string) =>
 export function normalizePublicId(value: string) {
   return value.replace(/^\s*ID\s*/i, '').replace(/\s/g, '')
 }
+export function boardErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  const code = String((error as { code?: unknown } | null)?.code ?? message)
+  const messages: Record<string, string> = {
+    BOARD_ACCESS_CHANGED: '画板的协作状态已更新。请重新打开画板后再试。',
+    ACCESS_REVOKED: '你已没有此画板的访问权限，请联系创建者重新邀请。',
+    ACCESS_DENIED: '你已没有此画板的访问权限，请联系创建者重新邀请。',
+    PERMISSION_DENIED: '你目前没有执行此操作的权限，请联系画板创建者。',
+    BOARD_NOT_FOUND: '这个画板已不可用，可能已被删除或取消共享。',
+    READ_ONLY: '你目前只有查看权限，请联系创建者开通编辑权限。',
+    FORBIDDEN: '你目前没有执行此操作的权限，请联系画板创建者。',
+    SESSION_CHANGED: '登录状态已更新，请重新打开画板后再试。',
+    EXECUTION_STILL_STOPPING: '上一次任务正在停止，请稍等片刻后重试。',
+    TARGET_NOT_FOUND: '原组件已被移除，请重新发起研究以创建新组件。',
+    REFERENCED_SOURCE_CHANGED: '引用的资料已变化，请重新选择资料后发起研究。',
+    REQUEST_NOT_FOUND: '这条任务的本地记录已不可用，请重新发起研究。'
+  }
+  return messages[code] ?? (/^[A-Z][A-Z0-9_]+$/.test(message) || !message
+    ? '操作暂时未完成，请稍后重试。'
+    : message)
+}
+export function showBoardError(doc: Document, error: unknown) {
+  const d = boardDialog(doc, '操作未完成')
+  const message = doc.createElement('p')
+  message.className = 'srb-error-message'
+  message.textContent = boardErrorMessage(error)
+  d.body.append(message)
+  return d
+}
 export async function unwrapBoardReply<T>(
   reply: Promise<BoardsResult>
 ): Promise<T> {
@@ -74,8 +103,7 @@ export function boardDialog(doc: Document, title: string) {
       return value
     } catch (error) {
       if (dialog.isConnected)
-        status.textContent =
-          error instanceof Error ? error.message : '操作未完成，请重试。'
+        status.textContent = boardErrorMessage(error)
       return undefined
     } finally {
       running = false
@@ -154,7 +182,8 @@ export function installBoardUiStyles(doc: Document) {
 .srb-section{font-size:14px;line-height:20px}.srb-section .srb-section-toggle,[data-srb-workspaces] .srb-section-toggle{display:inline-flex;align-items:center;justify-content:flex-start;gap:7px;flex:none;font:inherit;font-size:14px;font-weight:400;line-height:20px;color:var(--dsw-alias-label-tertiary,#888);padding:0;height:28px;border:0;background:transparent;cursor:pointer;border-radius:4px}.srb-section .srb-section-toggle:hover,[data-srb-workspaces] .srb-section-toggle:hover{color:var(--dsw-alias-label-primary,#222);background:transparent}.srb-chevron{display:inline-block;box-sizing:border-box;width:6px;height:6px;border-right:1.4px solid currentColor;border-bottom:1.4px solid currentColor;transform:rotate(45deg) translateY(-2px);margin:0 3px;flex:none}.srb-chevron[data-collapsed=true]{transform:rotate(-45deg)}
 [data-srb-workspaces] [data-srb-workspace-list][hidden]{display:none!important}[data-srb-workspaces][data-section-collapsed=true]{flex:none!important;min-height:0!important}
 .srb-actions{gap:10px;margin-left:auto}.srb-actions button{font-size:12px;height:30px;box-sizing:border-box}.srb-actions .srb-favorite-button{color:var(--dsw-alias-label-secondary,#666)}.srb-menu-trigger{display:flex;align-items:center;gap:7px}.srb-actions .srb-presence{padding-right:2px}
-.srb-row-status{display:inline-flex;width:16px;height:16px;flex:none}.srb-row-status svg{width:14px;height:14px}.srb-pending-ring{box-sizing:border-box;width:14px;height:14px;border:1.5px dashed currentColor;border-radius:50%;flex:none;color:var(--dsw-alias-label-tertiary,#888)}
+.srb-row-status{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex:none}.srb-row-status svg{width:14px;height:14px}.srb-pending-ring{box-sizing:border-box;width:12px;height:12px;border:1.2px dashed currentColor;border-radius:50%;flex:none;color:var(--dsw-alias-label-tertiary,#888)}
+.srb-error-message{margin:0;font-size:14px;line-height:1.65;overflow-wrap:anywhere}
 
 [data-dsh-sidebar-root] [data-srb-board-region]{flex:none;max-height:32vh}.srb-section.srb-section{flex:initial;min-height:40px;max-height:32vh;padding-top:6px;padding-bottom:10px;overflow:hidden}.srb-section .srb-board-list{overflow-x:hidden;padding-bottom:0}.srb-section .srb-board-title{display:flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:inherit}.srb-board-title>span:last-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}.srb-research-icon{display:block;width:16px;height:16px;flex:none;background:currentColor;-webkit-mask:url(/sherlock-research.svg) center/contain no-repeat;mask:url(/sherlock-research.svg) center/contain no-repeat}
 .srb-action-menu{position:fixed;inset:auto;margin:0;box-sizing:border-box;width:208px;padding:5px;border:1px solid var(--dsw-alias-border-l2,#ddd);border-radius:12px;background:var(--dsw-alias-bg-layer-2,#fff);color:var(--dsw-alias-label-primary,#222);box-shadow:0 8px 32px #0002;z-index:4000;font:13px/1.5 system-ui}.srb-action-menu button{display:block;width:100%;padding:9px 12px;text-align:left;border:0;border-radius:7px;background:transparent;color:inherit;font:inherit;cursor:pointer}.srb-action-menu button:is(:hover,:focus-visible){outline:none;background:var(--dsw-alias-interactive-bg-hover,#8882)}

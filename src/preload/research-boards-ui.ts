@@ -16,6 +16,7 @@ import type {
 import {
   boardButton,
   boardDialog,
+  showBoardError,
   boardRoleLabel,
   installBoardUiStyles,
   normalizePublicId,
@@ -209,9 +210,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       : null
   const isShared = (id: string) => bridge.isSharedSession(id)
   const showError = (error: unknown) => {
-    const d = boardDialog(doc, '操作未完成')
-    d.status.textContent =
-      error instanceof Error ? error.message : String(error)
+    showBoardError(doc, error)
   }
   const purge = (id: string) => {
     for (const kind of ['files', 'artifacts', 'selection'])
@@ -2275,6 +2274,7 @@ export function ResearchBoardDiscussion({
       { className: 'srb-request-statuses' },
       ...pendingRequests
         .filter((r: any) => belongs(r.requestMessageId))
+        .filter((r: any) => r.runtimeState !== 'superseded')
         .filter(
           (r: any) =>
             r.state === 'taskCreateFailed' ||
