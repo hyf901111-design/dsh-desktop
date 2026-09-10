@@ -1,4 +1,38 @@
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
+import type { BoardView } from '../shared/research-boards'
+
+/** Full membership is independent of presence; disconnected peers remain discoverable. */
+export function boardMembers(view: Pick<BoardView, 'members' | 'presence' | 'connection'>, selfId?: string) {
+  const presence = new Map((view.presence ?? []).map(member => [member.userId, member]))
+  const members = [...new Map((view.members ?? view.presence ?? []).map(member => [member.userId, member])).values()]
+  return members.map(member => ({
+    ...member,
+    self: member.userId === selfId,
+    online: view.connection === 'online' && presence.has(member.userId),
+    editing: !!presence.get(member.userId)?.selectedIds?.length
+  })).sort((a, b) => Number(b.online) - Number(a.online) || Number(b.self) - Number(a.self) || (a.joinedAt ?? 0) - (b.joinedAt ?? 0))
+}
+
+export function boardEntryActions(entry: { boardId?: string; sharingState?: string; role?: string }) {
+  const collaboration = !!entry.boardId && entry.sharingState === 'shared'
+  return [
+    { id: 'rename', label: '重命名', disabled: !!entry.boardId && entry.role !== 'owner' },
+    { id: 'collaboration', label: collaboration ? '管理协作' : '共享协作' },
+    ...(!collaboration ? [{ id: 'workspace', label: '放回工作区' }] : [])
+  ]
+}
+
+/** Figma 307:573/581/589 mesh palettes, shared consistently by every member surface. */
+export function boardAvatarBackground(userId: string, self = false) {
+  if (self) return 'url(/figma-self-avatar.png) center / cover no-repeat'
+  const palettes = [
+    ['55,90,181', '45,171,177', '119,103,201', '134,214,209'],
+    ['82,107,69', '127,166,103', '68,158,145', '210,197,132'],
+    ['133,70,167', '239,120,104', '189,97,191', '244,175,136']
+  ]
+  const [base, top, left, right] = palettes[Array.from(userId).reduce((n, c) => n + c.charCodeAt(0), 0) % palettes.length]!
+  return `radial-gradient(ellipse 70% 70% at 88% 88%,rgba(${right},.94),rgba(${right},.799) 32%,rgba(${right},0)),radial-gradient(ellipse 66% 70% at 20% 81%,rgba(${left},.84),rgba(${left},.714) 32%,rgba(${left},0)),radial-gradient(ellipse 82% 85% at 75% 13%,rgb(${top}),rgba(${top},.85) 32%,rgba(${top},0)),rgb(${base})`
+}
 
 /** Retried requests show their current state once; prior attempts remain inspectable. */
 export function boardTaskAttempts<T extends { createdAt?: number; targetId?: string | null }>(tasks: T[]) {

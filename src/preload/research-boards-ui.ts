@@ -1,7 +1,7 @@
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
-import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconBranchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   BoardView,
   Canvas,
@@ -60,7 +60,7 @@ export type PageDependencies = {
   document?: Document
 }
 export { selectionNodeReady } from './research-board-presentation'
-import { boardEditTime, boardTaskStatus, boardTaskAttempts } from './research-board-presentation'
+import { boardEditTime, boardTaskStatus, boardTaskAttempts, boardMembers, boardEntryActions, boardAvatarBackground } from './research-board-presentation'
 export { followResearchConversation } from './research-conversation-follow'
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
@@ -1185,6 +1185,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     },
     async returnToWorkspace(entry: Favorite | BoardSummary) {
       const shared = 'boardId' in entry
+      if (shared && entry.sharingState === 'shared') throw Error('请先取消协作，再放回工作区。')
       const id = shared ? await openBoard(entry.boardId) : entry.sessionId
       if (!id) throw Error('研究看板尚未就绪')
       if (shared && view(id)?.permissions.edit) await flushCanvas(id)
@@ -1302,40 +1303,8 @@ function safely(page: ResearchBoardsPage, fn: () => Promise<unknown>) {
 function currentBoard(page: ResearchBoardsPage, id: string) {
   return page.getView(id)
 }
-function boardIcon(kind: 'people' | 'boards') {
-  return h(
-    'svg',
-    {
-      width: 16,
-      height: 16,
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 1.6,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-      'aria-hidden': true
-    },
-    ...(kind === 'people'
-      ? [
-          h('path', {
-            key: 'a',
-            d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'
-          }),
-          h('circle', { key: 'b', cx: 9, cy: 7, r: 4 })
-        ]
-      : [
-          h('rect', {
-            key: 'a',
-            x: 3,
-            y: 3,
-            width: 18,
-            height: 18,
-            rx: 3
-          }),
-          h('path', { key: 'b', d: 'M9 3v18M9 10h12' })
-        ])
-  )
+function boardIcon(_kind: 'people' | 'boards') {
+  return h('span', { className: 'srb-people-icon', 'aria-hidden': true })
 }
 export function ResearchBoardHeader({
   page,
@@ -1383,21 +1352,22 @@ export function ResearchBoardHeader({
             className: 'srb-favorite-button',
             onClick: safely(page, () => page.favorite(sessionId))
           },
+          h('span', { className: 'srb-favorite-icon', 'aria-hidden': true }),
           f && f.pinned !== false ? '已设为常用' : '设为常用'
         ),
-    h('button', {
-      className: 'srb-create-collaboration',
-      disabled: !!v && (!v.permissions.manage || v.board.lifecycle !== 'active'),
-      onClick: safely(page, async () => {
-        if (v) {
-          const d = boardDialog(document, '邀请协作')
-          inviteForm(page, d, async () => {
-            if (page.getView(sessionId)?.board.sharingState !== 'shared') await page.call('board.reopen', { boardId: v.boardId })
-            return v.boardId
+    v?.board.sharingState === 'shared'
+      ? v.permissions.read && h('button', {
+          className: 'srb-manage-button',
+          onClick: () => manageBoard(page, v.boardId, 'settings')
+        }, '管理')
+      : h('button', {
+          className: 'srb-create-collaboration',
+          disabled: !!v && (!v.permissions.manage || v.board.lifecycle !== 'active'),
+          onClick: safely(page, async () => {
+            if (v) addBoardCollaborator(page, v.boardId, sessionId)
+            else shareFavorite(page, await page.collaborationSource(sessionId))
           })
-        } else shareFavorite(page, await page.collaborationSource(sessionId))
-      })
-    }, '创建协作')
+        }, boardIcon('people'), '创建协作')
   )
 }
 const colorFor = (id: string) =>
@@ -1419,55 +1389,92 @@ export function ResearchBoardPresence({
     v.board.sharingState !== 'shared'
   )
     return null
-  const users = [
-    ...new Map(v.presence.map((p) => [p.userId, p])).values()
-  ].sort((a, b) =>
-    a.userId === s.account.user?.userId
-      ? -1
-      : b.userId === s.account.user?.userId
-        ? 1
-        : (a.joinedAt ?? 0) - (b.joinedAt ?? 0)
-  )
-  return h(
-    'div',
-    { className: 'srb-presence', 'aria-label': '当前在场成员' },
-    ...users.slice(0, 5).map((p) =>
-      h(
-        'button',
-        {
-          className: 'srb-avatar',
-          key: p.userId,
-          style: { '--srb-color': colorFor(p.userId) } as React.CSSProperties,
-          'data-offline': v.connection !== 'online',
-          'aria-label': `${p.username}，${boardRoleLabel(p.role)}`,
-          onClick: () => manageBoard(page, v.boardId)
-        },
-        Array.from(p.username)[0]?.toUpperCase(),
-        h(
-          'span',
-          { className: 'srb-tip', role: 'tooltip' },
-          p.username,
-          p.userId === s.account.user?.userId ? ' · 你' : '',
-          h(
-            'small',
-            null,
-            boardRoleLabel(p.role),
-            v.connection !== 'online' ? ' · 重新连接中' : ''
-          )
-        )
-      )
-    ),
-    users.length > 5 &&
-      h(
-        'button',
-        {
-          'aria-label': `另外 ${users.length - 5} 位在场成员`,
-          onClick: () => manageBoard(page, v.boardId)
-        },
-        `+${users.length - 5}`
-      )
-  )
+  const users = boardMembers(v, s.account.user?.userId)
+  return h('div', { className: 'srb-presence', 'aria-label': '协作成员' },
+    ...users.slice(0, 3).map(p => h('button', {
+      className: 'srb-avatar', key: p.userId,
+      style: { '--srb-avatar-background': boardAvatarBackground(p.userId, p.self) } as React.CSSProperties,
+      'data-self': p.self, 'data-offline': !p.online,
+      'aria-label': `${p.username}，${boardRoleLabel(p.role)}`,
+      'aria-haspopup': 'dialog',
+      onClick: (event: React.MouseEvent<HTMLButtonElement>) => showBoardMembers(page, sessionId, event.currentTarget)
+    }, Array.from(p.username)[0]?.toUpperCase(),
+      h('span', { className: 'srb-tip', role: 'tooltip' }, p.username, p.self ? ' · 你' : '',
+        h('small', null, boardRoleLabel(p.role), p.online ? ' · 正在画板中' : ' · 未在当前画板')))),
+    users.length > 3 && h('button', {
+      className: 'srb-avatar-overflow', 'aria-label': `另外 ${users.length - 3} 位协作成员`,
+      'aria-haspopup': 'dialog',
+      onClick: (event: React.MouseEvent<HTMLButtonElement>) => showBoardMembers(page, sessionId, event.currentTarget)
+    }, `+${users.length - 3}`),
+    v.permissions.manage && v.board.lifecycle === 'active' && h('button', {
+      className: 'srb-add-collaborator', 'aria-label': '添加协作者',
+      onClick: () => addBoardCollaborator(page, v.boardId, sessionId)
+    }, h('span', { className: 'srb-plus-icon', 'aria-hidden': true })))
 }
+
+export function showBoardMembers(page: ResearchBoardsPage, sessionId: string, anchor: HTMLElement) {
+  const doc = anchor.ownerDocument, win = doc.defaultView!
+  doc.querySelectorAll('.srb-members-popover').forEach(element => element.dispatchEvent(new win.Event('srb-close')))
+  const popover = doc.createElement('div')
+  popover.className = 'srb-members-popover'
+  popover.setAttribute('popover', 'auto')
+  popover.setAttribute('role', 'dialog')
+  popover.setAttribute('aria-label', '协作成员')
+  const title = uiText('h2', ''), online = uiText('p', '', 'srb-members-online')
+  const input = doc.createElement('input')
+  input.type = 'search'; input.placeholder = '搜索成员姓名…'; input.setAttribute('aria-label', '搜索成员姓名')
+  const list = uiText('div', '', 'srb-members-scroll')
+  const footer = uiText('div', '', 'srb-members-footer')
+  const close = () => { popover.hidePopover?.(); popover.remove(); off(); win.removeEventListener('resize', position) }
+  const position = () => {
+    const rect = anchor.getBoundingClientRect()
+    popover.style.left = Math.max(12, Math.min(rect.right - 340, win.innerWidth - 352)) + 'px'
+    popover.style.top = Math.max(12, Math.min(rect.bottom + 8, win.innerHeight - popover.getBoundingClientRect().height - 12)) + 'px'
+  }
+  const render = () => {
+    const v = page.getView(sessionId)
+    if (!v?.permissions.read || v.board.sharingState !== 'shared') { close(); return }
+    const users = boardMembers(v, page.getState().account.user?.userId)
+    title.textContent = `协作成员 · ${users.length}`
+    online.textContent = `${users.filter(member => member.online).length} 位正在画板中`
+    list.replaceChildren()
+    for (const member of users.filter(member => member.username.toLocaleLowerCase().includes(input.value.trim().toLocaleLowerCase()))) {
+      const row = uiText('div', '', 'srb-member'), avatar = uiText('div', Array.from(member.username)[0]?.toUpperCase() ?? '', 'srb-member-avatar')
+      avatar.style.setProperty('--srb-avatar-background', boardAvatarBackground(member.userId, member.self))
+      avatar.dataset.self = String(member.self)
+      const identity = uiText('div', '', 'srb-member-identity')
+      identity.append(uiText('strong', member.username + (member.self ? ' · 你' : '')), uiText('small', member.online ? member.editing ? '正在编辑' : '正在画板中' : '未在当前画板'))
+      row.append(avatar, identity, uiText('span', member.role === 'owner' ? '创建者' : member.role === 'editor' ? '可编辑' : '可查看', 'srb-role'))
+      list.append(row)
+    }
+    if (!list.children.length) list.append(uiText('p', '没有找到匹配的成员', 'srb-members-empty'))
+    footer.replaceChildren(boardButton(doc, '管理协作', () => { close(); manageBoard(page, v.boardId, 'members') }))
+  }
+  const off = page.subscribe(() => { if (popover.isConnected) render(); else off() })
+  input.addEventListener('input', render)
+  popover.addEventListener('srb-close', close)
+  popover.addEventListener('toggle', (event: Event) => { if ((event as Event & { newState?: string }).newState === 'closed') close() })
+  popover.addEventListener('keydown', (event: KeyboardEvent) => { if (event.key === 'Escape') close() })
+  popover.append(title, online, input, list, footer)
+  doc.body.append(popover)
+  render(); if (!popover.isConnected) return { popover, close }; popover.showPopover?.(); position(); win.addEventListener('resize', position)
+  popover.tabIndex = -1
+  popover.focus({ preventScroll: true })
+  return { popover, close }
+}
+
+export function addBoardCollaborator(page: ResearchBoardsPage, boardId: string, sessionId: string) {
+  const v = page.getView(sessionId)
+  if (!v?.permissions.read || !v.permissions.manage || v.board.lifecycle !== 'active') return
+  const d = boardDialog(document, '添加协作者')
+  d.dialog.classList.add('srb-add-collaborator-dialog')
+  d.body.append(uiText('p', `邀请成员加入「${v.board.title}」`, 'srb-description'))
+  inviteForm(page, d, async () => {
+    if (page.getView(sessionId)?.board.sharingState !== 'shared') await page.call('board.reopen', { boardId })
+    return boardId
+  })
+}
+
 export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoardsPage; wide?: boolean; expandSidebar?: () => void }) {
   const state = useBoard(page)
   const skin = React.useSyncExternalStore((listener: () => void) => { window.addEventListener('sherlock-sidebar-skin', listener); return () => window.removeEventListener('sherlock-sidebar-skin', listener) }, () => (window as any).__sherlockWorkspaceSidebarSkin)
@@ -1514,7 +1521,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
             onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') { setQuery(''); setSearch(false) } } }),
           search && h('button', { className: B.clearButton, 'aria-label': '关闭看板搜索', onClick: (e: React.MouseEvent) => { e.stopPropagation(); setQuery(''); setSearch(false) } }, h(IconCloseFill14)))),
       h('div', { className: classes(B.headerActions, search && B.headerActionsHidden) },
-        h(Menu, { open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
+        h(Menu, { className: 'srb-navigation-menu', open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
           selectedIds: [preferences.groupBy, preferences.sort],
           items: [{ type: 'label', id: 'groups-label', text: '分组方式' }, { id: 'type', label: '按类型' }, { id: 'flat', label: '单列表' },
             { type: 'separator', id: 'sort-separator' }, { type: 'label', id: 'sort-label', text: '排序方式' }, { id: 'manual', label: '手动排序' }, { id: 'updated', label: '最近更新' }],
@@ -1523,7 +1530,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
             if (id === 'type' || id === 'flat') save({ ...preferences, groupBy: id })
             else save({ ...preferences, sort: id })
           },
-          anchor: h('button', { className: B.iconButton, 'aria-label': '看板视图选项', title: '看板视图选项', onClick: () => setOptionsOpen(!optionsOpen) }, h(IconPersonalizationOutline16)) }),
+          anchor: h('button', { className: B.iconButton, 'aria-label': '看板视图选项', 'aria-expanded': optionsOpen, title: '看板视图选项', onClick: () => setOptionsOpen(!optionsOpen) }, h(IconPersonalizationOutline16)) }),
         h('button', { className: B.iconButton, 'aria-label': '新建研究看板', title: '新建研究看板', disabled: creating, onClick: safely(page, async () => {
           setCreating(true)
           try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }
@@ -1603,11 +1610,7 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
   const shared = 'boardId' in entry
   const sessionId = shared ? entry.localSessionId : entry.sessionId
   const collaboration = shared && entry.sharingState === 'shared'
-  const items = [
-    { id: 'rename', label: '重命名', icon: h(IconEditOutline16), disabled: shared && entry.role !== 'owner' },
-    { id: 'collaboration', label: collaboration ? '管理协作' : '共享协作', icon: h(IconBranchOutline16) },
-    { id: 'workspace', label: '放回工作区', icon: h(IconFolderOpenOutline16) }
-  ]
+  const items = boardEntryActions(entry).map(item => ({ ...item, icon: item.id === 'collaboration' ? boardIcon('people') : h(item.id === 'rename' ? IconEditOutline16 : IconFolderOpenOutline16) }))
   return h('div', { className: ['srb-row', R.sessionRow, !nested && R.flatSessionRowWithoutStatus, selected && R.selected, open && R.menuOpen, marker === 'before' && R.dropBefore, marker === 'after' && R.dropAfter].filter(Boolean).join(' '), 'data-menu-open': open, 'aria-current': selected,
     ...drag, 'data-drop-marker': marker ?? undefined,
     onContextMenu: (event: React.MouseEvent) => { event.preventDefault(); setOpen(true) } },
@@ -1621,15 +1624,16 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
         ? h('span', { className: 'srb-row-status', title: '多人协作', 'aria-label': '多人协作' }, boardIcon('people'))
         : h('span', { className: 'srb-pending-ring', title: '等待成员接受邀请', 'aria-label': '等待接受邀请' })),
       h('span', null, entry.title)),
-    h('span', { className: R.time }, h(BoardEditTime, { value: time || undefined, editor: shared ? entry.updatedBy?.username : undefined })),
-    h('span', { className: R.rowActions }, h(Menu, { open, onClose: () => setOpen(false), items, portal: true, closeOnPointerLeave: true,
+    h('span', { className: R.time + ' srb-row-time' }, h(BoardEditTime, { value: time || undefined, editor: shared ? entry.updatedBy?.username : undefined })),
+    h('span', { className: R.rowActions + ' srb-row-actions' }, h(Menu, { className: 'srb-navigation-menu', open, onClose: () => setOpen(false), items, portal: true, closeOnPointerLeave: true,
       anchor: h('button', { className: R.iconButton + ' srb-row-more', 'aria-label': entry.title + '，更多', 'aria-haspopup': 'menu', 'aria-expanded': open,
         onClick: (event: React.MouseEvent) => { event.stopPropagation(); setOpen(!open) } }, h(IconEllipsisOutline16)),
     onSelect: (id: string) => {
       setOpen(false)
       if (id === 'rename') renameBoardEntry(page, entry)
       if (id === 'collaboration') {
-        if (shared) manageBoard(page, entry.boardId)
+        if (collaboration) manageBoard(page, entry.boardId, 'members')
+        else if (shared) void page.openBoard(entry.boardId).then((id: string) => addBoardCollaborator(page, entry.boardId, id)).catch(page.showError)
         else shareFavorite(page, entry)
       }
       if (id === 'workspace') void page.returnToWorkspace(entry).catch(page.showError)
@@ -1676,6 +1680,7 @@ function BoardEditTime({ value, editor }: { value?: number; editor?: string }) {
 export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
   const d = boardDialog(document, '创建协作'),
     s = page.getState()
+  d.dialog.classList.add('srb-create-collaboration-dialog')
   if (s.account.status === 'loading' || s.account.status === 'unavailable') {
     d.body.textContent =
       s.account.status === 'loading'
@@ -1727,19 +1732,13 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
     const name = document.createElement('input')
     name.value = `${f.title} · 协作`
     name.setAttribute('aria-label', '协作名称')
-    const scope = document.createElement('p')
-    scope.textContent =
-      capture.nodeCount === 0 && capture.historyCount === 0 && capture.assetBytes === 0
-        ? '当前研究尚无组件、已保存对话或资料，将创建空白共享画板。'
-        : `将当前研究的 ${capture.nodeCount} 个组件、${capture.historyCount} 条已保存对话及 ${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料复制到共享画板。`
-    const sync = document.createElement('p')
-    sync.textContent =
-      '协作成员访问的是同一块共享画板，拖动、编辑和生成的组件会实时同步。原个人画板单独保留，后续修改不会与共享画板互相同步。'
-    scope.className = 'srb-description'
-    sync.className = 'srb-info-panel'
+    const panel = uiText('div', '', 'srb-info-panel')
+    const summary = uiText('div', '', 'srb-capture-summary')
+    summary.append(uiText('span', `${capture.nodeCount} 个组件`), uiText('span', `${capture.historyCount} 条已保存对话`), uiText('span', `${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料`))
+    panel.append(summary, uiText('p', '成员将共同编辑同一块共享画板。原个人研究独立保留，后续修改互不影响。'))
     const field = uiText('label', '画板名称')
     field.append(name)
-    d.body.append(field, scope, sync)
+    d.body.append(field, panel)
     inviteForm(
       page,
       d,
@@ -1768,7 +1767,7 @@ function inviteForm(
   parent: HTMLElement = d.body
 ) {
   const input = document.createElement('input')
-  input.placeholder = 'ID 0000 0000 00'
+  input.placeholder = '输入 10 位数字 ID'
   input.setAttribute('aria-label', '对方专有 ID')
   input.inputMode = 'numeric'
   const role = document.createElement('select')
@@ -1782,8 +1781,8 @@ function inviteForm(
     o.textContent = text!
     role.append(o)
   }
-  const recipient = document.createElement('p')
-  let user: { publicId: string; username: string } | undefined,
+  const recipient = document.createElement('div')
+  let user: { userId?: string; publicId: string; username: string } | undefined,
     boardId: string | undefined,
     lookup = 0
   const send = boardButton(document, label, async () => {
@@ -1800,21 +1799,14 @@ function inviteForm(
           publicId: confirmedPublicId,
           role: confirmedRole
         })
-        d.status.textContent = '邀请已发送，等待对方接受'
-        recipient.textContent = '邀请已发送'
-        send.remove()
-        void page.openBoard(boardId).then(() => selectBoardSession(page.current() ?? '')).catch(page.showError)
-        parent.append(
-          boardButton(document, '打开协作看板', async () => {
-            await page.openBoard(boardId!)
-            d.close()
-          })
-        )
+        await page.openBoard(boardId)
+        selectBoardSession(page.current() ?? '')
+        d.close()
       },
       boardId ? '发送邀请…' : '上传资料并创建协作副本…'
     )
     send.disabled = false
-    if (boardId && send.isConnected) send.textContent = '副本已创建，重试邀请'
+    if (boardId && send.isConnected) send.textContent = label
   })
   send.disabled = true
   send.className = 'srb-primary'
@@ -1833,7 +1825,7 @@ function inviteForm(
     }
     const found = await d.run(
       () =>
-        page.call<{ user: { publicId: string; username: string } }>(
+        page.call<{ user: { userId?: string; publicId: string; username: string } }>(
           'user.lookup',
           { publicId: id }
         ),
@@ -1841,28 +1833,40 @@ function inviteForm(
     )
     if (turn !== lookup || !d.dialog.isConnected || !found) return
     user = found.user
-    recipient.textContent = `${user.username} · ID ${publicIdLabel(user.publicId)}`
+    const avatar = uiText('div', Array.from(user.username)[0]?.toUpperCase() ?? '', 'srb-member-avatar')
+    avatar.style.setProperty('--srb-avatar-background', boardAvatarBackground(user.userId ?? user.publicId, user.userId === page.getState().account.user?.userId))
+    const identity = uiText('div', '', 'srb-member-identity')
+    identity.append(uiText('strong', user.username), uiText('small', `ID ${publicIdLabel(user.publicId)}`))
+    const check = uiText('span', '', 'srb-check-icon')
+    check.setAttribute('aria-label', '已核对接收人')
+    recipient.replaceChildren(avatar, identity, check)
     send.disabled = false
   })
   const form = document.createElement('section')
   form.className = 'srb-invite-form'
   const field = document.createElement('label')
-  field.textContent = '通过用户 ID 邀请'
+  const management = d.dialog.classList.contains('srb-management')
+  const creation = d.dialog.classList.contains('srb-create-collaboration-dialog')
+  field.textContent = management ? '邀请新成员 · 对方专有 ID' : '对方专有 ID'
   const lookupRow = document.createElement('div')
   lookupRow.className = 'srb-field-row'
   lookupRow.append(input, lookupButton)
   field.append(lookupRow)
-  const hint = document.createElement('p')
-  hint.className = 'srb-description'
-  hint.textContent = '输入对方的 10 位专有 ID，核对用户后发送邀请。'
   recipient.className = 'srb-recipient'
   const controls = document.createElement('div')
   controls.className = 'srb-invite-controls'
   const roleLabel = document.createElement('label')
-  roleLabel.textContent = '成员权限'
+  roleLabel.textContent = management ? '' : '邀请权限'
   roleLabel.append(role)
-  controls.append(roleLabel, send)
-  form.append(field, hint, recipient, controls)
+  controls.append(roleLabel)
+  form.append(field, recipient, controls)
+  if (creation) form.append(uiText('p', '可编辑成员可拖动、编辑和生成组件；仅查看成员只能浏览。', 'srb-description'))
+  if (management) controls.append(send)
+  else {
+    const actions = uiText('div', '', 'srb-dialog-footer')
+    actions.append(boardButton(document, '取消', d.close), send)
+    form.append(actions)
+  }
   parent.append(form)
 }
 function uiText(tag: string, text: string, className = '') {
@@ -1882,7 +1886,7 @@ function fieldRow(
   field.append(row)
   return field
 }
-export function manageBoard(page: ResearchBoardsPage, boardId: string) {
+export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTab: 'members' | 'settings' = 'members') {
   const d = boardDialog(document, '管理协作')
   d.dialog.classList.add('srb-management')
   void d.run(async () => {
@@ -1895,22 +1899,17 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
         boardButton(document, '打开看板', async () => {
           await page.openBoard(boardId)
           d.close()
-          manageBoard(page, boardId)
+          manageBoard(page, boardId, initialTab)
         })
       )
       return
     }
+    if (!v.permissions.read) {
+      d.body.append(uiText('p', '共享访问已结束。', 'srb-description'))
+      return
+    }
     const intro = uiText('div', '', 'srb-dialog-intro')
-    intro.append(
-      uiText('strong', v.board.title),
-      uiText(
-        'p',
-        v.board.sharingState === 'shared'
-          ? '成员共同编辑同一块画板，修改实时同步。'
-          : '这块画板目前仅你可见。',
-        'srb-description'
-      )
-    )
+    intro.append(uiText('p', v.board.title, 'srb-board-name'))
     const tabs = uiText('nav', '', 'srb-dialog-tabs')
     tabs.setAttribute('role', 'tablist')
     tabs.setAttribute('aria-label', '协作管理')
@@ -1933,8 +1932,9 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
       tab.role = 'tab'
       tab.id = panel.id + '-tab'
       tab.setAttribute('aria-controls', panel.id)
-      tab.setAttribute('aria-selected', String(panel === members))
-      tab.tabIndex = panel === members ? 0 : -1
+      const selected = initialTab === 'members' ? panel === members : panel === settings
+      tab.setAttribute('aria-selected', String(selected))
+      tab.tabIndex = selected ? 0 : -1
       tab.onkeydown = (e) => {
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
           e.preventDefault()
@@ -1947,7 +1947,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
       }
       panel.setAttribute('role', 'tabpanel')
       panel.setAttribute('aria-labelledby', tab.id)
-      panel.hidden = panel !== members
+      panel.hidden = !selected
       tabs.append(tab)
     }
     d.body.append(intro, tabs, members, settings)
@@ -1983,19 +1983,18 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
         settings.replaceChildren()
         return
       }
-      const users = [
-        ...new Map(current.members.map((m) => [m.userId, m])).values()
-      ]
+      const users = boardMembers(current, page.getState().account.user?.userId)
       memberList.append(uiText('h3', `成员 · ${users.length}`))
       for (const member of users) {
         const row = uiText('div', '', 'srb-member'),
           avatar = uiText(
             'div',
-            Array.from(member.username)[0] ?? '',
+            Array.from(member.username)[0]?.toUpperCase() ?? '',
             'srb-member-avatar'
           )
-        avatar.style.setProperty('--srb-color', colorFor(member.userId)!)
-        const online = current.presence.some((p) => p.userId === member.userId)
+        avatar.style.setProperty('--srb-avatar-background', boardAvatarBackground(member.userId, member.userId === page.getState().account.user?.userId))
+        avatar.dataset.self = String(member.userId === page.getState().account.user?.userId)
+        const online = current.connection === 'online' && current.presence.some((p) => p.userId === member.userId)
         avatar.dataset.online = String(online)
         const identity = uiText('div', '', 'srb-member-identity')
         identity.append(
@@ -2033,7 +2032,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
           remove.className = 'srb-quiet-danger'
           row.append(select, remove)
         } else
-          row.append(uiText('span', boardRoleLabel(member.role), 'srb-role'))
+          row.append(uiText('span', member.role === 'owner' ? '创建者' : member.role === 'editor' ? '可编辑' : '可查看', 'srb-role'))
         memberList.append(row)
       }
       if (!current.permissions.manage || !current.pendingInvitations?.length)
@@ -2043,11 +2042,14 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
       )
       for (const invite of current.pendingInvitations) {
         const row = uiText('div', '', 'srb-member')
+        const avatar = uiText('div', Array.from(invite.invitee.username)[0]?.toUpperCase() ?? '', 'srb-member-avatar')
+        avatar.style.setProperty('--srb-avatar-background', boardAvatarBackground(invite.invitee.userId, invite.invitee.userId === page.getState().account.user?.userId))
+        row.append(avatar)
         row.dataset.pendingInvitation = invite.invitationId
         const identity = uiText('div', '', 'srb-member-identity')
         identity.append(
           uiText('strong', invite.invitee.username),
-          uiText('small', `ID ${publicIdLabel(invite.invitee.publicId)}`)
+          uiText('small', `等待接受 · ID ${publicIdLabel(invite.invitee.publicId)}`)
         )
         const select = document.createElement('select')
         select.setAttribute(
@@ -2110,6 +2112,8 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
         )
       )
     }
+    const settingsList = uiText('div', '', 'srb-settings-list')
+    settings.append(settingsList)
     const setting = (
       title: string,
       description: string,
@@ -2127,20 +2131,12 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
         uiText('p', description, 'srb-description')
       )
       row.append(label, button)
-      settings.append(row)
+      settingsList.append(row)
       if (danger) button.className = 'srb-quiet-danger'
     }
     setting(
-      '侧栏显示',
-      '从研究看板列表快速访问。',
-      cmd(
-        summary?.pinned ? '移出侧栏' : '固定到侧栏',
-        summary?.pinned ? 'board.unpin' : 'board.pin'
-      )
-    )
-    setting(
       '保存个人副本',
-      '保存当前内容，之后作为个人研究独立编辑。',
+      '保存当前内容，之后独立编辑。',
       boardButton(document, '另存为个人研究', () =>
         d.run(async () => {
           await page.copyPersonal(boardId)
@@ -2150,17 +2146,8 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
     )
     if (v.permissions.manage) {
       setting(
-        '自动刷新',
-        '控制画板中组件的定时更新。',
-        cmd(
-          v.board.refreshPaused ? '恢复自动刷新' : '暂停自动刷新',
-          'board.refreshPause',
-          { paused: !v.board.refreshPaused }
-        )
-      )
-      setting(
         '归档画板',
-        '归档后所有成员仍可查看，暂时停止编辑。',
+        '所有成员仍可查看，暂时停止编辑。',
         cmd(
           v.board.lifecycle === 'archived' ? '恢复协作' : '归档协作',
           v.board.lifecycle === 'archived' ? 'board.restore' : 'board.archive'
@@ -2171,7 +2158,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
         ownerOnly ? '重新开启共享' : '结束共享',
         ownerOnly
           ? '重新邀请成员加入这块画板。'
-          : '其他成员立即失去访问权，原个人研究保留。',
+          : '其他成员立即失去访问权。',
         boardButton(document, ownerOnly ? '重新开启共享' : '取消共享', () => {
           const c = boardDialog(
             document,
@@ -2202,6 +2189,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string) {
         }),
         !ownerOnly
       )
+      settings.append(uiText('p', '结束共享不删除原个人研究。重新开启时需再次邀请成员。', 'srb-description'))
     } else
       setting(
         '退出协作',
