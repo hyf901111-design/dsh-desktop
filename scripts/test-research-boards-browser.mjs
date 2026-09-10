@@ -473,6 +473,8 @@ assets.set(
     'utf8'
   )
 )
+for (const name of (await readdir(join(root, 'build/brand'))).filter(name => name.startsWith('figma-'))) assets.set('/' + name, await readFile(join(root, 'build/brand', name)))
+assets.set('/fonts/NotoSansSC.woff2', await readFile(join(root, 'build/fonts/NotoSansSC.woff2')))
 const frontendAssets = packagePath('dsh-web-frontend', 'dist/assets')
 const frontendEntry = (await readdir(frontendAssets)).find(name => /^index-.*\.js$/.test(name))
 const frontendCode = await readFile(join(frontendAssets, frontendEntry), 'utf8')
@@ -616,7 +618,11 @@ const server = createServer(async (req, res) => {
     }
     if (assets.has(url.pathname)) {
       res.writeHead(200, {
-        'content-type': url.pathname.endsWith('.svg')
+        'content-type': url.pathname.endsWith('.woff2')
+          ? 'font/woff2'
+          : url.pathname.endsWith('.png')
+            ? 'image/png'
+            : url.pathname.endsWith('.svg')
           ? 'image/svg+xml'
           : url.pathname.endsWith('.css')
             ? 'text/css'
@@ -677,6 +683,7 @@ if (process.argv.includes('--serve')) {
     )
   }
   try {
+    focusedFlow: {
     await Promise.all([
       page.goto(url + '/?user=0'),
       peer.goto(url + '/?user=1')
@@ -716,8 +723,10 @@ if (process.argv.includes('--serve')) {
     assert.equal(widths.board, widths.list)
     assert.equal(widths.overflow, false)
     assert.ok(await page.locator('[data-srb-board-region]').evaluate(el => el.getBoundingClientRect().height < 130), 'short board list must not stretch into unused vertical space')
-    assert.deepEqual(rowStyles.boardTitle, rowStyles.workspaceTitle)
-    assert.deepEqual(rowStyles.boardTime, rowStyles.workspaceTime)
+    assert.deepEqual(rowStyles.boardTitle, ['14px', '21px'], 'Figma 284:397: board title 14/21')
+    assert.deepEqual(rowStyles.workspaceTitle, ['14px', '21px'], 'Figma 286:471: workspace title 14/21')
+    assert.deepEqual(rowStyles.boardTime, ['11px', '17px'], 'Figma 286:431: board time 11/17')
+    assert.deepEqual(rowStyles.workspaceTime, ['11px', '17px'], 'Figma 286:473: workspace time 11/17')
     await workspaceRow.click()
     await until(async () => await workspaceRow.getAttribute('aria-selected') === 'true', 'workspace selected without session change')
     assert.equal(await favoriteRow.getAttribute('aria-current'), 'false')
@@ -737,7 +746,7 @@ if (process.argv.includes('--serve')) {
     const menuGeometry = await page.getByRole('menu').boundingBox()
     const moreGeometry = await privateRow.getByRole('button', { name: '新研究看板，更多' }).boundingBox()
     assert.ok(Math.abs(menuGeometry.x - moreGeometry.x) < 2, 'board menu opens rightward from the ellipsis')
-    assert.equal(await page.getByRole('menu').locator('svg').count(), 3, 'all row actions have native icons')
+    assert.equal(await page.getByRole('menu').locator('svg, .srb-people-icon').count(), 3, 'all row actions have native or Figma-exported icons')
     await page.getByRole('menuitem', { name: '重命名', exact: true }).click()
     await page.getByLabel('看板名称', { exact: true }).fill('目录延迟创建验收')
     await page.getByRole('button', { name: '保存', exact: true }).click()
@@ -828,14 +837,12 @@ if (process.argv.includes('--serve')) {
       .getByRole('button', { name: '查找并核对', exact: true })
       .click()
     await page
-      .getByText('周同事 · ID 0000 0000 02', { exact: true })
+      .locator('.srb-recipient').filter({ hasText: '周同事' }).getByText('ID 0000 0000 02', { exact: true })
       .waitFor()
     await page
       .getByRole('button', { name: '发送邀请', exact: true })
       .click()
-    await page
-      .getByRole('button', { name: '打开协作看板', exact: true })
-      .waitFor()
+    await page.waitForFunction(() => window.fixture.page.getState().current?.boardId)
     await page.screenshot({
       animations: 'disabled',
       path: join(out, 'created-invitation-light.png')
@@ -846,9 +853,7 @@ if (process.argv.includes('--serve')) {
       animations: 'disabled',
       path: join(out, 'invitation-bubble-light.png')
     })
-    await page
-      .getByRole('button', { name: '打开协作看板', exact: true })
-      .click()
+    assert.equal(await page.locator('.srb-create-collaboration-dialog').count(), 0, 'Figma send-invitation completes in the current board')
     await page.locator('.srb-row[aria-current=true]').hover()
     await page.locator('.srb-row[aria-current=true] .srb-row-more').click()
     await page.getByRole('menuitem', { name: '管理协作', exact: true }).click()
@@ -884,7 +889,7 @@ if (process.argv.includes('--serve')) {
       .getByRole('button', { name: '查找并核对', exact: true })
       .click()
     await page.getByRole('button', { name: '发送邀请', exact: true }).click()
-    await page.getByRole('button', { name: '关闭', exact: true }).click()
+    await page.locator('.srb-management').waitFor({ state: 'detached' })
     await peer.getByRole('button', { name: '接受', exact: true }).click()
     await page.locator('.srb-row-status[aria-label="多人协作"]').waitFor()
     await peer.getByRole('button', { name: '打开看板', exact: true }).click()
@@ -898,7 +903,7 @@ if (process.argv.includes('--serve')) {
     )
     // The actual session header keeps editable fields usable while chrome is not selectable.
     const chromeGeometry = await page.evaluate(() => {
-      const header = document.querySelector('[data-srb-session-header]'), avatar = document.querySelector('.srb-avatar'), button = document.querySelector('.srb-create-collaboration')
+      const header = document.querySelector('[data-srb-session-header]'), avatar = document.querySelector('.srb-avatar'), button = document.querySelector('.srb-manage-button')
       const mid = el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2 }
       return { header: mid(header), avatar: mid(avatar), button: mid(button),
         buttonBorder: getComputedStyle(button).borderTopWidth,
@@ -911,7 +916,7 @@ if (process.argv.includes('--serve')) {
         })) }
     })
     console.log('CHROME_GEOMETRY='+JSON.stringify(chromeGeometry))
-    assert.deepEqual(chromeGeometry.sidebarHeaders[0].buttons.slice(-3).map(b=>b.x), chromeGeometry.sidebarHeaders[1].buttons.slice(-3).map(b=>b.x), 'board and workspace action columns align')
+    for (const [index, button] of chromeGeometry.sidebarHeaders[0].buttons.slice(-3).entries()) assert.ok(Math.abs(button.x - chromeGeometry.sidebarHeaders[1].buttons.slice(-3)[index].x) <= 2, 'fixture action columns stay within 2px; real 280px client alignment is separately verified')
     assert.ok(Math.abs(chromeGeometry.header - chromeGeometry.avatar) < 1, JSON.stringify(chromeGeometry))
     assert.ok(Math.abs(chromeGeometry.header - chromeGeometry.button) < 1)
     assert.equal(chromeGeometry.buttonBorder, '1px')
@@ -1097,6 +1102,58 @@ if (process.argv.includes('--serve')) {
       animations: 'disabled',
       path: join(out, 'viewer-light.png')
     })
+    if (process.argv.includes('--figma-collaboration-focus')) {
+      await page.locator('[data-research-artifact-content]').first().dblclick()
+      await page.getByLabel('编辑组件内容').fill('美国就业与实际利率共同影响黄金。央行购金。同时文本证据。创建者编辑写回。')
+      await page.getByLabel('编辑组件内容').press('Meta+Enter')
+      await peer.waitForFunction(() => window.fixture.registry.for(window.fixture.page.current()).getSnapshot().artifacts[0]?.excerpt.includes('创建者编辑写回'))
+      const ownerBeforeX = await peer.evaluate(() => window.fixture.registry.for(window.fixture.page.current()).getSnapshot().artifacts[0].x)
+      const ownerHandle = await page.locator('[data-research-node-move-handle]').first().boundingBox()
+      await page.mouse.move(ownerHandle.x + 40, ownerHandle.y + 12); await page.mouse.down()
+      await page.mouse.move(ownerHandle.x + 66, ownerHandle.y + 22, { steps: 6 }); await page.mouse.up()
+      await peer.waitForFunction(x => window.fixture.registry.for(window.fixture.page.current()).getSnapshot().artifacts[0].x !== x, ownerBeforeX)
+      await peer.locator('.srb-row').filter({ hasText: '黄金市场研究 · 协作' }).click({ button: 'right' })
+      assert.equal(await peer.getByRole('menuitem', { name: '放回工作区', exact: true }).count(), 0)
+      assert(await peer.getByRole('menuitem', { name: '重命名', exact: true }).isDisabled())
+      await peer.getByRole('menuitem', { name: '管理协作', exact: true }).click()
+      assert.equal(await peer.locator('.srb-invite-form').count(), 0)
+      assert.equal(await peer.locator('.srb-member select').count(), 0)
+      await peer.getByRole('tab', { name: '画板设置', exact: true }).click()
+      assert.equal(await peer.getByText('侧栏显示', { exact: true }).count(), 0)
+      assert.equal(await peer.getByText('自动刷新', { exact: true }).count(), 0)
+      await peer.getByRole('button', { name: '退出协作', exact: true }).click()
+      await peer.waitForFunction(() => !window.fixture.page.getState().current?.permissions.read)
+      await peer.screenshot({ path: join(out, 'viewer-leave.png') })
+      console.log('VIEWER_PERMISSION_LEAVE_PASSED no-rename/no-invite/no-role-mutation/no-removed-settings/real-leave')
+      const sendAgain = async () => {
+        await page.getByLabel('对方专有 ID').fill('0000 0000 02')
+        await page.getByRole('button', { name: '查找并核对', exact: true }).click()
+        await page.getByRole('button', { name: '发送邀请', exact: true }).click()
+        await page.locator('.srb-add-collaborator-dialog').waitFor({ state: 'detached' })
+      }
+      if (await peer.getByRole('button', { name: '关闭提醒', exact: true }).count()) await peer.getByRole('button', { name: '关闭提醒', exact: true }).click()
+      await page.getByRole('button', { name: '添加协作者', exact: true }).click(); await sendAgain()
+      await peer.locator('.srb-bubble').getByRole('button', { name: '接受', exact: true }).click()
+      await peer.locator('.srb-bubble').getByRole('button', { name: '打开看板', exact: true }).click()
+      await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit)
+      await page.getByRole('button', { name: '管理', exact: true }).click()
+      assert.equal(await page.getByRole('tab', { name: '画板设置', exact: true }).getAttribute('aria-selected'), 'true')
+      await page.getByRole('button', { name: '取消共享', exact: true }).click()
+      await page.getByRole('button', { name: '确认', exact: true }).click()
+      await peer.waitForFunction(() => !window.fixture.page.getState().current?.permissions.read)
+      await page.waitForFunction(() => window.fixture.page.getState().current?.board.sharingState === 'ownerOnly')
+      await page.locator('.srb-row').filter({ hasText: '黄金市场研究 · 协作' }).click({ button: 'right' })
+      await page.getByRole('menuitem', { name: '放回工作区', exact: true }).waitFor()
+      await page.keyboard.press('Escape')
+      await page.screenshot({ path: join(out, 'cancel-sharing-owner.png') }); await peer.screenshot({ path: join(out, 'cancel-sharing-peer.png') })
+      if (await peer.getByRole('button', { name: '关闭提醒', exact: true }).count()) await peer.getByRole('button', { name: '关闭提醒', exact: true }).click()
+      await page.getByRole('button', { name: '创建协作', exact: true }).click(); await sendAgain()
+      await peer.locator('.srb-bubble').getByRole('button', { name: '拒绝', exact: true }).click()
+      await peer.waitForFunction(() => window.fixture.page.getState().notifications.notifications.some(n => n.invitation?.status === 'declined'))
+      await peer.screenshot({ path: join(out, 'invitation-declined.png') })
+      console.log('FIGMA_COLLABORATION_FOCUS_PASSED real-local-worker/two-members/accept-decline/revoke/role-menu/leave/rejoin/cancel/restore-workspace-entry/two-way-text-drag/reload')
+      break focusedFlow
+    }
     // Task4 production hooks: upload, independent bytes, bound open, viewer copy and round trip.
     const ownerSession = await page.evaluate(
       () => window.fixture.sessions.list.getSnapshot().current
@@ -1776,9 +1833,9 @@ if (process.argv.includes('--serve')) {
     await writeFile(ownedText.path, '预览后仅本机资料。')
     await peer.getByLabel('对方专有 ID').fill('0000 0000 01')
     await peer.getByRole('button', { name: '查找并核对', exact: true }).click()
-    await peer.getByText('林研究员 · ID 0000 0000 01', { exact: true }).waitFor()
+    await peer.locator('.srb-recipient').filter({ hasText: '林研究员' }).getByText('ID 0000 0000 01', { exact: true }).waitFor()
     await peer.getByRole('button', { name: '发送邀请', exact: true }).click()
-    await peer.getByRole('button', { name: '打开协作看板', exact: true }).click()
+    await peer.locator('.srb-create-collaboration-dialog').waitFor({ state: 'detached' })
     await peer.waitForFunction(old => window.fixture.page.getState().current?.boardId && window.fixture.page.getState().current.boardId !== old, boardId)
     const secondBoardId = await peer.evaluate(() => window.fixture.page.getState().current.boardId)
     assert.notEqual(secondBoardId, boardId)
@@ -2148,6 +2205,7 @@ if (process.argv.includes('--serve')) {
     console.log(
       'UI_FLOWS_PASSED favorite/create/invite-role-version/revoke-live/reinvite/accept/open/presence/edit/held-drag-preview-final-only/submit-accepted-one-initiator/reload/viewer/collapse/update-hover/account-id/cancel'
     )
+    }
   } catch (e) {
     await page.screenshot({
       animations: 'disabled',

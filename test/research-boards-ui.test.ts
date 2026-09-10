@@ -231,7 +231,7 @@ it('aggregates startup history once and limits new bubbles to3 with hover-paused
   try {
     await vi.advanceTimersByTimeAsync(1)
     expect(w.document.querySelector('.srb-bubble')?.textContent).toContain(
-      '2 条待处理'
+      '还有 2 条协作邀请'
     )
     dispose()
     dispose = mountResearchBoardNotifications(w.document as any, bridge)
@@ -266,7 +266,7 @@ it('aggregates startup history once and limits new bubbles to3 with hover-paused
     )
     await vi.advanceTimersByTimeAsync(10000)
     expect(w.document.querySelector('.srb-bubble')?.textContent).toContain(
-      '2 条待处理'
+      '还有 2 条协作邀请'
     )
   } finally {
     dispose()

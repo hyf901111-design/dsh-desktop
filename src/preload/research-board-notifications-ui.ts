@@ -1,6 +1,7 @@
 import type { UpdateStatus } from '../shared/contracts'
 import { installSidebarNoticeStyles, noticeIcon, positionSidebarNotice } from './sidebar-notice'
 import { updateMessage } from './update-view'
+import { normalizeUpdateNotification, readUpdateNotification, saveUpdateNotification, updateNotificationVersionInstalled } from './update-notification-store'
 import { boardEditTime } from './research-board-presentation'
 import type {
   Notification,
@@ -35,8 +36,10 @@ export function mountResearchBoardNotifications(
     burst = 0,
     aggregate = 0
   let activeNotification: Notification | undefined
-  let latestUpdate: UpdateStatus | undefined
-  let updateReadVersion = win.localStorage.getItem('ework.update.read') ?? ''
+  let latestUpdate = readUpdateNotification(win.localStorage)
+  let liveUpdatePhase: UpdateStatus['phase'] | undefined
+  let updateReadVersion = ''
+  try { updateReadVersion = win.localStorage.getItem('ework.update.read') ?? '' } catch {}
   let countdown: ReturnType<typeof setTimeout> | undefined,
     remaining = 10000,
     started = 0,
@@ -78,7 +81,7 @@ export function mountResearchBoardNotifications(
     }
   }
   function resume() {
-    if (hover || focused || !bubble || countdown || ['downloading', 'downloaded', 'installing'].includes(latestUpdate?.phase ?? '')) return
+    if (hover || focused || !bubble || countdown || ['downloading', 'downloaded', 'installing'].includes(liveUpdatePhase ?? '')) return
     started = Date.now()
     countdown = setTimeout(() => closeBubble(), remaining)
   }
@@ -232,7 +235,7 @@ export function mountResearchBoardNotifications(
     title.className = 'srb-notification-title'
     title.textContent = `版本更新 · ${latestUpdate?.availableVersion ?? ''}`
     const message = doc.createElement('p')
-    message.textContent = latestUpdate ? updateMessage(latestUpdate, 'zh') : ''
+    message.textContent = latestUpdate && liveUpdatePhase === latestUpdate.phase ? updateMessage(latestUpdate, 'zh') : ''
     row.append(title, message)
     const actions = doc.createElement('div')
     actions.className = 'srb-notification-actions'
@@ -240,7 +243,7 @@ export function mountResearchBoardNotifications(
       panel?.remove(); panel = undefined; bell?.setAttribute('aria-expanded', 'false')
       doc.dispatchEvent(new win.Event('ework-open-about'))
     }))
-    if (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error') actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : '重新下载', () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
+    if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : '重新下载', () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
     row.append(actions)
     return row
   }
@@ -449,7 +452,7 @@ export function mountResearchBoardNotifications(
     }
     if (latestUpdate?.availableVersion) {
       updateReadVersion = latestUpdate.availableVersion
-      win.localStorage.setItem('ework.update.read', updateReadVersion)
+      try { win.localStorage.setItem('ework.update.read', updateReadVersion) } catch {}
     }
     panel = doc.createElement('section')
     panel.className = 'srb-notifications'
@@ -583,9 +586,14 @@ export function mountResearchBoardNotifications(
   const receiveUpdate = () => {
     try {
       const update = JSON.parse(doc.documentElement.dataset.eworkUpdateStatus ?? 'null') as UpdateStatus | null
-      if (update?.availableVersion && ['available', 'downloading', 'downloaded', 'installing', 'error'].includes(update.phase)) latestUpdate = update
-      else if (update?.phase === 'error' && latestUpdate) latestUpdate = { ...update, availableVersion: latestUpdate.availableVersion }
-      else if (update?.phase === 'up-to-date' && latestUpdate) latestUpdate = { ...update, availableVersion: latestUpdate.availableVersion }
+      liveUpdatePhase = update?.phase
+      const next = normalizeUpdateNotification(update) ?? (['error', 'up-to-date'].includes(update?.phase ?? '') && latestUpdate ? normalizeUpdateNotification({ ...update, availableVersion: latestUpdate.availableVersion }) : undefined)
+      if (next) { latestUpdate = next; saveUpdateNotification(win.localStorage, next) }
+      else if (latestUpdate?.availableVersion && update?.currentVersion && updateNotificationVersionInstalled(update.currentVersion, latestUpdate.availableVersion)) {
+        latestUpdate = { currentVersion: update.currentVersion, availableVersion: latestUpdate.availableVersion, phase: 'up-to-date', manual: false }
+        liveUpdatePhase = 'up-to-date'
+        saveUpdateNotification(win.localStorage, latestUpdate)
+      }
       if (['downloading', 'downloaded', 'installing'].includes(update?.phase ?? '')) pause()
       else resume()
       reconcile()
