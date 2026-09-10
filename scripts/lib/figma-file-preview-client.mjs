@@ -10,6 +10,9 @@ function replaceOnce(source, anchor, replacement) {
 }
 
 export function patchFigmaFilePreview(source) {
+  if (!source.includes('/* ODYSSEY_PDF_HIDDEN_READER_SIZE */')) source = replaceOnce(source,
+    'const width = Math.floor(body.clientWidth);\n\t\t\t\t\tconst height = Math.floor(body.clientHeight);',
+    '/* ODYSSEY_PDF_HIDDEN_READER_SIZE */\n                    if(body.closest("[data-research-original-reader]")?.hidden)return;\n                    const width = Math.floor(body.clientWidth);\n\t\t\t\t\tconst height = Math.floor(body.clientHeight);')
   // Preserve genuine page metadata separately from entry sizing; it must not re-enable PDF aspect-locked cards.
   if (!source.includes('/* ODYSSEY_FILE_RATIO_METADATA */')) source = replaceOnce(source, 'function researchCanvasPersistedGeometry(node) {', `function researchCanvasPersistedGeometry(node) {
     /* ODYSSEY_FILE_RATIO_METADATA */
@@ -124,6 +127,8 @@ body[data-ds-dark-theme] [data-research-file-presentation]{--odyssey-card-text:#
 .odyssey-file-presentation,.odyssey-file-reader{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;width:100%;height:100%}
 .odyssey-file-entry{box-sizing:border-box;display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;height:100%;padding:0 17px 15px;gap:12px;color:var(--odyssey-card-text,#292b2f);font:13px/21px "EWork DIN Pro","Noto Sans SC",sans-serif;overflow-wrap:anywhere}
 .odyssey-file-entry[hidden],.odyssey-file-reader[hidden]{display:none!important}
+/* Expanded RichNodeFrame readers own interaction even when the background canvas retains a gesture modifier. */
+.rScV5Q_richNode[open]>.rScV5Q_previewBody>.rScV5Q_previewShield{display:none!important;pointer-events:none!important}
 .odyssey-file-entry[data-entry-compact=true]{padding:6px 12px;gap:4px}
 .odyssey-file-kind{display:flex;align-items:center;gap:8px;height:20px;flex:none;color:var(--odyssey-card-muted,#81858c);font:11px/19px "EWork DIN Pro","Noto Sans SC",sans-serif}.odyssey-file-kind>img{flex:none;width:16px;height:16px}
 .odyssey-file-excerpt{margin:0;font:inherit}.odyssey-file-source{color:var(--odyssey-card-muted,#81858c);font:11px/19px "EWork DIN Pro","Noto Sans SC",sans-serif}.odyssey-file-status{font:inherit}

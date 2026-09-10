@@ -99,6 +99,42 @@ describe('Figma file entries and complete readers', () => {
     try { expect(image.host.querySelector('[data-research-file-entry]')).toBeNull(); expect(image.restore).toHaveBeenCalledTimes(1) } finally { await image.cleanup() }
   })
 
+  it.each(['data-command-pressed', 'data-space-pressed', 'data-dragging'])('lets expanded readers receive pointers while canvas %s is retained', async attribute => {
+    const mounted = await mount(fixtureFile('html'))
+    try {
+      mounted.host.classList.add('rScV5Q_root'); mounted.host.setAttribute(attribute, 'true')
+      const shield = mounted.host.querySelector('[data-research-preview-shield]')!
+      expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('auto')
+      await mounted.toggle(); await mounted.settle()
+      expect(mounted.window.getComputedStyle(shield).display).toBe('none')
+      expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('none')
+      const reader = mounted.host.querySelector('[data-research-original-reader]')!
+      expect(reader.hasAttribute('inert')).toBe(false)
+      await mounted.toggle()
+      expect(mounted.window.getComputedStyle(shield).display).not.toBe('none')
+      expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('auto')
+    } finally { await mounted.cleanup() }
+  })
+
+  it('also releases the shared shield for an expanded generated summary', async () => {
+    const node = { id: 'summary-reader', kind: 'generated-container', messageId: 'summary-reader', title: '总结提炼', x: 350, y: 220, width: 656, height: 456, generationStatus: 'completed', refreshMinutes: 0, containerSpec: { version: 1, type: 'markdown', title: '总结提炼', content: '原始完整总结正文' } }
+    const mounted = await mount(node)
+    try {
+      mounted.host.classList.add('rScV5Q_root'); mounted.host.setAttribute('data-command-pressed', 'true')
+      expect(mounted.host.querySelector('[data-research-file-presentation]')).toBeNull()
+      const shield = mounted.host.querySelector('[data-research-preview-shield]')!
+      expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('auto')
+      await mounted.toggle(); await mounted.settle()
+      expect(mounted.host.querySelector('dialog')?.open).toBe(true)
+      expect(mounted.host.textContent).toContain('原始完整总结正文')
+      expect(mounted.window.getComputedStyle(shield).display).toBe('none')
+      expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('none')
+      await mounted.toggle()
+      expect(mounted.window.getComputedStyle(shield).display).not.toBe('none')
+      expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('auto')
+    } finally { await mounted.cleanup() }
+  })
+
   it('shows original loading and unavailable states only after opening', async () => {
     let finish!: (value: null) => void
     const restore = vi.fn(() => new Promise(resolve => { finish = resolve }))

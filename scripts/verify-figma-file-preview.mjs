@@ -7,7 +7,8 @@ import { join } from 'node:path'
 import assert from 'node:assert/strict'
 import { patchFigmaFilePreview } from './lib/figma-file-preview-client.mjs'
 
-const root = process.cwd(), out = join(root, 'output/figma-file-preview-20260910')
+const interactionOnly = process.argv.includes('--interaction-only')
+const root = process.cwd(), out = join(root, 'output/figma-file-preview-20260910', ...(interactionOnly ? ['reader-interaction'] : []))
 const clientSource = patchFigmaFilePreview(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
 const entry = String.raw`
 import React from 'react';import {MarkdownText} from '@deepseek-ai/dsh-client-ui-primitives';import * as jsx from 'react/jsx-runtime';import * as reactDOM from 'react-dom';import {createRoot} from 'react-dom/client';
@@ -34,7 +35,7 @@ function samplePdf() {
   return Buffer.from(pdf + `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`)
 }
 const paragraph = '保留原始文件正文与现有阅读交互，不将完整内容缩小到卡片尺寸。'
-const webDocument = `<!doctype html><meta charset="utf-8"><style>body{margin:24px;background:white;color:#222;font:17px/28px sans-serif}p{max-width:1000px}input,button{font:inherit}</style><h1>原始完整网页</h1><input value="原始输入"><button id="count" onclick="this.textContent=Number(this.textContent)+1">0</button>${Array.from({ length: 45 }, (_, index) => `<p>${index + 1}. ${paragraph}</p>`).join('')}`
+const webDocument = `<!doctype html><meta charset="utf-8"><style>body{margin:24px;background:white;color:#222;font:17px/28px sans-serif}p{max-width:1000px}input,button{font:inherit}</style><h1>原始完整网页</h1><input value="原始输入"><button id="count">0</button><script src="/document/events.js"></script>${Array.from({ length: 45 }, (_, index) => `<p>${index + 1}. ${paragraph}</p>`).join('')}<p id="reader-end">END</p>`
 const server = createServer(async (req, res) => {
   try {
     const path = new URL(req.url, 'http://localhost').pathname
@@ -42,7 +43,8 @@ const server = createServer(async (req, res) => {
     else if (path === '/harness.css') { res.setHeader('Content-Type', 'text/css'); res.end(bundle.outputFiles.find(file => file.path.endsWith('.css'))?.text || '') }
     else if (path === '/client.js') { res.setHeader('Content-Type', 'application/javascript'); res.end(clientSource) }
     else if (path === '/document/pdf') { res.setHeader('Content-Type', 'application/pdf'); res.end(samplePdf()) }
-    else if (path === '/document/html' || path === '/document/web') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(webDocument) }
+    else if (path === '/document/events.js') { res.setHeader('Content-Type', 'application/javascript'); res.end("document.getElementById('count').addEventListener('click',function(){this.textContent=Number(this.textContent)+1})") }
+    else if (path === '/document/html' || path === '/document/web') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'"); res.end(webDocument) }
     else if (path === '/document/txt' || path === '/document/md') { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.end(Array.from({ length: 80 }, (_, index) => `${index + 1}. 第 ${index + 1} 条：${paragraph}`).join('\n')) }
     else if (path.startsWith('/sherlock-pdfjs/') && !path.includes('..')) { res.setHeader('Content-Type', path.endsWith('.js') ? 'application/javascript' : 'application/octet-stream'); res.end(await readFile(join(root, 'node_modules/@deepseek-ai/dsh-web-frontend/dist', path))) }
     else if (path === '/fonts/NotoSansSC.woff2') { res.setHeader('Content-Type', 'font/woff2'); res.end(await readFile(join(root, 'build/fonts/NotoSansSC.woff2'))) }
@@ -98,6 +100,50 @@ async function snapshot(name) {
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}`)
   await page.locator('[data-research-file-entry]').waitFor()
+  if (interactionOnly) {
+    const interactionMetrics = []
+    for (const format of ['html', 'pdf', 'web', 'txt', 'md']) {
+      await showFile(format); await toggleReader()
+      const iframeSelector = format === 'html' ? '[data-research-html-preview]' : format === 'web' ? '[data-research-web-frame]' : null
+      const scrollSelector = format === 'pdf' ? '[data-research-pdf-scroll]' : format === 'txt' ? '[data-research-text-preview]' : '[data-research-markdown-scroll]'
+      if (format === 'pdf') await page.locator('[data-research-pdf-rendered-page="1"]').waitFor({ timeout: 20000 })
+      const frame = iframeSelector ? page.frameLocator(iframeSelector) : null
+      if (frame) await frame.locator('#reader-end').waitFor()
+      else await page.locator(scrollSelector).waitFor()
+      // Reproduce the real canvas ancestor that can retain modifier state when a dialog opens.
+      await page.evaluate(() => { const host = document.getElementById('host'); host.classList.add('rScV5Q_root'); host.setAttribute('data-command-pressed', 'true') })
+      const hit = await page.locator('[data-research-original-reader]').evaluate(reader => {
+        const box = reader.getBoundingClientRect(), target = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2), shield = reader.closest('[data-research-node-id]').querySelector('[data-research-preview-shield]')
+        return { readerHit: reader === target || reader.contains(target), target: target?.className, shieldDisplay: getComputedStyle(shield).display, shieldPointerEvents: getComputedStyle(shield).pointerEvents, center: [box.x + box.width / 2, box.y + box.height / 2] }
+      })
+      assert.equal(hit.shieldDisplay, 'none'); assert.equal(hit.shieldPointerEvents, 'none'); assert.equal(hit.readerHit, true)
+      if (frame) {
+        await frame.locator('input').click(); await frame.locator('input').fill('关闭后保留87.5%')
+        await frame.locator('#count').click(); assert.equal(await frame.locator('#count').innerText(), '1')
+      }
+      const scrollState = async () => frame
+        ? await frame.locator('html').evaluate(e => { const s = e.ownerDocument.scrollingElement; return { top: s.scrollTop, client: s.clientHeight, height: s.scrollHeight } })
+        : await page.locator(scrollSelector).evaluate(e => ({ top: e.scrollTop, client: e.clientHeight, height: e.scrollHeight }))
+      await page.mouse.move(...hit.center); await page.mouse.wheel(0, 100000)
+      const deadline = Date.now() + 5000
+      let end = await scrollState()
+      while (Date.now() < deadline && end.top + end.client < end.height - 2) { await page.waitForTimeout(50); end = await scrollState() }
+      assert(end.height > end.client && end.top > 0 && end.top + end.client >= end.height - 2, format + ' real wheel must reach document END: ' + JSON.stringify(end))
+      if (frame) {
+        const endVisible = await frame.locator('#reader-end').evaluate(e => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })
+        assert.equal(endVisible, true)
+      }
+      await page.screenshot({ path: join(out, format + '-reader-wheel-end.png') })
+      await toggleReader(); await toggleReader()
+      const reopened = await scrollState(); assert.equal(reopened.top, end.top)
+      if (frame) { assert.equal(await frame.locator('input').inputValue(), '关闭后保留87.5%'); assert.equal(await frame.locator('#count').innerText(), '1') }
+      interactionMetrics.push({ format, hit, end, reopened, physicalWheelReachedEnd: true, interactionPreserved: true })
+      await toggleReader(); await page.evaluate(() => document.getElementById('host').removeAttribute('data-command-pressed'))
+    }
+    assert.deepEqual(errors, [])
+    await writeFile(join(out, 'results.json'), JSON.stringify({ evidence: 'controlled Chromium; production frame/CSS and original readers; real pointer and wheel under retained canvas command state; local HTML uses external script under CSP excluding inline scripts', interactionMetrics, errors }, null, 2))
+    console.log(JSON.stringify({ passed: true, output: out, readers: interactionMetrics.length, physicalWheelReachedEnd: true, errors }, null, 2))
+  } else {
   for (const theme of ['light', 'dark']) {
     await page.evaluate(theme => theme === 'dark' ? document.body.setAttribute('data-ds-dark-theme', '') : document.body.removeAttribute('data-ds-dark-theme'), theme)
     await showFile('pdf'); await snapshot(`${theme}-pdf-entry`)
@@ -160,4 +206,5 @@ try {
   assert.deepEqual(errors, [])
   await writeFile(join(out, 'results.json'), JSON.stringify({ evidence: 'controlled Chromium; production file/web frames and original PDF.js/HTML/web/text readers; Office adapter covered separately by focused identity tests', metrics, readers, fonts, generatedWeb: { editingSubmitted: true, closedRefreshAndErrorVisible: true, automaticRefresh: 'original controller verified in focused tests' }, errors }, null, 2))
   console.log(JSON.stringify({ passed: true, output: out, closedStates: metrics.length, readers, errors }, null, 2))
+  }
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }

@@ -52,3 +52,9 @@ node scripts/verify-figma-file-preview.mjs
 | `dark-pdf-loading-reader.png` / `dark-pdf-unavailable-reader.png` / `dark-pdf-unavailable-entry.png` | 原授权等待圆环、原失败状态、关闭后真实失败记录 |
 
 这些是 **真实 Chromium 内的生产组件与原阅读器链、受控本地文档/桥接回包**，不是打包 Electron 验收。17 个闭合状态实测 client 与 scroll 尺寸相等；页面异常0；PDF类型行实际字形命中自定义 DINPro，中文标题命中自定义 Noto Sans SC。Office 覆盖原生产包装器对既有预览服务组件的传参、惰性授权及实例/输入状态保留；未在这组 Chromium 中伪造 `sherlock-preview://` 能力协议运行完整 Office 引擎。原 Office 服务和解析器未修改，其格式兼容性与最终包导入操作仍由最终客户端验收记录限定。浏览器中的文档、来源和更新提交回调均为本地夹具；不证明任意远端网页、任意 Office 文件或真实附件授权服务均通过。最终打包图继续归档至 `output/figma-final-review/index.html`。
+
+最终包 `1997d70` 的真实用户操作验收发现：展开 HTML 阅读器时，画布保留手势状态后，选择用 `.rScV5Q_previewShield` 仍以 `pointer-events:auto / z-index:4` 覆盖正文。现场三个正文点均命中遮罩，输入经 AX 设置可成功却不能代表鼠标交互通过。同一祖先手势规则作用于所有 `ResearchCanvasRichNodeFrame`，包括生成 HTML/总结；修复只对 `.rScV5Q_richNode[open]` 的直属正文选择遮罩设为不显示、不接收指针；闭合卡选择/拖拽遮罩保持原行为。进一步滚轮到 PDF 文末验证发现，隐藏原阅读器时其 ResizeObserver 曾清空布局尺寸并截断滚动位置；现在仅跳过隐藏的原阅读器尺寸测量，重新可见时仍走原窗口尺寸适配。
+
+本次补充运行 `npx vitest run test/figma-file-preview.test.ts`，25 项通过（新增 Command/Space/拖拽三种祖先状态及非文件生成总结下展开可交互、关闭恢复遮罩）；补丁连续两次结果相同且语法通过，TypeScript 通过。`node scripts/verify-figma-file-preview.mjs --interaction-only` 使用生产组件、完整原样式与受控本地文件，复现画布 Command 状态并验证实际命中、鼠标点击、物理滚轮至文末及关闭重开：HTML 1417/2203、PDF 4757/5543、网页1473/2203、文本682/1468、Markdown1034/1820（数值为 scrollTop/scrollHeight）；五种阅读器位置均完整保留，页面异常0。五张 `*-reader-wheel-end.png` 与 JSON 位于 `output/figma-file-preview-20260910/reader-interaction/`。该轮是受控 Chromium 证据；修复后的打包 Electron HTML/PDF 真实点击和滚轮仍须随重新构建验收，不以此替代。
+
+本地 HTML 的既有 capability CSP 允许经授权同源及 HTTP(S) 外部脚本，不允许内联脚本/`onclick`；本轮未修改 CSP、sandbox、授权或底层服务。浏览器夹具改用外部事件脚本并施加禁止 inline script 的 CSP，避免把公开 HTTP 夹具的内联按钮成功误当成真实本地文件安全策略的承诺。输入原生编辑、符合原策略的外部事件脚本以及关闭重开状态保留均有实际交互证据。
