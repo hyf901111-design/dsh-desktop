@@ -213,7 +213,7 @@ const slotsMap = new Map<string, any>(),
   }
 const page = mod.__page.createResearchBoardsPage({
   sessions,
-  workspaces: { list: ws, api: { host: { status: async () => ({ result: { ok: true, value: { cwd: await rpc('fixture:default-directory') } } }) } }, refresh: async () => ws.set({ items: [...ws.getSnapshot().items.filter((w: any) => w.workspaceId === 'workspace'), ...await rpc('fixture:workspace-list')] }), archiveSession: async (id: string) => { await rpc('fixture:session-archive', id); await sessions.refresh() } },
+  workspaces: { list: ws, api: { host: { describe: async () => ({ result: { ok: true, value: { cwd: await rpc('fixture:default-directory') } } }) } }, refresh: async () => ws.set({ items: [...ws.getSnapshot().items.filter((w: any) => w.workspaceId === 'workspace'), ...await rpc('fixture:workspace-list')] }), archiveSession: async (id: string) => { await rpc('fixture:session-archive', id); await sessions.refresh() } },
   researchWorkspaces: registry,
   inputHub: hub,
   slots,
