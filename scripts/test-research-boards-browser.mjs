@@ -712,6 +712,7 @@ if (process.argv.includes('--serve')) {
     const widths = await page.evaluate(() => ({ board: document.querySelector('.srb-row').getBoundingClientRect().width, list: document.querySelector('.srb-board-list').clientWidth - parseFloat(getComputedStyle(document.querySelector('.srb-board-list')).paddingLeft) - parseFloat(getComputedStyle(document.querySelector('.srb-board-list')).paddingRight), overflow: document.querySelector('.srb-section').scrollWidth > document.querySelector('.srb-section').clientWidth }))
     assert.equal(widths.board, widths.list)
     assert.equal(widths.overflow, false)
+    assert.ok(await page.locator('[data-srb-board-region]').evaluate(el => el.getBoundingClientRect().height < 130), 'short board list must not stretch into unused vertical space')
     assert.deepEqual(rowStyles.boardTitle, rowStyles.workspaceTitle)
     assert.deepEqual(rowStyles.boardTime, rowStyles.workspaceTime)
     await workspaceRow.click()
@@ -1963,8 +1964,12 @@ if (process.argv.includes('--serve')) {
         return createHash('sha256').update(location.url).digest('hex') !== '529d2eb875d10d261ef43955db15af9f6be50681c33087bbf6d4e276edb95543'
       } catch { return true }
     })
-    if (unexpectedErrors.length || failedRequests.length) {
-      console.error('UNEXPECTED_BROWSER_ERRORS', JSON.stringify({ unexpectedErrors, failedRequests }))
+    // Switching boards/revoking access intentionally unmounts preview iframes.
+    // Chromium reports their cancelled navigation as ERR_ABORTED; successful
+    // preview rendering and revoked access are asserted in the flow above.
+    const unexpectedRequests = failedRequests.filter(r => !(new URL(r.url).pathname === '/preview' && r.failure?.errorText === 'net::ERR_ABORTED'))
+    if (unexpectedErrors.length || unexpectedRequests.length) {
+      console.error('UNEXPECTED_BROWSER_ERRORS', JSON.stringify({ unexpectedErrors, failedRequests: unexpectedRequests }))
       process.exitCode = 1
     }
     await writeFile(
