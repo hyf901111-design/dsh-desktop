@@ -8,6 +8,15 @@ const FILE_DRAG_PATCH_MARKER = '/* sherlock:files-to-research-canvas:v2 */'
 const LEGACY_FILE_DRAG_PATCH_MARKER = '/* sherlock:files-to-research-canvas:v1 */'
 const PANEL_SURFACE_SYNC_PATCH_MARKER = '/* sherlock:panel-surface-sync:v1 */'
 const PANEL_DRAG_DIMENSION_PATCH_MARKER = '/* sherlock:panel-drag-dimensions:v1 */'
+const RESEARCH_GENERATION_FOCUS_PATCH_MARKER = '/* sherlock:research-generation-keeps-conversation:v1 */'
+
+export function sherlockResearchGenerationOwnsFocus(state, doc = globalThis.document) {
+  const hasResearch = node => node?.kind === 'leaf'
+    ? node.tabs?.some(tab => tab.id === 'sherlock-research-conversation' && tab.meta?.sherlockPinned === true)
+    : node?.children?.some(hasResearch)
+  if (!hasResearch(state?.splits)) return false
+  return !!doc?.querySelector('[data-research-canvas] [data-research-generation-state="queued"], [data-research-canvas] [data-research-generation-state="running"]')
+}
 
 function replaceExact(source, before, after, label, expectedCount = 1) {
   const count = source.split(before).length - 1
@@ -24,6 +33,17 @@ function replaceExact(source, before, after, label, expectedCount = 1) {
  */
 export function patchBetterSidebarClient(source) {
   let next = source
+
+  if (!next.includes(RESEARCH_GENERATION_FOCUS_PATCH_MARKER)) {
+    next = replaceExact(next,
+      '\t\tfunction detectNewDirectSubagent(prev, next, sessionId) {',
+      `\t\t${RESEARCH_GENERATION_FOCUS_PATCH_MARKER}\n${sherlockResearchGenerationOwnsFocus.toString()}\n\t\tfunction detectNewDirectSubagent(prev, next, sessionId) {`,
+      'Research generation focus predicate')
+    next = replaceExact(next,
+      '\t\t\t\tif (!detectNewDirectSubagent(prev, sessionList, sessionId)) return;',
+      '\t\t\t\tif (!detectNewDirectSubagent(prev, sessionList, sessionId)) return;\n\t\t\t\tif (sherlockResearchGenerationOwnsFocus(store.getSnapshot().state)) return;',
+      'Research generation automatic task tab focus')
+  }
 
   if (!next.includes(PATCH_MARKER)) next = replaceExact(
     next,
