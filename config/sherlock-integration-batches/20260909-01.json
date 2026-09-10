@@ -11,179 +11,33 @@
         "schemaVersion": 1,
         "featureName": "EWork Odyssey final Figma navigation, collaboration and component redesign",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "857d41743fbe66c0254299c66909ae85b27eb83e",
-        "tipCommit": "6365688cf794c0e333b84d1cefa4410e7680708d",
+        "baseCommit": "6365688cf794c0e333b84d1cefa4410e7680708d",
+        "tipCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
         "commits": [
           {
-            "commit": "53b2074cedbf92bb81155d25da144e3e6337da02",
+            "commit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
             "parents": [
-              "857d41743fbe66c0254299c66909ae85b27eb83e"
+              "6365688cf794c0e333b84d1cefa4410e7680708d"
             ],
-            "subject": "补充文件与网页紧凑入口及完整阅读设计依据"
-          },
-          {
-            "commit": "5fb237879c10530b8659987ba20e88e68b1471df",
-            "parents": [
-              "53b2074cedbf92bb81155d25da144e3e6337da02"
-            ],
-            "subject": "修复长文本卡片适配及正文与摘要提示重叠"
-          },
-          {
-            "commit": "3e0df136948b3581e4496c8390bbdfb04bd52427",
-            "parents": [
-              "5fb237879c10530b8659987ba20e88e68b1471df"
-            ],
-            "subject": "还原一体毛玻璃外壳并校正研究消息与输入密度"
-          },
-          {
-            "commit": "0fa7fca57bc98a656b2d8bc34fedb3d3746628a5",
-            "parents": [
-              "3e0df136948b3581e4496c8390bbdfb04bd52427"
-            ],
-            "subject": "修正收起侧栏时新建按钮的透明状态"
-          },
-          {
-            "commit": "9bcfb220d8bd35a494428a3fd35856b9916a199e",
-            "parents": [
-              "0fa7fca57bc98a656b2d8bc34fedb3d3746628a5"
-            ],
-            "subject": "按最终稿统一研究与侧栏图标的线形和尺寸"
-          },
-          {
-            "commit": "57876644d580ffb4b7613db072cc90de1f93544a",
-            "parents": [
-              "9bcfb220d8bd35a494428a3fd35856b9916a199e"
-            ],
-            "subject": "修正研究页标签栏固定加号与标题边界"
-          },
-          {
-            "commit": "6365688cf794c0e333b84d1cefa4410e7680708d",
-            "parents": [
-              "57876644d580ffb4b7613db072cc90de1f93544a"
-            ],
-            "subject": "实现文件紧凑入口并保留原阅读器与网页刷新控制"
+            "subject": "修复放大阅读遮罩拦截并保留PDF阅读位置"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "build/brand/figma-sidebar-bell.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/figma-sidebar-chevron.svg"
-          },
-          {
             "status": "M",
-            "path": "build/sherlock-research.svg"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-file-web-evidence/dark.png"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-file-web-evidence/figma-file.svg"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-file-web-evidence/figma-link.svg"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-file-web-evidence/light.png"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-file-web-evidence/validation.json"
-          },
-          {
-            "status": "A",
             "path": "docs/figma-file-web-supplement-20260910.md"
           },
           {
             "status": "M",
-            "path": "docs/figma-final-shell-20260910.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-navigation-icon-evidence/dark.png"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-navigation-icon-evidence/light.png"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-navigation-icon-evidence/metrics.json"
-          },
-          {
-            "status": "A",
-            "path": "docs/figma-navigation-icons-final-20260910.md"
-          },
-          {
-            "status": "M",
-            "path": "scripts/install-brand-assets.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-canvas-client.d.mts"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-file-preview-client.d.mts"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/figma-file-preview-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/verify-figma-file-preview.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-notifications-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "A",
             "path": "test/figma-file-preview.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-file-drop.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-tabbar-final-layout.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-text-summary-final.test.ts"
           }
         ],
         "checks": [
@@ -194,8 +48,8 @@
             ],
             "outcome": "passed",
             "summary": "Local dependencies verified",
-            "verifiedCommit": "6365688cf794c0e333b84d1cefa4410e7680708d",
-            "completedAt": "2026-09-10T12:22:28.890Z",
+            "verifiedCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
+            "completedAt": "2026-09-10T12:47:36.489Z",
             "timeoutMs": 600000
           },
           {
@@ -208,8 +62,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "6365688cf794c0e333b84d1cefa4410e7680708d",
-            "completedAt": "2026-09-10T12:22:28.890Z",
+            "verifiedCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
+            "completedAt": "2026-09-10T12:47:36.489Z",
             "timeoutMs": 120000
           },
           {
@@ -238,8 +92,8 @@
             ],
             "outcome": "passed",
             "summary": "Focused final design checks passed; see captured test log",
-            "verifiedCommit": "6365688cf794c0e333b84d1cefa4410e7680708d",
-            "completedAt": "2026-09-10T12:22:28.890Z",
+            "verifiedCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
+            "completedAt": "2026-09-10T12:47:36.489Z",
             "timeoutMs": 120000
           }
         ],
@@ -257,80 +111,7 @@
           "Integration browser checks explicitly use SHERLOCK_COLLABORATION_BROWSER_FOCUS=figma-final; unrelated full browser cases are excluded and documented",
           "Arbitrary generated HTML layout still depends on semantic structure; summaries preserve full reading content"
         ],
-        "generatedAt": "2026-09-10T12:22:28.890Z"
-      },
-      "merged": {
-        "mergeCommit": "e050179f50189a154c7f6e55a87903a5de80c930",
-        "verificationCommit": "e050179f50189a154c7f6e55a87903a5de80c930",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "e050179f50189a154c7f6e55a87903a5de80c930",
-            "completedAt": "2026-09-10T12:23:20.642Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e050179f50189a154c7f6e55a87903a5de80c930",
-            "completedAt": "2026-09-10T12:23:20.642Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "e050179f50189a154c7f6e55a87903a5de80c930",
-            "completedAt": "2026-09-10T12:23:20.642Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "e050179f50189a154c7f6e55a87903a5de80c930",
-            "completedAt": "2026-09-10T12:23:20.642Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "e050179f50189a154c7f6e55a87903a5de80c930",
-            "completedAt": "2026-09-10T12:23:20.642Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T12:23:20.642Z"
+        "generatedAt": "2026-09-10T12:47:36.489Z"
       }
     }
   ],
