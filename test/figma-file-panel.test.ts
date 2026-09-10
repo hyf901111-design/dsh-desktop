@@ -113,7 +113,7 @@ describe('Figma Files panel', () => {
     const vendorStyle = source.match(/const css\$3 = ("(?:\\.|[^"\\])*");/)
     expect(vendorStyle).not.toBeNull()
     const lateStyle = browser.document.createElement('style')
-    lateStyle.textContent = JSON.parse(vendorStyle![1])
+    lateStyle.textContent = JSON.parse(vendorStyle![1]!)
     browser.document.head.appendChild(lateStyle)
     const row = browser.document.createElement('button')
     row.className = 't8lSSG_explorerFile'

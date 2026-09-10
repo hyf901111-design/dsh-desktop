@@ -58,6 +58,7 @@ describe('Figma shell patch installation', () => {
       isInitialResearchSession: () => false,
       isPersistedResearchSession: () => false,
       explicitResearchViewSessions: new Set(),
+      explicitHomeViewSessions: new Set(['current']),
       resolveActiveView: (tabs: { id: string }[], selected: string) => tabs.find(tab => tab.id === selected)
     })
     for (const [view, blank, phase, title, displayTitle, expected] of [
