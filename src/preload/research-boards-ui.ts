@@ -1,7 +1,7 @@
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
-import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconPlusOutline16, IconEditOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconBranchOutline16, IconFolderOpenOutline16, IconEditOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   BoardView,
   Canvas,
@@ -1440,8 +1440,17 @@ export function ResearchBoardPresence({
 }
 export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoardsPage; wide?: boolean; expandSidebar?: () => void }) {
   const state = useBoard(page)
+  const skin = React.useSyncExternalStore((listener: () => void) => { window.addEventListener('sherlock-sidebar-skin', listener); return () => window.removeEventListener('sherlock-sidebar-skin', listener) }, () => (window as any).__sherlockWorkspaceSidebarSkin)
+  const searchInput = React.useRef<HTMLInputElement>(null), searchRoot = React.useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('sherlock.boards.collapsed') === 'true')
   const [search, setSearch] = React.useState(false), [query, setQuery] = React.useState('')
+  React.useEffect(() => { if (search) searchInput.current?.focus({ preventScroll: true }) }, [search])
+  React.useEffect(() => {
+    if (!search) return
+    const outside = (event: MouseEvent) => { if (!query.trim() && !searchRoot.current?.contains(event.target as Node)) setSearch(false) }
+    document.addEventListener('pointerdown', outside)
+    return () => document.removeEventListener('pointerdown', outside)
+  }, [search, query])
   const [optionsOpen, setOptionsOpen] = React.useState(false), [creating, setCreating] = React.useState(false)
   const [preferences, setPreferences] = React.useState(() => {
     try {
@@ -1462,35 +1471,41 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   entries.sort((a, b) => preferences.sort === 'updated' ? b.time - a.time :
     (order.includes(a.key) ? order.indexOf(a.key) : 100000) - (order.includes(b.key) ? order.indexOf(b.key) : 100000))
   const visible = entries.filter(e => preferences.groups.includes(e.group) && e.value.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  if (!wide) return null
-  return h('section', { className: 'srb-section', 'data-wide': true, 'aria-label': '研究看板' },
-    h('header', null,
-      h('button', { className: 'srb-section-toggle', 'aria-label': collapsed ? '展开研究看板' : '折叠研究看板', 'aria-expanded': !collapsed,
+  if (!wide || !skin) return null
+  const B = skin.header
+  const classes = (...names: Array<string | false>) => names.filter(Boolean).join(' ')
+  return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'aria-label': '研究看板' },
+    h('div', { className: B.sectionHeader },
+      h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开研究看板' : '折叠研究看板', 'aria-expanded': !collapsed,
         onClick: () => { setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed)) } },
         '研究看板', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
-      h('div', { className: 'srb-section-controls' },
-        h('button', { className: 'srb-icon-button', 'aria-label': '搜索研究看板', title: '搜索研究看板', onClick: () => { setSearch(!search); if (search) setQuery('') } }, h(IconSearchOutline16)),
+      h('div', { className: classes(B.searchSlot, search && B.searchSlotExpanded) },
+        h('div', { ref: searchRoot, className: classes(B.search, search && B.searchExpanded), onClick: () => { setSearch(true); searchInput.current?.focus() } },
+          h('button', { className: B.searchButton, 'aria-label': '搜索研究看板', 'aria-expanded': search, title: '搜索研究看板', onClick: () => setSearch(true) }, h(IconSearchOutline16, { size: search ? 11 : 14 })),
+          h('input', { ref: searchInput, className: B.searchInput, value: query, tabIndex: search ? 0 : -1, placeholder: '搜索研究看板…', 'aria-label': '搜索看板名称',
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') { setQuery(''); setSearch(false) } } }),
+          search && h('button', { className: B.clearButton, 'aria-label': '关闭看板搜索', onClick: (e: React.MouseEvent) => { e.stopPropagation(); setQuery(''); setSearch(false) } }, h(IconCloseFill14)))),
+      h('div', { className: classes(B.headerActions, search && B.headerActionsHidden) },
         h(Menu, { open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
           selectedIds: [...preferences.groups, preferences.sort],
           items: [{ type: 'label', id: 'groups-label', text: '分组方式' }, { id: 'private', label: '专用看板' }, { id: 'shared', label: '协作看板' },
             { type: 'separator', id: 'sort-separator' }, { type: 'label', id: 'sort-label', text: '排序方式' }, { id: 'manual', label: '手动排序' }, { id: 'updated', label: '最近更新' }],
           onSelect: (id: string) => {
+            setOptionsOpen(false)
             if (id === 'private' || id === 'shared') {
               const groups = preferences.groups.includes(id) ? preferences.groups.filter((g: string) => g !== id) : [...preferences.groups, id]
               if (groups.length) save({ ...preferences, groups })
             } else save({ ...preferences, sort: id })
           },
-          anchor: h('button', { className: 'srb-icon-button', 'aria-label': '看板视图选项', title: '看板视图选项', onClick: () => setOptionsOpen(!optionsOpen) }, h(IconPersonalizationOutline16)) }),
-        h('button', { className: 'srb-icon-button', 'aria-label': '新建研究看板', title: '新建研究看板', disabled: creating, onClick: safely(page, async () => {
+          anchor: h('button', { className: B.iconButton, 'aria-label': '看板视图选项', title: '看板视图选项', onClick: () => setOptionsOpen(!optionsOpen) }, h(IconPersonalizationOutline16)) }),
+        h('button', { className: B.iconButton, 'aria-label': '新建研究看板', title: '新建研究看板', disabled: creating, onClick: safely(page, async () => {
           setCreating(true)
           try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, groups: [...new Set([...preferences.groups, 'private'])] }) }
           finally { setCreating(false) }
-        }) }, h(IconPlusOutline16)))),
-    search && h('div', { className: 'srb-search' }, h('input', { autoFocus: true, value: query, placeholder: '搜索研究看板…', 'aria-label': '搜索看板名称',
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') { setQuery(''); setSearch(false) } } })),
-    (!collapsed || search) && h('div', { className: 'srb-board-list' },
+        }) }, h('span', { className: 'srb-research-icon', 'data-sherlock-research-icon': '', 'aria-hidden': true })))),
+    (!collapsed || search) && h('div', { className: B.listArea }, h('div', { className: classes('srb-board-list', B.list, B.flatList) },
       !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '新建研究看板，或从研究中创建协作'),
-      ...visible.map(entry => h(ResearchBoardRow, { key: entry.key, page, entry: entry.value, time: entry.time, selectedSession,
+      ...visible.map(entry => h(ResearchBoardRow, { key: entry.key, skin, page, entry: entry.value, time: entry.time, selectedSession,
         draggable: preferences.sort === 'manual' && !query,
         onDragStart: (e: React.DragEvent) => { setDrag(entry.key); e.dataTransfer.setData('text/x-sherlock-board', entry.key) },
         onDragEnd: () => setDrag(null),
@@ -1501,22 +1516,24 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
           keys.splice(keys.indexOf(entry.key), 0, drag)
           save({ ...preferences, order: keys }); setDrag(null)
         }
-      }))))
+      })))))
 }
-function ResearchBoardRow({ page, entry, time, selectedSession, ...drag }: any) {
+function ResearchBoardRow({ page, entry, time, selectedSession, skin, ...drag }: any) {
   const [open, setOpen] = React.useState(false)
+  const R = skin.rows
+  const selected = selectedSession === ('boardId' in entry ? entry.localSessionId : entry.sessionId) && page.current() === selectedSession
   const shared = 'boardId' in entry
   const sessionId = shared ? entry.localSessionId : entry.sessionId
   const collaboration = shared && entry.sharingState === 'shared'
   const items = [
     { id: 'rename', label: '重命名', icon: h(IconEditOutline16), disabled: shared && entry.role !== 'owner' },
-    { id: 'collaboration', label: collaboration ? '管理协作' : '共享协作' },
-    { id: 'workspace', label: '放回工作区' }
+    { id: 'collaboration', label: collaboration ? '管理协作' : '共享协作', icon: h(IconBranchOutline16) },
+    { id: 'workspace', label: '放回工作区', icon: h(IconFolderOpenOutline16) }
   ]
-  const row = h('div', { className: 'srb-row', 'data-menu-open': open, 'aria-current': selectedSession === sessionId && page.current() === sessionId,
+  return h('div', { className: ['srb-row', R.sessionRow, R.flatSessionRowWithoutStatus, selected && R.selected, open && R.menuOpen].filter(Boolean).join(' '), 'data-menu-open': open, 'aria-current': selected,
     ...drag, onDragOver: (event: React.DragEvent) => { if (drag.draggable) event.preventDefault() },
     onContextMenu: (event: React.MouseEvent) => { event.preventDefault(); setOpen(true) } },
-    h('button', { title: entry.title, onClick: safely(page, async () => {
+    h('button', { className: R.title + ' srb-board-title', title: entry.title, onClick: safely(page, async () => {
       if (shared) await page.openBoard(entry.boardId)
       else await page.openPersonal(entry.sessionId)
       selectBoardSession(page.current() ?? '')
@@ -1525,10 +1542,10 @@ function ResearchBoardRow({ page, entry, time, selectedSession, ...drag }: any) 
         ? h('span', { className: 'srb-row-status', title: '多人协作', 'aria-label': '多人协作' }, boardIcon('people'))
         : h('span', { className: 'srb-pending-ring', title: '等待成员接受邀请', 'aria-label': '等待接受邀请' })),
       h('span', null, entry.title)),
-    h(BoardEditTime, { value: time || undefined, editor: shared ? entry.updatedBy?.username : undefined }),
-    h('button', { className: 'srb-row-more', 'aria-label': entry.title + '，更多', 'aria-haspopup': 'menu', 'aria-expanded': open,
-      onClick: (event: React.MouseEvent) => { event.stopPropagation(); setOpen(!open) } }, h(IconEllipsisOutline16)))
-  return h(Menu, { open, onClose: () => setOpen(false), items, align: 'end', dense: true, portal: true, anchor: row,
+    h('span', { className: R.time }, h(BoardEditTime, { value: time || undefined, editor: shared ? entry.updatedBy?.username : undefined })),
+    h('span', { className: R.rowActions }, h(Menu, { open, onClose: () => setOpen(false), items, portal: true, closeOnPointerLeave: true,
+      anchor: h('button', { className: R.iconButton + ' srb-row-more', 'aria-label': entry.title + '，更多', 'aria-haspopup': 'menu', 'aria-expanded': open,
+        onClick: (event: React.MouseEvent) => { event.stopPropagation(); setOpen(!open) } }, h(IconEllipsisOutline16)),
     onSelect: (id: string) => {
       setOpen(false)
       if (id === 'rename') renameBoardEntry(page, entry)
@@ -1538,7 +1555,7 @@ function ResearchBoardRow({ page, entry, time, selectedSession, ...drag }: any) 
       }
       if (id === 'workspace') void page.returnToWorkspace(entry).catch(page.showError)
     }
-  })
+  })))
 }
 function renameBoardEntry(page: ResearchBoardsPage, entry: Favorite | BoardSummary) {
   const d = boardDialog(document, '重命名看板')
