@@ -803,6 +803,47 @@ export class ResearchBoardIntegration {
       .list(accountId, boardId)
       .find((r) => r.mutation === mutation)
     if (!record) throw Error('REQUEST_NOT_FOUND')
+    signal.throwIfAborted()
+    const authority = this.authority(accountId, boardId, undefined, true)
+    const epoch = authority.snapshot.board.sharingEpoch
+    if (record.epoch !== epoch) {
+      if (this.active.has(record.key)) throw Error('EXECUTION_STILL_STOPPING')
+      if (record.runtimeState === 'completed') return record.reply
+      // A new sharing epoch invalidates every old command. An explicit retry is
+      // a new request, never a replay/rebase of those frozen operation IDs.
+      let restart = record.restart
+      if (restart?.epoch !== epoch) {
+        const canvas = authority.snapshot.snapshot.canvas
+        const collection = record.intent.targetCollection === 'files' ? 'files' : 'artifacts'
+        const targetExists = record.intent.targetId && canvas[collection].some(
+          (node) => node.id === record.intent.targetId
+        )
+        restart = {
+          epoch,
+          mutation: randomUUID(),
+          intent: {
+            text: record.intent.text,
+            context: record.intent.context,
+            source: 'manual',
+            ...(targetExists ? { targetId: record.intent.targetId, targetCollection: collection } : {})
+          }
+        }
+        // Reserve both ID and intent before awaiting the network. Repeated
+        // clicks and lost replies must resume exactly the same new request.
+        this.journal.update(record.key, { restart })
+      }
+      const reply = await this.submit({
+        ...restart.intent,
+        accountId,
+        boardId,
+        clientMutationId: restart.mutation,
+        expectedEpoch: restart.epoch,
+        signal
+      })
+      this.journal.update(record.key, { runtimeState: 'superseded' })
+      void this.options.service().invoke('boards.refresh', {})
+      return reply
+    }
     if (
       ['interrupted', 'uncertain'].includes(record.runtimeState) ||
       (['starting', 'running'].includes(record.runtimeState) &&
@@ -835,7 +876,7 @@ export class ResearchBoardIntegration {
   }
   async submit(i: any) {
     const context = normalizeRequestContext(i.context)
-    const authority = this.authority(i.accountId, i.boardId, undefined, true)
+    const authority = this.authority(i.accountId, i.boardId, i.expectedEpoch, true)
     const epoch = authority.snapshot.board.sharingEpoch
     const intent = {
       text: i.text,
