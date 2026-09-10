@@ -3,6 +3,7 @@ import {
   historyAssetIds
 } from '../../packages/dsh-research-collaboration/context.js'
 import { createHash } from 'node:crypto'
+import { generationContent, mergeGenerationResult } from '../../packages/dsh-research-collaboration/generation-result.js'
 import { hash } from '../accounts/auth.js'
 import {
   createDocument,
@@ -1026,6 +1027,9 @@ export class ResearchBoardRoom {
         targetVersion: command.targetId
           ? current.nodeVersions[`${targetCollection}:${command.targetId}`]
           : null,
+        targetContentHash: command.targetId
+          ? hash(generationContent(canvas[targetCollection].find(n => n.id === command.targetId)))
+          : null,
         status: 'pending',
         epoch: board.sharingEpoch,
         createdAt: now()
@@ -1049,20 +1053,7 @@ export class ResearchBoardRoom {
           node.id = crypto.randomUUID()
           after[collection].push(node)
         } else {
-          for (const k of [
-            'x',
-            'y',
-            'width',
-            'height',
-            'rotation',
-            'scale',
-            'stackOrder'
-          ]) {
-            if (after[collection][index][k] !== undefined)
-              node[k] = after[collection][index][k]
-            else delete node[k]
-          }
-          after[collection][index] = node
+          after[collection][index] = mergeGenerationResult(after[collection][index], node)
         }
         validateCanvas(after)
         applyCanvasDiff(doc, before, after)
@@ -1167,17 +1158,24 @@ export class ResearchBoardRoom {
               (n) => n.id === task.targetId
             )
           if (command.node) {
+            // Old running tasks predate targetContentHash. Their immutable
+            // context remains the authority for this comparison after deploy.
+            let contentHash = task.targetContentHash
+            if (target && !contentHash) {
+              const object = await this.env.RESEARCH_ASSETS.get(task.contextKey)
+              const baseline = object && (await object.json()).canvas[task.targetCollection].find(n => n.id === task.targetId)
+              if (baseline) contentHash = hash(generationContent(baseline))
+            }
             if (!target) task.resultState = 'targetDeleted'
             else if (
-              current.nodeVersions[
-                `${task.targetCollection}:${task.targetId}`
-              ] !== task.targetVersion
+              contentHash ? hash(generationContent(target)) !== contentHash :
+                current.nodeVersions[`${task.targetCollection}:${task.targetId}`] !== task.targetVersion
             )
               task.resultState = 'pendingResult'
             else {
               const after = structuredClone(before)
               after[task.targetCollection] = after[task.targetCollection].map(
-                (n) => (n.id === task.targetId ? command.node : n)
+                (n) => (n.id === task.targetId ? mergeGenerationResult(n, command.node) : n)
               )
               applyCanvasDiff(doc, before, after)
               current.documentUpdate = toBase64(encodeDocument(doc))

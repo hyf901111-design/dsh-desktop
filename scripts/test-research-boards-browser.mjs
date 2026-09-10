@@ -1183,7 +1183,7 @@ if (process.argv.includes('--serve')) {
     assert.equal(users[0].modelCalls(), calls + 1)
     users[0].control.hold = true
     users[0].control.dropStartAck = true
-    const componentCalls = users[0].modelCalls()
+    let componentCalls = users[0].modelCalls()
     await page.evaluate(() => {
       const f = window.fixture,
         w = f.registry.for(f.sessions.list.getSnapshot().current)
@@ -1205,7 +1205,7 @@ if (process.argv.includes('--serve')) {
         }
       ])
     })
-    const component = await page.evaluate(async () => {
+    let component = await page.evaluate(async () => {
       const f = window.fixture,
         id = f.sessions.list.getSnapshot().current
       return f.hub.generateResearchSelection(f.sessions.binding(id).session, {
@@ -1239,6 +1239,29 @@ if (process.argv.includes('--serve')) {
           .current.canvas.artifacts.find((n) => n.id === 'component')?.x ===
         850
     )
+    users[0].control.release()
+    await peer.getByText('基于冻结资料的合成组件', { exact: true }).waitFor()
+    assert.equal(users[0].modelCalls(), componentCalls + 1)
+    let movedSnapshot = await users[0].client.request({ kind: 'board.get', boardId })
+    assert.equal(movedSnapshot.tasks.find(t => t.taskId === component.taskId).resultState, 'applied')
+    assert.equal(movedSnapshot.snapshot.canvas.artifacts.find(n => n.id === 'component').x, 850)
+    console.log('GENERATION_DURING_DRAG_PASSED automatically-applied/latest-position-preserved/peer-rendered')
+    await page.waitForFunction(taskId => window.fixture.page.getState().current.tasks.some(t => t.taskId === taskId && t.status === 'completed'), component.taskId)
+
+    // A real prompt/content edit must still retain the result for explicit apply.
+    users[0].control.hold = true
+    componentCalls = users[0].modelCalls()
+    component = await page.evaluate(async () => {
+      const f = window.fixture, id = f.sessions.list.getSnapshot().current
+      return f.hub.generateResearchSelection(f.sessions.binding(id).session, { sessionId: id, targetNodeId: 'component', kind: 'container', prompt: '再次生成研究卡片' })
+    })
+    assert.equal(component.ok, true, JSON.stringify(component))
+    await page.waitForFunction(taskId => window.fixture.page.getState().current.tasks.some(t => t.taskId === taskId && t.status === 'running'), component.taskId)
+    await page.evaluate(() => {
+      const f = window.fixture, w = f.registry.for(f.sessions.list.getSnapshot().current)
+      w.setArtifacts(w.getSnapshot().artifacts.map(n => n.id === 'component' ? { ...n, containerPrompt: '人工修改了组件的内容要求' } : n))
+    })
+    await peer.waitForFunction(() => window.fixture.page.getState().current.canvas.artifacts.find(n => n.id === 'component')?.containerPrompt === '人工修改了组件的内容要求')
     users[0].control.release()
     await page
       .getByRole('button', { name: '应用保留的研究结果', exact: true })

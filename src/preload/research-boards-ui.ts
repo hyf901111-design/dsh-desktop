@@ -882,7 +882,32 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (e.view.pendingCount) throw Error('画板更改尚未由云端确认')
     return e.view
   }
-  async function generateShared(sessionId: string, request: any) {
+  const generationFlights = new Map<string, { fingerprint: string; taskId?: string; promise: Promise<{ ok: boolean; taskId: string }> }>()
+  function retainedResult(sessionId: string, nodeId: string) {
+    const latest = view(sessionId)?.tasks.filter((t: any) => t.targetId === nodeId).at(-1) as any
+    return latest?.resultState === 'pendingResult' ? latest : undefined
+  }
+  async function applyRetainedResult(sessionId: string, nodeId: string) {
+    const v = await flushCanvas(sessionId), task = retainedResult(sessionId, nodeId)
+    if (!task) throw Error('保留的研究结果已变化，请稍后再试')
+    return call('task.applyResult', { boardId: v.boardId, taskId: task.taskId })
+  }
+  function generateShared(sessionId: string, request: any) {
+    const key = signature([state.account.generation, sessionId, view(sessionId)?.epoch, request.targetNodeId])
+    const fingerprint = signature(request)
+    const prior = generationFlights.get(key)
+    const known = prior?.taskId && view(sessionId)?.tasks.find((t: any) => t.taskId === prior.taskId) as any
+    if (prior && (!known || ['pending', 'running'].includes(known.status)))
+      return prior.fingerprint === fingerprint ? prior.promise : Promise.reject(Error('组件正在提交生成请求，请稍后再试'))
+    const flight = { fingerprint, taskId: undefined as string | undefined, promise: undefined as any }
+    flight.promise = generateSharedOnce(sessionId, request).then(result => {
+      flight.taskId = result.taskId
+      return result
+    }, error => { generationFlights.delete(key); throw error })
+    generationFlights.set(key, flight)
+    return flight.promise as Promise<{ ok: boolean; taskId: string }>
+  }
+  async function generateSharedOnce(sessionId: string, request: any) {
     const v = await flushCanvas(sessionId),
       workspace = deps.researchWorkspaces.for(sessionId),
       target = workspace
@@ -890,6 +915,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         .artifacts.find((n: any) => n.id === request.targetNodeId)
     if (!target || request.sessionId !== sessionId)
       throw Error('生成目标已失效')
+    const running = v.tasks.find((t: any) => t.targetId === target.id && ['pending', 'running'].includes(t.status)) as any
+    if (running) throw Error('这个组件正在生成，请等待当前任务完成')
     const references = (request.selectedNodeIds ?? []).map(
       (nodeId: string) => ({
         collection: workspace
@@ -1113,6 +1140,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     submitShared,
     flushCanvas,
     generateShared,
+    hasRetainedResult: (sessionId: string, nodeId: string) => !!retainedResult(sessionId, nodeId),
+    applyRetainedResult,
     inspectShared,
     cancelShared,
     retryRequest: (id: string) => {
