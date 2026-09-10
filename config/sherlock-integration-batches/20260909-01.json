@@ -9,23 +9,50 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一研究看板与工作区外层布局",
+        "featureName": "统一看板分组拖动并修复协作组件生成失败",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "dead6f032bb51bec98c2432c782a0221875931b7",
-        "tipCommit": "33b89cced2f93e44886d1ec3e5260a149e9a24d4",
+        "baseCommit": "33b89cced2f93e44886d1ec3e5260a149e9a24d4",
+        "tipCommit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
         "commits": [
           {
-            "commit": "33b89cced2f93e44886d1ec3e5260a149e9a24d4",
+            "commit": "2725a198a6d005b7268284fb93f3197dc424a640",
             "parents": [
-              "dead6f032bb51bec98c2432c782a0221875931b7"
+              "33b89cced2f93e44886d1ec3e5260a149e9a24d4"
             ],
-            "subject": "统一看板与工作区外层布局并消除空白撑高"
+            "subject": "统一研究看板分组目录与手动拖动排序交互"
+          },
+          {
+            "commit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
+            "parents": [
+              "2725a198a6d005b7268284fb93f3197dc424a640"
+            ],
+            "subject": "修复历史指令误禁检索及协作组件空正文恢复和错误状态同步"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-collaboration/protocol.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-collaboration/protocol.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-collaboration-worker.mjs"
           },
           {
             "status": "M",
@@ -33,69 +60,38 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
+            "path": "services/collaboration/room.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-generation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-polish.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "清洁依赖补丁幂等及执行验证通过",
-            "verifiedCommit": "33b89cced2f93e44886d1ec3e5260a149e9a24d4",
-            "completedAt": "2026-09-10T01:22:25.479935+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "双账号浏览器流程通过，覆盖直接邀请、虚线转多人图标、原研究隔离、菜单、新建空目录、搜索排序及资料上下文迁移",
-            "verifiedCommit": "33b89cced2f93e44886d1ec3e5260a149e9a24d4",
-            "completedAt": "2026-09-10T01:22:25.511823+00:00",
-            "timeoutMs": 300000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "浏览器验证菜单、搜索、行宽及短列表不撑高通过。原生确认了目录迁移成功，外层布局修正待新包验证。"
-        },
-        "acceptanceCriteria": [
-          "创建协作直接输入 ID 并生成独立分叉，原工作区研究保持独立",
-          "邀请未接受显示虚线环，接受后显示多人图标",
-          "看板标题栏搜索、视图选项和新建，看板条目右键及悬停菜单",
-          "空看板目录延迟创建，放回工作区保留对话资料并创建独立目录",
-          "共享看板迁移继续保持协作权限与同步"
-        ],
-        "risks": [
-          "原生包验证待集成后执行；不接受或晋升 main，不公开发布。",
-          "云端仅补充有效成员数，不修改数据库结构。"
-        ],
-        "generatedAt": "2026-09-10T01:22:25.511867+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8de7f865e104c90fd40a31f6eb2950ecb175f486",
-        "verificationCommit": "8de7f865e104c90fd40a31f6eb2950ecb175f486",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "8de7f865e104c90fd40a31f6eb2950ecb175f486",
-            "completedAt": "2026-09-10T01:22:56.886Z",
-            "timeoutMs": 600000
-          },
           {
             "argv": [
               "npm",
@@ -103,27 +99,10 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8de7f865e104c90fd40a31f6eb2950ecb175f486",
-            "completedAt": "2026-09-10T01:22:56.886Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "8de7f865e104c90fd40a31f6eb2950ecb175f486",
-            "completedAt": "2026-09-10T01:22:56.886Z",
-            "timeoutMs": 180000
+            "summary": "TypeScript 检查通过",
+            "verifiedCommit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
+            "completedAt": "2026-09-10T02:01:37.642575+00:00",
+            "timeoutMs": 300000
           },
           {
             "argv": [
@@ -133,9 +112,9 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "8de7f865e104c90fd40a31f6eb2950ecb175f486",
-            "completedAt": "2026-09-10T01:22:56.886Z",
+            "summary": "清洁依赖补丁幂等与执行通过",
+            "verifiedCommit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
+            "completedAt": "2026-09-10T02:01:37.642575+00:00",
             "timeoutMs": 300000
           },
           {
@@ -146,13 +125,58 @@
               "browser"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "8de7f865e104c90fd40a31f6eb2950ecb175f486",
-            "completedAt": "2026-09-10T01:22:56.886Z",
+            "summary": "双账号浏览器通过，新增真实鼠标拖动前后插入、原生蓝色标记、分组文件夹和缩进、折叠恢复、单选切换与顺序保留",
+            "verifiedCommit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
+            "completedAt": "2026-09-10T02:01:37.642575+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-board-runtime.test.js",
+              "test/research-board-generation.test.ts",
+              "test/research-board-polish.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "119 项相关运行时与状态检查通过",
+            "verifiedCommit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
+            "completedAt": "2026-09-10T02:01:37.642575+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "worker"
+            ],
+            "outcome": "passed",
+            "summary": "真实 Worker 数据库、WebSocket 与固定失败码广播通过",
+            "verifiedCommit": "2474603ade552117a739c35f27c8e3b7f60cc92c",
+            "completedAt": "2026-09-10T02:01:37.642575+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-10T01:22:56.886Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "双账号浏览器目录和协作流程通过。空正文、检索权限及错误状态回归通过；真实双端生成待集成后验证。"
+        },
+        "acceptanceCriteria": [
+          "分组方式为按类型与单列表互斥选项",
+          "按类型显示工作区同款专用看板与协作看板分类，文件夹图标、悬停箭头及缩进标题",
+          "手动排序复用工作区行拖动与蓝色前后插入标记，顺序持久化",
+          "最近更新排序和搜索时禁止手动拖动",
+          "当前请求独立决定检索权限，历史离线要求不关闭当前请求的搜索",
+          "空正文恢复保留已有网页与金融证据，无证据时保留当前请求授权的检索能力",
+          "任务失败以固定错误码同步至两端，终止任务不再显示等待，保留上一版有效组件内容"
+        ],
+        "risks": [
+          "原生包待集成后验证；不接受或晋升 main，不公开发布。",
+          "需要更新既有协作 Worker 以同步明确失败原因，不修改数据库结构。"
+        ],
+        "generatedAt": "2026-09-10T02:01:37.642575+00:00"
       }
     }
   ],
