@@ -182,6 +182,79 @@
           "云端仅补充有效成员数，不修改数据库结构。"
         ],
         "generatedAt": "2026-09-10T00:35:22.073533+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6ae7080c149df594405db1773ba8470cde25420e",
+        "verificationCommit": "6ae7080c149df594405db1773ba8470cde25420e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/ensure-local-dependencies.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
+            "verifiedCommit": "6ae7080c149df594405db1773ba8470cde25420e",
+            "completedAt": "2026-09-10T00:35:50.214Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6ae7080c149df594405db1773ba8470cde25420e",
+            "completedAt": "2026-09-10T00:35:50.214Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/research-boards-service.test.ts",
+              "test/research-board-client-adapter.test.js",
+              "test/research-boards-ui.test.ts",
+              "test/research-board-tasks.test.ts",
+              "test/slash-menu-locale.test.ts",
+              "test/standard-agent-preset.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
+            "verifiedCommit": "6ae7080c149df594405db1773ba8470cde25420e",
+            "completedAt": "2026-09-10T00:35:50.214Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "sources"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
+            "verifiedCommit": "6ae7080c149df594405db1773ba8470cde25420e",
+            "completedAt": "2026-09-10T00:35:50.214Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "browser"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
+            "verifiedCommit": "6ae7080c149df594405db1773ba8470cde25420e",
+            "completedAt": "2026-09-10T00:35:50.214Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-10T00:35:50.214Z"
       }
     }
   ],
