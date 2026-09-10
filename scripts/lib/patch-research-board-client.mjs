@@ -418,7 +418,7 @@ function task4Patch(source) {
   return source + '\n/* SHERLOCK_BOARD_EXECUTION_V1 */'
 }
 export function patchResearchBoardSidebar(source) {
-  if (source.includes('"sidebar.researchBoards"')) return source
+  if (source.includes('"sidebar.researchBoards"')) return patchBoardRegion(source)
   source = replace(
     source,
     '"sidebar.workspaces": {',
@@ -434,7 +434,13 @@ export function patchResearchBoardSidebar(source) {
     '\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.regionArea,',
     '\t\t\t\t\trenderSlot("sidebar.researchBoards",{wide,expandSidebar:()=>{if(collapsed)toggleSidebar();}}),\n\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.regionArea,'
   )
-  return source
+  return patchBoardRegion(source)
+}
+function patchBoardRegion(source) {
+  if (source.includes('data-srb-board-region')) return source
+  return replace(source,
+    'renderSlot("sidebar.researchBoards",{wide,expandSidebar:()=>{if(collapsed)toggleSidebar();}})',
+    'wide && (0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.regionArea,"data-srb-board-region":"",children:renderSlot("sidebar.researchBoards",{wide,expandSidebar:()=>{if(collapsed)toggleSidebar();}})})')
 }
 export function patchResearchBoardSidebarTypes(source) {
   if (source.includes("'sidebar.researchBoards'")) return source
