@@ -545,6 +545,14 @@ function generationResultPatch(source) {
 }
 function canvasInteractionPatch(source) {
   source = generationFeedbackPatch(source)
+  if (!source.includes('/* SHERLOCK_CHART_ARRANGE_STABLE_V1 */')) {
+    // Charts fill their existing frame. Measuring that as intrinsic content
+    // adds the frame border again on every arrange and slowly grows the card.
+    source = replace(source,
+      'node.kind === "web-link" || ["html", "web", "mind-map"].includes(node.containerSpec?.type)',
+      'node.kind === "web-link" || ["html", "web", "mind-map", "chart"].includes(node.containerSpec?.type)')
+    source += '\n/* SHERLOCK_CHART_ARRANGE_STABLE_V1 */'
+  }
   if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return source
   source = replace(source,
     'const interactivePreview = event.target?.closest?.("[data-research-preview-interactive],[data-research-selection-actions],[data-research-create-popover]");',

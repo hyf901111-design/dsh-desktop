@@ -7021,7 +7021,7 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('arranges legacy native and HTML containers into aligned fixed presets without deleting long content', async () => {
+  it('arranges legacy native and HTML containers into bounded manual rows without deleting long content', async () => {
     const html = '<main>Long HTML</main>'
     const mounted = await mountResearchCanvas({ sessionId: 'arrange-real-size', artifacts: [
       { id: 'long-native', kind: 'generated-container', messageId: 'native', title: 'Report', excerpt: 'Report', x: 100, y: 100, width: 560, height: 300, sizeMode: 'manual', generationStatus: 'completed', refreshMinutes: 0, containerPrompt: '报告', containerSpec: { version: 1, type: 'markdown', title: 'Report', content: 'Long report' } },
@@ -7035,12 +7035,37 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { canvas.dispatchEvent(new browserWindow.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 460, clientY: 320 })) })
       await act(async () => { click(browserWindow, host.querySelector('[data-research-context-arrange]') as HappyDOMElement | null) })
       const nodes = workspace.getSnapshot().artifacts
-      expect(nodes.find(node => node.id === 'long-native')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { content: 'Long report' } })
-      expect(nodes.find(node => node.id === 'long-html')).toMatchObject({ width: 720, height: 840, containerSizePreset: 'large', containerSpec: { html } })
+      expect(nodes.find(node => node.id === 'long-native')).toMatchObject({ width: 720, sizeMode: 'manual', containerSpec: { content: 'Long report' } })
+      expect(nodes.find(node => node.id === 'long-html')).toMatchObject({ width: 720, sizeMode: 'manual', containerSpec: { html } })
+      for (const node of nodes) {
+        expect(Number(node.height)).toBeGreaterThan(300)
+        expect(Number(node.height)).toBeLessThanOrEqual(1440)
+      }
+      expect(nodes[0]!.height).toBe(nodes[1]!.height)
       expect(nodes[0]!.y).toBe(nodes[1]!.y)
       const [a, b] = nodes as any[]
       expect(Math.abs(a.x - b.x) >= (a.width + b.width) / 2 || Math.abs(a.y - b.y) >= (a.height + b.height) / 2).toBe(true)
       expect(content.getAttribute('style')).toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+
+  it('keeps chart geometry stable across repeated arrange with a viewport-filling chart', async () => {
+    const mounted = await mountResearchCanvas({ sessionId: 'arrange-stable-chart', artifacts: [
+      { id: 'chart', kind: 'generated-container', messageId: 'chart', title: '趋势', excerpt: '趋势', x: 100, y: 100, width: 720, height: 600, sizeMode: 'manual', generationStatus: 'completed', refreshMinutes: 0, containerPrompt: '走势图', containerSpec: { version: 1, type: 'chart', title: '趋势', variant: 'line', labels: ['一月', '二月'], series: [{ name: '指数', values: [100, 102] }] } }
+    ] })
+    try {
+      const { host, workspace, canvas, browserWindow } = mounted
+      const content = host.querySelector('[data-research-artifact-card="chart"] .rScV5Q_containerContent')!
+      // Chart content fills the existing frame; it is not an intrinsic text height.
+      Object.defineProperty(content, 'scrollHeight', { configurable: true, get: () => Number(workspace.getSnapshot().artifacts[0]!.height) - 66 })
+      const arrange = async () => {
+        await act(async () => { canvas.dispatchEvent(new browserWindow.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 460, clientY: 320 })) })
+        await act(async () => { click(browserWindow, host.querySelector('[data-research-context-arrange]') as HappyDOMElement | null) })
+      }
+      await arrange()
+      const first = workspace.getSnapshot().artifacts[0]
+      for (let i = 0; i < 3; i++) await arrange()
+      expect(workspace.getSnapshot().artifacts[0]).toEqual(first)
     } finally { await mounted.cleanup() }
   })
 
@@ -7132,9 +7157,10 @@ describe('Sherlock workspace and composer controls', () => {
         const height = Number(node.height) * after.viewport.scale
         const centerX = Number(node.x) * after.viewport.scale + after.viewport.x
         const centerY = Number(node.y) * after.viewport.scale + after.viewport.y
-        expect(centerX - width / 2).toBeGreaterThanOrEqual(47)
-        expect(centerX + width / 2).toBeLessThanOrEqual(953)
-        expect(centerY - height / 2).toBeGreaterThanOrEqual(47)
+        // The shared workbench fitter reserves 32 px at the canvas edges.
+        expect(centerX - width / 2).toBeGreaterThanOrEqual(31)
+        expect(centerX + width / 2).toBeLessThanOrEqual(969)
+        expect(centerY - height / 2).toBeGreaterThanOrEqual(31)
         expect(centerY + height / 2).toBeLessThanOrEqual(653)
       }
       expect(after.viewport.scale).toBeLessThanOrEqual(1)
@@ -7150,7 +7176,7 @@ describe('Sherlock workspace and composer controls', () => {
     }
   })
 
-  it('organizes completed HTML and data components without shrinking fitted or manual sizes', async () => {
+  it('organizes completed HTML and data components into bounded rows while preserving every result', async () => {
     const storage = new MemoryStorage()
     const componentCases = [
       { type: 'html', width: 1200, height: 1600, spec: { html: '<main>完整长页面</main>' } },
@@ -7181,13 +7207,11 @@ describe('Sherlock workspace and composer controls', () => {
       await act(async () => { click(browserWindow, host.querySelector('[data-research-context-arrange]')) })
 
       const after = workspace.getSnapshot()
-      expect(after.artifacts.find((node) => node.id === 'html-auto'))
-        .toMatchObject({ width: 1200, height: 1600, sizeMode: 'auto' })
-      for (const { type, width, height } of componentCases) {
-        for (const sizeMode of ['auto', 'manual']) {
-          expect(after.artifacts.find((node) => node.id === `${type}-${sizeMode}`))
-            .toMatchObject({ width, height, sizeMode })
-        }
+      for (const original of artifacts) {
+        const node = after.artifacts.find((candidate) => candidate.id === original.id)!
+        expect(node).toMatchObject({ width: 720, sizeMode: 'manual', containerSpec: original.containerSpec })
+        expect(Number(node.height)).toBeGreaterThan(0)
+        expect(Number(node.height)).toBeLessThanOrEqual(1440)
       }
       const rectangles = after.artifacts.map((node) => ({
         left: Number(node.x) - Number(node.width) / 2,
@@ -7205,7 +7229,7 @@ describe('Sherlock workspace and composer controls', () => {
         storage.getItem('sherlock.research.canvas.artifacts.v1:session-organize-fitted-components') ?? '[]'
       ) as Array<Record<string, unknown>>
       expect(persisted.map(({ id, width, height, sizeMode }) => ({ id, width, height, sizeMode })))
-        .toEqual(artifacts.map(({ id, width, height, sizeMode }) => ({ id, width, height, sizeMode })))
+        .toEqual(after.artifacts.map(({ id, width, height, sizeMode }) => ({ id, width, height, sizeMode })))
     } finally {
       await mounted.cleanup()
     }
