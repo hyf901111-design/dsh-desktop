@@ -45,6 +45,8 @@ SHERLOCK_BOARD_QA_OUTPUT=output/playwright/figma-collaboration-final node script
 
 两成员聚焦流程以本地 Worker 和两个独立服务/渲染器执行，退出码 0，`FIGMA_COLLABORATION_FOCUS_PASSED`，`console.json` 中 errors 与 failedRequests 均为空。通过创建协作、真实邀请权限更新/撤销/接受/拒绝、双方打开、双向文本编辑和拖动写回、并发文本与几何合并、共享对话、重新加载、viewer 禁止写入/重命名/邀请/角色修改、管理设置移除项、退出/重新加入、取消协作后的对方撤权及创建者“放回工作区”入口恢复。退出和取消后服务端 `ACCESS_REVOKED` 是预期权限保护。拒绝安排在流程末尾，不绕过服务端拒绝后邀请冷却。
 
+集成执行器可显式运行 `SHERLOCK_COLLABORATION_BROWSER_FOCUS=figma-final node scripts/test-research-collaboration-e2e.mjs --stage browser`；仅该精确环境值传递上述聚焦 flag，未设置时保留原完整浏览器流程。结果 JSON 的 scope、exclusions 和 focusEnvironment 标记实际范围，不把聚焦执行标作完整流程。2026-09-10 已实际验证 `--stage sources`（`output/research-collaboration-e2e/run-6CMegQ/results.json`）和带该环境值的 `--stage browser`（`run-VkQhyM/results.json`）均通过。源码阶段补齐锁定版本的 layout 包，六个包执行 SHA512、patch-package、两次变换字节幂等及模块 factory；本地 runtime 安装布局执行通过。该轮 sources 绑定当次 HEAD/main，最终提交变化后需重新生成。
+
 该模式在权限和协作闭环后结束，跳过原脚本后段文件剪贴板、复制回环和其他无关用例。导航几何断言保留，并按 Figma 286:469–477 校正工作区文字为 14/21、时间 11/17；夹具侧栏固定 260px，工具列允许 2px 夹具差异，实际 280px 客户端对齐另由真实 Electron 验收。截图在 `output/playwright/figma-collaboration-final/`：`pending-invitation-owner.png`、`invitation-revoked-live.png`、`held-drag-ephemeral.png`、`viewer-light.png`、`viewer-leave.png`、`cancel-sharing-owner.png`、`cancel-sharing-peer.png`、`invitation-declined.png`。此处是生产 UI + 真实本地服务的集成证据，非真实打包 Electron 整页视觉验收；合成问答模型只用于调用次数和同步检查。
 
 ## 验收边界和剩余差异
