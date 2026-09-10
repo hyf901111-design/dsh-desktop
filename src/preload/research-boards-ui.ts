@@ -739,7 +739,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     )
   }
   async function defaultDirectory() {
-    const reply = await deps.workspaces.api.host.status({})
+    const reply = await deps.workspaces.api.host.describe({})
     if (!reply.result.ok) throw Error('无法读取默认工作目录')
     return reply.result.value.cwd as string
   }
