@@ -9,71 +9,390 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "消除表格测量边框累积",
+        "featureName": "EWork Odyssey final Figma navigation, collaboration and component redesign",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af",
-        "tipCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
+        "baseCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
+        "tipCommit": "9478088f94101bddd4f7b35431f620920f62129b",
         "commits": [
           {
-            "commit": "7c5fbc414a0c46f108634447326ce6e11a317529",
+            "commit": "1efc414d985cbce99ecfe91257fd88e7588b229e",
             "parents": [
-              "5fe18c988bf69dd32ec5b19c8037a57c52b4d7af"
+              "7c5fbc414a0c46f108634447326ce6e11a317529"
             ],
-            "subject": "消除表格整理测量的边框误差和同行组件累积增高"
+            "subject": "界面：按最终设计还原看板导航与协作管理"
+          },
+          {
+            "commit": "221063b7d88eee9531dba33dd5976eb92bea9f0b",
+            "parents": [
+              "1efc414d985cbce99ecfe91257fd88e7588b229e"
+            ],
+            "subject": "界面：还原通知与检查更新并保留自动安装状态"
+          },
+          {
+            "commit": "3cf176d792c9ed5de4432a83163792df31284389",
+            "parents": [
+              "221063b7d88eee9531dba33dd5976eb92bea9f0b"
+            ],
+            "subject": "界面：接入最终主界面材质字体与研究输入布局"
+          },
+          {
+            "commit": "8f3112f5ba54aaf70a9e95a0932c343d3d2ff4e6",
+            "parents": [
+              "3cf176d792c9ed5de4432a83163792df31284389"
+            ],
+            "subject": "性能：共享中文字体并保持组件沙箱与离线导出"
+          },
+          {
+            "commit": "13d097f58848e49b4e56f01985348f34085dc0ed",
+            "parents": [
+              "8f3112f5ba54aaf70a9e95a0932c343d3d2ff4e6"
+            ],
+            "subject": "界面：校准毛玻璃半径纹理与侧栏文字基线"
+          },
+          {
+            "commit": "b977e3c19a2ecdbcfbbdc4c107c82ca83db42c4f",
+            "parents": [
+              "13d097f58848e49b4e56f01985348f34085dc0ed"
+            ],
+            "subject": "界面：实现便当盒组件规格状态与内容自适应"
+          },
+          {
+            "commit": "0537c13c087040f4b38adadf916b3405adca173b",
+            "parents": [
+              "b977e3c19a2ecdbcfbbdc4c107c82ca83db42c4f"
+            ],
+            "subject": "修复：持久化版本消息并验证协作权限闭环"
+          },
+          {
+            "commit": "169f230cce75660b6f6741ccc066eb188af71a7a",
+            "parents": [
+              "0537c13c087040f4b38adadf916b3405adca173b"
+            ],
+            "subject": "测试：限定最终设计协作验收并补齐清洁安装输入"
+          },
+          {
+            "commit": "d46a7b737a43b62bcc607e9008713bef6d0c82bb",
+            "parents": [
+              "169f230cce75660b6f6741ccc066eb188af71a7a"
+            ],
+            "subject": "设计：补充浅深色字体加载失败与重试交互"
+          },
+          {
+            "commit": "9478088f94101bddd4f7b35431f620920f62129b",
+            "parents": [
+              "d46a7b737a43b62bcc607e9008713bef6d0c82bb"
+            ],
+            "subject": "修复：处理面板延迟挂载与组件详情内容溢出"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "build/brand/figma-check.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-close.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-collaboration-plus.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-favorite-selected.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-favorite.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-glass-dark-base.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-glass-dark-mesh.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-glass-dark-overlay.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-glass-light-base.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-glass-light-mesh.png"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/figma-people.svg"
+          },
+          {
+            "status": "C100",
+            "path": "build/brand/figma-self-avatar.png",
+            "previousPath": "build/sherlock-account-background.png"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/branch.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/check.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/chevron.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/more.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/plus.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/summary.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/fonts/NotoSansSC-OFL.txt"
+          },
+          {
+            "status": "A",
+            "path": "build/fonts/NotoSansSC.woff2"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-final-canvas-20260910.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-final-canvas-evidence/figma-42-selected-light.png"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-final-navigation-20260910.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-final-shell-20260910.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-font-retry-evidence/47-font-retry-dark.png"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-font-retry-evidence/47-font-retry-light.png"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-font-retry-evidence/validation.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-font-retry-supplement-20260910.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-runtime-font-evidence-20260910.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-update-notifications-20260910.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/sherlock-research-collaboration-operations.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-09-10-figma-final-client.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "C050",
+            "path": "packages/dsh-research-task-runtime/component-noto-font.js",
+            "previousPath": "skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-settings-general+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "scripts/install-brand-assets.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/patch-figma-final-shell.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
-          }
-        ],
-        "checks": [
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "viewport-filling content|organizes mixed canvas|arranges legacy native|organizes completed HTML"
-            ],
-            "outcome": "passed",
-            "summary": "五项渲染画布整理交互回归通过",
-            "verifiedCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
-            "completedAt": "2026-09-10T08:29:01.669453+00:00",
-            "timeoutMs": 300000
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-workbench.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "工作台聚焦回归通过",
-            "verifiedCommit": "7c5fbc414a0c46f108634447326ce6e11a317529",
-            "completedAt": "2026-09-10T08:29:01.669453+00:00",
-            "timeoutMs": 300000
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-collaboration-e2e.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-figma-updates.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-manager.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-state.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/assets.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-notice-assets.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/sidebar-notice.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/update-notification-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/contracts.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-final-shell-patch.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-navigation-final.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-update-control.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-notification-store.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-state.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-ui.test.ts"
           }
         ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "渲染画布中连续整理图表与表格四次，尺寸稳定；混合组件无重叠且结果保留。最终原生包待复验。"
-        },
-        "acceptanceCriteria": [
-          "图表重复整理不累积边框高度",
-          "所有类型统一排列、内容保留且无重叠"
-        ],
-        "risks": [],
-        "generatedAt": "2026-09-10T08:29:01.669453+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b1585aa3f88d7f4b509779113f805c4cbaa9a4ab",
-        "verificationCommit": "b1585aa3f88d7f4b509779113f805c4cbaa9a4ab",
         "checks": [
           {
             "argv": [
@@ -81,68 +400,64 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "b1585aa3f88d7f4b509779113f805c4cbaa9a4ab",
-            "completedAt": "2026-09-10T08:30:40.987Z",
+            "summary": "Local dependencies verified",
+            "verifiedCommit": "9478088f94101bddd4f7b35431f620920f62129b",
+            "completedAt": "2026-09-10T10:21:55.895Z",
             "timeoutMs": 600000
           },
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b1585aa3f88d7f4b509779113f805c4cbaa9a4ab",
-            "completedAt": "2026-09-10T08:30:40.987Z",
+            "summary": "TypeScript passed",
+            "verifiedCommit": "9478088f94101bddd4f7b35431f620920f62129b",
+            "completedAt": "2026-09-10T10:21:55.895Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "node_modules/.bin/vitest",
+              "node",
+              "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-boards-service.test.ts",
+              "test/figma-final-shell-patch.test.ts",
+              "test/research-board-navigation-final.test.ts",
               "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
+              "test/research-container-chrome.test.ts",
+              "test/research-workbench.test.js",
+              "test/research-html-theme.test.js",
+              "test/sidebar-update-control.test.ts",
+              "test/settings-about.test.ts",
+              "test/update-state.test.ts",
+              "test/update-ui.test.ts",
+              "test/update-notification-store.test.ts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "b1585aa3f88d7f4b509779113f805c4cbaa9a4ab",
-            "completedAt": "2026-09-10T08:30:40.987Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "b1585aa3f88d7f4b509779113f805c4cbaa9a4ab",
-            "completedAt": "2026-09-10T08:30:40.987Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "b1585aa3f88d7f4b509779113f805c4cbaa9a4ab",
-            "completedAt": "2026-09-10T08:30:40.987Z",
-            "timeoutMs": 300000
+            "summary": "Focused final design checks passed; see captured test log",
+            "verifiedCommit": "9478088f94101bddd4f7b35431f620920f62129b",
+            "completedAt": "2026-09-10T10:21:55.895Z",
+            "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-09-10T08:30:40.987Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Production React components verified in light/dark, selected/hover/generation and actual loaded fonts. Two local Worker members passed synchronization and permission flows. Packaged Electron whole-window acceptance follows integration build and is not claimed here."
+        },
+        "acceptanceCriteria": [
+          "Final Figma groups 22-46 connected to real application services and state",
+          "Figma group 47 supplements the actual font retry states",
+          "Build from the integration worktree using the local runbook, verify the actual UI and leave it open"
+        ],
+        "risks": [
+          "No public release or online update installation",
+          "Integration browser checks explicitly use SHERLOCK_COLLABORATION_BROWSER_FOCUS=figma-final; unrelated full browser cases are excluded and documented",
+          "Arbitrary generated HTML layout still depends on semantic structure; summaries preserve full reading content"
+        ],
+        "generatedAt": "2026-09-10T10:21:55.895Z"
       }
     }
   ],
