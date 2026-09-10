@@ -9,27 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修正研究看板默认目录的原生 Host 接口",
+        "featureName": "复用工作区目录样式与修复看板迁移宿主依赖",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "75943b6d3fa0d83111f648b7287d8e8feec31b8f",
-        "tipCommit": "f4af4838e2a0e06148800c20708e62c80fae6f13",
+        "baseCommit": "f4af4838e2a0e06148800c20708e62c80fae6f13",
+        "tipCommit": "dead6f032bb51bec98c2432c782a0221875931b7",
         "commits": [
           {
-            "commit": "f4af4838e2a0e06148800c20708e62c80fae6f13",
+            "commit": "dead6f032bb51bec98c2432c782a0221875931b7",
             "parents": [
-              "75943b6d3fa0d83111f648b7287d8e8feec31b8f"
+              "f4af4838e2a0e06148800c20708e62c80fae6f13"
             ],
-            "subject": "修正新建研究看板读取默认目录的原生接口"
+            "subject": "复用工作区看板目录样式并修复放回工作区依赖"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/research-boards-ui.ts"
           },
           {
             "status": "M",
-            "path": "test/fixtures/research-boards-browser.ts"
+            "path": "test/research-board-directories.test.js"
           }
         ],
         "checks": [
@@ -37,12 +53,13 @@
             "argv": [
               "node_modules/.bin/vitest",
               "run",
+              "test/research-board-directories.test.js",
               "test/research-board-client-adapter.test.js"
             ],
             "outcome": "passed",
-            "summary": "27 项相关适配器检查通过",
-            "verifiedCommit": "f4af4838e2a0e06148800c20708e62c80fae6f13",
-            "completedAt": "2026-09-10T00:41:22.822464+00:00",
+            "summary": "30 项聚焦检查通过，含真实 Cordis 作用域服务访问与目录迁移",
+            "verifiedCommit": "dead6f032bb51bec98c2432c782a0221875931b7",
+            "completedAt": "2026-09-10T01:09:11.663199+00:00",
             "timeoutMs": 300000
           },
           {
@@ -53,8 +70,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "f4af4838e2a0e06148800c20708e62c80fae6f13",
-            "completedAt": "2026-09-10T00:41:22.822464+00:00",
+            "verifiedCommit": "dead6f032bb51bec98c2432c782a0221875931b7",
+            "completedAt": "2026-09-10T01:09:11.663417+00:00",
             "timeoutMs": 300000
           },
           {
@@ -66,8 +83,8 @@
             ],
             "outcome": "passed",
             "summary": "清洁依赖补丁幂等及执行验证通过",
-            "verifiedCommit": "f4af4838e2a0e06148800c20708e62c80fae6f13",
-            "completedAt": "2026-09-10T00:41:22.822464+00:00",
+            "verifiedCommit": "dead6f032bb51bec98c2432c782a0221875931b7",
+            "completedAt": "2026-09-10T01:09:11.663420+00:00",
             "timeoutMs": 300000
           },
           {
@@ -79,14 +96,14 @@
             ],
             "outcome": "passed",
             "summary": "双账号浏览器流程通过，覆盖直接邀请、虚线转多人图标、原研究隔离、菜单、新建空目录、搜索排序及资料上下文迁移",
-            "verifiedCommit": "f4af4838e2a0e06148800c20708e62c80fae6f13",
-            "completedAt": "2026-09-10T00:41:22.822464+00:00",
+            "verifiedCommit": "dead6f032bb51bec98c2432c782a0221875931b7",
+            "completedAt": "2026-09-10T01:09:11.663422+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "双账号浏览器流程通过，覆盖直接邀请、虚线转多人图标、原研究隔离、菜单、新建空目录、搜索排序及资料上下文迁移；原生包待集成后验证。"
+          "summary": "使用原生工作区 CSS 和真实菜单样式的双客户端浏览器验证通过，菜单右向定位、全部图标、时间对齐、搜索替换标题及横向无溢出；原生包待集成验证。"
         },
         "acceptanceCriteria": [
           "创建协作直接输入 ID 并生成独立分叉，原工作区研究保持独立",
@@ -99,80 +116,7 @@
           "原生包验证待集成后执行；不接受或晋升 main，不公开发布。",
           "云端仅补充有效成员数，不修改数据库结构。"
         ],
-        "generatedAt": "2026-09-10T00:41:22.822464+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3ecc4a562c2c53d5f1013b557fe149820a854d31",
-        "verificationCommit": "3ecc4a562c2c53d5f1013b557fe149820a854d31",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "3ecc4a562c2c53d5f1013b557fe149820a854d31",
-            "completedAt": "2026-09-10T00:41:55.750Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3ecc4a562c2c53d5f1013b557fe149820a854d31",
-            "completedAt": "2026-09-10T00:41:55.750Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "3ecc4a562c2c53d5f1013b557fe149820a854d31",
-            "completedAt": "2026-09-10T00:41:55.750Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "3ecc4a562c2c53d5f1013b557fe149820a854d31",
-            "completedAt": "2026-09-10T00:41:55.750Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "3ecc4a562c2c53d5f1013b557fe149820a854d31",
-            "completedAt": "2026-09-10T00:41:55.750Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T00:41:55.750Z"
+        "generatedAt": "2026-09-10T01:09:11.663424+00:00"
       }
     }
   ],
