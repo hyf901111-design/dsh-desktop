@@ -9,39 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复协作组件误冲突和重复生成",
+        "featureName": "补齐容器状态摘要的内容冲突隔离",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "e073e773b876e7738c15de52f1f68338a0e687ab",
-        "tipCommit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
+        "baseCommit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
+        "tipCommit": "bed441b649db1e9e5d9e0313d48b9fe7234a5813",
         "commits": [
           {
-            "commit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
+            "commit": "bed441b649db1e9e5d9e0313d48b9fe7234a5813",
             "parents": [
-              "e073e773b876e7738c15de52f1f68338a0e687ab"
+              "56539564f7589c183d6f480ee6564623dcd0d1ff"
             ],
-            "subject": "修复协作组件生成误冲突及重复提交并保留已完成结果"
+            "subject": "排除容器状态摘要引起的伪内容冲突"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-collaboration/generation-result.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-collaboration-worker.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-boards-browser.mjs"
-          },
-          {
-            "status": "M",
-            "path": "services/collaboration/room.js"
           },
           {
             "status": "M",
@@ -49,15 +33,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-client-adapter.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/research-board-generation.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-generation-result.test.js"
           }
         ],
         "checks": [
@@ -69,23 +49,21 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
-            "completedAt": "2026-09-10T05:06:55.785491+00:00",
+            "verifiedCommit": "bed441b649db1e9e5d9e0313d48b9fe7234a5813",
+            "completedAt": "2026-09-10T05:11:30.138038+00:00",
             "timeoutMs": 300000
           },
           {
             "argv": [
               "node_modules/.bin/vitest",
               "run",
-              "test/research-board-generation.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-conversation-follow.test.ts",
-              "test/research-board-polish.test.ts"
+              "test/research-generation-result.test.js",
+              "test/research-board-generation.test.ts"
             ],
             "outcome": "passed",
-            "summary": "46项相关生成和界面回归通过",
-            "verifiedCommit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
-            "completedAt": "2026-09-10T05:06:55.785491+00:00",
+            "summary": "13项摘要隔离和生成状态回归通过",
+            "verifiedCommit": "bed441b649db1e9e5d9e0313d48b9fe7234a5813",
+            "completedAt": "2026-09-10T05:11:30.138038+00:00",
             "timeoutMs": 300000
           },
           {
@@ -94,39 +72,15 @@
               "scripts/test-collaboration-worker.mjs"
             ],
             "outcome": "passed",
-            "summary": "真实 Worker 内容冲突与布局合并检查通过",
-            "verifiedCommit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
-            "completedAt": "2026-09-10T05:06:55.785491+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "清洁依赖和补丁幂等检查通过",
-            "verifiedCommit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
-            "completedAt": "2026-09-10T05:06:55.785491+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-boards-browser.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "生成中拖动自动应用、真实内容修改保留结果、共享编辑成员工作台通过",
-            "verifiedCommit": "56539564f7589c183d6f480ee6564623dcd0d1ff",
-            "completedAt": "2026-09-10T05:06:55.785491+00:00",
+            "summary": "真实Worker布局合并及内容冲突检查通过",
+            "verifiedCommit": "bed441b649db1e9e5d9e0313d48b9fe7234a5813",
+            "completedAt": "2026-09-10T05:11:30.138038+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实双浏览器验证生成期间拖动自动回写并保持位置；实际内容修改仍保留结果供应用；共享编辑成员工作台创建通过。"
+          "outcome": "not-applicable",
+          "summary": "后续补丁只调整服务端容器内容比较与状态投影；沿用前一交接的界面，集成后再次执行双浏览器验收。"
         },
         "acceptanceCriteria": [
           "位置尺寸和执行状态变化不会阻挡生成内容，回写保留最新布局",
@@ -136,80 +90,7 @@
         "risks": [
           "包含向后兼容的协作 Worker 结果比较变更，无数据库迁移；仅更新授权协作服务和本地客户端，不公开发布。"
         ],
-        "generatedAt": "2026-09-10T05:06:55.785491+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9196155860d361a7ae8909c0fdb4c1c731592c36",
-        "verificationCommit": "9196155860d361a7ae8909c0fdb4c1c731592c36",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "9196155860d361a7ae8909c0fdb4c1c731592c36",
-            "completedAt": "2026-09-10T05:07:58.643Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9196155860d361a7ae8909c0fdb4c1c731592c36",
-            "completedAt": "2026-09-10T05:07:58.643Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "9196155860d361a7ae8909c0fdb4c1c731592c36",
-            "completedAt": "2026-09-10T05:07:58.643Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "9196155860d361a7ae8909c0fdb4c1c731592c36",
-            "completedAt": "2026-09-10T05:07:58.643Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "9196155860d361a7ae8909c0fdb4c1c731592c36",
-            "completedAt": "2026-09-10T05:07:58.643Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T05:07:58.643Z"
+        "generatedAt": "2026-09-10T05:11:30.138038+00:00"
       }
     }
   ],
