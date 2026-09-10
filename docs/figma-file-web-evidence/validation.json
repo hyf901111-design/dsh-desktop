@@ -1,0 +1,580 @@
+{
+  "originalCount": 55,
+  "originalChanges": [],
+  "groups": [
+    {
+      "id": "414:588",
+      "name": "48 文件与网页 · 摘要入口与放大阅读 / 浅色 / 2026-09-10",
+      "x": 40,
+      "y": 32440,
+      "width": 1580,
+      "height": 1100,
+      "missingFonts": []
+    },
+    {
+      "id": "414:591",
+      "name": "48 文件与网页 · 摘要入口与放大阅读 / 深色 / 2026-09-10",
+      "x": 1648,
+      "y": 32440,
+      "width": 1580,
+      "height": 1100,
+      "missingFonts": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "415:593",
+      "name": "文件入口 S · 无内部滚动",
+      "x": 0,
+      "y": 39,
+      "width": 320,
+      "height": 220,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.8809733390808105,
+            "g": 0.8809733390808105,
+            "b": 0.8809733390808105
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:595",
+      "name": "真实元数据与摘要 · 缺失字段不占位",
+      "x": 18,
+      "y": 55,
+      "width": 284,
+      "height": 52,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:605",
+      "name": "文件入口 S · 无内部滚动",
+      "x": 0,
+      "y": 39,
+      "width": 320,
+      "height": 220,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.8809733390808105,
+            "g": 0.8809733390808105,
+            "b": 0.8809733390808105
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:615",
+      "name": "组件 hover 浮层 · 绝对定位 / 不占内容空间",
+      "x": 248,
+      "y": 12,
+      "width": 60,
+      "height": 30,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 7,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:628",
+      "name": "网页摘要 M · 无内部滚动",
+      "x": 0,
+      "y": 39,
+      "width": 656,
+      "height": 220,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.8809733390808105,
+            "g": 0.8809733390808105,
+            "b": 0.8809733390808105
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:630",
+      "name": "真实元数据与摘要 · 缺失字段不占位",
+      "x": 18,
+      "y": 55,
+      "width": 620,
+      "height": 73,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:639",
+      "name": "完整阅读器 · 文件与网页共用放大容器",
+      "x": 100,
+      "y": 558,
+      "width": 1380,
+      "height": 420,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.8809733390808105,
+            "g": 0.8809733390808105,
+            "b": 0.8809733390808105
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:645",
+      "name": "阅读器内容区 · 允许纵向滚动",
+      "x": 18,
+      "y": 55,
+      "width": 1344,
+      "height": 349,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": true,
+      "overflowDirection": "VERTICAL",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:646",
+      "name": "原始内容 · 不缩放字体",
+      "x": 0,
+      "y": 0,
+      "width": 1308,
+      "height": 361,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:664",
+      "name": "文件入口 S · 无内部滚动",
+      "x": 0,
+      "y": 39,
+      "width": 320,
+      "height": 220,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.16078431904315948,
+            "g": 0.16470588743686676,
+            "b": 0.1764705926179886
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.2585811913013458,
+            "g": 0.2585811913013458,
+            "b": 0.2585811913013458
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:666",
+      "name": "真实元数据与摘要 · 缺失字段不占位",
+      "x": 18,
+      "y": 55,
+      "width": 284,
+      "height": 52,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:676",
+      "name": "文件入口 S · 无内部滚动",
+      "x": 0,
+      "y": 39,
+      "width": 320,
+      "height": 220,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.16078431904315948,
+            "g": 0.16470588743686676,
+            "b": 0.1764705926179886
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.2585811913013458,
+            "g": 0.2585811913013458,
+            "b": 0.2585811913013458
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:686",
+      "name": "组件 hover 浮层 · 绝对定位 / 不占内容空间",
+      "x": 248,
+      "y": 12,
+      "width": 60,
+      "height": 30,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 7,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.16078431904315948,
+            "g": 0.16470588743686676,
+            "b": 0.1764705926179886
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:699",
+      "name": "网页摘要 M · 无内部滚动",
+      "x": 0,
+      "y": 39,
+      "width": 656,
+      "height": 220,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.16078431904315948,
+            "g": 0.16470588743686676,
+            "b": 0.1764705926179886
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.2585811913013458,
+            "g": 0.2585811913013458,
+            "b": 0.2585811913013458
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:701",
+      "name": "真实元数据与摘要 · 缺失字段不占位",
+      "x": 18,
+      "y": 55,
+      "width": 620,
+      "height": 73,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:710",
+      "name": "完整阅读器 · 文件与网页共用放大容器",
+      "x": 100,
+      "y": 558,
+      "width": 1380,
+      "height": 420,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 12,
+      "strokeWeight": 1,
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.16078431904315948,
+            "g": 0.16470588743686676,
+            "b": 0.1764705926179886
+          },
+          "boundVariables": {}
+        }
+      ],
+      "strokes": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.2585811913013458,
+            "g": 0.2585811913013458,
+            "b": 0.2585811913013458
+          },
+          "boundVariables": {}
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "415:716",
+      "name": "阅读器内容区 · 允许纵向滚动",
+      "x": 18,
+      "y": 55,
+      "width": 1344,
+      "height": 349,
+      "layoutSizingVertical": "FIXED",
+      "clipsContent": true,
+      "overflowDirection": "VERTICAL",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    },
+    {
+      "id": "415:717",
+      "name": "原始内容 · 不缩放字体",
+      "x": 0,
+      "y": 0,
+      "width": 1308,
+      "height": 361,
+      "layoutSizingVertical": "HUG",
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "cornerRadius": 0,
+      "strokeWeight": 1,
+      "fills": [],
+      "strokes": [],
+      "effects": []
+    }
+  ],
+  "capturedAt": "2026-09-10T11:44:56.648Z",
+  "referenceNodes": {
+    "fileLight": "379:649",
+    "fileDark": "379:764",
+    "bodyHierarchy": "365:588",
+    "fileIcon": "209:151",
+    "linkIcon": "284:634",
+    "hoverLight": "354:680",
+    "hoverDark": "354:874"
+  },
+  "screenshots": [
+    {
+      "source": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=414-588",
+      "dest": "assets/figma/48-file-web-light.png",
+      "kind": "figma-reference",
+      "bytes": 123962,
+      "sha256": "42aa32590a4b6aab295708839ed20b81a0f3bfd51036a66c0ba6fa4d66450312",
+      "width": 1580,
+      "height": 1100,
+      "nodeId": "414:588"
+    },
+    {
+      "source": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=414-591",
+      "dest": "assets/figma/48-file-web-dark.png",
+      "kind": "figma-reference",
+      "bytes": 153869,
+      "sha256": "570db4ea4ddcf3e52cde0291d3562b4f5a75e3adfb8f0aa2108deaf7a2d551cb",
+      "width": 1580,
+      "height": 1100,
+      "nodeId": "414:591"
+    }
+  ]
+}
