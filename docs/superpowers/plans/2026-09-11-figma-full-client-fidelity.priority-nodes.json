@@ -1,0 +1,1626 @@
+{
+  "capturedDate": "2026-09-11",
+  "fileKey": "Jkyr5rMvgM8GNH6E68xnqd",
+  "priority": {
+    "frames": [
+      {
+        "id": "121:2607",
+        "name": "毛玻璃首页 · 浅色 / 右侧栏收起",
+        "app": {
+          "id": "121:2609",
+          "name": "首页 · 浅色 / 一体毛玻璃外壳",
+          "type": "FRAME",
+          "rect": [
+            100,
+            100,
+            1380,
+            900
+          ],
+          "opacity": 1,
+          "visible": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6700000166893005,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.8941176533699036,
+                "g": 0.8980392217636108,
+                "b": 0.8980392217636108
+              },
+              "boundVariables": {}
+            }
+          ],
+          "effects": [
+            {
+              "type": "DROP_SHADOW",
+              "visible": true,
+              "radius": 64,
+              "boundVariables": {},
+              "color": {
+                "r": 0.029999999329447746,
+                "g": 0.07999999821186066,
+                "b": 0.054999999701976776,
+                "a": 0.3199999928474426
+              },
+              "offset": {
+                "x": 0,
+                "y": 24
+              },
+              "spread": -10,
+              "blendMode": "NORMAL",
+              "showShadowBehindNode": true
+            },
+            {
+              "type": "BACKGROUND_BLUR",
+              "visible": true,
+              "radius": 32,
+              "boundVariables": {},
+              "blurType": "NORMAL"
+            }
+          ],
+          "radius": 12,
+          "strokes": []
+        },
+        "regions": [
+          {
+            "id": "121:2610",
+            "name": "左侧菜单 · 继承一体毛玻璃外壳",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              280,
+              900
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "121:2717",
+            "name": "主工作区 · 云层背景 / R32 / 黑色边框",
+            "type": "FRAME",
+            "rect": [
+              280,
+              10,
+              1088,
+              880
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "IMAGE",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "scaleMode": "FILL",
+                "scalingFactor": 0.5,
+                "rotation": 0,
+                "filters": {
+                  "exposure": 0,
+                  "contrast": 0,
+                  "saturation": 0.15000000596046448,
+                  "temperature": 0,
+                  "tint": 0,
+                  "highlights": 0,
+                  "shadows": 0
+                },
+                "imageTransform": [
+                  [
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0
+                  ]
+                ],
+                "imageHash": "87ba69921234e44d6ea62241ada564fbf71823f4"
+              }
+            ],
+            "effects": [],
+            "radius": 12,
+            "strokes": []
+          },
+          {
+            "id": "121:2769",
+            "name": "macOS 窗口边框",
+            "type": "RECTANGLE",
+            "rect": [
+              0.5,
+              0.5,
+              1379,
+              899
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 17.5,
+            "strokes": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 0.2549019753932953,
+                  "g": 0.26274511218070984,
+                  "b": 0.2549019753932953
+                },
+                "boundVariables": {}
+              }
+            ]
+          },
+          {
+            "id": "121:2770",
+            "name": "文字副本 · 可编辑文本（默认隐藏）",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              1380,
+              900
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          }
+        ],
+        "controls": []
+      },
+      {
+        "id": "121:4227",
+        "name": "毛玻璃首页 · 深色 / 右侧栏收起",
+        "app": {
+          "id": "121:4229",
+          "name": "首页 · 深色 / 一体毛玻璃外壳",
+          "type": "FRAME",
+          "rect": [
+            100,
+            100,
+            1380,
+            900
+          ],
+          "opacity": 1,
+          "visible": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.7799999713897705,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.02745000086724758,
+                "g": 0.03528999909758568,
+                "b": 0.03528999909758568
+              },
+              "boundVariables": {}
+            }
+          ],
+          "effects": [
+            {
+              "type": "DROP_SHADOW",
+              "visible": true,
+              "radius": 64,
+              "boundVariables": {},
+              "color": {
+                "r": 0.029999999329447746,
+                "g": 0.07999999821186066,
+                "b": 0.054999999701976776,
+                "a": 0.3199999928474426
+              },
+              "offset": {
+                "x": 0,
+                "y": 24
+              },
+              "spread": -10,
+              "blendMode": "NORMAL",
+              "showShadowBehindNode": true
+            },
+            {
+              "type": "BACKGROUND_BLUR",
+              "visible": true,
+              "radius": 32,
+              "boundVariables": {},
+              "blurType": "NORMAL"
+            }
+          ],
+          "radius": 12,
+          "strokes": []
+        },
+        "regions": [
+          {
+            "id": "121:4230",
+            "name": "左侧菜单 · 继承一体毛玻璃外壳",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              280,
+              900
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "121:4337",
+            "name": "主工作区 · 云层背景 / R32 / 黑色边框",
+            "type": "FRAME",
+            "rect": [
+              280,
+              10,
+              1088,
+              880
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "IMAGE",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "scaleMode": "FILL",
+                "scalingFactor": 0.5,
+                "rotation": 0,
+                "filters": {
+                  "exposure": 0,
+                  "contrast": 0,
+                  "saturation": 0,
+                  "temperature": 0,
+                  "tint": 0,
+                  "highlights": 0,
+                  "shadows": 0
+                },
+                "imageTransform": [
+                  [
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0
+                  ]
+                ],
+                "imageHash": "2736352740a71e080da6dc9d80aaffbf9beb51bc"
+              }
+            ],
+            "effects": [],
+            "radius": 12,
+            "strokes": []
+          },
+          {
+            "id": "121:4391",
+            "name": "macOS 窗口边框",
+            "type": "RECTANGLE",
+            "rect": [
+              0.5,
+              0.5,
+              1379,
+              899
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 17.5,
+            "strokes": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 0.2549019753932953,
+                  "g": 0.26274511218070984,
+                  "b": 0.2549019753932953
+                },
+                "boundVariables": {}
+              }
+            ]
+          },
+          {
+            "id": "121:4392",
+            "name": "文字副本 · 可编辑文本（默认隐藏）",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              1380,
+              900
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          }
+        ],
+        "controls": []
+      },
+      {
+        "id": "136:11",
+        "name": "毛玻璃首页 · 浅色 / 右侧栏展开",
+        "app": {
+          "id": "136:13",
+          "name": "首页 · 浅色 / 一体毛玻璃外壳",
+          "type": "FRAME",
+          "rect": [
+            100,
+            100,
+            1380,
+            900
+          ],
+          "opacity": 1,
+          "visible": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6700000166893005,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.8941176533699036,
+                "g": 0.8980392217636108,
+                "b": 0.8980392217636108
+              },
+              "boundVariables": {}
+            }
+          ],
+          "effects": [
+            {
+              "type": "DROP_SHADOW",
+              "visible": true,
+              "radius": 64,
+              "boundVariables": {},
+              "color": {
+                "r": 0.029999999329447746,
+                "g": 0.07999999821186066,
+                "b": 0.054999999701976776,
+                "a": 0.3199999928474426
+              },
+              "offset": {
+                "x": 0,
+                "y": 24
+              },
+              "spread": -10,
+              "blendMode": "NORMAL",
+              "showShadowBehindNode": true
+            },
+            {
+              "type": "BACKGROUND_BLUR",
+              "visible": true,
+              "radius": 32,
+              "boundVariables": {},
+              "blurType": "NORMAL"
+            }
+          ],
+          "radius": 12,
+          "strokes": []
+        },
+        "regions": [
+          {
+            "id": "136:14",
+            "name": "左侧菜单 · 继承一体毛玻璃外壳",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              280,
+              900
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "136:121",
+            "name": "主工作区 · 云层背景 / R32 / 黑色边框",
+            "type": "FRAME",
+            "rect": [
+              280,
+              10,
+              1088,
+              880
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "IMAGE",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "scaleMode": "FILL",
+                "scalingFactor": 0.5,
+                "rotation": 0,
+                "filters": {
+                  "exposure": 0,
+                  "contrast": 0,
+                  "saturation": 0.15000000596046448,
+                  "temperature": 0,
+                  "tint": 0,
+                  "highlights": 0,
+                  "shadows": 0
+                },
+                "imageTransform": [
+                  [
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0
+                  ]
+                ],
+                "imageHash": "87ba69921234e44d6ea62241ada564fbf71823f4"
+              }
+            ],
+            "effects": [],
+            "radius": 12,
+            "strokes": []
+          },
+          {
+            "id": "136:178",
+            "name": "macOS 窗口边框",
+            "type": "RECTANGLE",
+            "rect": [
+              0.5,
+              0.5,
+              1379,
+              899
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 17.5,
+            "strokes": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 0.2549019753932953,
+                  "g": 0.26274511218070984,
+                  "b": 0.2549019753932953
+                },
+                "boundVariables": {}
+              }
+            ]
+          },
+          {
+            "id": "136:179",
+            "name": "文字副本 · 可编辑文本（默认隐藏）",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              1380,
+              900
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          }
+        ],
+        "controls": []
+      },
+      {
+        "id": "136:221",
+        "name": "毛玻璃首页 · 深色 / 右侧栏展开",
+        "app": {
+          "id": "136:223",
+          "name": "首页 · 深色 / 一体毛玻璃外壳",
+          "type": "FRAME",
+          "rect": [
+            100,
+            100,
+            1380,
+            900
+          ],
+          "opacity": 1,
+          "visible": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.7799999713897705,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.02745000086724758,
+                "g": 0.03528999909758568,
+                "b": 0.03528999909758568
+              },
+              "boundVariables": {}
+            }
+          ],
+          "effects": [
+            {
+              "type": "DROP_SHADOW",
+              "visible": true,
+              "radius": 64,
+              "boundVariables": {},
+              "color": {
+                "r": 0.029999999329447746,
+                "g": 0.07999999821186066,
+                "b": 0.054999999701976776,
+                "a": 0.3199999928474426
+              },
+              "offset": {
+                "x": 0,
+                "y": 24
+              },
+              "spread": -10,
+              "blendMode": "NORMAL",
+              "showShadowBehindNode": true
+            },
+            {
+              "type": "BACKGROUND_BLUR",
+              "visible": true,
+              "radius": 32,
+              "boundVariables": {},
+              "blurType": "NORMAL"
+            }
+          ],
+          "radius": 12,
+          "strokes": []
+        },
+        "regions": [
+          {
+            "id": "136:224",
+            "name": "左侧菜单 · 继承一体毛玻璃外壳",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              280,
+              900
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "136:331",
+            "name": "主工作区 · 云层背景 / R32 / 黑色边框",
+            "type": "FRAME",
+            "rect": [
+              280,
+              10,
+              1088,
+              880
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "IMAGE",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "scaleMode": "FILL",
+                "scalingFactor": 0.5,
+                "rotation": 0,
+                "filters": {
+                  "exposure": 0,
+                  "contrast": 0,
+                  "saturation": 0,
+                  "temperature": 0,
+                  "tint": 0,
+                  "highlights": 0,
+                  "shadows": 0
+                },
+                "imageTransform": [
+                  [
+                    1,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    1,
+                    0
+                  ]
+                ],
+                "imageHash": "2736352740a71e080da6dc9d80aaffbf9beb51bc"
+              }
+            ],
+            "effects": [],
+            "radius": 12,
+            "strokes": []
+          },
+          {
+            "id": "136:389",
+            "name": "macOS 窗口边框",
+            "type": "RECTANGLE",
+            "rect": [
+              0.5,
+              0.5,
+              1379,
+              899
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 17.5,
+            "strokes": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 0.2549019753932953,
+                  "g": 0.26274511218070984,
+                  "b": 0.2549019753932953
+                },
+                "boundVariables": {}
+              }
+            ]
+          },
+          {
+            "id": "136:390",
+            "name": "文字副本 · 可编辑文本（默认隐藏）",
+            "type": "FRAME",
+            "rect": [
+              0,
+              0,
+              1380,
+              900
+            ],
+            "opacity": 1,
+            "visible": false,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          }
+        ],
+        "controls": []
+      },
+      {
+        "id": "179:2",
+        "name": "13 对话 · 底部终端展开 / 浅色 · 原方案材质",
+        "app": {
+          "id": "179:4",
+          "name": "13 对话 · 底部终端展开 / 浅色",
+          "type": "FRAME",
+          "rect": [
+            100,
+            100,
+            1380,
+            900
+          ],
+          "opacity": 1,
+          "visible": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6700000166893005,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.8972054719924927,
+                "g": 0.8972054719924927,
+                "b": 0.8972054719924927
+              },
+              "boundVariables": {}
+            }
+          ],
+          "effects": [
+            {
+              "type": "DROP_SHADOW",
+              "visible": true,
+              "radius": 64,
+              "boundVariables": {},
+              "color": {
+                "r": 0,
+                "g": 0,
+                "b": 0,
+                "a": 0.3199999928474426
+              },
+              "offset": {
+                "x": 0,
+                "y": 24
+              },
+              "spread": -10,
+              "blendMode": "NORMAL",
+              "showShadowBehindNode": true
+            },
+            {
+              "type": "BACKGROUND_BLUR",
+              "visible": true,
+              "radius": 32,
+              "boundVariables": {},
+              "blurType": "NORMAL"
+            }
+          ],
+          "radius": 12,
+          "strokes": []
+        },
+        "regions": [
+          {
+            "id": "179:24",
+            "name": "一体圆角工作区 · 无首页背景",
+            "type": "FRAME",
+            "rect": [
+              80,
+              10,
+              1288,
+              880
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 0.9479027390480042,
+                  "g": 0.9479027390480042,
+                  "b": 0.9479027390480042
+                },
+                "boundVariables": {}
+              }
+            ],
+            "effects": [],
+            "radius": 16,
+            "strokes": []
+          }
+        ],
+        "controls": [
+          {
+            "id": "294:1487",
+            "name": "消息入口 · 收起侧栏",
+            "type": "FRAME",
+            "rect": [
+              26,
+              818,
+              28,
+              28
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "179:210",
+            "name": "收起底部面板",
+            "type": "FRAME",
+            "rect": [
+              864,
+              6,
+              28,
+              28
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "179:117",
+            "name": "收起底部面板 · 已展开",
+            "type": "FRAME",
+            "rect": [
+              32,
+              0,
+              28,
+              28
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 0.07999999821186066,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0
+                },
+                "boundVariables": {}
+              }
+            ],
+            "effects": [],
+            "radius": 7,
+            "strokes": []
+          }
+        ]
+      },
+      {
+        "id": "179:218",
+        "name": "13 对话 · 底部终端展开 / 深色 · 原方案材质",
+        "app": {
+          "id": "179:220",
+          "name": "13 对话 · 底部终端展开 / 深色",
+          "type": "FRAME",
+          "rect": [
+            100,
+            100,
+            1380,
+            900
+          ],
+          "opacity": 1,
+          "visible": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.7799999713897705,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.033623214811086655,
+                "g": 0.033623214811086655,
+                "b": 0.033623214811086655
+              },
+              "boundVariables": {}
+            }
+          ],
+          "effects": [
+            {
+              "type": "DROP_SHADOW",
+              "visible": true,
+              "radius": 64,
+              "boundVariables": {},
+              "color": {
+                "r": 0,
+                "g": 0,
+                "b": 0,
+                "a": 0.3199999928474426
+              },
+              "offset": {
+                "x": 0,
+                "y": 24
+              },
+              "spread": -10,
+              "blendMode": "NORMAL",
+              "showShadowBehindNode": true
+            },
+            {
+              "type": "BACKGROUND_BLUR",
+              "visible": true,
+              "radius": 32,
+              "boundVariables": {},
+              "blurType": "NORMAL"
+            }
+          ],
+          "radius": 12,
+          "strokes": []
+        },
+        "regions": [
+          {
+            "id": "179:240",
+            "name": "一体圆角工作区 · 无首页背景",
+            "type": "FRAME",
+            "rect": [
+              80,
+              10,
+              1288,
+              880
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 0.11961803585290909,
+                  "g": 0.11961803585290909,
+                  "b": 0.11961803585290909
+                },
+                "boundVariables": {}
+              }
+            ],
+            "effects": [],
+            "radius": 16,
+            "strokes": []
+          }
+        ],
+        "controls": [
+          {
+            "id": "294:1490",
+            "name": "消息入口 · 收起侧栏",
+            "type": "FRAME",
+            "rect": [
+              26,
+              818,
+              28,
+              28
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "179:426",
+            "name": "收起底部面板",
+            "type": "FRAME",
+            "rect": [
+              864,
+              6,
+              28,
+              28
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [],
+            "effects": [],
+            "radius": 0,
+            "strokes": []
+          },
+          {
+            "id": "179:333",
+            "name": "收起底部面板 · 已展开",
+            "type": "FRAME",
+            "rect": [
+              32,
+              0,
+              28,
+              28
+            ],
+            "opacity": 1,
+            "visible": true,
+            "fills": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 0.11999999731779099,
+                "blendMode": "NORMAL",
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1
+                },
+                "boundVariables": {}
+              }
+            ],
+            "effects": [],
+            "radius": 7,
+            "strokes": []
+          }
+        ]
+      }
+    ],
+    "variants": [
+      {
+        "id": "253:23",
+        "name": "Theme=Light, State=Input",
+        "width": 164,
+        "height": 24
+      },
+      {
+        "id": "253:30",
+        "name": "Theme=Light, State=Selected",
+        "width": 184,
+        "height": 24
+      },
+      {
+        "id": "253:39",
+        "name": "Theme=Light, State=Sent",
+        "width": 164,
+        "height": 24
+      },
+      {
+        "id": "253:46",
+        "name": "Theme=Dark, State=Input",
+        "width": 164,
+        "height": 24
+      },
+      {
+        "id": "253:53",
+        "name": "Theme=Dark, State=Selected",
+        "width": 184,
+        "height": 24
+      },
+      {
+        "id": "253:62",
+        "name": "Theme=Dark, State=Sent",
+        "width": 164,
+        "height": 24
+      }
+    ]
+  },
+  "settingsAndControls": {
+    "settings": [
+      {
+        "id": "177:2",
+        "name": "09 设置 · 通用设置 / 浅色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "177:4",
+              "name": "09 设置 · 通用设置 / 浅色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "177:2"
+            },
+            "children": [
+              {
+                "id": "177:5",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "177:4"
+              },
+              {
+                "id": "177:112",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "177:4"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "177:361",
+        "name": "09 设置 · 通用设置 / 深色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "177:363",
+              "name": "09 设置 · 通用设置 / 深色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "177:361"
+            },
+            "children": [
+              {
+                "id": "177:364",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "177:363"
+              },
+              {
+                "id": "177:471",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "177:363"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "178:2",
+        "name": "10 设置 · 模型 / 浅色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "178:4",
+              "name": "10 设置 · 模型 / 浅色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "178:2"
+            },
+            "children": [
+              {
+                "id": "178:5",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "178:4"
+              },
+              {
+                "id": "178:112",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "178:4"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "178:340",
+        "name": "10 设置 · 模型 / 深色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "178:342",
+              "name": "10 设置 · 模型 / 深色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "178:340"
+            },
+            "children": [
+              {
+                "id": "178:343",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "178:342"
+              },
+              {
+                "id": "178:450",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "178:342"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "178:1352",
+        "name": "11 设置 · 账户信息 / 浅色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "178:1354",
+              "name": "11 设置 · 账户信息 / 浅色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "178:1352"
+            },
+            "children": [
+              {
+                "id": "178:1355",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "178:1354"
+              },
+              {
+                "id": "178:1462",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "178:1354"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "178:1677",
+        "name": "11 设置 · 账户信息 / 深色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "178:1679",
+              "name": "11 设置 · 账户信息 / 深色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "178:1677"
+            },
+            "children": [
+              {
+                "id": "178:1680",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "178:1679"
+              },
+              {
+                "id": "178:1787",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "178:1679"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "178:678",
+        "name": "12 设置 · 关于 / 浅色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "178:680",
+              "name": "12 设置 · 关于 / 浅色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "178:678"
+            },
+            "children": [
+              {
+                "id": "178:681",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "178:680"
+              },
+              {
+                "id": "178:788",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "178:680"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "178:1015",
+        "name": "12 设置 · 关于 / 深色 · 原方案材质",
+        "apps": [
+          {
+            "node": {
+              "id": "178:1017",
+              "name": "12 设置 · 关于 / 深色",
+              "type": "FRAME",
+              "rect": [
+                100,
+                100,
+                1380,
+                900
+              ],
+              "parent": "178:1015"
+            },
+            "children": [
+              {
+                "id": "178:1018",
+                "name": "左侧菜单 · 继承一体毛玻璃外壳",
+                "type": "FRAME",
+                "rect": [
+                  0,
+                  0,
+                  240,
+                  900
+                ],
+                "parent": "178:1017"
+              },
+              {
+                "id": "178:1125",
+                "name": "一体圆角工作区 · 无首页背景",
+                "type": "FRAME",
+                "rect": [
+                  240,
+                  10,
+                  1128,
+                  880
+                ],
+                "parent": "178:1017"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "121:2607",
+        "appId": "121:2609",
+        "nodes": [
+          {
+            "id": "121:2629",
+            "name": "折叠侧栏",
+            "type": "FRAME",
+            "rect": [
+              244,
+              52,
+              16,
+              16
+            ],
+            "parent": "121:2610",
+            "appRect": [
+              244,
+              52,
+              16,
+              16
+            ]
+          },
+          {
+            "id": "136:2",
+            "name": "右侧工作区开关 · 已收起 / 28px",
+            "type": "FRAME",
+            "rect": [
+              1042,
+              18,
+              28,
+              28
+            ],
+            "parent": "121:2717",
+            "appRect": [
+              1322,
+              28,
+              28,
+              28
+            ]
+          }
+        ]
+      },
+      {
+        "id": "136:11",
+        "appId": "136:13",
+        "nodes": [
+          {
+            "id": "136:33",
+            "name": "折叠侧栏",
+            "type": "FRAME",
+            "rect": [
+              244,
+              52,
+              16,
+              16
+            ],
+            "parent": "136:14",
+            "appRect": [
+              244,
+              52,
+              16,
+              16
+            ]
+          },
+          {
+            "id": "212:15",
+            "name": "切换底部面板",
+            "type": "FRAME",
+            "rect": [
+              32,
+              0,
+              28,
+              28
+            ],
+            "parent": "212:10",
+            "appRect": [
+              1288,
+              29,
+              28,
+              28
+            ]
+          },
+          {
+            "id": "212:20",
+            "name": "右侧工作区开关 · 已展开 / 28px",
+            "type": "FRAME",
+            "rect": [
+              64,
+              0,
+              28,
+              28
+            ],
+            "parent": "212:10",
+            "appRect": [
+              1320,
+              29,
+              28,
+              28
+            ]
+          }
+        ]
+      },
+      {
+        "id": "179:2",
+        "appId": "179:4",
+        "nodes": [
+          {
+            "id": "294:1487",
+            "name": "消息入口 · 收起侧栏",
+            "type": "FRAME",
+            "rect": [
+              26,
+              818,
+              28,
+              28
+            ],
+            "parent": "179:5",
+            "appRect": [
+              26,
+              818,
+              28,
+              28
+            ]
+          },
+          {
+            "id": "179:210",
+            "name": "收起底部面板",
+            "type": "FRAME",
+            "rect": [
+              864,
+              6,
+              28,
+              28
+            ],
+            "parent": "179:195",
+            "appRect": [
+              956,
+              680,
+              28,
+              28
+            ]
+          },
+          {
+            "id": "179:117",
+            "name": "收起底部面板 · 已展开",
+            "type": "FRAME",
+            "rect": [
+              32,
+              0,
+              28,
+              28
+            ],
+            "parent": "179:112",
+            "appRect": [
+              1292,
+              29,
+              28,
+              28
+            ]
+          },
+          {
+            "id": "179:122",
+            "name": "右侧工作区开关 · 已展开 / 28px",
+            "type": "FRAME",
+            "rect": [
+              64,
+              0,
+              28,
+              28
+            ],
+            "parent": "179:112",
+            "appRect": [
+              1324,
+              29,
+              28,
+              28
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

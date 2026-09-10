@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
-import { patchFigmaFinalConversation } from '../scripts/lib/patch-figma-final-shell.mjs'
+import { patchFigmaFinalConversation, patchFigmaFinalLayout } from '../scripts/lib/patch-figma-final-shell.mjs'
 
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
 
@@ -12,6 +12,25 @@ function clientFunction(bundle: string, name: string) {
 }
 
 describe('Figma shell patch installation', () => {
+  it('keeps a 240 px sidebar after dragging and layout restoration, with the original collapse/default behavior', async () => {
+    const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
+    expect(patchFigmaFinalLayout(layout)).toBe(layout)
+    const { store, compute } = runInNewContext([
+      clientFunction(layout, 'clampWidth'), clientFunction(layout, 'computeColumns'), clientFunction(layout, 'createLayoutStore'),
+      '({store:createLayoutStore(),compute:computeColumns})'
+    ].join('\n'), { COLLAPSED_SIDEBAR_WIDTH: 80, _deepseek_ai_dsh_client_runtime_client: { defineStore: (spec: unknown) => spec } })
+    const state = store.init()
+    expect(state.sidebar).toBe(280)
+    store.actions.setSidebar(state, 240)
+    expect(compute(1380, state.sidebar, 0).sidebar).toBe(240)
+    store.actions.setSidebar(state, 100)
+    expect(state.sidebar).toBe(240)
+    store.actions.toggleSidebar(state)
+    expect(compute(1380, state.sidebar, 0).sidebar).toBe(80)
+    store.actions.toggleSidebar(state)
+    expect(state.sidebar).toBe(280)
+  })
+
   it('can refresh a previously installed block without duplicating runtime styles', () => {
     const installed = patchFigmaFinalConversation(source)
     expect(patchFigmaFinalConversation(installed)).toBe(installed)

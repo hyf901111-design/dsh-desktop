@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises'
 const css = await readFile(new URL('../../src/preload/figma-final-shell.css', import.meta.url), 'utf8')
+const homeCss = await readFile(new URL('../../src/preload/figma-home.css', import.meta.url), 'utf8')
+const panelCss = await readFile(new URL('../../src/preload/figma-panels.css', import.meta.url), 'utf8')
 const START = '/* ODYSSEY_FIGMA_FINAL_SHELL_START */'
 const END = '/* ODYSSEY_FIGMA_FINAL_SHELL_END */'
 function exact(source, from, to) {
@@ -8,6 +10,9 @@ function exact(source, from, to) {
   return source.replace(from, to)
 }
 export function patchFigmaFinalConversation(source) {
+  // The resident root knows the active view; DOM existence cannot distinguish an
+  // empty chat from Research, whose conversation/composer live in body portals.
+  source = exact(source, '"data-phase": phase,\n\t\t\t\tonClickCapture:', '"data-phase": phase,\n\t\t\t\t"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",\n\t\t\t\tonClickCapture:')
   source = exact(source, 'this.researchWidths.get(sessionId) ?? 420', 'this.researchWidths.get(sessionId) ?? 340')
   source = exact(source, 'function ComposerSurface({ zone, hero, researchEmpty,', 'function ComposerSurface({ zone, hero, research = false, researchEmpty,')
   source = exact(source, '(hero || researchEmpty) && heroWorkspaceRow', '(hero || research || researchEmpty) && heroWorkspaceRow')
@@ -34,7 +39,7 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source,
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };',
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || (Array.isArray(row.content) && contentParts(row.content).images.length > 0 ? t("image.pending") + " · " + contentParts(row.content).images.length : ""), frozenCanvasContext: true };')
-  const block = `${START}\nif(typeof document!=="undefined"){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.head.appendChild(style);}style.textContent=${JSON.stringify(css)};}\n${END}`
+  const block = `${START}\nif(typeof document!=="undefined"&&!document.getElementById?.("sherlock-desktop-shell-style")){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.head.appendChild(style);}style.textContent=${JSON.stringify(css + homeCss + panelCss)};}\n${END}`
   const starts=source.split(START).length-1, ends=source.split(END).length-1
   if(starts!==ends || starts>1 || (starts===1 && source.indexOf(END)<source.indexOf(START))) throw Error('Figma final shell marker is incomplete or duplicated')
   if(starts===1) return source.slice(0,source.indexOf(START))+block+source.slice(source.indexOf(END)+END.length)
@@ -42,5 +47,12 @@ export function patchFigmaFinalConversation(source) {
 }
 
 export function patchFigmaFinalLayout(source) {
-  return exact(source, 'clampWidth(sidebar, 264, 420)', 'clampWidth(sidebar, 280, 420)')
+  // 194:4 / 370 explicitly show 280 → 240. Apply the same minimum when
+  // dragging and when restoring persisted widths; the initial width stays 280.
+  if (source.includes('clampWidth(sidebar, 280, 420)')) {
+    source = exact(source, 'clampWidth(sidebar, 280, 420)', 'clampWidth(sidebar, 240, 420)')
+  } else {
+    source = exact(source, 'clampWidth(sidebar, 264, 420)', 'clampWidth(sidebar, 240, 420)')
+  }
+  return exact(source, 'clampWidth(px, 264, 420)', 'clampWidth(px, 240, 420)')
 }

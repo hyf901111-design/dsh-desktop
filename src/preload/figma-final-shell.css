@@ -51,7 +51,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .wSkVaW_tabActive { background:var(--odyssey-active-fill); color:var(--odyssey-active); font-weight:500; }
 .wSkVaW_tab:after { display:none; }
 /* Figma 284:513 / 880: the Research header has no divider stroke. */
-.wSkVaW_root:has(.rScV5Q_root) .wSkVaW_header:after { display:none; }
+.wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header:after { display:none; }
 .rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
 .sRp_root,.sRp_body { background:transparent !important; }
 .sRp_conversation { display:flex; flex-direction:column; gap:4px; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
@@ -96,21 +96,21 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .sRp_composer .uV2eYG_input,.sRp_composer .uV2eYG_mirror,.sRp_composer .uV2eYG_backdrop{font-family:"OdysseyChipCell","Noto Sans SC",sans-serif;}
 
 /* The plugin portal is attached to the viewport. Research keeps the canvas beneath the panel. */
-#root:has(.rScV5Q_root) { width:100%; margin-right:0; }
+#root:has([data-odyssey-page="research"]) { width:100%; margin-right:0; }
 .pI_x6G_centerCol { min-height:0; height:calc(100% - 20px); overflow:hidden; }
-body:has(.rScV5Q_root) .t8lSSG_panel { top:22px; bottom:22px; right:24px; box-sizing:border-box; }
+body:has([data-odyssey-page="research"]) .t8lSSG_panel { top:22px; bottom:22px; right:24px; box-sizing:border-box; }
 .t8lSSG_panelBody { border-radius:0 0 12px 12px; overflow:hidden; }
 .t8lSSG_panel:before { z-index:0; }
 .t8lSSG_panel:after { z-index:0; }
 .t8lSSG_panel>.t8lSSG_tabBar,.t8lSSG_panel>.t8lSSG_panelBody { position:relative; z-index:1; }
-body:has(.rScV5Q_root) .t8lSSG_toggleCluster { top:30px; right:32px; }
+body:has([data-odyssey-page="research"]) .t8lSSG_toggleCluster { top:30px; right:32px; }
 
 .t8lSSG_panel .t8lSSG_pane { background:transparent; }
 .t8lSSG_panel .t8lSSG_tabBar { border-radius:12px 12px 0 0; }
-body:has(.rScV5Q_root) .t8lSSG_toggleCluster { top:30px !important; right:32px; }
+body:has([data-odyssey-page="research"]) .t8lSSG_toggleCluster { top:30px !important; right:32px; }
 
 .t8lSSG_panel { border:0; outline:1px solid var(--odyssey-glass-border); outline-offset:-1px; }
-body:has(.rScV5Q_root) .wSkVaW_header { padding-right:calc(var(--dsh-sidebar-width, 0px) + 44px); }
+body:has([data-odyssey-page="research"]) .wSkVaW_header { padding-right:calc(var(--dsh-sidebar-width, 0px) + 44px); }
 body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none; }
 [data-sidebar-collapsed=true] .srb-account-controls > [data-research-board-bell-host] { order:-1; }
 /* Figma 286:469–477: workspace session typography shares the measured navigation baseline. */

@@ -1,0 +1,242 @@
+# EWork Odyssey 全文件高还原实施与验收计划
+
+> **For agentic workers:** 使用 superpowers:executing-plans 按下述任务逐项实施、复验和记录。任务使用复选框跟踪。执行方式由用户当前授权和协作规则决定，不默认创建新任务或委派代理。
+
+**Goal:** 对照 Figma 文件中的全部有效设计内容完成真实客户端的视觉与交互还原；任何遗漏页面、错误显示条件或明显视觉偏差都阻止标记整体完成。
+
+**Architecture:** 沿用现有 Electron、React、状态管理、文件阅读器、账户及研究服务。把首页、工作区、研究、设置、认证分别接入真实页面标识及有来源的材质/布局规则；修正可重复应用的源码补丁，清理互相覆盖的旧规则，不继续叠加仅适用于一张研究截图的全局 CSS。
+
+**Tech Stack:** Electron、TypeScript、React、现有 vendor 客户端及可重入补丁、Vitest；Figma Plugin API 读取；CUA 操作真实客户端，CDP 只读测量与截图。
+
+**Spec:** 用户 2026-09-10 的完整要求及 2026-09-11 对“全文件、首页、面板开关、设置整页”的追加要求；[Figma 文件](https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=284-396)；同目录的 [100 张画板索引](2026-09-11-figma-full-client-fidelity.design-index.md)、[机器可读索引](2026-09-11-figma-full-client-fidelity.design-index.json)、[重点原始节点属性](2026-09-11-figma-full-client-fidelity.priority-nodes.json)。
+
+## 全局约束
+
+- 全文件覆盖。当前实时清点为 1 个页面、100 张页面/状态画板、6 个行内标签组件变体，包含未编号首页和第 01–48 组。100 是画板数，不是最终子状态总数。
+- 最新用户要求、当前最终节点状态优先。不能把编号较早、名称带“原方案材质”的整个页面一律排除。
+- 旧规则被替代必须逐项指向新要求或新节点；不能为了通过验收，把现有实现反向写成设计稿。
+- 原设计保持原位。缺失交互可按用户既有授权在同文件补充，记录补充原因、来源与节点；不能改动最终稿来消除代码差异。
+- 原始 Figma fill、图片裁切/滤镜、透明度、模糊、描边、阴影、圆角分别记录。首页图片背景是产品内容；画板外部背景及注释不是产品内容。
+- 完整页面用真实应用容器测量。通常 1380×900，但以节点为准；组件/菜单规范稿逐个子区域测量，不能拿 1580×1100 外框缩放成产品。
+- 不缩小字体来塞内容。组件数字/英文 DINPro，中文 Noto Sans SC；其他界面按对应节点。检查实际平台字体而非仅检查 CSS 声明。
+- 原生行内引用、真实任务/更新状态、真实文件授权与阅读器继续复用；不能以整页图、克隆页面或固定演示数据代替产品。
+- 第 43 组是手动尺寸适配；第 45–46 组默认 S 320×220、M 656×220、L 656×456，间距 16、外边距 32。旧 32 间距及逐行居中不恢复。
+- 每完成一个独立模块及相关聚焦验证，创建中文本地提交，仅提交该模块文件。
+- 不跑全功能测试、不正式发布、不推送或改版本。共享客户端只按集成及本地手册构建。
+- 本次提交仅记录计划与当前节点清点，不修改运行客户端，也不把历史 311 项检查当成本轮视觉完成证明。
+
+## 0. 本轮预检已确认的缺口
+
+| 缺口 | 已读取的设计事实 | 当前源码证据 | 处理 |
+| --- | --- | --- | --- |
+| 首页背景丢失 | 121:2717/136:121 浅色图片 hash 87ba69921234e44d6ea62241ada564fbf71823f4；121:4337/136:331 深色 hash 2736352740a71e080da6dc9d80aaffbf9beb51bc；首页工作区圆角实际 12，尺寸 1088×880 | figma-final-shell.css 为 centerCol/root 全局指定纯色，统一工作区圆角 16 | P1 首先重建首页材质与独立页面规则 |
+| 面板开关条件与锚点错误 | 收起首页只有 136:2 右侧开关，应用坐标 1322/28、28×28；展开首页 212:15 底部入口为 1288/29、212:20 右侧开关为 1320/29；二者 28×28、间隔 4 | better-sidebar 的底部入口仅受 !narrow 控制；shell-style.ts 给 toggleCluster 全局 top 8；研究页另覆盖 top 30 | P2 以页面和开闭状态分别实现，不套一个固定位置 |
+| 设置仍是旧整页外观 | 09–12 组共 8 张浅深页面，设置导航 240，工作区 x240/y10、1128×880、圆角容器；通用设置分组卡片、标题/说明、行内控件有明确布局 | account-ui.ts 强制全屏 overlay、panel 100vw/100vh、圆角 0，导航 250；旧 verify-figma-settings-overlay.mjs 只验证遮挡和草稿恢复 | P3–P6 整套设置重新实现与逐页验收 |
+| 覆盖口径过窄 | 首页、01–21、22–48 均仍在当前文件 | 旧计划目标仅 22–46；旧画廊含大量受控截图 | 新索引所有项目从“未重新验收”开始，按证据类型分别记录 |
+
+本轮预读的 Figma 首页与设置截图位于 output/figma-full-preaudit-20260911。这两张工具截图包含外部阴影：节点属性为 1380×900，但导出原始范围为 1488×1008、输出为 1380×935，因此只能用于预读，**不能当作正式同尺寸对照基准**。正式验收必须校正应用裁切边界并记录裁切/比例。
+
+## 1. 全范围任务映射
+
+| 优先级/任务 | 设计范围 | 必须交付 |
+| --- | --- | --- |
+| P0 范围与逐图基准 | 全部 100 画板、6 变体、所有子状态/说明 | 无遗漏索引、属性快照、真实应用裁切、组件映射、操作路径 |
+| P1 首页与整窗材质 | 4 张首页；跨页公共壳体 | 原图片/渐变/滤镜、浅深毛玻璃、正确圆角和页面切换 |
+| P2 面板完整交互 | 首页、03、06–07、13–17、22–23、44 | 右侧/底部开闭、显示条件、拖宽/拖高、页签溢出与菜单 |
+| P3 设置共同框架+通用 | 09 浅深 | 240 导航、完整分组内容、标题和表单密度、保存/恢复 |
+| P4 设置模型 | 10 浅深 | 模型列表与配置、真实选择/校验/保存、下拉/空态 |
+| P5 设置账户+认证 | 11、18–19 浅深 | 账户页、古港背景登录注册、字段/错误/提交/返回 |
+| P6 关于+更新+通知 | 12、28、31–37 浅深 | 完整关于页、通知与更新所有过程状态和相应入口 |
+| P7 对话/文件/轨迹/引用 | 01–03、06、08、20–21、标签变体、48 | 文件区、真实阅读器、轨迹、消息/输入/标签所有状态 |
+| P8 导航与协作 | 22–27、29–30，旧稿同模块做替代记录 | 目录/排序/右键/常用/头像/成员与权限的完整实际行为 |
+| P9 研究组件与整理 | 04–05、07、16、38–47 | 生成/派生/停止/失败、默认/悬停/选中、手动适配与便当盒 |
+| P10 全文件验收闭环 | 所有有效子状态及跨模块转换 | 当前包逐项证据、差异清零、源码/包/窗口对应记录 |
+
+P1/P2/P3 是首批必须直接运行给用户验看的内容；设置各页不得推迟到最后做小修。后续按依赖推进，但没有任何任务可以用“其他模块已经通过”替代自己的验收。
+
+## 2. P0：把每张稿变成可执行的验收项
+
+**Files**
+- 已创建本计划及同名 design-index.json、design-index.md、priority-nodes.json。
+- 新建 scripts/verify-figma-coverage.mjs：检查清单完整性、证据路径与来源；不启动或控制 UI。
+- 生成 output/figma-full-acceptance/manifest.json、figma/、actual/、overlays/、metrics/、flows/、diffs.md。
+
+**接口约定：** manifest 内每个 case 包含 caseId、frameId、subnodeId、role、theme、page、preconditions、steps、expected、implementationFiles、status、designEvidence、runtimeEvidence、differences。status 仅为 indexed / measured / implemented / visual-pass / interaction-pass / accepted / superseded；superseded 必须有 replacesBy 节点或用户要求原文，不能计为通过。每条证据记录 packageCommit、appPath、captureKind、viewport、deviceScaleFactor、file、sha256；无实际包证据不得 accepted。
+
+- [x] 实时列出全文件页面、100 张画板及 6 组件变体。
+- [ ] 逐画板读取全部有效子节点及说明，展开菜单/弹层/错误/加载/选中/点击后的子状态；登记注释对产品行为的约束，剔除的只是不属于 UI 的说明本身。
+- [ ] 逐项解析旧稿与新稿的替代关系。例如旧研究导航由 22–30 覆盖，但旧对话文件区、轨迹和设置仍适用；记录局部替代而非整张删除。
+- [ ] 定位每张完整页的实际应用容器；保存原始图片和属性快照，校验真实像素尺寸。规范类画板每个组件或弹层单独裁切。
+- [ ] 保存包含继承链的 fills/effects、图片 hash/crop/rotation、字体段、布局约束、圆角、边框、状态和坐标，不能只读顶层背景。
+- [ ] 为每个 case 指定真实 UI 入口、可复现数据、执行文件和操作步骤；列出额外组合状态，不让一张图覆盖多个未操作分支。
+- [ ] 清单验证至少断言：100 个画板均有对应项、6 个组件变体均有项、无重复 caseId、无无来源跳过、所有有效 case 有实现文件和操作路径。未完成项返回失败并列出 ID。
+
+**通过门槛：** 范围覆盖率 100%，子状态展开完成；这一步完成仍只代表基准齐全，不代表开发通过。
+
+## 3. P1：首页与材质基础
+
+**Modify:** src/preload/figma-final-shell.css、src/preload/shell-style.ts、scripts/lib/patch-figma-final-shell.mjs；原生窗口涉及 src/main 的现有窗口创建路径时只做对应材质调整。
+**Create:** src/preload/figma-home.css；Figma 原始资源放 build/figma/，资源清单注明 hash、节点、原比例、裁切及滤镜。
+**Focused checks:** test/figma-final-shell-patch.test.ts、test/sidebar-vibrancy.test.ts；只扩展相关场景。
+
+- [ ] 从真实首页渲染分支输出稳定的页面语义标识；绑定 home/chat/research/trace/settings/auth，不依赖偶然存在的浮层 DOM 来猜主页。
+- [ ] 按 121:2717/4337、136:121/331 下载并校验原图资源，分别复现浅深裁切、滤镜及图片上方所有可见叠层。
+- [ ] 区分首页工作区圆角 12 与普通工作区 16；移除首页上的纯色 !important 覆盖，不影响对话/研究各自背景。
+- [ ] 外壳、侧栏继承、页面内容和右面板各自使用对应材质。记录每项 Figma 到 CSS/原生窗口的转换，不默认将所有模糊值减半。
+- [ ] 复现首页标题、项目/模式选择、输入区域的位置、宽度与材质；检查右栏开闭后布局按稿变化。
+- [ ] 真实包浅深 × 左栏开闭 × 右栏开闭截图；背景必须已解码并可见，不能在 fallback 纯色时采样通过。
+- [ ] 通过后中文提交“还原首页云层背景和页面独立材质”。
+
+**阻断条件：** 首页仍纯色、云层比例/位置错误、外壳有重复遮罩、换页残留首页背景、字体或图标缺失，任一都不能继续宣称基础视觉完成。
+
+## 4. P2：右侧和底部面板完整状态
+
+**Modify:** scripts/lib/patch-sherlock-better-sidebar.mjs、src/preload/shell-style.ts、src/preload/figma-final-shell.css、scripts/lib/patch-figma-final-shell.mjs。
+**Focused checks:** test/desktop-shell-controls.test.ts、test/research-tabbar-final-layout.test.ts、test/sidebar-new-session-actions.test.ts。
+**运行时依据:** build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js 的 store、togglePanel、toggleBottomPanel 和真实 portal；修改持久补丁，不仅修改构建输出。
+
+- [ ] 清点所有页的开关群组及 hover/active 背景；按钮点击区、圆角和 SVG 尺寸/描边分别测量。
+- [ ] 首页右栏关闭时仅显示右栏开关；右栏展开后显示底部入口。其他页面逐节点验证相同或不同规则，不把首页坐标直接套到研究页。
+- [ ] 保留 panelOpen、bottomOpen、宽高和活动页签作为各自状态；按钮是否显示不等于销毁面板、终端或草稿。
+- [ ] 补全开关矩阵：右关/底关、右开/底关、右开/底开、右关/底开；按稿决定对应入口位置。若最后一种没有图，先设计补充，保留可恢复入口与终端状态，不擅自结束终端。
+- [ ] 覆盖主页无会话、已存在会话、对话/研究切换、窗口变窄、左栏开闭。无会话入口行为复用现有创建流程并验证可点击。
+- [ ] 第 14/15 组实际拖动左栏 280→240 和右栏 340→400；移除不符合稿的最小宽度限制，检查拖动后面板锚点、标签、输入重排。
+- [ ] 第 13 组真实终端展开/收起/拖高；第 17 组长标题溢出、下拉切换、固定加号、关闭与重新打开，全部通过鼠标操作。
+- [ ] 聚焦交互断言包含：入口数量及可见性、aria-expanded 与状态一致、点击仅改变对应目标、关闭不丢页签/输入、终端实例不重建。
+- [ ] 通过后中文提交“按设计还原面板入口条件与开闭布局”。
+
+## 5. P3：设置框架与通用设置
+
+**Modify:** src/preload/account-ui.ts、src/preload/shell-style.ts、scripts/lib/patch-figma-final-shell.mjs、src/preload/figma-final-shell.css。
+**Create:** src/preload/figma-settings.css。
+**Focused checks:** test/figma-settings-layout.test.ts（新增真实设置组件场景）、既有 test/model-multimodal-settings.test.ts；scripts/verify-figma-settings-overlay.mjs 仅保留遮挡回归用途。
+
+- [ ] 逐节点读取 177:4/177:363：240 导航、Logo、返回应用、四个导航项、图标、活动行、圆角工作区、内容列与所有分组行。
+- [ ] 移除旧 panel 圆角 0/全屏遮盖及 nav 250 的视觉强制规则，重接到设置专属壳体；沿用设置服务与表单事件。
+- [ ] 通用页按稿重排“会话与权限”“界面”两组：Agent 预设、权限、繁忙时 Enter、语言、外观。实际读取说明文案、标题层级、分组间距、分隔线和控件宽度。
+- [ ] 复现浅/深/跟随系统三段控件、下拉选中/悬停/焦点、禁用与保存失败告知。
+- [ ] 在测试配置中改变设置→返回→重开，验证值真实持久化；恢复用户原始偏好。弹层不被右侧 portal 遮挡，返回应用恢复原会话/草稿。
+- [ ] 浅深整页与每个展开控件独立截图，不用 About 页面截图代表通用设置。
+- [ ] 通过后中文提交“还原设置框架和通用设置完整页面”。
+
+## 6. P4：模型设置
+
+**Modify:** settings 原组件映射对应的 scripts/lib/patch-figma-final-shell.mjs、src/preload/figma-settings.css；原模型服务不换成演示。
+**Focused checks:** test/model-multimodal-settings.test.ts、test/model-provider-policy.test.ts、test/web-search-settings-ui.test.ts，仅跑本次涉及项。
+
+- [ ] 读取 178:4/178:342 全部内容、配置行、开关/选择器、说明、按钮与空/错误/加载情况。
+- [ ] 对照模型设置真实组件逐项排布，字体/列宽/卡片密度及弹层位置跟稿一致。
+- [ ] 下拉或切换必须写回现有配置；已有能力/权限限制显示真实禁用原因。
+- [ ] 涉及凭据只在隔离测试配置验证，不更改用户密钥；错误状态使用本地受控响应，但必须经过同一实际表单和服务入口。
+- [ ] 浅深整页、下拉、配置保存/失败、长名称逐项复验并中文提交。
+
+## 7. P5：账户页与登录注册
+
+**Modify:** src/preload/account-ui.ts、src/preload/figma-settings.css；新增 src/preload/figma-auth.css 及对应原始背景资源。
+**Focused checks:** test/account-service.test.ts 中直接相关项；新增 test/figma-auth-layout.test.ts 绑定真实认证组件。
+
+- [ ] 读取 178:1354/1679，以及 219:2/44/86/136 的实际应用和表单节点；不能沿用现有 360 宽小弹窗代替整页古港背景。
+- [ ] 还原账户身份、头像、复制 ID、安全设置等稿中存在的内容，复用原读取/复制/提交处理。
+- [ ] 还原登录注册背景、居中玻璃表单、Logo、各字段、邀请码/确认密码、焦点、错误文案和切换入口。
+- [ ] 用同一集成包的隔离测试配置验证登录/注册/错误/过期；不退出或覆盖用户当前主配置的账户。
+- [ ] 若现有集成 runner 缺少隔离配置支持，先在该 runner 补本地测试能力并聚焦验证，再执行本组；不能改用静态认证克隆作为实际验收。
+- [ ] 浅深账户及登录注册每种状态复验后中文提交。
+
+## 8. P6：关于、通知和更新
+
+**Modify:** src/preload/account-ui.ts、src/preload/update-view.ts、src/preload/sidebar-notice.ts、src/preload/sidebar-update-control.ts、src/preload/figma-settings.css。
+**Focused checks:** test/settings-about.test.ts、test/update-state.test.ts、test/update-ui.test.ts、test/sidebar-update-control.test.ts、test/update-install-lifecycle.test.ts 的直接相关状态。
+
+- [ ] 逐节点实现 12 组完整关于布局及 34–37 组状态，版本/说明/历史/按钮/进度区都纳入视觉对照。
+- [ ] 28、31–33 组每个通知、邀请、更新提示单独做 case：入口定位在账户上方，文本变长时宽度和高度自然适配。
+- [ ] 本地更新夹具通过实际更新状态机和同一组件触发发现→下载→失败/恢复→校验→自动重启告知，不能仅给 DOM 加 class。
+- [ ] 真实已点击更新且下载完成后的告知不新增“重启安装”二次点击；记录动作及状态转换日志。
+- [ ] 线上只做获准的真实检查，完整下载/安装用本地受控更新端点和隔离客户端；绝不改公开更新源。报告明确本地链路与线上验证范围。
+- [ ] 浅深关于整页、所有通知与过程状态复验后中文提交。
+
+## 9. P7：对话、文件、轨迹和引用
+
+**Modify:** scripts/lib/patch-figma-final-shell.mjs、scripts/lib/patch-sherlock-better-sidebar.mjs、scripts/lib/figma-file-preview-client.mjs、src/preload/figma-final-shell.css。
+**Focused checks:** test/research-file-drop.test.ts、test/figma-file-preview.test.ts、test/research-generation-sidebar-focus.test.ts、test/research-queue-final-copy.test.ts；如轨迹改动则定位并运行该路径聚焦用例。
+
+- [ ] 第 01–03/06：文件树、搜索/层级、文档预览、表格、新增面板、左栏收起，逐个真实入口及返回路径验收。
+- [ ] 第 08：时间轴、步骤、展开/收起、成功/失败/加载、长内容及滚动边界，接实际任务记录。
+- [ ] 第 20–21 与 6 变体：输入/选中/发送后、删除/焦点、长名/多标签换行、粘贴、文件及组件混排。短消息气泡收缩但段落左对齐。
+- [ ] 第 48：文件入口、HTML/PDF/Office 原阅读器、网页摘要、加载/失败、完整阅读、原生滚动和关闭状态保留，读取真授权路径。
+- [ ] 不把“组件内部无滚动条”套到成员列表、设置、文件树、轨迹和完整阅读器。
+- [ ] 每页浅深及真实交互证据齐全后按模块中文提交。
+
+## 10. P8：导航与协作完整复核
+
+**Modify:** src/preload/research-board-dialogs.ts、src/preload/research-boards-ui.ts 及现有 navigation/presentation 源码、scripts/lib/patch-sherlock-better-sidebar.mjs。
+**Focused checks:** test/research-board-navigation-final.test.ts、test/research-board-client-adapter.test.js、test/research-boards-ui.test.ts；双成员流程执行集成手册的对应本地服务/浏览器阶段。
+
+- [ ] 每个右键菜单、搜索/分组/排序、hover 更多图标按 22–30 实际子节点核对。
+- [ ] 专用和协作看板菜单、权限、创建/取消协作后的入口变化，全部有操作前后记录；不能只看静态截图。
+- [ ] 头像 3＋N、搜索、在线/离线、完整可滚动成员列表、自身统一渐变、加号添加与管理设置，逐个测量。
+- [ ] 常用按钮选中态、不恢复已删功能、共享输入与标签均检查。
+- [ ] 两个受控测试账户在实际集成客户端验证拖动、编辑、生成与权限写回；不向无关真实成员发邀请。若环境阻断，保留为未验收，不用 Worker 截图代替客户端验收。
+- [ ] 模块通过后中文提交。
+
+## 11. P9：组件状态、生成、内容与整理
+
+**Modify:** scripts/lib/figma-canvas-client.mjs、scripts/lib/figma-file-preview-client.mjs 及已定位的 research workbench/生成实现。
+**Focused checks:** test/research-container-chrome.test.ts、test/research-workbench.test.js、test/research-html-theme.test.js、test/research-text-summary-final.test.ts、test/research-canvas-dot-icons-final.test.ts 等直接受影响项。
+
+- [ ] 38–42：生成/完成/失败/停止、骨架/圆环/步骤/过程、重试；hover 浮层不参与布局，选中蓝框/光晕/工具栏与生成相互独立。
+- [ ] 思维导图、总结、基于所选创建各菜单/弹层/过程/结果逐项验证；点击后实际产出和状态写回。
+- [ ] 43：每种自由宽高的信息层级重新排布，内容不整体缩小、不隐藏溢出冒充适配。
+- [ ] 44：空白研究、点阵、唯一右侧标语与稳定输入；不添加中央引导。
+- [ ] 45–46：S/M/L、16 间距、32 外边距、大卡优先、同规格顺序、不同列数/视野居中、超 L 拆分或摘要；画布缩放不改变内容字体规范。
+- [ ] 47：组件内真实字体命中、失败/重试恢复。测试 KPI/表格/图表/长文/混排和手动尺寸，不以一个示例概括所有内容类型。
+- [ ] 同模块浅深及真实任务操作复验通过后中文提交。
+
+## 12. 每个模块都执行同一验收循环
+
+1. 读原节点属性及截图，登记 case；没有设计依据的数值不能直接写死。
+2. 在真实组件实现。先校整体分区/大面积背景，再校文字/控件/图标，最后校浮层/状态/动效。
+3. 在稳定可复现测试数据下走真实 UI 路径；逐页逐状态截当前包，并记录运行版本/路径/提交。
+4. 对同尺寸应用区域进行并排、50% 叠加和区域差异图；检查顶部/四角/输入底部/按钮中心等锚点。
+5. 输出具体差异：节点、期望值、实测值、截图区域及修复文件。修正后重新截图，不替换原图或放宽标准掩盖差异。
+6. 检查同一公共样式影响的其他页面和浅深态；只追加受影响的聚焦回归。
+7. 模块 case 全部通过后提交；更改公共壳体/字体/面板锚点后，关联旧截图自动过期，必须重拍。
+
+### 统一验收门槛
+
+- **范围：** 全部 100 张画板及 6 变体都有有效映射；每个子状态和说明规则均已登记。没有依据的跳过为 0。
+- **布局：** 基准 viewport 下关键位置/宽高/间距误差不超过 1 CSS px；边缘和文字基线无肉眼可见漂移；动态布局不得靠绝对定位拼成固定截图。
+- **字体：** 字体真实命中；字号/字重/行高/字距按稿；固定样本行数、断行、对齐一致。操作系统字体抗锯齿差异不能豁免错误字体或不同换行。
+- **材质：** 原图片/裁切、各层透明度、模糊、边框/阴影/光晕逐项对应；不接受用统一不透明灰色或统一阴影代替。
+- **图标：** SVG 图形/线宽/圆角/方向、16/14 等稿中尺寸、点击区、按钮间距和状态一致；对勾不使用字符。
+- **行为：** 所有设计入口能真实进入、关闭、返回和恢复状态；没有仅外观存在的按钮；面板切换不丢草稿/终端/文件位置。
+- **截图：** 不能把带阴影扩边的导出当成同尺寸 app 图；实际窗口及内容区截图分别标明。动态日期/数据只可在明确标注区域遮罩用于差异计算，不能遮罩错误布局或材质。
+- **通过判定：** 不用总 SSIM、测试数量、截图张数作为单一通过条件。任何明显偏差或遗漏都阻止 accepted。
+- **剩余差异：** 只允许明确记录、确实不可由应用消除的渲染差异；实现可修正的视觉偏差继续修复。不可验证的状态必须保留未验收，不能笼统宣称全量完成。
+
+## 13. 聚焦验证与本地构建
+
+- 每个任务运行自己列出的用例；仅样式变更不新增“断言 CSS 字符串等于实现”的机械测试。状态/行为变更采用能暴露原问题的用例。
+- 每次相关改动完成后运行类型/依赖检查；没有新改动或失败不重复全批。
+- 图形验收使用同一生产组件与真实 Electron 页面；受控状态服务必须透明注明，DOM 克隆只能诊断，不能获得 accepted。
+- 手册：docs/sherlock-local-test-runbook.md、docs/sherlock-multi-session-integration-runbook.md。
+- 起点功能 worktree 为 research-board-design-20260909 / d816294；现有共享测试包为 integration-20260909-01 / 6089c47。执行前实时核验 main/分支/批次/租约，不自动覆盖其他 session 改动。
+- 更新交接与集成检查后，仅由有效集成工作区运行：
+
+```sh
+./script/build_and_run.sh --verify
+npm run verify:package:mac -- --app 'dist-notarized/mac-arm64/EWork Odyssey.app'
+```
+
+- 校验源码、包内资源、实际 appPath/commit 及当前窗口一致。禁止功能 worktree 直接替换共享客户端；不公证、不发布、不改版本。
+
+## 14. 最终交付条件与顺序
+
+- [ ] 首页、面板、设置四页首先完成真实窗口验收，并保留这批对照作为基准。
+- [ ] 其他所有设计有效 case 达到视觉通过和交互通过；未覆盖项数为 0，或明确停留为未完成。
+- [ ] 用实际账户/真实数据再走常用流程，确认固定视觉样本未替换生产服务。
+- [ ] 最终同一构建覆盖全文件逐图复验；前序包、受控组件与当前包证据不能混算。
+- [ ] 交付可检索清单：每张 Figma 原稿→子状态→当前真实截图→叠加差异→操作记录→代码提交→验收结论。
+- [ ] 差异清单标具体节点、预期/实测、严重度、处理结果；不写“还有少量细节”这种不可验证结论。
+- [ ] 正常启动最终客户端，保持主界面可用；提供 100 张画板覆盖统计和实际状态统计，允许用户按设计名称直接定位检查。
+
+**执行时的汇报格式：** “本批核对哪些具体稿；确认了什么差异；修正后哪些 case 通过；哪些仍未通过；下批处理哪些页面”。未经上述门槛，不能使用“全部还原”“全量验收完成”。
