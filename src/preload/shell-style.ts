@@ -1,4 +1,6 @@
 import figmaFinalStyles from './figma-final-shell.css?raw'
+import figmaHomeStyles from './figma-home.css?raw'
+import figmaPanelStyles from './figma-panels.css?raw'
 const DESKTOP_SHELL_STYLE_ID = 'sherlock-desktop-shell-style'
 
 const desktopShellStyles = `
@@ -10,9 +12,6 @@ const desktopShellStyles = `
   }
   .ydkMvW_title { min-width: 0; flex: 1; }
   .ydkMvW_close { order: -1; }
-  .t8lSSG_toggleCluster {
-    top: calc(8px + env(safe-area-inset-top)) !important;
-  }
 `
 
 export function mountDesktopShellStyles(document: Document): void {
@@ -20,6 +19,7 @@ export function mountDesktopShellStyles(document: Document): void {
 
   const style = document.createElement('style')
   style.id = DESKTOP_SHELL_STYLE_ID
-  style.textContent = desktopShellStyles + figmaFinalStyles
+  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles
   document.documentElement.appendChild(style)
+  document.getElementById('odyssey-figma-final-shell')?.remove()
 }

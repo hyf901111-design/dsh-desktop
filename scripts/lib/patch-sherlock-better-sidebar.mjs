@@ -9,6 +9,7 @@ const LEGACY_FILE_DRAG_PATCH_MARKER = '/* sherlock:files-to-research-canvas:v1 *
 const PANEL_SURFACE_SYNC_PATCH_MARKER = '/* sherlock:panel-surface-sync:v1 */'
 const PANEL_DRAG_DIMENSION_PATCH_MARKER = '/* sherlock:panel-drag-dimensions:v1 */'
 const RESEARCH_GENERATION_FOCUS_PATCH_MARKER = '/* sherlock:research-generation-keeps-conversation:v1 */'
+const FIGMA_PANEL_LAYOUT_PATCH_MARKER = '/* sherlock:figma-panel-layout:v1 */'
 
 export function sherlockResearchGenerationOwnsFocus(state, doc = globalThis.document) {
   const hasResearch = node => node?.kind === 'leaf'
@@ -87,8 +88,108 @@ function patchPanelToggleGlyphs(source) {
   return marker + '\n' + source
 }
 
+/**
+ * Add the stable state and accessibility contract used by the Figma panel
+ * layout. The panels remain mounted while hidden, so their tabs, editor state,
+ * terminal buffers, and persisted dimensions keep the existing store behavior.
+ */
+function patchFigmaPanelLayout(source) {
+  if (source.includes(FIGMA_PANEL_LAYOUT_PATCH_MARKER)) return source
+
+
+  source = replaceExact(source,
+    `\t\t\tif (state === void 0 || sessionId === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t"data-dsh-panel-host": true,
+\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\tclassName: sidebar_module_css_default.toggleCluster,
+\t\t\t\t\tchildren: [!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+\t\t\t\t\t\tlabel: t("noSession"),
+\t\t\t\t\t\tside: "bottom",
+\t\t\t\t\t\tdelayMs: 500,
+\t\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\tclassName: sidebar_module_css_default.toggleButton,
+\t\t\t\t\t\t\tdisabled: true,
+\t\t\t\t\t\t\t"aria-label": t("noSession"),
+\t\t\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelBottomOutline16, {})
+\t\t\t\t\t\t})
+\t\t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+\t\t\t\t\t\tlabel: t("noSession"),
+\t\t\t\t\t\tside: "bottom",
+\t\t\t\t\t\tdelayMs: 500,
+\t\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\tclassName: sidebar_module_css_default.toggleButton,
+\t\t\t\t\t\t\tdisabled: true,
+\t\t\t\t\t\t\t"aria-label": t("noSession"),
+\t\t\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelRightOutline16, {})
+\t\t\t\t\t\t})
+\t\t\t\t\t})]
+\t\t\t\t})
+\t\t\t});`,
+    `\t\t\tif (state === void 0 || sessionId === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t"data-dsh-panel-host": true,
+\t\t\t\t"data-odyssey-panel-right": "closed",
+\t\t\t\t"data-odyssey-panel-bottom": "closed",
+\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t\tclassName: sidebar_module_css_default.toggleCluster,
+\t\t\t\t\trole: "group",
+\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+\t\t\t\t\t\tlabel: t("expand"),
+\t\t\t\t\t\tside: "bottom",
+\t\t\t\t\t\tdelayMs: 500,
+\t\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\tclassName: sidebar_module_css_default.toggleButton,
+\t\t\t\t\t\t\t"data-odyssey-panel-entry": "right",
+\t\t\t\t\t\t\t"aria-label": t("expand"),
+\t\t\t\t\t\t\t"aria-expanded": false,
+\t\t\t\t\t\t\tonClick: () => {
+\t\t\t\t\t\t\t\tctx.workspaces.startSession(void 0, (nextSessionId) => {
+\t\t\t\t\t\t\t\t\tstore.reduceFor(nextSessionId, (current) => current.panelOpen ? current : { ...current, panelOpen: true });
+\t\t\t\t\t\t\t\t\twindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId: nextSessionId } }));
+\t\t\t\t\t\t\t\t});
+\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelRightOutline16, { active: false })
+\t\t\t\t\t\t})
+\t\t\t\t\t})
+\t\t\t\t})
+\t\t\t});`,
+    'Figma no-session panel entry')
+
+  source = replaceExact(source,
+    '\t\t\treturn /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t"data-dsh-panel-host": true,',
+    `\t\t\t${FIGMA_PANEL_LAYOUT_PATCH_MARKER}\n\t\t\tconst showBottomToggle = !narrow && state.panelOpen;\n\t\t\treturn /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t"data-dsh-panel-host": true,\n\t\t\t\t"data-odyssey-panel-right": state.panelOpen ? "open" : "closed",\n\t\t\t\t"data-odyssey-panel-bottom": state.bottomOpen ? "open" : "closed",`,
+    'Figma panel host state')
+  source = replaceExact(source,
+    '\t\t\t\t\t\tchildren: [!narrow && /* @__PURE__ */',
+    '\t\t\t\t\t\tchildren: [showBottomToggle && /* @__PURE__ */',
+    'Figma bottom entry visibility')
+  source = replaceExact(source,
+    '\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.toggleButton,\n\t\t\t\t\t\t\t\t"aria-label": state.bottomOpen ? t("collapseBottomPanel") : t("expandBottomPanel"),',
+    '\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.toggleButton,\n\t\t\t\t\t\t\t\t"data-odyssey-panel-entry": "bottom",\n\t\t\t\t\t\t\t\t"aria-controls": "odyssey-bottom-workspace-panel",\n\t\t\t\t\t\t\t\t"aria-expanded": state.bottomOpen,\n\t\t\t\t\t\t\t\t"aria-label": state.bottomOpen ? t("collapseBottomPanel") : t("expandBottomPanel"),',
+    'Figma bottom entry semantics')
+  source = replaceExact(source,
+    '\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.toggleButton,\n\t\t\t\t\t\t\t\t"aria-label": state.panelOpen ? t("collapse") : t("expand"),',
+    '\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.toggleButton,\n\t\t\t\t\t\t\t\t"data-odyssey-panel-entry": "right",\n\t\t\t\t\t\t\t\t"aria-controls": "odyssey-right-workspace-panel",\n\t\t\t\t\t\t\t\t"aria-expanded": state.panelOpen,\n\t\t\t\t\t\t\t\t"aria-label": state.panelOpen ? t("collapse") : t("expand"),',
+    'Figma right entry semantics')
+  source = replaceExact(source,
+    '\t\t\t\t\t/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tref: panelRef,',
+    '\t\t\t\t\t/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tid: "odyssey-right-workspace-panel",\n\t\t\t\t\t\t"aria-hidden": !state.panelOpen,\n\t\t\t\t\t\tref: panelRef,',
+    'Figma right panel identity')
+  source = replaceExact(source,
+    '\t\t\t\t\t!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tref: bottomRef,',
+    '\t\t\t\t\t!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tid: "odyssey-bottom-workspace-panel",\n\t\t\t\t\t\t"aria-hidden": !state.bottomOpen,\n\t\t\t\t\t\tref: bottomRef,',
+    'Figma bottom panel identity')
+  source = replaceExact(source,
+    '\t\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.bottomClose,\n\t\t\t\t\t\t\t\t\t"aria-label": t("collapseBottomPanel"),',
+    '\t\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.bottomClose,\n\t\t\t\t\t\t\t\t\t"aria-controls": "odyssey-bottom-workspace-panel",\n\t\t\t\t\t\t\t\t\t"aria-expanded": state.bottomOpen,\n\t\t\t\t\t\t\t\t\t"aria-label": t("collapseBottomPanel"),',
+    'Figma bottom close semantics')
+  return source
+}
+
 export function patchBetterSidebarClient(source) {
-  let next = patchPanelToggleGlyphs(source)
+  let next = patchFigmaPanelLayout(patchPanelToggleGlyphs(source))
 
   if (!next.includes(RESEARCH_GENERATION_FOCUS_PATCH_MARKER)) {
     next = replaceExact(next,
