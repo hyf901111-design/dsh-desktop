@@ -945,6 +945,14 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it.each(['不要使用 web_search，使用示例数据', '不调用 financial_query，只使用给定数据'])('keeps explicitly forbidden tools disabled: %s', async query => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start(query)
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual([])
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    await handle.dispose()
+  })
+
   it('bounds a stuck research child and carries only its search evidence into recovery', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     vi.useFakeTimers()
