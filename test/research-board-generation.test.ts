@@ -3,6 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { ResearchBoardIntegration } from '../src/main/research-board-integration'
+import { createDocument, projectDocument, mergeDocumentUpdate } from '../packages/dsh-research-collaboration/document.js'
+import { fromBase64 } from '../packages/dsh-research-collaboration/protocol.js'
 
 const roots: string[] = []
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }) })
@@ -37,17 +39,49 @@ it('restarts an explicitly retried request under current authority after sharing
   service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: { files: [], artifacts: [] } } } })) as any
   const intent = { text: '重新生成计数器', context: { scope: 'board', references: [] }, targetId: 'removed', targetCollection: 'artifacts', source: 'manual' }
   const key = integration.journal.prepare('user', 'board', 'old', intent, 1)
-  integration.journal.update(key, { runtimeState: 'interrupted', reply: { taskId: 'old-task', requestMessageId: 'old-message' } })
+  integration.journal.update(key, { runtimeState: 'superseded', reply: { taskId: 'old-task', requestMessageId: 'old-message' }, restart: { epoch: 3, mutation: 'previous-chat-retry', intent: { text: intent.text, context: intent.context, source: 'manual' } } })
+  expect(integration.requests('user', 'board')[0]!.runtimeState).toBe('interrupted')
   const submit = vi.spyOn(integration, 'submit').mockImplementation(async i => ({ accepted: true, clientMutationId: i.clientMutationId, taskId: 'new-task' }))
   await integration.retry('user', 'board', 'old', new AbortController().signal)
   await integration.retry('user', 'board', 'old', new AbortController().signal)
   const first = submit.mock.calls[0]![0], second = submit.mock.calls[1]![0]
   expect(first).toMatchObject({ accountId: 'user', boardId: 'board', text: intent.text, source: 'manual' })
-  expect(first.targetId).toBeUndefined()
+  expect(first.targetId).toBeTruthy()
+  expect(first.targetId).not.toBe('removed')
+  expect(first.replacementUpdate).toBeTruthy()
   expect(first.clientMutationId).not.toBe('old')
   expect(second.clientMutationId).toBe(first.clientMutationId)
   expect(integration.journal.get(key)).toMatchObject({ epoch: 1, runtimeState: 'superseded' })
+  expect(integration.requests('user', 'board')[0]!.runtimeState).toBe('superseded')
   expect(service.taskAuthority).toHaveBeenCalledWith('user', 'board', undefined, true)
+})
+
+it('creates and fills a new canvas component when the old retry target was deleted, preserving existing components', async () => {
+  const { integration, service, canvas, runtimeRequest } = await fixture()
+  const doc = createDocument(canvas)
+  const commands: any[] = []
+  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: projectDocument(doc) } } })) as any
+  ;(integration as any).options.client.request = async ({ body }: any) => {
+    commands.push(body)
+    const reply: any = { action: body.action, operationId: body.operationId, seq: commands.length }
+    if (body.action === 'update') mergeDocumentUpdate(doc, fromBase64(body.update), new Set())
+    if (body.action === 'message') reply.message = { id: 'new-message', text: body.text, context: body.context }
+    if (body.action === 'taskCreate') reply.task = { taskId: 'new-task', requestMessageId: body.requestMessageId, targetId: body.targetId, targetCollection: body.targetCollection }
+    if (body.action === 'taskClaim') reply.leaseToken = 'lease', reply.task = { contextSnapshot: { canvas: projectDocument(doc), history: [], messages: [{ id: 'new-message', text: '重新生成计数器', context: { scope: 'board', references: [] } }] } }
+    return reply
+  }
+  runtimeRequest.mockResolvedValue({ status: 'completed', text: JSON.stringify({ version: 1, type: 'html', title: '计数器', content: '<button>加一</button>' }) } as any)
+  const key = integration.journal.prepare('user', 'board', 'old', { text: '重新生成计数器', context: { scope: 'board', references: [] }, targetId: 'removed', targetCollection: 'artifacts', source: 'manual' }, 1)
+  integration.journal.update(key, { runtimeState: 'interrupted', reply: { taskId: 'old-task' } })
+  await integration.retry('user', 'board', 'old', new AbortController().signal)
+  await vi.waitFor(() => expect(commands.some(c => c.action === 'taskResult')).toBe(true))
+  expect(runtimeRequest.mock.calls[0]![1]).toMatchObject({ kind: 'container', query: '重新生成计数器' })
+  const result = commands.find(c => c.action === 'taskResult')
+  expect(result.node).toMatchObject({ kind: 'generated-container', generationStatus: 'completed', containerSpec: { type: 'html', title: '计数器' } })
+  expect(result.node.id).not.toBe('removed')
+  expect(projectDocument(doc).artifacts.find((n: any) => n.id === 'node')).toEqual(canvas.artifacts[0])
+  expect(commands.filter(c => c.action === 'update')).toHaveLength(1)
+  doc.destroy()
 })
 
 it('does not restart old requests after current edit access is revoked', async () => {
