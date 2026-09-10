@@ -248,9 +248,11 @@ const t = (s: string, values: Record<string, unknown> = {}) =>
 function FixtureDiscussion({ sessionId, children }: any) {
   const [conversationHost, setConversationHost] = React.useState(null)
   const [composerHost, setComposerHost] = React.useState(null)
+  const [active, setActive] = React.useState(true)
+  React.useEffect(() => { win.fixture.setResearchPanelActive = setActive }, [])
   return h('div', { className: 'fixture-discussion' },
     h(mod.__ResearchConversationPanel, {
-      active: true, sessionId, researchWorkspaces: registry,
+      active, sessionId, researchWorkspaces: registry,
       conversationHostRef: setConversationHost, composerHostRef: setComposerHost
     }),
     conversationHost && ReactDOM.createPortal(children[0], conversationHost),

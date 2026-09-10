@@ -61,6 +61,7 @@ export type PageDependencies = {
 }
 export { selectionNodeReady } from './research-board-presentation'
 import { boardEditTime, boardTaskStatus, boardTaskAttempts } from './research-board-presentation'
+export { followResearchConversation } from './research-conversation-follow'
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   selectedBoardSession,

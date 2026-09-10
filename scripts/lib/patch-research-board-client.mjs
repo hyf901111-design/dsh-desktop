@@ -480,13 +480,47 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
-  if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return chromePatch(source)
+  if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return entryPatch(chromePatch(source))
   source = replace(
     source,
     'node.kind !== "generated-container" && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)',
     'sherlockBoardsPage.selectionNodeReady(node) && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)'
   )
-  return chromePatch(source + '\n/* SHERLOCK_BOARD_POLISH_V1 */')
+  return entryPatch(chromePatch(source + '\n/* SHERLOCK_BOARD_POLISH_V1 */'))
+}
+function entryPatch(source) {
+  if (source.includes('/* SHERLOCK_RESEARCH_ENTRY_V1 */')) return source
+  source = replace(source,
+    'function ResearchConversationPanel({ active, sessionId, presentation, researchWorkspaces, conversationHostRef, composerHostRef }) {\n\t\t\tconst panelRef = (0, react.useRef)(null);',
+    `function ResearchConversationPanel({ active, sessionId, presentation, researchWorkspaces, conversationHostRef, composerHostRef }) {
+            const panelRef = (0, react.useRef)(null);
+            (0, react.useLayoutEffect)(() => {
+                if (active && panelRef.current) return sherlockBoardsPage.followResearchConversation(panelRef.current);
+            }, [active, sessionId]);`)
+  source = replace(source,
+    'if (!sessionId) return;\n                let active = true, timer;',
+    'if (!sessionId || sherlockShared(sessionId)) return;\n                let active = true, timer;')
+  source = replace(source,
+    'workbenchActions.current = resolvedActions;',
+    `workbenchActions.current = resolvedActions;
+            const sharedWorkbenchSeen = (0, react.useRef)({ sessionId, ids: new Set() });
+            (0, react.useEffect)(() => {
+                if (!sherlockShared(sessionId) || !sherlockBoardsAdapter) return;
+                if (sharedWorkbenchSeen.current.sessionId !== sessionId) sharedWorkbenchSeen.current = { sessionId, ids: new Set() };
+                const view = sherlockBoardsAdapter.getView(sessionId);
+                const userId = sherlockBoardsAdapter.getState().account.user?.userId;
+                for (const node of researchWorkspaceSnapshot2.artifacts ?? []) {
+                    if (!node.workbenchId || sharedWorkbenchSeen.current.ids.has(node.workbenchId)) continue;
+                    const task = view?.tasks.find(t => t.targetId === node.id);
+                    if (!task) continue;
+                    sharedWorkbenchSeen.current.ids.add(node.workbenchId);
+                    const request = view?.messages.find(m => m.id === task.requestMessageId);
+                    if (request?.author?.userId === userId && ['queued','running'].includes(node.generationStatus)) {
+                        setWorkbenchFocus(node.workbenchId); workbenchActions.current.setView?.('research');
+                    }
+                }
+            }, [sessionId, researchWorkspaceSnapshot2.artifacts]);`)
+  return source + '\n/* SHERLOCK_RESEARCH_ENTRY_V1 */'
 }
 function chromePatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_CHROME_V1 */')) return source

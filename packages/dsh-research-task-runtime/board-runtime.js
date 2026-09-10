@@ -30,7 +30,7 @@ export class SharedExecutionRuntime {
     if (
       !/^[\w:.-]{1,128}$/.test(taskId) ||
       typeof sessionId !== 'string' ||
-      !['qa', 'container', 'create', 'summary', 'mind-map'].includes(kind) ||
+      !['qa', 'board', 'container', 'create', 'summary', 'mind-map'].includes(kind) ||
       typeof prompt !== 'string' ||
       (request.query !== undefined && (typeof request.query !== 'string' || !request.query.trim() || Buffer.byteLength(request.query) > 16384)) ||
       !prompt.trim() ||

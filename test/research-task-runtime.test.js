@@ -1848,6 +1848,42 @@ it('default shared executor uses the production subagent adapter for QA and nati
   }
 })
 
+it('exposes the existing workbench tool only to a leased board planner and returns a plan without unleased local children', async () => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  const { registerWorkbench } = await import('../packages/dsh-research-task-runtime/workbench.js')
+  const dir = await mkdtemp(join(tmpdir(), 'shared-workbench-tool-'))
+  const parent = { id: 'shared-parent', session: { events: [] } }, child = { id: 'planner-child', session: { id: 'planner-child', events: [] } }
+  let finish, tool
+  const run = { id: child.id, localAgent: child, result: new Promise(r => { finish = r }), dispose: vi.fn(async () => {}) }
+  const ctx = sessionEventContext(parent, child, run)
+  ctx.tools = { register: t => { tool = t; return () => {} } }
+  ctx.webServer = { register: () => () => {} }
+  const on = vi.spyOn(ctx, 'on'), unleasedStart = vi.fn()
+  const disposeTool = await registerWorkbench(ctx, { start: unleasedStart }, { filePath: join(dir, 'plans.json'), isTrustedRequest: () => true, readJsonBody: async () => ({}) })
+  const executor = createSharedBoardExecutor(ctx)
+  try {
+    const pending = executor.execute({ taskId: 'leased-task', sessionId: parent.id, kind: 'board', query: '创建两个离线面板', prompt: '创建两个离线面板' }, new AbortController().signal)
+    await vi.waitFor(() => expect(on).toHaveBeenCalled())
+    const config = ctx.subagents.start.mock.calls[0][1]
+    expect(config.toolFilter.allow).toContain('research_workbench_create')
+    expect(config.persona).toContain('具有共享画布编辑权限')
+    const input = { requestId: 'stable', title: '双面板', panels: [0,1].map(i => ({ title: `面板${i}`, prompt: '原生 HTML 离线计数器', type: 'html', size: 'small' })) }
+    const exec = { agent: child, signal: new AbortController().signal }
+    expect(await tool.execute(input, exec)).toMatchObject({ planId: 'leased-task', status: 'accepted' })
+    await tool.execute(input, exec)
+    expect(unleasedStart).not.toHaveBeenCalled()
+    finish({ stopReason: 'completed', output: [] })
+    expect(JSON.parse(await pending)).toMatchObject({ type: 'workbench-plan', plan: { title: '双面板', panels: [{ title: '面板0' }, { title: '面板1' }] } })
+    expect(run.dispose).toHaveBeenCalledOnce()
+    await expect(tool.execute(input, exec)).rejects.toThrow('研究会话不可用')
+  } finally {
+    finish({ stopReason: 'completed', output: [] })
+    await executor.dispose()
+    await disposeTool()
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 it('shared component generation repairs a malformed HTML response once without repeating research', async () => {
   const { createSharedBoardExecutor } = await runtimeModule()
   const parent = { id: 'shared-parent', session: { events: [] } }

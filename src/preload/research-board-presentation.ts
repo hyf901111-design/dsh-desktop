@@ -1,11 +1,17 @@
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 
 /** Retried requests show their current state once; prior attempts remain inspectable. */
-export function boardTaskAttempts<T extends { createdAt?: number }>(tasks: T[]) {
+export function boardTaskAttempts<T extends { createdAt?: number; targetId?: string | null }>(tasks: T[]) {
   const ordered = tasks.map((task, index) => ({ task, index }))
     .sort((a, b) => (b.task.createdAt ?? 0) - (a.task.createdAt ?? 0) || b.index - a.index)
     .map(({ task }) => task)
-  return { current: ordered.slice(0, 1), previous: ordered.slice(1) }
+  const current: T[] = [], previous: T[] = [], targets = new Set<string | null>()
+  for (const task of ordered) {
+    const target = task.targetId ?? null
+    if (targets.has(target)) previous.push(task)
+    else { targets.add(target); current.push(task) }
+  }
+  return { current, previous }
 }
 
 export function boardTaskStatus(task: { status: string; failureCode?: unknown }) {
