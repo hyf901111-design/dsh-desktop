@@ -7049,14 +7049,17 @@ describe('Sherlock workspace and composer controls', () => {
     } finally { await mounted.cleanup() }
   })
 
-  it('keeps chart geometry stable across repeated arrange with a viewport-filling chart', async () => {
+  it.each(['chart', 'table'])('keeps %s geometry stable across repeated arrange with viewport-filling content', async (type) => {
+    const spec = type === 'chart'
+      ? { version: 1, type, title: '趋势', variant: 'line', labels: ['一月', '二月'], series: [{ name: '指数', values: [100, 102] }] }
+      : { version: 1, type, title: '趋势', columns: ['月份', '指数'], rows: [['一月', 100], ['二月', 102]] }
     const mounted = await mountResearchCanvas({ sessionId: 'arrange-stable-chart', artifacts: [
-      { id: 'chart', kind: 'generated-container', messageId: 'chart', title: '趋势', excerpt: '趋势', x: 100, y: 100, width: 720, height: 600, sizeMode: 'manual', generationStatus: 'completed', refreshMinutes: 0, containerPrompt: '走势图', containerSpec: { version: 1, type: 'chart', title: '趋势', variant: 'line', labels: ['一月', '二月'], series: [{ name: '指数', values: [100, 102] }] } }
+      { id: 'chart', kind: 'generated-container', messageId: 'chart', title: '趋势', excerpt: '趋势', x: 100, y: 100, width: 720, height: 600, sizeMode: 'manual', generationStatus: 'completed', refreshMinutes: 0, containerPrompt: '走势图', containerSpec: spec }
     ] })
     try {
       const { host, workspace, canvas, browserWindow } = mounted
       const content = host.querySelector('[data-research-artifact-card="chart"] .rScV5Q_containerContent')!
-      // Chart content fills the existing frame; it is not an intrinsic text height.
+      // Responsive content can fill the existing frame without overflowing it.
       Object.defineProperty(content, 'scrollHeight', { configurable: true, get: () => Number(workspace.getSnapshot().artifacts[0]!.height) - 66 })
       const arrange = async () => {
         await act(async () => { canvas.dispatchEvent(new browserWindow.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 460, clientY: 320 })) })
