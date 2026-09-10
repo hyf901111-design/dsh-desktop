@@ -50,6 +50,8 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .wSkVaW_tab { box-sizing:border-box; min-width:56px; height:28px; padding:4px 15px; border-radius:7px; font:400 13px/20px var(--odyssey-font-ui); }
 .wSkVaW_tabActive { background:var(--odyssey-active-fill); color:var(--odyssey-active); font-weight:500; }
 .wSkVaW_tab:after { display:none; }
+/* Figma 284:513 / 880: the Research header has no divider stroke. */
+.wSkVaW_root:has(.rScV5Q_root) .wSkVaW_header:after { display:none; }
 .rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
 .sRp_root,.sRp_body { background:transparent !important; }
 .sRp_conversation { display:flex; flex-direction:column; gap:4px; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
@@ -85,7 +87,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .t8lSSG_panel:before { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-2; pointer-events:none; background: url('/figma-glass-light-mesh.png') center/1136px 1136px, url('/figma-glass-light-base.png') right center/1088px 880px; }
 .t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(16px); }
 [data-ds-dark-theme] .t8lSSG_panel:before { background: url('/figma-glass-dark-overlay.png') right center/1122px 1122px, url('/figma-glass-dark-mesh.png') right center/1202px 1202px, url('/figma-glass-dark-base.png') right center/1088px 880px; }
-.t8lSSG_panel .t8lSSG_tabBar { height:44px; box-sizing:border-box; padding:7px 8px; background:transparent; border-bottom:0; gap:4px; }
+.t8lSSG_panel .t8lSSG_tabBar { height:44px; box-sizing:border-box; padding:7px 8px; background:transparent; border-bottom:0; gap:6px; }
 .t8lSSG_panel .t8lSSG_tab { border:0; min-width:46px; height:30px; border-radius:7px; padding:0 6px 0 8px; font:400 12px/20px var(--odyssey-font-ui); }
 .t8lSSG_panel .t8lSSG_tabActive { background:var(--odyssey-active-fill); font-weight:500; }
 .t8lSSG_panel .t8lSSG_tabList { gap:4px; }
@@ -137,7 +139,7 @@ body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlo
 .sRp_composer .FJxK0a_root { display:none; }
 .t8lSSG_panel .t8lSSG_tabBar { padding-top:6px; padding-bottom:6px; }
 .t8lSSG_panel .t8lSSG_tabList { height:32px; align-items:flex-start; }
-.t8lSSG_panel .t8lSSG_tabList>div:has(>.t8lSSG_tabBarPlus) { margin-left:auto; flex:none; align-self:center; }
+.t8lSSG_panel .t8lSSG_tabBar>:has(>.t8lSSG_tabBarPlus) { flex:0 0 28px; align-self:center; }
 .t8lSSG_panel .t8lSSG_tabBarPlus { width:28px; height:28px; border-radius:7px; background:transparent; }
 
 /* Figma 284:710–713 / 1078–1081: conversation text retains Noto, independently of DIN component numerals. */

@@ -26,6 +26,35 @@ function replaceExact(source, before, after, label, expectedCount = 1) {
   return source.split(before).join(after)
 }
 
+// Keep the new-tab menu outside the horizontal scroller. A sticky transparent
+// trigger inside that scroller allows long tab titles to paint beneath it.
+function patchTabBarMenuLayout(source) {
+  const marker = '/* sherlock:tabbar-independent-menu:v1 */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('\t\tfunction TabBar(props) {')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  if (start < 0 || end < 0) throw new Error('Unable to patch Better Sidebar TabBar layout boundary')
+  let tabBar = source.slice(start, end)
+  tabBar = replaceExact(tabBar,
+    'return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: clsx(sidebar_module_css_default.tabBar,',
+    'return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\tclassName: clsx(sidebar_module_css_default.tabBar,',
+    'TabBar sibling render')
+  tabBar = replaceExact(tabBar,
+    '\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\tref: listRef,\n\t\t\t\t\tclassName: sidebar_module_css_default.tabList,\n\t\t\t\t\tchildren: [tabs.map(',
+    '\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\tref: listRef,\n\t\t\t\t\tclassName: sidebar_module_css_default.tabList,\n\t\t\t\t\tchildren: tabs.map(',
+    'TabBar scrollable tabs')
+  tabBar = replaceExact(tabBar,
+    '\t\t\t\t\t}, tab.id); }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {',
+    '\t\t\t\t\t}, tab.id); })\n\t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {',
+    'TabBar independent menu')
+  tabBar = replaceExact(tabBar,
+    '\t\t\t\t\t})]\n\t\t\t\t})\n\t\t\t});',
+    '\t\t\t\t\t})]\n\t\t\t});',
+    'TabBar sibling closure')
+  tabBar = tabBar.replace('function TabBar(props) {', 'function TabBar(props) {\n\t\t\t' + marker)
+  return source.slice(0, start) + tabBar + source.slice(end)
+}
+
 /**
  * Extend the bundled Better Sidebar runtime with the small host contract used
  * by Research mode. The transform is deliberately exact so a plugin upgrade
@@ -165,7 +194,7 @@ export function patchBetterSidebarClient(source) {
     'committed panel surface dimensions'
   )
 
-  if (source.includes(PATCH_MARKER)) return next
+  if (source.includes(PATCH_MARKER)) return patchTabBarMenuLayout(next)
 
   const moveBefore = `\t\t\t\t\tconst insertAt = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
   const moveAfter = `\t\t\t\t\tconst requestedIndex = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tconst pinnedCount = leaf.tabs.filter((tab) => tab.meta?.sherlockPinned === true).length;\n\t\t\t\t\tconst insertAt = moved.meta?.sherlockPinned === true ? 0 : Math.max(pinnedCount, requestedIndex);\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
@@ -230,7 +259,7 @@ export function patchBetterSidebarClient(source) {
     'tab render closure'
   )
 
-  return next
+  return patchTabBarMenuLayout(next)
 }
 
 export async function patchBetterSidebarPackage(packageRoot) {
