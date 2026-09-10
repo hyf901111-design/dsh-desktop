@@ -149,9 +149,9 @@ describe('EWork Odyssey About settings', () => {
     const zh = aboutModule.buildSherlockAboutInfo('9.8.7', 'zh')
     const en = aboutModule.buildSherlockAboutInfo('9.8.7', 'en')
 
-    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.9.2', date: '2026-09-08' })
-    expect(en.releaseNotes[0]?.version).toBe('0.9.2')
-    expect(zh.releaseNotes[0]?.items.some((item) => item.includes('基金对比'))).toBe(true)
+    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.9.5', date: '2026-09-09' })
+    expect(en.releaseNotes[0]?.version).toBe('0.9.5')
+    expect(zh.releaseNotes[0]?.items.some((item) => item.includes('模式'))).toBe(true)
     expect(zh.releaseNotes.find((note) => note.version === '0.8.4')).toMatchObject({ version: '0.8.4', date: '2026-09-06' })
     expect(en.releaseNotes.find((note) => note.version === '0.8.4')?.items).toHaveLength(3)
     expect(zh.releaseNotes.find((note) => note.version === '0.8.3')).toMatchObject({ version: '0.8.3', date: '2026-09-06' })
@@ -212,7 +212,7 @@ describe('EWork Odyssey About settings', () => {
 
     const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
     const lockfile = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'))
-    expect(manifest.version).toBe(zh.releaseNotes[0]?.version)
+    expect(aboutModule.buildSherlockAboutInfo(manifest.version, 'zh').releaseNotes[0]?.version).toBe(manifest.version)
     expect(lockfile.version).toBe(manifest.version)
     expect(lockfile.packages[''].version).toBe(manifest.version)
 
@@ -299,7 +299,7 @@ describe('EWork Odyssey About settings', () => {
     }
   })
 
-  it('shows a download action beside check and follows live download and restart state', async () => {
+  it('uses one update control and follows real download and automatic verification state', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/settings/about' })
     const restoreGlobals = installBrowserGlobals(browserWindow)
     let listener: ((status: UpdateStatus) => void) | undefined
@@ -323,10 +323,10 @@ describe('EWork Odyssey About settings', () => {
       await act(async () => host.querySelector<HappyButton>('[data-about-check-update]')!.click())
       const download = host.querySelector<HappyButton>('[data-about-download-update]')
       expect(download).not.toBeNull()
-      expect(download?.parentElement).toBe(host.querySelector('[data-about-check-update]')?.parentElement)
+      expect(host.querySelector('[data-about-check-update]')).toBeNull()
       await act(async () => listener?.({ ...available, phase: 'downloading', percent: 42, transferredBytes: 42000000, totalBytes: 100000000 }))
-      expect(host.textContent).toContain('about.downloading')
-      expect(host.textContent).toContain('42.0 MB / 100.0 MB')
+      expect(host.textContent).toContain('about.downloadStatus')
+      expect(host.querySelector('[data-about-update-phase]')?.getAttribute('data-about-update-phase')).toBe('downloading')
       await act(async () => listener?.({ ...available, phase: 'downloading', percent: 0 }))
       expect(host.textContent).not.toContain('42.0 MB')
       expect(host.querySelector('[data-about-download-update]')).toBeNull()
@@ -334,9 +334,11 @@ describe('EWork Odyssey About settings', () => {
       await act(async () => host.querySelector<HappyButton>('[data-about-download-update]')!.click())
       expect(downloadUpdate).toHaveBeenCalledOnce()
       expect(installUpdate).not.toHaveBeenCalled()
-      expect(host.querySelector('[data-about-install-update]')).not.toBeNull()
-      await act(async () => host.querySelector<HappyButton>('[data-about-install-update]')!.click())
-      expect(installUpdate).toHaveBeenCalledOnce()
+      expect(host.querySelector('[data-about-install-update]')).toBeNull()
+      expect(host.textContent).toContain('about.verifying')
+      expect(host.querySelector<HappyButton>('.sherlock-about-check')?.disabled).toBe(true)
+      expect(host.querySelector('.sherlock-about-action-icon[data-loading=true]')).not.toBeNull()
+      expect(installUpdate).not.toHaveBeenCalled()
     } finally {
       await act(async () => root.unmount())
       restoreGlobals()

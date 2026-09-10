@@ -8,6 +8,7 @@ export type UpdateStateEvent =
       percent: number
       transferredBytes?: number
       totalBytes?: number
+      bytesPerSecond?: number
     }
   | { type: 'downloaded'; version: string }
   | { type: 'install' }
@@ -40,7 +41,8 @@ export function reduceUpdateStatus(
         phase: 'downloading',
         percent: clampPercent(event.percent),
         transferredBytes: validBytes(event.transferredBytes),
-        totalBytes: validBytes(event.totalBytes)
+        totalBytes: validBytes(event.totalBytes),
+        bytesPerSecond: validBytes(event.bytesPerSecond)
       }
     case 'downloaded':
       return { ...base, phase: 'downloaded', availableVersion: event.version }
