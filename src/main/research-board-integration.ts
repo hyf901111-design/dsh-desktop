@@ -111,11 +111,12 @@ export class ResearchBoardIntegration {
         if (error instanceof ResearchBoardsError) throw error
         const message = error instanceof Error ? error.message : ''
         const match =
-          /^(RESOURCE_UNAVAILABLE|HISTORY_TOO_LARGE|HISTORY_UNSUPPORTED_ATTACHMENT|HISTORY_UNSAVED|ASSET_SIZE_LIMIT|SOURCE_CHANGED|PRIVATE_PATH_IN_HISTORY|DESTINATION_NOT_EMPTY|DESTINATION_NOT_FRESH|DESTINATION_CHANGED|COPY_FINALIZING)(?:: (.*))?$/.exec(
+          /^(BOARD_BUSY|RESOURCE_UNAVAILABLE|HISTORY_TOO_LARGE|HISTORY_UNSUPPORTED_ATTACHMENT|HISTORY_UNSAVED|ASSET_SIZE_LIMIT|SOURCE_CHANGED|PRIVATE_PATH_IN_HISTORY|DESTINATION_NOT_EMPTY|DESTINATION_NOT_FRESH|DESTINATION_CHANGED|COPY_FINALIZING)(?:: (.*))?$/.exec(
             message
           )
         if (!match) throw error
         const labels: Record<string, string> = {
+          BOARD_BUSY: '请先等待当前研究执行完成，再放回工作区',
           RESOURCE_UNAVAILABLE: '引用资料无法授权或已丢失',
           HISTORY_TOO_LARGE: '完整研究对话超过共享上限，未截断上传',
           HISTORY_UNSUPPORTED_ATTACHMENT:
@@ -137,6 +138,7 @@ export class ResearchBoardIntegration {
       }
     }
     this.hooks = {
+      directory: (input, signal) => guarded(() => this.directory(input, signal)),
       captureOriginal: (i) => guarded(() => this.snapshots.capture(i)),
       previewCapture: (i) => guarded(() => this.snapshots.preview(i)),
       materializeBoard: (i) => this.materialize(i),
@@ -163,6 +165,29 @@ export class ResearchBoardIntegration {
       requestRetry: (a, b, m, s) => this.retry(a, b, m, s),
       taskAction: (a, b, t, action, s) => this.taskAction(a, b, t, action, s)
     }
+  }
+  async directory(input: any, signal: AbortSignal) {
+    const result = await this.runtime('directory', input, signal)
+    if (input.mode === 'workspace' && result.localSessionId !== input.sessionId && !this.options.service().isSharedSession(input.sessionId)) {
+      const canvas = structuredClone(this.readOriginal(input.sessionId))
+      await this.snapshots.cloneLocalImport(input.sessionId, result.localSessionId)
+      const files = new FrozenBoardFiles(join(result.path, '资料'))
+      for (const node of canvas.files) {
+        const source = await this.resolveSource(input.sessionId, node)
+        if (!source) throw Error('研究资料暂不可用，原看板已保留。')
+        const frozen = await files.freeze(source.path, String(node.name ?? source.name ?? '资料'), signal, 'contentType' in source ? String(source.contentType) : undefined)
+        const path = files.path(frozen)
+        const grant = await this.options.registry.admitFinder({ path, sessionId: result.localSessionId, nodeId: node.id })
+        delete node.authorizationId
+        delete node.assetId
+        Object.assign(node, { path, source: 'computer' })
+        if (grant) Object.assign(node, { authorizationId: grant.authorizationId, contentType: grant.contentType })
+        else node.previewEligible = false
+      }
+      for (const kind of ['files', 'artifacts'] as const)
+        if (!this.options.storage.setItem(`sherlock.research.canvas.${kind}.v1:${result.localSessionId}`, JSON.stringify(canvas[kind]))) throw Error('STORAGE_UNAVAILABLE')
+    }
+    return result
   }
   async personalContext(sessionId: string) {
     const imported = this.snapshots.importFor(sessionId)
@@ -227,6 +252,7 @@ export class ResearchBoardIntegration {
       return this.options.runtimeRequest(action, body, signal)
     if (
       ![
+        'directory',
         'history',
         'fresh',
         'fresh-check',

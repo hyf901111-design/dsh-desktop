@@ -71,13 +71,14 @@ export async function handleRequest(request, env, ctx) {
     if (path === '/boards' && request.method === 'GET') {
       const rows = await sql(
         env,
-        "SELECT b.state,m.role FROM research_boards b JOIN board_members m ON m.board_id=b.id WHERE m.user_id=? AND m.status='active' ORDER BY b.created_at DESC",
+        "SELECT b.state,m.role,(SELECT COUNT(*) FROM board_members a WHERE a.board_id=b.id AND a.status='active') AS member_count FROM research_boards b JOIN board_members m ON m.board_id=b.id WHERE m.user_id=? AND m.status='active' ORDER BY b.created_at DESC",
         user.id
       ).all()
       return json({
         boards: rows.results.map((r) => ({
           ...JSON.parse(r.state).board,
-          role: r.role
+          role: r.role,
+          memberCount: r.member_count
         }))
       })
     }

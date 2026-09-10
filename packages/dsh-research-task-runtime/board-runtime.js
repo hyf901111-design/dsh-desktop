@@ -1,3 +1,4 @@
+import { BoardDirectories } from './board-directories.js'
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
@@ -154,8 +155,9 @@ export async function assertPrivateResearchSession(
 export function registerBoardRuntime(
   ctx,
   runtime,
-  { token = process.env.SHERLOCK_RESEARCH_BOARDS_TOKEN } = {}
+  { token = process.env.SHERLOCK_RESEARCH_BOARDS_TOKEN, directoryRoot = process.env.DSH_HOME } = {}
 ) {
+  const directories = directoryRoot ? new BoardDirectories(ctx, directoryRoot) : null
   const reservations = new Map()
   const release = (copyId) => {
     const r = reservations.get(copyId)
@@ -169,6 +171,7 @@ export function registerBoardRuntime(
   }
 
   const paths = [
+    'directory',
     'history',
     'fresh',
     'fresh-check',
@@ -177,7 +180,7 @@ export function registerBoardRuntime(
     'inspect',
     'cancel'
   ]
-  const disposed = []
+  const disposed = [() => directories?.dispose()]
   for (const action of paths)
     disposed.push(
       ctx.webServer.register({
@@ -219,7 +222,10 @@ export function registerBoardRuntime(
             }
             const input = JSON.parse(Buffer.concat(chunks).toString())
             let result
-            if (action === 'fresh-release') {
+            if (action === 'directory') {
+              if (!directories) throw Error('DIRECTORY_UNAVAILABLE')
+              result = await directories.run(input)
+            } else if (action === 'fresh-release') {
               const r = reservations.get(input.copyId)
               if (r && r.sessionId !== input.sessionId)
                 throw Error('DESTINATION_CHANGED')

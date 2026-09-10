@@ -1779,3 +1779,27 @@ it('records personal board content edits, preserves edit time on selection and i
   t.service.writeCanvasStorage(key, '[{"id":"note","x":10}]')
   expect(t.service.getSnapshot().favorites[0]!.updatedAt).toBe(stamp)
 })
+
+it('keeps sharing authority and refreshed file materialization when moving a board to a new workspace session', async () => {
+  const materialized: string[] = []
+  const t = make({
+    directory: async () => ({ localSessionId: 'workspace-session', path: '/workspace/board' }),
+    materializeBoard: async input => { materialized.push(input.localSessionId); return input.canvas }
+  })
+  await ready(t)
+  const input = { mode: 'workspace', sessionId: 'shared-session', title: 'Board', basePath: '/workspace' }
+  expect((await t.service.invoke('local.directory', input)).ok).toBe(true)
+  expect(t.store.account('u').bindings.board).toBe('workspace-session')
+  expect(t.service.isSharedSession('workspace-session')).toBe(true)
+  expect(t.service.isSharedSession('shared-session')).toBe(true)
+  expect(materialized.at(-1)).toBe('workspace-session')
+  expect((await t.service.invoke('local.directory', input)).ok).toBe(true)
+  await t.service.invoke('board.unpin', { boardId: 'board' })
+  await t.service.invoke('board.activate', { localSessionId: 'workspace-session' })
+  const view = t.service.getSnapshot().current!
+  const canvas = structuredClone(view.canvas)
+  canvas.artifacts[0]!.x = 80
+  expect((await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'workspace-session', baseRevision: view.canvasRevision, clientMutationId: 'after-move', canvas })).ok).toBe(true)
+  expect(t.service.getSnapshot().boards[0]?.pinned).toBe(false)
+  expect((await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'shared-session', baseRevision: view.canvasRevision, clientMutationId: 'old-session', canvas })).ok).toBe(false)
+})

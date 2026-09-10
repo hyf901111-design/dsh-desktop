@@ -132,9 +132,9 @@ const sessions: any = {
     list.set({ ...list.getSnapshot(), current: id })
     hub.setResearchActive(id, true)
   },
-  create: async () => {
+  create: async (options: any = {}) => {
     const id = crypto.randomUUID()
-    await rpc('fixture:session-create', id)
+    await rpc('fixture:session-create', id, options)
     const prior = list.getSnapshot()
     list.set({
       ...prior,
@@ -144,13 +144,18 @@ const sessions: any = {
           id,
           title: '新研究',
           displayTitle: '新研究',
-          cwd: '/fixture',
+          cwd: options.cwd ?? '/fixture',
           blank: true
         }
       },
       ids: [...prior.ids, id]
     })
     return id
+  },
+  refresh: async () => {
+    const items = await rpc('fixture:session-list')
+    const prior = list.getSnapshot()
+    list.set({ ...prior, ids: items.map((s: any) => s.id), byId: Object.fromEntries(items.map((s: any) => [s.id, { ...s, displayTitle: prior.byId[s.id]?.displayTitle ?? s.title }])) })
   },
   binding: (id: string) => {
     if (!bindings.has(id))
@@ -208,7 +213,7 @@ const slotsMap = new Map<string, any>(),
   }
 const page = mod.__page.createResearchBoardsPage({
   sessions,
-  workspaces: { list: ws },
+  workspaces: { list: ws, api: { host: { status: async () => ({ result: { ok: true, value: { cwd: await rpc('fixture:default-directory') } } }) } }, refresh: async () => ws.set({ items: [...ws.getSnapshot().items.filter((w: any) => w.workspaceId === 'workspace'), ...await rpc('fixture:workspace-list')] }), archiveSession: async (id: string) => { await rpc('fixture:session-archive', id); await sessions.refresh() } },
   researchWorkspaces: registry,
   inputHub: hub,
   slots,

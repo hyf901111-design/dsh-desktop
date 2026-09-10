@@ -8,6 +8,12 @@ import {
   patchResearchBoardSidebar,
   patchResearchBoardWorkspace
 } from '../scripts/lib/patch-research-board-client.mjs'
+// These tests exercise the page adapter; actual menu rendering is covered by
+// the two-renderer browser test using the real Workspace primitives.
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
+  Menu: () => null, IconEllipsisOutline16: () => null, IconSearchOutline16: () => null,
+  IconPersonalizationOutline16: () => null, IconPlusOutline16: () => null, IconEditOutline16: () => null
+}))
 const require = createRequire(import.meta.url)
 async function load(shared = true) {
   const window = new Window({ url: 'http://localhost/' })
@@ -830,7 +836,7 @@ it('upgrades the committed Task3 transform to gesture hooks without duplicate pa
   const path =
     process.cwd() +
     '/output/playwright/source-checks/task3-base-transform.mjs'
-  await writeFile(path, oldSource)
+  await writeFile(path, oldSource.replace(/external: \[.react.\]/, "external: ['react', '@deepseek-ai/dsh-client-ui-primitives']"))
   const old = await import(pathToFileURL(path).href + '?v=' + Date.now())
   const raw = await readFile(
     'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',

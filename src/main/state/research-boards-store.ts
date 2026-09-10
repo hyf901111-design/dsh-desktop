@@ -157,16 +157,24 @@ export class ResearchBoardsStore {
       change(s.accounts[id])
     })
   }
-  addFavorite(identity: ResearchIdentity): Favorite {
+  addFavorite(identity: ResearchIdentity, pinned = true, dedicated = false): Favorite {
     key(identity.sessionId)
     if (this.sharedSession(identity.sessionId))
       throw new ResearchBoardsError('BINDING_CONFLICT')
     const old = this.state.favorites.find(
       (f) => f.sessionId === identity.sessionId
     )
-    if (old) return clone(old)
+    if (old) {
+      if (pinned && old.pinned === false) {
+        this.transaction(s => { s.favorites.find(f => f.favoriteId === old.favoriteId)!.pinned = true })
+        return { ...clone(old), pinned: true }
+      }
+      return clone(old)
+    }
     const value = {
       ...identity,
+      pinned,
+      dedicated,
       favoriteId: randomUUID(),
       createdAt: Date.now()
     }
@@ -218,6 +226,17 @@ export class ResearchBoardsStore {
     this.updateAccount(accountId, (a) => {
       a.hidden = a.hidden.filter((id) => id !== boardId)
       if (!pinned) a.hidden.push(boardId)
+    })
+  }
+  rebind(accountId: string, boardId: string, previousId: string, sessionId: string) {
+    key(sessionId)
+    this.transaction(s => {
+      const account = s.accounts[accountId]
+      const existing = s.sharedSessions[sessionId]
+      if (account?.bindings[boardId] === sessionId && existing?.accountId === accountId && existing?.boardId === boardId) return
+      if (!account || account.bindings[boardId] !== previousId || existing) throw new ResearchBoardsError('BINDING_CONFLICT')
+      account.bindings[boardId] = sessionId
+      s.sharedSessions[sessionId] = { accountId, boardId, localSessionId: sessionId }
     })
   }
   bind(accountId: string, boardId: string, sessionId: string) {
