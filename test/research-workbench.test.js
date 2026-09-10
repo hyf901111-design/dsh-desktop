@@ -122,7 +122,8 @@ describe('研究工作台', () => {
         const client = await bundle(), workspace = client.createResearchWorkspaceSession(store(), 'sizes');
         workspace.applyWorkbench({ id: 'sizes', panels: planned.map((p,i) => ({ ...p, nodeId: `s${i}`, taskId: `t${i}` })) });
         workspace.updateNodeGeometry('s0', { height: 3500, sizeMode: 'auto' });
-        expect(workspace.getSnapshot().artifacts[0].height).toBe(3500);
+        // A tall automatic S card upgrades both axes to L; 320×456 is not a valid preset.
+        expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 656, height: 456, containerSizePreset: 'large', sizeMode: 'auto' });
         const times = workspace.getSnapshot().artifacts.map(p => p.workbenchRevealAt);
         expect(times[1]-times[0]).toBeGreaterThanOrEqual(500);
         workspace.organizeCanvas(new Map([['s0', {width: 720, height: 3500}]]));
@@ -130,6 +131,8 @@ describe('研究工作台', () => {
         expect(nodes.map(n=>n.height)).toEqual([456,220,456,456]);
         expect(nodes[0].containerPrompt).toBe(planned[0].prompt);
         expect(nodes.every(n=>n.width<=656&&n.height<=456)).toBe(true);
+        workspace.updateNodeGeometry('s0', { width: 420, height: 3500, sizeMode: 'manual' });
+        expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 420, height: 3500, sizeMode: 'manual' });
     });
     it('surfaces real search topics and public reports, omitting private reasoning and raw artifact code', async () => {
         const event = publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'web_search', arguments: JSON.stringify({ query: 'CDE 医药审批进展', token: 'private-token' }) } });

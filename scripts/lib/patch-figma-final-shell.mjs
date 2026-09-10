@@ -13,6 +13,27 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source, '(hero || researchEmpty) && heroWorkspaceRow', '(hero || research || researchEmpty) && heroWorkspaceRow')
   source = exact(source, 'const composerSurface = (0, react_jsx_runtime.jsx)(ComposerSurface, {\n\t\t\t\tzone,', 'const composerSurface = (0, react_jsx_runtime.jsx)(ComposerSurface, {\n\t\t\t\tresearch,\n\t\t\t\tzone,')
   source = exact(source, '"data-research-empty-state": "",\n\t\t\t\tchildren: (0, react_jsx_runtime.jsx)(HeroShell, { t })', '"data-research-empty-state": "",\n\t\t\t\tchildren: "探索更远，洞见更深。"')
+  // Figma 44: 361:5828 / 361:6121. Display-only fallback; never rename a session.
+  source = exact(source, 'const ancestry = useSessions((s) => deriveAncestry(s, sessionId), equalBreadcrumbs);', 'const ancestry = useSessions((s) => deriveAncestry(s, sessionId), equalBreadcrumbs);\n\t\t\tconst explicitSessionTitle = useSessions((s) => s.byId[sessionId]?.title);')
+  source = exact(source, 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;', 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;\n\t\t\tconst blankResearchTitle = active?.id === "research" && blank === true && composerPhase === "blank" && !explicitSessionTitle?.trim();')
+  source = exact(source, 'children: summary.displayTitle', 'children: last && blankResearchTitle ? "新研究" : summary.displayTitle')
+  // Keep workspace and permission-block placeholders ahead of the empty Research hint.
+  source = exact(source, '} : hero ? { placeholder: t("placeholder.hero") } : {},', '} : hero ? { placeholder: t("placeholder.hero") } : researchEmpty ? { placeholder: "描述你想研究的问题…" } : {},')
+  // Figma 22–30 / 44: automatic context stays in the request, not in the input or message UI.
+  source = exact(source, 'researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),', 'null /* Figma final: manual references remain native inline chips. */,')
+  source = exact(source, '|| research.canvasContext !== void 0 || rest.length > 0;', '|| rest.length > 0; /* Automatic context alone is not visible message content. */')
+  source = exact(source, [
+    'children: [projectResearchUserText(research, openFile), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {',
+    '\t\t\t\t\t\t\t"data-research-context-provenance": "",',
+    '\t\t\t\t\t\t\tstyle: { marginTop: research.text === "" ? 0 : 6, fontSize: 11, lineHeight: "16px", color: "var(--dsw-alias-label-tertiary)" },',
+    '\t\t\t\t\t\t\ttitle: `${t("research.context.initialSources")}: ${research.canvasContext.initialSourceIds.join(", ") || t("research.context.noInitialSources")}`,',
+    '\t\t\t\t\t\t\tchildren: t("research.context.sent", { total: research.canvasContext.totalSources, initial: research.canvasContext.initialSourceIds.length })',
+    '\t\t\t\t\t\t}), rest.map'
+  ].join('\n'), 'children: [projectResearchUserText(research, openFile), rest.map')
+  // QueueDock projects only visible input; automatic canvas context remains frozen in the payload.
+  source = exact(source,
+    'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };',
+    'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || (Array.isArray(row.content) && contentParts(row.content).images.length > 0 ? t("image.pending") + " · " + contentParts(row.content).images.length : ""), frozenCanvasContext: true };')
   const block = `${START}\nif(typeof document!=="undefined"){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.head.appendChild(style);}style.textContent=${JSON.stringify(css)};}\n${END}`
   const starts=source.split(START).length-1, ends=source.split(END).length-1
   if(starts!==ends || starts>1 || (starts===1 && source.indexOf(END)<source.indexOf(START))) throw Error('Figma final shell marker is incomplete or duplicated')

@@ -48,7 +48,7 @@
 .wSkVaW_tab:after { display:none; }
 .rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
 .sRp_root,.sRp_body { background:transparent !important; }
-.sRp_conversation { display:flex; flex-direction:column; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
+.sRp_conversation { display:flex; flex-direction:column; gap:4px; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
 .sRp_messages { flex:1 1 0; min-height:0; overflow:auto; }
 .sRp_composer { position:relative; flex:0 0 auto; bottom:auto; background:transparent; }
 .sRp_root { --dsh-composer-side-clearance:0px; --dsh-composer-dock-inset:0px; }
@@ -65,7 +65,7 @@
 .sRp_composer .uV2eYG_primary { width:30px; height:30px; transform:none; background:#65686e; }
 .sRp_composer .uV2eYG_chip { background:var(--odyssey-input-chip); border:1px solid var(--odyssey-glass-border); }
 .sRp_composer .uV2eYG_chipLabel { font:400 12px/20px var(--odyssey-font-ui); }
-.sRp_emptyState { min-height:0; display:flex; align-items:center; justify-content:center; font:500 19px/1.55 var(--odyssey-font-ui); color:var(--odyssey-text); text-align:center; }
+.sRp_emptyState { min-height:0; box-sizing:border-box; padding-bottom:42px; display:flex; align-items:center; justify-content:center; font:500 19px/1.55 var(--odyssey-font-ui); color:var(--odyssey-text); text-align:center; }
 .sRp_emptyState .pXSMma_root { padding:0; }
 .sRp_messages .Md3f7G_scroll { padding-inline:0; }
 .gdEzaW_userRow { justify-content:flex-end; }
@@ -106,7 +106,7 @@ body:has(.rScV5Q_root) .t8lSSG_toggleCluster { top:30px !important; right:32px; 
 .t8lSSG_panel { border:0; outline:1px solid var(--odyssey-glass-border); outline-offset:-1px; }
 body:has(.rScV5Q_root) .wSkVaW_header { padding-right:calc(var(--dsh-sidebar-width, 0px) + 44px); }
 body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none; }
-[data-sidebar-collapsed=true] .srb-account-controls .srb-bell { order:-1; }
+[data-sidebar-collapsed=true] .srb-account-controls > [data-research-board-bell-host] { order:-1; }
 /* Figma 286:469–477: workspace session typography shares the measured navigation baseline. */
 [data-dsh-sidebar-root] .YDXeBa_title { font-size:14px; line-height:21px; }
 [data-dsh-sidebar-root] .YDXeBa_time { font-size:11px; line-height:17px; }
@@ -117,3 +117,9 @@ body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none
 [data-ds-dark-theme] .t8lSSG_panel { background-image:url('/figma-glass-dark-base.png'); }
 [data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background:url('/figma-glass-dark-overlay.png') -753px -133px/1122px 1122px no-repeat, url('/figma-glass-dark-mesh.png') -793px -173px/1202px 1202px no-repeat; }
 .t8lSSG_panel .t8lSSG_panelResize { left:0; width:6px; }
+
+/* Settings lives inside the glass frame's stacking context; Better Sidebar is
+   a body portal. Hide that portal while the real settings dialog is mounted,
+   preserving its tabs/draft and preventing guardAnchor reattachment from
+   covering settings. Other settings popovers remain available. */
+body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlock-settings-panel]:not([hidden])) [data-dsh-panel-host] { display:none !important; }

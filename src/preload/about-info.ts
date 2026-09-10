@@ -481,20 +481,30 @@ export function buildSherlockAboutInfo(
   version: string,
   locale: SherlockAboutLocale
 ): SherlockAboutInfo {
+  // Parallel integration may prepend the same release twice. Keep its first
+  // position and nonempty metadata, but retain every distinct change.
+  const notesByVersion = new Map<string, SherlockReleaseNote>()
+  for (const note of releaseNotes[locale]) {
+    const existing = notesByVersion.get(note.version)
+    if (existing) {
+      if (!existing.title?.trim() && note.title?.trim()) existing.title = note.title
+      if (!existing.date.trim() && note.date.trim()) existing.date = note.date
+      existing.items = [...new Set([...existing.items, ...note.items])]
+    } else {
+      notesByVersion.set(note.version, { ...note, items: [...new Set(note.items)] })
+    }
+  }
   return {
     productName: 'EWork Odyssey',
     version,
-    releaseNotes: releaseNotes[locale].filter((note) => {
+    releaseNotes: [...notesByVersion.values()].filter((note) => {
       const runtime = version.split('.').map(Number)
       const release = note.version.split('.').map(Number)
       for (let index = 0; index < 3; index++) {
         if ((release[index] ?? 0) !== (runtime[index] ?? 0)) return (release[index] ?? 0) < (runtime[index] ?? 0)
       }
       return true
-    }).map((note) => ({
-      ...note,
-      items: [...note.items]
-    }))
+    })
   }
 }
 

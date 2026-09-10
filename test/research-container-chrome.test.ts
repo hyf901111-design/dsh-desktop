@@ -400,3 +400,85 @@ describe('Figma component content hierarchy', () => {
     } finally {await mounted.cleanup()}
   });
 });
+
+describe('Figma packaged canvas placement and late styles', () => {
+  it.each([
+    ['展示比特币当前价格核心指标', 'small', 320, 220],
+    ['制作一张近期走势短表格', 'medium', 656, 220],
+    ['制作比特币综合概览看板', 'large', 656, 456]
+  ])('selects the initial content size before starting: %s', async (prompt, size, width, height) => {
+    const mounted = await mountContainer({ sizeMode: 'manual', width: 656, height: 456 })
+    try {
+      let created: any
+      await act(async () => {
+        mounted.workspace.setCanvasSize({ width: 1288, height: 798, availableWidth: 928 })
+        mounted.workspace.setArtifacts([])
+        created = mounted.workspace.createContainerDraft()
+        mounted.workspace.beginContainerGeneration(created.id, prompt)
+      })
+      const node = mounted.workspace.getSnapshot().artifacts[0]
+      expect(node).toMatchObject({ generationStatus: 'queued', containerSizePreset: size, width, height })
+      expect(node.x - node.width / 2).toBeGreaterThanOrEqual(32)
+      expect(node.x + node.width / 2).toBeLessThanOrEqual(896)
+      expect(node.y + node.height / 2).toBeLessThanOrEqual(678)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('keeps automatic growth above the toolbar and leaves manually sized creation unchanged', async () => {
+    const mounted = await mountContainer({ sizeMode: 'auto', width: 656, height: 220 })
+    try {
+      await act(async () => {
+        mounted.workspace.setCanvasSize({ width: 1288, height: 798, availableWidth: 928 })
+        mounted.workspace.setArtifacts([{ ...mounted.workspace.getSnapshot().artifacts[0], x: 700, y: 650 }])
+        mounted.workspace.updateNodeGeometry('html', { width: 656, height: 456, sizeMode: 'auto' })
+      })
+      const grown = mounted.workspace.getSnapshot().artifacts[0]
+      expect(grown.x + grown.width / 2).toBeLessThanOrEqual(896)
+      expect(grown.y + grown.height / 2).toBeLessThanOrEqual(678)
+      await act(async () => {
+        mounted.workspace.updateNodeGeometry('html', { x: 1000, y: 1100, width: 700, height: 500, sizeMode: 'manual' })
+        mounted.workspace.beginContainerGeneration('html', '制作复杂市场综合看板')
+      })
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ x: 1000, y: 1100, width: 700, height: 500, sizeMode: 'manual' })
+    } finally { await mounted.cleanup() }
+  })
+
+  it('retains the final style after compact chrome and the module stylesheet load lazily', async () => {
+    const mounted = await mountContainer({ sizeMode: 'manual', width: 656, height: 456 })
+    try {
+      const doc = mounted.browserWindow.document
+      const finalStyle = doc.querySelector('style[data-sherlock-figma-canvas]')!
+      for (const attribute of ['data-research-compact-style', 'data-plugin-css']) {
+        const legacy = doc.createElement('style')
+        legacy.setAttribute(attribute, attribute === 'data-plugin-css' ? '@deepseek-ai/dsh-client-ui-conversation/ResearchCanvas.module.css' : '')
+        legacy.textContent = '.rScV5Q_globalToolbar{height:38px}'
+        doc.head.append(legacy)
+        await new Promise(resolve => setTimeout(resolve, 20))
+        expect(doc.head.lastElementChild).toBe(finalStyle)
+      }
+      expect(finalStyle.textContent).toContain('box-sizing:border-box;width:272px;height:48px')
+    } finally { await mounted.cleanup() }
+  })
+})
+
+
+describe('Figma derived summary sizing', () => {
+  it('caps a previously oversized automatic summary at L while retaining its complete source', async () => {
+    const excerpt = '市场概览。\n\n' + '保留完整的生成内容与所有来源。'.repeat(60)
+    const mounted = await mountContainer({ kind: 'generated-summary', sourceNodeIds: ['source'], generationSources: [{ id: 'source', type: 'artifact', title: '来源', text: '原始资料' }], containerSpec: undefined, width: 656, height: 640, sizeMode: 'auto', excerpt })
+    try {
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 656, height: 456, excerpt })
+      expect(mounted.host.querySelector('[data-component-summary=true]')).not.toBeNull()
+      await mounted.click('[data-research-container-expand]')
+      expect(mounted.host.querySelector('[data-research-derived-summary]')?.textContent).toContain(excerpt)
+    } finally { await mounted.cleanup() }
+  })
+
+  it('keeps manual derived dimensions when their content needs a reading summary', async () => {
+    const mounted = await mountContainer({ kind: 'generated-summary', sourceNodeIds: ['source'], generationSources: [{ id: 'source', type: 'artifact', title: '来源', text: '原始资料' }], containerSpec: undefined, width: 320, height: 220, sizeMode: 'manual', excerpt: '概览。'.repeat(160) })
+    try {
+      expect(mounted.workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 320, height: 220, sizeMode: 'manual' })
+      expect(mounted.host.querySelector('[data-component-summary=true]')).not.toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+})
