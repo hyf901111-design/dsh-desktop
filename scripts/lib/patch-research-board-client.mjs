@@ -536,7 +536,7 @@ function patchWorkspaceSelection(source) {
 }
 
 function patchWorkspaceBoardVisibility(source) {
-  if (source.includes('/* SHERLOCK_WORKSPACE_BOARD_VISIBILITY_V1 */')) return source
+  if (source.includes('/* SHERLOCK_WORKSPACE_BOARD_VISIBILITY_V1 */')) return patchWorkspaceSidebarSkin(source)
   source = replace(source, 'function useSidebarBoardSelection() {', `
         function useBoardHiddenSessions() {
             const raw = (0,react.useSyncExternalStore)(
@@ -554,5 +554,14 @@ function patchWorkspaceBoardVisibility(source) {
   if (source.split(anchor).length !== 4) throw Error('Workspace board visibility list anchors drifted')
   source = source.replaceAll(anchor, 'const list = useBoardWorkspaceList(useSessions((s) => s));')
   source = replace(source, 'const statuses = sessionStatuses(result, t);', 'const hidden = useBoardHiddenSessions(); if(hidden.has(result.id))return null; const statuses = sessionStatuses(result, t);')
-  return source + '\n/* SHERLOCK_WORKSPACE_BOARD_VISIBILITY_V1 */'
+  return patchWorkspaceSidebarSkin(source + '\n/* SHERLOCK_WORKSPACE_BOARD_VISIBILITY_V1 */')
+}
+
+function patchWorkspaceSidebarSkin(source) {
+  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */')) return source
+  return replace(source, '\t\texports.apply = apply;', `
+        /* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */
+        window.__sherlockWorkspaceSidebarSkin = {rows: Rows_module_css_default, header: WorkspaceBrowser_module_css_default};
+        window.dispatchEvent(new window.Event("sherlock-sidebar-skin"));
+        \t\texports.apply = apply;`)
 }

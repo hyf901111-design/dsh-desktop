@@ -470,6 +470,12 @@ assets.set(
     'utf8'
   )
 )
+const frontendAssets = packagePath('dsh-web-frontend', 'dist/assets')
+const frontendEntry = (await readdir(frontendAssets)).find(name => /^index-.*\.js$/.test(name))
+const frontendCode = await readFile(join(frontendAssets, frontendEntry), 'utf8')
+const menuPrefix = /"_denseList_([A-Za-z0-9]+)_\d+"/.exec(frontendCode)?.[1]
+assert.ok(menuPrefix, 'actual frontend Menu CSS module')
+const menuClasses = Object.fromEntries([...frontendCode.matchAll(new RegExp('"_([A-Za-z]+)_' + menuPrefix + '_[0-9]+"', 'g'))].map(m => [m[1], JSON.parse(m[0])]))
 const browser = await build({
   entryPoints: ['test/fixtures/research-boards-browser.ts'],
   nodePaths: [join(root, 'node_modules')],
@@ -484,6 +490,9 @@ const browser = await build({
     {
       name: 'assets',
       setup(b) {
+        b.onLoad({ filter: /dsh-client-ui-primitives\/lib\/index\.js$/ }, async args => ({
+          contents: (await readFile(args.path, 'utf8')).replace('var Menu_module_css_default = {};', 'var Menu_module_css_default = ' + JSON.stringify(menuClasses) + ';'), loader: 'js'
+        }))
         if (packageRoot !== root) b.onResolve({ filter: /^@deepseek-ai\/dsh-client-ui-primitives$/ }, async () => ({
           path: packagePath('dsh-client-ui-primitives', 'lib/index.js')
         }))
@@ -700,6 +709,9 @@ if (process.argv.includes('--serve')) {
         boardTime: values(board.querySelector('time')), workspaceTime: values(row.querySelector('[class*="_time"]')) }
     })
     assert.equal(rowStyles.boardHeight, rowStyles.workspaceHeight)
+    const widths = await page.evaluate(() => ({ board: document.querySelector('.srb-row').getBoundingClientRect().width, list: document.querySelector('.srb-board-list').clientWidth - parseFloat(getComputedStyle(document.querySelector('.srb-board-list')).paddingLeft) - parseFloat(getComputedStyle(document.querySelector('.srb-board-list')).paddingRight), overflow: document.querySelector('.srb-section').scrollWidth > document.querySelector('.srb-section').clientWidth }))
+    assert.equal(widths.board, widths.list)
+    assert.equal(widths.overflow, false)
     assert.deepEqual(rowStyles.boardTitle, rowStyles.workspaceTitle)
     assert.deepEqual(rowStyles.boardTime, rowStyles.workspaceTime)
     await workspaceRow.click()
@@ -718,12 +730,20 @@ if (process.argv.includes('--serve')) {
     await until(async () => !(await stat(privatePath).catch(() => null)), 'blank board has no directory')
     const privateRow = page.locator('.srb-row').filter({ hasText: '新研究看板' })
     await privateRow.click({ button: 'right' })
+    const menuGeometry = await page.getByRole('menu').boundingBox()
+    const moreGeometry = await privateRow.getByRole('button', { name: '新研究看板，更多' }).boundingBox()
+    assert.ok(Math.abs(menuGeometry.x - moreGeometry.x) < 2, 'board menu opens rightward from the ellipsis')
+    assert.equal(await page.getByRole('menu').locator('svg').count(), 3, 'all row actions have native icons')
     await page.getByRole('menuitem', { name: '重命名', exact: true }).click()
     await page.getByLabel('看板名称', { exact: true }).fill('目录延迟创建验收')
     await page.getByRole('button', { name: '保存', exact: true }).click()
     const renamedRow = page.locator('.srb-row').filter({ hasText: '目录延迟创建验收' })
     await renamedRow.waitFor()
     await page.getByRole('button', { name: '搜索研究看板', exact: true }).click()
+    await page.getByRole('button', { name: '关闭看板搜索' }).waitFor()
+    await page.getByRole('button', { name: '新建研究看板', exact: true }).waitFor({ state: 'hidden' })
+    assert.equal(await page.getByLabel('搜索看板名称').evaluate(e => e.className), await page.evaluate(() => window.__sherlockWorkspaceSidebarSkin.header.searchInput))
+    await page.screenshot({ animations: 'disabled', path: join(out, 'shared-sidebar-search.png') })
     await page.getByLabel('搜索看板名称').fill('目录延迟')
     assert.equal(await page.locator('.srb-row').count(), 1)
     await page.getByLabel('搜索看板名称').fill('不存在的看板')

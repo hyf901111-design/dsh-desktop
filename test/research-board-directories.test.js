@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { mkdtempSync, mkdirSync, existsSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { Context } from '@deepseek-ai/cordis'
+import { inject as runtimeDependencies } from '../packages/dsh-research-task-runtime/index.js'
 import { Session } from '@deepseek-ai/dsh-session'
 import { BoardDirectories } from '../packages/dsh-research-task-runtime/board-directories.js'
 function fixture() {
@@ -24,6 +26,26 @@ function fixture() {
   return { root, sessions, directories, workspaces, ctx, observe: (...args) => observe(...args), close: () => { directories.dispose(); rmSync(root, { recursive: true, force: true }) } }
 }
 describe('research board directories', () => {
+  it('can return a board through the real scoped Host service container', async () => {
+    const f = fixture(), root = new Context()
+    try {
+      for (const name of runtimeDependencies) root.provide(name, f.ctx[name] ?? {})
+      // Register it even when missing from inject so Cordis, rather than the fake
+      // service object, validates the production plugin dependency boundary.
+      if (!runtimeDependencies.includes('workspaceRegistry')) root.provide('workspaceRegistry', f.ctx.workspaceRegistry)
+      const row = f.directories.reserve(f.root, '宿主依赖验收')
+      f.ctx.sessions.create('scoped-board', { meta: { cwd: row.path } })
+      await f.directories.run({ mode: 'bind', directoryId: row.directoryId, sessionId: 'scoped-board' })
+      const result = await new Promise((resolve, reject) => {
+        root.plugin({ inject: runtimeDependencies, apply(ctx) {
+          const directories = new BoardDirectories(ctx, f.root)
+          directories.run({ mode: 'workspace', sessionId: 'scoped-board', title: row.title, basePath: f.root }).then(resolve, reject).finally(() => directories.dispose())
+        } })
+      })
+      expect(result.localSessionId).toBe('scoped-board')
+      expect(f.workspaces.get(row.path).sessionIds).toEqual(['scoped-board'])
+    } finally { f.close() }
+  })
   it('keeps blank boards virtual across restart and materializes only their own path for file tools', async () => {
     const f = fixture()
     try {
