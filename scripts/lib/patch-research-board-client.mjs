@@ -564,10 +564,13 @@ function patchWorkspaceBoardVisibility(source) {
 }
 
 function patchWorkspaceSidebarSkin(source) {
+  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')) return source
   if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */')) return source
+    .replace('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */', '/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')
+    .replace('header: WorkspaceBrowser_module_css_default};', 'header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};')
   return replace(source, '\t\texports.apply = apply;', `
-        /* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */
-        window.__sherlockWorkspaceSidebarSkin = {rows: Rows_module_css_default, header: WorkspaceBrowser_module_css_default};
+        /* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */
+        window.__sherlockWorkspaceSidebarSkin = {rows: Rows_module_css_default, header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};
         window.dispatchEvent(new window.Event("sherlock-sidebar-skin"));
         \t\texports.apply = apply;`)
 }

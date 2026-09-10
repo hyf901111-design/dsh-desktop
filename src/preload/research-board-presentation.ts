@@ -1,3 +1,12 @@
+import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
+
+export function boardTaskStatus(task: { status: string; failureCode?: unknown }) {
+  if (task.status === 'pending') return '研究任务等待执行'
+  if (task.status === 'running') return '正在研究…'
+  if (task.status === 'interrupted') return '研究任务已中断。'
+  if (task.status === 'failed') return taskFailureMessage(task.failureCode) ?? taskFailureMessage('GENERATION_FAILED')
+  return undefined
+}
 /** Selection actions require usable content, including completed generated containers. */
 export function selectionNodeReady(node: {
   kind?: string

@@ -1,7 +1,7 @@
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
-import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconBranchOutline16, IconFolderOpenOutline16, IconEditOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconBranchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   BoardView,
   Canvas,
@@ -59,7 +59,8 @@ export type PageDependencies = {
   document?: Document
 }
 export { selectionNodeReady } from './research-board-presentation'
-import { boardEditTime } from './research-board-presentation'
+import { boardEditTime, boardTaskStatus } from './research-board-presentation'
+import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   selectedBoardSession,
   selectBoardSession,
@@ -1454,15 +1455,13 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   const [optionsOpen, setOptionsOpen] = React.useState(false), [creating, setCreating] = React.useState(false)
   const [preferences, setPreferences] = React.useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('sherlock.boards.view.v2') ?? 'null')
-      const groups = Array.isArray(saved?.groups) ? saved.groups.filter((v: unknown) => v === 'private' || v === 'shared') : []
-      return { groups: groups.length ? groups : ['private', 'shared'], sort: saved?.sort === 'updated' ? 'updated' : 'manual', order: Array.isArray(saved?.order) ? saved.order.filter((v: unknown) => typeof v === 'string') : [] }
+      const saved = JSON.parse(localStorage.getItem('sherlock.boards.view.v3') ?? localStorage.getItem('sherlock.boards.view.v2') ?? 'null')
+      return { groupBy: saved?.groupBy === 'type' ? 'type' : 'flat', collapsedGroups: Array.isArray(saved?.collapsedGroups) ? saved.collapsedGroups.filter((g: unknown) => g === 'private' || g === 'shared') : [], sort: saved?.sort === 'updated' ? 'updated' : 'manual', order: Array.isArray(saved?.order) ? saved.order.filter((v: unknown) => typeof v === 'string') : [] }
     }
-    catch { return { groups: ['private', 'shared'], sort: 'manual', order: [] } }
+    catch { return { groupBy: 'flat', collapsedGroups: [], sort: 'manual', order: [] } }
   })
-  const [drag, setDrag] = React.useState<string | null>(null)
   const selectedSession = React.useSyncExternalStore(subscribeBoardSelection, selectedBoardSession)
-  const save = (next: any) => { setPreferences(next); localStorage.setItem('sherlock.boards.view.v2', JSON.stringify(next)) }
+  const save = (next: any) => { setPreferences(next); localStorage.setItem('sherlock.boards.view.v3', JSON.stringify(next)) }
   const entries = [
     ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, page.editedAt(f.sessionId) ?? 0) })),
     ...state.boards.filter(b => b.pinned).map(b => ({ key: 'shared:' + b.boardId, group: b.sharingState === 'shared' ? 'shared' : 'private', value: b, time: b.updatedAt ?? b.createdAt }))
@@ -1470,7 +1469,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   const order = preferences.order as string[]
   entries.sort((a, b) => preferences.sort === 'updated' ? b.time - a.time :
     (order.includes(a.key) ? order.indexOf(a.key) : 100000) - (order.includes(b.key) ? order.indexOf(b.key) : 100000))
-  const visible = entries.filter(e => preferences.groups.includes(e.group) && e.value.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+  const visible = entries.filter(e => e.value.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   if (!wide || !skin) return null
   const B = skin.header
   const classes = (...names: Array<string | false>) => names.filter(Boolean).join(' ')
@@ -1487,38 +1486,88 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
           search && h('button', { className: B.clearButton, 'aria-label': '关闭看板搜索', onClick: (e: React.MouseEvent) => { e.stopPropagation(); setQuery(''); setSearch(false) } }, h(IconCloseFill14)))),
       h('div', { className: classes(B.headerActions, search && B.headerActionsHidden) },
         h(Menu, { open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
-          selectedIds: [...preferences.groups, preferences.sort],
-          items: [{ type: 'label', id: 'groups-label', text: '分组方式' }, { id: 'private', label: '专用看板' }, { id: 'shared', label: '协作看板' },
+          selectedIds: [preferences.groupBy, preferences.sort],
+          items: [{ type: 'label', id: 'groups-label', text: '分组方式' }, { id: 'type', label: '按类型' }, { id: 'flat', label: '单列表' },
             { type: 'separator', id: 'sort-separator' }, { type: 'label', id: 'sort-label', text: '排序方式' }, { id: 'manual', label: '手动排序' }, { id: 'updated', label: '最近更新' }],
           onSelect: (id: string) => {
             setOptionsOpen(false)
-            if (id === 'private' || id === 'shared') {
-              const groups = preferences.groups.includes(id) ? preferences.groups.filter((g: string) => g !== id) : [...preferences.groups, id]
-              if (groups.length) save({ ...preferences, groups })
-            } else save({ ...preferences, sort: id })
+            if (id === 'type' || id === 'flat') save({ ...preferences, groupBy: id })
+            else save({ ...preferences, sort: id })
           },
           anchor: h('button', { className: B.iconButton, 'aria-label': '看板视图选项', title: '看板视图选项', onClick: () => setOptionsOpen(!optionsOpen) }, h(IconPersonalizationOutline16)) }),
         h('button', { className: B.iconButton, 'aria-label': '新建研究看板', title: '新建研究看板', disabled: creating, onClick: safely(page, async () => {
           setCreating(true)
-          try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, groups: [...new Set([...preferences.groups, 'private'])] }) }
+          try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }
           finally { setCreating(false) }
         }) }, h('span', { className: 'srb-research-icon', 'data-sherlock-research-icon': '', 'aria-hidden': true })))),
-    (!collapsed || search) && h('div', { className: B.listArea }, h('div', { className: classes('srb-board-list', B.list, B.flatList) },
-      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '新建研究看板，或从研究中创建协作'),
-      ...visible.map(entry => h(ResearchBoardRow, { key: entry.key, skin, page, entry: entry.value, time: entry.time, selectedSession,
-        draggable: preferences.sort === 'manual' && !query,
-        onDragStart: (e: React.DragEvent) => { setDrag(entry.key); e.dataTransfer.setData('text/x-sherlock-board', entry.key) },
-        onDragEnd: () => setDrag(null),
-        onDrop: (e: React.DragEvent) => {
-          e.preventDefault()
-          if (!drag || drag === entry.key || preferences.sort !== 'manual') return
-          const keys = entries.map(e => e.key).filter(key => key !== drag)
-          keys.splice(keys.indexOf(entry.key), 0, drag)
-          save({ ...preferences, order: keys }); setDrag(null)
-        }
-      })))))
+    (!collapsed || search) && h(ResearchBoardList, { page, skin, visible, entries, preferences, query, selectedSession, save }))
 }
-function ResearchBoardRow({ page, entry, time, selectedSession, skin, ...drag }: any) {
+function ResearchBoardList({ page, skin, visible, entries, preferences, query, selectedSession, save }: any) {
+  const [drag, setDrag] = React.useState<any>(null)
+  const currentDrag = React.useRef<any>(null), committed = React.useRef(false)
+  skin.useNativeDragAcceptance(drag !== null)
+  const updateDrag = (next: any) => { currentDrag.current = next; setDrag(next) }
+  React.useEffect(() => { updateDrag(null) }, [preferences.groupBy, preferences.sort, query])
+  const B = skin.header, grouped = preferences.groupBy === 'type'
+  const commit = (over: { key: string; half: 'before' | 'after' } | null) => {
+    const active = currentDrag.current
+    if (!active || !over || committed.current) return
+    committed.current = true
+    updateDrag(null)
+    const rows = entries.filter((e: any) => !grouped || e.group === active.group)
+    const source = rows.findIndex((e: any) => e.key === active.key), target = rows.findIndex((e: any) => e.key === over.key)
+    if (source < 0 || target < 0 || source === target) return
+    const anchor = over.half === 'before' ? target : target + 1
+    if (anchor === source || anchor === source + 1) return
+    const keys = rows.map((e: any) => e.key).filter((key: string) => key !== active.key)
+    keys.splice(anchor > source ? anchor - 1 : anchor, 0, active.key)
+    let index = 0
+    save({ ...preferences, order: entries.map((e: any) => !grouped || e.group === active.group ? keys[index++] : e.key) })
+  }
+  const renderRow = (entry: any) => {
+    const active = drag !== null && (!grouped || drag.group === entry.group)
+    const over = (e: React.DragEvent) => ({ key: entry.key, half: skin.rowHalf(e) })
+    return h(ResearchBoardRow, { key: entry.key, skin, page, entry: entry.value, time: entry.time, selectedSession, nested: grouped,
+      marker: active && drag.over?.key === entry.key ? drag.over.half : null,
+      draggable: preferences.sort === 'manual' && !query,
+      onDragStart: (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', entry.key)
+        e.dataTransfer.setData('text/x-sherlock-board', entry.key)
+        committed.current = false
+        updateDrag({ key: entry.key, group: entry.group, over: null })
+      },
+      onDragOver: (e: React.DragEvent) => {
+        if (!active) return
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move'
+        updateDrag({ ...currentDrag.current, over: over(e) })
+      },
+      onDrop: (e: React.DragEvent) => { if (active) { e.preventDefault(); commit(over(e)) } },
+      onDragEnd: () => { commit(currentDrag.current?.over ?? null); updateDrag(null); committed.current = false }
+    })
+  }
+  const groups = grouped ? ['private', 'shared'].map(group => ({ group, rows: visible.filter((e: any) => e.group === group) })).filter(g => g.rows.length) : []
+  const firstMarker = !grouped && drag?.over?.key === visible[0]?.key && drag?.over?.half === 'before'
+  return h('div', { className: B.listArea }, h('div', { className: B.treeBody },
+    h('div', { className: ['srb-board-list', B.list, !grouped && B.flatList].filter(Boolean).join(' '), 'data-group-by': preferences.groupBy },
+      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '新建研究看板，或从研究中创建协作'),
+      ...(grouped ? groups.map(({ group, rows }) => h(ResearchBoardGroup, { key: group, skin, group,
+        expanded: !!query || !preferences.collapsedGroups.includes(group),
+        onToggle: () => { if (!query) save({ ...preferences, collapsedGroups: preferences.collapsedGroups.includes(group) ? preferences.collapsedGroups.filter((g: string) => g !== group) : [...preferences.collapsedGroups, group] }) }
+      }, ...rows.map(renderRow))) : visible.map(renderRow))),
+    firstMarker && h('span', { className: B.listTopDropIndicator, 'aria-hidden': true })))
+}
+function ResearchBoardGroup({ skin, group, expanded, onToggle, children }: any) {
+  const R = skin.rows, title = group === 'private' ? '专用看板' : '协作看板'
+  return h('div', { className: skin.header.groupSection, 'data-srb-board-group': group },
+    h('div', { className: R.projectRow, role: 'treeitem', tabIndex: 0, 'aria-label': title, 'aria-expanded': expanded,
+      onClick: onToggle, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } } },
+      h('span', { className: R.slot + ' ' + R.folder }, h(skin.WorkspaceFolderIcon, { expanded })),
+      h('span', { className: R.slot + ' ' + R.chevron }, h(IconTriangleRightFill14, { className: [R.arrow, expanded && R.arrowOpen].filter(Boolean).join(' ') })),
+      h('span', { className: R.projectText }, h('span', { className: R.title }, title))),
+    expanded && children)
+}
+function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, nested, ...drag }: any) {
   const [open, setOpen] = React.useState(false)
   const R = skin.rows
   const selected = selectedSession === ('boardId' in entry ? entry.localSessionId : entry.sessionId) && page.current() === selectedSession
@@ -1530,9 +1579,10 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, ...drag }:
     { id: 'collaboration', label: collaboration ? '管理协作' : '共享协作', icon: h(IconBranchOutline16) },
     { id: 'workspace', label: '放回工作区', icon: h(IconFolderOpenOutline16) }
   ]
-  return h('div', { className: ['srb-row', R.sessionRow, R.flatSessionRowWithoutStatus, selected && R.selected, open && R.menuOpen].filter(Boolean).join(' '), 'data-menu-open': open, 'aria-current': selected,
-    ...drag, onDragOver: (event: React.DragEvent) => { if (drag.draggable) event.preventDefault() },
+  return h('div', { className: ['srb-row', R.sessionRow, !nested && R.flatSessionRowWithoutStatus, selected && R.selected, open && R.menuOpen, marker === 'before' && R.dropBefore, marker === 'after' && R.dropAfter].filter(Boolean).join(' '), 'data-menu-open': open, 'aria-current': selected,
+    ...drag, 'data-drop-marker': marker ?? undefined,
     onContextMenu: (event: React.MouseEvent) => { event.preventDefault(); setOpen(true) } },
+    nested && h('span', { className: R.slot, 'aria-hidden': true }),
     h('button', { className: R.title + ' srb-board-title', title: entry.title, onClick: safely(page, async () => {
       if (shared) await page.openBoard(entry.boardId)
       else await page.openPersonal(entry.sessionId)
@@ -2234,9 +2284,9 @@ export function ResearchBoardDiscussion({
           h(
             'div',
             { className: 'srb-status', key: r.clientMutationId },
-            r.runtimeState
+            taskFailureMessage(r.failureCode) ?? (r.runtimeState
               ? '执行已中断或结果未确认；不会自动重复调用模型。'
-              : '消息已保存，任务尚未启动。',
+              : '消息已保存，任务尚未启动。'),
             h(
               'button',
               {
@@ -2302,13 +2352,13 @@ export function ResearchBoardDiscussion({
       ...v.tasks
         .filter((t: any) => belongs(t.requestMessageId))
         .filter(
-          (t) => !['completed', 'failed', 'cancelled'].includes(t.status)
+          (t) => boardTaskStatus(t) && !(['failed', 'interrupted'].includes(t.status) && pendingRequests.some((r: any) => r.taskId === t.taskId && ['interrupted', 'uncertain'].includes(r.runtimeState)))
         )
         .map((t) =>
           h(
             'p',
             { key: t.taskId, className: 'srb-status' },
-            t.status === 'running' ? '正在研究…' : '研究任务等待执行'
+            boardTaskStatus(t)
           )
         )
     )

@@ -1,6 +1,13 @@
 import { Session } from '@deepseek-ai/dsh-session'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { SharedExecutionRuntime } from '../packages/dsh-research-task-runtime/board-runtime.js'
+it('preserves a typed model failure through the shared runtime', async () => {
+  const runtime = new SharedExecutionRuntime({ storage: { load: async () => ({}), save: async () => {} }, execute: async () => { throw Object.assign(Error('no body'), { code: 'EMPTY_OUTPUT' }) } })
+  await runtime.start({ taskId: 'task', sessionId: 'local', kind: 'container', prompt: 'request' })
+  await vi.waitFor(() => expect(runtime.inspect('task').status).toBe('failed'))
+  expect(runtime.inspect('task').errorCode).toBe('EMPTY_OUTPUT')
+  await runtime.dispose()
+})
 it('fixed task identity starts once and refuses a changed payload or restart replay', async () => {
   let calls = 0
   let release

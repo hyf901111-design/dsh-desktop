@@ -19,6 +19,7 @@ import {
 } from './state/research-board-request-journal'
 import { normalizeRequestContext } from '../../packages/dsh-research-collaboration/context.js'
 import { freezeSnapshot } from '../../packages/dsh-research-collaboration/document.js'
+import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import type {
   ResearchBoardsService,
   ResearchBoardHooks
@@ -486,9 +487,10 @@ export class ResearchBoardIntegration {
         if (['pending', 'running'].includes(task.status))
           node.generationStatus =
             task.status === 'pending' ? 'queued' : 'running'
-        else if (task.status === 'interrupted') {
-          node.generationStatus = 'interrupted'
-          node.generationError = '研究任务已停止'
+        else if (task.status === 'failed' || task.status === 'interrupted') {
+          node.generationStatus = task.status
+          node.generationError = taskFailureMessage(task.failureCode) ?? (task.status === 'failed' ? taskFailureMessage('GENERATION_FAILED')! : '研究任务已停止')
+          if (node.containerSpec) node.refreshError = node.generationError
         } else if (task.resultState === 'pendingResult') {
           node.generationStatus = 'interrupted'
           node.generationError = '组件已发生修改；研究结果已保留，可手动应用'
@@ -783,6 +785,7 @@ export class ResearchBoardIntegration {
         text: r.intent.text,
         context: r.intent.context,
         ...r.reply,
+        ...(taskFailureMessage(r.failureCode) ? { failureCode: r.failureCode } : {}),
         runtimeState:
           ['starting', 'running'].includes(r.runtimeState) &&
           !this.active.has(r.key)
@@ -816,6 +819,7 @@ export class ResearchBoardIntegration {
       this.journal.update(record.key, {
         runtimeState: undefined,
         runtimeError: undefined,
+        failureCode: undefined,
         executorId: undefined,
         taskAttempt: (record.taskAttempt ?? 0) + 1,
         reply: { ...record.reply, taskId: null, state: 'messageAccepted' }
@@ -972,6 +976,7 @@ export class ResearchBoardIntegration {
   private async execute(key: string, task: any, signal: AbortSignal) {
     let heartbeat: ReturnType<typeof setInterval> | undefined
     let localTaskId: string | undefined
+    let failureCode: string | undefined
     const r = this.journal.get(key)
     const stop = () => {
       if (localTaskId)
@@ -1089,6 +1094,7 @@ export class ResearchBoardIntegration {
         taskId: localTaskId,
         sessionId: a.localSessionId,
         kind,
+        query: request.text,
         prompt,
         files
       }
@@ -1120,8 +1126,10 @@ export class ResearchBoardIntegration {
         this.authority(r.accountId, r.boardId, r.epoch, true)
         local = await this.runtime('inspect', { taskId: localTaskId }, signal)
       }
-      if (local.status !== 'completed')
+      if (local.status !== 'completed') {
+        if (local.status === 'failed') failureCode = taskFailureMessage(local.errorCode) ? local.errorCode : 'GENERATION_FAILED'
         throw Error(local.error ?? 'EXECUTION_INTERRUPTED')
+      }
       let node: any
       if (target) {
         node = {
@@ -1160,6 +1168,7 @@ export class ResearchBoardIntegration {
       if (this.journal.get(key).runtimeState !== 'uncertain')
         this.journal.update(key, {
           runtimeState: 'interrupted',
+          failureCode,
           runtimeError: (error as Error).message
         })
       stop()
@@ -1168,7 +1177,7 @@ export class ResearchBoardIntegration {
           key,
           'taskStop',
           'taskStop',
-          { taskId: task.taskId },
+          { taskId: task.taskId, ...(!signal.aborted && failureCode ? { failureCode } : {}) },
           new AbortController().signal
         )
       } catch {}

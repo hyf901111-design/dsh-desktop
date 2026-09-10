@@ -1,4 +1,5 @@
 export const PROTOCOL_VERSION: 1
+export function taskFailureMessage(code: unknown): string | undefined
 export const LIMITS: Readonly<{
   nodes: number
   documentBytes: number

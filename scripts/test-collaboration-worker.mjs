@@ -552,6 +552,16 @@ try {
   console.log(
     'PASS: task result apply/conflict/deletion and offline tombstone enforcement'
   )
+  const failedGeneration = await makeTask('a')
+  assert.equal((await command(0, 'taskStop', { taskId: failedGeneration.task.taskId, failureCode: 'EMPTY_OUTPUT' })).status, 403, 'only the initiating member reports a generation failure')
+  assert.equal((await command(1, 'taskStop', { taskId: failedGeneration.task.taskId, failureCode: 'untrusted raw error /Users/private/token' })).status, 400)
+  const failedTask = await ok(command(1, 'taskStop', { taskId: failedGeneration.task.taskId, failureCode: 'EMPTY_OUTPUT' }))
+  assert.equal(failedTask.task.status, 'failed')
+  assert.equal(failedTask.task.failureCode, 'EMPTY_OUTPUT')
+  const peerFailure = (await ok(call(0, `/boards/${boardId}`))).tasks.find(t => t.taskId === failedGeneration.task.taskId)
+  assert.equal(peerFailure.failureCode, 'EMPTY_OUTPUT')
+  assert.equal(peerFailure.leaseHash, undefined)
+  console.log('PASS: typed generation failure reaches peers without private diagnostics')
   const leaseRow = await db
     .prepare('SELECT state FROM research_boards WHERE id=?')
     .bind(boardId)

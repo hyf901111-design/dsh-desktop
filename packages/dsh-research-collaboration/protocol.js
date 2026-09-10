@@ -1,4 +1,18 @@
 export const PROTOCOL_VERSION = 1
+// Only fixed public failure codes cross the collaboration boundary.
+const TASK_FAILURES = Object.freeze({
+  EMPTY_OUTPUT: '模型没有返回可展示的内容，自动恢复仍未完成。',
+  INVALID_OUTPUT: '组件格式未通过校验，自动修复仍未完成。',
+  OUTPUT_TOO_LARGE: '组件内容超过长度上限，自动精简仍未完成。',
+  CONTAINER_DATA_UNAVAILABLE: '未能取得所需资料，请检查网络或数据源。',
+  TIMEOUT: '模型响应超时，本次生成未完成。',
+  TRANSPORT: '模型连接中断，本次生成未完成。',
+  RATE_LIMIT: '模型服务暂时限流，本次生成未完成。',
+  GENERATION_FAILED: '本次组件生成未完成，可重新执行。'
+})
+export function taskFailureMessage(code) {
+  return typeof code === 'string' && Object.hasOwn(TASK_FAILURES, code) ? TASK_FAILURES[code] : undefined
+}
 export const LIMITS = Object.freeze({
   nodes: 1000,
   documentBytes: 1024 * 1024,

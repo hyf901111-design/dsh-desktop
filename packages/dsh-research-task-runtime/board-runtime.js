@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { exportHumanHistory } from '../dsh-research-collaboration/context.js'
+import { taskFailureMessage } from '../dsh-research-collaboration/protocol.js'
 const hash = (v) =>
   createHash('sha256').update(JSON.stringify(v)).digest('hex')
 export class SharedExecutionRuntime {
@@ -31,6 +32,7 @@ export class SharedExecutionRuntime {
       typeof sessionId !== 'string' ||
       !['qa', 'container', 'create', 'summary', 'mind-map'].includes(kind) ||
       typeof prompt !== 'string' ||
+      (request.query !== undefined && (typeof request.query !== 'string' || !request.query.trim() || Buffer.byteLength(request.query) > 16384)) ||
       !prompt.trim() ||
       Buffer.byteLength(prompt) > 1600000
     )
@@ -70,6 +72,7 @@ export class SharedExecutionRuntime {
           if (owns('running')) {
             task.status = 'failed'
             task.error = error instanceof Error ? error.message : '执行失败'
+            task.errorCode = taskFailureMessage(error?.code) ? error.code : 'GENERATION_FAILED'
           }
         } finally {
           if (this.controllers.get(taskId) === controller)
