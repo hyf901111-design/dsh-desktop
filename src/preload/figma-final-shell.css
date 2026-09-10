@@ -154,3 +154,12 @@ body[data-ds-dark-theme] .sRp_messages .gdEzaW_bubble { background:rgb(44.72 44.
 .t8lSSG_toggleButton:not(:hover):not(:focus-visible)>[data-odyssey-panel-active="true"] { color:#697078; }
 [data-ds-dark-theme] .t8lSSG_toggleButton:not(:hover):not(:focus-visible)>[data-odyssey-panel-toggle] { color:#a0a0a0; }
 [data-ds-dark-theme] .t8lSSG_toggleButton:not(:hover):not(:focus-visible)>[data-odyssey-panel-active="true"] { color:#b9b9b9; }
+
+/* Figma 22 / 284:419, 786 and 44 / 361:5799–5816, 6092–6109: glyph tones are independent of primary text. */
+.hHd-Xa_root { --odyssey-sidebar-glyph:rgb(102.8768 102.8768 102.8768); --odyssey-sidebar-action-glyph:#74777b; }
+[data-ds-dark-theme] .hHd-Xa_root { --odyssey-sidebar-glyph:rgb(210.3662 210.3662 210.3662); --odyssey-sidebar-action-glyph:rgb(153.3686 153.3686 153.3686); }
+.hHd-Xa_root .hHd-Xa_iconButton>svg,.hHd-Xa_root .hHd-Xa_newSession>svg,.hHd-Xa_root .hHd-Xa_researchIcon { color:var(--odyssey-sidebar-glyph); }
+.hHd-Xa_root .hHd-Xa_newSession>svg { flex:none; width:16px; height:16px; }
+.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_researchIcon { width:16px; height:16px; }
+.hHd-Xa_root .qDHVXG_sectionHeader :is(.qDHVXG_searchButton,.qDHVXG_iconButton)>:is(svg,.srb-research-icon),.hHd-Xa_root .srb-bell-icon { color:var(--odyssey-sidebar-action-glyph); }
+.hHd-Xa_root.hHd-Xa_collapsed .qDHVXG_rail .qDHVXG_iconButton>svg { color:var(--odyssey-sidebar-glyph); }

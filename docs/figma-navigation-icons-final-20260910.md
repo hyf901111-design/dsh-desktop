@@ -20,3 +20,12 @@
 浅深截图见 [浅色](figma-navigation-icon-evidence/light.png)、[深色](figma-navigation-icon-evidence/dark.png)，精确尺寸与差异见 [metrics.json](figma-navigation-icon-evidence/metrics.json)。图片以 2× 像素倍率截图，CSS 图标仍为 16 px（箭头 12 px）。
 
 聚焦检查：`research-boards-ui.test.ts` 与 `research-board-client-adapter.test.js` 共 37 项通过；实际 sidebar / workspace 客户端补丁语法检查、重复应用字节幂等及旧 18 px 调用移除检查通过。没有运行全量测试，没有构建或替换共享客户端；真实 Electron 位置和点击行为由最终包验收。
+# 最后实包复查：导航图标色与缩放
+
+2026-09-10，读取最终第 44 组浅色 `361:5799/5801/5803/5806`、深色 `361:6092/6094/6096/6099`：四个入口均 16×16、opacity 1，浅色 RGB 102.876804，深色 RGB 210.366197。铃铛 `361:5815/6108` 均 16×16、stroke 1.35，浅色 #74777B、深色 RGB 153.368602。第 22 组展开态 `284:419/421/435` 与 `284:786/788/802` 沿用入口色；搜索、视图、新研究、加工作区 `286:415/419/456/460/463` 与 `286:1074/1078/1115/1119/1122` 沿用铃铛次要色。
+
+e0df480 实包旧规则将收起入口和铃铛继承为深色 primary #F9FAFB，未叠加 brightness/filter；新研究遗留 18px，新对话 SVG 被既有内边距压为 14×16。`figma-final-shell.css` 仅限定 SVG / mask 图标颜色、新研究 16px 与新对话 SVG 不收缩，不改变文字、按钮布局、资源或事件。
+
+受控复核使用该实包真实 DOM 和全部 103 份 stylesheet（945036 bytes），追加当前样式，在 Chromium 切换浅深色与展开/收起。每态 10 个图标的计算颜色、16×16 尺寸、filter none、opacity 1 均通过，零页面/资源错误；捕获到的收起加工作区选择器优先级问题已修正后重跑。浏览器计算色会四舍五入为浅 #676767 / #74777B、深 #D2D2D2 / #999999。
+
+证据 `/tmp/odyssey-sidebar-icon-final/metrics.json`，只读实包复核 `node /tmp/odyssey-sidebar-icon-final/inspect-cdp.cjs 9336 /tmp/current-icons.json`。该脚本只读取当前态，输出 glyph 与 button 的独立颜色、尺寸、filter 和 mask，成功退出 0。受控截图是静态 DOM 的 class 投影，没有 React 条件重挂；仅证明级联和图标尺寸，不作为真实收起布局或新包验收。最终四态仍由主任务在下一包逐态截图时执行同一只读检查。
