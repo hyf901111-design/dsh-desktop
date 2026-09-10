@@ -140,6 +140,33 @@ function installBrowserGlobals(browserWindow: Window): () => void {
 }
 
 describe('EWork Odyssey About settings', () => {
+  it('merges release notes duplicated during integration without losing distinct changes', async () => {
+    const { transformSync } = requireModule('esbuild') as typeof import('esbuild')
+    const source = await readFile('src/preload/about-info.ts', 'utf8')
+    // Reproduce two branches prepending the same version to the real localized data.
+    const fixture = [
+      { version: '0.9.5', date: '', title: '', items: ['共同修复', '首分支修复'] },
+      { version: '0.9.4', date: '2026-09-08', items: ['历史修复'] },
+      { version: '0.9.5', date: '2026-09-09', title: '模式与交互优化', items: ['共同修复', '另一分支修复'] },
+      { version: '0.9.5', date: '2026-09-10', title: '后续标题', items: ['另一分支修复'] }
+    ]
+    const compiled = transformSync(`${source}\nreleaseNotes.zh = ${JSON.stringify(fixture)};\nreleaseNotes.en = ${JSON.stringify(fixture)};`, { loader: 'ts', format: 'cjs' }).code
+    const context = { module: { exports: {} }, exports: {} }
+    runInNewContext(compiled, context)
+    const about = context.module.exports as typeof import('../src/preload/about-info')
+    for (const locale of ['zh', 'en'] as const) {
+      const result = about.buildSherlockAboutInfo('0.9.5', locale)
+      expect(result.version).toBe('0.9.5')
+      expect(result.releaseNotes).toEqual([
+        { version: '0.9.5', date: '2026-09-09', title: '模式与交互优化', items: ['共同修复', '首分支修复', '另一分支修复'] },
+        { version: '0.9.4', date: '2026-09-08', items: ['历史修复'] }
+      ])
+      result.releaseNotes[0]!.items.push('仅调用方修改')
+      expect(about.buildSherlockAboutInfo('0.9.5', locale).releaseNotes[0]!.items).not.toContain('仅调用方修改')
+      expect(about.buildSherlockAboutInfo('0.9.4', locale).releaseNotes.map(note => note.version)).toEqual(['0.9.4'])
+    }
+  })
+
   it('builds localized release notes around the real runtime version', async () => {
     const aboutModule = await import('../src/preload/about-info').catch(() => null)
 

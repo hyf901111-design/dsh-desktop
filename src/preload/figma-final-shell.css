@@ -117,3 +117,9 @@ body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none
 [data-ds-dark-theme] .t8lSSG_panel { background-image:url('/figma-glass-dark-base.png'); }
 [data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background:url('/figma-glass-dark-overlay.png') -753px -133px/1122px 1122px no-repeat, url('/figma-glass-dark-mesh.png') -793px -173px/1202px 1202px no-repeat; }
 .t8lSSG_panel .t8lSSG_panelResize { left:0; width:6px; }
+
+/* Settings lives inside the glass frame's stacking context; Better Sidebar is
+   a body portal. Hide that portal while the real settings dialog is mounted,
+   preserving its tabs/draft and preventing guardAnchor reattachment from
+   covering settings. Other settings popovers remain available. */
+body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlock-settings-panel]:not([hidden])) [data-dsh-panel-host] { display:none !important; }
