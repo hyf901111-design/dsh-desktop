@@ -6,6 +6,7 @@ import { Window } from 'happy-dom'
 import { describe, expect, it } from 'vitest'
 
 import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
+import { patchFigmaFinalConversation } from '../scripts/lib/patch-figma-final-shell.mjs'
 
 const source = await readFile(new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
 const patched = patchBetterSidebarClient(source)
@@ -103,6 +104,27 @@ async function mountPatchedTabBar(onNewTab: (id: string) => void) {
 }
 
 describe('Figma Files panel', () => {
+  it('retains measured row geometry when the plugin CSS loads after the browser fallback', async () => {
+    const browser = new Window()
+    const conversation = patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+    const start = conversation.indexOf('/* ODYSSEY_FIGMA_FINAL_SHELL_START */')
+    const end = conversation.indexOf('/* ODYSSEY_FIGMA_FINAL_SHELL_END */', start)
+    runInNewContext(conversation.slice(start, end), { document: browser.document })
+    const vendorStyle = source.match(/const css\$3 = ("(?:\\.|[^"\\])*");/)
+    expect(vendorStyle).not.toBeNull()
+    const lateStyle = browser.document.createElement('style')
+    lateStyle.textContent = JSON.parse(vendorStyle![1])
+    browser.document.head.appendChild(lateStyle)
+    const row = browser.document.createElement('button')
+    row.className = 't8lSSG_explorerFile'
+    row.setAttribute('data-odyssey-file-row', 'file')
+    browser.document.body.appendChild(row)
+    expect(browser.getComputedStyle(row).height).toBe('38px')
+    expect(browser.getComputedStyle(row).gap).toBe('10px')
+    expect(browser.document.querySelectorAll('#odyssey-figma-final-shell')).toHaveLength(1)
+    await browser.happyDOM.close()
+  })
+
   it('marks the real explorer controls and preserves refresh as an accessible action', () => {
     expect(patched).toContain('/* sherlock:figma-file-panel:v1 */')
     expect(patched).toContain('"data-odyssey-file-search": true')
