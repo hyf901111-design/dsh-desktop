@@ -949,15 +949,20 @@ export class ResearchTaskRuntime {
       // At most one repair generation, within the same task/concurrency slot.
       // Completed malformed output and truncated output follow the same acceptance gate.
       for (let attempt = 0; attempt < 2; attempt++) {
+        if (result?.localDeadlineExceeded) {
+          await handle?.dispose()
+          handle = undefined
+          if (task.cancelRequested || terminalState(task.state)) return
+        }
         if (typeof result?.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
         const deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try { output = finalText(result?.output, task.kind) }
         catch (error) { if (!structured || !['INVALID_OUTPUT', 'OUTPUT_TOO_LARGE'].includes(error.code)) throw error }
-        if (output !== undefined || !structured || attempt === 1 || !['completed', 'max-tokens'].includes(result?.stopReason)) break
+        if (output !== undefined || !structured || attempt === 1 || !canSynthesizeResult(result) || result.localDeadlineExceeded && !recoveryText && !recoveryEvidence) break
         this.appendEvent(task, { type: 'assistant-delta', text: '正在校验并自动修复组件内容…' })
-        await handle.dispose().catch(() => undefined)
+        await handle?.dispose()
         handle = undefined
         if (task.cancelRequested || terminalState(task.state)) return
         handle = await startHandle([
@@ -973,10 +978,10 @@ export class ResearchTaskRuntime {
         result = await handle.result
         if (task.cancelRequested || terminalState(task.state)) return
       }
-      if (structured && output === undefined && ['completed', 'max-tokens'].includes(result?.stopReason)) {
+      if (structured && output === undefined && canSynthesizeResult(result)) {
         output = readableFallback ?? (recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
-      if (output !== undefined && result?.stopReason === 'max-tokens') result = { ...result, stopReason: 'completed' }
+      if (output !== undefined && canSynthesizeResult(result)) result = { ...result, stopReason: 'completed' }
 
       if (
         result?.stopReason === 'completed' &&
@@ -1074,7 +1079,26 @@ export function researchSearchEvidence(event, searchCallIds) {
   return blocks.filter(b => b?.type === 'tool-result' && searchCallIds.has(b.toolCallId) && !b.isError && !b.error)
     .flatMap(b => Array.isArray(b.content) ? b.content : [])
     .filter(b => b?.type === 'text' && typeof b.text === 'string' && !/unknown tool|tool not found|api.?key|unauthorized/i.test(b.text))
-    .map(b => b.text).join('\n').slice(0, MAX_CONTAINER_EVIDENCE_BYTES)
+    .map(b => compactResearchEvidence(b.text)).join('\n').slice(0, MAX_CONTAINER_EVIDENCE_BYTES)
+}
+
+// Strip transport identifiers, retaining observed dates, units, quality and sources.
+// Complete rows avoid handing the recovery model a truncated JSON document.
+function compactResearchEvidence(text) {
+  let data
+  try { data = JSON.parse(text) } catch { return text }
+  if (data?.schema_version !== 'financial-1' || !Array.isArray(data.records)) return text
+  const rows = [], sources = new Set()
+  for (const r of data.records) {
+    if (!r || typeof r.instrument !== 'string' || typeof r.metric !== 'string') continue
+    if (!['string', 'number'].includes(typeof r.value)) continue
+    rows.push(`${r.as_of ?? '日期未提供'} | ${r.instrument} | ${r.metric} | ${r.value} ${r.unit ?? ''} | ${[r.price_basis,r.quality_state].filter(Boolean).join('；')}`)
+    for (const url of [r.source_url, r.url]) if (typeof url === 'string' && /^https?:\/\//.test(url)) sources.add(url)
+  }
+  return [`行情资料（响应状态：${data.status}，接收时间：${data.received_at ?? '未提供'}）`, '日期 | 标的 | 指标 | 数值与单位 | 口径与质量', ...rows, ...sources, ...(Array.isArray(data.limitations) ? data.limitations : []).filter(v=>typeof v==='string')].join('\n')
+}
+function canSynthesizeResult(result) {
+  return ['completed', 'max-tokens'].includes(result?.stopReason) || result?.stopReason === 'timeout' && result.localDeadlineExceeded === true
 }
 
 export function createSubagentAdapter(ctx) {
@@ -1219,6 +1243,7 @@ export function createSubagentAdapter(ctx) {
       if (signal.aborted) throw signal.reason
       let effectivePrompt = prompt
       let hostEvidence = ''
+      if (kind === 'container' || kind === 'create') effectivePrompt += '\n趋势图优先使用宿主 chart 格式的 labels/series，直接交付已有真实数据，不编写冗长的 SVG 坐标或重复的 HTML 图表代码。历史记录很多时可选取有明确日期的代表数据点，并注明采样和覆盖范围；无法取得的区间保留缺失说明，不要为凑齐数据持续查询。'
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
       if (permitsTools) effectivePrompt += '\n股票、指数、ETF、基金的行情、净值、历史日线或对比研究，优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要替代该工具已覆盖的数据。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。网页搜索只补充工具未覆盖的资料。生成的是带数据时点的快照，不代表持续实时更新。'
       if (needsWebData) {
@@ -1267,12 +1292,13 @@ export function createSubagentAdapter(ctx) {
       // Restrict only this child after its bounded research phase. In-flight reads
       // finish normally, then the same conversation synthesizes existing evidence.
       let searchCalls = 0, researchClosed = false, liftResearchLimit
+      let lastOutputAt = 0, streamedText = ''
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
       let evidenceBytes = Buffer.byteLength(hostEvidence, 'utf8')
       const closeResearch = () => {
         if (researchClosed || signal.aborted || !child.ctx?.tools?.restrict || !child.steer) return
         researchClosed = true
-        liftResearchLimit = child.ctx.tools.restrict({ deny: ['web_search'] })
+        liftResearchLimit = child.ctx.tools.restrict({ deny: ['web_search', 'financial_query'] })
         child.steer(createUserMessage({ content: [{ type: 'text', text: '本面板的资料检索阶段已结束。请使用当前会话已经取得的证据直接生成最终组件 JSON，不要再次搜索；缺少的字段注明缺失和已知数据日期，不能据此虚构数值或趋势。' }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime', form: 'notice', summary: '结束检索并构建组件' } }))
       }
       const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(closeResearch, 120000) : undefined
@@ -1284,18 +1310,24 @@ export function createSubagentAdapter(ctx) {
           seen.add(seq)
         }
         if (event?.type === 'tool/call' && ['web_search', 'financial_query'].includes(event.data?.name)) {
-          if (event.data.name === 'web_search') searchCalls++
+          searchCalls++
           if (typeof event.data.callId === 'string') evidenceCalls.add(event.data.callId)
         }
         if (event?.type === 'tool/result' && evidenceBytes < MAX_CONTAINER_EVIDENCE_BYTES) {
           const text = researchSearchEvidence(event, evidenceCalls)
           if (text) {
-            const piece = truncateUtf8(text, Math.min(8000, MAX_CONTAINER_EVIDENCE_BYTES - evidenceBytes))
+            const piece = truncateUtf8(text, MAX_CONTAINER_EVIDENCE_BYTES - evidenceBytes)
             evidenceParts.push(piece)
             evidenceBytes += Buffer.byteLength(piece, 'utf8')
           }
         }
         if (event?.type === 'tool/result' && searchCalls >= 8) closeResearch()
+        if (event?.type === 'step/start') streamedText = ''
+        const chunk = event?.type === 'assistant/chunk' ? event.data?.chunk : undefined
+        if (chunk?.type === 'text-delta' && typeof chunk.text === 'string' && chunk.text) {
+          lastOutputAt = Date.now()
+          streamedText += truncateUtf8(chunk.text, Math.max(0, MAX_STRUCTURED_OUTPUT_BYTES - Buffer.byteLength(streamedText, 'utf8')))
+        }
         onSessionEvent(event)
       }
       const off = ctx.on('session/event', (session, event) => {
@@ -1315,7 +1347,19 @@ export function createSubagentAdapter(ctx) {
       let disposed = false, completionTimer
       const boundedResult = kind === 'container' || synthesisOnly ? Promise.race([
         run.result,
-        new Promise(resolve => { completionTimer = setTimeout(() => resolve({ stopReason: 'timeout', output: [] }), synthesisOnly ? 90000 : 180000) })
+        new Promise(resolve => {
+          const started = Date.now(), budget = synthesisOnly ? 90000 : 180000
+          const finish = () => {
+            const remaining = budget + 120000 - (Date.now() - started)
+            // Public output, not private reasoning or tool churn, earns bounded time to finish.
+            if (lastOutputAt && Date.now() - lastOutputAt < 15000 && remaining > 0) {
+              completionTimer = setTimeout(finish, Math.min(15000, remaining))
+              return
+            }
+            resolve({ stopReason: 'timeout', localDeadlineExceeded: true, output: streamedText ? [{ type: 'text', text: streamedText }] : [] })
+          }
+          completionTimer = setTimeout(finish, budget)
+        })
       ]) : run.result
       return {
         childSessionId: child.id,
@@ -1572,9 +1616,14 @@ export function createSharedBoardExecutor(ctx) {
         for (let attempt = 0; attempt < 2; attempt++) {
           const result = await handle.result
           signal.throwIfAborted()
-          // Connection failures and explicit cancellation must not trigger a
-          // second model call or publish partial content as a successful result.
-          if (!['completed', 'max-tokens'].includes(result?.stopReason)) {
+          // A locally enforced budget is recoverable only after the original
+          // child has stopped. Provider errors/cancellation remain terminal.
+          if (result?.localDeadlineExceeded) {
+            await handle.dispose()
+            handle = undefined
+            signal.throwIfAborted()
+          }
+          if (!canSynthesizeResult(result)) {
             if (result?.stopReason === 'timeout') throw new ResearchTaskError('TIMEOUT', MODEL_FAILURE_MESSAGES.TIMEOUT)
             throw Error('EXECUTION_INTERRUPTED')
           }
@@ -1582,6 +1631,7 @@ export function createSharedBoardExecutor(ctx) {
           const delivered = (result.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
           if (delivered && Buffer.byteLength(delivered, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = delivered
           if (typeof result.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
+          if (result.localDeadlineExceeded && !recoveryText && !recoveryEvidence) throw new ResearchTaskError('TIMEOUT', MODEL_FAILURE_MESSAGES.TIMEOUT)
           if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
           try {
             const text = finalText(result.output, request.kind)
@@ -1595,7 +1645,7 @@ export function createSharedBoardExecutor(ctx) {
               throw error
             }
           }
-          await handle.dispose()
+          await handle?.dispose()
           handle = undefined
           signal.throwIfAborted()
           handle = await start([

@@ -1075,7 +1075,7 @@ describe('Research task Subagent adapter', () => {
     for (let i = 0; i < 8; i++) fixture.ctx.emit(fixture.ctx.child.session, { seq: i + 1, type: 'tool/call', data: { name: 'web_search', arguments: '{"query":"指标数据"}' } });
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 9, type: 'tool/result', data: {} });
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 10, type: 'tool/result', data: {} });
-    expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search'] });
+    expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search', 'financial_query'] });
     expect(fixture.ctx.child.steer).toHaveBeenCalledTimes(1);
     expect(fixture.ctx.child.steer.mock.calls[0][0].content[0].text).toContain('已经取得');
     await handle.dispose();
@@ -1972,4 +1972,71 @@ it.each(['aborted', 'error'])('shared generation does not repair or publish %s r
     expect(ctx.subagents.start).toHaveBeenCalledTimes(1)
     expect(run.dispose).toHaveBeenCalledTimes(1)
   } finally { await executor.dispose() }
+})
+
+it('finishes all five shared panels when one reaches the local deadline with usable evidence', async () => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  vi.useFakeTimers()
+  const parent = { id: 'shared-parent', session: { events: [] } }, listeners = new Set(), runs = [], children = []
+  const valid = JSON.stringify({version:1,type:'chart',title:'已核实走势',variant:'line',labels:['2026-09-01','2026-09-02'],series:[{name:'指数',values:[12,13]}]})
+  const ctx = {agents:{get:()=>parent},on:(_name,f)=>{listeners.add(f);return()=>listeners.delete(f)},subagents:{start:vi.fn(async(_kind,options)=>{
+    const i=runs.length, child={id:`child-${i}`,session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}},steer:vi.fn()};children.push(child)
+    if(i===5){expect(runs[2].dispose).toHaveBeenCalledOnce();expect(options.toolFilter.allow).toEqual([]);expect(options.prompt[0].text).toContain('2026-09-02');expect(options.prompt[0].text).not.toContain('PRIVATE_REASONING')}
+    const run={id:child.id,localAgent:child,result:i===2?new Promise(()=>{}):Promise.resolve({stopReason:'completed',output:[{type:'text',text:valid}]}),dispose:vi.fn(async()=>{})};runs.push(run);return run
+  })}}
+  const executor=createSharedBoardExecutor(ctx)
+  try {
+    const pending=Promise.all(Array.from({length:5},(_,i)=>executor.execute({taskId:`task-${i}`,sessionId:parent.id,kind:'container',query:'离线资料生成图表',prompt:`面板${i}`},new AbortController().signal)))
+    void pending.catch(()=>{})
+    await vi.advanceTimersByTimeAsync(1)
+    const emit=e=>listeners.forEach(f=>f(children[2],e))
+    emit({type:'tool/call',seq:1,data:{callId:'history',name:'financial_query'}})
+    emit({type:'tool/result',seq:2,data:{message:{content:[{type:'tool-result',toolCallId:'history',content:[{type:'text',text:'核实记录：2026-09-01 12 点；2026-09-02 13 点。'}]}]}}})
+    emit({type:'assistant/chunk',seq:3,data:{chunk:{type:'reasoning-delta',text:'PRIVATE_REASONING'}}})
+    await vi.advanceTimersByTimeAsync(180001)
+    expect(await pending).toEqual(Array(5).fill(valid))
+    expect(ctx.subagents.start).toHaveBeenCalledTimes(6)
+    expect(children[2].ctx.tools.restrict).toHaveBeenCalledWith({deny:['web_search','financial_query']})
+  } finally {await executor.dispose();vi.useRealTimers()}
+})
+
+it('keeps a container that is still streaming past the soft deadline, with no extra model call', async () => {
+  const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers()
+  const parent={id:'parent'},child={id:'child',session:{events:[]}},result=Promise.withResolvers()
+  const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
+  let handle
+  try {
+    handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query:'离线图表',prompt:'图表',signal:new AbortController().signal,onSessionEvent:()=>{}})
+    let done=false;void handle.result.then(()=>{done=true})
+    await vi.advanceTimersByTimeAsync(175000)
+    ctx.emit(child,{type:'assistant/chunk',seq:1,data:{chunk:{type:'text-delta',text:'{"version":1,'}}})
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(done).toBe(false)
+    result.resolve({stopReason:'completed',output:[{type:'text',text:'完整的最终内容'}]})
+    expect((await handle.result).stopReason).toBe('completed')
+    expect(ctx.subagents.start).toHaveBeenCalledOnce()
+  } finally {await handle?.dispose();vi.useRealTimers()}
+})
+
+it('does not restart a timed-out shared child that has no evidence or usable output', async () => {
+ const {createSharedBoardExecutor}=await runtimeModule();vi.useFakeTimers()
+ const parent={id:'parent'},child={id:'child',session:{events:[]}},run={id:'child',localAgent:child,result:new Promise(()=>{}),dispose:vi.fn(async()=>{})}
+ const ctx=sessionEventContext(parent,child,run),executor=createSharedBoardExecutor(ctx)
+ try{
+  const pending=executor.execute({sessionId:'parent',kind:'container',query:'离线任务',prompt:'生成组件'},new AbortController().signal)
+  const rejected=expect(pending).rejects.toMatchObject({code:'TIMEOUT'})
+  await vi.advanceTimersByTimeAsync(180001);await rejected
+  expect(ctx.subagents.start).toHaveBeenCalledOnce();expect(run.dispose).toHaveBeenCalledOnce()
+ }finally{await executor.dispose();vi.useRealTimers()}
+})
+
+it('caps the streaming extension even if a child keeps emitting text indefinitely', async () => {
+ const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers()
+ const parent={id:'parent'},child={id:'child',session:{events:[]}},run={id:'child',localAgent:child,result:new Promise(()=>{}),dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
+ let handle
+ try{
+  handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'离线任务',prompt:'生成',signal:new AbortController().signal,onSessionEvent:()=>{}})
+  for(let seq=1;seq<=30;seq++){ctx.emit(child,{type:'assistant/chunk',seq,data:{chunk:{type:'text-delta',text:'输出片段'}}});await vi.advanceTimersByTimeAsync(10000)}
+  expect(await handle.result).toMatchObject({stopReason:'timeout',localDeadlineExceeded:true})
+ }finally{await handle?.dispose();vi.useRealTimers()}
 })
