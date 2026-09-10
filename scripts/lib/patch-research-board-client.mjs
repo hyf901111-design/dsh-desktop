@@ -489,7 +489,7 @@ function polishPatch(source) {
   return entryPatch(chromePatch(source + '\n/* SHERLOCK_BOARD_POLISH_V1 */'))
 }
 function entryPatch(source) {
-  if (source.includes('/* SHERLOCK_RESEARCH_ENTRY_V1 */')) return source
+  if (source.includes('/* SHERLOCK_RESEARCH_ENTRY_V1 */')) return generationResultPatch(source)
   source = replace(source,
     'function ResearchConversationPanel({ active, sessionId, presentation, researchWorkspaces, conversationHostRef, composerHostRef }) {\n\t\t\tconst panelRef = (0, react.useRef)(null);',
     `function ResearchConversationPanel({ active, sessionId, presentation, researchWorkspaces, conversationHostRef, composerHostRef }) {
@@ -520,7 +520,23 @@ function entryPatch(source) {
                     }
                 }
             }, [sessionId, researchWorkspaceSnapshot2.artifacts]);`)
-  return source + '\n/* SHERLOCK_RESEARCH_ENTRY_V1 */'
+  return generationResultPatch(source + '\n/* SHERLOCK_RESEARCH_ENTRY_V1 */')
+}
+function generationResultPatch(source) {
+  if (source.includes('/* SHERLOCK_GENERATION_RESULT_V1 */')) return source
+  source = replace(source,
+    'const target = workspace.retryGeneration(node.id);',
+    `if (sherlockShared(sessionId) && sherlockBoardsAdapter?.hasRetainedResult(sessionId, node.id)) {
+                    try { await sherlockBoardsAdapter.applyRetainedResult(sessionId, node.id); } catch (error) { sherlockBoardsAdapter.showError(error); }
+                    return;
+                }
+                const target = workspace.retryGeneration(node.id);`)
+  const retained = 'sherlockShared(sessionId) && sherlockBoardsAdapter?.hasRetainedResult(sessionId, node.id)'
+  source = replace(source, '"aria-label": "重试生成",', `"aria-label": (${retained}) ? "应用保留的研究结果" : "重试生成",`)
+  source = replace(source,
+    'children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 }), "重试"]',
+    `children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 }), (${retained}) ? "应用结果" : "重试"]`)
+  return source + '\n/* SHERLOCK_GENERATION_RESULT_V1 */'
 }
 function chromePatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_CHROME_V1 */')) return source

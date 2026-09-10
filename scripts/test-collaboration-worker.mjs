@@ -485,6 +485,21 @@ try {
     })
   )
   assert.equal(completed.task.resultState, 'applied')
+  const movedTask = await makeTask('a')
+  const movedBase = await ok(call(1, `/boards/${boardId}`))
+  const movedCanvas = structuredClone(movedBase.snapshot.canvas)
+  Object.assign(movedCanvas.artifacts[0], { x: 870, y: 920, width: 640, height: 540, stackOrder: 38, sizeMode: 'manual', generationStatus: 'running', generationError: '旧状态', refreshMinutes: 15 })
+  await ok(command(1, 'update', { update: toBase64(applyCanvasDiff(decodeDocument(fromBase64(movedBase.documentUpdate)), movedBase.snapshot.canvas, movedCanvas)) }))
+  const movedResult = await ok(command(1, 'taskResult', {
+    taskId: movedTask.task.taskId, leaseToken: movedTask.leaseToken,
+    node: { ...movedBase.snapshot.canvas.artifacts[0], excerpt: '拖动后仍显示生成结果', generationStatus: 'completed' }
+  }))
+  assert.equal(movedResult.task.resultState, 'applied', 'layout/progress changes are not content conflicts')
+  const movedNode = (await ok(call(1, `/boards/${boardId}`))).snapshot.canvas.artifacts[0]
+  assert.equal(movedNode.excerpt, '拖动后仍显示生成结果')
+  for (const key of ['x', 'y', 'width', 'height', 'stackOrder', 'sizeMode', 'refreshMinutes']) assert.equal(movedNode[key], movedCanvas.artifacts[0][key], `preserve latest ${key}`)
+  assert.equal(movedNode.generationStatus, 'completed')
+  assert.equal(movedNode.generationError, undefined)
   const conflictTask = await makeTask('a')
   let latest = await ok(call(1, `/boards/${boardId}`))
   let change = structuredClone(latest.snapshot.canvas)

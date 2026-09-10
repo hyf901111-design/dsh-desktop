@@ -959,6 +959,37 @@ it('Task4 transformed shared generation uses the board adapter without private f
   expect(source).toContain('PersonalResearchHistory')
 })
 
+it('coalesces repeated component generation clicks before cloud acknowledgement', async () => {
+  const f = await pageFixture()
+  let release
+  f.bridge.invoke.mockImplementation(async action => {
+    if (action === 'request.submit') { await new Promise(r => { release = r }); return { ok: true, value: { accepted: true, taskId: 'single-task' } } }
+    return { ok: true }
+  })
+  try {
+    const request = { sessionId: 'shared', targetNodeId: 'a', kind: 'container', prompt: '创建计数器' }
+    const pending = Array.from({ length: 9 }, () => f.page.generateShared('shared', request))
+    await vi.waitFor(() => expect(f.bridge.invoke.mock.calls.filter(c => c[0] === 'request.submit')).toHaveLength(1))
+    release()
+    expect((await Promise.all(pending)).every(r => r.taskId === 'single-task')).toBe(true)
+    // The command can be acknowledged before the task snapshot reaches React.
+    await f.page.generateShared('shared', request)
+    expect(f.bridge.invoke.mock.calls.filter(c => c[0] === 'request.submit')).toHaveLength(1)
+  } finally { f.dispose() }
+})
+
+it('applies a retained result from the component without another model request', async () => {
+  const f = await pageFixture()
+  try {
+    f.emit({ type: 'board', view: { ...f.view, seq: 2, tasks: [{ taskId: 'retained', targetId: 'a', status: 'completed', resultState: 'pendingResult' }] } })
+    expect(f.page.hasRetainedResult('shared', 'a')).toBe(true)
+    await f.page.applyRetainedResult('shared', 'a')
+    expect(f.bridge.invoke).toHaveBeenCalledWith('task.applyResult', { boardId: 'board', taskId: 'retained' })
+    expect(f.bridge.invoke.mock.calls.some(c => c[0] === 'request.submit')).toBe(false)
+    expect(f.source).toContain('"应用结果" : "重试"')
+  } finally { f.dispose() }
+})
+
 it('places imported history before real native chat flow and suppresses the empty surface only while the native conversation is empty', async () => {
   const { source } = await load(false)
   expect(source).toContain('PersonalResearchHistory,{sessionId,flow:true')

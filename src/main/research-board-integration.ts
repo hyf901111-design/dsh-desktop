@@ -502,6 +502,10 @@ export class ResearchBoardIntegration {
         } else if (task.resultState === 'pendingResult') {
           node.generationStatus = 'interrupted'
           node.generationError = '组件已发生修改；研究结果已保留，可手动应用'
+        } else if (task.status === 'completed' && task.resultState === 'applied') {
+          node.generationStatus = 'completed'
+          delete node.generationError
+          delete node.refreshError
         }
       }
     }
@@ -520,8 +524,8 @@ export class ResearchBoardIntegration {
   }) {
     this.authority(i.accountId, i.boardId, i.epoch, true)
     const canvas = structuredClone(i.canvas)
-    const existing = this.authority(i.accountId, i.boardId, i.epoch).snapshot
-      .snapshot.canvas
+    const snapshot = this.authority(i.accountId, i.boardId, i.epoch).snapshot
+    const existing = snapshot.snapshot.canvas
     for (const node of canvas.files) {
       let assetId = node.collaborationAssetId as string | undefined
       const old = existing.files.find((n) => n.id === node.id)
@@ -616,6 +620,14 @@ export class ResearchBoardIntegration {
         else delete n.generationError
       }
       const old = existing.artifacts.find((x) => x.id === n.id)
+      // Shared generation state comes from the leased task, not the native
+      // private-generation poller or a renderer's stale copy of the node.
+      if (old && snapshot.tasks.some((t: any) => t.targetId === n.id)) {
+        for (const key of ['generationStatus', 'generationError', 'generationStartedAt', 'generationCompletedAt', 'lastSuccessfulAt', 'refreshError']) {
+          if (old[key] !== undefined) n[key] = old[key]
+          else delete n[key]
+        }
+      }
       if (
         n.kind === 'generated-container' &&
         (Number(original?.refreshMinutes) || 0) !==
@@ -1065,6 +1077,7 @@ export class ResearchBoardIntegration {
     let heartbeat: ReturnType<typeof setInterval> | undefined
     let localTaskId: string | undefined
     let failureCode: string | undefined
+    let resultSubmitting = false
     const r = this.journal.get(key)
     const stop = () => {
       if (localTaskId)
@@ -1100,6 +1113,9 @@ export class ResearchBoardIntegration {
           { taskId: task.taskId, leaseToken: lease },
           signal
         ).catch(() => {
+          // A heartbeat already in flight can return STALE_LEASE after the
+          // result commits and releases that lease. It must not cancel success.
+          if (resultSubmitting) return
           this.active.get(key)?.abort()
           stop()
         })
@@ -1249,6 +1265,8 @@ export class ResearchBoardIntegration {
         }
       }
       if (Buffer.byteLength(answer) > 16384) throw Error('MESSAGE_SIZE_LIMIT')
+      resultSubmitting = true
+      clearInterval(heartbeat)
       await this.step(
         key,
         'taskResult',
@@ -1262,7 +1280,9 @@ export class ResearchBoardIntegration {
         signal
       )
       this.journal.update(key, { runtimeState: 'completed' })
-      await this.options.service().invoke('boards.refresh', {})
+      // Refresh is a separate read: a transient failure cannot undo the
+      // acknowledged cloud result or submit a spurious taskStop.
+      await this.options.service().invoke('boards.refresh', {}).catch(() => {})
     } catch (error) {
       if (this.journal.get(key).runtimeState !== 'uncertain')
         this.journal.update(key, {

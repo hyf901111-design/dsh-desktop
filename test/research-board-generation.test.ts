@@ -72,6 +72,27 @@ async function fixture(tasks: any[] = []) {
   return { integration, runtimeRequest, commands, canvas, service }
 }
 
+it('keeps an acknowledged result completed when refreshing the board fails', async () => {
+  const task = { taskId: 'task', targetId: 'node', targetCollection: 'artifacts', requestMessageId: 'message', status: 'running' }
+  const { integration, runtimeRequest, commands, service } = await fixture([task])
+  runtimeRequest.mockResolvedValue({ status: 'completed', text: JSON.stringify({ version: 1, type: 'markdown', title: '结果', content: '已生成' }) })
+  service.invoke.mockRejectedValue(Error('NETWORK_UNAVAILABLE'))
+  const key = integration.journal.prepare('user', 'board', 'refresh-failed', { text: '生成内容' }, 1)
+  await (integration as any).execute(key, task, new AbortController().signal)
+  expect(integration.journal.get(key).runtimeState).toBe('completed')
+  expect(commands.some(c => c.action === 'taskStop')).toBe(false)
+})
+
+it('does not publish stale renderer execution indicators back to a shared node', async () => {
+  const task = { taskId: 'task', targetId: 'node', status: 'completed', resultState: 'applied' }
+  const { integration, canvas } = await fixture([task])
+  const local = structuredClone(canvas)
+  Object.assign(local.artifacts[0]!, { x: 500, generationStatus: 'failed', generationError: '私有轮询器的旧状态' })
+  const projected = await integration.project({ accountId: 'user', accountGeneration: 1, boardId: 'board', epoch: 1, localSessionId: 'local', canvas: local, signal: new AbortController().signal })
+  expect(projected.artifacts[0]).toMatchObject({ x: 500, generationStatus: 'completed' })
+  expect(projected.artifacts[0]!.generationError).toBeUndefined()
+})
+
 it('rechecks edit authority after planning and never creates panels after access is revoked', async () => {
   const { integration, service, runtimeRequest, commands } = await fixture()
   const task = { taskId: 'planner', requestMessageId: 'message', status: 'running' }
