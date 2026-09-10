@@ -1,6 +1,7 @@
 import { patchFigmaFinalConversation } from './patch-figma-final-shell.mjs'
 import { researchNotoFontCss } from '../../packages/dsh-research-task-runtime/component-noto-font.js'
 import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
+import { patchFigmaFilePreview } from './figma-file-preview-client.mjs'
 import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -571,7 +572,7 @@ function canvasInteractionPatch(source) {
       "const measuredHeight = Math.min(maxHeight, Math.max(RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight, naturalHeight + RESEARCH_CANVAS_TITLE_HEIGHT + 2));\n                    const height = measuredHeight > before.height && measuredHeight - before.height <= 2 ? before.height : measuredHeight;\n                    measured.set(node.id, { ...before, width, height, sizeMode: 'manual' });")
     source += '\n/* SHERLOCK_ARRANGE_BORDER_STABLE_V1 */'
   }
-  if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return patchFigmaFinalCanvas(source)
+  if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return patchFigmaFilePreview(patchFigmaFinalCanvas(source))
   source = replace(source,
     'const interactivePreview = event.target?.closest?.("[data-research-preview-interactive],[data-research-selection-actions],[data-research-create-popover]");',
     `const frame = event.target?.closest?.("[data-research-node-id]");
@@ -596,7 +597,7 @@ function canvasInteractionPatch(source) {
                     const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
                     if (organized === null) return false;
                     organized.viewport = researchWorkbenchViewport([...organized.files, ...organized.artifacts], organized.viewport, snapshot.canvasSize);` + source.slice(end)
-  return patchFigmaFinalCanvas(source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */')
+  return patchFigmaFilePreview(patchFigmaFinalCanvas(source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */'))
 }
 
 function generationFeedbackPatch(source) {
