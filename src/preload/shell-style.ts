@@ -1,3 +1,4 @@
+import figmaFinalStyles from './figma-final-shell.css?raw'
 const DESKTOP_SHELL_STYLE_ID = 'sherlock-desktop-shell-style'
 
 const desktopShellStyles = `
@@ -19,6 +20,6 @@ export function mountDesktopShellStyles(document: Document): void {
 
   const style = document.createElement('style')
   style.id = DESKTOP_SHELL_STYLE_ID
-  style.textContent = desktopShellStyles
+  style.textContent = desktopShellStyles + figmaFinalStyles
   document.documentElement.appendChild(style)
 }

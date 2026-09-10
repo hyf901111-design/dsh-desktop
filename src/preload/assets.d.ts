@@ -7,3 +7,5 @@ declare module '*.png?url&inline' {
   const dataUrl: string
   export default dataUrl
 }
+
+declare module '*.css?raw' { const content: string; export default content }
