@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, readFile } from 'node:fs/promises'
+import { runInNewContext } from 'node:vm'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { ResearchBoardIntegration } from '../src/main/research-board-integration'
@@ -7,6 +9,15 @@ import { createDocument, projectDocument, mergeDocumentUpdate } from '../package
 import { fromBase64 } from '../packages/dsh-research-collaboration/protocol.js'
 
 const roots: string[] = []
+async function clientArtifacts(nodes: any[]) {
+  const require = createRequire(import.meta.url)
+  let descriptor: any
+  const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+  runInNewContext(source, { window: { __ModuleLoader__: { load: (d: any) => { descriptor = d } } }, document: undefined, TextEncoder, AbortController, URL, setTimeout, clearTimeout })
+  const fake: any = new Proxy(function () {}, { get: () => fake, apply: () => fake, construct: () => ({}) })
+  const client = descriptor.factory((id: string) => ['react', 'react/jsx-runtime'].includes(id) ? require(id) : fake)
+  return client.parseResearchCanvasArtifactNodes(JSON.stringify(nodes))
+}
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }) })
 async function fixture(tasks: any[] = []) {
   const root = await mkdtemp(join(tmpdir(), 'board-generation-')); roots.push(root)
@@ -70,7 +81,7 @@ it('creates and fills a new canvas component when the old retry target was delet
     if (body.action === 'taskClaim') reply.leaseToken = 'lease', reply.task = { contextSnapshot: { canvas: projectDocument(doc), history: [], messages: [{ id: 'new-message', text: '重新生成计数器', context: { scope: 'board', references: [] } }] } }
     return reply
   }
-  runtimeRequest.mockResolvedValue({ status: 'completed', text: JSON.stringify({ version: 1, type: 'html', title: '计数器', content: '<button>加一</button>' }) } as any)
+  runtimeRequest.mockResolvedValue({ status: 'completed', text: JSON.stringify({ version: 1, type: 'html', title: '计数器', html: '<button>加一</button>' }) } as any)
   const key = integration.journal.prepare('user', 'board', 'old', { text: '重新生成计数器', context: { scope: 'board', references: [] }, targetId: 'removed', targetCollection: 'artifacts', source: 'manual' }, 1)
   integration.journal.update(key, { runtimeState: 'interrupted', reply: { taskId: 'old-task' } })
   await integration.retry('user', 'board', 'old', new AbortController().signal)
@@ -79,9 +90,21 @@ it('creates and fills a new canvas component when the old retry target was delet
   const result = commands.find(c => c.action === 'taskResult')
   expect(result.node).toMatchObject({ kind: 'generated-container', generationStatus: 'completed', containerSpec: { type: 'html', title: '计数器' } })
   expect(result.node.id).not.toBe('removed')
+  expect((await clientArtifacts([result.node])).map((n: any) => n.id)).toEqual([result.node.id])
+  expect((await clientArtifacts(projectDocument(doc).artifacts)).some((n: any) => n.id === result.node.id)).toBe(true)
   expect(projectDocument(doc).artifacts.find((n: any) => n.id === 'node')).toEqual(canvas.artifacts[0])
   expect(commands.filter(c => c.action === 'update')).toHaveLength(1)
   doc.destroy()
+})
+
+it('restores already generated legacy components to the actual client renderer without rerunning the model', async () => {
+  const { integration, runtimeRequest } = await fixture()
+  const legacy = { id: 'legacy', kind: 'generated-container', title: '智能容器', x: 40, y: 800, width: 520, height: 380, containerPrompt: '生成计数器', generationStatus: 'completed', containerSpec: { version: 1, type: 'html', title: '计数器', html: '<button>加一</button>' } }
+  expect(await clientArtifacts([legacy])).toEqual([])
+  const repaired = await integration.materialize({ accountId: 'user', boardId: 'board', epoch: 3, localSessionId: 'local', canvas: { files: [], artifacts: [legacy] }, signal: new AbortController().signal })
+  expect((await clientArtifacts(repaired.artifacts)).map((n: any) => n.id)).toEqual(['legacy'])
+  expect(repaired.artifacts[0]!.containerSpec).toEqual(legacy.containerSpec)
+  expect(runtimeRequest).not.toHaveBeenCalled()
 })
 
 it('does not restart old requests after current edit access is revoked', async () => {
