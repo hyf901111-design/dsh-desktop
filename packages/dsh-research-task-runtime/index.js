@@ -1,6 +1,5 @@
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { registerWorkbench, captureSharedWorkbenchPlan } from './workbench.js'
 import { acceptArtifactOutput, artifactReadableFallback, extractArtifactObjects } from './artifact-output.js'
 import { INTERACTIVE_ARTIFACT_PROMPT } from './interactive-artifact.js'
@@ -1289,17 +1288,17 @@ export function createSubagentAdapter(ctx) {
 
       const releaseWorkbench = kind === 'board' && onWorkbenchPlan ? captureSharedWorkbenchPlan(child.id, onWorkbenchPlan) : undefined
 
-      // Restrict only this child after its bounded research phase. In-flight reads
-      // finish normally, then the same conversation synthesizes existing evidence.
+      // Restrict only this child after its bounded research phase. A queued steer
+      // would start another step after its final artifact and discard that result.
+      // Let in-flight reads and final output finish without injecting a new turn.
       let searchCalls = 0, researchClosed = false, liftResearchLimit
-      let lastOutputAt = 0, streamedText = ''
+      let lastOutputAt = 0, streamedText = '', completedArtifact
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
       let evidenceBytes = Buffer.byteLength(hostEvidence, 'utf8')
       const closeResearch = () => {
-        if (researchClosed || signal.aborted || !child.ctx?.tools?.restrict || !child.steer) return
+        if (researchClosed || signal.aborted || !child.ctx?.tools?.restrict) return
         researchClosed = true
         liftResearchLimit = child.ctx.tools.restrict({ deny: ['web_search', 'financial_query'] })
-        child.steer(createUserMessage({ content: [{ type: 'text', text: '本面板的资料检索阶段已结束。请使用当前会话已经取得的证据直接生成最终组件 JSON，不要再次搜索；缺少的字段注明缺失和已知数据日期，不能据此虚构数值或趋势。' }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime', form: 'notice', summary: '结束检索并构建组件' } }))
       }
       const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(closeResearch, 120000) : undefined
       const seen = new Set()
@@ -1322,6 +1321,11 @@ export function createSubagentAdapter(ctx) {
           }
         }
         if (event?.type === 'tool/result' && searchCalls >= 8) closeResearch()
+        if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {
+          // Retain only complete public artifacts accepted by the normal parser.
+          // Never recover reasoning or an incomplete JSON fragment as success.
+          try { completedArtifact = finalText(event.data?.message?.content, kind) ?? completedArtifact } catch {}
+        }
         if (event?.type === 'step/start') streamedText = ''
         const chunk = event?.type === 'assistant/chunk' ? event.data?.chunk : undefined
         if (chunk?.type === 'text-delta' && typeof chunk.text === 'string' && chunk.text) {
@@ -1356,7 +1360,11 @@ export function createSubagentAdapter(ctx) {
               completionTimer = setTimeout(finish, Math.min(15000, remaining))
               return
             }
-            resolve({ stopReason: 'timeout', localDeadlineExceeded: true, output: streamedText ? [{ type: 'text', text: streamedText }] : [] })
+            let text = streamedText
+            if (completedArtifact) {
+              try { text = finalText([{ type: 'text', text }], kind) ?? completedArtifact } catch { text = completedArtifact }
+            }
+            resolve({ stopReason: 'timeout', localDeadlineExceeded: true, output: text ? [{ type: 'text', text }] : [] })
           }
           completionTimer = setTimeout(finish, budget)
         })
