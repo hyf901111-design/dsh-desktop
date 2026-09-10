@@ -20,20 +20,26 @@ describe('研究工作台', () => {
         for (const panels of [[panel(1)], [panel(1), panel(1)], Array.from({ length: 11 }, (_, i) => panel(i)), [panel(1), { ...panel(2), height: 99999 }]])
             expect(() => validateWorkbench({ requestId: 'a', title: '行业', panels })).toThrow();
     });
-    it('plans aligned rows using the tallest panel in each row', () => {
-        const panels = layoutWorkbench(Array.from({ length: 7 }, (_, i) => panel(i)));
-        expect(panels.slice(0, 3).map(p => p.y)).toEqual([0, 0, 0]);
-        expect(panels[3].y).toBe(632);
-        expect(panels.every(p => p.width === 720)).toBe(true);
+    it('packs large cards first and fills the remaining cells without changing same-size order', () => {
+        const panels = layoutWorkbench(['small','large','medium','small','small'].map((size,i)=>({...panel(i),size})));
+        expect(panels.map(({x,y,width,height})=>({x,y,width,height}))).toEqual([
+            {x:672,y:0,width:320,height:220}, {x:0,y:0,width:656,height:456},
+            {x:0,y:472,width:656,height:220}, {x:672,y:236,width:320,height:220},
+            {x:672,y:472,width:320,height:220}
+        ]);
+        expect(panels.map(p=>p.title)).toEqual(Array.from({length:5},(_,i)=>`面板${i}`));
+        for(let i=0;i<panels.length;i++)for(const b of panels.slice(i+1)) {
+            const a=panels[i];expect(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y).toBe(true);
+        }
     });
-    it('fits the whole workbench rather than only the nearest panel, leaving room for the composer', async () => {
+    it('fits the whole workbench rather than only the nearest panel, leaving the designed outer margin', async () => {
         const client = await bundle();
         const panels = layoutWorkbench(Array.from({ length: 4 }, (_, i) => panel(i))).map(p => ({ ...p, x: p.x + p.width / 2, y: p.y + p.height / 2 }));
         const viewport = client.researchWorkbenchViewport(panels, { x: 0, y: 0, scale: 1 }, { width: 658, height: 824 });
         for (const p of panels) {
             expect((p.x - p.width / 2) * viewport.scale + viewport.x).toBeGreaterThanOrEqual(31);
             expect((p.x + p.width / 2) * viewport.scale + viewport.x).toBeLessThanOrEqual(627);
-            expect((p.y + p.height / 2) * viewport.scale + viewport.y).toBeLessThanOrEqual(644);
+            expect((p.y + p.height / 2) * viewport.scale + viewport.y).toBeLessThanOrEqual(792);
         }
     });
     it('starts all panels, deduplicates a repeated request, and restores unclaimed plans', async () => {
@@ -102,17 +108,17 @@ describe('研究工作台', () => {
         expect(workspace.getSnapshot().artifacts).toHaveLength(4);
         expect(client.createResearchWorkspaceSession(storage, 's').getSnapshot().artifacts[0].workbenchId).toBe('board');
         workspace.applyGenerationInspection('n0', { taskId: 't0', canvasNodeId: 'n0', state: 'running', lastSeq: 1, events: [] });
-        expect(workspace.getSnapshot().artifacts[0].width).toBe(720);
-        expect(workspace.getSnapshot().artifacts[0].height).toBe(600);
+        expect(workspace.getSnapshot().artifacts[0].width).toBe(656);
+        expect(workspace.getSnapshot().artifacts[0].height).toBe(456);
         workspace.applyGenerationInspection('n0', { taskId: 't0', canvasNodeId: 'n0', state: 'completed', lastSeq: 2, events: [], finalOutput: JSON.stringify({ type: 'markdown', title: '内容', markdown: '# 标题\n正文' }) });
         const nodes = workspace.getSnapshot().artifacts;
-        expect(nodes[0].width).toBe(720);
-        expect(nodes[3].y - nodes[3].height / 2).toBeGreaterThanOrEqual(Math.max(...nodes.slice(0, 2).map((n) => n.y + n.height / 2)) + 31);
+        expect(nodes[0].width).toBe(656);
+        expect(nodes.every(n=>n.width===656&&[220,456].includes(n.height))).toBe(true);
     });
-    it('uses presets as initial sizes and preserves measured content when arranging', async () => {
+    it('uses S M L sizes and retains full content while capping arranged frames at L', async () => {
         const input = { requestId: 'sizes', title: '工作台', panels: [0,1,2,3].map((n) => ({ ...panel(n), size: n === 0 ? 'small' : n === 1 ? 'medium' : 'large' })) };
         const planned = layoutWorkbench(validateWorkbench(input).panels);
-        expect(planned.map(p => p.height)).toEqual([600,600,840,840]);
+        expect(planned.map(p => p.height)).toEqual([220,220,456,456]);
         const client = await bundle(), workspace = client.createResearchWorkspaceSession(store(), 'sizes');
         workspace.applyWorkbench({ id: 'sizes', panels: planned.map((p,i) => ({ ...p, nodeId: `s${i}`, taskId: `t${i}` })) });
         workspace.updateNodeGeometry('s0', { height: 3500, sizeMode: 'auto' });
@@ -121,9 +127,9 @@ describe('研究工作台', () => {
         expect(times[1]-times[0]).toBeGreaterThanOrEqual(500);
         workspace.organizeCanvas(new Map([['s0', {width: 720, height: 3500}]]));
         const nodes = workspace.getSnapshot().artifacts;
-        expect(nodes.map(n=>n.height)).toEqual([1440,1440,840,840]);
-        expect(nodes[0].y).toBe(nodes[1].y);
-        expect(nodes[2].y).toBe(nodes[3].y);
+        expect(nodes.map(n=>n.height)).toEqual([456,220,456,456]);
+        expect(nodes[0].containerPrompt).toBe(planned[0].prompt);
+        expect(nodes.every(n=>n.width<=656&&n.height<=456)).toBe(true);
     });
     it('surfaces real search topics and public reports, omitting private reasoning and raw artifact code', async () => {
         const event = publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'web_search', arguments: JSON.stringify({ query: 'CDE 医药审批进展', token: 'private-token' }) } });
@@ -140,19 +146,19 @@ describe('研究工作台', () => {
     });
 });
 
-it('grows a preset HTML card and moves subsequent rows only by the additional row height', async () => {
+it('upgrades a preset HTML card to L and moves following rows without exceeding L', async () => {
     const client = await bundle(), storage = store();
     const html = '<main>可核验的内容</main>';
-    const nodes = [0,1,2,3].map(i => ({id:`fit${i}`,kind:'generated-container',messageId:`fit${i}`,title:'面板',excerpt:'内容',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'监控',refreshMinutes:0,width:720,height:600,x:(i%2)*752+360,y:i<2?348:980,sizeMode:'auto',containerSizePreset:'medium',workbenchId:'fit',containerSpec:{version:1,type:'html',title:'面板',html}}));
+    const nodes = [0,1,2,3].map(i => ({id:`fit${i}`,kind:'generated-container',messageId:`fit${i}`,title:'面板',excerpt:'内容',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'监控',refreshMinutes:0,width:656,height:220,x:(i%2)*672+328,y:i<2?142:378,sizeMode:'auto',containerSizePreset:'medium',workbenchId:'fit',containerSpec:{version:1,type:'html',title:'面板',html}}));
     storage.setItem('sherlock.research.canvas.artifacts.v1:fit', JSON.stringify(nodes));
     const workspace = client.createResearchWorkspaceSession(storage,'fit');
-    expect(workspace.fitHtmlContent('fit0',html,{width:720,height:1000})).toBe(true);
-    expect(workspace.getSnapshot().artifacts.map(n=>n.y)).toEqual([548,348,1380,1380]);
-    expect(workspace.fitHtmlContent('fit1',html,{width:720,height:900})).toBe(true);
-    expect(workspace.getSnapshot().artifacts[2].y).toBe(1380);
+    expect(workspace.fitHtmlContent('fit0',html,{width:656,height:400})).toBe(true);
+    expect(workspace.getSnapshot().artifacts.map(n=>n.y)).toEqual([260,142,614,614]);
+    expect(workspace.fitHtmlContent('fit1',html,{width:656,height:300})).toBe(true);
+    expect(workspace.getSnapshot().artifacts[2].y).toBe(614);
     workspace.resizeNode('fit0','se',{x:0,y:-200},1);
-    expect(workspace.fitHtmlContent('fit0',html,{width:720,height:1100})).toBe(false);
-    expect(workspace.getSnapshot().artifacts[0].height).toBe(800);
+    expect(workspace.fitHtmlContent('fit0',html,{width:656,height:1100})).toBe(false);
+    expect(workspace.getSnapshot().artifacts[0].height).toBe(256);
 });
 
 it('arranges links, text and many generated panels together without an empty vertical region', async () => {

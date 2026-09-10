@@ -105,7 +105,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             title: { type: 'string', required: true },
             panels: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题、内容边界、数据与来源，以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
-                        type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '初始规格：small 720×360、medium 720×600、large 720×840。按信息量选择，首屏只呈现核心内容；容器可按内容增高，避免固定高度的内部滚动区。' }
+                        type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '初始规格：small 320×220、medium 656×220、large 656×456。按内容密度先选规格：核心指标/短结论用small，短表格/横向趋势用medium，复杂图表/多维对比用large。内容放不下升级，超过large则拆分组件或摘要，完整内容在放大阅读中呈现。字体不缩小、组件内无滚动条。' }
                     } } }
         },
         output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },

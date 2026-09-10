@@ -480,7 +480,7 @@ it('keeps more than256 shared nodes when editing and atomically applying another
   expect(w.getSnapshot().artifacts[299].excerpt).toBe('changed')
 })
 
-it('renders at most5 avatars plus overflow and removes manage action after access ends', async () => {
+it('renders at most3 avatars plus overflow and removes manage action after access ends', async () => {
   const { ResearchBoardPresence, ResearchBoardHeader } = await import(
     '../src/preload/research-boards-ui.ts'
   )
@@ -506,8 +506,8 @@ it('renders at most5 avatars plus overflow and removes manage action after acces
   const rendered = renderToStaticMarkup(
     React.createElement(ResearchBoardPresence, { page, sessionId: 's' })
   )
-  expect(rendered.match(/class="srb-avatar"/g)).toHaveLength(5)
-  expect(rendered).toContain('+2')
+  expect(rendered.match(/class="srb-avatar"/g)).toHaveLength(3)
+  expect(rendered).toContain('+4')
   expect(rendered).toContain('Member0，创建者')
   view.permissions.read = false
   view.connection = 'revoked'
@@ -986,7 +986,7 @@ it('applies a retained result from the component without another model request',
     await f.page.applyRetainedResult('shared', 'a')
     expect(f.bridge.invoke).toHaveBeenCalledWith('task.applyResult', { boardId: 'board', taskId: 'retained' })
     expect(f.bridge.invoke.mock.calls.some(c => c[0] === 'request.submit')).toBe(false)
-    expect(f.source).toContain('"应用结果" : "重试"')
+    expect(f.source.includes('"应用结果" : "重新生成"')).toBe(true)
   } finally { f.dispose() }
 })
 

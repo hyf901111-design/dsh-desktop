@@ -1,3 +1,6 @@
+import { patchFigmaFinalConversation } from './patch-figma-final-shell.mjs'
+import { researchNotoFontCss } from '../../packages/dsh-research-task-runtime/component-noto-font.js'
+import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
 import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +10,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
   .replace(/^export /gm, '')
+  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n')
   .replace(/\bparseResearchHtmlArtifact\(/g, 'parseResearchContainerSpec(')
 const START = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_BEGIN */',
   END = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_END */'
@@ -485,6 +489,9 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
+  return patchFigmaFinalConversation(polishBoardPatch(source))
+}
+function polishBoardPatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return entryPatch(chromePatch(source))
   source = replace(
     source,
@@ -561,7 +568,7 @@ function canvasInteractionPatch(source) {
       "const measuredHeight = Math.min(maxHeight, Math.max(RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight, naturalHeight + RESEARCH_CANVAS_TITLE_HEIGHT + 2));\n                    const height = measuredHeight > before.height && measuredHeight - before.height <= 2 ? before.height : measuredHeight;\n                    measured.set(node.id, { ...before, width, height, sizeMode: 'manual' });")
     source += '\n/* SHERLOCK_ARRANGE_BORDER_STABLE_V1 */'
   }
-  if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return source
+  if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return patchFigmaFinalCanvas(source)
   source = replace(source,
     'const interactivePreview = event.target?.closest?.("[data-research-preview-interactive],[data-research-selection-actions],[data-research-create-popover]");',
     `const frame = event.target?.closest?.("[data-research-node-id]");
@@ -586,11 +593,12 @@ function canvasInteractionPatch(source) {
                     const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
                     if (organized === null) return false;
                     organized.viewport = researchWorkbenchViewport([...organized.files, ...organized.artifacts], organized.viewport, snapshot.canvasSize);` + source.slice(end)
-  return source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */'
+  return patchFigmaFinalCanvas(source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */')
 }
 
 function generationFeedbackPatch(source) {
   source = componentTypographyPatch(source)
+  source = componentRuntimeFontPatch(source)
   source = generationProgressOverlayPatch(source)
   if (!source.includes('/* SHERLOCK_GENERATION_PROGRESS_EVENTS_V1 */')) {
     source = replace(source, 'node[key]=original[key];}', 'node[key]=original[key];if(Array.isArray(original?.generationEvents))node.generationEvents=researchGenerationInspectionEvents(original.generationEvents.map(e=>({...e,taskId:node.generationTaskId,canvasNodeId:node.id})),node.generationTaskId,node.id,0);}')
@@ -609,7 +617,7 @@ function generationFeedbackPatch(source) {
   source = replace(source, "timer = setTimeout(tick, document.hidden ? 1000 : 160);", 'timer = setTimeout(tick, 1000);')
   source = replace(source, "className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,", "className: 'rScV5Q_generationTerminal', 'data-research-generation-visual': '', 'aria-hidden': true,")
   source = replace(source, "}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'", `}), (0,react_jsx_runtime.jsxs)('div', {'data-research-generation-activity':'',children:[outputChars>0?'已接收 '+outputChars.toLocaleString()+' 字 · ':'',activityStatus]}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'`)
-  const css = `[data-research-task-conversation]{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] :is(p,pre,code,details){min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] pre{white-space:pre-wrap;overflow-x:auto}[data-research-generation-empty]:is([data-research-generation-state=queued],[data-research-generation-state=running]):not([open]){height:320px!important;min-height:0!important}[data-research-generation-empty] .rScV5Q_generationProcess{min-height:0;height:100%;padding:12px 20px 16px;gap:10px}[data-research-generation-empty] .rScV5Q_generationTerminal{min-height:0;flex:1;display:flex;align-items:flex-start;overflow:hidden}[data-research-generation-empty] .rScV5Q_generationLog{justify-content:flex-start;gap:6px;width:100%;min-width:0}[data-research-generation-description]{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}[data-research-generation-activity]{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}.rScV5Q_generationLogText{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}`
+  const css = `[data-research-task-conversation]{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] :is(p,pre,code,details){min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] pre{white-space:pre-wrap;overflow-x:auto}[data-research-generation-empty] .rScV5Q_generationProcess{min-height:0;height:100%;padding:12px 20px 16px;gap:10px}[data-research-generation-empty] .rScV5Q_generationTerminal{min-height:0;flex:1;display:flex;align-items:flex-start;overflow:hidden}[data-research-generation-empty] .rScV5Q_generationLog{justify-content:flex-start;gap:6px;width:100%;min-width:0}[data-research-generation-description]{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}[data-research-generation-activity]{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}.rScV5Q_generationLogText{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}`
   return generationActivityClockPatch(source + `\n/* SHERLOCK_GENERATION_FEEDBACK_V1 */\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockGenerationFeedback="";style.textContent=${JSON.stringify(css)};document.head.appendChild(style);}\n`)
 }
 
@@ -618,10 +626,42 @@ function componentTypographyPatch(source) {
   const end = source.indexOf('// RESEARCH_COMPONENT_THEME_END', start)
   if (start < 0 || end < 0) throw Error('Component theme block missing')
   source = source.slice(0, start) + componentThemeSource + source.slice(end + '// RESEARCH_COMPONENT_THEME_END'.length)
-  const css = JSON.stringify(researchComponentTypographyCss('[data-research-container-type], [data-research-generated-mind-map], [data-research-compact-chrome] .rScV5Q_nodeTitleText'))
-  const oldCall = "researchComponentTypographyCss('[data-research-container-type], [data-research-generated-mind-map], [data-research-compact-chrome] .rScV5Q_nodeTitleText')"
-  if (source.includes('/* SHERLOCK_COMPONENT_DIN_PRO_V1 */')) return source.replace('style.textContent='+oldCall, 'style.textContent='+css)
-  return source + `\n/* SHERLOCK_COMPONENT_DIN_PRO_V1 */\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockComponentTypography="";style.textContent=${css};document.head.appendChild(style);}\n`
+  const css = JSON.stringify(researchComponentTypographyCss('[data-research-container-type], [data-research-generated-mind-map], [data-research-compact-chrome] .rScV5Q_nodeTitleText', { notoFont: 'local' }))
+  const marker = '/* SHERLOCK_COMPONENT_DIN_PRO_V1 */'
+  const next = `${marker}\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockComponentTypography="";style.textContent=${css};document.head.appendChild(style);}`
+  const previous = source.indexOf(marker)
+  if (previous >= 0) {
+    const suffix = ';document.head.appendChild(style);}'
+    const previousEnd = source.indexOf(suffix, previous)
+    if (previousEnd < 0) throw Error('Component typography stylesheet boundary missing')
+    return source.slice(0, previous) + next + source.slice(previousEnd + suffix.length)
+  }
+  return source + '\n' + next + '\n'
+
+}
+
+function componentRuntimeFontPatch(source) {
+  source = source.replaceAll("buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime'})", 'buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme())')
+  source = replace(source, 'const srcDoc = (0, react.useMemo)(() => buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme()), [spec.html, spec.title]);', "const srcDoc = (0, react.useMemo)(() => buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime'}), [spec.html, spec.title]);")
+  const runtimeStart=source.indexOf('/* SHERLOCK_COMPONENT_RUNTIME_FONT_V1 */')
+  if(runtimeStart>=0){const end=source.indexOf('function ResearchHtmlArtifact({ spec, node, onSize }) {',runtimeStart);if(end<0)throw Error('Runtime font bridge boundary missing');source=source.slice(0,runtimeStart)+source.slice(end);}
+  source = replace(source, 'function ResearchHtmlArtifact({ spec, node, onSize }) {', `/* SHERLOCK_COMPONENT_RUNTIME_FONT_V1 */
+        let researchNotoRuntimeFont;
+        function researchSendRuntimeFont(frame, view, force=false) {
+            const target=frame.contentWindow;
+            frame.dataset.researchFontStatus='loading';
+            if(force)researchNotoRuntimeFont=undefined;
+            if(!researchNotoRuntimeFont)researchNotoRuntimeFont=fetch('/fonts/NotoSansSC.woff2').then(response=>{if(!response.ok)throw Error('Noto Sans SC 字体读取失败');return response.blob();}).then(blob=>{if(blob.size<1||blob.size>16*1024*1024)throw Error('Noto Sans SC 字体文件无效');return blob;});
+            researchNotoRuntimeFont.then(blob=>{if(frame.isConnected&&frame.contentWindow===target){target.postMessage({type:'sherlock-font-data',font:'noto-sc',blob},'*');frame.dataset.researchFontStatus='delivered';}}).catch(error=>{researchNotoRuntimeFont=undefined;if(frame.isConnected&&frame.contentWindow===target){target.postMessage({type:'sherlock-font-failed',font:'noto-sc'},'*');frame.dataset.researchFontStatus='failed';}view.console?.error('组件字体加载失败',error);});
+        }
+        function ResearchHtmlArtifact({ spec, node, onSize }) {`)
+  source=source.replace(/if\(data\.type==='sherlock-font-request'[^\n]+\n[ ]*/, '')
+  source=source.replace(/if\(\(data\.type==='sherlock-font-request'[^\n]+\n[ ]*/, '')
+  source=source.replace(/if\(data\.type==='sherlock-font-status'[^\n]+\n[ ]*/, '')
+  source = replace(source, 'if (data.type === "sherlock-content-hover" && Object.keys(data).length === 2', `if((data.type==='sherlock-font-request'||data.type==='sherlock-font-retry')&&data.font==='noto-sc'&&Object.keys(data).length===2&&Object.hasOwn(data,'type')&&Object.hasOwn(data,'font')){researchSendRuntimeFont(frame,view,data.type==='sherlock-font-retry');return;}
+                        if(data.type==='sherlock-font-status'&&data.font==='noto-sc'&&Object.keys(data).length===3&&['loaded','failed'].includes(data.status)){frame.dataset.researchFontStatus=data.status;return;}
+                        if (data.type === "sherlock-content-hover" && Object.keys(data).length === 2`)
+  return source
 }
 
 function generationActivityClockPatch(source) {
