@@ -11,21 +11,105 @@
         "schemaVersion": 1,
         "featureName": "EWork Odyssey final Figma navigation, collaboration and component redesign",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "6365688cf794c0e333b84d1cefa4410e7680708d",
-        "tipCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
+        "baseCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
+        "tipCommit": "c772b2ed10a2019df5f3e1168f1c64b6c96cc68a",
         "commits": [
           {
-            "commit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
+            "commit": "84e7787eebdec2bf93971c6d7c8759f749e45ebe",
             "parents": [
-              "6365688cf794c0e333b84d1cefa4410e7680708d"
+              "e061bf3fe7d031d071cfdde432c308d95ee7e2ca"
             ],
-            "subject": "修复放大阅读遮罩拦截并保留PDF阅读位置"
+            "subject": "保留HTML阅读视口并修复重开滚动归零"
+          },
+          {
+            "commit": "fd46a882f37fc204c5ae174ea4c890ff7d3e6937",
+            "parents": [
+              "84e7787eebdec2bf93971c6d7c8759f749e45ebe"
+            ],
+            "subject": "按Figma细化面板切换图标与开合颜色"
+          },
+          {
+            "commit": "c772b2ed10a2019df5f3e1168f1c64b6c96cc68a",
+            "parents": [
+              "fd46a882f37fc204c5ae174ea4c890ff7d3e6937"
+            ],
+            "subject": "还原画布矢量点阵和底部工具原始图标"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "build/figma-canvas-icons/global-container-dark.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/global-container-light.svg"
+          },
+          {
+            "status": "C082",
+            "path": "build/figma-canvas-icons/global-link-dark.svg",
+            "previousPath": "docs/figma-file-web-evidence/figma-link.svg"
+          },
+          {
+            "status": "C100",
+            "path": "build/figma-canvas-icons/global-link-light.svg",
+            "previousPath": "docs/figma-file-web-evidence/figma-link.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/global-voice-dark.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/global-voice-light.svg"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-canvas-primitives-final-20260910.md"
+          },
+          {
             "status": "M",
             "path": "docs/figma-file-web-supplement-20260910.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-icon-evidence/361-6013.svg"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-icon-evidence/361-6018.svg"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-icon-evidence/361-6307.svg"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-icon-evidence/361-6312.svg"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-icon-evidence/comparison.png"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-icon-evidence/metrics.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-icon-evidence/packaged-before-dom.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/figma-panel-toggle-icons-20260910.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
           },
           {
             "status": "M",
@@ -33,11 +117,23 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/verify-figma-file-preview.mjs"
           },
           {
             "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
             "path": "test/figma-file-preview.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-dot-icons-final.test.ts"
           }
         ],
         "checks": [
@@ -48,8 +144,8 @@
             ],
             "outcome": "passed",
             "summary": "Local dependencies verified",
-            "verifiedCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
-            "completedAt": "2026-09-10T12:47:36.489Z",
+            "verifiedCommit": "c772b2ed10a2019df5f3e1168f1c64b6c96cc68a",
+            "completedAt": "2026-09-10T13:24:27.406Z",
             "timeoutMs": 600000
           },
           {
@@ -62,8 +158,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
-            "completedAt": "2026-09-10T12:47:36.489Z",
+            "verifiedCommit": "c772b2ed10a2019df5f3e1168f1c64b6c96cc68a",
+            "completedAt": "2026-09-10T13:24:27.406Z",
             "timeoutMs": 120000
           },
           {
@@ -88,12 +184,13 @@
               "test/research-text-summary-final.test.ts",
               "test/figma-file-preview.test.ts",
               "test/research-boards-ui.test.ts",
-              "test/research-tabbar-final-layout.test.ts"
+              "test/research-tabbar-final-layout.test.ts",
+              "test/research-canvas-dot-icons-final.test.ts"
             ],
             "outcome": "passed",
             "summary": "Focused final design checks passed; see captured test log",
-            "verifiedCommit": "e061bf3fe7d031d071cfdde432c308d95ee7e2ca",
-            "completedAt": "2026-09-10T12:47:36.489Z",
+            "verifiedCommit": "c772b2ed10a2019df5f3e1168f1c64b6c96cc68a",
+            "completedAt": "2026-09-10T13:24:27.406Z",
             "timeoutMs": 120000
           }
         ],
@@ -111,80 +208,7 @@
           "Integration browser checks explicitly use SHERLOCK_COLLABORATION_BROWSER_FOCUS=figma-final; unrelated full browser cases are excluded and documented",
           "Arbitrary generated HTML layout still depends on semantic structure; summaries preserve full reading content"
         ],
-        "generatedAt": "2026-09-10T12:47:36.489Z"
-      },
-      "merged": {
-        "mergeCommit": "e3cf1784e69a66d102b681cbc1ebd616e8578e98",
-        "verificationCommit": "e3cf1784e69a66d102b681cbc1ebd616e8578e98",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "e3cf1784e69a66d102b681cbc1ebd616e8578e98",
-            "completedAt": "2026-09-10T12:48:32.777Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e3cf1784e69a66d102b681cbc1ebd616e8578e98",
-            "completedAt": "2026-09-10T12:48:32.777Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "e3cf1784e69a66d102b681cbc1ebd616e8578e98",
-            "completedAt": "2026-09-10T12:48:32.777Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "e3cf1784e69a66d102b681cbc1ebd616e8578e98",
-            "completedAt": "2026-09-10T12:48:32.777Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "e3cf1784e69a66d102b681cbc1ebd616e8578e98",
-            "completedAt": "2026-09-10T12:48:32.777Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T12:48:32.777Z"
+        "generatedAt": "2026-09-10T13:24:27.406Z"
       }
     }
   ],
