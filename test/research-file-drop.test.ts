@@ -3058,9 +3058,9 @@ describe('Research canvas file drops', () => {
     }
 
     expect(client.researchCanvasViewportPlacement(snapshot, 'web-link', 0))
-      .toEqual({ x: 1_000, y: 700, width: 720, height: 480, sizeMode: 'auto' })
+      .toEqual({ x: 1_000, y: 612, width: 720, height: 480, sizeMode: 'auto' })
     expect(client.researchCanvasViewportPlacement(snapshot, 'generated-container', 8))
-      .toEqual({ x: 1_144, y: 844, width: 520, height: 300, sizeMode: 'auto' })
+      .toEqual({ x: 1_144, y: 756, width: 656, height: 220, sizeMode: 'auto' })
     expect(client.researchCanvasViewportPlacement(snapshot, 'unknown', 0)).toBeNull()
   })
 

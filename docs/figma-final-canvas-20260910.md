@@ -78,3 +78,17 @@
 - S失败详情：点击后通过现有放大阅读进入原生dialog，详细错误与重试入口在reader中展示；实测reader client/scroll均786。关闭后详情自动收起，S正文client/scroll均170。
 - 单项长KPI：保持24px，通过实际字体测量跨列。手动S只展示能容纳的内容，client/scroll均318×170；放大恢复两项完整值。自动S遇到相同内容则调用现有workspace升级到L656×456，summary=false，client/scroll均654×406。只有手动尺寸或已L才摘要。
 - 此轮只跑5项直接容器检查，全部通过；补丁fresh解析、第二次严格幂等通过。证据：`output/playwright/canvas-final/cold-start-and-overflow.log`，`failure-details-reader.png`、`long-kpi-reflow.png`。
+
+### 19:00 实际包晚加载覆盖与真实工具结果复验
+
+通过只读 CDP 9336 检查本地包 `1f99c276` 主窗口，发现最终画布 style 在插件 `ResearchCanvas.module.css` 与旧 `data-research-compact-style` 之前加载：工具栏实际为 280×46、按钮 84×32；卡底色 #171717、标题栏 64，而非最终稿。现显式 toolbar border-box，并观察这两个旧样式的延迟插入，将最终样式保持在它们之后，插件卸载时停止观察。此修复一并恢复默认/选中外框、标题、内容底色及选中工具栏的样式优先级。
+
+用实际包的上述两个 CSS 原文，在生产组件隔离页延迟加载进行复验（并移除先前样本的全局 border-box 掩盖）：工具栏局部 x328、y726、272×48，按钮 84×36，Noto Sans SC 13/20、blur12；frame/title/body #292A2D，标题48。实际 panel left936 扣除稿内8 px空隙后，availableWidth928。点阵相位按361:6148改为 x12.5499×scale + panX / y7.6871×scale + panY，保留原半径 .675、间距13.71与主题透明度。
+
+“容器→填写需求→创建”现在在开始任务前按需求类型/密度调用现有便当盒规格选择器；短指标S、短表/趋势M、综合概览等L。草稿与后续自动增长使用可见宽度，保留32 px边距并为底栏预留88 px；已有手动尺寸与坐标保持。缩放0.5下的落位亦已断言。`late-css-created-dark.png` 使用生产按钮与创建逻辑、隔离的任务返回桩，因此图中的失败状态是受控测试，不能作为真实服务生成成功证据。
+
+真实包工具生成的两个结果（导图 `bac5b2e5…`、总结 `f536072e…`）经只读本地存储提取并在生产组件加载同样晚 CSS 复验。原导图横向溢出784，原总结自动增到640且裁切：现导图按实际宽度分列，保留树形主支路、连接与编辑源行；空间不足时按广度优先保留层级并显示阅读提示，完整树在放大阅读恢复。派生总结复用同一正文语义适配器，自动尺寸上限656×456，手动小框摘要、阅读全文。源文字与层级未写回为摘要；不可枚举的 `sourceLineIndex` 在呈现副本中显式保留，双击编辑、提交与Escape取消均已验证。
+
+实测正常L：导图 body/map654×406且scroll相等，根标题及所有叶节点均无文本溢出；总结body654×406、正文654×376且scroll相等。手动S：body318×170且scroll相等，导图保留根与主支路、总结正文摘要；放大阅读1316×836恢复导图9节点和总结最后段。正文/图节点采用第43组的13 px正文规格，S/L与放大阅读不缩放字号。未通过 CSS 隐藏内容消除这些溢出。
+
+新增/本次直接聚焦：chrome尺寸/晚样式/语义适配9项，导图与总结编辑/安全原生渲染7项，缩放下全局创建定位1项，共17项通过；fresh canonical补丁与重复补丁均可解析、严格幂等。证据位于 `output/playwright/canvas-final/late-css-placement.json`、`derived-samples-metrics.json` 以及同目录的 `generated-mind-map-{actual-sample,reader,manual-small}.png`、`generated-summary-{actual-sample,reader,manual-small}.png`。此节截图为生产组件隔离验证；最终新包主路径由主线程另行启动验收，不将本节图片冒称为修复后真实客户端截图。
