@@ -18,8 +18,8 @@ import {
   digest
 } from './state/research-board-request-journal'
 import { normalizeRequestContext } from '../../packages/dsh-research-collaboration/context.js'
-import { freezeSnapshot } from '../../packages/dsh-research-collaboration/document.js'
-import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
+import { freezeSnapshot, createDocument, encodeDocument } from '../../packages/dsh-research-collaboration/document.js'
+import { taskFailureMessage, toBase64 } from '../../packages/dsh-research-collaboration/protocol.js'
 import type {
   ResearchBoardsService,
   ResearchBoardHooks
@@ -787,7 +787,9 @@ export class ResearchBoardIntegration {
         ...r.reply,
         ...(taskFailureMessage(r.failureCode) ? { failureCode: r.failureCode } : {}),
         runtimeState:
-          ['starting', 'running'].includes(r.runtimeState) &&
+          r.runtimeState === 'superseded' && r.intent.targetId && r.restart && !r.restart.intent.targetId
+            ? 'interrupted'
+            : ['starting', 'running'].includes(r.runtimeState) &&
           !this.active.has(r.key)
             ? 'interrupted'
             : r.runtimeState
@@ -812,12 +814,32 @@ export class ResearchBoardIntegration {
       // A new sharing epoch invalidates every old command. An explicit retry is
       // a new request, never a replay/rebase of those frozen operation IDs.
       let restart = record.restart
-      if (restart?.epoch !== epoch) {
+      if (restart?.epoch !== epoch || (record.intent.targetId && !restart.intent.targetId)) {
         const canvas = authority.snapshot.snapshot.canvas
         const collection = record.intent.targetCollection === 'files' ? 'files' : 'artifacts'
         const targetExists = record.intent.targetId && canvas[collection].some(
           (node) => node.id === record.intent.targetId
         )
+        let replacement: { targetId: string; targetCollection: string; replacementUpdate: string } | undefined
+        if (record.intent.targetId && !targetExists) {
+          const template = record.generationTarget
+          const node = {
+            id: randomUUID(),
+            kind: template?.kind ?? 'generated-container',
+            title: template?.title ?? '智能容器',
+            x: 40,
+            y: Math.max(0, ...canvas.artifacts.map(n => Number(n.y ?? 0) + Number(n.height ?? 380))) + 32,
+            width: template?.width ?? 520,
+            height: template?.height ?? 380,
+            containerPrompt: record.intent.text,
+            generationStatus: 'draft'
+          }
+          // This update adds only a fresh node. It cannot replace other users'
+          // changes, and its bytes/ID are durably reserved with the retry.
+          const doc = createDocument({ files: [], artifacts: [node] })
+          replacement = { targetId: node.id, targetCollection: 'artifacts', replacementUpdate: toBase64(encodeDocument(doc)) }
+          doc.destroy()
+        }
         restart = {
           epoch,
           mutation: randomUUID(),
@@ -825,7 +847,7 @@ export class ResearchBoardIntegration {
             text: record.intent.text,
             context: record.intent.context,
             source: 'manual',
-            ...(targetExists ? { targetId: record.intent.targetId, targetCollection: collection } : {})
+            ...(targetExists ? { targetId: record.intent.targetId, targetCollection: collection } : replacement ?? {})
           }
         }
         // Reserve both ID and intent before awaiting the network. Repeated
@@ -888,6 +910,7 @@ export class ResearchBoardIntegration {
           }
         : {}),
       source: i.source ?? 'manual',
+      ...(i.replacementUpdate ? { replacementUpdate: i.replacementUpdate } : {}),
       ...(i.source === 'refresh'
         ? {
             refreshScheduleId:
@@ -903,6 +926,13 @@ export class ResearchBoardIntegration {
       intent,
       epoch
     )
+    if (intent.targetId && !this.journal.get(key).generationTarget) {
+      const target = authority.snapshot.snapshot.canvas[intent.targetCollection as 'artifacts' | 'files']
+        .find(n => n.id === intent.targetId)
+      if (target) this.journal.update(key, { generationTarget: Object.fromEntries(
+        ['kind', 'title', 'width', 'height'].filter(k => target[k] !== undefined).map(k => [k, target[k]])
+      ) })
+    }
     if (this.submissions.has(key)) return this.submissions.get(key)
     const work = this.submitOnce(i, key, intent, epoch)
     this.submissions.set(key, work)
@@ -941,6 +971,9 @@ export class ResearchBoardIntegration {
   private async submitOnce(i: any, key: string, intent: any, epoch: number) {
     let record = this.journal.get(key)
     if (record.reply?.taskId) return record.reply
+    if (intent.replacementUpdate) {
+      await this.step(key, 'targetCreate', 'update', { update: intent.replacementUpdate }, i.signal)
+    }
     let message: any
     try {
       message = (
