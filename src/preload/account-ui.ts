@@ -3,6 +3,10 @@ import type { ResearchBoardsBridge } from '../shared/research-boards'
 import sherlockLogo from '../../build/sherlock-logo.svg?raw'
 import accountAvatar from '../../build/sherlock-account-avatar.svg?raw'
 import accountBackground from '../../build/sherlock-account-background.png?url&inline'
+import settingsCss from './figma-settings.css?raw'
+import authCss from './figma-auth.css?raw'
+import authBackground from './figma-settings-assets/ancient-harbor.png?url&inline'
+import authClose from './figma-settings-assets/auth-close.svg?raw'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   user?: Account | null
@@ -18,14 +22,6 @@ export function mountAccountUi(
   const style = document.createElement('style')
   // Keep the settings shell below the shared portaled menus (z-index 1100).
   style.textContent = `
- .sherlock-auth-dialog{box-sizing:border-box;width:min(360px,calc(100vw - 40px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--dsw-alias-border-l2,#555);border-radius:20px;background:var(--dsw-alias-bg-layer-2,#191919);color:var(--dsw-alias-label-primary);box-shadow:0 24px 90px #0005;overflow:auto}
- .sherlock-auth-dialog::backdrop{background:#0005}
- .sherlock-auth-dialog .VOzbGW_content{padding:0}.sherlock-auth-dialog .sherlock-account-page{padding:28px 24px 20px}
- .sherlock-auth-dialog .sherlock-account-page h1{font-size:18px;margin-top:20px}
- .sherlock-auth-dialog .sherlock-account-page form{margin-top:20px;gap:14px}
- .sherlock-auth-dialog .sherlock-account-page input{height:38px}
- .sherlock-auth-dialog .sherlock-account-page button[type=submit]{padding:9px 12px}
- .sherlock-auth-dialog .sherlock-auth-switch{display:block;width:100%;text-align:center;border:0;background:transparent;padding:4px 0;margin-top:14px;font-size:12px;color:var(--dsw-alias-label-secondary)}
  .sherlock-account-page [role=status]:empty{display:none}
  .sherlock-field-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
  .sherlock-field-heading .sherlock-field-error{font-size:11px;font-weight:400;color:var(--dsw-alias-label-secondary);text-align:right}
@@ -35,13 +31,6 @@ export function mountAccountUi(
  .sherlock-auth-logo{display:block;width:88px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
- .VOzbGW_overlay{z-index:1000!important;background:var(--dsw-alias-bg-layer-2,#181818)}
- .VOzbGW_mask{display:none!important}
- .VOzbGW_panel{width:100vw!important;max-width:none!important;height:100vh!important;border-radius:0!important;box-shadow:none!important}
- .VOzbGW_nav{width:250px!important;padding:52px 12px 20px!important;background:var(--dsw-specific-sidebar-fill);overflow-y:auto;gap:12px!important}
- .VOzbGW_navTitle{display:none!important}.VOzbGW_content{padding-top:36px}
- .VOzbGW_options{padding:20px max(32px,calc((100% - 800px)/2)) 60px!important}
- .VOzbGW_header{height:32px!important;padding:0 24px!important}.VOzbGW_close{display:none!important}
  .VOzbGW_panel[data-account-active] .VOzbGW_options,.VOzbGW_panel[data-account-active] .VOzbGW_header{display:none!important}
  .VOzbGW_panel[data-account-active] .VOzbGW_navCell:not([data-account-nav]).VOzbGW_active{background:transparent!important}
  .sherlock-account-button,.sherlock-account-menu button,.sherlock-account-nav{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer;text-align:left;border-radius:8px;padding:9px 12px}
@@ -73,8 +62,9 @@ export function mountAccountUi(
  .sherlock-account-page [role=status]{min-height:24px;color:var(--dsw-alias-label-secondary)}
  .sherlock-account-page input:focus-visible,.sherlock-account-page button:focus-visible,.sherlock-account-nav:focus-visible,[data-account-nav]:focus-visible,.sherlock-account-menu button:focus-visible,.sherlock-account-button:focus-visible{outline:1px solid var(--dsw-alias-label-secondary,#aaa);outline-offset:1px}
  .sherlock-account-card{border:1px solid var(--dsw-alias-border-l2,#555);border-radius:14px;padding:20px;margin-top:20px}
- @media(max-width:720px){.VOzbGW_nav{width:180px!important}.sherlock-account-page{padding:24px}.VOzbGW_options{padding:20px!important}}
+
  `
+  style.textContent += settingsCss + authCss
   document.head.append(style)
   let user: Account | null = null,
     pendingAccount = false,
@@ -161,9 +151,16 @@ export function mountAccountUi(
       dialog.setAttribute('aria-label', '登录 EWork Odyssey')
       const content = document.createElement('div')
       content.className = 'VOzbGW_content'
-      const close = button('×', () => dialog.close(), 'sherlock-auth-close')
+      dialog.style.setProperty('--sherlock-auth-background', `url("${authBackground}")`)
+      const close = button('', () => dialog.close(), 'sherlock-auth-close')
+      const closeIcon = new DOMParser().parseFromString(authClose, 'image/svg+xml').documentElement
+      closeIcon.setAttribute('aria-hidden', 'true')
+      close.append(document.importNode(closeIcon, true))
       close.setAttribute('aria-label', '关闭登录')
-      dialog.append(close, content)
+      const frame = document.createElement('div')
+      frame.className = 'sherlock-auth-frame'
+      frame.append(close, content)
+      dialog.append(frame)
       dialog.addEventListener('close', () => {
         dialog.remove()
         if (authDialog === dialog) authDialog = undefined
@@ -240,10 +237,11 @@ export function mountAccountUi(
     title.textContent = user
       ? '账户信息'
       : register
-        ? '注册 EWork Odyssey'
-        : '登录 EWork Odyssey'
+        ? '创建账户'
+        : '欢迎回来'
     page.append(title)
     if (!user) {
+      root.dataset.authMode = register ? 'register' : 'login'
       const logo = new DOMParser().parseFromString(
         sherlockLogo,
         'image/svg+xml'
@@ -288,6 +286,7 @@ export function mountAccountUi(
       i.type = type
       i.autocomplete = autocomplete as AutoFill
       i.required = true
+      if (!user) i.placeholder = name === 'username' ? (register ? '3–32 位文字、数字、下划线或短横线' : '请输入用户名') : name === 'password' ? (register ? '设置 10–128 位密码' : '请输入密码') : name === 'confirmPassword' ? '再次输入密码' : '请输入邀请码'
       i.setAttribute('aria-label', label)
       i.setAttribute('aria-describedby', error.id)
       i.addEventListener('input', () => {
@@ -308,6 +307,8 @@ export function mountAccountUi(
       card.className = 'sherlock-account-card sherlock-account-profile'
       const name = document.createElement('strong')
       name.textContent = user.username
+      const avatar = trigger?.querySelector('.sherlock-account-avatar')?.cloneNode(true)
+      if (avatar) card.append(avatar)
       card.append(name)
       const accountId = user.id
       if (boards) {
@@ -331,7 +332,15 @@ export function mountAccountUi(
           copy.disabled=false
         }).catch(()=>{if(card.isConnected)id.textContent='用户 ID 暂时不可用'})
       }
-      page.append(card)
+      const group = document.createElement('section')
+      group.className = 'sherlock-settings-group'
+      const heading = document.createElement('h2')
+      heading.textContent = '账户'
+      const list = document.createElement('div')
+      list.className = 'sherlock-settings-list'
+      list.append(card)
+      group.append(heading, list)
+      page.append(group)
       const security = document.createElement('div')
       security.className = 'sherlock-account-card sherlock-account-security'
       const label = document.createElement('span')
@@ -351,7 +360,7 @@ export function mountAccountUi(
       passwordToggle.setAttribute('aria-expanded', 'false')
       passwordToggle.setAttribute('aria-controls', form.id)
       security.append(label, passwordToggle)
-      page.append(security)
+      list.append(security)
       field('currentPassword', '当前密码', 'password', 'current-password')
       field('password', '新密码', 'password', 'new-password')
       field('confirmPassword', '确认新密码', 'password', 'new-password')
@@ -487,20 +496,38 @@ export function mountAccountUi(
       const usage = document.createElement('div')
       usage.className = 'sherlock-account-card'
       usage.textContent = '正在加载最近 30 天用量…'
-      page.append(usage)
+      const group = document.createElement('section')
+      group.className = 'sherlock-settings-group'
+      const heading = document.createElement('h2')
+      heading.textContent = '最近 30 天用量'
+      group.append(heading, usage)
+      page.append(group)
       void invoke('usage')
         .then((reply) => {
           if (!usage.isConnected) return
-          usage.textContent = reply.error
-            ? '用量暂时不可用。'
-            : reply.usage?.length
-              ? reply.usage
-                  .map(
-                    (row) =>
-                      `${row.capability === 'fund-research' ? '基金研究' : row.capability}：${row.requests} 次请求，${row.succeeded} 次成功`
-                  )
-                  .join('；')
-              : '最近 30 天暂无云端调用。'
+          usage.replaceChildren()
+          if (reply.error || !reply.usage?.length) {
+            const row = document.createElement('div')
+            row.className = 'sherlock-account-usage-row'
+            row.textContent = reply.error ? '用量暂时不可用。' : '最近 30 天暂无云端调用。'
+            usage.append(row)
+          } else for (const entry of reply.usage) {
+            const row = document.createElement('div')
+            row.className = 'sherlock-account-usage-row'
+            const label = document.createElement('span')
+            label.className = 'sherlock-account-usage-name'
+            label.textContent = entry.capability === 'fund-research' ? '基金研究' : entry.capability
+            row.append(label)
+            for (const [caption, count] of [['请求次数', entry.requests], ['成功次数', entry.succeeded]] as const) {
+              const stat = document.createElement('div'), value = document.createElement('strong'), title = document.createElement('small')
+              stat.className = 'sherlock-account-usage-stat'
+              value.textContent = String(count)
+              title.textContent = caption
+              stat.append(value, title)
+              row.append(stat)
+            }
+            usage.append(row)
+          }
         })
         .catch(() => {
           usage.textContent = '用量暂时不可用。'
@@ -590,7 +617,13 @@ export function mountAccountUi(
       root.querySelector<HTMLButtonElement>('.VOzbGW_close')?.click()
       trigger?.focus()
     })
-    nav.prepend(back)
+    back.className = 'sherlock-settings-back'
+    const brand = document.createElement('span')
+    brand.className = 'sherlock-settings-logo'
+    brand.setAttribute('aria-label', 'EWork Odyssey')
+    const brandSvg = new DOMParser().parseFromString(sherlockLogo, 'image/svg+xml').documentElement
+    brand.append(document.importNode(brandSvg, true))
+    nav.prepend(brand, back)
     const account = button('', () => open(true), 'VOzbGW_navCell')
     account.dataset.accountNav = ''
     const icon = new DOMParser().parseFromString(
