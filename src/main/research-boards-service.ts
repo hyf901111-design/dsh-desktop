@@ -79,6 +79,7 @@ export type CapturedAsset = {
   open(): Promise<BodyInit>
 }
 export type ResearchBoardHooks = {
+  directory?(input: Record<string, unknown>, signal: AbortSignal): Promise<any>
   canResumePersonalCopy?(
     accountId: string,
     copyId: string,
@@ -201,7 +202,8 @@ type RuntimeBoard = {
   presence: Presence[]
   materialized?: Canvas
   materializedRevision?: string
-  materialization?: { revision: string; promise: Promise<void> }
+  materializedSessionId?: string
+  materialization?: { revision: string; localSessionId: string; promise: Promise<void> }
   mutationReplies: Map<string, CanvasReply>
   deletionRecovery: Map<
     string,
@@ -1171,10 +1173,10 @@ export class ResearchBoardsService {
   }
   private async materialize(r: RuntimeBoard, ctx = this.context()) {
     const boardId = r.snapshot.board.boardId,
-      localSessionId = this.localSession(boardId),
       deadline = Date.now() + 30000
-    if (!localSessionId) return
-    while (r.materializedRevision !== r.revision) {
+    while (r.materializedRevision !== r.revision || r.materializedSessionId !== this.localSession(boardId)) {
+      const localSessionId = this.localSession(boardId)
+      if (!localSessionId) return
       this.check(ctx)
       if (this.boards.get(boardId) !== r || r.abort.signal.aborted)
         throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
@@ -1182,7 +1184,7 @@ export class ResearchBoardsService {
         throw new ResearchBoardsError('STALE_CANVAS_REVISION')
       const revision = r.revision
       let pending = r.materialization
-      if (!pending || pending.revision !== revision) {
+      if (!pending || pending.revision !== revision || pending.localSessionId !== localSessionId) {
         const canvas = projectDocument(r.doc)
         const promise = (async () => {
           if (
@@ -1209,11 +1211,12 @@ export class ResearchBoardsService {
           this.check(ctx)
           if (this.boards.get(boardId) !== r || r.abort.signal.aborted)
             throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
-          if (r.revision !== revision) return
+          if (r.revision !== revision || this.localSession(boardId) !== localSessionId) return
+          r.materializedSessionId = localSessionId
           r.materialized = copy(value)
           r.materializedRevision = revision
         })()
-        pending = { revision, promise }
+        pending = { revision, localSessionId, promise }
         r.materialization = pending
       }
       try {
@@ -2043,8 +2046,31 @@ export class ResearchBoardsService {
   private async perform(action: string, input: unknown): Promise<unknown> {
     if (this.stopped) throw new ResearchBoardsError('SESSION_CHANGED')
     switch (action) {
+      case 'local.directory': {
+        const p = exact(input, ['mode'], ['basePath', 'title', 'sessionId', 'directoryId'])
+        if (!['reserve', 'bind', 'workspace'].includes(String(p.mode))) throw new ResearchBoardsError('INVALID_REQUEST')
+        if (p.sessionId !== undefined) safeId(p.sessionId)
+        if (p.directoryId !== undefined) safeId(p.directoryId)
+        if (p.title !== undefined) text(p.title)
+        if (p.basePath !== undefined) text(p.basePath, 4096)
+        if (!this.options.hooks?.directory) throw new ResearchBoardsError('CAPTURE_UNAVAILABLE')
+        const binding = p.sessionId ? this.store.sharedSession(String(p.sessionId)) : undefined
+        const ctx = binding ? this.context() : null
+        if (binding && binding.accountId !== ctx!.userId) throw new ResearchBoardsError('PERMISSION_DENIED')
+        if (binding) this.requireBoard(binding.boardId)
+        const result = await this.options.hooks.directory(p, this.generationAbort.signal)
+        if (ctx) this.check(ctx)
+        if (binding && p.mode === 'workspace' && result.localSessionId !== p.sessionId) {
+          this.store.rebind(binding.accountId, binding.boardId, binding.localSessionId, result.localSessionId)
+          const runtime = this.boards.get(binding.boardId)
+          if (runtime) await this.materialize(runtime)
+          this.emitState()
+        }
+        return result
+      }
       case 'favorite.add': {
-        const p = exact(input, ['identity'])
+        const p = exact(input, ['identity'], ['pinned', 'dedicated'])
+        if ((p.pinned !== undefined && typeof p.pinned !== 'boolean') || (p.dedicated !== undefined && typeof p.dedicated !== 'boolean')) throw new ResearchBoardsError('INVALID_REQUEST')
         const i = exact(
           p.identity,
           ['sessionId', 'title'],
@@ -2054,7 +2080,7 @@ export class ResearchBoardsService {
         text(i.title)
         for (const k of ['cwd', 'workspaceId', 'workspaceTitle'])
           if (i[k] !== undefined) text(i[k], 4096)
-        const favorite = this.store.addFavorite(i as Favorite)
+        const favorite = this.store.addFavorite(i as Favorite, p.pinned !== false, p.dedicated === true)
         this.emitState()
         return favorite
       }

@@ -15,6 +15,7 @@ import {
   mkdtemp,
   rm,
   realpath,
+  stat,
   symlink
 } from 'node:fs/promises'
 import { createServer } from 'node:http'
@@ -228,12 +229,13 @@ for (let i = 0; i < 2; i++) {
     'user/message',
     {
       id: 'intro',
-      source: { kind: 'user' },
+      role: 'user', source: { kind: 'user' },
       content: [{ type: 'text', text: '研究黄金价格的影响因素。' }]
     },
     { surfaceOp: 'append' }
   )
   const sessionData = new Map([['original', original]])
+  const workspaceData = new Map(), archivedSessions = new Set()
   let modelCalls = 0
   const control = {
     hold: false,
@@ -278,7 +280,14 @@ for (let i = 0; i < 2; i++) {
           return () => runtimeRoutes.delete(path)
         }
       },
-      sessions: { get: (id) => sessionData.get(id), flush: async () => true },
+      on: () => () => {},
+      workspaceRegistry: { resolveByPath: async path => workspaceData.get(path), create: async path => {
+        const item = { id: randomUUID(), path, title: '', sessionIds: [], setTitle: async title => { item.title = title }, attachSession: async id => {
+          assert.equal(sessionData.get(id).header.cwd, path)
+          if (!item.sessionIds.includes(id)) item.sessionIds.push(id)
+        } }; workspaceData.set(path, item); return item
+      } },
+      sessions: { get: (id) => sessionData.get(id), flush: async () => true, create: (id, options) => { const s = Session.create(id, options?.seed, { version: 0, id, createdAt: Date.now(), ...options?.meta }); sessionData.set(id, s); return s } },
       sessionPersistence: {
         inspect: async (id) => {
           const s = sessionData.get(id)
@@ -288,7 +297,7 @@ for (let i = 0; i < 2; i++) {
       }
     },
     execution,
-    { token: runtimeToken }
+    { token: runtimeToken, directoryRoot: dir }
   )
   const runtimeServer = createServer((req, res) => {
     const handler = runtimeRoutes.get(req.url)
@@ -361,6 +370,10 @@ for (let i = 0; i < 2; i++) {
     },
     invalidate: () => {}
   })
+  const directoryHook = integration.hooks.directory
+  integration.hooks.directory = async (...args) => {
+    try { return await directoryHook(...args) } catch (error) { console.error('DIRECTORY_FAILED', error.stack); throw error }
+  }
   service = new ResearchBoardsService({
     store,
     storage,
@@ -390,6 +403,7 @@ for (let i = 0; i < 2; i++) {
     .run()
   await service.invoke('boards.refresh', {})
   users.push({
+    workspaceData, archivedSessions,
     account,
     signIn: (identity = i) => {
       activeToken = tokens[identity]
@@ -555,9 +569,14 @@ const server = createServer(async (req, res) => {
       } else if (channel === 'preview:release')
         value = { ok: u.registry.releaseCapability(args[0]) }
       else if (channel === 'fixture:session-create') {
-        u.sessionData.set(args[0], Session.create(args[0]))
+        if (args[1]?.cwd) await mkdir(args[1].cwd, { recursive: true })
+        u.sessionData.set(args[0], Session.create(args[0], [], { version: 0, id: args[0], createdAt: Date.now(), cwd: args[1]?.cwd ?? u.dir }))
         value = true
-      } else if (channel === 'canvas:get')
+      } else if (channel === 'fixture:default-directory') value = u.dir
+      else if (channel === 'fixture:workspace-list') value = [...u.workspaceData.values()].map(w => ({workspaceId: w.id, path: w.path, title: w.title, sessionIds: w.sessionIds}))
+      else if (channel === 'fixture:session-archive') { u.archivedSessions.add(args[0]); value = true }
+      else if (channel === 'fixture:session-list') value = [...u.sessionData.values()].filter(s => !u.archivedSessions.has(s.id)).map(s => ({ id: s.id, cwd: s.header.cwd, title: s.events.findLast(e => e.type === 'session/title')?.data.title ?? '研究看板', blank: !s.events.length }))
+      else if (channel === 'canvas:get')
         value = u.service.readCanvasStorage(args[0])
       else if (channel === 'canvas:set')
         value = u.service.writeCanvasStorage(...args)
@@ -670,7 +689,7 @@ if (process.argv.includes('--serve')) {
     await page.getByRole('button', { name: '设为常用', exact: true }).click()
     const favoriteRow = page.locator('.srb-row').filter({ hasText: '黄金市场研究' }).first()
     const workspaceRow = page.locator('.fixture-workspaces [role="treeitem"]').filter({ hasText: '黄金市场研究' }).first()
-    await favoriteRow.locator('button').click()
+    await favoriteRow.locator('button').first().click()
     await until(async () => await favoriteRow.getAttribute('aria-current') === 'true', 'favorite selected')
     assert.equal(await workspaceRow.getAttribute('aria-selected'), 'false')
     const rowStyles = await page.evaluate(() => {
@@ -686,14 +705,48 @@ if (process.argv.includes('--serve')) {
     await workspaceRow.click()
     await until(async () => await workspaceRow.getAttribute('aria-selected') === 'true', 'workspace selected without session change')
     assert.equal(await favoriteRow.getAttribute('aria-current'), 'false')
-    await favoriteRow.locator('button').click()
+    await favoriteRow.locator('button').first().click()
     await until(async () => await favoriteRow.getAttribute('aria-current') === 'true', 'favorite reselected')
     assert.equal(await workspaceRow.getAttribute('aria-selected'), 'false')
     await page.mouse.move(700, 100)
     await page.screenshot({ path: join(out, 'sidebar-single-selection.png') })
     console.log('SIDEBAR_SELECTION_PASSED actual-workspace-row/styles/same-session-entry-switch')
-    await page.getByRole('button', { name: '画板设置', exact: true }).click()
-    await page.getByRole('menuitem', { name: '共享协作', exact: true }).click()
+    await page.getByRole('button', { name: '新建研究看板', exact: true }).click()
+    await page.waitForFunction(() => window.fixture.page.current() !== 'original')
+    const privateBoardId = await page.evaluate(() => window.fixture.page.current())
+    const privatePath = users[0].sessionData.get(privateBoardId).header.cwd
+    await until(async () => !(await stat(privatePath).catch(() => null)), 'blank board has no directory')
+    const privateRow = page.locator('.srb-row').filter({ hasText: '新研究看板' })
+    await privateRow.click({ button: 'right' })
+    await page.getByRole('menuitem', { name: '重命名', exact: true }).click()
+    await page.getByLabel('看板名称', { exact: true }).fill('目录延迟创建验收')
+    await page.getByRole('button', { name: '保存', exact: true }).click()
+    const renamedRow = page.locator('.srb-row').filter({ hasText: '目录延迟创建验收' })
+    await renamedRow.waitFor()
+    await page.getByRole('button', { name: '搜索研究看板', exact: true }).click()
+    await page.getByLabel('搜索看板名称').fill('目录延迟')
+    assert.equal(await page.locator('.srb-row').count(), 1)
+    await page.getByLabel('搜索看板名称').fill('不存在的看板')
+    await page.getByText('没有找到匹配的看板', { exact: true }).waitFor()
+    await page.getByLabel('搜索看板名称').press('Escape')
+    await page.getByRole('button', { name: '看板视图选项', exact: true }).click()
+    await page.getByRole('menuitem', { name: '最近更新', exact: true }).click()
+    await page.keyboard.press('Escape')
+    await renamedRow.hover()
+    assert.equal(await renamedRow.locator('time').isVisible(), false)
+    await page.screenshot({ path: join(out, 'board-navigation-v2.png') })
+    await renamedRow.locator('.srb-row-more').click()
+    await page.getByRole('menuitem', { name: '放回工作区', exact: true }).click()
+    await until(async () => await renamedRow.count() === 0, 'private board returned to workspace')
+    assert.equal(await page.evaluate(() => window.fixture.page.current()), privateBoardId)
+    assert.equal((await stat(privatePath)).isDirectory(), true)
+    assert.equal(users[0].workspaceData.get(privatePath).title, '目录延迟创建验收')
+    assert.deepEqual(users[0].workspaceData.get(privatePath).sessionIds, [privateBoardId])
+    await page.evaluate(() => window.fixture.page.openPersonal('original'))
+    console.log('BOARD_NAVIGATION_V2_PASSED new/empty-directory/right-click/rename/search/sort/hover-menu/return-to-workspace')
+    await page.getByRole('button', { name: '取消常用', exact: true }).click()
+    await until(async () => await favoriteRow.count() === 0, 'source removed from favorites before direct collaboration')
+    await page.getByRole('button', { name: '创建协作', exact: true }).click()
     await page.getByLabel('对方专有 ID').fill('0000 0000 02')
     await page
       .getByRole('button', { name: '查找并核对', exact: true })
@@ -702,7 +755,7 @@ if (process.argv.includes('--serve')) {
       .getByText('周同事 · ID 0000 0000 02', { exact: true })
       .waitFor()
     await page
-      .getByRole('button', { name: '创建副本并邀请', exact: true })
+      .getByRole('button', { name: '发送邀请', exact: true })
       .click()
     await page
       .getByRole('button', { name: '打开协作看板', exact: true })
@@ -711,6 +764,7 @@ if (process.argv.includes('--serve')) {
       animations: 'disabled',
       path: join(out, 'created-invitation-light.png')
     })
+    await page.locator('.srb-pending-ring').waitFor()
     await peer.getByRole('button', { name: '接受', exact: true }).waitFor()
     await peer.screenshot({
       animations: 'disabled',
@@ -719,7 +773,8 @@ if (process.argv.includes('--serve')) {
     await page
       .getByRole('button', { name: '打开协作看板', exact: true })
       .click()
-    await page.getByRole('button', { name: '画板设置', exact: true }).click()
+    await page.locator('.srb-row[aria-current=true]').hover()
+    await page.locator('.srb-row[aria-current=true] .srb-row-more').click()
     await page.getByRole('menuitem', { name: '管理协作', exact: true }).click()
     await page.getByLabel('周同事待处理邀请权限').selectOption('viewer')
     await peer
@@ -755,6 +810,7 @@ if (process.argv.includes('--serve')) {
     await page.getByRole('button', { name: '发送邀请', exact: true }).click()
     await page.getByRole('button', { name: '关闭', exact: true }).click()
     await peer.getByRole('button', { name: '接受', exact: true }).click()
+    await page.locator('.srb-row-status[aria-label="多人协作"]').waitFor()
     await peer.getByRole('button', { name: '打开看板', exact: true }).click()
     await page.locator('[data-shared-discussion]').waitFor()
     await peer.locator('[data-shared-discussion]').waitFor()
@@ -1496,7 +1552,7 @@ if (process.argv.includes('--serve')) {
         'user/message',
         {
           id: 'later-personal',
-          source: { kind: 'user' },
+          role: 'user', source: { kind: 'user' },
           content: [{ type: 'text', text: '副本中的新问题' }]
         },
         { surfaceOp: 'append' }
@@ -1574,19 +1630,18 @@ if (process.argv.includes('--serve')) {
     await peer.screenshot({ path: join(out, 'personal-import-light.png') })
     const reshareCalls = users.map(u => u.modelCalls())
     await peer.getByRole('button', { name: '设为常用', exact: true }).click()
-    await peer.getByRole('button', { name: '画板设置', exact: true }).click()
-    await peer.getByRole('menuitem', { name: '共享协作', exact: true }).click()
+    await peer.getByRole('button', { name: '创建协作', exact: true }).click()
     await peer.getByLabel('协作名称').fill('第二代独立协作')
     // Preview has completed. Later private transcript/file edits must stay private.
     users[1].sessionData.get(personalId).append('user/message', {
-      id: 'after-reviewed-preview', source: { kind: 'user' },
+      id: 'after-reviewed-preview', role: 'user', source: { kind: 'user' },
       content: [{ type: 'text', text: '预览后仅本机问题' }]
     }, { surfaceOp: 'append' })
     await writeFile(ownedText.path, '预览后仅本机资料。')
     await peer.getByLabel('对方专有 ID').fill('0000 0000 01')
     await peer.getByRole('button', { name: '查找并核对', exact: true }).click()
     await peer.getByText('林研究员 · ID 0000 0000 01', { exact: true }).waitFor()
-    await peer.getByRole('button', { name: '创建副本并邀请', exact: true }).click()
+    await peer.getByRole('button', { name: '发送邀请', exact: true }).click()
     await peer.getByRole('button', { name: '打开协作看板', exact: true }).click()
     await peer.waitForFunction(old => window.fixture.page.getState().current?.boardId && window.fixture.page.getState().current.boardId !== old, boardId)
     const secondBoardId = await peer.evaluate(() => window.fixture.page.getState().current.boardId)
@@ -1851,6 +1906,18 @@ if (process.argv.includes('--serve')) {
       path: join(out, 'revoked-light.png')
     })
     assert.equal(await peer.locator('[data-shared-discussion]').count(), 0)
+    const legacyFavorite = users[1].service.getSnapshot().favorites.find(f => f.favoriteId === signedOutFavorite.value.favoriteId)
+    await peer.evaluate(f => window.fixture.page.returnToWorkspace(f), legacyFavorite)
+    const movedPersonal = await peer.evaluate(() => window.fixture.page.current())
+    assert.notEqual(movedPersonal, personal.personalId)
+    assert.ok(users[1].archivedSessions.has(personal.personalId))
+    assert.ok(users[1].sessionData.get(movedPersonal).events.length >= users[1].sessionData.get(personal.personalId).events.length)
+    assert.equal(users[1].integration.snapshots.importFor(movedPersonal).history.length, users[1].integration.snapshots.importFor(personal.personalId).history.length)
+    const movedCanvas = JSON.parse(users[1].storage.getItem('sherlock.research.canvas.files.v1:' + movedPersonal))
+    for (const node of movedCanvas) assert.ok(node.path.startsWith(users[1].sessionData.get(movedPersonal).header.cwd + '/'))
+    assert.ok(movedCanvas.length > 0)
+    await peer.locator('[data-personal-import]').first().waitFor()
+    console.log('BOARD_RETURN_LEGACY_PASSED transcript/files/imports/source-retained/new-folder')
     console.log(
       'UI_FLOWS_PASSED favorite/create/invite-role-version/revoke-live/reinvite/accept/open/presence/edit/held-drag-preview-final-only/submit-accepted-one-initiator/reload/viewer/collapse/update-hover/account-id/cancel'
     )

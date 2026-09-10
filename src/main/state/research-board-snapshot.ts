@@ -120,6 +120,13 @@ export class ResearchBoardSnapshots {
     const item = this.state.imports[sessionId]
     return item ? structuredClone(item) : null
   }
+  async cloneLocalImport(sourceId: string, destinationId: string) {
+    const source = this.state.imports[sourceId]
+    if (source) {
+      this.state.imports[destinationId] = structuredClone(source)
+      this.save()
+    }
+  }
   async ownedSource(sessionId: string, nodeId: string) {
     const imported = this.importFor(sessionId)
     const assetId =

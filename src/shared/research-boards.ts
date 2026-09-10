@@ -15,6 +15,8 @@ export type ResearchIdentity = {
 }
 export type Favorite = ResearchIdentity & {
   favoriteId: string
+  pinned?: boolean
+  dedicated?: boolean
   updatedAt?: number
   createdAt: number
 }

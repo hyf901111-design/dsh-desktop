@@ -28,6 +28,7 @@ export type Board = {
   schemaVersion: 1
   capturedAt: string
   createdAt: number
+  memberCount?: number
   updatedAt?: number
   updatedBy?: { userId: string; username: string }
   role?: BoardRole

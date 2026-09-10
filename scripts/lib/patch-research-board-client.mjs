@@ -20,7 +20,7 @@ async function pageModule() {
     platform: 'browser',
     format: 'cjs',
     write: false,
-    external: ['react'],
+    external: ['react', '@deepseek-ai/dsh-client-ui-primitives'],
     target: 'chrome120',
     logLevel: 'silent'
   })
@@ -515,7 +515,7 @@ export function patchResearchBoardWorkspace(source) {
 }
 
 function patchWorkspaceSelection(source) {
-  if (source.includes('/* SHERLOCK_WORKSPACE_SELECTION_V1 */')) return source
+  if (source.includes('/* SHERLOCK_WORKSPACE_SELECTION_V1 */')) return patchWorkspaceBoardVisibility(source)
   source = replace(source, 'function SearchResultItem({ result, currentId, onOpen, t }) {', `
         function useSidebarBoardSelection() {
             return (0, react.useSyncExternalStore)(
@@ -532,5 +532,27 @@ function patchWorkspaceSelection(source) {
   source = replace(source, 'const selected = node.id === currentId;', 'const boardSelection = useSidebarBoardSelection(); const selected = node.id === currentId && boardSelection !== node.id;')
   source = replace(source, 'onOpen(result.id);', 'clearSidebarBoardSelection(); onOpen(result.id);')
   source = replace(source, 'onOpen(node.id);', 'clearSidebarBoardSelection(); onOpen(node.id);')
-  return source + '\n/* SHERLOCK_WORKSPACE_SELECTION_V1 */'
+  return patchWorkspaceBoardVisibility(source + '\n/* SHERLOCK_WORKSPACE_SELECTION_V1 */')
+}
+
+function patchWorkspaceBoardVisibility(source) {
+  if (source.includes('/* SHERLOCK_WORKSPACE_BOARD_VISIBILITY_V1 */')) return source
+  source = replace(source, 'function useSidebarBoardSelection() {', `
+        function useBoardHiddenSessions() {
+            const raw = (0,react.useSyncExternalStore)(
+                listener=>{document.addEventListener("sherlock-sidebar-selection",listener);return ()=>document.removeEventListener("sherlock-sidebar-selection",listener);},
+                ()=>document.documentElement.dataset.srbHiddenSessions || "[]"
+            );
+            return (0,react.useMemo)(()=>new Set(JSON.parse(raw)),[raw]);
+        }
+        function useBoardWorkspaceList(list) {
+            const hidden = useBoardHiddenSessions();
+            return (0,react.useMemo)(()=>({...list,ids:list.ids.filter(id=>!hidden.has(id)),byId:Object.fromEntries(Object.entries(list.byId).filter(([id])=>!hidden.has(id)))}),[list,hidden]);
+        }
+        function useSidebarBoardSelection() {`)
+  const anchor = 'const list = useSessions((s) => s);'
+  if (source.split(anchor).length !== 4) throw Error('Workspace board visibility list anchors drifted')
+  source = source.replaceAll(anchor, 'const list = useBoardWorkspaceList(useSessions((s) => s));')
+  source = replace(source, 'const statuses = sessionStatuses(result, t);', 'const hidden = useBoardHiddenSessions(); if(hidden.has(result.id))return null; const statuses = sessionStatuses(result, t);')
+  return source + '\n/* SHERLOCK_WORKSPACE_BOARD_VISIBILITY_V1 */'
 }

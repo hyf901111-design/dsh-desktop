@@ -1,6 +1,7 @@
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
+import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconPlusOutline16, IconEditOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   BoardView,
   Canvas,
@@ -50,7 +51,7 @@ export type PageDependencies = {
     binding(id: string): any
     [key: string]: any
   }
-  workspaces: { list: Store<any> }
+  workspaces: { list: Store<any>; [key: string]: any }
   researchWorkspaces: { for(id: string): Workspace }
   inputHub: { shells: Map<string, any> }
   bridge: ResearchBoardsBridge
@@ -166,6 +167,14 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   const favoriteWatches = new Map<string, () => void>()
   const cleanups: Array<() => void> = []
   const notify = () => {
+    const hidden = JSON.stringify([
+      ...state.favorites.filter(f => f.dedicated && f.pinned !== false).map(f => f.sessionId),
+      ...state.boards.filter(b => b.pinned && b.localSessionId).map(b => b.localSessionId)
+    ].sort())
+    if (doc.documentElement.dataset.srbHiddenSessions !== hidden) {
+      doc.documentElement.dataset.srbHiddenSessions = hidden
+      doc.dispatchEvent(new Event('sherlock-sidebar-selection'))
+    }
     revision++
     listeners.forEach((fn) => fn())
   }
@@ -729,6 +738,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       })
     )
   }
+  async function defaultDirectory() {
+    const reply = await deps.workspaces.api.host.status({})
+    if (!reply.result.ok) throw Error('无法读取默认工作目录')
+    return reply.result.value.cwd as string
+  }
+  async function freshBoard(title: string) {
+    const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath: await defaultDirectory() })
+    const id = await deps.sessions.create({ cwd: directory.path })
+    await deps.sessions.binding(id)?.session.rename(title)
+    await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId: id })
+    return id
+  }
   async function fresh(title: string) {
     const context = identity(current() ?? '')
     const id = await deps.sessions.create(
@@ -753,7 +774,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           title: string
         }>('board.open', { boardId })
         if (opened.localSessionId) return opened.localSessionId
-        const id = await fresh(opened.title)
+        const id = await freshBoard(opened.title)
         const bound = await call<{ view: BoardView }>('board.bind', {
           boardId,
           reservationId: opened.reservationId,
@@ -1113,9 +1134,45 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.sessions.open(id)
       await activate(id, true)
     },
+    async createPrivateBoard() {
+      const id = await freshBoard('新研究看板')
+      const i = identity(id)
+      if (!i) throw Error('研究看板尚未就绪')
+      await call('favorite.add', { identity: i, dedicated: true })
+      await api.openPersonal(id)
+      selectBoardSession(id)
+      return id
+    },
+    async renamePersonal(id: string, title: string) {
+      await deps.sessions.binding(id)?.session.rename(title)
+    },
+    async collaborationSource(id: string) {
+      const existing = state.favorites.find(f => f.sessionId === id)
+      if (existing) return existing
+      const i = identity(id)
+      if (!i) throw Error('研究内容尚未就绪')
+      return call<Favorite>('favorite.add', { identity: i, pinned: false })
+    },
+    async returnToWorkspace(entry: Favorite | BoardSummary) {
+      const shared = 'boardId' in entry
+      const id = shared ? await openBoard(entry.boardId) : entry.sessionId
+      if (!id) throw Error('研究看板尚未就绪')
+      if (shared && view(id)?.permissions.edit) await flushCanvas(id)
+      const result = await call<{ localSessionId: string }>('local.directory', { mode: 'workspace', sessionId: id, title: entry.title, basePath: await defaultDirectory() })
+      await deps.workspaces.refresh()
+      if (result.localSessionId !== id) {
+        // Publish the replacement before archiving the retained source record.
+        await deps.sessions.refresh()
+        await deps.workspaces.archiveSession(id)
+      }
+      if (shared) await call('board.unpin', { boardId: entry.boardId })
+      else await call('favorite.remove', { favoriteId: entry.favoriteId })
+      selectBoardSession('')
+      await api.openPersonal(result.localSessionId)
+    },
     async favorite(id: string) {
       const f = state.favorites.find((f) => f.sessionId === id)
-      if (f) await call('favorite.remove', { favoriteId: f.favoriteId })
+      if (f && f.pinned !== false) await call('favorite.remove', { favoriteId: f.favoriteId })
       else {
         const i = identity(id)
         if (i) await call('favorite.add', { identity: i })
@@ -1250,111 +1307,6 @@ function boardIcon(kind: 'people' | 'boards') {
         ])
   )
 }
-function BoardActionMenu({
-  items
-}: {
-  items: { label: string; action: () => void }[]
-}) {
-  const ref = React.useRef(null as HTMLDivElement | null),
-    trigger = React.useRef(null as HTMLButtonElement | null)
-  const [open, setOpen] = React.useState(false)
-  React.useEffect(() => {
-    if (!open) return
-    const menu = ref.current!,
-      button = trigger.current!,
-      rect = button.getBoundingClientRect()
-    menu.style.top = `${rect.bottom + 8}px`
-    menu.style.left = `${Math.max(8, Math.min(rect.right - 208, window.innerWidth - 216))}px`
-    menu.showPopover?.()
-    menu.querySelector<HTMLButtonElement>('button')?.focus()
-    const dismiss = (event: Event) => {
-      if (
-        !menu.contains(event.target as Node) &&
-        !button.contains(event.target as Node)
-      )
-        setOpen(false)
-    }
-    const toggle = (event: any) => {
-      if (event.newState === 'closed') setOpen(false)
-    }
-    document.addEventListener('pointerdown', dismiss)
-    menu.addEventListener('toggle', toggle)
-    return () => {
-      document.removeEventListener('pointerdown', dismiss)
-      menu.removeEventListener('toggle', toggle)
-      menu.hidePopover?.()
-    }
-  }, [open])
-  return h(
-    React.Fragment,
-    null,
-    h(
-      'button',
-      {
-        ref: trigger,
-        className: 'srb-menu-trigger',
-        'aria-label': '画板设置',
-        'aria-haspopup': 'menu',
-        'aria-expanded': open,
-        onClick: () => setOpen(!open)
-      },
-      '画板设置',
-      h('span', { className: 'srb-chevron', 'aria-hidden': true })
-    ),
-    open &&
-      h(
-        'div',
-        {
-          ref,
-          className: 'srb-action-menu',
-          role: 'menu',
-          popover: 'auto',
-          'aria-label': '画板设置',
-          onKeyDown: (event: React.KeyboardEvent) => {
-            const buttons = [
-                ...ref.current!.querySelectorAll<HTMLButtonElement>('button')
-              ],
-              index = buttons.indexOf(
-                document.activeElement as HTMLButtonElement
-              )
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              setOpen(false)
-              trigger.current?.focus()
-            }
-            if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-              event.preventDefault()
-              buttons[
-                event.key === 'Home'
-                  ? 0
-                  : event.key === 'End'
-                    ? buttons.length - 1
-                    : (index +
-                        (event.key === 'ArrowDown' ? 1 : -1) +
-                        buttons.length) %
-                      buttons.length
-              ]?.focus()
-            }
-          }
-        },
-        ...items.map((item) =>
-          h(
-            'button',
-            {
-              key: item.label,
-              role: 'menuitem',
-              onClick: () => {
-                setOpen(false)
-                trigger.current?.focus()
-                item.action()
-              }
-            },
-            item.label
-          )
-        )
-      )
-  )
-}
 export function ResearchBoardHeader({
   page,
   sessionId,
@@ -1372,34 +1324,6 @@ export function ResearchBoardHeader({
     return null
   const v = currentBoard(page, sessionId),
     f = s.favorites.find((f) => f.sessionId === sessionId)
-  const items = v
-    ? [
-        ...(v.permissions.read
-          ? [
-              {
-                label: '管理协作',
-                action: () => manageBoard(page, v.boardId)
-              }
-            ]
-          : []),
-        { label: '管理研究看板', action: () => manageSidebarBoards(page) }
-      ]
-    : [
-        ...(f
-          ? [
-              { label: '共享协作', action: () => shareFavorite(page, f) },
-              {
-                label: '重命名看板',
-                action: () => favoriteMenu(page, f)
-              },
-              {
-                label: '取消常用',
-                action: safely(page, () => page.favorite(sessionId))
-              }
-            ]
-          : []),
-        { label: '管理研究看板', action: () => manageSidebarBoards(page) }
-      ]
   return h(
     'div',
     { className: 'srb-actions' },
@@ -1424,14 +1348,26 @@ export function ResearchBoardHeader({
       : h(
           'button',
           {
-            'aria-label': f ? '取消常用' : '设为常用',
-            'aria-pressed': !!f,
+            'aria-label': f?.pinned !== false && f ? '取消常用' : '设为常用',
+            'aria-pressed': !!f && f.pinned !== false,
             className: 'srb-favorite-button',
             onClick: safely(page, () => page.favorite(sessionId))
           },
-          f ? '已设为常用' : '设为常用'
+          f && f.pinned !== false ? '已设为常用' : '设为常用'
         ),
-    h(BoardActionMenu, { key: sessionId, items })
+    h('button', {
+      className: 'srb-create-collaboration',
+      disabled: !!v && (!v.permissions.manage || v.board.lifecycle !== 'active'),
+      onClick: safely(page, async () => {
+        if (v) {
+          const d = boardDialog(document, '邀请协作')
+          inviteForm(page, d, async () => {
+            if (page.getView(sessionId)?.board.sharingState !== 'shared') await page.call('board.reopen', { boardId: v.boardId })
+            return v.boardId
+          })
+        } else shareFavorite(page, await page.collaborationSource(sessionId))
+      })
+    }, '创建协作')
   )
 }
 const colorFor = (id: string) =>
@@ -1502,188 +1438,126 @@ export function ResearchBoardPresence({
       )
   )
 }
-function manageSidebarBoards(page: ResearchBoardsPage) {
-  const s = page.getState()
-  const d = boardDialog(document, '管理看板')
-  for (const b of s.boards) {
-    const row = document.createElement('div')
-    row.className = 'srb-member'
-    const label = document.createElement('span')
-    label.textContent = b.title
-    row.append(
-      label,
-      boardButton(document, b.pinned ? '移出侧栏' : '固定到侧栏', () =>
-        d.run(async () => {
-          await page.call(b.pinned ? 'board.unpin' : 'board.pin', {
-            boardId: b.boardId
-          })
-          d.close()
-        })
-      ),
-      boardButton(document, '打开', () =>
-        d.run(async () => {
-          await page.openBoard(b.boardId)
-          d.close()
-        })
-      )
-    )
-    d.body.append(row)
-  }
-  if (!s.boards.length) d.body.textContent = '暂无协作看板。'
-}
-export function ResearchBoardSidebar({
-  page,
-  wide = true
-}: {
-  page: ResearchBoardsPage
-  wide?: boolean
-  expandSidebar?: () => void
-}) {
-  const s = useBoard(page),
-    [collapsed, setCollapsed] = React.useState(() => {
-      try {
-        return localStorage.getItem('sherlock.boards.collapsed') === 'true'
-      } catch {
-        return false
-      }
-    }),
-    [drag, setDrag] = React.useState<string | null>(null)
-  const selectedSession = React.useSyncExternalStore(
-    subscribeBoardSelection,
-    selectedBoardSession
-  )
-
+export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoardsPage; wide?: boolean; expandSidebar?: () => void }) {
+  const state = useBoard(page)
+  const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('sherlock.boards.collapsed') === 'true')
+  const [search, setSearch] = React.useState(false), [query, setQuery] = React.useState('')
+  const [optionsOpen, setOptionsOpen] = React.useState(false), [creating, setCreating] = React.useState(false)
+  const [preferences, setPreferences] = React.useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sherlock.boards.view.v2') ?? 'null')
+      const groups = Array.isArray(saved?.groups) ? saved.groups.filter((v: unknown) => v === 'private' || v === 'shared') : []
+      return { groups: groups.length ? groups : ['private', 'shared'], sort: saved?.sort === 'updated' ? 'updated' : 'manual', order: Array.isArray(saved?.order) ? saved.order.filter((v: unknown) => typeof v === 'string') : [] }
+    }
+    catch { return { groups: ['private', 'shared'], sort: 'manual', order: [] } }
+  })
+  const [drag, setDrag] = React.useState<string | null>(null)
+  const selectedSession = React.useSyncExternalStore(subscribeBoardSelection, selectedBoardSession)
+  const save = (next: any) => { setPreferences(next); localStorage.setItem('sherlock.boards.view.v2', JSON.stringify(next)) }
+  const entries = [
+    ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, page.editedAt(f.sessionId) ?? 0) })),
+    ...state.boards.filter(b => b.pinned).map(b => ({ key: 'shared:' + b.boardId, group: b.sharingState === 'shared' ? 'shared' : 'private', value: b, time: b.updatedAt ?? b.createdAt }))
+  ]
+  const order = preferences.order as string[]
+  entries.sort((a, b) => preferences.sort === 'updated' ? b.time - a.time :
+    (order.includes(a.key) ? order.indexOf(a.key) : 100000) - (order.includes(b.key) ? order.indexOf(b.key) : 100000))
+  const visible = entries.filter(e => preferences.groups.includes(e.group) && e.value.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   if (!wide) return null
-
-  return h(
-    'section',
-    { className: 'srb-section', 'data-wide': wide, 'aria-label': '研究看板' },
-    h(
-      'header',
-      null,
-      h(
-        'button',
-        {
-          className: 'srb-section-toggle',
-          'aria-label': collapsed ? '展开研究看板' : '折叠研究看板',
-          'aria-expanded': !collapsed,
-          onClick: () => {
-            setCollapsed(!collapsed)
-            try {
-              localStorage.setItem(
-                'sherlock.boards.collapsed',
-                String(!collapsed)
-              )
-            } catch {}
-          }
-        },
-        h(
-          React.Fragment,
-          null,
-          '研究看板',
-          h('span', {
-            className: 'srb-chevron',
-            'data-collapsed': collapsed,
-            'aria-hidden': true
-          })
-        )
-      )
-    ),
-    !collapsed &&
-      wide &&
-      h(
-        React.Fragment,
-        null,
-        !s.favorites.length &&
-          !s.boards.some((b) => b.pinned) &&
-          h('p', { className: 'srb-empty' }, '在研究中设为常用，固定到这里'),
-        ...s.favorites.map((f) =>
-          h(
-            'div',
-            {
-              key: f.favoriteId,
-              className: 'srb-row',
-              'aria-current':
-                selectedSession === f.sessionId && page.current() === f.sessionId,
-              onContextMenu: (event: React.MouseEvent) => {
-                event.preventDefault()
-                favoriteMenu(page, f)
-              },
-              draggable: true,
-              onDragStart: (e: React.DragEvent) => {
-                setDrag(f.favoriteId)
-                e.dataTransfer.setData(
-                  'text/x-sherlock-favorite',
-                  f.favoriteId
-                )
-              },
-              onDragOver: (e: React.DragEvent) => e.preventDefault(),
-              onDrop: (e: React.DragEvent) => {
-                e.preventDefault()
-                if (!drag || drag === f.favoriteId) return
-                const ids = s.favorites
-                  .map((f) => f.favoriteId)
-                  .filter((id) => id !== drag)
-                ids.splice(ids.indexOf(f.favoriteId), 0, drag)
-                void page
-                  .call('favorite.reorder', { favoriteIds: ids })
-                  .catch(page.showError)
-                setDrag(null)
-              }
-            },
-            h(
-              'button',
-              {
-                onClick: safely(page, async () => {
-                  await page.openPersonal(f.sessionId)
-                  selectBoardSession(f.sessionId)
-                }),
-                title: f.title
-              },
-              h('span', null, f.title)
-            ),
-            h(BoardEditTime, {
-              value:
-                Math.max(f.updatedAt ?? 0, page.editedAt(f.sessionId) ?? 0) ||
-                undefined
-            })
-          )
-        ),
-        ...s.boards
-          .filter((b) => b.pinned)
-          .map((b) =>
-            h(
-              'div',
-              {
-                key: b.boardId,
-                className: 'srb-row',
-                onContextMenu: (event: React.MouseEvent) => {
-                  event.preventDefault()
-                  manageBoard(page, b.boardId)
-                },
-                'aria-current':
-                  selectedSession === b.localSessionId && page.current() === b.localSessionId
-              },
-              h(
-                'button',
-                {
-                  onClick: safely(page, async () => {
-                    await page.openBoard(b.boardId)
-                    selectBoardSession(page.current() ?? '')
-                  }),
-                  title: b.title
-                },
-                b.sharingState === 'shared' && boardIcon('people'),
-                h('span', null, b.title)
-              ),
-              h(BoardEditTime, {
-                value: b.updatedAt,
-                editor: b.updatedBy?.username
-              })
-            )
-          )
-      )
-  )
+  return h('section', { className: 'srb-section', 'data-wide': true, 'aria-label': '研究看板' },
+    h('header', null,
+      h('button', { className: 'srb-section-toggle', 'aria-label': collapsed ? '展开研究看板' : '折叠研究看板', 'aria-expanded': !collapsed,
+        onClick: () => { setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed)) } },
+        '研究看板', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
+      h('div', { className: 'srb-section-controls' },
+        h('button', { className: 'srb-icon-button', 'aria-label': '搜索研究看板', title: '搜索研究看板', onClick: () => { setSearch(!search); if (search) setQuery('') } }, h(IconSearchOutline16)),
+        h(Menu, { open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
+          selectedIds: [...preferences.groups, preferences.sort],
+          items: [{ type: 'label', id: 'groups-label', text: '分组方式' }, { id: 'private', label: '专用看板' }, { id: 'shared', label: '协作看板' },
+            { type: 'separator', id: 'sort-separator' }, { type: 'label', id: 'sort-label', text: '排序方式' }, { id: 'manual', label: '手动排序' }, { id: 'updated', label: '最近更新' }],
+          onSelect: (id: string) => {
+            if (id === 'private' || id === 'shared') {
+              const groups = preferences.groups.includes(id) ? preferences.groups.filter((g: string) => g !== id) : [...preferences.groups, id]
+              if (groups.length) save({ ...preferences, groups })
+            } else save({ ...preferences, sort: id })
+          },
+          anchor: h('button', { className: 'srb-icon-button', 'aria-label': '看板视图选项', title: '看板视图选项', onClick: () => setOptionsOpen(!optionsOpen) }, h(IconPersonalizationOutline16)) }),
+        h('button', { className: 'srb-icon-button', 'aria-label': '新建研究看板', title: '新建研究看板', disabled: creating, onClick: safely(page, async () => {
+          setCreating(true)
+          try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, groups: [...new Set([...preferences.groups, 'private'])] }) }
+          finally { setCreating(false) }
+        }) }, h(IconPlusOutline16)))),
+    search && h('div', { className: 'srb-search' }, h('input', { autoFocus: true, value: query, placeholder: '搜索研究看板…', 'aria-label': '搜索看板名称',
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') { setQuery(''); setSearch(false) } } })),
+    (!collapsed || search) && h('div', { className: 'srb-board-list' },
+      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '新建研究看板，或从研究中创建协作'),
+      ...visible.map(entry => h(ResearchBoardRow, { key: entry.key, page, entry: entry.value, time: entry.time, selectedSession,
+        draggable: preferences.sort === 'manual' && !query,
+        onDragStart: (e: React.DragEvent) => { setDrag(entry.key); e.dataTransfer.setData('text/x-sherlock-board', entry.key) },
+        onDragEnd: () => setDrag(null),
+        onDrop: (e: React.DragEvent) => {
+          e.preventDefault()
+          if (!drag || drag === entry.key || preferences.sort !== 'manual') return
+          const keys = entries.map(e => e.key).filter(key => key !== drag)
+          keys.splice(keys.indexOf(entry.key), 0, drag)
+          save({ ...preferences, order: keys }); setDrag(null)
+        }
+      }))))
+}
+function ResearchBoardRow({ page, entry, time, selectedSession, ...drag }: any) {
+  const [open, setOpen] = React.useState(false)
+  const shared = 'boardId' in entry
+  const sessionId = shared ? entry.localSessionId : entry.sessionId
+  const collaboration = shared && entry.sharingState === 'shared'
+  const items = [
+    { id: 'rename', label: '重命名', icon: h(IconEditOutline16), disabled: shared && entry.role !== 'owner' },
+    { id: 'collaboration', label: collaboration ? '管理协作' : '共享协作' },
+    { id: 'workspace', label: '放回工作区' }
+  ]
+  const row = h('div', { className: 'srb-row', 'data-menu-open': open, 'aria-current': selectedSession === sessionId && page.current() === sessionId,
+    ...drag, onDragOver: (event: React.DragEvent) => { if (drag.draggable) event.preventDefault() },
+    onContextMenu: (event: React.MouseEvent) => { event.preventDefault(); setOpen(true) } },
+    h('button', { title: entry.title, onClick: safely(page, async () => {
+      if (shared) await page.openBoard(entry.boardId)
+      else await page.openPersonal(entry.sessionId)
+      selectBoardSession(page.current() ?? '')
+    }) },
+      collaboration && ((entry.memberCount ?? page.getView(sessionId)?.members.length ?? 1) > 1
+        ? h('span', { className: 'srb-row-status', title: '多人协作', 'aria-label': '多人协作' }, boardIcon('people'))
+        : h('span', { className: 'srb-pending-ring', title: '等待成员接受邀请', 'aria-label': '等待接受邀请' })),
+      h('span', null, entry.title)),
+    h(BoardEditTime, { value: time || undefined, editor: shared ? entry.updatedBy?.username : undefined }),
+    h('button', { className: 'srb-row-more', 'aria-label': entry.title + '，更多', 'aria-haspopup': 'menu', 'aria-expanded': open,
+      onClick: (event: React.MouseEvent) => { event.stopPropagation(); setOpen(!open) } }, h(IconEllipsisOutline16)))
+  return h(Menu, { open, onClose: () => setOpen(false), items, align: 'end', dense: true, portal: true, anchor: row,
+    onSelect: (id: string) => {
+      setOpen(false)
+      if (id === 'rename') renameBoardEntry(page, entry)
+      if (id === 'collaboration') {
+        if (shared) manageBoard(page, entry.boardId)
+        else shareFavorite(page, entry)
+      }
+      if (id === 'workspace') void page.returnToWorkspace(entry).catch(page.showError)
+    }
+  })
+}
+function renameBoardEntry(page: ResearchBoardsPage, entry: Favorite | BoardSummary) {
+  const d = boardDialog(document, '重命名看板')
+  const input = document.createElement('input')
+  input.value = entry.title
+  input.setAttribute('aria-label', '看板名称')
+  const label = uiText('label', '名称'); label.append(input)
+  const save = boardButton(document, '保存', () => d.run(async () => {
+    const title = input.value.trim()
+    if (!title) throw Error('请输入看板名称')
+    if ('boardId' in entry) await page.call('board.rename', { boardId: entry.boardId, title })
+    else {
+      await page.renamePersonal(entry.sessionId, title)
+      await page.call('favorite.rename', { favoriteId: entry.favoriteId, title })
+    }
+    d.close()
+  }))
+  save.className = 'srb-primary'
+  d.body.append(label, save)
 }
 function BoardEditTime({ value, editor }: { value?: number; editor?: string }) {
   const [now, setNow] = React.useState(Date.now())
@@ -1703,36 +1577,8 @@ function BoardEditTime({ value, editor }: { value?: number; editor?: string }) {
     boardEditTime(value, now)
   )
 }
-function favoriteMenu(page: ResearchBoardsPage, f: Favorite) {
-  const d = boardDialog(document, f.title)
-  const name = document.createElement('input')
-  name.value = f.title
-  name.setAttribute('aria-label', '看板名称')
-  d.body.append(
-    name,
-    boardButton(document, '保存名称', () =>
-      d.run(async () => {
-        await page.call('favorite.rename', {
-          favoriteId: f.favoriteId,
-          title: name.value
-        })
-        d.close()
-      })
-    ),
-    boardButton(document, '共享协作', () => {
-      d.close()
-      shareFavorite(page, f)
-    }),
-    boardButton(document, '取消常用', () =>
-      d.run(async () => {
-        await page.call('favorite.remove', { favoriteId: f.favoriteId })
-        d.close()
-      })
-    )
-  )
-}
 export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
-  const d = boardDialog(document, '共享协作'),
+  const d = boardDialog(document, '创建协作'),
     s = page.getState()
   if (s.account.status === 'loading' || s.account.status === 'unavailable') {
     d.body.textContent =
@@ -1769,7 +1615,6 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
     )
     return
   }
-  const existing = s.boards.filter((b) => b.sourceFavoriteId === f.favoriteId)
   const start = async () => {
     d.body.replaceChildren()
     const capture = await d.run(
@@ -1813,24 +1658,10 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
         )
         return result.board.boardId
       },
-      '创建副本并邀请'
+      '发送邀请'
     )
   }
-  if (existing.length) {
-    d.body.append(
-      document.createTextNode(
-        '已有协作副本，继续管理可邀请成员加入同一看板。'
-      )
-    )
-    for (const b of existing)
-      d.body.append(
-        boardButton(document, b.title, () => {
-          d.close()
-          manageBoard(page, b.boardId)
-        })
-      )
-    d.body.append(boardButton(document, '新建协作副本', start))
-  } else void start()
+  void start()
 }
 type Dialog = ReturnType<typeof boardDialog>
 function inviteForm(
@@ -1873,9 +1704,10 @@ function inviteForm(
           publicId: confirmedPublicId,
           role: confirmedRole
         })
-        d.status.textContent = '邀请已发送'
+        d.status.textContent = '邀请已发送，等待对方接受'
         recipient.textContent = '邀请已发送'
         send.remove()
+        void page.openBoard(boardId).then(() => selectBoardSession(page.current() ?? '')).catch(page.showError)
         parent.append(
           boardButton(document, '打开协作看板', async () => {
             await page.openBoard(boardId!)

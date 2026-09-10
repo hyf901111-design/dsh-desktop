@@ -492,7 +492,7 @@ export class ResearchBoardRoom {
       ).all()
     ).results
     return {
-      board: { ...current.board, role: member.role },
+      board: { ...current.board, role: member.role, memberCount: members.length },
       snapshot: {
         canvas: projectDocument(
           decodeDocument(fromBase64(current.documentUpdate))
