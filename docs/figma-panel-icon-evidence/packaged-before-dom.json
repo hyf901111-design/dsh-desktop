@@ -1,0 +1,36 @@
+[
+  {
+    "svg": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"1.5\" y=\"2\" width=\"13\" height=\"12\" rx=\"2.5\" stroke=\"currentColor\" stroke-width=\"1.5\"></rect><rect x=\"3.25\" y=\"10\" width=\"9.5\" height=\"2.75\" rx=\"1\" fill=\"currentColor\" stroke=\"none\"></rect></svg>",
+    "rect": {
+      "x": 1294,
+      "y": 36,
+      "width": 16,
+      "height": 16,
+      "top": 36,
+      "right": 1310,
+      "bottom": 52,
+      "left": 1294
+    },
+    "color": "rgb(207, 211, 214)",
+    "stroke": "none",
+    "strokeWidth": "1px",
+    "parent": "<button type=\"button\" class=\"t8lSSG_toggleButton\" aria-label=\"展开底部面板\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"1.5\" y=\"2\" width=\"13\" height=\"12\" rx=\"2.5\" stroke=\"currentColor\" stroke-width=\"1.5\"></rect><rect x=\"3.25\" y=\"10\" width=\"9.5\" height=\"2.75\" rx=\"1\" fill=\"currentColor\" stroke=\"none\"></rect></svg></button>"
+  },
+  {
+    "svg": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"1.5\" y=\"2\" width=\"13\" height=\"12\" rx=\"2.5\" stroke=\"currentColor\" stroke-width=\"1.5\"></rect><rect x=\"10.5\" y=\"3.25\" width=\"2.75\" height=\"9.5\" rx=\"1\" fill=\"currentColor\" stroke=\"none\"></rect></svg>",
+    "rect": {
+      "x": 1326,
+      "y": 36,
+      "width": 16,
+      "height": 16,
+      "top": 36,
+      "right": 1342,
+      "bottom": 52,
+      "left": 1326
+    },
+    "color": "rgb(207, 211, 214)",
+    "stroke": "none",
+    "strokeWidth": "1px",
+    "parent": "<button type=\"button\" class=\"t8lSSG_toggleButton\" aria-label=\"折叠侧边栏\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"1.5\" y=\"2\" width=\"13\" height=\"12\" rx=\"2.5\" stroke=\"currentColor\" stroke-width=\"1.5\"></rect><rect x=\"10.5\" y=\"3.25\" width=\"2.75\" height=\"9.5\" rx=\"1\" fill=\"currentColor\" stroke=\"none\"></rect></svg></button>"
+  }
+]

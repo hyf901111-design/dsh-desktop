@@ -1,0 +1,99 @@
+{
+  "evidence": "Figma original SVG versus actual production glyph function rendered by React in controlled Chromium; not packaged Electron",
+  "syntax": true,
+  "idempotence": true,
+  "metrics": [
+    {
+      "direction": "bottom",
+      "active": "false",
+      "width": 16,
+      "height": 16,
+      "color": "rgb(119, 119, 119)",
+      "paths": [
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        },
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        }
+      ]
+    },
+    {
+      "direction": "right",
+      "active": "true",
+      "width": 16,
+      "height": 16,
+      "color": "rgb(105, 112, 120)",
+      "paths": [
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        },
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        }
+      ]
+    },
+    {
+      "direction": "bottom",
+      "active": "false",
+      "width": 16,
+      "height": 16,
+      "color": "rgb(160, 160, 160)",
+      "paths": [
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        },
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        }
+      ]
+    },
+    {
+      "direction": "right",
+      "active": "true",
+      "width": 16,
+      "height": 16,
+      "color": "rgb(185, 185, 185)",
+      "paths": [
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        },
+        {
+          "tag": "path",
+          "strokeWidth": "1px",
+          "cap": "round",
+          "join": "round",
+          "fill": "none"
+        }
+      ]
+    }
+  ]
+}
