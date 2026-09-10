@@ -9,74 +9,81 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "EWork Odyssey 全文件还原首批：首页通体框架、面板开关和设置认证",
+        "featureName": "EWork Odyssey 全文件还原第二批：实拍修正、文件面板与真实更新状态",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "d816294d994afb596f30deb14f6e4fd90afc1833",
-        "tipCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+        "baseCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+        "tipCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
         "commits": [
           {
-            "commit": "30302ea350dff1ec48e1a7eb410d62621930d076",
+            "commit": "1ac939d212100584ab86a1ad1bdfd7643c882d00",
             "parents": [
-              "d816294d994afb596f30deb14f6e4fd90afc1833"
+              "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14"
             ],
-            "subject": "制定全文件Figma还原计划并登记100张画板"
+            "subject": "修正首页切换与原稿标题并还原文件面板和拖动行为"
           },
           {
-            "commit": "968dbc1e06a8fe0dbb4256960a21fc31e797d4a3",
+            "commit": "377e6078cb5c6bf2d7cd1444bde68abdb61111fb",
             "parents": [
-              "30302ea350dff1ec48e1a7eb410d62621930d076"
+              "1ac939d212100584ab86a1ad1bdfd7643c882d00"
             ],
-            "subject": "还原首页云层材质并修正通体框架和面板开关"
+            "subject": "按实拍修正设置细节并接通更新保存和自动重启状态"
           },
           {
-            "commit": "844d5ece9d22613a8b4e7255c4b78da2d3640e86",
+            "commit": "6616c7da3e7a2a5064d19109228a40ed64e79d60",
             "parents": [
-              "968dbc1e06a8fe0dbb4256960a21fc31e797d4a3"
+              "377e6078cb5c6bf2d7cd1444bde68abdb61111fb"
             ],
-            "subject": "按侧栏展开收起状态校正面板边距和终端容器尺寸"
+            "subject": "固定后置样式层以避免异步插件覆盖设计尺寸"
           },
           {
-            "commit": "bd522f657780c379f267734acc4b7f0f2583c9d8",
+            "commit": "ee174df0e6352bbf0445159431a52b3654c635a3",
             "parents": [
-              "844d5ece9d22613a8b4e7255c4b78da2d3640e86"
+              "6616c7da3e7a2a5064d19109228a40ed64e79d60"
             ],
-            "subject": "还原设置各页与登录注册界面并保留动态插件设置"
+            "subject": "建立逐节点设计覆盖与真实客户端证据验收门槛"
           },
           {
-            "commit": "f1026ae83723c08262617b87b2514d421dfd7d05",
+            "commit": "87eb20a53f311b71659087046046ea8b0fd1048b",
             "parents": [
-              "bd522f657780c379f267734acc4b7f0f2583c9d8"
+              "ee174df0e6352bbf0445159431a52b3654c635a3"
             ],
-            "subject": "补齐设置模块的清洁安装集成夹具"
+            "subject": "按原稿校正深色面板收起按钮透明度"
           },
           {
-            "commit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
+            "commit": "868839c014dd6a20d3e19a3644ccff12f783a9c5",
             "parents": [
-              "f1026ae83723c08262617b87b2514d421dfd7d05"
+              "87eb20a53f311b71659087046046ea8b0fd1048b"
             ],
-            "subject": "修正研究页标题栏状态选择器"
+            "subject": "区分新建对话与研究标签切换以保持导航可用"
+          },
+          {
+            "commit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
+            "parents": [
+              "868839c014dd6a20d3e19a3644ccff12f783a9c5"
+            ],
+            "subject": "将面板和常用交互动效纳入逐状态验收范围"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "build/brand/figma-home-mode.svg"
+            "path": "build/brand/figma-home-headline-dark.svg"
           },
           {
             "status": "A",
-            "path": "docs/superpowers/plans/2026-09-11-figma-full-client-fidelity.design-index.json"
+            "path": "build/brand/figma-home-headline-light.svg"
           },
           {
             "status": "A",
-            "path": "docs/superpowers/plans/2026-09-11-figma-full-client-fidelity.design-index.md"
+            "path": "docs/figma-full-coverage-20260911.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/plans/2026-09-11-figma-full-client-fidelity.md"
           },
           {
             "status": "A",
-            "path": "docs/superpowers/plans/2026-09-11-figma-full-client-fidelity.priority-nodes.json"
+            "path": "scripts/build-figma-coverage-manifest.py"
           },
           {
             "status": "M",
@@ -84,11 +91,11 @@
           },
           {
             "status": "A",
-            "path": "scripts/lib/figma-settings-client.d.mts"
+            "path": "scripts/lib/figma-updates-client.d.mts"
           },
           {
             "status": "A",
-            "path": "scripts/lib/figma-settings-client.mjs"
+            "path": "scripts/lib/figma-updates-client.mjs"
           },
           {
             "status": "M",
@@ -103,40 +110,76 @@
             "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
+            "status": "A",
+            "path": "scripts/verify-figma-coverage.mjs"
+          },
+          {
             "status": "M",
-            "path": "scripts/test-research-collaboration-e2e.mjs"
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/native-install.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/update/restart-preparation.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/update/restart-receipt.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-manager.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-state.ts"
           },
           {
             "status": "M",
             "path": "src/preload/account-ui.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/figma-auth.css"
           },
           {
-            "status": "M",
-            "path": "src/preload/figma-final-shell.css"
+            "status": "A",
+            "path": "src/preload/figma-file-panel.css"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/figma-home.css"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/figma-panels.css"
           },
           {
-            "status": "A",
-            "path": "src/preload/figma-settings-assets/ancient-harbor.png"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/figma-settings-assets/auth-close.svg"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/settings-background.ts"
           },
           {
             "status": "M",
@@ -144,11 +187,43 @@
           },
           {
             "status": "M",
-            "path": "test/desktop-shell-controls.test.ts"
+            "path": "src/preload/sidebar-notice.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-notification-store.ts"
           },
           {
             "status": "A",
+            "path": "src/preload/update-preparation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/contracts.ts"
+          },
+          {
+            "status": "M",
             "path": "test/figma-auth-layout.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-coverage-manifest.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-coverage.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-file-panel.test.ts"
           },
           {
             "status": "M",
@@ -156,7 +231,63 @@
           },
           {
             "status": "A",
-            "path": "test/figma-settings-layout.test.ts"
+            "path": "test/figma-panel-default-width.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-panel-drag-recovery.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-update-client.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-update-control.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-freshness.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-install-lifecycle.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-manager.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-page-preparation.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-restart-preparation.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-restart-receipt.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-state.test.ts"
           }
         ],
         "checks": [
@@ -166,9 +297,9 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "Checked on exact feature tip; 10 focused files / 70 tests passed, TypeScript and dependencies passed.",
-            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
-            "completedAt": "2026-09-10T22:37:33.260550+00:00",
+            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
+            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
+            "completedAt": "2026-09-10T23:44:40.051Z",
             "timeoutMs": 600000
           },
           {
@@ -180,9 +311,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "Checked on exact feature tip; 10 focused files / 70 tests passed, TypeScript and dependencies passed.",
-            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
-            "completedAt": "2026-09-10T22:37:33.260550+00:00",
+            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
+            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
+            "completedAt": "2026-09-10T23:44:40.051Z",
             "timeoutMs": 120000
           },
           {
@@ -195,16 +326,46 @@
               "test/desktop-shell-controls.test.ts",
               "test/research-tabbar-final-layout.test.ts",
               "test/sidebar-new-session-actions.test.ts",
+              "test/figma-file-panel.test.ts",
+              "test/figma-panel-default-width.test.ts",
+              "test/figma-panel-drag-recovery.test.ts",
+              "test/figma-update-client.test.ts",
               "test/figma-settings-layout.test.ts",
               "test/figma-auth-layout.test.ts",
-              "test/model-multimodal-settings.test.ts",
-              "test/model-provider-policy.test.ts",
-              "test/settings-about.test.ts"
+              "test/update-restart-preparation.test.ts",
+              "test/update-restart-receipt.test.ts",
+              "test/update-page-preparation.test.ts",
+              "test/update-state.test.ts",
+              "test/update-manager.test.ts",
+              "test/update-freshness.test.ts",
+              "test/update-install-lifecycle.test.ts",
+              "test/sidebar-update-control.test.ts",
+              "test/update-ui.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/settings-about.test.ts",
+              "test/figma-coverage.test.js",
+              "test/figma-coverage-manifest.test.js"
             ],
             "outcome": "passed",
-            "summary": "Checked on exact feature tip; 10 focused files / 70 tests passed, TypeScript and dependencies passed.",
-            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
-            "completedAt": "2026-09-10T22:37:33.260550+00:00",
+            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
+            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
+            "completedAt": "2026-09-10T23:44:40.051Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-boards-service.test.ts",
+              "test/research-board-client-adapter.test.js",
+              "-t",
+              "update preparation"
+            ],
+            "outcome": "passed",
+            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
+            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
+            "completedAt": "2026-09-10T23:44:40.051Z",
             "timeoutMs": 120000
           },
           {
@@ -215,100 +376,27 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "All 8 locked frontend packages validated with SHA512, clean patches, idempotency and settings factories; source stage passed.",
-            "verifiedCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
-            "completedAt": "2026-09-10T22:37:33.260550+00:00",
+            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
+            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
+            "completedAt": "2026-09-10T23:44:40.051Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "This is an intermediate source checkpoint for the required integration package. Real native baseline home/settings captured; new package visual/interaction acceptance is pending and will be performed after building only from integration. This handoff does not claim full Figma acceptance."
+          "summary": "Intermediate source checkpoint for integration-only local packaging. Checkpoint1 actual 1380x900 Electron home/settings both themes were compared; discovered differences fixed here and require new packaged screenshots. No full Figma acceptance claimed."
         },
         "acceptanceCriteria": [
-          "Full Figma plan retains all 100 frames and 6 variants",
-          "Build current integration as a local test package and verify actual home/settings/panel states",
-          "Continue full frame-by-frame comparison and fix remaining differences; no release"
+          "258 currently enumerated states across100 frames and6 variants retain individual references",
+          "Rebuild only existing integration and recheck home/settings/panel events in actual client",
+          "Continue full Figma per-state comparison including new common motion requirement and whole-shell transparent blur"
         ],
         "risks": [
-          "Intermediate implementation checkpoint, not overall completion",
-          "Native glass and all per-frame geometry require actual package comparison",
-          "Only focused tests; no public release, push, version change or user data migration"
+          "Intermediate checkpoint; P7B/P7C/P8/P9/full motion and full visual acceptance remain",
+          "No public release, push, version bump or notarization",
+          "Native update installation not exercised against user production feed; isolated restart provenance still required"
         ],
-        "generatedAt": "2026-09-10T22:37:33.260550+00:00"
-      },
-      "merged": {
-        "mergeCommit": "30e830c46010368647d0fd82a1d2816ced83d2ca",
-        "verificationCommit": "30e830c46010368647d0fd82a1d2816ced83d2ca",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "30e830c46010368647d0fd82a1d2816ced83d2ca",
-            "completedAt": "2026-09-10T22:38:07.065Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "30e830c46010368647d0fd82a1d2816ced83d2ca",
-            "completedAt": "2026-09-10T22:38:07.065Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "30e830c46010368647d0fd82a1d2816ced83d2ca",
-            "completedAt": "2026-09-10T22:38:07.065Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "30e830c46010368647d0fd82a1d2816ced83d2ca",
-            "completedAt": "2026-09-10T22:38:07.065Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "30e830c46010368647d0fd82a1d2816ced83d2ca",
-            "completedAt": "2026-09-10T22:38:07.065Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-10T22:38:07.065Z"
+        "generatedAt": "2026-09-10T23:44:40.051Z"
       }
     }
   ],
