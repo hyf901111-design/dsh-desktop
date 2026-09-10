@@ -36,8 +36,8 @@
 .pI_x6G_frame { background: var(--odyssey-shell) !important; backdrop-filter: blur(16px); border-radius:12px; }
 /* Figma 284:400 / 767 inherits the single window material. The legacy sidebar tint must not compound its opacity. */
 .hHd-Xa_root { background:transparent !important; }
-.hHd-Xa_root .hHd-Xa_newSession { background:rgb(255 255 255 / .6); border:0; box-shadow:none; }
-body[data-ds-dark-theme] .hHd-Xa_root .hHd-Xa_newSession { background:rgb(39.575 39.575 39.575); }
+.hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(255 255 255 / .6); border:0; box-shadow:none; }
+body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(39.575 39.575 39.575); }
 .pI_x6G_sidebarCol { background: transparent !important; border: 0; }
 .pI_x6G_centerCol { margin:10px 12px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
 .wSkVaW_root { background:var(--odyssey-workspace); }
