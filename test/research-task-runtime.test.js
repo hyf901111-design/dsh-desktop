@@ -2086,6 +2086,7 @@ it('reports real tool and output activity without copying code, arguments or rea
  ctx.emit(child,{seq:2,type:'tool/call',data:{name:'financial_query',arguments:'{"token":"PRIVATE_TOKEN"}'}})
  ctx.emit(child,{seq:3,type:'assistant/chunk',data:{chunk:{type:'text-delta',text:'{"version":1,"type":"html","html":"PRIVATE_RAW_HTML"}'}}})
  ctx.emit(child,{seq:4,type:'tool/result',data:{}})
+ expect(updates[0].lastActivityAt).toBe(0)
  const progress=updates.at(-1);expect(progress.outputChars).toBeGreaterThan(0);expect(progress.events.some(e=>e.tool==='查询金融数据')).toBe(true)
  expect(JSON.stringify(updates)).not.toMatch(/PRIVATE_REASONING|PRIVATE_TOKEN|PRIVATE_RAW_HTML/)
  result.resolve({stopReason:'completed',output:[{type:'text',text:'{"version":1,"type":"markdown","title":"结果","content":"已完成"}'}]})

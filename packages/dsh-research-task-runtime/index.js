@@ -1583,7 +1583,7 @@ export function createSharedBoardExecutor(ctx) {
   const sharedAdapter = createSubagentAdapter(ctx)
   return {
     execute: async (request, signal, onProgress = () => {}) => {
-      const progress = { startedAt: Date.now(), lastActivityAt: Date.now(), outputChars: 0, events: [] }
+      const progress = { startedAt: Date.now(), lastActivityAt: 0, outputChars: 0, events: [] }
       let progressSeq = 0, lastProgressAt = 0, outputPrefix = ''
       const report = event => {
         signal.throwIfAborted()
