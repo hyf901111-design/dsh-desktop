@@ -4,7 +4,10 @@ export function mountFigmaResponsiveHeader(doc: Document): () => void {
   if (!win?.ResizeObserver) return () => {}
   const observed = new Set<HTMLElement>()
   const sync = (header: HTMLElement) => {
-    const width = header.getBoundingClientRect().width
+    // Research keeps its full backdrop and reserves the right panel with
+    // padding, so the border box is not the width available to its controls.
+    const style = win.getComputedStyle(header)
+    const width = header.getBoundingClientRect().width - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0) + 40
     const layout = width < 440 ? 'narrow' : width < 640 ? 'stacked' : 'regular'
     if (header.dataset.odysseyHeaderLayout !== layout) header.dataset.odysseyHeaderLayout = layout
   }
