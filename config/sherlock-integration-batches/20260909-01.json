@@ -9,90 +9,59 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件悬浮细节与十一人本地验收准备",
+        "featureName": "原生逐页验收修复：空态协作入口、拖动同步与只读工具栏",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "578904b1f24e71284b11f82225cd8af4a05fc343",
-        "tipCommit": "5d320e304e588d809260811d3402fca1c761e608",
+        "baseCommit": "5d320e304e588d809260811d3402fca1c761e608",
+        "tipCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
         "commits": [
           {
-            "commit": "93b4fe2a9705752a3e335b364e1e92820e26e810",
+            "commit": "8d90308d21a95c25bdd88e3f5e934507fe00cb3e",
             "parents": [
-              "578904b1f24e71284b11f82225cd8af4a05fc343"
+              "5d320e304e588d809260811d3402fca1c761e608"
             ],
-            "subject": "统一组件悬浮按钮圆角与淡入效果"
+            "subject": "修复空对话误隐藏研究画板协作入口"
           },
           {
-            "commit": "5d320e304e588d809260811d3402fca1c761e608",
+            "commit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
             "parents": [
-              "93b4fe2a9705752a3e335b364e1e92820e26e810"
+              "8d90308d21a95c25bdd88e3f5e934507fe00cb3e"
             ],
-            "subject": "扩充本地协作验收账号名额以覆盖十一人成员列表"
+            "subject": "修复画布拖动共享同步并补齐只读工具栏禁用状态"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/start-native-acceptance-services.mjs"
+            "path": "scripts/lib/figma-canvas-gestures.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-canvas-gestures.css"
-          }
-        ],
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "--check",
-              "scripts/start-native-acceptance-services.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "local fixture script syntax passed",
-            "verifiedCommit": "5d320e304e588d809260811d3402fca1c761e608",
-            "completedAt": "2026-09-11T13:07:29.470549+00:00",
-            "timeoutMs": 60000
+            "path": "src/preload/figma-final-shell.css"
           },
           {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "/tmp/full-audit-hover-sources.log; CSS only and fixture quota follow-up",
-            "verifiedCommit": "5d320e304e588d809260811d3402fca1c761e608",
-            "completedAt": "2026-09-11T13:07:29.470549+00:00",
-            "timeoutMs": 180000
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-canvas-gestures-ui.test.ts"
           }
         ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "Native before-state compared with live Figma; updated native verification after integration build."
-        },
-        "acceptanceCriteria": [
-          "组件悬浮工具条只淡入，按钮圆角6px",
-          "本地邀请配额覆盖十一人场景和超额拒绝"
-        ],
-        "risks": [
-          "Local build only; no release or push"
-        ],
-        "generatedAt": "2026-09-11T13:07:29.470549+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5f174a67166b994d35088e8a1e63daf17d9a49dd",
-        "verificationCommit": "5f174a67166b994d35088e8a1e63daf17d9a49dd",
         "checks": [
           {
             "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
+              "npx",
+              "vitest",
+              "run",
+              "test/figma-canvas-gestures-ui.test.ts",
+              "test/figma-canvas-snap.test.js",
+              "test/research-board-presence-final.test.ts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "5f174a67166b994d35088e8a1e63daf17d9a49dd",
-            "completedAt": "2026-09-11T13:08:29.897Z",
-            "timeoutMs": 600000
+            "summary": "15 focused tests passed; regression reproduced INVALID_DOCUMENT before correction",
+            "verifiedCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
+            "completedAt": "2026-09-11T13:43:35.550843+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -101,26 +70,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5f174a67166b994d35088e8a1e63daf17d9a49dd",
-            "completedAt": "2026-09-11T13:08:29.897Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "5f174a67166b994d35088e8a1e63daf17d9a49dd",
-            "completedAt": "2026-09-11T13:08:29.897Z",
+            "summary": "Typecheck passed",
+            "verifiedCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
+            "completedAt": "2026-09-11T13:43:35.551059+00:00",
             "timeoutMs": 180000
           },
           {
@@ -131,26 +83,25 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "5f174a67166b994d35088e8a1e63daf17d9a49dd",
-            "completedAt": "2026-09-11T13:08:29.897Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "5f174a67166b994d35088e8a1e63daf17d9a49dd",
-            "completedAt": "2026-09-11T13:08:29.897Z",
-            "timeoutMs": 300000
+            "summary": "Clean locked source patch fixture passed",
+            "verifiedCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
+            "completedAt": "2026-09-11T13:43:35.551063+00:00",
+            "timeoutMs": 180000
           }
         ],
-        "recordedAt": "2026-09-11T13:08:29.897Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "Both defects reproduced through native owner/editor windows. 11-member management, invitation acceptance and live role change exercised. Final correction awaits integration package native retest."
+        },
+        "acceptanceCriteria": [
+          "空对话不再隐藏有组件或已收藏画板的协作入口",
+          "拖动与缩放保留缺省字段语义，共享文档验证通过",
+          "仅查看成员的创建入口禁用"
+        ],
+        "risks": [
+          "Local build only; no release or push"
+        ],
+        "generatedAt": "2026-09-11T13:07:29.470549+00:00"
       }
     }
   ],
