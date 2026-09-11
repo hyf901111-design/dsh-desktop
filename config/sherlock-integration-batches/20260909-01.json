@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Native research table row sizing and numeric alignment",
+        "featureName": "Idempotent native research table patch",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "c304dde408bf116dac1ad44f9eabf44bd60fa100",
-        "tipCommit": "e70614d486e6dcc16fecf707fb8b8303773c3b4e",
+        "tipCommit": "4a601cdac87f65fa184142326052414fd7fb81bd",
         "commits": [
           {
             "commit": "e70614d486e6dcc16fecf707fb8b8303773c3b4e",
@@ -20,6 +20,13 @@
               "c304dde408bf116dac1ad44f9eabf44bd60fa100"
             ],
             "subject": "修复原生研究表格行高并统一格式化数值列对齐"
+          },
+          {
+            "commit": "4a601cdac87f65fa184142326052414fd7fb81bd",
+            "parents": [
+              "e70614d486e6dcc16fecf707fb8b8303773c3b4e"
+            ],
+            "subject": "修复研究表格补丁重复应用的幂等性"
           }
         ],
         "files": [
@@ -38,17 +45,13 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/research-component-upgrade-final.test.ts",
-              "test/research-derived-task-presentation.test.ts",
-              "test/research-derived-mindmap-final.test.ts",
-              "test/research-derived-provenance-final.test.ts",
-              "test/research-bento-visible-layout.test.js"
+              "test/research-board-client-adapter.test.js",
+              "test/research-component-upgrade-final.test.ts"
             ],
             "outcome": "passed",
-            "summary": "32 focused component checks passed",
-            "verifiedCommit": "e70614d486e6dcc16fecf707fb8b8303773c3b4e",
-            "completedAt": "2026-09-11T16:52:56.767873+00:00",
+            "summary": "40 focused adapter and component checks passed",
+            "verifiedCommit": "4a601cdac87f65fa184142326052414fd7fb81bd",
+            "completedAt": "2026-09-11T17:00:16.538593+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -64,7 +67,7 @@
         "risks": [
           "Local testing only; isolated data; no release or push"
         ],
-        "generatedAt": "2026-09-11T16:52:56.767873+00:00"
+        "generatedAt": "2026-09-11T17:00:16.539133+00:00"
       }
     }
   ],
