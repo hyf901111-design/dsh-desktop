@@ -1,13 +1,12 @@
 /*
- * Supplemental interaction motion. Figma's recursive motion inventory for
- * home 136:13 is empty, so these timings are a product motion spec rather
- * than exported Figma animation values. Static geometry remains authoritative.
+ * Figma 49/52/60: hover and press only change tone; panel motion has its own
+ * geometry transition. Button labels and hit areas stay fixed throughout.
  */
 :root {
   --odyssey-motion-panel-duration: 260ms;
   --odyssey-motion-panel-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --odyssey-motion-hover-duration: 140ms;
-  --odyssey-motion-press-duration: 90ms;
+  --odyssey-motion-hover-duration: 120ms;
+  --odyssey-motion-press-duration: 80ms;
   --odyssey-motion-menu-duration: 160ms;
 }
 
@@ -103,8 +102,7 @@
 [data-odyssey-tab-overflow-trigger] {
   transition:
     color var(--odyssey-motion-hover-duration) ease-out,
-    background-color var(--odyssey-motion-hover-duration) ease-out,
-    transform var(--odyssey-motion-press-duration) ease-out;
+    background-color var(--odyssey-motion-hover-duration) ease-out;
 }
 
 [data-dsh-panel-host] [data-odyssey-panel-entry]:active:not(:disabled),
@@ -113,7 +111,8 @@
 .t8lSSG_tabBarPlus:active:not(:disabled),
 .t8lSSG_tabClose:active:not(:disabled),
 [data-odyssey-tab-overflow-trigger]:active:not(:disabled) {
-  transform: scale(0.94);
+  transform: none;
+  transition-duration: var(--odyssey-motion-press-duration);
 }
 
 .t8lSSG_tab,
@@ -121,14 +120,14 @@
 body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"] {
   transition:
     color var(--odyssey-motion-hover-duration) ease-out,
-    background-color var(--odyssey-motion-hover-duration) ease-out,
-    transform var(--odyssey-motion-press-duration) ease-out;
+    background-color var(--odyssey-motion-hover-duration) ease-out;
 }
 
 .t8lSSG_tab:active,
 [data-odyssey-tab-overflow-option]:active:not(:disabled),
 body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"]:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: none;
+  transition-duration: var(--odyssey-motion-press-duration);
 }
 
 @keyframes odyssey-panel-menu-enter {
