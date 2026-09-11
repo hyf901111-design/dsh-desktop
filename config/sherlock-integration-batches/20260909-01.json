@@ -9,23 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "加快首页自然流动并微调光泽",
+        "featureName": "沿现有曲面增强首页山脊反光",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "6b932a4c6a25e3b142baa7ea4302961d0207768d",
-        "tipCommit": "8451551fe65bd274320148eb1bd6b48db913e2ae",
+        "baseCommit": "8451551fe65bd274320148eb1bd6b48db913e2ae",
+        "tipCommit": "8a277e31001e9160562c9fb1aad6f1464b8b9b6d",
         "commits": [
           {
-            "commit": "8451551fe65bd274320148eb1bd6b48db913e2ae",
+            "commit": "8a277e31001e9160562c9fb1aad6f1464b8b9b6d",
             "parents": [
-              "6b932a4c6a25e3b142baa7ea4302961d0207768d"
+              "8451551fe65bd274320148eb1bd6b48db913e2ae"
             ],
-            "subject": "适度加快首页自然流动并微调现有亮部光泽"
+            "subject": "沿现有曲面增强首页山脊反光与背光层次"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "src/preload/home-flow.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-flow.test.ts"
           }
         ],
         "checks": [
@@ -37,9 +41,9 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Source assembly passed; /tmp/natural-polish-sources.log",
-            "verifiedCommit": "8451551fe65bd274320148eb1bd6b48db913e2ae",
-            "completedAt": "2026-09-11T10:00:36.619966+00:00",
+            "summary": "Source assembly passed; /tmp/ridge-sources.log",
+            "verifiedCommit": "8a277e31001e9160562c9fb1aad6f1464b8b9b6d",
+            "completedAt": "2026-09-11T10:18:42.558046+00:00",
             "timeoutMs": 180000
           },
           {
@@ -48,9 +52,9 @@
               "scripts/verify-figma-home-fog.mjs"
             ],
             "outcome": "passed",
-            "summary": "Four timestamps, both themes, two sizes, pause and cleanup passed; /tmp/natural-polish-browser.log",
-            "verifiedCommit": "8451551fe65bd274320148eb1bd6b48db913e2ae",
-            "completedAt": "2026-09-11T10:00:36.620385+00:00",
+            "summary": "Four timestamps, both themes, two sizes, pause and cleanup passed; /tmp/ridge-browser.log",
+            "verifiedCommit": "8a277e31001e9160562c9fb1aad6f1464b8b9b6d",
+            "completedAt": "2026-09-11T10:18:42.558287+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -59,88 +63,15 @@
           "summary": "Controlled Chromium validates grayscale deformation, stable foreground, reduced motion, hidden-page pause and route cleanup. Exact native package verification follows integration."
         },
         "acceptanceCriteria": [
-          "保持自然轮廓，局部变化速率提高45%",
-          "只微调现有亮部光泽，不引入褶线或沟槽",
-          "0/4/8/12 秒、两主题、两尺寸与暂停检查通过"
+          "现有山脊凸起与背光侧对比增强，保留自然不规则轮廓",
+          "纯代码灰阶、无图片及整体位移",
+          "11项聚焦测试及四时间点、两主题、两尺寸、暂停检查通过"
         ],
         "risks": [
           "No release, push, version bump or notarization",
           "Existing full Figma acceptance remains ongoing"
         ],
-        "generatedAt": "2026-09-11T07:49:49.713709+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e3b2a1c27cb5f3c22970e6ff654f8ac3a9c09876",
-        "verificationCommit": "e3b2a1c27cb5f3c22970e6ff654f8ac3a9c09876",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "e3b2a1c27cb5f3c22970e6ff654f8ac3a9c09876",
-            "completedAt": "2026-09-11T10:01:20.668Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e3b2a1c27cb5f3c22970e6ff654f8ac3a9c09876",
-            "completedAt": "2026-09-11T10:01:20.668Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "e3b2a1c27cb5f3c22970e6ff654f8ac3a9c09876",
-            "completedAt": "2026-09-11T10:01:20.668Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "e3b2a1c27cb5f3c22970e6ff654f8ac3a9c09876",
-            "completedAt": "2026-09-11T10:01:20.668Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "e3b2a1c27cb5f3c22970e6ff654f8ac3a9c09876",
-            "completedAt": "2026-09-11T10:01:20.668Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T10:01:20.668Z"
+        "generatedAt": "2026-09-11T10:18:42.558291+00:00"
       }
     }
   ],
