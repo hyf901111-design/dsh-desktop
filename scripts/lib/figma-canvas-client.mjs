@@ -72,7 +72,7 @@ export function patchFigmaFinalCanvas(source) {
     const values=spec.rows.map(row=>row[index]).filter(value=>value!==null&&value!==undefined&&!['','—','--'].includes(String(value).trim()));
     return values.length>0&&values.every(value=>typeof value==='number'||/^[+−-]?\\d+(?:,\\d{3})*(?:\\.\\d+)?(?:%|‰|亿|万|元|点|倍|px)?$/.test(String(value).replace(/\\s/g,'')));
   }\n`;
-  if(source.includes('function researchTableNumericColumn('))source=block(source,'function researchTableNumericColumn(', 'function ResearchContainerContent(',tableColumnSource);
+  if(source.includes('function researchTableNumericColumn('))source=block(source,'function researchTableNumericColumn(', 'function ResearchContainerContent(',tableColumnSource.trimEnd());
   else source=exact(source,'function ResearchContainerContent(',tableColumnSource+'function ResearchContainerContent(');
   source=source.replace('const spec = node.containerSpec;\n\t\t\tif (spec.type === "html")', 'const spec = node.containerSpec;\n            const numericColumns=spec.type==="table"?spec.columns.map((_,index)=>researchTableNumericColumn(spec,index)):[];\n\t\t\tif (spec.type === "html")');
   source=source.replace('"th", { children: column }, index)', '"th", { "data-numeric": numericColumns[index] ? "true" : void 0, children: column }, index)');
