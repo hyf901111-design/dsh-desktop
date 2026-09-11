@@ -40,14 +40,13 @@ function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = 
 }
 
 describe('main-window navigation security', () => {
-  it('loads shell-created sidebar HTML and PDF frames without granting child documents the same access', () => {
+  it('loads shell-created sidebar HTML frames without granting child documents the same access', () => {
     const { listeners, mainFrame } = secureWindowFixture()
     const navigate = listeners.get('will-frame-navigate')!
     const child = { processId: 7, routingId: 42, url: 'about:blank' }
     const frame = { url: 'about:blank', parent: mainFrame }
     for (const url of [
-      'http://127.0.0.1:4310/sidebar/html/session-1/project/report.html',
-      'blob:http://127.0.0.1:4310/5d37d35a-1366-4bce-a177-50b6fb5f3cab'
+      'http://127.0.0.1:4310/sidebar/html/session-1/project/report.html'
     ]) {
       const allowed = vi.fn()
       navigate({ url, isMainFrame: false, frame, initiator: mainFrame, preventDefault: allowed })
@@ -70,6 +69,7 @@ describe('main-window navigation security', () => {
       'http://127.0.0.1:4311/sidebar/html/session-1/report.html',
       'http://127.0.0.1:4310/settings',
       'http://127.0.0.1:4310/sidebar/file?path=/private.txt',
+      'blob:http://127.0.0.1:4310/5d37d35a-1366-4bce-a177-50b6fb5f3cab',
       'blob:http://127.0.0.1:4311/5d37d35a-1366-4bce-a177-50b6fb5f3cab',
       'blob:https://example.com/5d37d35a-1366-4bce-a177-50b6fb5f3cab',
       'data:text/html,private',
