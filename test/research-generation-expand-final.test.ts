@@ -6,7 +6,7 @@ import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs'
 const requireModule=createRequire(import.meta.url), React=requireModule('react'), {createRoot}=requireModule('react-dom/client')
 const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
 function handler(node:any,workspace:any) {
-  const start=source.indexOf('onExpandGeneration:()=>')+'onExpandGeneration:'.length
+  const start=source.indexOf('onExpandGeneration:')+'onExpandGeneration:'.length
   expect(start).toBeGreaterThan('onExpandGeneration:'.length)
   let end=source.indexOf('{',start),depth=1;for(end++;depth&&end<source.length;end++){if(source[end]==='{')depth++;else if(source[end]==='}')depth--}
   return new Function('node','workspace','return '+source.slice(start,end))(node,workspace)
@@ -56,5 +56,5 @@ it('opens and closes real process details in a manually sized card without mutat
 })
 it('refreshes the old callback and remains idempotent',()=>{expect(patchFigmaFinalCanvas(source)===source).toBe(true);expect(()=>new Function(source)).not.toThrow()})
 it('fails closed if a later client changes the expansion callback shape',()=>{
-  expect(()=>patchFigmaFinalCanvas(source.replace('onExpandGeneration:()=>{const current=','onExpandGeneration:()=>{const changed='))).toThrow(/generation expansion callback anchor missing/)
+  expect(()=>patchFigmaFinalCanvas(source.replace('onExpandGeneration:(requestedSize="large")=>{const current=','onExpandGeneration:(requestedSize="large")=>{const changed='))).toThrow(/generation expansion callback anchor missing/)
 })
