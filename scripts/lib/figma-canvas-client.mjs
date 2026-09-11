@@ -65,6 +65,18 @@ function patchCanvasGraphicPrimitives(source) {
 
 export function patchFigmaFinalCanvas(source) {
   source=patchCanvasGraphicPrimitives(source);
+  // JSON table values commonly arrive as formatted strings. Preserve their
+  // text while aligning entire numeric columns, including their headings.
+  const tableColumnSource=`function researchTableNumericColumn(spec,index){
+    if(/日期|时间|名称|代码|编号|date|time|name|code|\\bid\\b/i.test(String(spec.columns[index])))return false;
+    const values=spec.rows.map(row=>row[index]).filter(value=>value!==null&&value!==undefined&&!['','—','--'].includes(String(value).trim()));
+    return values.length>0&&values.every(value=>typeof value==='number'||/^[+−-]?\\d+(?:,\\d{3})*(?:\\.\\d+)?(?:%|‰|亿|万|元|点|倍|px)?$/.test(String(value).replace(/\\s/g,'')));
+  }\n`;
+  if(source.includes('function researchTableNumericColumn('))source=block(source,'function researchTableNumericColumn(', 'function ResearchContainerContent(',tableColumnSource.trimEnd());
+  else source=exact(source,'function ResearchContainerContent(',tableColumnSource+'function ResearchContainerContent(');
+  source=source.replace('const spec = node.containerSpec;\n\t\t\tif (spec.type === "html")', 'const spec = node.containerSpec;\n            const numericColumns=spec.type==="table"?spec.columns.map((_,index)=>researchTableNumericColumn(spec,index)):[];\n\t\t\tif (spec.type === "html")');
+  source=source.replace('"th", { children: column }, index)', '"th", { "data-numeric": numericColumns[index] ? "true" : void 0, children: column }, index)');
+  source=source.replace('"data-numeric": typeof cell === "number" ? "true" : void 0', '"data-numeric": numericColumns[cellIndex] ? "true" : void 0');
   source=source.replace('"strong", { children: String(item.value) }', '"strong", { "data-research-metric-positive": /涨跌|增长|变化|收益率|回报|change|growth|return/i.test(item.label) && /^\\+\\s*\\d/.test(String(item.value).trim()) || void 0, children: String(item.value) }');
   source=source.replaceAll('"aria-label": "更多", "aria-haspopup": "menu"', '"aria-label": "更多操作", "aria-haspopup": "menu"');
   source=source.replace('title: expanded ? "关闭放大阅读" : "放大阅读", ', '');
@@ -596,7 +608,8 @@ body[data-ds-dark-theme] [data-research-compact-chrome] :is(.rScV5Q_containerMen
 [data-research-compact-chrome] .rScV5Q_containerKpis strong[data-research-metric-positive=true]{color:#cd7269}
 [data-research-compact-chrome] .rScV5Q_containerKpis em{font:13px/21px DINPro,'Noto Sans SC',sans-serif}
 [data-research-compact-chrome] .rScV5Q_containerTableScroll{padding:0 18px 12px;overflow:visible}
-[data-research-compact-chrome] .rScV5Q_containerTableScroll :is(th,td){height:33px;padding:6px 0;line-height:21px;border:0;border-bottom:1px solid var(--odyssey-card-border);overflow-wrap:anywhere}
+[data-research-compact-chrome] .rScV5Q_containerTableScroll :is(th,td){box-sizing:border-box;height:33px;padding:6px 0;line-height:21px;border:0;border-bottom:1px solid var(--odyssey-card-border);overflow-wrap:anywhere}
+[data-research-compact-chrome] .rScV5Q_containerTableScroll [data-numeric=true]{text-align:right}
 [data-research-compact-chrome] .rScV5Q_containerTableScroll th{font-size:11px;line-height:19px;font-weight:400}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown{padding:0 18px 12px;overflow:visible;font-size:13px;line-height:21px}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown>:first-child{font:inherit;color:inherit;overflow-wrap:anywhere}

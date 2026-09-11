@@ -95,6 +95,17 @@ it('reserves the full-reader hint without clipping a fifth KPI into the short ca
     expect(f.workspace.getSnapshot().artifacts[0].containerSpec.items).toHaveLength(6)
   } finally {await f.cleanup()}
 })
+it('aligns formatted numeric columns with their headings while keeping dates, codes and source text unchanged', async()=>{
+  const spec={version:1,type:'table',title:'行情',columns:['日期','代码','当前值','变化','成交额','来源'],rows:[['09-01','000300','4,575.02','+0.59%','186.2 亿','交易所'],['09-02','000905','4,548.05','−0.47%','—','交易所']]}
+  const f=await fixture(spec,'manual')
+  try{
+    await act(async()=>f.host.querySelector('[data-research-container-expand]')!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))
+    const headers=[...f.host.querySelectorAll('th')]
+    expect(headers.map(e=>e.getAttribute('data-numeric'))).toEqual([null,null,'true','true','true',null])
+    expect([...f.host.querySelectorAll('tbody tr')].map(row=>[...row.querySelectorAll('td')].map(e=>e.getAttribute('data-numeric')))).toEqual([headers.map(e=>e.getAttribute('data-numeric')),headers.map(e=>e.getAttribute('data-numeric'))])
+    expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+  }finally{await f.cleanup()}
+})
 it('recomputes the content budget at M instead of reusing S overflow measurements and unnecessarily jumping to L', async()=>{
   const f=await fixture({version:1,type:'markdown',title:'正文',content:'数据'.repeat(80)},'auto',true)
   try {
