@@ -137,6 +137,17 @@ body[data-ds-dark-theme] [data-research-file-presentation]{--odyssey-card-text:#
 .odyssey-file-presentation,.odyssey-file-reader{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;width:100%;height:100%}
 .odyssey-file-entry{box-sizing:border-box;display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;height:100%;padding:0 17px 15px;gap:12px;color:var(--odyssey-card-text,#292b2f);font:13px/21px "EWork DIN Pro","Noto Sans SC",sans-serif;overflow-wrap:anywhere}
 [data-research-file-presentation=html] [data-research-original-reader] .rScV5Q_htmlPreview{background:#fff!important}
+/* Compact Word previews reflow the page content; expanded reading retains the document's page geometry and zoom. */
+[data-research-file-presentation=docx]:not([open]) [data-research-original-reader]{container-type:inline-size}
+[data-research-file-presentation=docx]:not([open]) .docx-wrapper{background:transparent;padding:0}
+[data-research-file-presentation=docx]:not([open]) [class*=editorDocxWrap]{box-sizing:border-box;padding:0}
+@container (max-width:500px){
+  [data-research-file-presentation=docx]:not([open]) [class*=editorDocxWrap]{width:100%;zoom:1!important}
+  [data-research-file-presentation=docx]:not([open]) section.docx{width:100%!important;min-height:0!important;padding:16px!important;margin:0;box-shadow:none}
+  [data-research-file-presentation=docx]:not([open]) [class*=editorDocxZoom]{display:none}
+  [data-research-file-presentation=docx]:not([open]) [class*=editorDocxViewport]{box-sizing:border-box;padding:0;border:0;overflow:hidden}
+}
+
 .odyssey-file-entry[hidden],.odyssey-file-reader[hidden]{display:none!important}
 .odyssey-file-reader[hidden][data-research-retained-viewport]{display:block!important;position:absolute;top:0;left:0;flex:none;width:0!important;height:0!important;min-width:0!important;min-height:0!important;overflow:hidden!important;visibility:hidden;pointer-events:none}
 .odyssey-file-reader[hidden][data-research-retained-viewport]>*{flex:none!important;width:var(--odyssey-reader-width)!important;height:var(--odyssey-reader-height)!important;min-height:var(--odyssey-reader-height)!important;max-width:none!important;max-height:none!important}
