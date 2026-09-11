@@ -42,7 +42,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .pI_x6G_centerCol { margin:10px 12px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
 .wSkVaW_root { background:var(--odyssey-workspace); }
 .wSkVaW_header,.wSkVaW_tabs,.wSkVaW_titleRow,.sRp_root,.srb-section,.srb-dialog,.srb-presence,.srb-actions { font-family:var(--odyssey-font-ui); }
-.wSkVaW_header { box-sizing:border-box; padding:8px 20px 0; height:82px; min-height:82px; flex:0 0 82px; }
+.wSkVaW_header { box-sizing:border-box; padding:8px 20px 0; height:82px; min-height:82px; flex:0 0 82px; background:var(--odyssey-glass); backdrop-filter:blur(32px); border-bottom:0; box-shadow:none; z-index:8; }
 .wSkVaW_titleRow { min-height:30px; }
 /* 286:494 / 1153: the header mode control is 112 × 30 in every view. */
 .wSkVaW_header .cubgiG_seat { box-sizing:border-box; width:112px; height:30px; min-height:30px; padding:0 7px; gap:6px; font:400 13px/20px var(--odyssey-font-ui); transform:none; }
@@ -54,8 +54,8 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .wSkVaW_tab { box-sizing:border-box; min-width:56px; height:28px; padding:4px 15px; border-radius:7px; font:400 13px/20px var(--odyssey-font-ui); }
 .wSkVaW_tabActive { background:var(--odyssey-active-fill); color:var(--odyssey-active); font-weight:500; }
 .wSkVaW_tab:after { display:none; }
-/* Figma 284:513 / 880: the Research header has no divider stroke. */
-.wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header:after { display:none; }
+/* Figma 575:911 / 1162: the same 62% / 32px glass header spans all three modes, without a bottom stroke. */
+.wSkVaW_header:after { content:none; display:none; }
 .rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
 .sRp_root,.sRp_body { background:transparent !important; }
 .sRp_conversation { display:flex; flex-direction:column; gap:4px; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
@@ -65,7 +65,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .sRp_composer .wSkVaW_composerStack { --dsh-composer-stack-gap:4px; }
 .sRp_composer .wSkVaW_heroWorkspaceRow { height:24px; gap:8px; margin:0; padding:0; }
 .sRp_composer .uV2eYG_root { padding:0; }
-.sRp_composer .uV2eYG_card { min-height:150px; border:0; border-radius:10.5px; padding-top:12px; gap:8px; background:var(--odyssey-input); backdrop-filter:blur(12px); box-shadow:var(--odyssey-input-shadow); font:400 14px/22px var(--odyssey-font-ui); }
+.sRp_composer .uV2eYG_card { min-height:120px; border:0; border-radius:10.5px; padding-top:12px; gap:8px; background:var(--odyssey-input); backdrop-filter:blur(12px); box-shadow:var(--odyssey-input-shadow); font:400 14px/22px var(--odyssey-font-ui); }
 .sRp_composer .uV2eYG_scroll { flex:1 1 auto; }
 .sRp_composer .uV2eYG_input,.sRp_composer .uV2eYG_mirror,.sRp_composer .uV2eYG_backdrop { padding:4px 17px 0; }
 .sRp_composer .uV2eYG_row { flex-wrap:nowrap; gap:4px; padding:0 8px 8px; }
