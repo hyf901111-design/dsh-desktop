@@ -2207,7 +2207,8 @@ if (process.argv.includes('--serve')) {
     console.log('CANVAS_WHEEL_SELECTION_PASSED summary-pan/expanded-inner-scroll/close-reopen/iframe-state-retained');
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),node=w.getSnapshot().artifacts[0];w.setArtifacts([{...node,containerSpec:undefined,generationStatus:'queued',generationStartedAt:Date.now()-20000,generationLastActivityAt:Date.now(),generationOutputChars:1420,generationEvents:[{seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{seq:2,type:'tool-finished',failed:false}],height:840}]);w.attachGenerationTask('wheel-iframe',{taskId:'progress',canvasNodeId:'wheel-iframe',state:'running',lastSeq:3,startedAt:Date.now()-20000,events:[{taskId:'progress',canvasNodeId:'wheel-iframe',seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:2,type:'tool-finished',failed:false},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:3,type:'assistant-delta',text:'{"version":1,'.padEnd(1420,' ')}]});w.setViewport({x:0,y:0,scale:1})});
     await wheelCard.locator('[data-research-generation-process]').waitFor();
-    assert.ok((await wheelCard.boundingBox()).height<=321);
+    assert.ok(Math.abs((await wheelCard.boundingBox()).height-840)<=1, 'manual component height is preserved during generation');
+    await wheelCard.locator('[data-research-generation-toggle]').click();
     assert.match(await wheelCard.textContent(),/000933.SH 历史行情/);
     assert.match(await wheelCard.textContent(),/1,420/);
     await page.screenshot({path:join(out,'compact-generation-progress.png')});
@@ -2215,7 +2216,7 @@ if (process.argv.includes('--serve')) {
     await page.waitForFunction(()=>document.querySelector('[data-research-node-id="wheel-iframe"]').getBoundingClientRect().height>321);
     const overflow=await page.evaluate(()=>{const flow=document.createElement('div');flow.dataset.researchTaskConversation='';flow.style.width='320px';const p=document.createElement('p');p.textContent='const veryLongUnbrokenJavascriptIdentifier='.repeat(200);flow.append(p);document.body.append(flow);const result={width:flow.clientWidth,scroll:flow.scrollWidth};flow.remove();return result});
     assert.ok(overflow.scroll<=overflow.width+1);
-    console.log('GENERATION_FEEDBACK_PASSED compact-running/full-result/real-tool-activity/long-subagent-text-wrapping');
+    console.log('GENERATION_FEEDBACK_PASSED manual-size-preserved/expanded-process/full-result/real-tool-activity/long-subagent-text-wrapping');
 
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),b=window.canvasWheelBefore;w.setArtifacts(b.artifacts);w.setSelection(b.selection);w.setViewport(b.viewport)});
     console.log(
