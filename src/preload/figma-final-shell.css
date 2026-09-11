@@ -139,6 +139,16 @@ body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlo
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon { width:16px; height:16px; }
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
 .sRp_composer .FJxK0a_root { display:none; }
+/* 164:805/940: live canvas scope, inside the input at x17/y12. */
+.sRp_composer div:has(>[data-research-context-badge]) { margin:0 17px !important; max-width:calc(100% - 34px) !important; }
+.sRp_composer [data-research-context-badge] {
+  padding:0 !important; border:0 !important; border-radius:4px !important;
+  background:transparent !important; color:#5e5e5e !important;
+  font:400 11px/19px var(--odyssey-font-ui) !important;
+}
+[data-ds-dark-theme] .sRp_composer [data-research-context-badge] { color:#d0d0d0 !important; }
+.sRp_composer [data-research-context-badge]:hover { color:var(--odyssey-text) !important; }
+.sRp_composer [data-research-context-badge]:focus-visible { outline:1px solid var(--odyssey-active); outline-offset:3px; }
 .t8lSSG_panel .t8lSSG_tabBar { padding-top:6px; padding-bottom:6px; }
 .t8lSSG_panel .t8lSSG_tabList { height:32px; align-items:flex-start; }
 .t8lSSG_panel .t8lSSG_tabBar>:has(>.t8lSSG_tabBarPlus) { flex:0 0 28px; align-self:center; }

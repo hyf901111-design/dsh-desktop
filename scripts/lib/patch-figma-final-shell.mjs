@@ -38,8 +38,9 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source, 'children: summary.displayTitle', 'children: last && blankResearchTitle ? "新研究" : summary.displayTitle')
   // Keep workspace and permission-block placeholders ahead of the empty Research hint.
   source = exact(source, '} : hero ? { placeholder: t("placeholder.hero") } : {},', '} : hero ? { placeholder: t("placeholder.hero") } : researchEmpty ? { placeholder: "描述你想研究的问题…" } : {},')
-  // Figma 22–30 / 44: automatic context stays in the request, not in the input or message UI.
-  source = exact(source, 'researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),', 'null /* Figma final: manual references remain native inline chips. */,')
+  // User correction / 164:805,940: retain the live canvas scope control in
+  // the composer. Explicit references still flow as inline chips.
+  source = exact(source, 'null /* Figma final: manual references remain native inline chips. */,', 'researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),')
   source = exact(source, '|| research.canvasContext !== void 0 || rest.length > 0;', '|| rest.length > 0; /* Automatic context alone is not visible message content. */')
   source = exact(source, [
     'children: [projectResearchUserText(research, openFile), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {',
