@@ -64,6 +64,15 @@ it('routes management directly to board settings and keeps removed settings abse
   ;([...dialog.querySelectorAll('button')].find(button => button.textContent === '成员与邀请'))!.click()
   expect(dialog.querySelector('[role=tab][aria-selected=true]')?.textContent).toBe('成员与邀请')
 })
+it('anchors the member popover to the entire collaboration action group as in Figma 305:614', () => {
+  const f = fixture(), group = f.w.document.createElement('div'), anchor = f.w.document.createElement('button')
+  group.className = 'srb-actions'; group.append(anchor); f.w.document.body.append(group)
+  vi.spyOn(group, 'getBoundingClientRect').mockReturnValue(new f.w.DOMRect(778, 33, 214, 28))
+  vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new f.w.DOMRect(872, 33, 28, 28))
+  const { popover } = showBoardMembers(f.page, 's', anchor as unknown as HTMLElement)!
+  expect(popover.style.left).toBe('652px')
+  expect(popover.style.top).toBe('82px')
+})
 it('adding a collaborator checks an ID and sends to the same board without creating a new copy', async () => {
   const f = fixture()
   f.page.call.mockImplementation(async (action: string) => action === 'user.lookup' ? { user: { userId: 'peer', publicId: '1234567890', username: '林然' } } : {})
