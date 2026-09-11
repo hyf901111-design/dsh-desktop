@@ -2159,11 +2159,12 @@ if (process.argv.includes('--serve')) {
     assert.ok(movedCanvas.length > 0)
     await peer.locator('[data-personal-import]').first().waitFor()
     console.log('BOARD_RETURN_LEGACY_PASSED transcript/files/imports/source-retained/new-folder')
-    // Real browser wheel delivery across the iframe boundary, using the native frame.
+    // Real browser wheel delivery through an HTML component with its own scroll area.
+    // Whole-document overflow now intentionally renders a summary under the final design.
     await page.evaluate(async () => {
       const f=window.fixture; await f.page.openPersonal('original'); const w=f.registry.for('original');
       window.canvasWheelBefore=w.getSnapshot();
-      w.setArtifacts([{id:'wheel-iframe',messageId:'wheel-iframe',kind:'generated-container',title:'滚轮交互验收',excerpt:'内容',containerPrompt:'离线验收',refreshMinutes:0,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'滚轮交互验收',html:'<main style="height:1800px"><label>状态保留 <input id="state" value="原值"></label><p>顶部内容</p><p style="margin-top:1000px">底部内容</p></main>'},x:280,y:230,width:440,height:320,sizeMode:'manual'}]);
+      w.setArtifacts([{id:'wheel-iframe',messageId:'wheel-iframe',kind:'generated-container',title:'滚轮交互验收',excerpt:'内容',containerPrompt:'离线验收',refreshMinutes:0,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'滚轮交互验收',html:'<main id="scroll-content" style="position:absolute;inset:0;overflow:auto"><div style="height:1800px"><label>状态保留 <input id="state" value="原值"></label><p>顶部内容</p><p style="margin-top:1000px">底部内容</p></div></main>'},x:280,y:230,width:440,height:320,sizeMode:'manual'}]);
       w.setSelection({selectedNodeIds:[],orderedFileIds:[]});w.setViewport({x:0,y:0,scale:1});
     });
     const wheelCard=page.locator('[data-research-node-id="wheel-iframe"]');
@@ -2187,20 +2188,20 @@ if (process.argv.includes('--serve')) {
     const point=async()=>{const b=await wheelCard.locator('[data-research-preview-body]').boundingBox();assert.ok(b);return {x:b.x+b.width/2,y:b.y+Math.min(100,b.height/2)}};
     let p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,80);
     await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-80);
-    assert.equal(await wheelFrame.locator('html').evaluate(()=>window.scrollY),0);
+    assert.equal(await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop),0);
     p=await point();await page.mouse.click(p.x,p.y);
     await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().selection.selectedNodeIds.includes('wheel-iframe'));
     await wheelFrame.locator('#state').fill('保留输入');
     p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,120);
-    await wheelFrame.locator('html').evaluate(()=>new Promise(resolve=>{if(window.scrollY>0)return resolve();window.addEventListener('scroll',()=>resolve(),{once:true})}));
+    await wheelFrame.locator('#scroll-content').evaluate(e=>new Promise(resolve=>{if(e.scrollTop>0)return resolve();e.addEventListener('scroll',()=>resolve(),{once:true})}));
     assert.equal((await viewport()).y,-80);
-    assert.ok(await wheelFrame.locator('html').evaluate(()=>window.scrollY)>0);
+    assert.ok(await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop)>0);
     await page.screenshot({path:join(out,'canvas-selected-iframe-scroll.png')});
     await page.evaluate(()=>window.fixture.registry.for('original').setSelection({selectedNodeIds:[],orderedFileIds:[]}));
-    const innerScroll=await wheelFrame.locator('html').evaluate(()=>window.scrollY);
+    const innerScroll=await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop);
     p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,80);
     await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-160);
-    assert.equal(await wheelFrame.locator('html').evaluate(()=>window.scrollY),innerScroll);
+    assert.equal(await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop),innerScroll);
     assert.equal(await wheelFrame.locator('#state').inputValue(),'保留输入');
     await page.screenshot({path:join(out,'canvas-unselected-iframe-pan.png')});
     console.log('CANVAS_WHEEL_SELECTION_PASSED unselected-pan/selected-inner-scroll/deselect-pan/iframe-state-retained');
