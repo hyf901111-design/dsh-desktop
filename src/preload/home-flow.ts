@@ -34,7 +34,7 @@ export function createHomeFlowField() {
     if (time === seconds) return
     time = seconds
     FOG_VOLUMES.forEach(([amplitude, x, y, rx, ry], i) => {
-      const phase = i * 2.39996, t = seconds * (.067 + (i % 7) * .006)
+      const phase = i * 2.39996, t = seconds * 1.45 * (.067 + (i % 7) * .006)
       const local = Math.sin(t + phase) - Math.sin(phase)
       const cross = Math.sin(t * .79 + phase * 1.7) - Math.sin(phase * 1.7)
       state[i*5] = amplitude * (1 + .008 * cross)
@@ -45,7 +45,11 @@ export function createHomeFlowField() {
     })
   }
   const color = (value: number, dark: boolean) => {
-    const luminance = Math.max(12, Math.min(215, value))
+    // Lift only the existing lit regions, by at most four grayscale levels.
+    // A smooth shoulder adds a little sheen without new rims or dark grooves.
+    const highlight = Math.max(0, Math.min(1, (value - 55) / 65))
+    const sheen = 4 * highlight * highlight * (3 - 2 * highlight)
+    const luminance = Math.max(12, Math.min(215, value + sheen))
     return Math.round(dark ? luminance : 250 - 49 * (Math.min(185, luminance) - 12) / 173)
   }
   const sample = (x: number, y: number, seconds: number, dark: boolean) => {
