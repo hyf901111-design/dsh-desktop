@@ -5,6 +5,15 @@ function exact(source, from, to) {
   return source.replace(from, to)
 }
 export function patchFigmaSettingsGeneral(source) {
+  // Settings and Menu both listen on document. A single Escape belongs to the
+  // visible menu first; background portals concealed by settings do not count.
+  source = exact(source, 'if (e.key === "Escape") onClose();', `if (e.key !== "Escape" || e.defaultPrevented || e.isComposing) return;
+                    const menuOpen = [...document.querySelectorAll('[role="menu"], [role="listbox"]')].some((menu) => {
+                      if (menu.closest('[hidden], [inert], [data-settings-background-portal]')) return false;
+                      const style = getComputedStyle(menu);
+                      return style.display !== "none" && style.visibility !== "hidden" && style.visibility !== "collapse";
+                    });
+                    if (!menuOpen) onClose();`)
   const previous = `function GeneralSection({ renderSlot, t }) {
       const jsx = react_jsx_runtime.jsx, jsxs = react_jsx_runtime.jsxs;
       const chinese = t("general.nav") === "通用设置";
