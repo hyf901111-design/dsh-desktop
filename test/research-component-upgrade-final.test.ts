@@ -72,6 +72,29 @@ it('upgrades a 160-character native markdown S card to M before showing a summar
     expect(f.host.textContent).toContain(content)
   } finally { await f.cleanup() }
 })
+it('keeps four complete KPI values in a short 320 × 220 card without shrinking text or hiding a row', async () => {
+  const spec = { version:1, type:'kpi', title:'行情快照', items:[
+    {label:'最新点位',value:'4,575.02'}, {label:'涨跌幅',value:'+0.59%'},
+    {label:'今开',value:'4,567.89'}, {label:'昨收',value:'4,548.05'}
+  ] }
+  const f = await fixture(spec, 'manual')
+  try {
+    for (const item of spec.items) expect(f.host.textContent).toContain(item.value)
+    expect(f.host.querySelector('[data-research-metric-positive=true]')?.textContent).toBe('+0.59%')
+    expect(f.host.querySelector('[data-component-summary=true]')).toBeNull()
+    expect(f.upgrades).toEqual([])
+    expect(f.workspace.getSnapshot().artifacts[0]).toMatchObject({width:320,height:220,containerSpec:spec})
+  } finally { await f.cleanup() }
+})
+it('reserves the full-reader hint without clipping a fifth KPI into the short card', async () => {
+  const spec={version:1,type:'kpi',title:'核心指标',items:Array.from({length:6},(_,i)=>({label:'指标'+i,value:String(100+i)}))}
+  const f=await fixture(spec,'manual')
+  try {
+    expect(f.host.querySelectorAll('[data-research-container-kpi] strong')).toHaveLength(4)
+    expect(f.host.textContent).toContain('放大查看完整内容')
+    expect(f.workspace.getSnapshot().artifacts[0].containerSpec.items).toHaveLength(6)
+  } finally {await f.cleanup()}
+})
 it('recomputes the content budget at M instead of reusing S overflow measurements and unnecessarily jumping to L', async()=>{
   const f=await fixture({version:1,type:'markdown',title:'正文',content:'数据'.repeat(80)},'auto',true)
   try {
