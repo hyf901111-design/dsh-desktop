@@ -3,6 +3,14 @@ import {readFile} from 'node:fs/promises'
 import { it } from 'vitest'
 import {patchFigmaInlineReferences} from '../scripts/lib/figma-inline-references-client.mjs'
 const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+it('upgrades the previous inline projection without rendering an additional backdrop caret', () => {
+ const current=patchFigmaInlineReferences(source)
+ const native='const visibleCaretOffset = null; /* Figma: the native textarea owns the only caret. */'
+ const old='const visibleCaretOffset = !locked && !machineBusy && inputCaretOffset !== null ? Math.max(0, Math.min(inputCaretOffset, draft.length)) : null;'
+ assert.equal(current.includes(native),true)
+ assert.equal(patchFigmaInlineReferences(current.replace(native,old)),current)
+ assert.equal(patchFigmaInlineReferences(current),current)
+})
 it('preserves business handlers, exact occurrence deletion and provisional cleanup', () => {
 const patched=patchFigmaInlineReferences(source)
 new Function(patched)

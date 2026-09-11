@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { patchFigmaDerivedMenu, derivedMenuCss } from './figma-derived-menu-client.mjs'
 const iconData = Object.fromEntries(['branch','chevron','summary','plus','check','more','global-link-light','global-container-light','global-voice-light','global-link-dark','global-container-dark','global-voice-dark'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/'+name+'.svg',import.meta.url)).toString('base64')]));
 const bentoSource = readFileSync(new URL('../../packages/dsh-research-task-runtime/bento-layout.js', import.meta.url), 'utf8').replace(/^export /gm, '').replace(/^\/\/[^\n]*\n/,'')
 function exact(source, anchor, replacement) {
@@ -144,6 +145,39 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('function ResearchContainerBody({ node, sessionId, visible, onHtmlSize })', 'function ResearchContainerBody({ node, sessionId, visible, onHtmlSize, preserveHeading = false })');
   source=source.replace('text: spec.content.replace(', 'text: preserveHeading ? spec.content : spec.content.replace(');
   source=block(source,source.includes('function ResearchDerivedSummary(')?'function ResearchDerivedSummary(':'function ResearchMindMap({', 'function researchGenerationPresentation(',derivedSource);
+  const sourceMeta = 'node.kind === "generated-container" ? null : (0, react_jsx_runtime.jsxs)("span", {';
+  source=source.replaceAll('(ResearchDerivedSources,{node})','(ResearchDerivedSources,{node,readOnly})');
+  const linkedMeta = 'node.kind === "generated-container" ? null : ["generated-summary","generated-mind-map"].includes(node.kind)?(node.generationStatus==="completed"?(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node,readOnly}):null):(0, react_jsx_runtime.jsxs)("span", {';
+  source=source.replace('node.kind === "generated-container" ? null : ["generated-summary","generated-mind-map"].includes(node.kind)&&node.generationStatus==="completed"?(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node,readOnly}):(0, react_jsx_runtime.jsxs)("span", {',linkedMeta);
+  if(!source.includes(linkedMeta))source=exact(source,sourceMeta,linkedMeta);
+  const artifactStart=source.indexOf('function ResearchCanvasArtifactCard('),artifactEnd=source.indexOf('function nextResearchCanvasViewport(',artifactStart);
+  if(artifactStart<0||artifactEnd<artifactStart)throw Error('Figma derived title anchor missing');
+  let artifact=source.slice(artifactStart,artifactEnd);
+  if(!artifact.includes('"data-research-derived":')){
+    artifact=exact(artifact,'"data-research-generation-state": node.generationStatus,','"data-research-generation-state": node.generationStatus, "data-research-derived":researchIsDerivedNode(node)?node.kind:undefined,');
+    artifact=exact(artifact,'titleText: node.title,','titleText: researchDerivedTitle(node),');
+    artifact=exact(artifact,'}) : node.title,','}) : researchIsDerivedNode(node)?(0,react_jsx_runtime.jsx)(ResearchDerivedHeading,{node}):node.title,');
+  }
+  if(!artifact.includes('readOnly = sherlockShared(sessionId)')){
+    artifact=exact(artifact,'retryDisabled = false })','retryDisabled = false, readOnly = sherlockShared(sessionId) && sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit !== true })');
+    artifact=exact(artifact,'onNodeLabelCommit: onMindMapNodeCommit','onNodeLabelCommit: readOnly ? undefined : onMindMapNodeCommit, readOnly');
+  }
+  source=source.slice(0,artifactStart)+artifact+source.slice(artifactEnd);
+  const cardParentStart=source.indexOf('artifacts.map((node) => (0, react_jsx_runtime.jsx)(ResearchCanvasArtifactCard, {'),cardParentEnd=source.indexOf('}, node.id))',cardParentStart);
+  if(cardParentStart<0||cardParentEnd<cardParentStart)throw Error('Figma readonly card parent anchor missing');
+  let cardParent=source.slice(cardParentStart,cardParentEnd);
+  if(!cardParent.includes('readOnly: sharedReadOnly'))cardParent=exact(cardParent,'sessionId,','sessionId, readOnly: sharedReadOnly,');
+  source=source.slice(0,cardParentStart)+cardParent+source.slice(cardParentEnd);
+  const sourceTitles = '(node.generationSources ?? []).map((source) => source.title).join("、")';
+  const linkedTitles = '(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node,embedded:true})';
+  if(!source.includes(linkedTitles))source=exact(source,sourceTitles,linkedTitles);
+  // A reference jump keeps the user's zoom and centers in the unobscured area.
+  const focusStart=source.indexOf('function researchCanvasFocusViewport('),focusEnd=source.indexOf('function researchWorkbenchViewport(',focusStart);
+  if(focusStart<0||focusEnd<focusStart)throw Error('Figma source focus anchor missing');
+  let focus=source.slice(focusStart,focusEnd);
+  focus=focus.replace('canvasSize.width : 0;', 'Math.min(canvasSize.width,canvasSize.availableWidth>0?canvasSize.availableWidth:canvasSize.width) : 0;');
+  source=source.slice(0,focusStart)+focus+source.slice(focusEnd);
+
   const displayStart=source.indexOf('function ResearchMindMapDisplayNode('),displayEnd=source.indexOf('function ResearchMindMapBranches(',displayStart);
   if(displayStart>=0&&displayEnd>displayStart){const display=source.slice(displayStart,displayEnd).replace('children: node.label', 'children: node.displayLabel ?? node.label');source=source.slice(0,displayStart)+display+source.slice(displayEnd);}
   source=source.replace('observer?.observe(root);\n\t\t\t\twindow.addEventListener("resize", scheduleSync);', 'observer?.observe(root);\n                for(const panel of document.querySelectorAll(".t8lSSG_panel"))observer?.observe(panel);\n\t\t\t\twindow.addEventListener("resize", scheduleSync);');
@@ -192,7 +226,7 @@ export function patchFigmaFinalCanvas(source) {
     const marker=source.indexOf('/* SHERLOCK_FIGMA_CANVAS_FINAL_20260910 */');
     const start=source.indexOf("if(typeof document",marker),end=source.indexOf('\n',start);
     if(start<0||end<0)throw Error('Figma canvas stylesheet missing');
-    return capDerivedNodes(source.slice(0,start)+canvasStyleInstaller()+source.slice(end));
+    return patchFigmaDerivedMenu(capDerivedNodes(source.slice(0,start)+canvasStyleInstaller()+source.slice(end)));
   }
   source=exact(source,'assistant: Object.freeze({ width: 520, height: 300, minWidth: 360, minHeight: 120, resizable: true })','assistant: Object.freeze({ width: 320, height: 220, minWidth: 320, minHeight: 220, resizable: true })');
   source = exact(source, 'const RESEARCH_CANVAS_ORGANIZE_PADDING = 48;', 'const RESEARCH_CANVAS_ORGANIZE_PADDING = 32;')
@@ -251,7 +285,7 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
   source=exact(source, "className: 'rScV5Q_containerDraftFooter', style: { display: 'flex', justifyContent: 'flex-end', marginTop: 10 }, children: (0, react_jsx_runtime.jsx)('button', { type: 'button', 'data-research-create-submit'", "className: 'rScV5Q_containerDraftFooter', style: { display: 'flex', justifyContent: 'flex-end', marginTop: 10 }, children: (0, react_jsx_runtime.jsx)('button', { type: 'button', title:'⌘ Enter 创建', 'data-research-create-submit'")
   source=exact(source, `children: [(0, react_jsx_runtime.jsx)("span", { children: node.generationError ?? '生成失败，请重试。' }),`, `children: [(0,react_jsx_runtime.jsx)('strong',{children:node.generationStatus==='failed'?'暂时未能完成生成':'已停止生成'}),(0,react_jsx_runtime.jsx)('span',{children:node.generationStatus==='failed'?'未获取到有效内容，已保留你的生成要求。':'已保留需求与已获取的信息，可以重新生成。'}),(0,react_jsx_runtime.jsxs)('details',{onToggle:event=>{const details=event.currentTarget,card=details.closest('[data-research-compact-chrome]');if(details.open)card?.addEventListener('close',()=>{details.open=false;},{once:true});if(details.open&&!card?.open){details.open=false;card?.querySelector('[data-research-container-expand]')?.click();card?.ownerDocument.defaultView?.requestAnimationFrame(()=>{if(card.open)details.open=true;});}},children:[(0,react_jsx_runtime.jsx)('summary',{children:node.generationStatus==='failed'?'查看失败详情':'查看已有过程'}),(0,react_jsx_runtime.jsx)('p',{children:node.generationError||researchGenerationLog(node).slice(-3).map(row=>row.text).join('；')})]}),`)
   source=source.replace(' ? "应用结果" : "重试"]', ' ? "应用结果" : "重新生成"]')
-  return capDerivedNodes(source)+`\n/* SHERLOCK_FIGMA_CANVAS_FINAL_20260910 */\n${canvasStyleInstaller()}\n`
+  return patchFigmaDerivedMenu(capDerivedNodes(source)+`\n/* SHERLOCK_FIGMA_CANVAS_FINAL_20260910 */\n${canvasStyleInstaller()}\n`)
 }
 
 function capDerivedNodes(source) {
@@ -338,27 +372,82 @@ const generatedPlacementSource = `function researchCanvasGeneratedPlacement(node
 }
 `;
 
+
+function ResearchDerivedSources({node,embedded=false,readOnly=false}) {
+  const trigger=(0,react.useRef)(null),menu=(0,react.useRef)(null),[open,setOpen]=(0,react.useState)(false);
+  const frozen=new Map((node.generationSources??[]).map(source=>[source.id,source]));
+  const ids=Array.from(new Set(node.sourceNodeIds??[])),items=ids.map((id,index)=>({id,title:frozen.get(id)?.title||'来源组件 '+(index+1)}));
+  const close=()=>setOpen(false);
+  (0,react.useEffect)(()=>{if(!open)return;const doc=trigger.current?.ownerDocument;const dismiss=event=>{if(!trigger.current?.contains(event.target)&&!menu.current?.contains(event.target))close();};const key=event=>{if(event.key==='Escape'){event.preventDefault();close();trigger.current?.focus({preventScroll:true});}};doc?.addEventListener('pointerdown',dismiss,true);doc?.addEventListener('keydown',key,true);return()=>{doc?.removeEventListener('pointerdown',dismiss,true);doc?.removeEventListener('keydown',key,true);};},[open]);
+  const select=event=>{event.stopPropagation();close();(event.currentTarget.closest('dialog[open]')??trigger.current?.closest('dialog[open]'))?.close();};
+  const link=item=>(0,react_jsx_runtime.jsx)('button',{type:'button',role:embedded||open?'menuitem':undefined,'data-research-reference-node-id':item.id,onClick:select,onDoubleClick:event=>event.stopPropagation(),children:item.title},item.id);
+  if(embedded)return (0,react_jsx_runtime.jsx)('div',{className:'odyssey-source-links',children:items.map(link)});
+  const rect=trigger.current?.getBoundingClientRect(),doc=trigger.current?.ownerDocument,view=doc?.defaultView;
+  const popup=open&&rect?(0,react_dom.createPortal)((0,react_jsx_runtime.jsx)('div',{ref:menu,className:'odyssey-source-menu','data-research-source-menu':'',role:'menu','aria-label':'来源组件',onPointerDown:event=>event.stopPropagation(),style:{position:'fixed',width:270,maxWidth:'calc(100vw - 24px)',maxHeight:Math.max(40,Math.min(300,view.innerHeight-24)),left:Math.max(12,Math.min(view.innerWidth-282,rect.left)),...(rect.top>Math.min(300,items.length*36+16)+20?{bottom:view.innerHeight-rect.top+8}:{top:rect.bottom+8})},children:items.map(link)}),trigger.current.closest('dialog[open]')??doc.body):null;
+  return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_artifactMeta odyssey-derived-sources','data-research-derived-sources':'',onPointerDown:event=>event.stopPropagation(),children:[(0,react_jsx_runtime.jsx)('button',{ref:trigger,type:'button',disabled:!items.length,'data-research-reference-node-id':items.length===1?items[0].id:undefined,'aria-haspopup':items.length>1?'menu':undefined,'aria-expanded':items.length>1?open:undefined,onClick:event=>{if(items.length===1)select(event);else{event.stopPropagation();setOpen(!open);}},children:node.kind==='generated-mind-map'?'来源：所选组件':'› 查看来源组件'}),node.kind==='generated-mind-map'&&!readOnly?(0,react_jsx_runtime.jsx)('span',{children:' · 双击编辑节点'}):null,popup]});
+}
+
+
+function ResearchMindMapConnections({rootRef,revision}) {
+  const [geometry,setGeometry]=(0,react.useState)({width:1,height:1,path:''});
+  (0,react.useEffect)(()=>{const root=rootRef.current;if(!root)return;let active=true;const measure=()=>{if(!active)return;const bounds=root.getBoundingClientRect();if(!(bounds.width>0&&bounds.height>0))return;const sx=root.clientWidth/bounds.width,sy=root.clientHeight/bounds.height;const box=element=>{const rect=element.getBoundingClientRect();return {left:(rect.left-bounds.left)*sx+root.scrollLeft,top:(rect.top-bounds.top)*sy+root.scrollTop,width:rect.width*sx,height:rect.height*sy};};const origin=root.querySelector(':scope > [data-research-mind-map-node]');if(!origin)return;const paths=[];for(const branch of root.querySelectorAll('[data-research-mind-map-branch]')){const child=branch.querySelector(':scope > [data-research-mind-map-node]'),parentBranch=branch.parentElement.closest('[data-research-mind-map-branch]'),parent=parentBranch?.querySelector(':scope > [data-research-mind-map-node]')??origin;if(!child||!parent)continue;const a=box(parent),b=box(child);if(parent===origin){const x=a.left+a.width,y=a.top+a.height/2,endY=b.top+b.height/2,middle=(x+b.left)/2;paths.push('M'+x+' '+y+'H'+middle+'V'+endY+'H'+b.left);}else{const x=a.left+8,y=a.top+a.height,endY=b.top+b.height/2;paths.push('M'+x+' '+y+'V'+endY+'H'+b.left);}}const content=Array.from(root.querySelectorAll('[data-research-mind-map-node],.odyssey-component-summary-note')).map(box);const next={width:Math.max(root.clientWidth,...content.map(item=>item.left+item.width)),height:Math.max(root.clientHeight,...content.map(item=>item.top+item.height)),path:paths.join(' ')};setGeometry(before=>JSON.stringify(before)===JSON.stringify(next)?before:next);};const View=root.ownerDocument.defaultView,observer=View?.ResizeObserver?new View.ResizeObserver(measure):null;observer?.observe(root);for(const node of root.querySelectorAll('[data-research-mind-map-node]'))observer?.observe(node);measure();root.ownerDocument.fonts?.ready.then(measure);return()=>{active=false;observer?.disconnect();};},[rootRef,revision]);
+  return (0,react_jsx_runtime.jsx)('svg',{'data-research-mind-map-edges':'','aria-hidden':true,width:geometry.width,height:geometry.height,viewBox:'0 0 '+geometry.width+' '+geometry.height,children:(0,react_jsx_runtime.jsx)('path',{d:geometry.path,fill:'none',stroke:'currentColor',strokeWidth:1})});
+}
+
+
+function researchIsDerivedNode(node) {
+  return node?.kind==='generated-summary'||node?.kind==='generated-mind-map'||node?.kind==='generated-container'&&node.creationMode==='selection';
+}
+function researchDerivedTitle(node) {
+  if(!researchIsDerivedNode(node))return node.title;
+  if(node.kind==='generated-summary'&&node.generationStatus==='running')return '正在提炼关键结论';
+  if(node.generationStatus!=='completed'||!['思维导图','总结提炼'].includes(node.title))return node.title;
+  const heading=node.excerpt?.match(/^\s*#\s+([^\n]+)(?:\n|$)/)?.[1]?.trim();
+  if(!heading)return node.title;
+  const suffix=node.kind==='generated-mind-map'?'思维导图':'关键结论';
+  return heading.includes(suffix)?heading:heading+' · '+suffix;
+}
+function ResearchDerivedHeading({node}) {
+  const status=node.generationStatus==='completed'?(node.kind==='generated-mind-map'?(RESEARCH_MIND_MAP_DETAIL_OPTIONS.find(option=>option.value===researchMindMapDetail(node.generationDetail))?.label??'常规'):'已完成'):node.generationStatus==='queued'?'等待开始':node.generationStatus==='running'?'生成中':node.generationStatus==='failed'?'生成失败':node.generationStatus==='cancelled'?'已停止':node.generationStatus==='interrupted'?'已中断':'';
+  return (0,react_jsx_runtime.jsxs)('span',{'data-research-derived-title':'',children:[(0,react_jsx_runtime.jsx)('span',{children:researchDerivedTitle(node)}),status?(0,react_jsx_runtime.jsx)('span',{'data-research-derived-status':'',children:status}):null]});
+}
+
 const derivedSource = `function ResearchDerivedSummary({node,onUpgradeSize}) {
   const spec={version:1,type:'markdown',title:node.title,content:node.excerpt};
   return (0,react_jsx_runtime.jsx)('div',{'data-research-derived-summary':'',className:'odyssey-derived-summary',children:(0,react_jsx_runtime.jsx)(ResearchContainerContent,{node:{...node,height:Math.max(100,node.height-24),containerSpec:spec},preserveHeading:['pasted-text','assistant-result'].includes(node.kind),onUpgradeSize})});
 }
-function researchMindMapFitTree(tree,budget,labelLimit) {
+${researchIsDerivedNode.toString()}
+${researchDerivedTitle.toString()}
+${ResearchDerivedHeading.toString()}
+${ResearchDerivedSources.toString()}
+${ResearchMindMapConnections.toString()}
+function researchMindMapFitTree(tree,budget,labelLimit,rootLimit=labelLimit) {
   let remaining=Math.max(1,budget)-1,shortened=false;
-  const copy=node=>{const label=String(node.label),limit=node===tree?labelLimit*2:labelLimit;const displayLabel=label.length>limit?label.slice(0,Math.max(1,limit-1))+'…':label;if(displayLabel!==label)shortened=true;return {...node,sourceLineIndex:node.sourceLineIndex,displayLabel,children:[]};};
+  const copy=node=>{const label=String(node.label),limit=node===tree?rootLimit:labelLimit;const displayLabel=label.length>limit?label.slice(0,Math.max(1,limit-1))+'…':label;if(displayLabel!==label)shortened=true;return {...node,sourceLineIndex:node.sourceLineIndex,displayLabel,children:[]};};
   const result=copy(tree),queue=[{source:tree,target:result}];
   while(queue.length){const {source,target}=queue.shift();for(const child of source.children){if(remaining<=0){shortened=true;continue;}remaining--;const next=copy(child);target.children.push(next);queue.push({source:child,target:next});}}
   return {tree:result,shortened};
 }
-function ResearchMindMap({nodeId,text,detail='standard',onNodeLabelCommit}) {
-  const [editingLineIndex,setEditingLineIndex]=(0,react.useState)(null),[layout,setLayout]=(0,react.useState)({width:620,height:360,expanded:false}),[budget,setBudget]=(0,react.useState)(24),ref=(0,react.useRef)(null);
+function researchMindMapInitialBudget(height) {
+  return Math.max(2,1+Math.floor((height+12)/60));
+}
+function ResearchMindMap({nodeId,text,detail='standard',onNodeLabelCommit,readOnly=false}) {
+  const [editingLineIndex,setEditingLineIndex]=(0,react.useState)(null),[layout,setLayout]=(0,react.useState)({width:620,height:360,expanded:false}),[fitBudget,setFitBudget]=(0,react.useState)(null),ref=(0,react.useRef)(null);
   (0,react.useLayoutEffect)(()=>{const element=ref.current,card=element?.closest('[data-research-compact-chrome]');if(!element||!card)return;const update=()=>{const expanded=card.open;setLayout(previous=>{const next={width:element.clientWidth||previous.width,height:element.clientHeight||previous.height,expanded};return JSON.stringify(previous)===JSON.stringify(next)?previous:next;});};const View=element.ownerDocument.defaultView,observer=new View.ResizeObserver(update),mutation=new View.MutationObserver(update);observer.observe(element);mutation.observe(card,{attributes:true,attributeFilter:['open']});update();return()=>{observer.disconnect();mutation.disconnect();};},[nodeId]);
-  const columns=layout.width<440?1:layout.width<700?3:4;
-  (0,react.useLayoutEffect)(()=>setBudget(Math.max(1,Math.floor((layout.height-70)/42)*columns)),[text,layout.width,layout.height,columns]);
-  (0,react.useLayoutEffect)(()=>{const element=ref.current;if(!element||layout.expanded||editingLineIndex!==null)return;let active=true;const measure=()=>{if(active&&element.clientHeight>0&&(element.scrollHeight>element.clientHeight+1||element.scrollWidth>element.clientWidth+1))setBudget(Math.max(1,Math.floor(budget*.75)));};measure();element.ownerDocument.fonts?.ready.then(measure);return()=>{active=false;};},[budget,layout.expanded,layout.width,layout.height,editingLineIndex]);
+  const columns=1, budgetKey=text+'|'+layout.width+'|'+layout.height, budget=fitBudget?.key===budgetKey?fitBudget.value:researchMindMapInitialBudget(layout.height);
+  (0,react.useEffect)(()=>{if(readOnly)setEditingLineIndex(null);},[readOnly]);
+  
+  (0,react.useLayoutEffect)(()=>{const element=ref.current;if(!element||layout.expanded||editingLineIndex!==null)return;let active=true;
+    const measure=()=>{if(!active||element.clientHeight<=0)return;const bounds=element.getBoundingClientRect();if(!(bounds.width>0&&bounds.height>0))return;
+      const sx=element.clientWidth/bounds.width,sy=element.clientHeight/bounds.height;
+      // The previous SVG dimensions may still be from the old tree. Only text boxes
+      // and the real summary footer determine whether content fits this render.
+      const overflow=Array.from(element.querySelectorAll('[data-research-mind-map-node],.odyssey-component-summary-note')).some(node=>{const box=node.getBoundingClientRect();return (box.right-bounds.left)*sx>element.clientWidth+1||(box.bottom-bounds.top)*sy>element.clientHeight+1;});
+      if(overflow&&budget>2)setFitBudget({key:budgetKey,value:budget-1});};measure();element.ownerDocument.fonts?.ready.then(measure);return()=>{active=false;};},[budget,budgetKey,layout.expanded,layout.width,layout.height,editingLineIndex]);
   const normalizedDetail=researchMindMapDetail(detail),original=parseResearchMindMap(text,layout.expanded?'detailed':normalizedDetail);
-  const fit=original?(layout.expanded?{tree:original,shortened:false}:researchMindMapFitTree(original,budget,Math.max(6,Math.floor((layout.width-36-(columns-1)*16)/columns/13)*2))):null;
-  const tree=fit?.tree,cancel=()=>setEditingLineIndex(null),commit=(sourceLineIndex,label)=>{setEditingLineIndex(null);onNodeLabelCommit?.(sourceLineIndex,label);};
-  return (0,react_jsx_runtime.jsxs)('div',{ref,className:'rScV5Q_mindMap','data-research-mind-map':'','data-research-mind-map-detail':normalizedDetail,'data-mind-map-summary':!!fit?.shortened,'data-mind-map-expanded':layout.expanded,style:{'--odyssey-map-columns':Math.min(columns,Math.max(1,tree?.children.length??1))},lang:'zh-CN',children:tree?[(0,react_jsx_runtime.jsx)(ResearchMindMapDisplayNode,{artifactId:nodeId,node:tree,depth:0,root:true,editingLineIndex,onBeginEdit:setEditingLineIndex,onCommit:commit,onCancel:cancel}),tree.children.length?(0,react_jsx_runtime.jsx)(ResearchMindMapBranches,{artifactId:nodeId,nodes:tree.children,editingLineIndex,onBeginEdit:setEditingLineIndex,onCommit:commit,onCancel:cancel}):null,fit.shortened?(0,react_jsx_runtime.jsx)('span',{className:'odyssey-component-summary-note',children:'放大查看完整导图'}):null]:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_artifactExcerpt',children:text})]});
+  const fit=original?(layout.expanded?{tree:original,shortened:false}:researchMindMapFitTree(original,budget,Math.max(6,Math.floor((layout.width*.72-76)/12)*2),Math.max(6,Math.floor((Math.max(108,layout.width*.28)-24)/12)*2))):null;
+  const tree=fit?.tree,cancel=()=>setEditingLineIndex(null),commit=(sourceLineIndex,label)=>{setEditingLineIndex(null);if(!readOnly)onNodeLabelCommit?.(sourceLineIndex,label);};
+  return (0,react_jsx_runtime.jsxs)('div',{ref,className:'rScV5Q_mindMap','data-research-mind-map':'','data-research-mind-map-detail':normalizedDetail,'data-mind-map-summary':!!fit?.shortened,'data-mind-map-expanded':layout.expanded,style:{'--odyssey-map-columns':Math.min(columns,Math.max(1,tree?.children.length??1))},lang:'zh-CN',children:tree?[(0,react_jsx_runtime.jsx)(ResearchMindMapConnections,{rootRef:ref,revision:text+'|'+budget+'|'+layout.expanded+'|'+editingLineIndex}),(0,react_jsx_runtime.jsx)(ResearchMindMapDisplayNode,{artifactId:nodeId,node:tree,depth:0,root:true,editingLineIndex:readOnly?null:editingLineIndex,onBeginEdit:readOnly?()=>{}:setEditingLineIndex,onCommit:commit,onCancel:cancel}),tree.children.length?(0,react_jsx_runtime.jsx)(ResearchMindMapBranches,{artifactId:nodeId,nodes:tree.children,editingLineIndex:readOnly?null:editingLineIndex,onBeginEdit:readOnly?()=>{}:setEditingLineIndex,onCommit:commit,onCancel:cancel}):null,fit.shortened?(0,react_jsx_runtime.jsx)('span',{className:'odyssey-component-summary-note',children:'放大查看完整导图'}):null]:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_artifactExcerpt',children:text})]});
 }
 `;
 
@@ -371,6 +460,17 @@ const generationSource = `function ResearchGenerationProcess({node,onCancel,onEx
   (0,react.useEffect)(()=>{let timer;const tick=()=>{setClock(Date.now());timer=setTimeout(tick,1000);};timer=setTimeout(tick,1000);return()=>clearTimeout(timer);},[]);
   const elapsed=Math.max(0,Math.floor((clock-started.current)/1000));
   const rows=researchGenerationLog(node).slice(-3);
+  if(researchIsDerivedNode(node)){
+    const kind=node.kind==='generated-summary'?'summary':node.kind==='generated-mind-map'?'mind-map':'create',count=new Set(node.sourceNodeIds??[]).size;
+    const records=rows.filter(row=>row.id!=='preparing'),fullStep=records.at(-1)?.text||presentation.title,maxStep=Math.max(16,Math.floor(((node.width??656)-68)/13)*2),step=expanded||fullStep.length<=maxStep?fullStep:fullStep.slice(0,maxStep-1)+'…';
+    const toggle=event=>{event.stopPropagation();const card=event.currentTarget.closest('[data-research-compact-chrome]');if(!expanded&&!card?.open){card?.querySelector('[data-research-container-expand]')?.click();card?.addEventListener('close',()=>setExpanded(false),{once:true});}setExpanded(!expanded);};
+    const source=(0,react_jsx_runtime.jsx)('span',{'data-research-generation-sources':'',children:kind==='summary'?'基于所选 '+count+' 个组件':'来源：'+count+' 个组件'});
+    return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess odyssey-derived-process','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'data-process-compact':!expanded&&node.height<=220,'data-derived-kind':kind,'aria-busy':true,children:[
+      (0,react_jsx_runtime.jsxs)('button',{type:'button',className:'odyssey-generation-step','aria-label':expanded?'收起生成过程':'查看生成过程','aria-expanded':expanded,onPointerDown:event=>event.stopPropagation(),onClick:toggle,children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:step})]}),
+      kind==='summary'?source:null,
+      expanded?(0,react_jsx_runtime.jsxs)('div',{className:'odyssey-generation-records',children:[...records.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id)),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-elapsed':'',children:elapsed+' 秒'})]}):kind==='create'?(0,react_jsx_runtime.jsx)('div',{'data-research-derived-skeleton':'create',className:'odyssey-derived-skeleton','aria-hidden':true,children:Array.from({length:9},(_,index)=>(0,react_jsx_runtime.jsx)('i',{},index))}):null,
+      (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationFooter',children:[kind==='summary'?(0,react_jsx_runtime.jsx)('span',{children:'保留来源组件'}):source,typeof onCancel==='function'&&node.generationTaskId?(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-cancel':'','aria-label':'停止生成',onPointerDown:event=>event.stopPropagation(),onClick:event=>{event.preventDefault();event.stopPropagation();onCancel(node);},children:'停止'}):null]})]});
+  }
   return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'aria-busy':true,children:[
     (0,react_jsx_runtime.jsxs)('div',{className:'odyssey-generation-step',children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:researchPublicProgress(node.title||'当前组件')+' · '+(rows.at(-1)?.text||presentation.title)})]}),
     expanded?(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-records',children:rows.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id))}):(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-skeleton','aria-hidden':true,children:[0,1,2].map(i=>(0,react_jsx_runtime.jsx)('i',{},i))}),
@@ -465,24 +565,51 @@ body[data-ds-dark-theme] [data-research-compact-chrome][data-selected=true]{box-
 [data-research-compact-chrome] .rScV5Q_chartLabel{font:11px DINPro,'Noto Sans SC',sans-serif}\n[data-research-compact-chrome] .rScV5Q_chartLegend{padding:6px 0 0;font:11px/19px DINPro,'Noto Sans SC',sans-serif}
 [data-research-compact-chrome] .rScV5Q_artifactBody:has([data-research-derived-summary]),[data-research-compact-chrome][data-research-generated-mind-map] .rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important;gap:6px}
 .odyssey-derived-summary{display:flex;flex:1;min-height:0;flex-direction:column}
+.odyssey-derived-sources{display:flex!important;align-items:baseline;gap:4px;position:relative;font:11px/19px DINPro,'Noto Sans SC',sans-serif!important;white-space:nowrap}
+.odyssey-derived-sources>button{border:0;padding:0;background:transparent;color:#4279d8;font:inherit;cursor:pointer}.odyssey-derived-sources>button:disabled{color:#85878d;cursor:default}.odyssey-derived-sources>span{color:#85878d}
+.odyssey-source-menu{z-index:1000;box-sizing:border-box;overflow:auto;padding:8px;border-radius:10px;background:#fff;outline:1px solid #e7e8ec;box-shadow:0 4px 16px #0000000e;color:#242529;font:12px/20px DINPro,'Noto Sans SC',sans-serif}
+.odyssey-source-menu>button,.odyssey-source-links>button{display:block;width:100%;border:0;border-radius:6px;padding:8px 10px;text-align:left;background:transparent;color:inherit;font:inherit;overflow-wrap:anywhere;cursor:pointer}.odyssey-source-menu>button:hover,.odyssey-source-links>button:hover{background:#f4f5f7}
+body[data-ds-dark-theme] .odyssey-derived-sources>button{color:#92b5fa}body[data-ds-dark-theme] .odyssey-source-menu{background:#292a2d;outline-color:#414247;color:#ececed;box-shadow:0 4px 16px #00000029}body[data-ds-dark-theme] :is(.odyssey-source-menu,.odyssey-source-links)>button:hover{background:#343538}
+
 [data-research-compact-chrome] .rScV5Q_artifactMeta{flex:none;padding:0 18px 6px;font-size:10px;line-height:18px}
-[data-research-compact-chrome] .rScV5Q_mindMap{height:auto;flex:1;min-height:0;padding:6px 18px 0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px;overflow:visible;font-family:DINPro,'Noto Sans SC',sans-serif}
-[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapRoot{align-self:center;width:fit-content;max-width:100%}
-[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapChildren{display:grid;grid-template-columns:repeat(var(--odyssey-map-columns),minmax(0,1fr));gap:16px;padding-top:12px}
-[data-research-compact-chrome] .rScV5Q_mindMapChildren{min-width:0;gap:8px;justify-content:flex-start}
-[data-research-compact-chrome] .rScV5Q_mindMapBranch{flex-direction:column;align-items:stretch;gap:8px;min-width:0}
-[data-research-compact-chrome] .rScV5Q_mindMapBranch>.rScV5Q_mindMapChildren{padding-left:10px;border-left:1px solid var(--odyssey-card-muted)}
-[data-research-compact-chrome] .rScV5Q_mindMapNode{width:auto;min-width:0;max-width:100%;min-height:30px;padding:6px 8px;border-radius:5px;font:400 13px/21px DINPro,'Noto Sans SC',sans-serif;overflow-wrap:anywhere}
-[data-research-compact-chrome] .rScV5Q_mindMapRoot{font-weight:500}
-[data-research-compact-chrome] .rScV5Q_mindMapRoot:after{display:none}
-[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapChildren:before{content:"";position:absolute;left:50%;top:-12px;width:1px;height:12px;background:var(--odyssey-card-muted)}
-[data-research-compact-chrome] .rScV5Q_mindMapChildren:after,[data-research-compact-chrome] .rScV5Q_mindMapBranch:after{display:none}
-[data-research-compact-chrome] .rScV5Q_mindMapBranch:before{display:none}
-[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapChildren>.rScV5Q_mindMapBranch:before{display:block;left:50%;top:-12px;width:1px;height:12px}
-[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapChildren>.rScV5Q_mindMapBranch{border-top:1px solid var(--odyssey-card-muted)}
-[data-research-compact-chrome] .rScV5Q_mindMap .odyssey-component-summary-note{padding:0;line-height:18px}
-[data-research-compact-chrome][open] .rScV5Q_mindMap{overflow:auto}
+[data-research-compact-chrome] .rScV5Q_mindMap{position:relative;height:auto;flex:1;min-height:0;padding:6px 18px 0;display:grid;grid-template-columns:minmax(108px,28%) minmax(0,1fr);align-items:center;align-content:safe center;gap:12px 40px;overflow:visible;font-family:DINPro,'Noto Sans SC',sans-serif}
+[data-research-compact-chrome] .rScV5Q_mindMap>[data-research-mind-map-edges]{position:absolute;inset:0;pointer-events:none;overflow:visible;color:#adb4c2;z-index:0}
+body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_mindMap>[data-research-mind-map-edges]{color:#5a5e67}
+[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapRoot{grid-column:1;grid-row:1;align-self:center;width:100%;max-width:100%;z-index:1}
+[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapChildren{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:18px;padding:0;min-width:0;z-index:1}
+[data-research-compact-chrome] .rScV5Q_mindMapChildren{min-width:0;gap:10px;justify-content:flex-start}
+[data-research-compact-chrome] .rScV5Q_mindMapBranch{flex-direction:column;align-items:stretch;gap:10px;min-width:0}
+[data-research-compact-chrome] .rScV5Q_mindMapBranch>.rScV5Q_mindMapChildren{padding-left:22px;border:0;display:flex;flex-direction:column}
+[data-research-compact-chrome] .rScV5Q_mindMapNode[data-research-mind-map-depth]{position:relative;width:auto;min-width:0;max-width:100%;min-height:42px;padding:11px 12px;border:0;border-radius:8px;background:#f4f5f7;color:#242529;font:400 12px/20px DINPro,'Noto Sans SC',sans-serif;overflow-wrap:anywhere;z-index:1}
+body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_mindMapNode[data-research-mind-map-depth]{background:#343538;color:#ececed}
+[data-research-compact-chrome] .rScV5Q_mindMapRoot:after,[data-research-compact-chrome] .rScV5Q_mindMapChildren:before,[data-research-compact-chrome] .rScV5Q_mindMapChildren:after,[data-research-compact-chrome] .rScV5Q_mindMapBranch:before,[data-research-compact-chrome] .rScV5Q_mindMapBranch:after{display:none!important}
+[data-research-compact-chrome] .rScV5Q_mindMap .odyssey-component-summary-note{grid-column:1 / -1;padding:0;line-height:18px}
+[data-research-compact-chrome][open] .rScV5Q_mindMap{overflow:auto;align-content:start}
 [data-research-compact-chrome]:not([open]):has(.rScV5Q_mindMap,.odyssey-derived-summary)>.rScV5Q_previewBody{overflow:visible!important}
+[data-research-compact-chrome][data-research-derived]{border-width:0!important}
+[data-research-compact-chrome][data-research-derived]:not([data-selected=true]){outline:1px solid var(--odyssey-card-border)!important;outline-offset:-1px}
+[data-research-compact-chrome][data-research-derived]>.rScV5Q_nodeTitle{height:45px;min-height:45px;flex-basis:45px;padding:22px 22px 0!important}
+[data-research-compact-chrome][data-research-derived]>.rScV5Q_previewBody{height:calc(100% - 45px)}
+[data-research-compact-chrome][data-research-derived] .rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important;gap:6px}
+[data-research-derived-title]{display:flex;align-items:center;gap:8px;width:100%;min-width:0;font:500 15px/23px DINPro,'Noto Sans SC',sans-serif}
+[data-research-derived-title]>:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-research-derived-title]>[data-research-derived-status]{flex:none;color:var(--odyssey-card-muted);font:400 12px/20px DINPro,'Noto Sans SC',sans-serif}
+[data-research-derived] .odyssey-derived-sources{padding:0 22px 22px!important}
+[data-research-derived] .rScV5Q_mindMap{padding-left:22px;padding-right:22px}
+[data-research-derived] .odyssey-derived-summary .rScV5Q_containerMarkdown{padding-left:22px;padding-right:22px}
+[data-research-compact-chrome][data-research-derived] .odyssey-derived-process{padding:18px 22px 22px!important;gap:18px;height:100%;min-height:0}
+.odyssey-derived-process>.odyssey-generation-step{border:0;padding:0;background:transparent;text-align:left;color:inherit;cursor:pointer;font:13px/21px DINPro,'Noto Sans SC',sans-serif;gap:8px;flex:none}
+.odyssey-derived-process>.odyssey-generation-step:focus-visible{outline:1px solid var(--odyssey-select);outline-offset:4px;border-radius:4px}
+.odyssey-derived-process>[data-research-generation-sources]{flex:none;color:var(--odyssey-card-muted);font:12px/20px DINPro,'Noto Sans SC',sans-serif}
+[data-research-derived] .odyssey-derived-process>.rScV5Q_generationFooter{justify-content:space-between;margin-top:auto;padding-top:18px;border-top:1px solid var(--odyssey-card-border);color:var(--odyssey-card-muted)}
+.odyssey-derived-process>.rScV5Q_generationFooter button{padding:4px 12px;background:#f4f5f7;color:var(--odyssey-card-text);font:12px/20px DINPro,'Noto Sans SC',sans-serif}
+body[data-ds-dark-theme] .odyssey-derived-process>.rScV5Q_generationFooter button{background:#343538}
+.odyssey-derived-skeleton{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:8px 12px;flex:1;align-content:center;min-height:30px}
+.odyssey-derived-skeleton>i{display:block;height:12px;border-radius:4px;background:#eff0f2;animation:odyssey-skeleton 1.6s ease-in-out infinite}
+body[data-ds-dark-theme] .odyssey-derived-skeleton>i{background:#36373b}
+[data-research-derived] .odyssey-derived-process .odyssey-generation-records{overflow:visible;min-height:0;flex:1}
+[data-research-compact-chrome][data-research-derived] .odyssey-derived-process[data-process-compact=true]{gap:8px}
+[data-research-derived] .odyssey-derived-process[data-process-compact=true]>.rScV5Q_generationFooter{padding-top:12px}
 .rScV5Q_selectionActions{height:36px!important;padding:4px 6px!important;gap:2px;border-radius:11px!important;background:rgba(255,255,255,.94)!important;border:1px solid #00000014!important;backdrop-filter:blur(12px)!important;box-shadow:0 3px 12px #00000014!important}
 .rScV5Q_selectionActions button{height:28px;padding:0 6px;gap:5px;border-radius:7px;font:12px/18px 'Noto Sans SC',sans-serif}
 .rScV5Q_selectionActions button svg{width:14px;height:14px;flex:none}
@@ -510,8 +637,9 @@ body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 .rScV5Q_generationFooter [data-research-generation-elapsed]{color:var(--odyssey-card-muted);margin-right:auto}
 .rScV5Q_generationFooter button{height:28px;padding:0 8px;font:12px/20px 'Noto Sans SC',sans-serif;border:0;border-radius:6px;background:transparent;color:var(--odyssey-card-text)}
 [data-research-generation-process][data-process-expanded=true] .odyssey-generation-records{font-size:11px;line-height:17px;gap:4px;padding:6px 10px}
+[data-research-derived] [data-research-generation-process][data-process-expanded=true] .odyssey-generation-records{font-size:12px;line-height:20px;gap:8px;padding:10px 12px}
 [data-research-compact-chrome] .rScV5Q_generationFailure{min-height:0;padding:8px 18px 18px;align-items:flex-start;justify-content:flex-start;text-align:left;gap:12px;font:13px/21px 'Noto Sans SC',sans-serif}
 .rScV5Q_generationFailure>strong{font-size:16px;font-weight:500}.rScV5Q_generationFailure>span{color:var(--odyssey-card-muted)}.rScV5Q_generationFailure details{font-size:12px;line-height:20px}.rScV5Q_generationFailure details p{margin:8px 0}.rScV5Q_generationFailure button{margin-left:auto}
 @keyframes odyssey-ring{to{transform:rotate(360deg)}}@keyframes odyssey-skeleton{50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.rScV5Q_generationSpinner,.odyssey-generation-skeleton i{animation:none}}
-`
+` + derivedMenuCss

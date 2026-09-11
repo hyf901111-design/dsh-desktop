@@ -118,10 +118,10 @@ body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none
 [data-dsh-sidebar-root] .YDXeBa_time { font-size:11px; line-height:17px; }
 
 /* Figma 361:5988/5989: preserve the source texture rotation and crop before the glass layer. */
-.t8lSSG_panel { background:url('/figma-glass-light-base.png') right -12px top -12px/1088px 880px no-repeat; overflow:clip; }
-.t8lSSG_panel:before { inset:auto; left:-760px; top:-140px; width:1136px; height:1136px; border-radius:0; transform:rotate(90deg); background:url('/figma-glass-light-mesh.png') center/contain no-repeat; }
+.t8lSSG_panel { background:url('/figma-glass-light-base.png') right -12px top -12px/1088px 880px no-repeat; overflow:clip; container-type:size; }
+.t8lSSG_panel:before { --odyssey-panel-fog-size:max(1136px, calc(100cqh + 280px)); inset:auto; right:-36px; top:50%; width:var(--odyssey-panel-fog-size); height:var(--odyssey-panel-fog-size); border-radius:0; transform:translateY(-50%) rotate(90deg); background:url('/figma-glass-light-mesh.png') center/contain no-repeat; }
 [data-ds-dark-theme] .t8lSSG_panel { background-image:url('/figma-glass-dark-base.png'); }
-[data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background:url('/figma-glass-dark-overlay.png') -753px -133px/1122px 1122px no-repeat, url('/figma-glass-dark-mesh.png') -793px -173px/1202px 1202px no-repeat; }
+[data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background-image:url('/figma-glass-dark-overlay.png'),url('/figma-glass-dark-mesh.png'); background-position:right -29px center,right -69px center; background-size:max(1122px, calc(100cqh + 266px)) max(1122px, calc(100cqh + 266px)),max(1202px, calc(100cqh + 346px)) max(1202px, calc(100cqh + 346px)); background-repeat:no-repeat; }
 .t8lSSG_panel .t8lSSG_panelResize { left:0; width:6px; }
 
 /* Settings lives inside the glass frame's stacking context; Better Sidebar is

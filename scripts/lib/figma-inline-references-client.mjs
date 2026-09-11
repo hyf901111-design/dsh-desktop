@@ -149,6 +149,12 @@ function replaceOne(source, before, after) {
   return source.replace(before, after);
 }
 export function patchFigmaInlineReferences(source) {
+  // The projected textarea already owns the native insertion point, including
+  // references and IME. The old backdrop caret would draw a second cursor.
+  const oldCaret = 'const visibleCaretOffset = !locked && !machineBusy && inputCaretOffset !== null ? Math.max(0, Math.min(inputCaretOffset, draft.length)) : null;';
+  const nativeCaret = 'const visibleCaretOffset = null; /* Figma: the native textarea owns the only caret. */';
+  if (source.includes(oldCaret)) source = replaceOne(source, oldCaret, nativeCaret);
+  else if (!source.includes(nativeCaret)) throw Error('Figma native input caret anchor drifted');
   if (source.includes('/* sherlock-figma-inline-reference-v1 */')) return source;
   const marker = '\t\tfunction InputBar({';
   const start = source.indexOf(marker), end = source.indexOf('\n\t\t//#endregion', start);

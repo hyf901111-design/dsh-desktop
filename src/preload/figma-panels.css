@@ -8,8 +8,9 @@ body {
   --odyssey-panel-edge:24px;
 }
 
-/* 13 / 17 use the 80 px rail and a 20 px right edge. Home / 15 use 24. */
-body:has([data-dsh-frame][data-sidebar-collapsed="true"]) {
+/* Conversation frames use a 20 px right edge in 03/06/13/17. Home and
+   Research keep 24 px regardless of the left sidebar state. */
+body:has([data-odyssey-page="conversation"]) {
   --odyssey-panel-edge:20px;
 }
 
@@ -87,6 +88,147 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
   background: rgba(0, 0, 0, 0.08);
 }
 
+[data-dsh-panel-host] .t8lSSG_bottomClose {
+  top: 6px;
+  right: 12px;
+  border-radius: 7px;
+}
+
+[data-dsh-panel-host] .t8lSSG_bottomClose > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.t8lSSG_panel .t8lSSG_tabList {
+  position: relative;
+}
+
+[data-odyssey-tab-overflow-trigger] {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  flex: 0 0 28px;
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-bg-layer-1);
+  cursor: pointer;
+}
+
+[data-odyssey-tab-overflow-trigger][aria-expanded="true"] {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+[data-ds-dark-theme] [data-odyssey-tab-overflow-trigger][aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+[data-odyssey-tab-overflow-menu] {
+  position: absolute;
+  top: 48px;
+  left: 8px;
+  right: 8px;
+  z-index: 8;
+  box-sizing: border-box;
+  max-height: 329px;
+  padding: 8px 6px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 12px;
+  background: rgba(250, 250, 250, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+[data-ds-dark-theme] [data-odyssey-tab-overflow-menu] {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(40, 40, 40, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+[data-odyssey-tab-overflow-heading] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--dsw-alias-label-tertiary);
+  font: 400 12px/19px var(--odyssey-font-ui);
+}
+
+[data-odyssey-tab-overflow-divider] {
+  height: 1px;
+  margin: 4px 0;
+  background: rgba(0, 0, 0, 0.07);
+}
+
+[data-ds-dark-theme] [data-odyssey-tab-overflow-divider] {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+[data-odyssey-tab-overflow-list] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 276px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+[data-odyssey-tab-overflow-list]::-webkit-scrollbar {
+  display: none;
+}
+
+[data-odyssey-tab-overflow-option] {
+  display: flex;
+  flex: 0 0 36px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--dsw-alias-label-primary);
+  background: transparent;
+  cursor: pointer;
+  font: 400 13px/21px var(--odyssey-font-ui);
+  text-align: left;
+}
+
+[data-odyssey-tab-overflow-option]:hover,
+[data-odyssey-tab-overflow-option][aria-checked="true"] {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+[data-ds-dark-theme] [data-odyssey-tab-overflow-option]:hover,
+[data-ds-dark-theme] [data-odyssey-tab-overflow-option][aria-checked="true"] {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-odyssey-tab-overflow-icon],
+[data-odyssey-tab-overflow-check] {
+  display: inline-flex;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+[data-odyssey-tab-overflow-title] {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 [data-ds-dark-theme]
   [data-dsh-panel-host][data-odyssey-panel-right="closed"]
   [data-odyssey-panel-entry="right"]:not(:hover):not(:focus-visible) {
@@ -97,6 +239,12 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
   [data-dsh-panel-host]
   [data-odyssey-panel-entry][aria-expanded="true"]:not(:hover):not(:focus-visible) {
   background: rgba(255, 255, 255, 0.08);
+}
+
+[data-ds-dark-theme]
+  [data-dsh-panel-host]
+  [data-odyssey-panel-entry="bottom"][aria-expanded="true"]:not(:hover):not(:focus-visible) {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 body[data-dsh-title-bar-compat]
