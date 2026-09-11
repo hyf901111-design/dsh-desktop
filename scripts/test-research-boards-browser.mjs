@@ -2198,12 +2198,12 @@ if (process.argv.includes('--serve')) {
     assert.ok(await content.evaluate(e=>e.scrollTop)>0);
     assert.equal((await viewport()).y,-80);
     await page.screenshot({path:join(out,'canvas-expanded-iframe-scroll.png')});
-    await page.keyboard.press('Escape');
+    await wheelCard.locator('[data-research-container-expand]').click();
     await wheelCard.getByText('放大查看完整内容',{exact:true}).waitFor();
     await wheelCard.locator('[data-research-container-expand]').click();
     await wheelFrame.locator('#state').waitFor();
     assert.equal(await wheelFrame.locator('#state').inputValue(),'保留输入');
-    await page.keyboard.press('Escape');
+    await wheelCard.locator('[data-research-container-expand]').click();
     console.log('CANVAS_WHEEL_SELECTION_PASSED summary-pan/expanded-inner-scroll/close-reopen/iframe-state-retained');
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),node=w.getSnapshot().artifacts[0];w.setArtifacts([{...node,containerSpec:undefined,generationStatus:'queued',generationStartedAt:Date.now()-20000,generationLastActivityAt:Date.now(),generationOutputChars:1420,generationEvents:[{seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{seq:2,type:'tool-finished',failed:false}],height:840}]);w.attachGenerationTask('wheel-iframe',{taskId:'progress',canvasNodeId:'wheel-iframe',state:'running',lastSeq:3,startedAt:Date.now()-20000,events:[{taskId:'progress',canvasNodeId:'wheel-iframe',seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:2,type:'tool-finished',failed:false},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:3,type:'assistant-delta',text:'{"version":1,'.padEnd(1420,' ')}]});w.setViewport({x:0,y:0,scale:1})});
     await wheelCard.locator('[data-research-generation-process]').waitFor();
