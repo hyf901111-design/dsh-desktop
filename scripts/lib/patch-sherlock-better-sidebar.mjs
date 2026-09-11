@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { patchSidebarPdfPreview } from './sidebar-pdf-preview.mjs'
 
 const PATCH_MARKER = '/* sherlock:pinned-sidebar-tabs:v1 */'
 const RECONCILE_PATCH_MARKER = '/* sherlock:pinned-sidebar-reconcile:v1 */'
@@ -1027,7 +1028,7 @@ export function patchBetterSidebarClient(source) {
     'committed panel surface dimensions'
   )
 
-  if (source.includes(PATCH_MARKER)) return patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))
+  if (source.includes(PATCH_MARKER)) return patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))
 
   const moveBefore = `\t\t\t\t\tconst insertAt = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
   const moveAfter = `\t\t\t\t\tconst requestedIndex = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tconst pinnedCount = leaf.tabs.filter((tab) => tab.meta?.sherlockPinned === true).length;\n\t\t\t\t\tconst insertAt = moved.meta?.sherlockPinned === true ? 0 : Math.max(pinnedCount, requestedIndex);\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
@@ -1092,7 +1093,7 @@ export function patchBetterSidebarClient(source) {
     'tab render closure'
   )
 
-  return patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))
+  return patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))
 }
 
 export async function patchBetterSidebarPackage(packageRoot) {
