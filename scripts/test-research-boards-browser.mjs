@@ -905,20 +905,25 @@ if (process.argv.includes('--serve')) {
     const chromeGeometry = await page.evaluate(() => {
       const header = document.querySelector('[data-srb-session-header]'), avatar = document.querySelector('.srb-avatar'), button = document.querySelector('.srb-manage-button')
       const mid = el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2 }
-      return { header: mid(header), avatar: mid(avatar), button: mid(button),
+      const headerRect = header.getBoundingClientRect()
+      return { header: { top: headerRect.top, height: headerRect.height, center: mid(header) }, avatar: mid(avatar), button: mid(button),
         buttonBorder: getComputedStyle(button).borderTopWidth,
         sidebarSelect: getComputedStyle(document.querySelector('.srb-board-title')).userSelect,
         headerSelect: getComputedStyle(header).userSelect,
         inputSelect: getComputedStyle(document.querySelector('.srb-section input')).userSelect,
         sidebarHeaders: [...document.querySelectorAll('[data-srb-section-header]')].map(el => ({
+          paddingLeft: getComputedStyle(el).paddingLeft,
           buttons: [...el.querySelectorAll('button')].filter(b => b.getAttribute('aria-label') !== '搜索看板名称').map(b => ({label:b.getAttribute('aria-label'),x:b.getBoundingClientRect().x,width:b.getBoundingClientRect().width})),
           ancestry: [el,el.parentElement,el.parentElement.parentElement,el.parentElement.parentElement.parentElement].map(n=>({cls:n.className,width:n.getBoundingClientRect().width,x:n.getBoundingClientRect().x,padding:getComputedStyle(n).padding,border:getComputedStyle(n).borderWidth}))
         })) }
     })
     console.log('CHROME_GEOMETRY='+JSON.stringify(chromeGeometry))
     for (const [index, button] of chromeGeometry.sidebarHeaders[0].buttons.slice(-3).entries()) assert.ok(Math.abs(button.x - chromeGeometry.sidebarHeaders[1].buttons.slice(-3)[index].x) <= 2, 'fixture action columns stay within 2px; real 280px client alignment is separately verified')
-    assert.ok(Math.abs(chromeGeometry.header - chromeGeometry.avatar) < 1, JSON.stringify(chromeGeometry))
-    assert.ok(Math.abs(chromeGeometry.header - chromeGeometry.button) < 1)
+    assert.ok(Math.abs(chromeGeometry.header.height - 82) < 1, JSON.stringify(chromeGeometry))
+    assert.ok(Math.abs(chromeGeometry.avatar - chromeGeometry.header.top - 37) < 1, JSON.stringify(chromeGeometry))
+    assert.ok(Math.abs(chromeGeometry.avatar - chromeGeometry.button) < 1)
+    for (const section of chromeGeometry.sidebarHeaders.slice(0, 2)) assert.equal(section.paddingLeft, '0px')
+    assert.ok(Math.abs(chromeGeometry.sidebarHeaders[0].buttons[0].x - chromeGeometry.sidebarHeaders[1].buttons[0].x) < 1, JSON.stringify(chromeGeometry.sidebarHeaders))
     assert.equal(chromeGeometry.buttonBorder, '1px')
     assert.equal(chromeGeometry.sidebarSelect, 'none')
     assert.equal(chromeGeometry.headerSelect, 'none')
@@ -930,7 +935,7 @@ if (process.argv.includes('--serve')) {
     await page.mouse.up()
     assert.equal(await page.evaluate(() => getSelection()?.toString()), '')
     await page.screenshot({ path: join(out, 'collaboration-chrome-light.png') })
-    console.log('COLLABORATION_CHROME_PASSED header-center/button/chrome-selection/editable-search')
+    console.log('COLLABORATION_CHROME_PASSED figma-header-offset/sidebar-origin/button/chrome-selection/editable-search')
     const boardId = await page.evaluate(
         () => window.fixture.page.getState().current.boardId
       ),
