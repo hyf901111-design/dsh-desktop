@@ -10,7 +10,8 @@ import {
 } from './research-boards-service'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
 import { spawn } from 'node:child_process'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
+import { localAcceptanceOrigin } from './local-acceptance-services'
 import { isAbsolute, join, normalize, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
@@ -1150,9 +1151,14 @@ async function bootstrap(): Promise<void> {
       request
     )
   )
-  accountService = new AccountService(join(app.getPath('userData'), 'accounts'))
+  const acceptanceOrigin = localAcceptanceOrigin({
+    origin: app.commandLine.getSwitchValue('sherlock-local-acceptance-origin'),
+    userData: app.commandLine.getSwitchValue('sherlock-user-data-dir'),
+    appData: app.commandLine.getSwitchValue('sherlock-app-data-dir')
+  }, tmpdir())
+  accountService = new AccountService(join(app.getPath('userData'), 'accounts'), { origin: acceptanceOrigin })
   const accountEndpoint = await accountService.start()
-  const collaborationClient=new CollaborationClient(accountService)
+  const collaborationClient=new CollaborationClient(accountService, { origin: acceptanceOrigin })
   const boardsToken=randomUUID()
   researchBoardIntegration=new ResearchBoardIntegration({root:join(app.getPath('userData'),'research-board-runtime'),storage:researchCanvasStorage,registry:researchFilePreviewRegistry,clipboard:()=>researchClipboardService,client:collaborationClient,service:()=>researchBoardsService!,runtimeUrl:()=>runtime?.snapshot().url,runtimeToken:boardsToken,revealFile:target=>shell.showItemInFolder(target),invalidate:id=>researchContextBridge?.invalidateSession(id)})
   researchBoardsService = new ResearchBoardsService({
@@ -1248,7 +1254,7 @@ async function bootstrap(): Promise<void> {
   })
   installMenu()
   await launchHarness()
-  if (!developmentBuild) {
+  if (!developmentBuild && !acceptanceOrigin) {
     startUpdateManager()
   }
 }

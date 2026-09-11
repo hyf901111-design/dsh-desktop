@@ -202,3 +202,16 @@ it('authenticates only fixed collaboration endpoints and invalidates old replies
     service.collaborationRequest({ kind: 'https://evil.invalid' } as never)
   ).rejects.toMatchObject({ code: 'INVALID_REQUEST' })
 })
+
+it('routes isolated native login and collaboration to the same loopback service', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'sherlock-account-local-'))
+  directories.push(dir)
+  const service = new AccountService(dir, { origin: 'http://127.0.0.1:8773' })
+  services.push(service)
+  const remote = vi.fn(async (_url: string, _options?: RequestInit) => Response.json({ user: { id: 'local' }, token: 'c'.repeat(64) }))
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', { username: 'localtester', password: 'synthetic-test-password' })
+  expect(remote.mock.calls[0]?.[0]).toBe('http://127.0.0.1:8773/v1/account/login')
+  await service.collaborationRequest({ kind: 'me' })
+  expect(remote.mock.calls[1]?.[0]).toBe('http://127.0.0.1:8773/v1/collaboration/me')
+})
