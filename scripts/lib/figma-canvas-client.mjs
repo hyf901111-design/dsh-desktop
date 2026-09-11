@@ -123,8 +123,20 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('...queued, containerSizePreset: researchComponentSize(current), ...(current.containerSpec || current.sizeMode === "manual" ? {} : { width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)] }),', '...queued, ...(current.containerSpec || current.sizeMode === "manual" ? {} : researchContainerPlannedGeometry(snapshot,current,prompt)),');
   source=source.replace('onCancel: onCancelGeneration\n', 'onCancel: onCancelGeneration, onExpand: onExpandGeneration\n');
   source=source.replace('onActivate, onAutoHeight, onWebInspection', 'onActivate, onAutoHeight, onExpandGeneration, onWebInspection');
-  if(!source.includes('onExpandGeneration:()=>'))source=source.replace('onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),', 'onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }), onExpandGeneration:()=>{if(node.height<456)workspace.updateNodeGeometry(node.id,{width:656,height:456,sizeMode:"auto"});},');
-  source=source.replace('if(node.height<456)workspace.updateNodeGeometry', 'if(node.height!==456||node.width!==656)workspace.updateNodeGeometry');
+  // Figma 43 manual dimensions are a user choice, not an automatic preset request.
+  // Read the latest node because a resize can finish before this render's callback is replaced.
+  const expandGeneration = 'onExpandGeneration:()=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(current&&current.sizeMode!=="manual"&&(current.height!==456||current.width!==656))workspace.updateNodeGeometry(current.id,{width:656,height:456,sizeMode:"auto"});},';
+  if (!source.includes(expandGeneration)) {
+    const oldExpand = [
+      'onExpandGeneration:()=>{if(node.height<456)workspace.updateNodeGeometry(node.id,{width:656,height:456,sizeMode:"auto"});},',
+      'onExpandGeneration:()=>{if(node.height!==456||node.width!==656)workspace.updateNodeGeometry(node.id,{width:656,height:456,sizeMode:"auto"});},'
+    ].find(anchor => source.includes(anchor));
+    if (oldExpand) source = exact(source, oldExpand, expandGeneration);
+    else if (!source.includes('onExpandGeneration:()=>')) {
+      const autoHeight = 'onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),';
+      source = exact(source, autoHeight, autoHeight + ' ' + expandGeneration);
+    } else throw Error('Figma generation expansion callback anchor missing');
+  }
 
   source=source.replace(`}) : node.kind === "pasted-text" || node.kind === "assistant-result" || node.kind === "generated-summary" && node.generationStatus === 'completed' ?`, `}) : node.kind === 'generated-summary'&&node.generationStatus==='completed'?(0,react_jsx_runtime.jsx)(ResearchDerivedSummary,{node,onUpgradeSize:onExpandGeneration}):node.kind === "pasted-text" || node.kind === "assistant-result" ?`);
   source=source.replace('node.kind === "pasted-text" || node.kind === "assistant-result" ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {\n\t\t\t\t\t\ttext: node.excerpt,\n\t\t\t\t\t\tstreaming: false\n\t\t\t\t\t})', 'node.kind === "pasted-text" || node.kind === "assistant-result" ? (0,react_jsx_runtime.jsx)(ResearchDerivedSummary,{node,onUpgradeSize:onExpandGeneration})');
