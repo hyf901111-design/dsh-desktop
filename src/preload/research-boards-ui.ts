@@ -1365,7 +1365,7 @@ export function ResearchBoardHeader({
   const pinned = dedicatedBoard ? s.boards.some(board => board.boardId === v.boardId && board.pinned) : !!f && f.pinned !== false
   return h(
     'div',
-    { className: 'srb-actions' },
+    { className: 'srb-actions', 'data-srb-board-bound': !!(v || f) },
     v && !dedicatedBoard
       ? h(
           React.Fragment,
