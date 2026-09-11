@@ -9,31 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对齐邀请ID错误的字段反馈",
+        "featureName": "Research component Figma parity",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "d1d2704f03b79bd1948c669fb59320d6d78519cf",
-        "tipCommit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
+        "baseCommit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
+        "tipCommit": "aeb013aecf7cbeab08294472dd7fbd4ec8d4238f",
         "commits": [
           {
-            "commit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
+            "commit": "aeb013aecf7cbeab08294472dd7fbd4ec8d4238f",
             "parents": [
-              "d1d2704f03b79bd1948c669fb59320d6d78519cf"
+              "e378220b7a349640d2fd45a91a2c92d3cfb6df55"
             ],
-            "subject": "按设计稿将邀请ID错误放到字段下方并在编辑时清除"
+            "subject": "按设计稿修复研究组件短卡适配和滚轮交互并补齐悬停反馈"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
+            "path": "scripts/lib/figma-canvas-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
+            "path": "src/preload/figma-canvas-gestures.css"
           },
           {
-            "status": "A",
-            "path": "test/research-invitation-field-error.test.ts"
+            "status": "M",
+            "path": "test/figma-canvas-gestures-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-component-upgrade-final.test.ts"
           }
         ],
         "checks": [
@@ -42,13 +46,17 @@
               "npx",
               "vitest",
               "run",
-              "test/research-invitation-field-error.test.ts",
-              "test/research-board-navigation-final.test.ts"
+              "test/figma-canvas-gestures-ui.test.ts",
+              "test/research-component-upgrade-final.test.ts",
+              "test/research-derived-task-presentation.test.ts",
+              "test/research-derived-mindmap-final.test.ts",
+              "test/research-derived-provenance-final.test.ts",
+              "test/research-bento-visible-layout.test.js"
             ],
             "outcome": "passed",
-            "summary": "11 focused invitation and navigation checks passed",
-            "verifiedCommit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
-            "completedAt": "2026-09-11T15:20:13.100806+00:00",
+            "summary": "31 focused component checks passed",
+            "verifiedCommit": "aeb013aecf7cbeab08294472dd7fbd4ec8d4238f",
+            "completedAt": "2026-09-11T16:30:27.920604+00:00",
             "timeoutMs": 180000
           },
           {
@@ -58,98 +66,26 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript check passed",
-            "verifiedCommit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
-            "completedAt": "2026-09-11T15:20:13.100806+00:00",
+            "summary": "TypeScript passed",
+            "verifiedCommit": "aeb013aecf7cbeab08294472dd7fbd4ec8d4238f",
+            "completedAt": "2026-09-11T16:30:27.920604+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "Native 6546581 shows invalid ID feedback in dialog footer; final package will verify field-local alert and clear-on-edit."
+          "outcome": "passed",
+          "summary": "Actual React canvas Chromium: complete KPI rows, hover and selected geometry, reader scrolling, selected iframe panning and reduced motion. Native package validation follows integration."
         },
         "acceptanceCriteria": [
-          "错误紧邻ID字段且保留输入",
-          "编辑后清除旧错误",
-          "核对用户前发送保持禁用"
+          "Complete KPI rows without shrinking typography",
+          "Canvas owns selected card and iframe wheel",
+          "Hover labels above fixed controls",
+          "Reduced motion pauses derived skeleton"
         ],
         "risks": [
-          "本地隔离验收，不发布不推送"
+          "Local testing only; isolated data; no release or push"
         ],
-        "generatedAt": "2026-09-11T15:20:13.100806+00:00"
-      },
-      "merged": {
-        "mergeCommit": "62f10b9ca36f7dac16f9b1280ada4b8e54e35341",
-        "verificationCommit": "62f10b9ca36f7dac16f9b1280ada4b8e54e35341",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "62f10b9ca36f7dac16f9b1280ada4b8e54e35341",
-            "completedAt": "2026-09-11T15:26:08.051Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "62f10b9ca36f7dac16f9b1280ada4b8e54e35341",
-            "completedAt": "2026-09-11T15:26:08.051Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "62f10b9ca36f7dac16f9b1280ada4b8e54e35341",
-            "completedAt": "2026-09-11T15:26:08.051Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "62f10b9ca36f7dac16f9b1280ada4b8e54e35341",
-            "completedAt": "2026-09-11T15:26:08.051Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "62f10b9ca36f7dac16f9b1280ada4b8e54e35341",
-            "completedAt": "2026-09-11T15:26:08.051Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T15:26:08.051Z"
+        "generatedAt": "2026-09-11T16:30:27.920604+00:00"
       }
     }
   ],
