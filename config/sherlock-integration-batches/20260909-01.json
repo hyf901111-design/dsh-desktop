@@ -12,7 +12,7 @@
         "featureName": "首页代码流动背景及集成发现的更新入口布局修复",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "1fd352d18747165bc340501ccf79974da360d385",
-        "tipCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
+        "tipCommit": "4bda30c0c3bd45310895a1738d72f0a15478271a",
         "commits": [
           {
             "commit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
@@ -34,6 +34,41 @@
               "72ae6137280b3c4fe0d0afe0fb58d1fef670d300"
             ],
             "subject": "按新版账户页更新身份与密码展开验收"
+          },
+          {
+            "commit": "6bdfcd525c138aebbf70ebc61f9fb54bd0fbb1fd",
+            "parents": [
+              "180531009558d5b98a38b77675753a0ef119a3ad"
+            ],
+            "subject": "以组件内部滚动区验证新版画布滚轮路由"
+          },
+          {
+            "commit": "42f4ecc7ebf3b9f5b8948fdbe94f6c1af7ca792b",
+            "parents": [
+              "6bdfcd525c138aebbf70ebc61f9fb54bd0fbb1fd"
+            ],
+            "subject": "对齐摘要画布与放大阅读的滚动验收流程"
+          },
+          {
+            "commit": "fd6671cdf814b0f2a74ea1be8a3a29c5526426d2",
+            "parents": [
+              "42f4ecc7ebf3b9f5b8948fdbe94f6c1af7ca792b"
+            ],
+            "subject": "使用组件收起按钮验证阅读器状态保留"
+          },
+          {
+            "commit": "d74b340beefe7b439e03140d4bf9b86a9b199a55",
+            "parents": [
+              "fd6671cdf814b0f2a74ea1be8a3a29c5526426d2"
+            ],
+            "subject": "验证生成过程保留用户尺寸及按需展开详情"
+          },
+          {
+            "commit": "4bda30c0c3bd45310895a1738d72f0a15478271a",
+            "parents": [
+              "d74b340beefe7b439e03140d4bf9b86a9b199a55"
+            ],
+            "subject": "按新版生成反馈检查处理阶段与忙碌状态"
           }
         ],
         "files": [
@@ -73,54 +108,29 @@
         "checks": [
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "Procedural home flow typecheck passed; log /tmp/odyssey-figma-full-20260911/flow-typecheck.log",
-            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
-            "completedAt": "2026-09-11T08:05:02.925782+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-flow.test.ts",
-              "test/figma-motion-controller.test.ts",
-              "test/sidebar-update-control.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "Procedural home flow tests passed; log /tmp/odyssey-figma-full-20260911/flow-tests.log",
-            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
-            "completedAt": "2026-09-11T08:05:03.981600+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-figma-home-fog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "Procedural home flow browser passed; log /tmp/odyssey-figma-full-20260911/flow-browser.log",
-            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
-            "completedAt": "2026-09-11T08:05:12.183134+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
               "node",
               "scripts/test-research-collaboration-e2e.mjs",
               "--stage",
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Procedural home flow sources passed; log /tmp/odyssey-figma-full-20260911/flow-sources.log",
-            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
-            "completedAt": "2026-09-11T08:05:22.257896+00:00",
-            "timeoutMs": 120000
+            "summary": "Passed current source and updated final-design acceptance; /tmp/odyssey-figma-full-20260911/flow-wheel-sources.log",
+            "verifiedCommit": "4bda30c0c3bd45310895a1738d72f0a15478271a",
+            "completedAt": "2026-09-11T08:17:01.230369+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "browser"
+            ],
+            "outcome": "passed",
+            "summary": "Passed current source and updated final-design acceptance; /tmp/odyssey-figma-full-20260911/flow-wheel-browser.log",
+            "verifiedCommit": "4bda30c0c3bd45310895a1738d72f0a15478271a",
+            "completedAt": "2026-09-11T08:17:01.230623+00:00",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
