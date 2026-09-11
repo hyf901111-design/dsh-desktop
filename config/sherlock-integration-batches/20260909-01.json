@@ -9,70 +9,42 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "EWork Odyssey 第十二批：恢复文件预览、底部覆盖画布及全宽圆角顶栏",
+        "featureName": "EWork Odyssey 第十二批补充：终端标签布局与小卡文档内容适配",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "d1d449739c1e8f7b50cacb5024ca3511be2ab795",
-        "tipCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+        "baseCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+        "tipCommit": "1fd352d18747165bc340501ccf79974da360d385",
         "commits": [
           {
-            "commit": "7804697fcbee03b07685580ee61631232c19d0e4",
+            "commit": "2e3fe1392a33c1d29d84718fd2692de7fa43ac50",
             "parents": [
-              "d1d449739c1e8f7b50cacb5024ca3511be2ab795"
+              "c0fc41e50055afb53eb04f928dc9e699c0e0f18a"
             ],
-            "subject": "还原底部浮层与全宽圆角顶栏并增强首页四段灰雾流动"
+            "subject": "修正终端标签栏实际高度与加号位置并裁切圆角底层"
           },
           {
-            "commit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "commit": "1fd352d18747165bc340501ccf79974da360d385",
             "parents": [
-              "7804697fcbee03b07685580ee61631232c19d0e4"
+              "2e3fe1392a33c1d29d84718fd2692de7fa43ac50"
             ],
-            "subject": "恢复画布内各类文件真实预览并保留放大阅读状态"
+            "subject": "让小尺寸文档预览显示正文并保留放大后的原始版式"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/superpowers/plans/2026-09-11-figma-latest-material-and-avatar.md"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/figma-file-preview-client.mjs"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-figma-file-preview.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-figma-home-fog.mjs"
-          },
-          {
             "status": "A",
+            "path": "scripts/verify-figma-docx-inline.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/verify-figma-workspace-overlays.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-home.css"
-          },
-          {
-            "status": "M",
             "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-file-preview.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-motion-controller.test.ts"
           }
         ],
         "checks": [
@@ -82,9 +54,9 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "deps directly related validation passed; log checkpoint-12b-deps.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:43:48.738104+00:00",
+            "summary": "deps directly related validation passed; log checkpoint-12c-deps.log",
+            "verifiedCommit": "1fd352d18747165bc340501ccf79974da360d385",
+            "completedAt": "2026-09-11T07:06:41.312902+00:00",
             "timeoutMs": 120000
           },
           {
@@ -94,9 +66,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "typecheck directly related validation passed; log checkpoint-12b-typecheck.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:43:52.595935+00:00",
+            "summary": "typecheck directly related validation passed; log checkpoint-12c-typecheck.log",
+            "verifiedCommit": "1fd352d18747165bc340501ccf79974da360d385",
+            "completedAt": "2026-09-11T07:06:45.622161+00:00",
             "timeoutMs": 120000
           },
           {
@@ -115,9 +87,9 @@
               "test/research-bento-visible-layout.test.js"
             ],
             "outcome": "passed",
-            "summary": "focused directly related validation passed; log checkpoint-12b-focused.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:43:56.627265+00:00",
+            "summary": "focused directly related validation passed; log checkpoint-12c-focused.log",
+            "verifiedCommit": "1fd352d18747165bc340501ccf79974da360d385",
+            "completedAt": "2026-09-11T07:06:49.697002+00:00",
             "timeoutMs": 120000
           },
           {
@@ -128,9 +100,9 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "sources directly related validation passed; log checkpoint-12b-sources.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:44:06.422248+00:00",
+            "summary": "sources directly related validation passed; log checkpoint-12c-sources.log",
+            "verifiedCommit": "1fd352d18747165bc340501ccf79974da360d385",
+            "completedAt": "2026-09-11T07:06:58.620945+00:00",
             "timeoutMs": 300000
           },
           {
@@ -142,9 +114,9 @@
               "scripts/verify-figma-file-preview.mjs"
             ],
             "outcome": "passed",
-            "summary": "file-preview directly related validation passed; log checkpoint-12b-file-preview.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:44:14.237442+00:00",
+            "summary": "file-preview directly related validation passed; log checkpoint-12c-file-preview.log",
+            "verifiedCommit": "1fd352d18747165bc340501ccf79974da360d385",
+            "completedAt": "2026-09-11T07:07:06.750962+00:00",
             "timeoutMs": 120000
           },
           {
@@ -153,145 +125,37 @@
               "scripts/verify-figma-workspace-overlays.mjs"
             ],
             "outcome": "passed",
-            "summary": "overlays directly related validation passed; log checkpoint-12b-overlays.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:44:15.289784+00:00",
+            "summary": "overlays directly related validation passed; log checkpoint-12c-overlays.log",
+            "verifiedCommit": "1fd352d18747165bc340501ccf79974da360d385",
+            "completedAt": "2026-09-11T07:07:07.804192+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
               "node",
-              "scripts/verify-figma-canvas-panel-reopen.mjs"
+              "scripts/verify-figma-docx-inline.mjs"
             ],
             "outcome": "passed",
-            "summary": "reopen directly related validation passed; log checkpoint-12b-reopen.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:44:18.660988+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-figma-home-fog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "fog directly related validation passed; log checkpoint-12b-fog.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:44:23.887052+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-figma-header-hover.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "header-hover directly related validation passed; log checkpoint-12b-header-hover.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:44:24.659487+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-figma-panel-layout.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "glass directly related validation passed; log checkpoint-12b-glass.log",
-            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
-            "completedAt": "2026-09-11T06:44:26.583278+00:00",
+            "summary": "docx-inline directly related validation passed; log checkpoint-12c-docx-inline.log",
+            "verifiedCommit": "1fd352d18747165bc340501ccf79974da360d385",
+            "completedAt": "2026-09-11T07:07:08.320173+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Read final Figma groups64 and65 including application bounds, glass fills, 32/24px blur and bottom overlay notes. Controlled Chromium verifies full-width header across three views and two themes; bottom 220px overlay leaves canvas/component rectangles unchanged and shifts only toolbar; native acceptance must run on the new integration artifact. File preview regression reproduced in 9 failing cases then restored inline readers, with actual PDF.js/HTML/text rendering and isolated Electron cross-origin reader checks; native Office file acceptance remains pending."
+          "summary": "Native checkpoint12b revealed bottom tabbar content-box height52 instead of40 and flex pushing plus to right. Updated controlled check loads production sidebar CSS instead of a box-sizing stub. Native DOCX/PPTX content verified, with compact DOCX page margin issue now corrected in source and controlled geometry; next exact integration artifact still requires native verification."
         },
         "acceptanceCriteria": [
-          "Verify PDF, DOCX, PPTX, XLSX, HTML and TXT contents render directly on native canvas and retain original readers across expand/collapse",
-          "Verify native header reaches workspace right edge with correctly clipped top corners in chat/research/trajectory",
-          "Verify bottom panel height204 within 220 overlay; native canvas/component geometry unchanged and toolbar moves220",
-          "Verify sidebar reopen recenters toolbar, composer120 and actual homepage motion visibly moves with stable foreground",
-          "Keep original user data and main app open; no formal release"
+          "Native terminal tabbar40 and plus28 immediately after tabs with8px gap; no square backing at rounded corners",
+          "Native small Word card shows title and body; expanded reader preserves original page layout",
+          "Complete remaining PDF/XLSX/HTML/TXT native preview checks",
+          "Keep original main client open without public release"
         ],
         "risks": [
-          "Full Figma board-by-board acceptance remains ongoing; controlled checks are not native evidence",
-          "No public release, push, version bump, notarization or main promotion"
+          "Full Figma per-board acceptance ongoing; controlled checks are not native parity"
         ],
-        "generatedAt": "2026-09-11T06:44:26.583403+00:00"
-      },
-      "merged": {
-        "mergeCommit": "abbc8ba22e3efcdac9712de63d0ca6e865e3c680",
-        "verificationCommit": "abbc8ba22e3efcdac9712de63d0ca6e865e3c680",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "abbc8ba22e3efcdac9712de63d0ca6e865e3c680",
-            "completedAt": "2026-09-11T06:45:24.673Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "abbc8ba22e3efcdac9712de63d0ca6e865e3c680",
-            "completedAt": "2026-09-11T06:45:24.673Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "abbc8ba22e3efcdac9712de63d0ca6e865e3c680",
-            "completedAt": "2026-09-11T06:45:24.673Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "abbc8ba22e3efcdac9712de63d0ca6e865e3c680",
-            "completedAt": "2026-09-11T06:45:24.673Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "abbc8ba22e3efcdac9712de63d0ca6e865e3c680",
-            "completedAt": "2026-09-11T06:45:24.673Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T06:45:24.673Z"
+        "generatedAt": "2026-09-11T07:07:08.320273+00:00"
       }
     }
   ],
