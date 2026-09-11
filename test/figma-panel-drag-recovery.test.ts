@@ -170,21 +170,21 @@ describe('Figma panel drag recovery', () => {
         mounted.browserWindow.dispatchEvent(new mounted.browserWindow.PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: 0 }))
         mounted.browserWindow.dispatchEvent(new mounted.browserWindow.PointerEvent('pointerup', { bubbles: true, pointerId: 8, clientX: 0 }))
       })
-      expect(mounted.store.getSnapshot().state.width).toBe(756)
-      expect(mounted.host.querySelector('[class*="_panel"]')?.getAttribute('style')).toContain('width: 756px')
-      expect(mounted.browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('756px')
+      expect(mounted.store.getSnapshot().state.width).toBe(760)
+      expect(mounted.host.querySelector('[class*="_panel"]')?.getAttribute('style')).toContain('width: 760px')
+      expect(mounted.browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('760px')
     } finally { await mounted.restore() }
   })
 
   it('reclamps saved oversized widths for expanded, collapsed and small windows', () => {
     let left = 280
     const doc = { querySelector: () => ({ getBoundingClientRect: () => ({ right: left }) }) }
-    expect(odysseyClampPanelWidth(1300, 1380, doc)).toBe(756)
+    expect(odysseyClampPanelWidth(1300, 1380, doc)).toBe(760)
     expect(odysseyClampPanelWidth(400, 1380, doc)).toBe(400)
     expect(odysseyClampPanelWidth(1300, 900, doc)).toBe(280)
     left = 64
-    expect(odysseyClampPanelWidth(1300, 1380, doc)).toBe(972)
-    expect(odysseyClampPanelWidth(1300, 320, doc)).toBe(232)
+    expect(odysseyClampPanelWidth(1300, 1380, doc)).toBe(976)
+    expect(odysseyClampPanelWidth(1300, 320, doc)).toBe(236)
     expect(odysseyClampPanelWidth(Number.NaN, 1380, doc)).toBe(340)
   })
 

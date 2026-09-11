@@ -39,7 +39,7 @@
 .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(255 255 255 / .6); border:0; box-shadow:none; }
 body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(39.575 39.575 39.575); }
 .pI_x6G_sidebarCol { background: transparent !important; border: 0; }
-.pI_x6G_centerCol { margin:10px 12px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
+.pI_x6G_centerCol { margin:10px 10px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
 .wSkVaW_root { background:var(--odyssey-workspace); border-radius:inherit; position:relative; }
 .wSkVaW_header,.wSkVaW_tabs,.wSkVaW_titleRow,.sRp_root,.srb-section,.srb-dialog,.srb-presence,.srb-actions { font-family:var(--odyssey-font-ui); }
 .wSkVaW_header { box-sizing:border-box; padding:8px 20px 0; height:82px; min-height:82px; flex:0 0 82px; background:var(--odyssey-glass); backdrop-filter:blur(32px); border-bottom:0; box-shadow:none; z-index:8; border-radius:16px 16px 0 0; }
@@ -114,7 +114,7 @@ body:has([data-odyssey-page="research"]) .t8lSSG_toggleCluster { top:30px; right
 body:has([data-odyssey-page="research"]) .t8lSSG_toggleCluster { top:30px !important; right:32px; }
 
 .t8lSSG_panel { border:0; outline:1px solid var(--odyssey-glass-border); outline-offset:-1px; }
-body:has([data-odyssey-page]) .wSkVaW_header { padding-right:calc(var(--odyssey-right-occupancy,0px) + 20px); }
+body:has([data-odyssey-page]) .wSkVaW_header { padding-right:20px; }
 body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none; }
 [data-sidebar-collapsed=true] .srb-account-controls > [data-research-board-bell-host] { order:-1; }
 /* Figma 286:469–477: workspace session typography shares the measured navigation baseline. */
@@ -177,6 +177,6 @@ body[data-ds-dark-theme] .sRp_messages .gdEzaW_bubble { background:rgb(44.72 44.
 .hHd-Xa_root.hHd-Xa_collapsed .qDHVXG_rail .qDHVXG_iconButton>svg { color:var(--odyssey-sidebar-glyph); }
 
 /* The group 64 header overlays the home atmosphere without shifting its hero. */
-.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_header { position:absolute; top:0; left:0; right:0; border-radius:12px 12px 0 0; }
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_header { position:absolute; top:0; left:0; right:0; border-radius:16px 16px 0 0; }
 
-.wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header { padding-right:calc(var(--dsh-sidebar-width,0px) + 36px); }
+.wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header { padding-right:20px; }

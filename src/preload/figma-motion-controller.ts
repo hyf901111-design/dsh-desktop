@@ -47,7 +47,20 @@ export function mountFigmaMotionController(targetDocument: Document = document):
     })
   }
 
+  const syncPanelFocus = () => {
+    const host = targetDocument.querySelector('[data-dsh-panel-host]')
+    const panel = host?.querySelector<HTMLElement>('.t8lSSG_panel')
+    if (!panel) return
+    const closed = host?.getAttribute('data-odyssey-panel-right') !== 'open'
+    if (closed && panel.contains(targetDocument.activeElement)) {
+      host?.querySelector<HTMLElement>('[data-odyssey-panel-entry="right"]')?.focus({ preventScroll:true })
+    }
+    if (panel.inert !== closed) panel.inert = closed
+  }
   const Observer = targetWindow?.MutationObserver ?? MutationObserver
+  const panelFocusObserver = new Observer(syncPanelFocus)
+  panelFocusObserver.observe(targetDocument.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['data-odyssey-panel-right'] })
+  syncPanelFocus()
   const observer = new Observer(scheduleReady)
   observer.observe(targetDocument.documentElement, { childList: true, subtree: true })
   scheduleReady()
@@ -56,6 +69,8 @@ export function mountFigmaMotionController(targetDocument: Document = document):
     if (cancelled) return
     cancelled = true
     observer.disconnect()
+    panelFocusObserver.disconnect()
+    targetDocument.querySelector<HTMLElement>('.t8lSSG_panel')?.removeAttribute('inert')
     targetDocument.removeEventListener('visibilitychange', syncHomeMotion)
     cancelFrame(firstFrame)
     cancelFrame(secondFrame)

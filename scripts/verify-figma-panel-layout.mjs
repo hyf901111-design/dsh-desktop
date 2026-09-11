@@ -1,180 +1,41 @@
-// Focused Chromium regression for Figma panel geometry and pure backdrop glass.
-// It loads the production panel styles/assets in a controlled DOM fixture;
-// packaged-client validation remains a separate integration step.
+// Figma 66: run production geometry, motion/focus and resize feedback in Chromium.
+// Native preview rendering is validated separately after integration.
 import assert from 'node:assert/strict'
-import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
-
-const require = createRequire(import.meta.url)
-const { PNG } = require('pngjs')
-const playwrightPath = process.env.PLAYWRIGHT_MODULE_PATH
-  || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
-const playwright = await import(playwrightPath)
-const chromium = playwright.chromium ?? playwright.default?.chromium
-const chromeOptions = process.env.PLAYWRIGHT_EXECUTABLE_PATH
-  ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
-  : { executablePath: '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' }
-
-const assetNames = [
-  'figma-glass-light-base.png',
-  'figma-glass-light-mesh.png',
-  'figma-glass-dark-base.png',
-  'figma-glass-dark-mesh.png',
-  'figma-glass-dark-overlay.png'
-]
-
-const embedAssets = async source => {
-  let css = source
-  for (const name of assetNames) {
-    const png = await readFile(resolve('build/brand', name))
-    css = css.replaceAll(`/${name}`, `data:image/png;base64,${png.toString('base64')}`)
-  }
-  return css
-}
-
-const finalCss = await embedAssets(await readFile('src/preload/figma-final-shell.css', 'utf8'))
-const panelCss = await readFile('src/preload/figma-panels.css', 'utf8')
-
-const fixture = ({ pageKind, sidebarCollapsed, panelWidth = 340, panelHeight = 856, dark = false, bottom = false }) => {
-  const viewportHeight = panelHeight + 44
-  return {
-    viewport: { width: 1380, height: viewportHeight },
-    html: `<!doctype html><html><head><meta charset="utf-8"><style>
-      * { box-sizing:border-box; }
-      html,body,#root { width:100%; height:100%; margin:0; overflow:hidden; }
-      body { background:#ff00ff; --dsh-sidebar-width:${panelWidth}px; --dsh-sidebar-height:${bottom ? 220 : 0}px; }
-      [data-dsh-panel-host] { position:absolute; inset:0; }
-      .t8lSSG_panel { position:absolute; width:var(--dsh-sidebar-width); }
-      .t8lSSG_toggleCluster { position:absolute; display:flex; width:92px; height:28px; }
-      .t8lSSG_bottomPanel { position:absolute; left:80px; height:204px; }
-      .t8lSSG_bottomClose { position:absolute; width:28px; height:28px; top:3px; right:6px; padding:0; border:0; }
-      .t8lSSG_bottomClose svg { width:14px; height:14px; }
-    </style><style>${finalCss}</style><style>${panelCss}</style></head>
-    <body${dark ? ' data-ds-dark-theme' : ''}>
-      <div id="root">
-        <main data-dsh-frame data-sidebar-collapsed="${sidebarCollapsed}">
-          <section data-odyssey-page="${pageKind}"></section>
-        </main>
-      </div>
-      <div data-dsh-panel-host data-odyssey-panel-right="open" data-odyssey-panel-bottom="${bottom ? 'open' : 'closed'}">
-        <aside class="t8lSSG_panel"><div class="t8lSSG_tabBar"></div></aside>
-        <div class="t8lSSG_toggleCluster">
-          <button data-odyssey-panel-entry="bottom" aria-expanded="${bottom}"></button>
-          <button data-odyssey-panel-entry="right" aria-expanded="true"></button>
-        </div>
-        ${bottom ? '<section class="t8lSSG_bottomPanel"><button class="t8lSSG_bottomClose"><svg viewBox="0 0 16 16"></svg></button></section>' : ''}
-      </div>
-    </body></html>`
-  }
-}
-
-const close = (actual, expected, label, tolerance = 0.05) => {
-  assert(Math.abs(actual - expected) < tolerance, `${label}: ${actual} != ${expected}`)
-}
-
-const sampleChroma = (buffer, rect, edges) => {
-  const png = PNG.sync.read(buffer)
-  const colors = []
-  const read = (x, y) => {
-    const offset = (y * png.width + x) * 4
-    return [png.data[offset], png.data[offset + 1], png.data[offset + 2]]
-  }
-  for (let step = 0; step < 80; step += 1) {
-    const x = Math.round(rect.x + 8 + (rect.width - 17) * step / 79)
-    const y = Math.round(rect.y + 52 + (rect.height - 61) * step / 79)
-    if (edges.includes('right')) colors.push(read(Math.round(rect.x + rect.width - 5), y))
-    if (edges.includes('bottom')) colors.push(read(x, Math.round(rect.y + rect.height - 5)))
-  }
-  return Math.max(...colors.map(([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b)))
-}
-
-const browser = await chromium.launch(chromeOptions)
+import { transform } from 'esbuild'
+import pw from '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
+const css=await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-motion'].map(f=>readFile(`src/preload/${f}.css`,'utf8')))
+const runtime=await Promise.all(['figma-motion-controller','figma-resize-feedback'].map(async f=>(await transform(await readFile(`src/preload/${f}.ts`,'utf8'),{loader:'ts',format:'esm'})).code.replace(/export \{[^}]*\};/g,'')))
+const browser=await pw.chromium.launch({executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
+const near=(a,b,label)=>assert(Math.abs(a-b)<.2,`${label}: ${a} != ${b}`)
 try {
-  for (const pageKind of ['conversation', 'research']) {
-    for (const sidebarCollapsed of [false, true]) {
-      const setup = fixture({ pageKind, sidebarCollapsed })
-      const context = await browser.newContext({ viewport: setup.viewport, deviceScaleFactor: 1 })
-      const page = await context.newPage()
-      await page.setContent(setup.html, { waitUntil: 'load' })
-      const geometry = await page.evaluate(() => ({
-        panel: document.querySelector('.t8lSSG_panel').getBoundingClientRect().toJSON(),
-        controls: document.querySelector('.t8lSSG_toggleCluster').getBoundingClientRect().toJSON()
-      }))
-      const expectedRight = pageKind === 'conversation' ? 20 : 24
-      close(geometry.panel.x, 1380 - expectedRight - 340, `${pageKind}/${sidebarCollapsed} panel x`)
-      close(geometry.controls.x, 1380 - expectedRight - 8 - 92, `${pageKind}/${sidebarCollapsed} controls x`)
-      await context.close()
-    }
-  }
-
-  {
-    const setup = fixture({ pageKind: 'conversation', sidebarCollapsed: true, dark: true, bottom: true })
-    const context = await browser.newContext({ viewport: setup.viewport, deviceScaleFactor: 1, colorScheme: 'dark' })
-    const page = await context.newPage()
-    await page.setContent(setup.html, { waitUntil: 'load' })
-    const bottom = await page.evaluate(() => {
-      const panel = document.querySelector('.t8lSSG_bottomPanel').getBoundingClientRect()
-      const closeButton = document.querySelector('.t8lSSG_bottomClose').getBoundingClientRect()
-      const glyph = document.querySelector('.t8lSSG_bottomClose svg').getBoundingClientRect()
-      const active = getComputedStyle(document.querySelector('[data-odyssey-panel-entry="bottom"]')).backgroundColor
-      return {
-        panel: panel.toJSON(),
-        close: closeButton.toJSON(),
-        glyph: glyph.toJSON(),
-        active
-      }
-    })
-    close(bottom.panel.x, 92, 'bottom panel x')
-    close(bottom.panel.y, 674, 'bottom panel y')
-    close(bottom.panel.width, 904, 'bottom panel width')
-    close(bottom.close.x - bottom.panel.x, 864, 'bottom close local x')
-    close(bottom.close.y - bottom.panel.y, 6, 'bottom close local y')
-    close(bottom.glyph.width, 16, 'bottom glyph width')
-    close(bottom.glyph.height, 16, 'bottom glyph height')
-    assert.equal(bottom.active, 'rgba(255, 255, 255, 0.12)')
-    await context.close()
-  }
-
-  for (const dark of [false, true]) {
-    for (const panelWidth of [340, 400]) {
-      for (const panelHeight of [856, 1100]) {
-        const setup = fixture({ pageKind: 'research', sidebarCollapsed: false, panelWidth, panelHeight, dark })
-        const context = await browser.newContext({ viewport: setup.viewport, deviceScaleFactor: 1, colorScheme: dark ? 'dark' : 'light' })
-        const page = await context.newPage()
-        await page.setContent(setup.html, { waitUntil: 'load' })
-        await page.evaluate(() => document.fonts.ready)
-        const rect = await page.evaluate(() => document.querySelector('.t8lSSG_panel').getBoundingClientRect().toJSON())
-        const material = await page.evaluate(() => {
-          const panel = document.querySelector('.t8lSSG_panel')
-          return { base: getComputedStyle(panel).backgroundColor, image: getComputedStyle(panel, '::before').backgroundImage,
-            content: getComputedStyle(panel, '::before').content, blur: getComputedStyle(panel, '::after').backdropFilter,
-            tint: getComputedStyle(panel, '::after').backgroundColor }
-        })
-        assert.equal(material.base, 'rgba(0, 0, 0, 0)', 'right panel must sample the real backdrop')
-        assert.equal(material.image, 'none', 'no decorative backing image in either theme')
-        assert.equal(material.content, 'none')
-        assert.equal(material.blur, 'blur(32px)')
-        assert.equal(material.tint, dark ? 'rgba(17, 18, 19, 0.62)' : 'rgba(255, 255, 255, 0.62)')
-
-        const screenshot = await page.screenshot()
-        const maxChroma = sampleChroma(screenshot, rect, ['right', 'bottom'])
-        // The fixture puts a magenta scene behind the panel. The final 62%
-        // tint must transmit about 38% of its chroma, rather than covering it
-        // with the previously baked grayscale image.
-        assert(maxChroma >= 85 && maxChroma <= 105, `${dark ? 'dark' : 'light'} ${panelWidth}x${panelHeight} backdrop transmission ${maxChroma}`)
-        await page.evaluate(() => document.body.style.background = '#00ffff')
-        const changed = await page.screenshot()
-        const before = PNG.sync.read(screenshot), after = PNG.sync.read(changed)
-        const middle = (Math.floor(rect.y + rect.height / 2) * before.width + Math.floor(rect.x + rect.width / 2)) * 4
-        assert(before.data[middle] - after.data[middle] > 80, 'real backdrop red channel must propagate through glass')
-        assert(after.data[middle + 1] - before.data[middle + 1] > 80, 'real backdrop green channel must propagate through glass')
-        await context.close()
-      }
-    }
-  }
-
-  console.log('Figma panel geometry and pure backdrop glass passed in controlled Chromium')
-} finally {
-  await browser.close()
+const page=await browser.newPage({viewport:{width:1380,height:900}})
+await page.setContent(`<style>
+*{box-sizing:border-box}html,body,#root,.pI_x6G_frame{width:100%;height:100%;margin:0;overflow:hidden}body{--dsh-sidebar-width:340px;--dsh-sidebar-height:0px}.pI_x6G_frame{display:grid;grid-template-columns:80px minmax(0,1fr) 0}.wSkVaW_root{height:100%;display:flex;flex-direction:column}.rScV5Q_root{position:relative;flex:1;min-height:0}.toolbar{position:absolute;left:50%;bottom:24px;width:272px;height:48px;transform:translateX(-50%)}[data-dsh-panel-host]{position:fixed;inset:0;pointer-events:none}.t8lSSG_panel{position:absolute;pointer-events:auto;width:340px;display:flex;flex-direction:column}.t8lSSG_panelResize{position:absolute;top:16px;bottom:16px}.t8lSSG_panelBody{flex:1;min-height:0}.t8lSSG_toggleCluster{position:absolute;right:18px;display:flex;gap:4px;pointer-events:auto}.t8lSSG_tabBar{display:flex;align-items:center}.t8lSSG_tabList{flex:1;min-width:0;display:flex}.t8lSSG_tabBarPlus{width:28px;height:28px}.sRp_conversation{height:100%;display:flex}.sRp_messages{flex:1}.uV2eYG_card{height:120px}.scroll{height:150px;overflow:auto}button{border:0}
+</style><style>${css.join('\n')}</style><div id="root"><main class="pI_x6G_frame" data-dsh-frame><aside class="pI_x6G_sidebarCol"></aside><section class="pI_x6G_centerCol" data-pane="conversation"><div class="wSkVaW_root" data-odyssey-page="research"><header class="wSkVaW_header"></header><div class="rScV5Q_root"><div class="toolbar"></div></div></div></section></main></div><div data-dsh-panel-host data-odyssey-panel-right="open"><aside class="t8lSSG_panel"><div class="t8lSSG_panelResize"></div><div class="t8lSSG_tabBar"><div class="t8lSSG_tabList"><button class="t8lSSG_tab">对话</button></div><span><button class="t8lSSG_tabBarPlus">+</button></span></div><div class="t8lSSG_panelBody"><div class="sRp_conversation"><div class="sRp_messages"><div class="scroll"><div style="height:600px">已打开的消息</div></div></div><div class="sRp_composer"><textarea class="uV2eYG_card">未发送的草稿</textarea></div></div></div></aside><div class="t8lSSG_toggleCluster"><button data-odyssey-panel-entry="bottom">底</button><button data-odyssey-panel-entry="right">侧</button></div></div>`)
+await page.addScriptTag({content:runtime.join('\n')+`;window.disposeMotion=mountFigmaMotionController(document);window.disposeResize=mountFigmaResizeFeedback(document);document.querySelector('[data-odyssey-panel-entry="right"]').onclick=()=>{const host=document.querySelector('[data-dsh-panel-host]');const closed=host.dataset.odysseyPanelRight==='open';host.dataset.odysseyPanelRight=closed?'closed':'open';document.querySelector('.t8lSSG_panel').classList.toggle('t8lSSG_panelHidden',closed)};`})
+const settle=async()=>{await page.waitForTimeout(260);await page.evaluate(()=>new Promise(r=>requestAnimationFrame(r)))}
+const measure=()=>page.evaluate(()=>{const get=s=>document.querySelector(s).getBoundingClientRect().toJSON();const p=document.querySelector('.t8lSSG_panel');return {main:get('.pI_x6G_centerCol'),panel:get('.t8lSSG_panel'),header:get('.wSkVaW_header'),toolbar:get('.toolbar'),canvas:get('.rScV5Q_root'),control:get('[data-odyssey-panel-entry="right"]'),plus:get('.t8lSSG_tabBarPlus'),tint:getComputedStyle(p,'::after').backgroundColor,round:getComputedStyle(p).borderRadius,inert:p.inert}})
+for(const viewport of [{width:1380,height:900},{width:900,height:640}]) for(const left of [80,280]) for(const dark of [false,true]) {
+await page.setViewportSize(viewport)
+await page.evaluate(({left,dark})=>{document.querySelector('.pI_x6G_frame').style.gridTemplateColumns=`${left}px minmax(0,1fr) 0`;document.body.toggleAttribute('data-ds-dark-theme',dark)},{left,dark})
+for(const width of viewport.width===900&&left===280?[280]:[340,400]) {
+await page.evaluate(w=>{document.body.style.setProperty('--dsh-sidebar-width',w+'px');document.querySelector('.t8lSSG_panel').style.width=w+'px'},width)
+for(const kind of ['home','conversation','research','trace']) {
+await page.evaluate(kind=>document.querySelector('.wSkVaW_root').dataset.odysseyPage=kind,kind);await settle()
+let g=await measure();near(g.panel.x-g.main.right,10,'pane gap');near(g.panel.top,g.main.top,'top alignment');near(g.panel.bottom,g.main.bottom,'bottom alignment');near(g.panel.right,viewport.width-10,'outer edge');near(g.panel.width,width,'panel width');near(g.header.width,g.main.width,'header width');near(g.toolbar.x+136,g.canvas.x+g.canvas.width/2,'toolbar center');near(g.plus.y,g.control.y,'control alignment');assert.equal(g.tint,dark?'rgb(36, 36, 36)':'rgb(238, 238, 238)');assert.equal(g.round,'16px')
+const anchor=g.control;await page.locator('textarea').fill('保留草稿');await page.locator('.scroll').evaluate(e=>e.scrollTop=77)
+await page.locator('[data-odyssey-panel-entry="right"]').click();await settle();g=await measure();near(g.main.right,viewport.width-10,'collapsed main edge');near(g.control.x,anchor.x,'fixed anchor x');near(g.control.y,anchor.y,'fixed anchor y');assert(g.inert);assert(await page.locator('[data-odyssey-panel-entry="right"]').evaluate(e=>e===document.activeElement))
+await page.locator('[data-odyssey-panel-entry="right"]').click();await settle();g=await measure();near(g.panel.x-g.main.right,10,'reopened gap');assert(!g.inert);assert.equal(await page.locator('textarea').inputValue(),'保留草稿');assert.equal(await page.locator('.scroll').evaluate(e=>e.scrollTop),77)
 }
+}
+}
+// The handle lives in the gap and the feedback is centered there, without intercepting native resize.
+const g=await measure();await page.mouse.move(g.panel.left-5,330);await page.mouse.down();await page.waitForTimeout(30)
+const grip=await page.locator('[data-odyssey-resize-grip]').boundingBox();near(grip.width,6,'grip width');near(grip.height,120,'grip height');near(grip.x+3,g.panel.left-5,'grip gap center');await page.mouse.up();assert.equal(await page.locator('[data-odyssey-resize-feedback]').count(),0)
+// Reversal and reduced motion use the same anchor and final layout.
+await page.locator('[data-odyssey-panel-entry="right"]').click();await page.waitForTimeout(50);await page.locator('[data-odyssey-panel-entry="right"]').click();await settle();near((await measure()).panel.left-(await measure()).main.right,10,'reversal')
+await page.emulateMedia({reducedMotion:'reduce'});await page.locator('[data-odyssey-panel-entry="right"]').click();assert.equal(await page.locator('.t8lSSG_panel').evaluate(e=>getComputedStyle(e).visibility),'hidden')
+await page.evaluate(()=>{window.disposeMotion();window.disposeResize()})
+console.log('PASS: Figma 66, 4 page modes, 2 themes, 2 window sizes, sidebar states, 280/340/400 widths, reopen/draft/scroll/focus, reversal, reduced motion, gap drag feedback')
+}finally{await browser.close()}

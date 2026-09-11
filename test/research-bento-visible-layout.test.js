@@ -5,7 +5,7 @@ import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento
 import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
 const nodes = ['large','large','small','small','small'].map((size,index)=>({id:String(index),containerSizePreset:size,content:'原始数据'+index}));
 describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
-  it('recenters the unchanged board in the unobscured area when a panel or window changes size',async()=>{
+  it('preserves the viewport and component coordinates when Figma 66 panes resize',async()=>{
     const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
     const extract=name=>{const start=source.indexOf('function '+name+'(');let at=source.indexOf('{',start),depth=1;for(at++;depth;at++){if(source[at]==='{')depth++;if(source[at]==='}')depth--;}return source.slice(start,at);};
     const fit=runInNewContext(extract('researchWorkbenchViewport')+'\n'+extract('researchCanvasViewportForAreaChange')+'\nresearchCanvasViewportForAreaChange',{RESEARCH_CANVAS_MIN_SCALE:.1});
@@ -13,10 +13,7 @@ describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
     const before=JSON.stringify(snapshot.artifacts);
     for(const availableWidth of [1090,388,728]){
       const result=fit(snapshot,{width:1508,height:844,availableWidth});
-      const left=Math.min(...snapshot.artifacts.map(n=>(n.x-n.width/2)*result.scale+result.x));
-      const right=Math.max(...snapshot.artifacts.map(n=>(n.x+n.width/2)*result.scale+result.x));
-      expect(left).toBeGreaterThanOrEqual(31.99);expect(right).toBeLessThanOrEqual(availableWidth-31.99);
-      expect((left+right)/2).toBeCloseTo(availableWidth/2);
+      expect(result).toBe(snapshot.viewport);
     }
     expect(JSON.stringify(snapshot.artifacts)).toBe(before);
     expect(fit(snapshot,snapshot.canvasSize)).toBe(snapshot.viewport);
