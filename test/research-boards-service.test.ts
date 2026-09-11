@@ -344,6 +344,19 @@ it('keeps B changes when A undoes and never reports resurrecting a tombstoned no
   expect(deletion.ok).toBe(false)
   expect(deletion.error.code).toBe('DELETION_RECOVERY_REQUIRED')
 })
+it('update preparation rejects unconfirmed queued edits and succeeds after the real queue drains', async () => {
+  const t = make(), view = await ready(t)
+  await expect(t.service.prepareForUpdateRestart()).resolves.toBeUndefined()
+  t.setOnline(false)
+  const after = structuredClone(view.canvas)
+  after.artifacts[0]!.excerpt = 'save before update'
+  await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'shared-session', baseRevision: view.canvasRevision, clientMutationId: 'update-save', canvas: after })
+  await expect(t.service.prepareForUpdateRestart()).rejects.toThrow('尚未确认')
+  expect(new ResearchBoardsStore(t.dir).account('u').pending).toHaveLength(1)
+  t.setOnline(true)
+  await expect(t.service.prepareForUpdateRestart()).resolves.toBeUndefined()
+  expect(new ResearchBoardsStore(t.dir).account('u').pending).toHaveLength(0)
+})
 it('persists before sending, survives restart and recovers only own changes on revocation', async () => {
   const t = make()
   const view = await ready(t)

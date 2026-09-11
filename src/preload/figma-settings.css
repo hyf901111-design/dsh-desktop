@@ -1,7 +1,7 @@
 /* Source: Jkyr5rMvgM8GNH6E68xnqd 177:4/363, 178:4/342/1354/1679/680/1017.
    Outer shell 1380×900; workspace 240,10 1128×880; inner column 760. */
-.VOzbGW_overlay{--settings-surface:#f1f1f1;--settings-text:#252525;--settings-muted:#737373;--settings-group:#444;--settings-card:rgba(255,255,255,.76);--settings-border:rgba(0,0,0,.07);--settings-divider:rgba(0,0,0,.065);--settings-control:rgba(255,255,255,.8);--settings-active:rgba(0,0,0,.055);z-index:1000!important;background:rgba(229,229,229,.67);backdrop-filter:blur(32px);font-family:'Noto Sans SC',sans-serif;color:var(--settings-text)}
-body[data-ds-dark-theme] .VOzbGW_overlay{--settings-surface:rgb(30.5026,30.5026,30.5026);--settings-text:#efefef;--settings-muted:#a6a6a6;--settings-group:#ddd;--settings-card:#262626;--settings-border:rgba(255,255,255,.075);--settings-divider:rgba(255,255,255,.075);--settings-control:rgba(255,255,255,.065);--settings-active:rgba(255,255,255,.085);background:rgba(9,9,9,.78)}
+.VOzbGW_overlay{--settings-surface:#f1f1f1;--settings-text:#252525;--settings-muted:#737373;--settings-group:#444;--settings-card:rgba(255,255,255,.76);--settings-border:rgba(0,0,0,.07);--settings-divider:rgba(0,0,0,.065);--settings-control:rgba(255,255,255,.8);--settings-active:rgba(0,0,0,.055);z-index:1000!important;background:rgba(228.7874,228.7874,228.7874,.67);backdrop-filter:blur(16px);font-family:'Noto Sans SC',sans-serif;color:var(--settings-text)}
+body[data-ds-dark-theme] .VOzbGW_overlay{--settings-surface:rgb(30.5026,30.5026,30.5026);--settings-text:#efefef;--settings-muted:#a6a6a6;--settings-group:#ddd;--settings-card:#262626;--settings-border:rgba(255,255,255,.075);--settings-divider:rgba(255,255,255,.075);--settings-control:rgba(255,255,255,.065);--settings-active:rgba(255,255,255,.09);background:rgba(8.5739,8.5739,8.5739,.78)}
 .VOzbGW_overlay .VOzbGW_mask{display:none}
 .VOzbGW_overlay .VOzbGW_panel{box-sizing:border-box;width:100%;height:100%;max-width:none;max-height:none;padding:10px 12px 10px 0;border-radius:12px;background:transparent;box-shadow:none;overflow:hidden}
 .VOzbGW_overlay .VOzbGW_nav{position:relative;box-sizing:border-box;width:240px;flex:0 0 240px;margin:-10px 0;padding:96px 16px 20px;gap:20px;background:transparent;overflow-y:auto}
@@ -29,7 +29,7 @@ body[data-ds-dark-theme] .sherlock-settings-logo{color:#fff!important}
 .VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_rowText,.oY77xG_rowText,.T1PP_q_rowText,.hVGvvW_rowText){flex:1;gap:2px;padding:0;min-width:0}
 .VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_title,.oY77xG_title,.T1PP_q_title,.hVGvvW_title,._8HJdBW_title){font:400 14px/22px 'Noto Sans SC',sans-serif;color:var(--settings-text)}
 .VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_desc,.oY77xG_desc,.T1PP_q_desc){font:400 12px/19px 'Noto Sans SC',sans-serif;color:var(--settings-muted)}
-.VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_selector,.oY77xG_selector,.T1PP_q_selector,.hVGvvW_selector){flex:none;box-sizing:border-box;width:108px;max-width:40%;height:28px;padding:0 8px 0 10px;gap:6px;justify-content:space-between;border:0;border-radius:8px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif;color:var(--settings-text)}
+.VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_selector,.oY77xG_selector,.T1PP_q_selector,.hVGvvW_selector){flex:none;box-sizing:border-box;width:108px;max-width:none;white-space:nowrap;height:28px;padding:0 8px 0 10px;gap:6px;justify-content:space-between;border:0;border-radius:8px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif;color:var(--settings-text)}
 .VOzbGW_overlay .sherlock-settings-item .T1PP_q_selector{width:106px}.VOzbGW_overlay .sherlock-settings-item .hVGvvW_selector{width:96px}
 .VOzbGW_overlay .sherlock-settings-item button svg{width:12px;height:12px;flex:none}
 .VOzbGW_overlay ._8HJdBW_group{flex-direction:row}.VOzbGW_overlay ._8HJdBW_title{flex:1}
@@ -42,16 +42,18 @@ body[data-ds-dark-theme] .VOzbGW_overlay ._8HJdBW_cubeRow{background:rgba(0,0,0,
 .VOzbGW_overlay .zGbnIq_title{font:500 24px/34px 'Noto Sans SC',sans-serif;margin:0}
 .VOzbGW_overlay .zGbnIq_intro{font:400 13px/22px 'Noto Sans SC',sans-serif;color:var(--settings-muted);margin-top:6px}
 .VOzbGW_overlay .sherlock-settings-provider-title{margin:30px 0 10px}
-.VOzbGW_overlay .zGbnIq_rows{gap:0;margin:0;padding:0 16px;background:var(--settings-card);border-radius:12px 12px 0 0;border:1px solid var(--settings-border);border-bottom:0}
+.VOzbGW_overlay .zGbnIq_rows{gap:0;margin:0;padding:0 16px;background:var(--settings-card);border-radius:12px 12px 0 0;border:0;box-shadow:inset 1px 0 0 var(--settings-border),inset -1px 0 0 var(--settings-border),inset 0 1px 0 var(--settings-border)}
 .VOzbGW_overlay .zGbnIq_rowCard{position:relative;padding:0;border:0;border-bottom:1px solid var(--settings-divider);border-radius:0;gap:0}
 .VOzbGW_overlay .zGbnIq_rowHead{min-height:66px;gap:8px}.VOzbGW_overlay .zGbnIq_rowIdentity{display:flex;align-items:flex-start;justify-content:center;flex:1;flex-direction:column;gap:2px;min-width:0}
 .VOzbGW_overlay .zGbnIq_rowName{font:500 14px/22px 'Noto Sans SC',sans-serif;overflow-wrap:anywhere}
 .sherlock-settings-credential{font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--settings-muted)}.sherlock-settings-credential-missing{color:var(--dsw-alias-state-warn-label)}
 .VOzbGW_overlay .zGbnIq_rowActions{gap:8px}.VOzbGW_overlay .zGbnIq_rowActions button{box-sizing:border-box;min-width:56px;height:28px;padding:0 12px;border:0;border-radius:8px;font:400 13px/20px 'Noto Sans SC',sans-serif;background:var(--settings-control);color:var(--settings-text)}
-.VOzbGW_overlay .zGbnIq_addBlock{margin:0;padding:10px 16px;background:var(--settings-card);border:1px solid var(--settings-border);border-top:0;border-radius:0 0 12px 12px}
-.VOzbGW_overlay .zGbnIq_addButton{height:28px;min-height:28px;border:0;border-radius:8px;padding:0 16px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif}
+.VOzbGW_overlay .zGbnIq_addBlock{margin:0;padding:10px 16px;background:var(--settings-card);border:0;border-radius:0 0 12px 12px;box-shadow:inset 1px 0 0 var(--settings-border),inset -1px 0 0 var(--settings-border),inset 0 -1px 0 var(--settings-border)}
+.VOzbGW_overlay .zGbnIq_addButton{flex:none;width:auto;min-width:140px;height:28px;min-height:28px;border:0;border-radius:8px;padding:0 16px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif}
+.VOzbGW_overlay .zGbnIq_addActions{gap:8px}
+.VOzbGW_overlay .zGbnIq_addButton+.zGbnIq_addButton{min-width:174px}
 .VOzbGW_overlay .zGbnIq_savedNotice,.VOzbGW_overlay .zGbnIq_notice{margin-top:12px}
-/* Account 226:17/21; public ID row is retained as a real existing account capability. */
+/* Account 226:17/21: render only the designed profile and password rows. */
 .VOzbGW_overlay .sherlock-account-page{box-sizing:border-box;width:100%;min-height:0;padding:48px max(32px,calc((100% - 760px)/2)) 32px;color:var(--settings-text);font-family:'Noto Sans SC',sans-serif;display:flex;flex-direction:column;gap:30px}
 .VOzbGW_overlay .sherlock-account-page h1{margin:0;font:500 24px/34px 'Noto Sans SC',sans-serif}
 .VOzbGW_overlay .sherlock-account-page h2{margin:0;font:500 14px/22px 'Noto Sans SC',sans-serif;color:var(--settings-group)}
@@ -59,11 +61,35 @@ body[data-ds-dark-theme] .VOzbGW_overlay ._8HJdBW_cubeRow{background:rgba(0,0,0,
 .VOzbGW_overlay .sherlock-account-profile{display:flex;align-items:center;min-height:72px;gap:12px;padding:0 16px;border-radius:12px 12px 0 0;box-shadow:none;background:transparent}
 .VOzbGW_overlay .sherlock-account-profile strong{font:500 17px/26px 'Noto Sans SC',sans-serif}
 .VOzbGW_overlay .sherlock-account-profile .sherlock-account-avatar{width:36px;height:36px;font:500 16px/36px 'Noto Sans SC',sans-serif}
-.VOzbGW_overlay .sherlock-account-id-row{margin-left:auto;gap:12px;border:0;padding:0;font-size:12px}
-.VOzbGW_overlay .sherlock-account-security{position:relative;min-height:54px;padding:0 16px;background:transparent;box-shadow:none;border-radius:0 0 12px 12px}
-.VOzbGW_overlay .sherlock-account-security:before{content:'';position:absolute;top:0;left:16px;right:16px;height:1px;background:var(--settings-divider)}
-.VOzbGW_overlay .sherlock-account-page .sherlock-account-security button,.VOzbGW_overlay .sherlock-account-id-row button{height:28px;padding:0 18px;border:0;border-radius:8px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif}
-.VOzbGW_overlay .sherlock-account-usage-row{display:flex;align-items:center;gap:24px;min-height:86px;padding:0 16px}.sherlock-account-usage-name{flex:1}.sherlock-account-usage-stat{display:flex;flex-direction:column;gap:2px;width:120px}.sherlock-account-usage-stat strong{font:500 24px/34px 'Noto Sans SC',sans-serif}.sherlock-account-usage-stat small{font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--settings-muted)}
+.VOzbGW_overlay .sherlock-account-security{position:relative;min-height:54px;margin-top:1px;padding:0 16px;background:transparent;box-shadow:none;border-radius:0 0 12px 12px;font:400 14px/22px 'Noto Sans SC',sans-serif}
+.VOzbGW_overlay .sherlock-account-security:before{content:'';position:absolute;top:-1px;left:16px;right:16px;height:1px;background:var(--settings-divider)}
+.VOzbGW_overlay .sherlock-account-page .sherlock-account-security button{height:28px;padding:0 18px;border:0;border-radius:8px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif}
+.VOzbGW_overlay .sherlock-account-usage-row{display:flex;align-items:center;gap:24px;min-height:86px;padding:0 16px}.sherlock-account-usage-name{flex:1}.sherlock-account-usage-stat{display:flex;flex-direction:column;gap:2px;width:120px}.sherlock-account-usage-stat strong{font:500 24px/32px 'Noto Sans SC',sans-serif}.sherlock-account-usage-stat small{font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--settings-muted)}
 .VOzbGW_overlay .sherlock-account-page form{margin:0;flex:none;width:100%;max-width:440px}.VOzbGW_overlay .sherlock-account-page form[hidden]{display:none}
 .VOzbGW_overlay .sherlock-about{--about-text:var(--settings-text);--about-muted:var(--settings-muted)}
+/* About 240:2, 241:2/7 and 226:38/46: the inside stroke consumes no row space. */
+.VOzbGW_overlay .sherlock-about{--about-items:#646464;--about-button:rgba(0,0,0,.045)}
+.VOzbGW_overlay .sherlock-about-release-list{border:0;box-shadow:inset 0 0 0 1px var(--about-border)}
+.VOzbGW_overlay .sherlock-about-release-header{gap:6px}
+.VOzbGW_overlay .sherlock-about-release-content h3{margin-bottom:8px}
+.VOzbGW_overlay .sherlock-about-release-items{padding-left:0;list-style:none}
+.VOzbGW_overlay .sherlock-about-release-items li{position:relative;padding-left:16px}
+.VOzbGW_overlay .sherlock-about-release-items li:before{content:'•';position:absolute;left:0}
+.VOzbGW_overlay .sherlock-about-check:disabled{opacity:.65}
+body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-about{--about-list:#262626;--about-border:rgba(255,255,255,.075);--about-items:#b7b7b7}
 @media(max-width:900px){.VOzbGW_overlay .VOzbGW_nav{width:200px;flex-basis:200px}.VOzbGW_overlay .sherlock-settings-back{width:168px}.VOzbGW_overlay .VOzbGW_options,.VOzbGW_overlay .sherlock-account-page{padding-left:24px;padding-right:24px}.VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_row,.oY77xG_row,.T1PP_q_row){padding-top:10px;padding-bottom:10px}.VOzbGW_overlay .sherlock-account-id-row{flex-wrap:wrap}}
+
+/* The real overlay is nested in the mounted sidebar; visibility preserves its stores. */
+body:has(.VOzbGW_overlay) .pI_x6G_frame{visibility:hidden}
+.VOzbGW_overlay{visibility:visible}
+[data-settings-background-portal]{visibility:hidden!important;pointer-events:none!important}
+
+/* Later account state 178:1957 has a subtle dark return-button fill. */
+body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-settings-back{background:rgba(255,255,255,.04)}
+.VOzbGW_overlay .sherlock-settings-back:hover,body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-settings-back:hover{background:var(--settings-active)}
+.VOzbGW_overlay .sherlock-account-security button:hover:not(:disabled){background:var(--settings-active)}
+.VOzbGW_overlay .sherlock-account-usage-stat+.sherlock-account-usage-stat{margin-left:8px}
+body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-account-page{--settings-text:#e5e5e5;--settings-muted:#a0a0a0;--settings-control:rgba(255,255,255,.09)}
+/* Anchor the same 760px column when the changelog adds a native scrollbar. */
+.VOzbGW_overlay .VOzbGW_options:has(.sherlock-about){padding-right:32px}
+.VOzbGW_overlay .sherlock-about{width:760px;max-width:100%;margin:0}

@@ -50,9 +50,11 @@ import { isAbortedNavigationError, shouldLoadHarnessUrl } from './window-navigat
 import {
   checkForUpdates,
   registerUpdateHandlers,
+  setUpdateRestartPreparation,
   startUpdateManager,
   stopUpdateManager
 } from './update/update-manager'
+import { prepareUpdateRestart } from './update/restart-preparation'
 import type { RuntimeSnapshot } from '../shared/contracts'
 import { resolveHarnessLocale } from './application-locale'
 import { installContextMenu } from './context-menu'
@@ -1110,6 +1112,10 @@ async function bootstrap(): Promise<void> {
   if (process.platform === 'darwin') app.dock?.setIcon(desktopIconPath())
   launchDirectory = await ensureLaunchRoot(app.getPath('userData'))
   registerUpdateHandlers(() => mainWindow)
+  setUpdateRestartPreparation(() => prepareUpdateRestart(mainWindow, ipcMain, async () => {
+    if (!researchBoardsService) throw Error('研究服务尚未就绪，应用尚未退出。')
+    await researchBoardsService.prepareForUpdateRestart()
+  }))
   if (process.platform === 'darwin') startHarnessThemePreferenceSync()
   const dshHome = join(app.getPath('userData'), 'harness')
   researchFilePreviewRegistry = new ResearchFilePreviewRegistry({

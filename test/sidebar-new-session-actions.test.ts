@@ -380,6 +380,14 @@ describe('Sherlock sidebar new-session actions', () => {
         expect(host.querySelector('header')?.getAttribute('aria-hidden')).toBeNull()
         if (target !== 'chat') expect(host.querySelector(`[data-rendered-view="${target}"]`)).not.toBeNull()
       }
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:conversation-initial-chat', {
+          detail: { sessionId: 'session-new-research' }
+        }))
+        render()
+      })
+      expect(actions.setView).toHaveBeenLastCalledWith('chat')
+      expect(host.querySelector('header')?.getAttribute('aria-hidden')).toBe('true')
     } finally {
       await act(async () => { root.unmount() })
     }

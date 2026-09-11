@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
+import { patchFigmaAboutUpdates } from '../scripts/lib/figma-updates-client.mjs'
 import { runInNewContext } from 'node:vm'
 import { Window, type HTMLButtonElement as HappyButton } from 'happy-dom'
 import type { UpdateStatus } from '../src/shared/contracts'
@@ -62,10 +63,10 @@ async function loadSettingsBundle(options?: {
   browserWindow?: Window
   aboutBridge?: AboutBridge
 }): Promise<ClientBundle> {
-  const source = await readFile(
+  const source = patchFigmaAboutUpdates(await readFile(
     'node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js',
     'utf8'
-  )
+  ))
   let descriptor: BundleDescriptor | undefined
   const document = options?.browserWindow?.document ?? {
     querySelector: () => null,
@@ -319,7 +320,8 @@ describe('EWork Odyssey About settings', () => {
         button?.click()
       })
       expect(checkForUpdates).toHaveBeenCalledOnce()
-      expect(host.textContent).toContain('EWork Odyssey 已是最新版本')
+      expect(host.textContent).toContain('已是最新版本')
+      expect(host.textContent).not.toContain('EWork Odyssey 已是最新版本')
     } finally {
       await act(async () => root.unmount())
       restoreGlobals()
@@ -361,8 +363,14 @@ describe('EWork Odyssey About settings', () => {
       await act(async () => host.querySelector<HappyButton>('[data-about-download-update]')!.click())
       expect(downloadUpdate).toHaveBeenCalledOnce()
       expect(installUpdate).not.toHaveBeenCalled()
-      expect(host.querySelector('[data-about-install-update]')).toBeNull()
       expect(host.textContent).toContain('about.verifying')
+      for (const [installStage, label] of [['preparing', 'Preparing installation'], ['saving', 'Saving research state'], ['restarting', 'Restarting the app']] as const) {
+        await act(async () => listener?.({ ...available, phase: 'installing', installStage }))
+        expect(host.textContent).toContain(label)
+        expect(host.querySelector<HappyButton>('.sherlock-about-check')?.disabled).toBe(true)
+        expect(host.querySelector('[data-about-install-update]')).toBeNull()
+      }
+      expect(host.querySelector('[data-about-install-update]')).toBeNull()
       expect(host.querySelector<HappyButton>('.sherlock-about-check')?.disabled).toBe(true)
       expect(host.querySelector('.sherlock-about-action-icon[data-loading=true]')).not.toBeNull()
       expect(installUpdate).not.toHaveBeenCalled()

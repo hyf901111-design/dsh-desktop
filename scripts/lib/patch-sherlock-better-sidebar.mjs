@@ -8,8 +8,11 @@ const FILE_DRAG_PATCH_MARKER = '/* sherlock:files-to-research-canvas:v2 */'
 const LEGACY_FILE_DRAG_PATCH_MARKER = '/* sherlock:files-to-research-canvas:v1 */'
 const PANEL_SURFACE_SYNC_PATCH_MARKER = '/* sherlock:panel-surface-sync:v1 */'
 const PANEL_DRAG_DIMENSION_PATCH_MARKER = '/* sherlock:panel-drag-dimensions:v1 */'
+const PANEL_WINDOW_POINTER_FALLBACK_PATCH_MARKER = '/* sherlock:panel-window-pointer-fallback:v1 */'
 const RESEARCH_GENERATION_FOCUS_PATCH_MARKER = '/* sherlock:research-generation-keeps-conversation:v1 */'
 const FIGMA_PANEL_LAYOUT_PATCH_MARKER = '/* sherlock:figma-panel-layout:v1 */'
+const FIGMA_FILE_PANEL_PATCH_MARKER = '/* sherlock:figma-file-panel:v1 */'
+const FIGMA_PANEL_DEFAULT_WIDTH_PATCH_MARKER = '/* sherlock:figma-panel-default-width:v1 */'
 
 export function sherlockResearchGenerationOwnsFocus(state, doc = globalThis.document) {
   const hasResearch = node => node?.kind === 'leaf'
@@ -188,8 +191,420 @@ function patchFigmaPanelLayout(source) {
   return source
 }
 
+/**
+ * Pointer capture is the preferred resize path, but native automation and a
+ * capture transfer can deliver the rest of the stream to window. Keep moves
+ * rAF-only and commit the store once on the terminal event in either path.
+ */
+function patchPanelWindowPointerFallback(source) {
+  if (source.includes(PANEL_WINDOW_POINTER_FALLBACK_PATCH_MARKER)) return source
+  source = replaceExact(source,
+    `\t\t\tconst dragCommitted = (0, react.useRef)(false);
+\t\t\t/**`,
+    `\t\t\tconst dragCommitted = (0, react.useRef)(false);
+\t\t\tconst activeDragPointer = (0, react.useRef)(null);
+\t\t\t/**`,
+    'window drag pointer identity')
+  source = replaceExact(source,
+    `\t\t\tconst abortDrag = (reset, event) => {
+\t\t\t\tif (dragCommitted.current) return;
+\t\t\t\tconst pending = pendingDrag.current;`,
+    `\t\t\tconst abortDrag = (reset, event) => {
+\t\t\t\tif (dragCommitted.current) return;
+\t\t\t\tdragCommitted.current = true;
+\t\t\t\tactiveDragPointer.current = null;
+\t\t\t\tconst pending = pendingDrag.current;`,
+    'interrupted drag single finish')
+  source = replaceExact(source,
+    `\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tconst width = !narrow && snapshot.state?.panelOpen === true ? Math.min(snapshot.state.width, window.innerWidth) : 0;`,
+    `\t\t\t${PANEL_WINDOW_POINTER_FALLBACK_PATCH_MARKER}
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tif (!anyDragging) return;
+\t\t\t\tconst matchesPointer = (event) => activeDragPointer.current === null || activeDragPointer.current === event.pointerId;
+\t\t\t\tconst onWindowDragMove = (event) => {
+\t\t\t\t\tif (dragCommitted.current || !matchesPointer(event)) return;
+\t\t\t\t\tif (draggingWidth) {
+\t\t\t\t\t\tconst { startX, startWidth } = widthDrag.current;
+\t\t\t\t\t\tconst width = clampWidth(startWidth + (startX - event.clientX));
+\t\t\t\t\t\tconst height = state?.bottomOpen === true ? Math.min(state.bottomHeight, window.innerHeight) : 0;
+\t\t\t\t\t\tscheduleDrag(width, height);
+\t\t\t\t\t} else if (draggingBottom) {
+\t\t\t\t\t\tconst { startY, startHeight } = bottomDrag.current;
+\t\t\t\t\t\tconst height = clampHeight(startHeight + (startY - event.clientY));
+\t\t\t\t\t\tscheduleDrag(Math.min(state?.width ?? 0, window.innerWidth), height);
+\t\t\t\t\t} else if (draggingCorner) {
+\t\t\t\t\t\tconst { startX, startY, startWidth, startHeight } = cornerDrag.current;
+\t\t\t\t\t\tscheduleDrag(clampWidth(startWidth + (startX - event.clientX)), clampHeight(startHeight + (startY - event.clientY)));
+\t\t\t\t\t}
+\t\t\t\t};
+\t\t\t\tconst onWindowDragEnd = (event) => {
+\t\t\t\t\tif (dragCommitted.current || !matchesPointer(event)) return;
+\t\t\t\t\tdragCommitted.current = true;
+\t\t\t\t\tactiveDragPointer.current = null;
+\t\t\t\t\tconst pending = pendingDrag.current;
+\t\t\t\t\tif (draggingWidth) {
+\t\t\t\t\t\tconst { startX, startWidth } = widthDrag.current;
+\t\t\t\t\t\tconst width = pending?.width ?? clampWidth(startWidth + (startX - event.clientX));
+\t\t\t\t\t\tconst height = state?.bottomOpen === true ? Math.min(state.bottomHeight, window.innerHeight) : 0;
+\t\t\t\t\t\tcommitDrag(width, height, (s) => setWidth(s, width));
+\t\t\t\t\t\tsetDraggingWidth(false);
+\t\t\t\t\t} else if (draggingBottom) {
+\t\t\t\t\t\tconst { startY, startHeight } = bottomDrag.current;
+\t\t\t\t\t\tconst height = pending?.height ?? clampHeight(startHeight + (startY - event.clientY));
+\t\t\t\t\t\tcommitDrag(Math.min(state?.width ?? 0, window.innerWidth), height, (s) => setBottomHeight(s, height));
+\t\t\t\t\t\tsetDraggingBottom(false);
+\t\t\t\t\t} else if (draggingCorner) {
+\t\t\t\t\t\tconst { startX, startY, startWidth, startHeight } = cornerDrag.current;
+\t\t\t\t\t\tconst width = pending?.width ?? clampWidth(startWidth + (startX - event.clientX));
+\t\t\t\t\t\tconst height = pending?.height ?? clampHeight(startHeight + (startY - event.clientY));
+\t\t\t\t\t\tcommitDrag(width, height, (s) => setBottomHeight(setWidth(s, width), height));
+\t\t\t\t\t\tsetDraggingCorner(false);
+\t\t\t\t\t}
+\t\t\t\t};
+\t\t\t\tconst onWindowDragCancel = (event) => {
+\t\t\t\t\tif (!matchesPointer(event)) return;
+\t\t\t\t\tabortDrag(() => {
+\t\t\t\t\t\tsetDraggingWidth(false);
+\t\t\t\t\t\tsetDraggingCorner(false);
+\t\t\t\t\t\tsetDraggingBottom(false);
+\t\t\t\t\t}, event);
+\t\t\t\t};
+\t\t\t\twindow.addEventListener("pointermove", onWindowDragMove);
+\t\t\t\twindow.addEventListener("pointerup", onWindowDragEnd);
+\t\t\t\twindow.addEventListener("pointercancel", onWindowDragCancel);
+\t\t\t\treturn () => {
+\t\t\t\t\twindow.removeEventListener("pointermove", onWindowDragMove);
+\t\t\t\t\twindow.removeEventListener("pointerup", onWindowDragEnd);
+\t\t\t\t\twindow.removeEventListener("pointercancel", onWindowDragCancel);
+\t\t\t\t};
+\t\t\t}, [
+\t\t\t\tanyDragging,
+\t\t\t\tdraggingWidth,
+\t\t\t\tdraggingBottom,
+\t\t\t\tdraggingCorner,
+\t\t\t\tstate?.width,
+\t\t\t\tstate?.bottomOpen,
+\t\t\t\tstate?.bottomHeight
+\t\t\t]);
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tconst width = !narrow && snapshot.state?.panelOpen === true ? Math.min(snapshot.state.width, window.innerWidth) : 0;`,
+    'window drag terminal event fallback')
+  source = replaceExact(source,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = false;
+\t\t\t\t\t\t\t\t\twidthDrag.current = {`,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = false;
+\t\t\t\t\t\t\t\t\tactiveDragPointer.current = event.pointerId;
+\t\t\t\t\t\t\t\t\twidthDrag.current = {`,
+    'width drag pointer start')
+  source = replaceExact(source,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = false;
+\t\t\t\t\t\t\t\t\tcornerDrag.current = {`,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = false;
+\t\t\t\t\t\t\t\t\tactiveDragPointer.current = event.pointerId;
+\t\t\t\t\t\t\t\t\tcornerDrag.current = {`,
+    'corner drag pointer start')
+  source = replaceExact(source,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = false;
+\t\t\t\t\t\t\t\t\tbottomDrag.current = {`,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = false;
+\t\t\t\t\t\t\t\t\tactiveDragPointer.current = event.pointerId;
+\t\t\t\t\t\t\t\t\tbottomDrag.current = {`,
+    'bottom drag pointer start')
+  source = replaceExact(source,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = true;
+\t\t\t\t\t\t\t\t\tevent.currentTarget.releasePointerCapture(event.pointerId);`,
+    `\t\t\t\t\t\t\t\t\tdragCommitted.current = true;
+\t\t\t\t\t\t\t\t\tevent.currentTarget.releasePointerCapture(event.pointerId);
+\t\t\t\t\t\t\t\t\tactiveDragPointer.current = null;`,
+    'local drag pointer finish', 3)
+  for (const stateName of ['Width', 'Corner', 'Bottom']) {
+    source = replaceExact(source,
+      `onPointerCancel: () => {
+\t\t\t\t\t\t\t\t\tabortDrag(() => setDragging${stateName}(false));
+\t\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\t\tonLostPointerCapture: () => {
+\t\t\t\t\t\t\t\t\tabortDrag(() => setDragging${stateName}(false));`,
+      `onPointerCancel: (event) => {
+\t\t\t\t\t\t\t\t\tabortDrag(() => setDragging${stateName}(false), event);
+\t\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\t\tonLostPointerCapture: (event) => {
+\t\t\t\t\t\t\t\t\tabortDrag(() => setDragging${stateName}(false), event);`,
+      `${stateName.toLowerCase()} drag interruption event`)
+  }
+  return source
+}
+
+/**
+ * Expose the real Files/editor controls to the late Figma stylesheet without
+ * replacing their store, filesystem operations, CodeMirror, Markdown renderer,
+ * or plugin-provided Office viewers. Exact boundaries keep a package upgrade
+ * loud instead of leaving a partly styled explorer behind.
+ */
+function patchFigmaFilePanel(source) {
+  if (source.includes(FIGMA_FILE_PANEL_PATCH_MARKER)) return source
+
+  source = replaceExact(source,
+    `\t\tfunction baseName$1(path) {
+\t\t\tconst trimmed = path.replace(/[\\\\/]+$/, "");
+\t\t\tconst at = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\\\"));
+\t\t\treturn at === -1 ? trimmed : trimmed.slice(at + 1);
+\t\t}`,
+    `\t\tfunction baseName$1(path) {
+\t\t\tconst trimmed = path.replace(/[\\\\/]+$/, "");
+\t\t\tconst at = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\\\"));
+\t\t\treturn at === -1 ? trimmed : trimmed.slice(at + 1);
+\t\t}
+\t\t${FIGMA_FILE_PANEL_PATCH_MARKER}
+\t\tfunction sherlockFigmaFileKind(name) {
+\t\t\tconst extension = name.includes(".") ? name.slice(name.lastIndexOf(".") + 1).toLowerCase() : "";
+\t\t\treturn ["c", "cc", "cpp", "css", "go", "h", "html", "java", "js", "json", "jsx", "mjs", "py", "rb", "rs", "sh", "swift", "ts", "tsx", "vue", "xml", "yaml", "yml"].includes(extension) ? "code" : "file";
+\t\t}`,
+    'Figma file kind contract')
+
+  const fileTreeStart = source.indexOf('\t\tfunction FileTree(props) {')
+  const fileTreeEnd = source.indexOf('\n\t\t//#endregion', fileTreeStart)
+  if (fileTreeStart < 0 || fileTreeEnd < 0) throw new Error('Unable to patch Better Sidebar Figma FileTree boundary')
+  let fileTree = source.slice(fileTreeStart, fileTreeEnd)
+  fileTree = replaceExact(fileTree,
+    'style: { paddingLeft: depth * 22 + 6 },',
+    'style: { paddingLeft: depth * 22 },',
+    'Figma tree indentation', 4)
+  fileTree = replaceExact(fileTree,
+    `\t\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.explorerRow, sidebar_module_css_default.explorerDir, entry.hidden && sidebar_module_css_default.explorerHidden),
+\t\t\t\t\t\t\tstyle: { paddingLeft: depth * 22 },`,
+    `\t\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.explorerRow, sidebar_module_css_default.explorerDir, entry.hidden && sidebar_module_css_default.explorerHidden),
+\t\t\t\t\t\t\t"data-odyssey-file-row": "directory",
+\t\t\t\t\t\t\tstyle: { paddingLeft: depth * 22 },`,
+    'Figma directory row identity')
+  fileTree = replaceExact(fileTree,
+    `\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.explorerRow, entry.hidden && sidebar_module_css_default.explorerHidden, entry.broken && sidebar_module_css_default.explorerBroken),
+\t\t\t\t\t\tstyle: { paddingLeft: depth * 22 },`,
+    `\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.explorerRow, entry.hidden && sidebar_module_css_default.explorerHidden, entry.broken && sidebar_module_css_default.explorerBroken),
+\t\t\t\t\t\t"data-odyssey-file-row": sherlockFigmaFileKind(entry.name),
+\t\t\t\t\t\tstyle: { paddingLeft: depth * 22 },`,
+    'Figma file row identity')
+  fileTree = replaceExact(fileTree,
+    'isOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 14 }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderClose16, { size: 14 })',
+    'isOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 16 }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderClose16, { size: 16 })',
+    'Figma directory icon')
+  fileTree = replaceExact(fileTree,
+    '/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, { size: 14 }),',
+    '/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "data-odyssey-file-icon": sherlockFigmaFileKind(entry.name), "aria-hidden": true }),',
+    'Figma typed file icon')
+  fileTree = replaceExact(fileTree,
+    `\t\t\t\t\tclassName: sidebar_module_css_default.explorerRow,
+\t\t\t\t\tstyle: { paddingLeft: 6 },`,
+    `\t\t\t\t\tclassName: sidebar_module_css_default.explorerRow,
+\t\t\t\t\t"data-odyssey-project-root": true,
+\t\t\t\t\tstyle: { paddingLeft: 0 },`,
+    'Figma project root identity')
+  fileTree = replaceExact(fileTree,
+    '/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 14 }),',
+    '/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 16 }),',
+    'Figma project root icon', 1)
+  source = source.slice(0, fileTreeStart) + fileTree + source.slice(fileTreeEnd)
+
+  const treePanelStart = source.indexOf('\t\tfunction TreePanel(props) {')
+  const treePanelEnd = source.indexOf('\n\t\t//#endregion', treePanelStart)
+  if (treePanelStart < 0 || treePanelEnd < 0) throw new Error('Unable to patch Better Sidebar Figma TreePanel boundary')
+  let treePanel = source.slice(treePanelStart, treePanelEnd)
+  treePanel = replaceExact(treePanel,
+    'className: clsx(sidebar_module_css_default.editorTreePanel, full === true && sidebar_module_css_default.editorTreePanelFull),',
+    'className: clsx(sidebar_module_css_default.editorTreePanel, full === true && sidebar_module_css_default.editorTreePanelFull),\n\t\t\t\t"data-odyssey-file-panel": true,',
+    'Figma file panel identity')
+  treePanel = replaceExact(treePanel,
+    `\t\t\t\t\tclassName: sidebar_module_css_default.editorTreeSearch,
+\t\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {`,
+    `\t\t\t\t\tclassName: sidebar_module_css_default.editorTreeSearch,
+\t\t\t\t\t"data-odyssey-file-search": true,
+\t\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+\t\t\t\t\t\t"data-odyssey-file-search-icon": true,
+\t\t\t\t\t\t"aria-hidden": true
+\t\t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {`,
+    'Figma file search identity')
+  treePanel = replaceExact(treePanel,
+    `\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\tclassName: sidebar_module_css_default.iconButton,
+\t\t\t\t\t\t"aria-label": t("refresh"),`,
+    `\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\tclassName: sidebar_module_css_default.iconButton,
+\t\t\t\t\t\t"data-odyssey-file-refresh": true,
+\t\t\t\t\t\t"aria-label": t("refresh"),`,
+    'Figma refresh identity')
+  treePanel = replaceExact(treePanel,
+    `\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.editorSearchResult,
+\t\t\t\t\t\t\t\ttitle: rel,`,
+    `\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.editorSearchResult,
+\t\t\t\t\t\t\t\t"data-odyssey-file-search-result": sherlockFigmaFileKind(rel),
+\t\t\t\t\t\t\t\ttitle: rel,`,
+    'Figma search result identity')
+  source = source.slice(0, treePanelStart) + treePanel + source.slice(treePanelEnd)
+
+  const editorStart = source.indexOf('\t\tfunction EditorHost(props) {')
+  const editorEnd = source.indexOf('\n\t\t//#endregion', editorStart)
+  if (editorStart < 0 || editorEnd < 0) throw new Error('Unable to patch Better Sidebar Figma EditorHost boundary')
+  let editor = source.slice(editorStart, editorEnd)
+  editor = replaceExact(editor,
+    `if (treeOnly) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\tclassName: sidebar_module_css_default.editor,`,
+    `if (treeOnly) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\tclassName: sidebar_module_css_default.editor,
+\t\t\t\t"data-odyssey-file-editor": "tree",`,
+    'Figma tree editor identity')
+  editor = replaceExact(editor,
+    `\t\t\treturn /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\tclassName: sidebar_module_css_default.editor,
+\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\tclassName: sidebar_module_css_default.editorHeader,`,
+    `\t\t\treturn /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\tclassName: sidebar_module_css_default.editor,
+\t\t\t\t"data-odyssey-file-editor": "document",
+\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\tclassName: sidebar_module_css_default.editorHeader,
+\t\t\t\t\t"data-odyssey-file-editor-header": true,`,
+    'Figma document editor identity')
+  source = source.slice(0, editorStart) + editor + source.slice(editorEnd)
+
+  const tabBarStart = source.indexOf('\t\tfunction TabBar(props) {')
+  const tabBarEnd = source.indexOf('\n\t\t//#endregion', tabBarStart)
+  if (tabBarStart < 0 || tabBarEnd < 0) throw new Error('Unable to patch Better Sidebar Figma TabBar boundary')
+  let tabBar = source.slice(tabBarStart, tabBarEnd)
+  tabBar = replaceExact(tabBar,
+    `/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+\t\t\t\t\t\topen: menuOpen,`,
+    `/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+\t\t\t\t\t\tclassName: "odyssey-file-new-tab-menu",
+\t\t\t\t\t\topen: menuOpen,`,
+    'Figma new tab menu identity')
+  tabBar = replaceExact(tabBar,
+    `\t\t\t\t\t\t\tclassName: sidebar_module_css_default.tabBarPlus,
+\t\t\t\t\t\t\t"aria-label": t("newTab"),`,
+    `\t\t\t\t\t\t\tclassName: sidebar_module_css_default.tabBarPlus,
+\t\t\t\t\t\t\t"aria-expanded": menuOpen,
+\t\t\t\t\t\t\t"aria-label": t("newTab"),`,
+    'Figma new tab menu state')
+  tabBar = replaceExact(tabBar,
+    '\t\t\t\t\t\t\tlabel: option.label,',
+    '\t\t\t\t\t\t\tlabel: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "data-odyssey-file-menu-label": true, children: option.label }),',
+    'Figma new tab menu portal identity')
+  source = source.slice(0, tabBarStart) + tabBar + source.slice(tabBarEnd)
+
+  return source
+}
+
+/**
+ * Reserve 0 as the persisted "design default" sentinel. New sessions then
+ * start at the measured 340px, while every pre-existing non-zero percentage
+ * continues to scale with the viewport. The settings field renders the
+ * sentinel as an empty numeric field with a truthful 340px placeholder; typing
+ * 20–60 opts into percentage behavior, and clearing restores the fixed default.
+ */
+function patchFigmaPanelDefaultWidth(source) {
+  if (source.includes(FIGMA_PANEL_DEFAULT_WIDTH_PATCH_MARKER)) return source
+  source = replaceExact(source,
+    '\t\t\tdefaultWidthPercent: 35,',
+    '\t\t\tdefaultWidthPercent: 0,',
+    'Figma fixed default preference')
+  source = replaceExact(source,
+    `\t\tfunction clampWidthPercent(value) {
+\t\t\treturn Math.min(60, Math.max(20, Math.round(value)));
+\t\t}`,
+    `\t\t${FIGMA_PANEL_DEFAULT_WIDTH_PATCH_MARKER}
+\t\tfunction clampWidthPercent(value) {
+\t\t\tif (value === 0) return 0;
+\t\t\treturn Math.min(60, Math.max(20, Math.round(value)));
+\t\t}
+\t\tfunction sidebarWidthDraft(percent) {
+\t\t\treturn percent === 0 ? "" : String(percent);
+\t\t}`,
+    'Figma fixed default sentinel')
+  source = replaceExact(source,
+    `\t\tfunction defaultWidthFor(viewport, percent) {
+\t\t\treturn Math.min(viewport, Math.max(280, Math.round(viewport * percent / 100)));
+\t\t}`,
+    `\t\tfunction defaultWidthFor(viewport, percent) {
+\t\t\tif (percent === 0) return Math.min(viewport, 340);
+\t\t\treturn Math.min(viewport, Math.max(280, Math.round(viewport * percent / 100)));
+\t\t}`,
+    'Figma fixed default width')
+  source = replaceExact(source,
+    'settingsWidthTitle: "默认宽度占比",\n\t\t\tsettingsWidthDesc: "新建会话时侧边卡片占窗口宽度的百分比 (20–60)",',
+    'settingsWidthTitle: "新会话默认宽度",\n\t\t\tsettingsWidthDesc: "留空使用固定 340 px；输入 20–60 使用窗口宽度占比",',
+    'Figma width setting Chinese copy')
+  source = replaceExact(source,
+    'settingsWidthTitle: "Default width share",\n\t\t\tsettingsWidthDesc: "The side card\'s default share of the window width for new conversations (20–60)",',
+    'settingsWidthTitle: "New conversation width",\n\t\t\tsettingsWidthDesc: "Leave blank for the fixed 340 px default, or enter 20–60 for a window-width percentage",',
+    'Figma width setting English copy')
+  source = replaceExact(source,
+    'const [widthDraft, setWidthDraft] = (0, react.useState)(String(store.getPrefs().defaultWidthPercent));',
+    'const [widthDraft, setWidthDraft] = (0, react.useState)(() => sidebarWidthDraft(store.getPrefs().defaultWidthPercent));',
+    'Figma width draft initial value')
+  source = replaceExact(source,
+    'setWidthDraft(String(next.defaultWidthPercent));',
+    'setWidthDraft(sidebarWidthDraft(next.defaultWidthPercent));',
+    'Figma width draft loaded value')
+  source = replaceExact(source,
+    'setWidthDraft(String(settled.defaultWidthPercent));',
+    'setWidthDraft(sidebarWidthDraft(settled.defaultWidthPercent));',
+    'Figma width draft settled value')
+  source = replaceExact(source,
+    `\t\t\tconst commitWidth = () => {
+\t\t\t\tconst parsed = Number(widthDraft);
+\t\t\t\tif (!Number.isFinite(parsed)) {
+\t\t\t\t\tsetWidthDraft(String(prefs.defaultWidthPercent));
+\t\t\t\t\treturn;
+\t\t\t\t}
+\t\t\t\tconst clamped = clampWidthPercent(parsed);
+\t\t\t\tconst previous = prefs;
+\t\t\t\tsetPrefs({
+\t\t\t\t\t...previous,
+\t\t\t\t\tdefaultWidthPercent: clamped
+\t\t\t\t});
+\t\t\t\tsetWidthDraft(String(clamped));
+\t\t\t\tsetError(null);
+\t\t\t\tcommit({ defaultWidthPercent: clamped }).then((outcome) => applyOutcome(previous, outcome));
+\t\t\t};`,
+    `\t\t\tconst commitWidth = () => {
+\t\t\t\tconst useFixedDefault = widthDraft.trim() === "";
+\t\t\t\tconst parsed = Number(widthDraft);
+\t\t\t\tif (!useFixedDefault && !Number.isFinite(parsed)) {
+\t\t\t\t\tsetWidthDraft(sidebarWidthDraft(prefs.defaultWidthPercent));
+\t\t\t\t\treturn;
+\t\t\t\t}
+\t\t\t\tconst clamped = useFixedDefault ? 0 : clampWidthPercent(parsed);
+\t\t\t\tconst previous = prefs;
+\t\t\t\tsetPrefs({
+\t\t\t\t\t...previous,
+\t\t\t\t\tdefaultWidthPercent: clamped
+\t\t\t\t});
+\t\t\t\tsetWidthDraft(sidebarWidthDraft(clamped));
+\t\t\t\tsetError(null);
+\t\t\t\tcommit({ defaultWidthPercent: useFixedDefault ? 0 : clamped }).then((outcome) => applyOutcome(previous, outcome));
+\t\t\t};`,
+    'Figma width setting commit')
+  source = replaceExact(source,
+    `\t\t\t\t\t\t\t\t\t\tvalue: widthDraft,
+\t\t\t\t\t\t\t\t\t\tmin: 20,`,
+    `\t\t\t\t\t\t\t\t\t\tvalue: widthDraft,
+\t\t\t\t\t\t\t\t\t\tplaceholder: "340 px",
+\t\t\t\t\t\t\t\t\t\tmin: 20,`,
+    'Figma width setting placeholder')
+  source = replaceExact(source,
+    `\t\t\t\t\t\t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+\t\t\t\t\t\t\t\t\t\tclassName: SideCardSection_module_css_default.suffix,
+\t\t\t\t\t\t\t\t\t\tchildren: t("settingsWidthSuffix")
+\t\t\t\t\t\t\t\t\t})]`,
+    `\t\t\t\t\t\t\t\t\t}), widthDraft !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+\t\t\t\t\t\t\t\t\t\tclassName: SideCardSection_module_css_default.suffix,
+\t\t\t\t\t\t\t\t\t\tchildren: t("settingsWidthSuffix")
+\t\t\t\t\t\t\t\t\t})]`,
+    'Figma width setting suffix')
+  return source
+}
+
 export function patchBetterSidebarClient(source) {
-  let next = patchFigmaPanelLayout(patchPanelToggleGlyphs(source))
+  let next = patchFigmaPanelDefaultWidth(patchFigmaFilePanel(patchPanelWindowPointerFallback(patchFigmaPanelLayout(patchPanelToggleGlyphs(source)))))
 
   if (!next.includes(RESEARCH_GENERATION_FOCUS_PATCH_MARKER)) {
     next = replaceExact(next,
@@ -424,9 +839,17 @@ export function sherlockSessionHasChatFile(session, targetPath) {
 
 export function patchBetterSidebarServer(source) {
   const marker = '/* sherlock:session-attached-media:v1 */'
-  if (source.includes(marker)) return source
+  const defaultWidthMarker = '/* sherlock:figma-panel-default-width-schema:v1 */'
+  let next = source
+  if (!next.includes(defaultWidthMarker) && next.includes('defaultWidthPercent: z.number().step(1).min(20).max(60).default(35),')) {
+    next = defaultWidthMarker + '\n' + replaceExact(next,
+      'defaultWidthPercent: z.number().step(1).min(20).max(60).default(35),',
+      'defaultWidthPercent: z.number().step(1).min(0).max(60).default(0),',
+      'Figma fixed default width schema')
+  }
+  if (next.includes(marker)) return next
   const guard = 'if (!isWithin(cwd, path)) throw new SidebarError("fs-error", "media path outside the session working directory", 403);'
-  return `${marker}\n${sherlockSessionHasChatFile.toString()}\n` + replaceExact(source, guard,
+  return `${marker}\n${sherlockSessionHasChatFile.toString()}\n` + replaceExact(next, guard,
     'if (!isWithin(cwd, path) && !sherlockSessionHasChatFile(ctx.sessions.get(sessionId), path)) throw new SidebarError("fs-error", "media path outside the session working directory", 403);',
     'session attached media scope')
 }

@@ -3,6 +3,7 @@ import { runInNewContext } from 'node:vm'
 import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { describe, it, expect, vi } from 'vitest'
+import { patchFigmaUpdateWorkspace } from '../scripts/lib/figma-updates-client.mjs'
 import {
   patchResearchBoardConversation,
   patchResearchBoardSidebar,
@@ -53,7 +54,7 @@ async function load(shared = true) {
     'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
     'utf8'
   )
-  const source = await patchResearchBoardConversation(raw)
+  const source = patchFigmaUpdateWorkspace(await patchResearchBoardConversation(raw))
   runInNewContext(
     source.replace(
       '\t\texports.apply = apply;',
@@ -304,6 +305,41 @@ async function pageFixture() {
     }
   }
 }
+it('update preparation saves actual workspaces and releases the input lock on failure', async () => {
+  const f = await pageFixture()
+  try {
+    await f.page.prepareForUpdate()
+    expect(f.window.document.body.inert).toBe(true)
+    f.window.dispatchEvent(new f.window.Event('sherlock:boards:update-resume'))
+    expect(f.window.document.body.inert).toBe(false)
+    f.registry.for('shared').isCollaborationGesture = () => true
+    await expect(f.page.prepareForUpdate()).rejects.toThrow('拖动')
+    expect(f.window.document.body.inert).toBe(false)
+  } finally { f.dispose() }
+})
+it('update preparation drains every already-started draft write when replies arrive out of order', async () => {
+  const f = await pageFixture(), replies = []
+  try {
+    f.bridge.invoke.mockImplementation(action => action === 'recovery.saveDraft'
+      ? new Promise(resolve => replies.push(resolve))
+      : Promise.resolve({ ok: true, value: null }))
+    f.page.saveDraft('shared', 'first')
+    f.page.saveDraft('shared', 'latest')
+    let done = false
+    const prepared = f.page.prepareForUpdate().then(() => { done = true })
+    replies[1]({ ok: true })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(done).toBe(false)
+    replies[0]({ ok: true })
+    await prepared
+    expect(done).toBe(true)
+    f.window.dispatchEvent(new f.window.Event('sherlock:boards:update-resume'))
+    f.bridge.invoke.mockResolvedValue({ ok: false, error: { code: 'WRITE_FAILED', message: '保存失败' } })
+    f.page.saveDraft('shared', 'failed')
+    await expect(f.page.prepareForUpdate()).rejects.toThrow('草稿保存失败')
+    expect(f.window.document.body.inert).toBe(false)
+  } finally { f.dispose() }
+})
 it('serializes next local edits on localBranchRevision and never overwrites them with queued remote hydration', async () => {
   const f = await pageFixture(),
     w = f.registry.for('shared')

@@ -1,4 +1,6 @@
-vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async () => fakes.autoUpdater.quitAndInstall(false, true) }))
+vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async (_updater: unknown, _timeout: unknown, beforeQuit: () => Promise<unknown>) => { await beforeQuit(); fakes.autoUpdater.quitAndInstall(false, true) } }))
+vi.mock('../src/main/update/restart-receipt', () => ({ consumeUpdateRestartReceipt: () => undefined, writeUpdateRestartReceipt: vi.fn(), cancelUpdateRestartReceipt: vi.fn() }))
+vi.mock('../src/main/update/mac-update-recovery', () => ({ armMacRenameRecovery: async () => undefined, repairRenamedMacDock: async () => {} }))
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const fakes = vi.hoisted(() => {
@@ -44,6 +46,7 @@ vi.mock('electron', () => ({
   autoUpdater: {},
   app: {
     getVersion: () => '0.5.0',
+    getPath: () => '/isolated-test',
     isPackaged: true,
     isReady: () => false
   },
@@ -67,6 +70,7 @@ import {
   getUpdateStatus,
   installDownloadedUpdate,
   registerUpdateHandlers,
+  setUpdateRestartPreparation,
   startUpdateManager,
   stopUpdateManager
 } from '../src/main/update/update-manager'
@@ -108,6 +112,7 @@ describe('desktop update manager', () => {
     const download = vi.spyOn(fakes.autoUpdater, 'downloadUpdate')
     const quitAndInstall = vi.spyOn(fakes.autoUpdater, 'quitAndInstall')
     startUpdateManager()
+    setUpdateRestartPreparation(async () => {})
 
     await checkForUpdates()
     expect(getUpdateStatus()).toMatchObject({
@@ -121,6 +126,7 @@ describe('desktop update manager', () => {
     expect(download).toHaveBeenCalledOnce()
     expect(getUpdateStatus()).toMatchObject({
       phase: 'installing',
+      installStage: 'restarting',
       availableVersion: '0.6.0'
     })
     await installDownloadedUpdate()

@@ -171,7 +171,7 @@ export function installBoardUiStyles(doc: Document) {
 [data-srb-session-header]:has(.srb-actions) [data-srb-title-row]{display:contents}
 [data-srb-session-header]:has(.srb-actions) [data-srb-title-cluster]{grid-column:1;grid-row:1;min-width:0;min-height:32px}
 [data-srb-session-header]:has(.srb-actions) [data-srb-tabs]{grid-column:1;grid-row:2}
-[data-srb-session-header]:has(.srb-actions) [data-srb-utilities]{grid-column:2;grid-row:1 / span 2;align-self:stretch;align-items:center;margin-left:0;margin-top:-12px;position:relative;z-index:2}
+[data-srb-session-header]:has(.srb-actions) [data-srb-utilities]{grid-column:2;grid-row:1 / span 2;align-self:start;height:62px;align-items:center;margin-left:0;margin-top:-2px;position:relative;z-index:2}
 .srb-actions .srb-create-collaboration{border:1px solid var(--dsw-alias-border-l2,#ddd);background:var(--dsw-alias-button-elevated-fill,var(--dsw-alias-bg-layer-2,#fff));padding:0 12px;border-radius:8px;font-weight:500;line-height:28px}
 .srb-actions .srb-create-collaboration:disabled{opacity:.45;cursor:default}.srb-actions .srb-avatar{width:28px;height:28px;flex:none}
 .srb-request-statuses{display:flex;flex-direction:column;gap:8px;min-width:0}.srb-request-statuses:empty{display:none}.srb-request-statuses .srb-status{margin:0;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,#777)}
@@ -180,7 +180,7 @@ export function installBoardUiStyles(doc: Document) {
 .srb-attempt-history{font-size:11px;line-height:18px;color:var(--dsw-alias-label-tertiary,#888)}.srb-attempt-history summary{cursor:pointer;width:fit-content;user-select:none}.srb-attempt-history[open] summary{margin-bottom:6px}.srb-attempt-history .srb-status{display:flex;gap:8px;font-size:11px;padding:2px 0}.srb-attempt-history time{font-variant-numeric:tabular-nums;flex:none}
 /* Shared section geometry and understated board actions. */
 [data-dsh-sidebar-root] :is(.srb-section,[data-srb-workspaces]){box-sizing:border-box;min-width:0;width:100%}
-[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-section-header]{padding-right:0;margin-right:0}
+[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-section-header]{padding-inline:0;margin-right:0}
 [data-srb-section-header]>:empty{display:none}
 
 .srb-section{font-size:14px;line-height:20px}.srb-section .srb-section-toggle,[data-srb-workspaces] .srb-section-toggle{display:inline-flex;align-items:center;justify-content:flex-start;gap:7px;flex:none;font:inherit;font-size:14px;font-weight:400;line-height:20px;color:var(--dsw-alias-label-tertiary,#888);padding:0;height:28px;border:0;background:transparent;cursor:pointer;border-radius:4px}.srb-section .srb-section-toggle:hover,[data-srb-workspaces] .srb-section-toggle:hover{color:var(--dsw-alias-label-primary,#222);background:transparent}.srb-chevron{display:inline-block;width:12px;height:12px;background:currentColor;mask:url(/figma-sidebar-chevron.svg) center/contain no-repeat;flex:none}.srb-chevron[data-collapsed=true]{transform:rotate(-90deg)}

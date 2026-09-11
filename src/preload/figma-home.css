@@ -74,6 +74,29 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
   transform:translateY(-3px);
 }
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_previewBadge { display:none; }
+/* 121:2763 / 4385 are the visible, original outlined lettering. The hidden
+   26 px editable source is not the final glyph geometry. Keep real copy in AX. */
+.wSkVaW_root[data-odyssey-page="home"] [data-odyssey-home-title-art] {
+  display:block;
+  position:relative;
+  flex:none;
+  width:289.1889px;
+  height:36.5867px;
+  font-size:0;
+  line-height:0;
+}
+.wSkVaW_root[data-odyssey-page="home"] [data-odyssey-home-title-art]::after {
+  content:"";
+  position:absolute;
+  left:-6.8889px;
+  top:-2.3809px;
+  width:296.078px;
+  height:45.7861px;
+  background:url('/figma-home-headline-light.svg') center/100% 100% no-repeat;
+}
+[data-ds-dark-theme] .wSkVaW_root[data-odyssey-page="home"] [data-odyssey-home-title-art]::after {
+  background-image:url('/figma-home-headline-dark.svg');
+}
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow {
   box-sizing:border-box;
   height:32px;
@@ -93,7 +116,7 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
   transform:translateY(-2px);
 }
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_folder { width:16px; height:16px; }
-.wSkVaW_root[data-odyssey-page="home"] .pXSMma_chevron { width:12px; height:12px; }
+.wSkVaW_root[data-odyssey-page="home"] .pXSMma_chevron { width:12px; height:12px; margin-left:-1px; }
 .wSkVaW_root[data-odyssey-page="home"] .cubgiG_seat {
   box-sizing:border-box;
   height:24px;
@@ -104,6 +127,9 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
   transform:translateY(-2px);
 }
 .wSkVaW_root[data-odyssey-page="home"] .cubgiG_seatIcon { width:16px; height:16px; }
+/* Empty slot anchors are retained by the plugin system but must not consume a
+   flex gap. The target distance is 20 px from the project chevron to mode icon. */
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow>[data-slot="conversation.hero.workspace"]>span:empty { display:none; }
 .wSkVaW_root[data-odyssey-page="home"] .cubgiG_seatIcon[data-mode-icon="standard"] {
   background:currentColor;
   mask:url('/figma-home-mode.svg') center/contain no-repeat;

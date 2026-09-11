@@ -1,4 +1,6 @@
-vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async () => fake.updater.quitAndInstall(false, true) }))
+vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async (_updater: unknown, _timeout: unknown, beforeQuit: () => Promise<unknown>) => { await beforeQuit(); fake.updater.quitAndInstall(false, true) } }))
+vi.mock('../src/main/update/restart-receipt', () => ({ consumeUpdateRestartReceipt: () => undefined, writeUpdateRestartReceipt: vi.fn(), cancelUpdateRestartReceipt: vi.fn() }))
+vi.mock('../src/main/update/mac-update-recovery', () => ({ armMacRenameRecovery: async () => undefined, repairRenamedMacDock: async () => {} }))
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fake = vi.hoisted(() => ({
@@ -12,7 +14,7 @@ const fake = vi.hoisted(() => ({
 }))
 vi.mock('electron', () => ({
   autoUpdater: {},
-  app: { getVersion: () => '0.8.3', isPackaged: true, isReady: () => false },
+  app: { getVersion: () => '0.8.3', getPath: () => '/isolated-test', isPackaged: true, isReady: () => false },
   BrowserWindow: { getAllWindows: () => [] }, ipcMain: { handle: vi.fn() },
   powerMonitor: { on: vi.fn(), removeListener: vi.fn() }
 }))
@@ -37,11 +39,25 @@ beforeEach(async () => {
   })
   manager = await import('../src/main/update/update-manager')
   manager.startUpdateManager()
+  manager.setUpdateRestartPreparation(async () => {})
   await manager.checkForUpdates()
 })
 afterEach(() => manager.stopUpdateManager())
 
 describe('update target freshness', () => {
+  it('never quits when research persistence fails, and retries only after saving succeeds', async () => {
+    const stages: string[] = []
+    manager.setUpdateRestartPreparation(async () => { stages.push(manager.getUpdateStatus().installStage!); throw Error('研究更改尚未保存') })
+    await manager.downloadAvailableUpdate()
+    expect(stages).toEqual(['saving'])
+    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'error', availableVersion: '0.8.4', message: '研究更改尚未保存' })
+    expect(fake.updater.quitAndInstall).not.toHaveBeenCalled()
+    manager.setUpdateRestartPreparation(async () => {})
+    await manager.checkForUpdates(true)
+    await manager.installDownloadedUpdate()
+    expect(manager.getUpdateStatus()).toMatchObject({ phase: 'installing', installStage: 'restarting' })
+    expect(fake.updater.quitAndInstall).toHaveBeenCalledOnce()
+  })
   it('refreshes an available release in both background and manual checks', async () => {
     fake.latest = '0.8.5'
     await manager.checkForUpdates()

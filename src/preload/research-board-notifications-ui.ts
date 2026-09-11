@@ -218,12 +218,14 @@ export function mountResearchBoardNotifications(
       if (!compact || n.invitation?.status !== 'accepted') footer.append(status)
       footer.classList.add('ework-notice-actions')
       row.append(footer)
-      if (n.invitation?.status === 'accepted')
+      if (n.invitation?.status === 'accepted') {
         footer.append(
           boardButton(doc, '打开看板', () =>
             requestBoardPageAction(doc, 'open', n.boardId)
           )
         )
+        if (compact) footer.lastElementChild?.classList.add('ework-notice-primary')
+      }
     }
     return row
   }
@@ -371,6 +373,7 @@ export function mountResearchBoardNotifications(
           openPanel()
         })
       )
+      actions.lastElementChild?.classList.add('ework-notice-primary')
     }
     doc.body.append(bubble)
     anchor(bubble)

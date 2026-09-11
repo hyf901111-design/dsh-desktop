@@ -57,7 +57,7 @@ function replaceRequiredAny(contents, searches, replacement, file) {
 await mkdir(destinationDirectory, { recursive: true })
 await mkdir(path.join(destinationDirectory, 'fonts'), { recursive: true })
 await copyFile(path.join(projectRoot, 'build/fonts/NotoSansSC.woff2'), path.join(destinationDirectory, 'fonts/NotoSansSC.woff2'))
-for (const name of ['figma-home-mode.svg','figma-sidebar-chevron.svg','figma-sidebar-bell.svg','figma-people.svg','figma-self-avatar.png','figma-check.svg','figma-close.svg','figma-collaboration-plus.svg','figma-favorite.svg','figma-favorite-selected.svg','figma-glass-light-base.png','figma-glass-light-mesh.png','figma-glass-dark-base.png','figma-glass-dark-mesh.png','figma-glass-dark-overlay.png']) {
+for (const name of ['figma-home-headline-light.svg','figma-home-headline-dark.svg','figma-home-mode.svg','figma-sidebar-chevron.svg','figma-sidebar-bell.svg','figma-people.svg','figma-self-avatar.png','figma-check.svg','figma-close.svg','figma-collaboration-plus.svg','figma-favorite.svg','figma-favorite-selected.svg','figma-glass-light-base.png','figma-glass-light-mesh.png','figma-glass-dark-base.png','figma-glass-dark-mesh.png','figma-glass-dark-overlay.png']) {
   await copyFile(path.join(projectRoot, 'build/brand', name), path.join(destinationDirectory, name))
 }
 await copyFile(source, destination)

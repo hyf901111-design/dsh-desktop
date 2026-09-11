@@ -1,7 +1,7 @@
 import type { UpdateStatus } from '../shared/contracts'
 
 const KEY = 'ework.update.latest.v1'
-const phases = new Set(['available', 'downloading', 'downloaded', 'installing', 'error', 'up-to-date'])
+const phases = new Set(['available', 'downloading', 'downloaded', 'installing', 'updated', 'error', 'up-to-date'])
 const version = (value: unknown): value is string => typeof value === 'string' && value.length <= 96 && /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(value)
 
 /** Persist only the updater's small, plain-data status contract, never arbitrary DOM or HTML. */
@@ -16,6 +16,7 @@ export function normalizeUpdateNotification(value: unknown): UpdateStatus | unde
     manual: input.manual === true
   }
   if (typeof input.message === 'string') status.message = input.message.slice(0, 1200)
+  if (input.phase === 'installing' && ['preparing', 'saving', 'restarting'].includes(String(input.installStage))) status.installStage = input.installStage as UpdateStatus['installStage']
   for (const key of ['percent', 'transferredBytes', 'totalBytes', 'bytesPerSecond'] as const) {
     const amount = input[key]
     if (typeof amount === 'number' && Number.isFinite(amount) && amount >= 0) status[key] = key === 'percent' ? Math.min(100, amount) : Math.floor(amount)
@@ -35,7 +36,7 @@ export function saveUpdateNotification(storage: Pick<Storage, 'setItem'>, value:
   const status = normalizeUpdateNotification(value)
   if (!status) return
   // A record survives startup; a transfer task does not. Never persist progress or installation state.
-  const record: UpdateStatus = { currentVersion: status.currentVersion, availableVersion: status.availableVersion, phase: status.phase === 'up-to-date' ? 'up-to-date' : 'available', manual: false }
+  const record: UpdateStatus = { currentVersion: status.currentVersion, availableVersion: status.availableVersion, phase: status.phase === 'up-to-date' || status.phase === 'updated' ? 'up-to-date' : 'available', manual: false }
   try { storage.setItem(KEY, JSON.stringify(record)) } catch {}
 }
 

@@ -7,6 +7,7 @@ import settingsCss from './figma-settings.css?raw'
 import authCss from './figma-auth.css?raw'
 import authBackground from './figma-settings-assets/ancient-harbor.png?url&inline'
 import authClose from './figma-settings-assets/auth-close.svg?raw'
+import { createSettingsBackgroundController } from './settings-background'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   user?: Account | null
@@ -18,6 +19,7 @@ export function mountAccountUi(
   invoke: (action: string, input?: unknown) => Promise<Reply>,
   boards?: ResearchBoardsBridge
 ) {
+  const settingsBackground = createSettingsBackgroundController(document)
   installBoardUiStyles(document)
   const style = document.createElement('style')
   // Keep the settings shell below the shared portaled menus (z-index 1100).
@@ -28,7 +30,7 @@ export function mountAccountUi(
  .sherlock-field-heading .sherlock-field-error:empty{display:none}
  .sherlock-account-avatar svg{display:block;width:100%;height:100%}
  .sherlock-account-avatar[data-authenticated=true]{background:transparent url("${accountBackground}") center/cover no-repeat;color:#fff;font-weight:600;font-style:normal}
- .sherlock-auth-logo{display:block;width:88px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
+ .sherlock-auth-logo{display:block;width:88px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#080909}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
  .VOzbGW_panel[data-account-active] .VOzbGW_options,.VOzbGW_panel[data-account-active] .VOzbGW_header{display:none!important}
@@ -151,7 +153,14 @@ export function mountAccountUi(
       dialog.setAttribute('aria-label', '登录 EWork Odyssey')
       const content = document.createElement('div')
       content.className = 'VOzbGW_content'
-      dialog.style.setProperty('--sherlock-auth-background', `url("${authBackground}")`)
+      // The original Figma fill exceeds Chromium's custom-property token limit.
+      // Keep the image intact and let the image decoder load it directly.
+      const backdrop = document.createElement('img')
+      backdrop.className = 'sherlock-auth-backdrop'
+      backdrop.alt = ''
+      backdrop.setAttribute('aria-hidden', 'true')
+      backdrop.draggable = false
+      backdrop.src = authBackground
       const close = button('', () => dialog.close(), 'sherlock-auth-close')
       const closeIcon = new DOMParser().parseFromString(authClose, 'image/svg+xml').documentElement
       closeIcon.setAttribute('aria-hidden', 'true')
@@ -160,7 +169,7 @@ export function mountAccountUi(
       const frame = document.createElement('div')
       frame.className = 'sherlock-auth-frame'
       frame.append(close, content)
-      dialog.append(frame)
+      dialog.append(backdrop, frame)
       dialog.addEventListener('close', () => {
         dialog.remove()
         if (authDialog === dialog) authDialog = undefined
@@ -310,28 +319,6 @@ export function mountAccountUi(
       const avatar = trigger?.querySelector('.sherlock-account-avatar')?.cloneNode(true)
       if (avatar) card.append(avatar)
       card.append(name)
-      const accountId = user.id
-      if (boards) {
-        const row = document.createElement('div'), id = document.createElement('span')
-        row.className = 'sherlock-account-id-row'
-        id.textContent = '正在获取用户 ID…'
-        let publicId: string | undefined
-        const copy = button('复制 ID', () => {
-          if (!publicId || user?.id !== accountId) return
-          void document.defaultView!.navigator.clipboard.writeText(publicId).then(()=>{copy.textContent='已复制';copy.setAttribute('aria-label','已复制 ID');setTimeout(()=>{if(copy.isConnected){copy.textContent='复制 ID';copy.setAttribute('aria-label','复制 ID')}},2000)}).catch(()=>{copy.textContent='复制失败，请重试'})
-        })
-        copy.disabled = true
-        row.append(id, copy)
-        card.append(row)
-        void boards.getSnapshot().then(snapshot=>{
-          if(!card.isConnected || user?.id!==accountId) return
-          const identity=snapshot.account.user
-          if(identity?.userId!==accountId){id.textContent='用户 ID 暂时不可用';return}
-          publicId=identity.publicId
-          id.textContent='ID '+publicIdLabel(publicId)
-          copy.disabled=false
-        }).catch(()=>{if(card.isConnected)id.textContent='用户 ID 暂时不可用'})
-      }
       const group = document.createElement('section')
       group.className = 'sherlock-settings-group'
       const heading = document.createElement('h2')
@@ -484,15 +471,15 @@ export function mountAccountUi(
           submit.disabled = false
         })
     }
-    if (!user)
-      page.append(
-        button(
-          register ? '已有账户，去登录' : '没有账户？使用邀请码注册',
-          () => renderAccount(root, !register),
-          'sherlock-auth-switch'
-        )
-      )
-    else {
+    if (!user) {
+      const switchMode = button('', () => renderAccount(root, !register), 'sherlock-auth-switch')
+      const prompt = document.createElement('span')
+      prompt.textContent = register ? '已有账户？' : '没有账户？'
+      const action = document.createElement('strong')
+      action.textContent = register ? '去登录' : '使用邀请码注册'
+      switchMode.append(prompt, action)
+      page.append(switchMode)
+    } else {
       const usage = document.createElement('div')
       usage.className = 'sherlock-account-card'
       usage.textContent = '正在加载最近 30 天用量…'
@@ -699,8 +686,9 @@ export function mountAccountUi(
   )
   const openFromBoards = () => open(true)
   document.defaultView?.addEventListener('sherlock:account-open', openFromBoards)
-  const observer = new MutationObserver(reconcile)
+  const observer = new MutationObserver(() => { settingsBackground.reconcile(); reconcile() })
   observer.observe(document.documentElement, { childList: true, subtree: true })
+  settingsBackground.reconcile()
   reconcile()
   void invoke('me')
     .then((reply) => {
@@ -711,6 +699,7 @@ export function mountAccountUi(
   return () => {
     authDialog?.close()
     observer.disconnect()
+    settingsBackground.dispose()
     closeMenu()
     style.remove()
     document.defaultView?.removeEventListener('sherlock:account-open', openFromBoards)
