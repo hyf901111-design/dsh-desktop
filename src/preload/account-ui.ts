@@ -4,6 +4,10 @@ import sherlockLogo from '../../build/sherlock-logo.svg?raw'
 import accountAvatar from '../../build/sherlock-account-avatar.svg?raw'
 import accountBackground from '../../build/sherlock-account-background.png?url&inline'
 import settingsCss from './figma-settings.css?raw'
+import themeSystem from './figma-settings-assets/theme-system.svg?raw'
+import themeLight from './figma-settings-assets/theme-light.svg?raw'
+import themeDark from './figma-settings-assets/theme-dark.svg?raw'
+import modeStandard from './figma-settings-assets/mode-standard.svg?raw'
 import authCss from './figma-auth.css?raw'
 import authBackground from './figma-settings-assets/ancient-harbor.png?url&inline'
 import authClose from './figma-settings-assets/auth-close.svg?raw'
@@ -66,7 +70,7 @@ export function mountAccountUi(
  .sherlock-account-card{border:1px solid var(--dsw-alias-border-l2,#555);border-radius:14px;padding:20px;margin-top:20px}
 
  `
-  style.textContent += settingsCss + authCss
+  style.textContent += `:root{--odyssey-theme-system:url("${"data:image/svg+xml," + encodeURIComponent(themeSystem)}");--odyssey-theme-light:url("${"data:image/svg+xml," + encodeURIComponent(themeLight)}");--odyssey-theme-dark:url("${"data:image/svg+xml," + encodeURIComponent(themeDark)}");--odyssey-mode-standard:url("${"data:image/svg+xml," + encodeURIComponent(modeStandard)}")}` + settingsCss + authCss
   document.head.append(style)
   let user: Account | null = null,
     pendingAccount = false,

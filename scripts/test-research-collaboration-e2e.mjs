@@ -71,7 +71,7 @@ async function sources() {
   const inventory = JSON.parse(await readFile(join(root, 'output/research-boards-source-inputs-20260909/verified-inputs.json'), 'utf8'))
   const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'))
   // Include every locked package transformed by the production postinstall path.
-  for (const packageName of ['@deepseek-ai/dsh-client-ui-workspace', '@deepseek-ai/dsh-client-ui-layout', '@deepseek-ai/dsh-client-ui-settings-general', '@deepseek-ai/dsh-client-ui-settings-models', '@deepseek-ai/dsh-client-ui-trajectory']) {
+  for (const packageName of ['@deepseek-ai/dsh-client-ui-workspace', '@deepseek-ai/dsh-client-ui-layout', '@deepseek-ai/dsh-client-ui-settings-general', '@deepseek-ai/dsh-client-ui-settings-models', '@deepseek-ai/dsh-client-ui-trajectory', '@deepseek-ai/dsh-client-ui-theme', '@deepseek-ai/dsh-client-ui-agent-preset']) {
     if (inventory.some(p => p.name === packageName)) continue
     const metadata = lock.packages['node_modules/' + packageName]
     const response = await fetch(metadata.resolved)
@@ -80,7 +80,7 @@ async function sources() {
     await writeFile(archive, Buffer.from(await response.arrayBuffer()))
     inventory.push({name:packageName,version:metadata.version,archive,integrity:metadata.integrity,resolved:metadata.resolved})
   }
-  const names = ['dsh-client-ui-conversation', 'dsh-client-ui-sidebar', 'dsh-client-ui-workspace', 'dsh-client-ui-layout', 'dsh-client-ui-settings-general', 'dsh-client-ui-settings-models', 'dsh-client-ui-trajectory', 'dsh-client-ui-primitives', 'dsh-web-frontend']
+  const names = ['dsh-client-ui-conversation', 'dsh-client-ui-sidebar', 'dsh-client-ui-workspace', 'dsh-client-ui-layout', 'dsh-client-ui-settings-general', 'dsh-client-ui-settings-models', 'dsh-client-ui-trajectory', 'dsh-client-ui-theme', 'dsh-client-ui-agent-preset', 'dsh-client-ui-primitives', 'dsh-web-frontend']
   assert.deepEqual(inventory.map(p => p.name.split('/')[1]).sort(), [...names].sort())
   for (const p of inventory) {
     assert.equal(p.version, '0.1.0-rc.7')
@@ -98,7 +98,7 @@ async function sources() {
       run(['tar', '-xzf', p.archive, '--strip-components=1', '-C', destination])
       // Trajectory is transformed only by the production postinstall module;
       // it has no patch-package baseline to apply before that transform.
-      if (p.name === '@deepseek-ai/dsh-client-ui-trajectory') continue
+      if (['@deepseek-ai/dsh-client-ui-trajectory', '@deepseek-ai/dsh-client-ui-theme'].includes(p.name)) continue
       const patchName = p.name.replace('/', '+') + '+0.1.0-rc.7.patch'
       const patchFile = join(runDir, baseline + '-' + patchName)
       const patch = baseline === 'main-conversation' && p.name.endsWith('conversation')

@@ -86,3 +86,18 @@ export function patchFigmaSettingsModels(source) {
   source = exact(source, 'className: `${ModelsSection_module_css_default["credentialDot"]} ${ModelsSection_module_css_default["credentialDotMissing"]}`,', 'className: "sherlock-settings-credential sherlock-settings-credential-missing", children: t("credentialMissing"),')
   return source
 }
+
+// Figma 177:696 / 177:337: cards change the presentation, not persisted theme state.
+export function patchFigmaSettingsAppearance(source) {
+  source = exact(source, 'children: CUBES.map(({ id, labelKey, Icon }) =>', 'children: [...CUBES].sort((a, b) => ["system", "light", "dark"].indexOf(a.id) - ["system", "light", "dark"].indexOf(b.id)).map(({ id, labelKey, Icon }) =>');
+  source = exact(source, '"aria-pressed": preference === id,', '"aria-pressed": preference === id,\n\t\t\t\t\t\t"data-theme-preference": id,');
+  source = exact(source, 'children: [(0, react_jsx_runtime.jsx)(Icon, {}), t(labelKey)]', 'children: [(0, react_jsx_runtime.jsx)("span", { className: "sherlock-theme-preview", "aria-hidden": true }), (0, react_jsx_runtime.jsx)("span", { className: "sherlock-theme-label", children: t(labelKey) })]');
+  source = exact(source, '"appearance.title": "外观"', '"appearance.title": "主题"');
+  source = exact(source, '"appearance.light": "浅色"', '"appearance.light": "雅典娜白"');
+  return exact(source, '"appearance.dark": "深色"', '"appearance.dark": "阿伽门农黑"');
+}
+
+export function patchFigmaSettingsPreset(source) {
+  source = exact(source, 'children: [label, (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: chevronClassName })]', 'children: [(0, react_jsx_runtime.jsx)(ModeIcon, { id: selectedId || "standard", size: 16 }), (0, react_jsx_runtime.jsx)("span", { children: label }), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: chevronClassName })]');
+  return exact(source, 'label: option.trust === "user" ? `${name} · ${t("userTrust")}` : name', 'label: (0, react_jsx_runtime.jsxs)("span", { className: "sherlock-settings-preset-option", children: [(0, react_jsx_runtime.jsx)(ModeIcon, { id: option.id, size: 16 }), option.trust === "user" ? `${name} · ${t("userTrust")}` : name] })');
+}

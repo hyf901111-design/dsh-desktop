@@ -1,5 +1,5 @@
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
-import { patchFigmaSettingsGeneral, patchFigmaSettingsModels } from './lib/figma-settings-client.mjs'
+import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
 import { patchFigmaInlineReferences } from './lib/figma-inline-references-client.mjs'
 import { patchFigmaTrajectory } from './lib/figma-trajectory-client.mjs'
@@ -113,7 +113,9 @@ writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')
 
 for (const [name, patch] of [
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
-  ['dsh-client-ui-settings-models', patchFigmaSettingsModels]
+  ['dsh-client-ui-settings-models', patchFigmaSettingsModels],
+  ['dsh-client-ui-theme', patchFigmaSettingsAppearance],
+  ['dsh-client-ui-agent-preset', patchFigmaSettingsPreset]
 ]) {
   const clientPath = join(process.cwd(), 'node_modules', '@deepseek-ai', name, 'lib/client.js')
   writeFileSync(clientPath, patch(readFileSync(clientPath, 'utf8')))
