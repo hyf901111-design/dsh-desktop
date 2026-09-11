@@ -9,34 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "最新主题卡片与模式图标还原",
+        "featureName": "画布拖动吸附与四角缩放还原",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "54881b7d4b06a7a8b8286071201cffeb158bacf6",
-        "tipCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
+        "baseCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
+        "tipCommit": "578904b1f24e71284b11f82225cd8af4a05fc343",
         "commits": [
           {
-            "commit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
+            "commit": "578904b1f24e71284b11f82225cd8af4a05fc343",
             "parents": [
-              "54881b7d4b06a7a8b8286071201cffeb158bacf6"
+              "b2aec397d49e5f7ffb464aa852ef4f3270acd019"
             ],
-            "subject": "按最新设计还原主题预览卡片并统一模式图标与设置控件"
-          },
-          {
-            "commit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
-            "parents": [
-              "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4"
-            ],
-            "subject": "补齐主题和模式插件的干净源码集成验证"
+            "subject": "按设计稿补齐画布吸附辅助线和四角缩放交互"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "scripts/lib/figma-settings-client.d.mts"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-settings-client.mjs"
+            "status": "A",
+            "path": "scripts/lib/figma-canvas-gestures.mjs"
           },
           {
             "status": "M",
@@ -44,39 +33,19 @@
           },
           {
             "status": "M",
-            "path": "scripts/test-research-collaboration-e2e.mjs"
-          },
-          {
-            "status": "M",
             "path": "src/preload/account-ui.ts"
           },
           {
-            "status": "M",
-            "path": "src/preload/figma-home.css"
+            "status": "A",
+            "path": "src/preload/figma-canvas-gestures.css"
           },
           {
             "status": "A",
-            "path": "src/preload/figma-settings-assets/mode-standard.svg"
+            "path": "test/figma-canvas-gestures-ui.test.ts"
           },
           {
             "status": "A",
-            "path": "src/preload/figma-settings-assets/theme-dark.svg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/figma-settings-assets/theme-light.svg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/figma-settings-assets/theme-system.svg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-settings.css"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-theme-cards.test.ts"
+            "path": "test/figma-canvas-snap.test.js"
           }
         ],
         "checks": [
@@ -87,9 +56,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "/tmp/full-audit-types.log",
-            "verifiedCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
-            "completedAt": "2026-09-11T12:38:37.906729+00:00",
+            "summary": "/tmp/full-audit-gestures-types.log",
+            "verifiedCommit": "578904b1f24e71284b11f82225cd8af4a05fc343",
+            "completedAt": "2026-09-11T13:00:35.695579+00:00",
             "timeoutMs": 180000
           },
           {
@@ -97,15 +66,13 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-theme-cards.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/figma-settings-dismiss.test.ts",
-              "test/standard-agent-preset.test.ts"
+              "test/figma-canvas-gestures-ui.test.ts",
+              "test/figma-canvas-snap.test.js"
             ],
             "outcome": "passed",
-            "summary": "17 focused checks passed; /tmp/full-audit-theme-tests.log and /tmp/full-audit-tests.log",
-            "verifiedCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
-            "completedAt": "2026-09-11T12:38:37.906729+00:00",
+            "summary": "9 focused checks passed",
+            "verifiedCommit": "578904b1f24e71284b11f82225cd8af4a05fc343",
+            "completedAt": "2026-09-11T13:00:35.695579+00:00",
             "timeoutMs": 180000
           },
           {
@@ -116,9 +83,9 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "/tmp/full-audit-sources.log",
-            "verifiedCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
-            "completedAt": "2026-09-11T12:41:51.067519+00:00",
+            "summary": "/tmp/full-audit-gestures-sources.log",
+            "verifiedCommit": "578904b1f24e71284b11f82225cd8af4a05fc343",
+            "completedAt": "2026-09-11T13:00:35.695579+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -127,87 +94,14 @@
           "summary": "Native before-state compared with live Figma; updated native verification after integration build."
         },
         "acceptanceCriteria": [
-          "三张主题预览使用原始Figma矢量并保存真实主题偏好",
-          "标准/构建图标随实际模式变化",
-          "设置选择器与导航文字按浅深色稿还原"
+          "屏幕阈值6px进入10px释放，Alt关闭，组内位置不变",
+          "四角24px热区10px圆形手柄，Esc恢复操作前状态",
+          "单次手势只记录一次撤销；权限和占用保护"
         ],
         "risks": [
           "Local build only; no release or push"
         ],
-        "generatedAt": "2026-09-11T12:38:37.906729+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b0b646ac869f79c2b24d2f3253eb61580017f7af",
-        "verificationCommit": "b0b646ac869f79c2b24d2f3253eb61580017f7af",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "b0b646ac869f79c2b24d2f3253eb61580017f7af",
-            "completedAt": "2026-09-11T12:42:35.854Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b0b646ac869f79c2b24d2f3253eb61580017f7af",
-            "completedAt": "2026-09-11T12:42:35.854Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "b0b646ac869f79c2b24d2f3253eb61580017f7af",
-            "completedAt": "2026-09-11T12:42:35.854Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "b0b646ac869f79c2b24d2f3253eb61580017f7af",
-            "completedAt": "2026-09-11T12:42:35.854Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "b0b646ac869f79c2b24d2f3253eb61580017f7af",
-            "completedAt": "2026-09-11T12:42:35.854Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T12:42:35.854Z"
+        "generatedAt": "2026-09-11T13:00:35.695579+00:00"
       }
     }
   ],
