@@ -39,7 +39,7 @@ it('follows actual clamped width without taking over native drag, and cleans can
   await win.happyDOM.close()
 })
 
-it('follows the right panel left edge, with no invented width label, and clears on removal', async () => {
+it('centers feedback in the 10px parallel-panel gutter, without a width label, and clears on removal', async () => {
   const win = new Window()
   const doc = win.document
   doc.body.innerHTML = '<aside class="t8lSSG_panel"><div class="t8lSSG_panelResize"></div></aside>'
@@ -48,7 +48,7 @@ it('follows the right panel left edge, with no invented width label, and clears 
   const handle = doc.querySelector('.t8lSSG_panelResize')!
   handle.dispatchEvent(new win.PointerEvent('pointerover', { bubbles:true, clientY:436 }))
   const feedback = doc.querySelector<HTMLElement>('[data-odyssey-resize-feedback]')!
-  expect(feedback.style.left).toBe('956px')
+  expect(feedback.style.left).toBe('951px')
   expect(feedback.style.height).toBe('852px')
   expect(doc.querySelector('[data-odyssey-resize-width]')).toBe(null)
   handle.remove()
