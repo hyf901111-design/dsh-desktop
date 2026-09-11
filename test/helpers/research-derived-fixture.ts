@@ -31,7 +31,11 @@ export async function derivedFixture(kind = 'generated-summary', count = 1, over
   workspace.setCanvasSize({ width: 1200, height: 800, availableWidth:728 })
   const host = browser.document.createElement('div'); browser.document.body.append(host)
   const root = createRoot(host)
-  const statuses:string[]=[];
+  const statuses:string[]=[],cancellations:any[]=[];
+  workspace.setGenerationCancelSink((request:any)=>{cancellations.push(request);return Promise.resolve({ok:true})});
+  const upgradeStart=source.indexOf('onExpandGeneration:')+'onExpandGeneration:'.length;let upgradeEnd=source.indexOf('{',upgradeStart),depth=1;for(upgradeEnd++;depth;upgradeEnd++){if(source[upgradeEnd]==='{')depth++;else if(source[upgradeEnd]==='}')depth--}
+  const upgrade=(node:any)=>new Function('node','workspace','return '+source.slice(upgradeStart,upgradeEnd))(node,workspace);
+
   const begin=source.indexOf('const onResearchReferenceClickCapture ='), body=source.indexOf('(event) => {',begin), end=source.indexOf('}, [research, researchWorkspace]);',body)+1;
   const locate=new Function('research','researchWorkspace','setResearchReferenceStatus','return '+source.slice(body,end))(true,workspace,(message:string)=>statuses.push(message));
   function Harness() {
@@ -43,12 +47,12 @@ export async function derivedFixture(kind = 'generated-summary', count = 1, over
       onMindMapNodeCommit:(line:number,label:string)=>workspace.updateMindMapNodeLabel(node.id,line,label),
       onContentEdit: () => setEditing(true), onContentCancel: () => setEditing(false),
       onContentCommit: (text: string) => { workspace.updateArtifactContent(node.id, text); setEditing(false) },
-      onExpandGeneration: () => workspace.updateNodeGeometry(node.id, { width: 656, height: 456, sizeMode: 'auto' }),
+      onExpandGeneration: upgrade(node),onCancelGeneration:()=>workspace.cancelGeneration(node.id),
       onAutoHeight: (_node: any, height: number) => workspace.updateNodeGeometry(node.id, { height, sizeMode: 'auto' })
     }))
   }
   await act(async () => root.render(React.createElement(Harness)))
-  return { browser, host, workspace, statuses, client, measure() { for (const callback of [...resizeCallbacks]) callback() }, setReadOnly() { shared = true; workspace.setCollaborationAccess(false) },
+  return { browser, host, workspace, statuses, cancellations, client, measure() { for (const callback of [...resizeCallbacks]) callback() }, setReadOnly() { shared = true; workspace.setCollaborationAccess(false) },
     async cleanup() { await act(async () => root.unmount()); for (const [key, value] of saved) if (value) Object.defineProperty(globalThis, key, value); else delete (globalThis as any)[key]; await browser.happyDOM.close() } }
 }
 

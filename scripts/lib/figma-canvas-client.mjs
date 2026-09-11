@@ -145,8 +145,18 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('text: spec.content.replace(', 'text: preserveHeading ? spec.content : spec.content.replace(');
   source=block(source,source.includes('function ResearchDerivedSummary(')?'function ResearchDerivedSummary(':'function ResearchMindMap({', 'function researchGenerationPresentation(',derivedSource);
   const sourceMeta = 'node.kind === "generated-container" ? null : (0, react_jsx_runtime.jsxs)("span", {';
-  const linkedMeta = 'node.kind === "generated-container" ? null : ["generated-summary","generated-mind-map"].includes(node.kind)&&node.generationStatus==="completed"?(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node}):(0, react_jsx_runtime.jsxs)("span", {';
+  const linkedMeta = 'node.kind === "generated-container" ? null : ["generated-summary","generated-mind-map"].includes(node.kind)?(node.generationStatus==="completed"?(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node}):null):(0, react_jsx_runtime.jsxs)("span", {';
+  source=source.replace('node.kind === "generated-container" ? null : ["generated-summary","generated-mind-map"].includes(node.kind)&&node.generationStatus==="completed"?(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node}):(0, react_jsx_runtime.jsxs)("span", {',linkedMeta);
   if(!source.includes(linkedMeta))source=exact(source,sourceMeta,linkedMeta);
+  const artifactStart=source.indexOf('function ResearchCanvasArtifactCard('),artifactEnd=source.indexOf('function nextResearchCanvasViewport(',artifactStart);
+  if(artifactStart<0||artifactEnd<artifactStart)throw Error('Figma derived title anchor missing');
+  let artifact=source.slice(artifactStart,artifactEnd);
+  if(!artifact.includes('"data-research-derived":')){
+    artifact=exact(artifact,'"data-research-generation-state": node.generationStatus,','"data-research-generation-state": node.generationStatus, "data-research-derived":researchIsDerivedNode(node)?node.kind:undefined,');
+    artifact=exact(artifact,'titleText: node.title,','titleText: researchDerivedTitle(node),');
+    artifact=exact(artifact,'}) : node.title,','}) : researchIsDerivedNode(node)?(0,react_jsx_runtime.jsx)(ResearchDerivedHeading,{node}):node.title,');
+  }
+  source=source.slice(0,artifactStart)+artifact+source.slice(artifactEnd);
   const sourceTitles = '(node.generationSources ?? []).map((source) => source.title).join("、")';
   const linkedTitles = '(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node,embedded:true})';
   if(!source.includes(linkedTitles))source=exact(source,sourceTitles,linkedTitles);
@@ -373,10 +383,31 @@ function ResearchMindMapConnections({rootRef,revision}) {
   return (0,react_jsx_runtime.jsx)('svg',{'data-research-mind-map-edges':'','aria-hidden':true,width:geometry.width,height:geometry.height,viewBox:'0 0 '+geometry.width+' '+geometry.height,children:(0,react_jsx_runtime.jsx)('path',{d:geometry.path,fill:'none',stroke:'currentColor',strokeWidth:1})});
 }
 
+
+function researchIsDerivedNode(node) {
+  return node?.kind==='generated-summary'||node?.kind==='generated-mind-map'||node?.kind==='generated-container'&&node.creationMode==='selection';
+}
+function researchDerivedTitle(node) {
+  if(!researchIsDerivedNode(node))return node.title;
+  if(node.kind==='generated-summary'&&node.generationStatus==='running')return '正在提炼关键结论';
+  if(node.generationStatus!=='completed'||!['思维导图','总结提炼'].includes(node.title))return node.title;
+  const heading=node.excerpt?.match(/^\s*#\s+([^\n]+)(?:\n|$)/)?.[1]?.trim();
+  if(!heading)return node.title;
+  const suffix=node.kind==='generated-mind-map'?'思维导图':'关键结论';
+  return heading.includes(suffix)?heading:heading+' · '+suffix;
+}
+function ResearchDerivedHeading({node}) {
+  const status=node.generationStatus==='completed'?(node.kind==='generated-mind-map'?(RESEARCH_MIND_MAP_DETAIL_OPTIONS.find(option=>option.value===researchMindMapDetail(node.generationDetail))?.label??'常规'):'已完成'):node.generationStatus==='queued'?'等待开始':node.generationStatus==='running'?'生成中':node.generationStatus==='failed'?'生成失败':node.generationStatus==='cancelled'?'已停止':node.generationStatus==='interrupted'?'已中断':'';
+  return (0,react_jsx_runtime.jsxs)('span',{'data-research-derived-title':'',children:[(0,react_jsx_runtime.jsx)('span',{children:researchDerivedTitle(node)}),status?(0,react_jsx_runtime.jsx)('span',{'data-research-derived-status':'',children:status}):null]});
+}
+
 const derivedSource = `function ResearchDerivedSummary({node,onUpgradeSize}) {
   const spec={version:1,type:'markdown',title:node.title,content:node.excerpt};
   return (0,react_jsx_runtime.jsx)('div',{'data-research-derived-summary':'',className:'odyssey-derived-summary',children:(0,react_jsx_runtime.jsx)(ResearchContainerContent,{node:{...node,height:Math.max(100,node.height-24),containerSpec:spec},preserveHeading:['pasted-text','assistant-result'].includes(node.kind),onUpgradeSize})});
 }
+${researchIsDerivedNode.toString()}
+${researchDerivedTitle.toString()}
+${ResearchDerivedHeading.toString()}
 ${ResearchDerivedSources.toString()}
 ${ResearchMindMapConnections.toString()}
 function researchMindMapFitTree(tree,budget,labelLimit,rootLimit=labelLimit) {
@@ -408,6 +439,17 @@ const generationSource = `function ResearchGenerationProcess({node,onCancel,onEx
   (0,react.useEffect)(()=>{let timer;const tick=()=>{setClock(Date.now());timer=setTimeout(tick,1000);};timer=setTimeout(tick,1000);return()=>clearTimeout(timer);},[]);
   const elapsed=Math.max(0,Math.floor((clock-started.current)/1000));
   const rows=researchGenerationLog(node).slice(-3);
+  if(researchIsDerivedNode(node)){
+    const kind=node.kind==='generated-summary'?'summary':node.kind==='generated-mind-map'?'mind-map':'create',count=new Set(node.sourceNodeIds??[]).size;
+    const records=rows.filter(row=>row.id!=='preparing'),fullStep=records.at(-1)?.text||presentation.title,maxStep=Math.max(16,Math.floor(((node.width??656)-68)/13)*2),step=expanded||fullStep.length<=maxStep?fullStep:fullStep.slice(0,maxStep-1)+'…';
+    const toggle=event=>{event.stopPropagation();const card=event.currentTarget.closest('[data-research-compact-chrome]');if(!expanded&&!card?.open){card?.querySelector('[data-research-container-expand]')?.click();card?.addEventListener('close',()=>setExpanded(false),{once:true});}setExpanded(!expanded);};
+    const source=(0,react_jsx_runtime.jsx)('span',{'data-research-generation-sources':'',children:kind==='summary'?'基于所选 '+count+' 个组件':'来源：'+count+' 个组件'});
+    return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess odyssey-derived-process','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'data-process-compact':!expanded&&node.height<=220,'data-derived-kind':kind,'aria-busy':true,children:[
+      (0,react_jsx_runtime.jsxs)('button',{type:'button',className:'odyssey-generation-step','aria-label':expanded?'收起生成过程':'查看生成过程','aria-expanded':expanded,onPointerDown:event=>event.stopPropagation(),onClick:toggle,children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:step})]}),
+      kind==='summary'?source:null,
+      expanded?(0,react_jsx_runtime.jsxs)('div',{className:'odyssey-generation-records',children:[...records.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id)),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-elapsed':'',children:elapsed+' 秒'})]}):kind==='create'?(0,react_jsx_runtime.jsx)('div',{'data-research-derived-skeleton':'create',className:'odyssey-derived-skeleton','aria-hidden':true,children:Array.from({length:9},(_,index)=>(0,react_jsx_runtime.jsx)('i',{},index))}):null,
+      (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationFooter',children:[kind==='summary'?(0,react_jsx_runtime.jsx)('span',{children:'保留来源组件'}):source,typeof onCancel==='function'&&node.generationTaskId?(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-cancel':'','aria-label':'停止生成',onPointerDown:event=>event.stopPropagation(),onClick:event=>{event.preventDefault();event.stopPropagation();onCancel(node);},children:'停止'}):null]})]});
+  }
   return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'aria-busy':true,children:[
     (0,react_jsx_runtime.jsxs)('div',{className:'odyssey-generation-step',children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:researchPublicProgress(node.title||'当前组件')+' · '+(rows.at(-1)?.text||presentation.title)})]}),
     expanded?(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-records',children:rows.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id))}):(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-skeleton','aria-hidden':true,children:[0,1,2].map(i=>(0,react_jsx_runtime.jsx)('i',{},i))}),
@@ -523,6 +565,30 @@ body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_mindMapNode[data
 [data-research-compact-chrome] .rScV5Q_mindMap .odyssey-component-summary-note{grid-column:1 / -1;padding:0;line-height:18px}
 [data-research-compact-chrome][open] .rScV5Q_mindMap{overflow:auto;align-content:start}
 [data-research-compact-chrome]:not([open]):has(.rScV5Q_mindMap,.odyssey-derived-summary)>.rScV5Q_previewBody{overflow:visible!important}
+[data-research-compact-chrome][data-research-derived]{border-width:0!important}
+[data-research-compact-chrome][data-research-derived]:not([data-selected=true]){outline:1px solid var(--odyssey-card-border)!important;outline-offset:-1px}
+[data-research-compact-chrome][data-research-derived]>.rScV5Q_nodeTitle{height:45px;min-height:45px;flex-basis:45px;padding:22px 22px 0!important}
+[data-research-compact-chrome][data-research-derived]>.rScV5Q_previewBody{height:calc(100% - 45px)}
+[data-research-compact-chrome][data-research-derived] .rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important;gap:6px}
+[data-research-derived-title]{display:flex;align-items:center;gap:8px;width:100%;min-width:0;font:500 15px/23px DINPro,'Noto Sans SC',sans-serif}
+[data-research-derived-title]>:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-research-derived-title]>[data-research-derived-status]{flex:none;color:var(--odyssey-card-muted);font:400 12px/20px DINPro,'Noto Sans SC',sans-serif}
+[data-research-derived] .odyssey-derived-sources{padding:0 22px 22px!important}
+[data-research-derived] .rScV5Q_mindMap{padding-left:22px;padding-right:22px}
+[data-research-derived] .odyssey-derived-summary .rScV5Q_containerMarkdown{padding-left:22px;padding-right:22px}
+[data-research-compact-chrome][data-research-derived] .odyssey-derived-process{padding:18px 22px 22px!important;gap:18px;height:100%;min-height:0}
+.odyssey-derived-process>.odyssey-generation-step{border:0;padding:0;background:transparent;text-align:left;color:inherit;cursor:pointer;font:13px/21px DINPro,'Noto Sans SC',sans-serif;gap:8px;flex:none}
+.odyssey-derived-process>.odyssey-generation-step:focus-visible{outline:1px solid var(--odyssey-select);outline-offset:4px;border-radius:4px}
+.odyssey-derived-process>[data-research-generation-sources]{flex:none;color:var(--odyssey-card-muted);font:12px/20px DINPro,'Noto Sans SC',sans-serif}
+[data-research-derived] .odyssey-derived-process>.rScV5Q_generationFooter{justify-content:space-between;margin-top:auto;padding-top:18px;border-top:1px solid var(--odyssey-card-border);color:var(--odyssey-card-muted)}
+.odyssey-derived-process>.rScV5Q_generationFooter button{padding:4px 12px;background:#f4f5f7;color:var(--odyssey-card-text);font:12px/20px DINPro,'Noto Sans SC',sans-serif}
+body[data-ds-dark-theme] .odyssey-derived-process>.rScV5Q_generationFooter button{background:#343538}
+.odyssey-derived-skeleton{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:8px 12px;flex:1;align-content:center;min-height:30px}
+.odyssey-derived-skeleton>i{display:block;height:12px;border-radius:4px;background:#eff0f2;animation:odyssey-skeleton 1.6s ease-in-out infinite}
+body[data-ds-dark-theme] .odyssey-derived-skeleton>i{background:#36373b}
+[data-research-derived] .odyssey-derived-process .odyssey-generation-records{overflow:visible;min-height:0;flex:1}
+[data-research-compact-chrome][data-research-derived] .odyssey-derived-process[data-process-compact=true]{gap:8px}
+[data-research-derived] .odyssey-derived-process[data-process-compact=true]>.rScV5Q_generationFooter{padding-top:12px}
 .rScV5Q_selectionActions{height:36px!important;padding:4px 6px!important;gap:2px;border-radius:11px!important;background:rgba(255,255,255,.94)!important;border:1px solid #00000014!important;backdrop-filter:blur(12px)!important;box-shadow:0 3px 12px #00000014!important}
 .rScV5Q_selectionActions button{height:28px;padding:0 6px;gap:5px;border-radius:7px;font:12px/18px 'Noto Sans SC',sans-serif}
 .rScV5Q_selectionActions button svg{width:14px;height:14px;flex:none}
@@ -550,6 +616,7 @@ body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 .rScV5Q_generationFooter [data-research-generation-elapsed]{color:var(--odyssey-card-muted);margin-right:auto}
 .rScV5Q_generationFooter button{height:28px;padding:0 8px;font:12px/20px 'Noto Sans SC',sans-serif;border:0;border-radius:6px;background:transparent;color:var(--odyssey-card-text)}
 [data-research-generation-process][data-process-expanded=true] .odyssey-generation-records{font-size:11px;line-height:17px;gap:4px;padding:6px 10px}
+[data-research-derived] [data-research-generation-process][data-process-expanded=true] .odyssey-generation-records{font-size:12px;line-height:20px;gap:8px;padding:10px 12px}
 [data-research-compact-chrome] .rScV5Q_generationFailure{min-height:0;padding:8px 18px 18px;align-items:flex-start;justify-content:flex-start;text-align:left;gap:12px;font:13px/21px 'Noto Sans SC',sans-serif}
 .rScV5Q_generationFailure>strong{font-size:16px;font-weight:500}.rScV5Q_generationFailure>span{color:var(--odyssey-card-muted)}.rScV5Q_generationFailure details{font-size:12px;line-height:20px}.rScV5Q_generationFailure details p{margin:8px 0}.rScV5Q_generationFailure button{margin-left:auto}
 @keyframes odyssey-ring{to{transform:rotate(360deg)}}@keyframes odyssey-skeleton{50%{opacity:.45}}
