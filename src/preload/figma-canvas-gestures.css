@@ -1,0 +1,24 @@
+/* Figma 59: four 24px hit targets, only the hovered 10px circle is visible. */
+[data-research-canvas] [data-research-node-id] > .rScV5Q_resizeHandle {
+  width:24px!important;height:24px!important;padding:0!important;border:0!important;
+  background:transparent!important;border-radius:0!important;opacity:1!important;
+  transform:scale(calc(1 / var(--research-canvas-scale,1)))!important;
+  transition:none!important;box-shadow:none!important;
+}
+[data-research-canvas] [data-research-node-id] > .rScV5Q_resizeHandle[data-research-resize-handle=nw]{left:-12px!important;top:-12px!important;right:auto!important;bottom:auto!important}
+[data-research-canvas] [data-research-node-id] > .rScV5Q_resizeHandle[data-research-resize-handle=ne]{right:-12px!important;top:-12px!important;left:auto!important;bottom:auto!important}
+[data-research-canvas] [data-research-node-id] > .rScV5Q_resizeHandle[data-research-resize-handle=sw]{left:-12px!important;bottom:-12px!important;right:auto!important;top:auto!important}
+[data-research-canvas] [data-research-node-id] > .rScV5Q_resizeHandle[data-research-resize-handle=se]{right:-12px!important;bottom:-12px!important;left:auto!important;top:auto!important}
+[data-research-canvas] .rScV5Q_resizeHandle > svg{display:none!important}
+[data-research-canvas] .rScV5Q_resizeHandle::after{content:'';position:absolute;inset:7px;box-sizing:border-box;border-radius:50%;border:1px solid #1b77ff;background:var(--odyssey-card,#fff);opacity:0}
+[data-research-canvas] .rScV5Q_resizeHandle:is(:hover,:focus-visible)::after{opacity:1}
+[data-research-canvas][data-research-operation] .rScV5Q_resizeHandle::after{opacity:0}
+[data-research-resize-corner=nw] [data-node-resizing] > [data-research-resize-handle=nw]::after,
+[data-research-resize-corner=ne] [data-node-resizing] > [data-research-resize-handle=ne]::after,
+[data-research-resize-corner=sw] [data-node-resizing] > [data-research-resize-handle=sw]::after,
+[data-research-resize-corner=se] [data-node-resizing] > [data-research-resize-handle=se]::after{opacity:1!important;background:#1b77ff}
+[data-research-canvas][data-shared-readonly=true] .rScV5Q_resizeHandle{display:none!important}
+[data-research-canvas] [data-research-geometry-blocked] > .rScV5Q_resizeHandle{display:none!important}
+[data-research-snap-guides]{position:absolute;inset:0;z-index:25;pointer-events:none;overflow:hidden}
+[data-research-snap-guides]>i{position:absolute;background:#76a4ff}
+[data-research-snap-guides]>span{position:absolute;border-radius:4px;padding:3px 6px;background:var(--dsw-alias-bg-layer-3,#3e3f43);color:var(--dsw-alias-label-primary,#e7e7e9);font:11px/17px 'EWork DIN Pro','Noto Sans SC',sans-serif;white-space:nowrap}

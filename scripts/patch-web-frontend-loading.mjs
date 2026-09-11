@@ -3,6 +3,7 @@ import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettings
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
 import { patchFigmaInlineReferences } from './lib/figma-inline-references-client.mjs'
 import { patchFigmaTrajectory } from './lib/figma-trajectory-client.mjs'
+import { patchFigmaCanvasGestures } from './lib/figma-canvas-gestures.mjs'
 import { installResearchBoardClientPatches } from './lib/patch-research-board-client.mjs'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -103,7 +104,7 @@ patchStyles(asset('.css'))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(conversationPath, patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8'))))
+writeFileSync(conversationPath, patchFigmaCanvasGestures(patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8')))))
 
 const trajectoryPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-trajectory/lib/client.js')
 writeFileSync(trajectoryPath, patchFigmaTrajectory(readFileSync(trajectoryPath, 'utf8')))
