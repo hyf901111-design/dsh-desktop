@@ -462,7 +462,7 @@ it.each(['accept', 'decline'] as const)('restores the compact %s action after a 
   w.document.body.append(host)
   let emit: (event: any) => void = () => {}
   const state: ResearchBoardsState = { version: 1, eventSeq: 1,
-    account: { status: 'ready', generation: 1, user: { userId: 'u' } },
+    account: { status: 'ready', generation: 1, user: { userId: 'u', publicId: '0000000001', username: '甲' } },
     favorites: [], boards: [], current: null, recoveries: [],
     notifications: { cursor: 1, unreadCount: 0, pendingCount: 0, notifications: [] } }
   let rejectResponse!: (error: Error) => void

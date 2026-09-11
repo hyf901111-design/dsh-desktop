@@ -8,6 +8,7 @@ it('keeps notice inside strokes out of the action width, including primary and c
   installSidebarNoticeStyles(win.document as unknown as Document)
   win.document.body.innerHTML = '<aside class="ework-sidebar-notice"><button>详情</button><button class="ework-notice-primary">更新</button><button class="ework-notice-close">×</button></aside><aside class="srb-bubble ework-sidebar-notice"><button class="srb-primary">接受</button></aside>'
   const [secondary, primary, close, invitation] = [...win.document.querySelectorAll('button')].map(el => win.getComputedStyle(el))
+  if (!secondary || !primary || !close || !invitation) throw new Error('Expected all four notice controls')
   expect(secondary.borderLeftWidth).toBe('0px')
   expect(secondary.paddingLeft).toBe('10px')
   expect(secondary.height).toBe('26px')
@@ -20,7 +21,9 @@ it('keeps notice inside strokes out of the action width, including primary and c
 it('applies distinct checking and verification treatment after the real About CSS', async () => {
   const win = new Window()
   const vendor = await readFile('node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js', 'utf8')
-  const css = JSON.parse(vendor.match(/const sherlockAboutCss = ("(?:\\.|[^"\\])*");/)![1])
+  const cssLiteral = vendor.match(/const sherlockAboutCss = ("(?:\\.|[^"\\])*");/)?.[1]
+  if (!cssLiteral) throw new Error('Expected the actual About stylesheet')
+  const css = JSON.parse(cssLiteral)
   for (const text of [css, await readFile('src/preload/figma-settings.css', 'utf8')]) {
     const style = win.document.createElement('style'); style.textContent = text; win.document.head.append(style)
   }
