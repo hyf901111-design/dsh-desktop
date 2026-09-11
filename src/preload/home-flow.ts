@@ -1,6 +1,6 @@
 /** Reference-led grayscale regions with irregular overlapping transitions.
  * Signed broad and local volumes reproduce the supplied spatial composition;
- * there are no added highlight ribbons, crease paths or uniform blur layer.
+ * Curvature lighting follows those same volumes, without separate crease paths.
  * Independent bounded changes reshape overlaps without moving the surface.
  */
 const FOG_VOLUMES: ReadonlyArray<readonly [number, number, number, number, number]> = [
@@ -30,6 +30,7 @@ export function createHomeFlowField() {
   const state = new Float64Array(FOG_VOLUMES.length * 5)
   let time = NaN
   let xWeights = new Float64Array(0), yWeights = new Float64Array(0)
+  let xCurvature = new Float64Array(0), yCurvature = new Float64Array(0)
   const prepare = (seconds: number) => {
     if (time === seconds) return
     time = seconds
@@ -44,39 +45,48 @@ export function createHomeFlowField() {
       state[i*5+4] = ry * (1 - .028 * cross)
     })
   }
-  const color = (value: number, dark: boolean) => {
+  const color = (value: number, curvature: number, dark: boolean) => {
     // Lift only the existing lit regions, by at most four grayscale levels.
     // A smooth shoulder adds a little sheen without new rims or dark grooves.
     const highlight = Math.max(0, Math.min(1, (value - 55) / 65))
     const sheen = 4 * highlight * highlight * (3 - 2 * highlight)
-    const luminance = Math.max(12, Math.min(215, value + sheen))
+    // Convex shoulders catch light; the adjacent concave side recedes. This
+    // bounded analytic curvature sharpens existing ridges, not brightness bands.
+    const ridge = 14 * curvature / (14 + Math.abs(curvature))
+    const luminance = Math.max(12, Math.min(215, value + sheen + ridge))
     return Math.round(dark ? luminance : 250 - 49 * (Math.min(185, luminance) - 12) / 173)
   }
   const sample = (x: number, y: number, seconds: number, dark: boolean) => {
     prepare(seconds)
-    let value = 9.8591
+    let value = 9.8591, curvature = 0
     for (let i=0; i<state.length; i+=5) {
       const dx=(x-state[i+1]!)/state[i+3]!, dy=(y-state[i+2]!)/state[i+4]!
-      value += state[i]! * Math.exp(-.5 * (dx*dx+dy*dy))
+      const volume = state[i]! * Math.exp(-.5 * (dx*dx+dy*dy))
+      value += volume
+      curvature += volume * (.0012 * (1-dx*dx) / state[i+3]!**2 + .0006 * (1-dy*dy) / state[i+4]!**2)
     }
-    return color(value,dark)
+    return color(value,curvature,dark)
   }
   const paint = (pixels: ImageData, seconds: number, dark: boolean) => {
     prepare(seconds)
     const {width,height,data}=pixels, count=FOG_VOLUMES.length
-    if(xWeights.length!==width*count) xWeights=new Float64Array(width*count)
-    if(yWeights.length!==height*count) yWeights=new Float64Array(height*count)
+    if(xWeights.length!==width*count) { xWeights=new Float64Array(width*count); xCurvature=new Float64Array(width*count) }
+    if(yWeights.length!==height*count) { yWeights=new Float64Array(height*count); yCurvature=new Float64Array(height*count) }
     // Separable Gaussian weights: a few thousand exponentials per frame,
     // instead of one exponential for every volume at every pixel.
     for(let c=0;c<count;c++) {
       const i=c*5
-      for(let x=0;x<width;x++){const d=(x/(width-1)-state[i+1]!)/state[i+3]!;xWeights[c*width+x]=state[i]!*Math.exp(-.5*d*d)}
-      for(let y=0;y<height;y++){const d=(y/(height-1)-state[i+2]!)/state[i+4]!;yWeights[c*height+y]=Math.exp(-.5*d*d)}
+      for(let x=0;x<width;x++){const d=(x/(width-1)-state[i+1]!)/state[i+3]!;xWeights[c*width+x]=state[i]!*Math.exp(-.5*d*d);xCurvature[c*width+x]=.0012*(1-d*d)/state[i+3]!**2}
+      for(let y=0;y<height;y++){const d=(y/(height-1)-state[i+2]!)/state[i+4]!;yWeights[c*height+y]=Math.exp(-.5*d*d);yCurvature[c*height+y]=.0006*(1-d*d)/state[i+4]!**2}
     }
     for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
-      let value=9.8591
-      for(let c=0;c<count;c++) value+=xWeights[c*width+x]!*yWeights[c*height+y]!
-      const index=(y*width+x)*4, gray=color(value,dark)
+      let value=9.8591, curvature=0
+      for(let c=0;c<count;c++) {
+        const volume=xWeights[c*width+x]!*yWeights[c*height+y]!
+        value+=volume
+        curvature+=volume*(xCurvature[c*width+x]!+yCurvature[c*height+y]!)
+      }
+      const index=(y*width+x)*4, gray=color(value,curvature,dark)
       data[index]=data[index+1]=data[index+2]=gray;data[index+3]=255
     }
   }
