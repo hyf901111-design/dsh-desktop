@@ -167,9 +167,9 @@ export function installBoardUiStyles(doc: Document) {
 /* Non-editable application chrome keeps drag gestures for navigation. */
 :is([data-dsh-sidebar-root],[data-srb-session-header],[role=tablist]),:is([data-dsh-sidebar-root],[data-srb-session-header],[role=tablist]) *{-webkit-user-select:none;user-select:none}
 :is([data-dsh-sidebar-root],[data-srb-session-header]) :is(input,textarea,[contenteditable=true],[contenteditable=true] *){-webkit-user-select:text;user-select:text}
-[data-srb-session-header]:has(.srb-actions):not([aria-hidden=true]){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:20px}
+[data-srb-session-header]:has(.srb-actions):not([aria-hidden=true]){display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:30px 36px;align-content:start;column-gap:20px}
 [data-srb-session-header]:has(.srb-actions) [data-srb-title-row]{display:contents}
-[data-srb-session-header]:has(.srb-actions) [data-srb-title-cluster]{grid-column:1;grid-row:1;min-width:0;min-height:32px}
+[data-srb-session-header]:has(.srb-actions) [data-srb-title-cluster]{grid-column:1;grid-row:1;min-width:0;min-height:30px}
 [data-srb-session-header]:has(.srb-actions) [data-srb-tabs]{grid-column:1;grid-row:2}
 [data-srb-session-header]:has(.srb-actions) [data-srb-utilities]{grid-column:2;grid-row:1 / span 2;align-self:start;height:62px;align-items:center;margin-left:0;margin-top:-2px;position:relative;z-index:2}
 .srb-actions .srb-create-collaboration{border:1px solid var(--dsw-alias-border-l2,#ddd);background:var(--dsw-alias-button-elevated-fill,var(--dsw-alias-bg-layer-2,#fff));padding:0 12px;border-radius:8px;font-weight:500;line-height:28px}

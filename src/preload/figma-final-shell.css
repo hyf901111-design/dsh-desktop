@@ -42,8 +42,12 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .pI_x6G_centerCol { margin:10px 12px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
 .wSkVaW_root { background:var(--odyssey-workspace); }
 .wSkVaW_header,.wSkVaW_tabs,.wSkVaW_titleRow,.sRp_root,.srb-section,.srb-dialog,.srb-presence,.srb-actions { font-family:var(--odyssey-font-ui); }
-.wSkVaW_header { box-sizing:border-box; padding:8px 20px 0; min-height:82px; }
+.wSkVaW_header { box-sizing:border-box; padding:8px 20px 0; height:82px; min-height:82px; flex:0 0 82px; }
 .wSkVaW_titleRow { min-height:30px; }
+/* 286:494 / 1153: the header mode control is 112 × 30 in every view. */
+.wSkVaW_header .cubgiG_seat { box-sizing:border-box; width:112px; height:30px; min-height:30px; padding:0 7px; gap:6px; font:400 13px/20px var(--odyssey-font-ui); transform:none; }
+.wSkVaW_header .cubgiG_seatIcon { width:16px; height:16px; }
+.wSkVaW_header .cubgiG_chevron { width:12px; height:12px; }
 .wSkVaW_titleCluster { gap:6px; }
 .wSkVaW_crumb { padding:0; border-radius:0; font-size:14px; line-height:21px; }
 .wSkVaW_tabs { gap:6px; margin-top:6px; padding-left:0; height:30px; }
@@ -118,10 +122,10 @@ body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none
 [data-dsh-sidebar-root] .YDXeBa_time { font-size:11px; line-height:17px; }
 
 /* Figma 361:5988/5989: preserve the source texture rotation and crop before the glass layer. */
-.t8lSSG_panel { background:url('/figma-glass-light-base.png') right -12px top -12px/1088px 880px no-repeat; overflow:clip; container-type:size; }
-.t8lSSG_panel:before { --odyssey-panel-fog-size:max(1136px, calc(100cqh + 280px)); inset:auto; right:-36px; top:50%; width:var(--odyssey-panel-fog-size); height:var(--odyssey-panel-fog-size); border-radius:0; transform:translateY(-50%) rotate(90deg); background:url('/figma-glass-light-mesh.png') center/contain no-repeat; }
-[data-ds-dark-theme] .t8lSSG_panel { background-image:url('/figma-glass-dark-base.png'); }
-[data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background-image:url('/figma-glass-dark-overlay.png'),url('/figma-glass-dark-mesh.png'); background-position:right -29px center,right -69px center; background-size:max(1122px, calc(100cqh + 266px)) max(1122px, calc(100cqh + 266px)),max(1202px, calc(100cqh + 346px)) max(1202px, calc(100cqh + 346px)); background-repeat:no-repeat; }
+.t8lSSG_panel { background:#f2f2f2; overflow:clip; container-type:size; }
+.t8lSSG_panel:before { --odyssey-panel-fog-size:max(1136px, calc(100cqh + 280px), calc(100cqw + 72px)); inset:auto; right:-36px; top:50%; width:var(--odyssey-panel-fog-size); height:var(--odyssey-panel-fog-size); border-radius:0; transform:translateY(-50%) rotate(90deg); background:url('/figma-glass-light-mesh.png') center/contain no-repeat; }
+[data-ds-dark-theme] .t8lSSG_panel { background:#1f1f1f; }
+[data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background-image:url('/figma-glass-dark-overlay.png'); background-position:right -29px center; background-size:max(1122px, calc(100cqh + 266px), calc(100cqw + 58px)) max(1122px, calc(100cqh + 266px), calc(100cqw + 58px)); background-repeat:no-repeat; }
 .t8lSSG_panel .t8lSSG_panelResize { left:0; width:6px; }
 
 /* Settings lives inside the glass frame's stacking context; Better Sidebar is
