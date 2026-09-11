@@ -45,7 +45,9 @@ const db = await mf.getD1Database('ACCOUNTS_DB')
 if (!resume) {
 for (const name of ['0001_accounts.sql','0002_research_boards.sql']) await db.exec((await readFile('services/accounts/migrations/'+name,'utf8')).replaceAll('\n',' '))
 const invite = 'local-acceptance-20260911'
-await db.prepare('INSERT INTO invites(hash,expires_at,max_uses) VALUES(?,?,10)').bind(hash(invite), Math.floor(Date.now()/1000)+86400).run()
+// Four seeded identities plus enough UI registrations for the 11-member design
+// and one rejected overflow member. This quota belongs only to the local fixture.
+await db.prepare('INSERT INTO invites(hash,expires_at,max_uses) VALUES(?,?,16)').bind(hash(invite), Math.floor(Date.now()/1000)+86400).run()
 const users = ['验收所有者','验收编辑者','验收只读者','验收离线成员']
 const password = 'Local-Acceptance-20260911!'
 for (const username of users) {
