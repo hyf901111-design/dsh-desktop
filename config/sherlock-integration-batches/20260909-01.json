@@ -9,42 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "原生逐页验收修复：空态协作入口、拖动同步与只读工具栏",
+        "featureName": "按钮状态动效对齐 Figma 49",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "5d320e304e588d809260811d3402fca1c761e608",
-        "tipCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
+        "baseCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
+        "tipCommit": "4a787927ea29c8a97a22a598c4f6fb01effb8b3b",
         "commits": [
           {
-            "commit": "8d90308d21a95c25bdd88e3f5e934507fe00cb3e",
+            "commit": "4a787927ea29c8a97a22a598c4f6fb01effb8b3b",
             "parents": [
-              "5d320e304e588d809260811d3402fca1c761e608"
+              "34e7126a3b5251afced7120c4a82f1c0978c6c09"
             ],
-            "subject": "修复空对话误隐藏研究画板协作入口"
-          },
-          {
-            "commit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
-            "parents": [
-              "8d90308d21a95c25bdd88e3f5e934507fe00cb3e"
-            ],
-            "subject": "修复画布拖动共享同步并补齐只读工具栏禁用状态"
+            "subject": "按最新按钮状态规范去除按压缩放并统一动效时长"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-canvas-gestures.mjs"
+            "path": "src/preload/figma-motion.css"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-canvas-gestures-ui.test.ts"
+            "path": "test/figma-motion-controller.test.ts"
           }
         ],
         "checks": [
@@ -53,26 +38,12 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/figma-canvas-snap.test.js",
-              "test/research-board-presence-final.test.ts"
+              "test/figma-motion-controller.test.ts"
             ],
             "outcome": "passed",
-            "summary": "15 focused tests passed; regression reproduced INVALID_DOCUMENT before correction",
-            "verifiedCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
-            "completedAt": "2026-09-11T13:43:35.550843+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "Typecheck passed",
-            "verifiedCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
-            "completedAt": "2026-09-11T13:43:35.551059+00:00",
+            "summary": "5 focused motion controller checks passed",
+            "verifiedCommit": "4a787927ea29c8a97a22a598c4f6fb01effb8b3b",
+            "completedAt": "2026-09-11T13:49:18.410279+00:00",
             "timeoutMs": 180000
           },
           {
@@ -83,98 +54,24 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Clean locked source patch fixture passed",
-            "verifiedCommit": "34e7126a3b5251afced7120c4a82f1c0978c6c09",
-            "completedAt": "2026-09-11T13:43:35.551063+00:00",
+            "summary": "Clean source patch fixture passed",
+            "verifiedCommit": "4a787927ea29c8a97a22a598c4f6fb01effb8b3b",
+            "completedAt": "2026-09-11T13:49:18.410522+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Both defects reproduced through native owner/editor windows. 11-member management, invitation acceptance and live role change exercised. Final correction awaits integration package native retest."
+          "summary": "Matched live Figma 49 text and design context; final native geometry verification pending integration."
         },
         "acceptanceCriteria": [
-          "空对话不再隐藏有组件或已收藏画板的协作入口",
-          "拖动与缩放保留缺省字段语义，共享文档验证通过",
-          "仅查看成员的创建入口禁用"
+          "页签、面板与菜单项按压不缩小",
+          "悬停120ms，按下80ms，松开120ms"
         ],
         "risks": [
           "Local build only; no release or push"
         ],
         "generatedAt": "2026-09-11T13:07:29.470549+00:00"
-      },
-      "merged": {
-        "mergeCommit": "dc3f70220197224ad31fc65f8ab8323cb5302271",
-        "verificationCommit": "dc3f70220197224ad31fc65f8ab8323cb5302271",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "dc3f70220197224ad31fc65f8ab8323cb5302271",
-            "completedAt": "2026-09-11T13:44:33.080Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "dc3f70220197224ad31fc65f8ab8323cb5302271",
-            "completedAt": "2026-09-11T13:44:33.080Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "dc3f70220197224ad31fc65f8ab8323cb5302271",
-            "completedAt": "2026-09-11T13:44:33.080Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "dc3f70220197224ad31fc65f8ab8323cb5302271",
-            "completedAt": "2026-09-11T13:44:33.080Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "dc3f70220197224ad31fc65f8ab8323cb5302271",
-            "completedAt": "2026-09-11T13:44:33.080Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T13:44:33.080Z"
       }
     }
   ],
