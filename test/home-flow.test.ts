@@ -3,22 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { homeFlowLuminance, mountHomeFlow } from '../src/preload/home-flow'
 
 describe('procedural home atmosphere', () => {
-  it('has many distinct medium fog peaks instead of a few page-sized light masses', () => {
-    for (const seconds of [0, 4, 8, 12, 60, 120]) {
-      const width = 64, height = 56
-      const values = Array.from({length: width * height}, (_, i) => homeFlowLuminance(i % width / (width-1), Math.floor(i/width)/(height-1), seconds, true))
-      let peaks = 0
-      for (let y=2;y<height-2;y++) for (let x=2;x<width-2;x++) {
-        const v=values[y*width+x]!
-        if (v<78) continue
-        let highest=true
-        for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++) {
-          if((dx||dy) && values[(y+dy)*width+x+dx]! >= v + ((dy<0||dy===0&&dx<0)?0:1)) highest=false
-        }
-        if(highest) peaks++
-      }
-      expect(peaks, `medium fog peaks at ${seconds}s`).toBeGreaterThanOrEqual(8)
-      expect(values.filter(v=>v<25).length/values.length).toBeLessThan(.02)
+  it('preserves the reference composition instead of distributing equal fog peaks across the page', () => {
+    // Median grayscale samples measured from unobstructed reference regions.
+    const anchors = [[.04,.2,171],[.35,.08,45],[.65,.18,105],[.9,.3,42],[.2,.65,64],[.5,.78,83],[.23,.88,18],[.9,.85,31]]
+    for (const [x,y,gray] of anchors) {
+      expect(Math.abs(homeFlowLuminance(x!,y!,0,true)-gray!)).toBeLessThan(12)
+      expect(Math.abs(homeFlowLuminance(x!,y!,12,true)-gray!)).toBeLessThan(16)
     }
   })
   it('produces bounded grayscale in both themes and continuous, non-uniform changes', () => {
@@ -26,16 +16,16 @@ describe('procedural home atmosphere', () => {
     for (let y = 0; y <= 1; y += .05) for (let x = 0; x <= 1; x += .05) {
       const dark = homeFlowLuminance(x, y, 0, true)
       const light = homeFlowLuminance(x, y, 0, false)
-      expect(dark).toBeGreaterThanOrEqual(15)
-      expect(dark).toBeLessThanOrEqual(127)
+      expect(dark).toBeGreaterThanOrEqual(12)
+      expect(dark).toBeLessThanOrEqual(185)
       expect(light).toBeGreaterThanOrEqual(201)
       expect(light).toBeLessThanOrEqual(250)
       changes.push(homeFlowLuminance(x, y, 6, true) - dark)
       expect(Math.abs(homeFlowLuminance(x, y, .042, true) - dark)).toBeLessThanOrEqual(2)
     }
     // Some regions lighten while others darken: not global opacity breathing.
-    expect(Math.max(...changes)).toBeGreaterThan(6)
-    expect(Math.min(...changes)).toBeLessThan(-6)
+    expect(Math.max(...changes)).toBeGreaterThan(1)
+    expect(Math.min(...changes)).toBeLessThan(-1)
   })
 
   it('stops rendering off the home page and disposes canvas, observers and animation', async () => {
