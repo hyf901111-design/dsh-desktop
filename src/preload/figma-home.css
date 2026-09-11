@@ -120,11 +120,6 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
 /* Empty slot anchors are retained by the plugin system but must not consume a
    flex gap. The target distance is 20 px from the project chevron to mode icon. */
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow>[data-slot="conversation.hero.workspace"]>span:empty { display:none; }
-.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon[data-mode-icon="standard"] {
-  background:currentColor;
-  mask:url('/figma-home-mode.svg') center/contain no-repeat;
-}
-.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon[data-mode-icon="standard"]>* { display:none; }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_root { padding:0; }
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_card {
