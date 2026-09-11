@@ -1870,6 +1870,21 @@ function inviteForm(
   input.placeholder = '输入 10 位数字 ID'
   input.setAttribute('aria-label', '对方专有 ID')
   input.inputMode = 'numeric'
+  const fieldError = uiText('small', '', 'srb-field-error')
+  fieldError.id = 'srb-invite-id-error-' + crypto.randomUUID()
+  fieldError.setAttribute('role', 'alert')
+  fieldError.hidden = true
+  const showFieldError = (message: string) => {
+    fieldError.textContent = message
+    fieldError.hidden = !message
+    if (message) {
+      input.setAttribute('aria-invalid', 'true')
+      input.setAttribute('aria-describedby', fieldError.id)
+    } else {
+      input.removeAttribute('aria-invalid')
+      input.removeAttribute('aria-describedby')
+    }
+  }
   const role = document.createElement('select')
   role.setAttribute('aria-label', '邀请权限')
   for (const [value, text] of [
@@ -1912,6 +1927,7 @@ function inviteForm(
   send.className = 'srb-primary'
   input.addEventListener('input', () => {
     lookup++
+    showFieldError('')
     user = undefined
     send.disabled = true
     recipient.textContent = ''
@@ -1920,9 +1936,10 @@ function inviteForm(
     const id = normalizePublicId(input.value),
       turn = ++lookup
     if (!/^\d{10}$/.test(id)) {
-      d.status.textContent = '请输入完整的 10 位数字 ID。'
+      showFieldError('请输入 10 位数字 ID。')
       return
     }
+    showFieldError('')
     const found = await d.run(
       () =>
         page.call<{ user: { userId?: string; publicId: string; username: string } }>(
@@ -1931,7 +1948,12 @@ function inviteForm(
         ),
       '查找用户…'
     )
-    if (turn !== lookup || !d.dialog.isConnected || !found) return
+    if (turn !== lookup || !d.dialog.isConnected) return
+    if (!found) {
+      showFieldError(d.status.textContent || '暂时无法核对用户，请重试。')
+      d.status.textContent = ''
+      return
+    }
     user = found.user
     const avatar = uiText('div', Array.from(user.username)[0]?.toUpperCase() ?? '', 'srb-member-avatar')
     avatar.style.setProperty('--srb-avatar-background', boardAvatarBackground(user.userId ?? user.publicId, user.userId === page.getState().account.user?.userId))
@@ -1951,7 +1973,7 @@ function inviteForm(
   const lookupRow = document.createElement('div')
   lookupRow.className = 'srb-field-row'
   lookupRow.append(input, lookupButton)
-  field.append(lookupRow)
+  field.append(lookupRow, fieldError)
   recipient.className = 'srb-recipient'
   const controls = document.createElement('div')
   controls.className = 'srb-invite-controls'
