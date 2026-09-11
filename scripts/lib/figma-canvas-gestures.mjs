@@ -51,6 +51,9 @@ function exact(source, from, to) {
 }
 
 export function patchFigmaCanvasGestures(source) {
+  source = exact(source, '"data-research-global-link": "",', '"data-research-global-link": "", disabled: sharedReadOnly,');
+  source = exact(source, '"data-research-global-container": "",\n\t\t\t\t\t\tdisabled: selectionGeneration', '"data-research-global-container": "",\n\t\t\t\t\t\tdisabled: sharedReadOnly || selectionGeneration');
+  source = exact(source, '(ResearchVoiceControl, {\n\t\t\t\t\t\tsessionId,\n\t\t\t\t\t\tdisabled: selectionGeneration', '(ResearchVoiceControl, {\n\t\t\t\t\t\tsessionId,\n\t\t\t\t\t\tdisabled: sharedReadOnly || selectionGeneration');
   source = exact(source, 'function ResearchCanvasResizeHandles({ nodeId, compact = false }) {', `${figmaCanvasBounds.toString()}\n${figmaCanvasSnap.toString()}\nfunction ResearchCanvasResizeHandles({ nodeId, compact = false }) {`)
   source = exact(source, '(compact ? ["se"] : ["nw", "ne", "sw", "se"]).map', '["nw", "ne", "sw", "se"].map')
   source = exact(source, '!expanded && (selected || compact) ? (0, react_jsx_runtime.jsx)(ResearchCanvasResizeHandles', '!expanded && geometry.resizable ? (0, react_jsx_runtime.jsx)(ResearchCanvasResizeHandles')
@@ -66,7 +69,16 @@ export function patchFigmaCanvasGestures(source) {
                   if (pendingHistoryTransaction === null) pendingHistoryTransaction = historyState();
                   if (sherlockShared(sessionId)) collaborationGesture = true;
                   const byId = new Map(nodes.map(n => [n.id, n]));
-                  const apply = n => { const g = byId.get(n.id); return g ? {...n,x:g.x,y:g.y,width:g.width,height:g.height,sizeMode:g.sizeMode,aspectRatio:g.aspectRatio,containerSizePreset:g.containerSizePreset} : n; };
+                  const apply = n => {
+                    const g = byId.get(n.id); if (!g) return n;
+                    const next = {...n,x:g.x,y:g.y,width:g.width,height:g.height};
+                    // Missing optional geometry must remain absent: the shared document
+                    // validator deliberately rejects undefined values over IPC.
+                    for (const key of ['sizeMode','aspectRatio','containerSizePreset']) {
+                      if (g[key] === undefined) delete next[key]; else next[key] = g[key];
+                    }
+                    return next;
+                  };
                   update({files:snapshot.files.map(apply),artifacts:snapshot.artifacts.map(apply)},false);
                 },
                 cancelPointerGeometry(nodes) {

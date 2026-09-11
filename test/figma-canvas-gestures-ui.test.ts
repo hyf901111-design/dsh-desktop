@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { validateCanvas } from '../packages/dsh-research-collaboration/document.js'
 
 const requireModule = createRequire(import.meta.url)
 const react = requireModule('react')
@@ -70,6 +71,12 @@ async function mounted(desktop: any = {}, configure?: (win: Window) => void, sel
 
 
 describe('Figma canvas pointer transactions', () => {
+  it('disables canvas creation controls when a shared board is read only', async () => {
+    const m = await mounted({researchBoards:{isSharedSession:()=>true}}, undefined, {disabled:false})
+    expect(m.query('[data-research-global-link]').disabled).toBe(true)
+    expect(m.query('[data-research-global-container]').disabled).toBe(true)
+    expect([...m.host.querySelectorAll('[data-research-global-toolbar] button')].every((b:any)=>b.disabled)).toBe(true)
+  })
   it('snaps to neighbouring edges, bypasses with Alt, and cancels without adding undo history', async () => {
     const m = await mounted()
     await act(async () => m.workspace.setArtifacts([textNode('a',200,200),textNode('b',850,600)]))
@@ -98,6 +105,7 @@ describe('Figma canvas pointer transactions', () => {
     for(const x of [230,270,300]) await m.event('pointermove',m.canvas,{pointerId:1,clientX:x,clientY:220})
     await m.event('pointerup',m.canvas,{pointerId:1})
     expect(m.workspace.getSnapshot().artifacts.map((n:any)=>n.x)).toEqual([300,950])
+    expect(() => validateCanvas({files:[],artifacts:m.workspace.getSnapshot().artifacts})).not.toThrow()
     await act(async()=>m.workspace.undo())
     expect(m.workspace.getSnapshot().artifacts.map((n:any)=>n.x)).toEqual([200,850])
     await act(async()=>m.workspace.redo())
@@ -113,6 +121,7 @@ describe('Figma canvas pointer transactions', () => {
     const n=m.workspace.getSnapshot().artifacts[0]
     expect(n.x+n.width/2).toBe(500)
     expect(n.y+n.height/2).toBe(380)
+    expect(() => validateCanvas({files:[],artifacts:[n]})).not.toThrow()
     expect(m.canvas.getAttribute('data-research-resize-corner')).toBe('nw')
     await m.event('pointercancel',m.canvas,{pointerId:1})
     expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({x:200,y:200,width:600,height:360})
