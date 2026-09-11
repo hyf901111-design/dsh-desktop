@@ -17,6 +17,7 @@ import {
 import { isPluginLoadError } from './plugin-error-view'
 import { mountDesktopShellStyles } from './shell-style'
 import { mountFigmaMotionController } from './figma-motion-controller'
+import { mountHomeFlow } from './home-flow'
 import { mountFigmaResizeFeedback } from './figma-resize-feedback'
 import { mountFigmaResponsiveHeader } from './figma-responsive-header'
 import { SidebarUpdateControl } from './sidebar-update-control'
@@ -138,6 +139,7 @@ function initializeUi(): void {
     mountNativeThemeSync({ document, ipcRenderer })
     mountDesktopShellStyles(document)
     window.addEventListener('unload', mountFigmaMotionController(document), { once: true })
+    window.addEventListener('unload', mountHomeFlow(document), { once: true })
     window.addEventListener('unload', mountFigmaResizeFeedback(document), { once: true })
     window.addEventListener('unload', mountFigmaResponsiveHeader(document), { once: true })
   }
