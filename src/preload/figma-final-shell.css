@@ -75,7 +75,8 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .sRp_composer .uV2eYG_primary { width:30px; height:30px; transform:none; background:#65686e; }
 .sRp_composer .uV2eYG_chip { background:var(--odyssey-input-chip); border:1px solid var(--odyssey-glass-border); }
 .sRp_composer .uV2eYG_chipLabel { font:400 12px/20px var(--odyssey-font-ui); }
-.sRp_emptyState { min-height:0; box-sizing:border-box; padding-bottom:42px; display:flex; align-items:center; justify-content:center; font:500 19px/1.55 var(--odyssey-font-ui); color:var(--odyssey-text); text-align:center; }
+.sRp_emptyState { min-height:0; box-sizing:border-box; padding-bottom:42px; display:flex; align-items:center; justify-content:center; font:500 19px/1.55 var(--odyssey-font-ui); color:#2a2b2d; text-align:center; }
+[data-ds-dark-theme] .sRp_emptyState { color:#e4e4e5; }
 .sRp_emptyState .pXSMma_root { padding:0; }
 .sRp_messages .Md3f7G_scroll { padding-inline:0; }
 .gdEzaW_userRow { justify-content:flex-end; }
