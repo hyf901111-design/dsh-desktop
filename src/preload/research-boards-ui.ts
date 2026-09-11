@@ -2010,11 +2010,11 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
           d.close()
         })
       )
+    let memberStructure = ''
     const renderMembers = () => {
       const current = view()
-      memberList.replaceChildren()
-      pending.replaceChildren()
       if (!current?.permissions.read) {
+        memberStructure = ''
         members.replaceChildren(
           uiText('p', '共享访问已结束。', 'srb-description')
         )
@@ -2022,6 +2022,27 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
         return
       }
       const users = boardMembers(current, page.getState().account.user?.userId)
+      // Cursor/selection heartbeats must not replace a native select while its
+      // menu is open. Presence labels can update without losing focus or scroll.
+      const structure = JSON.stringify({
+        manage: current.permissions.manage,
+        users: users.map(({ userId, username, role, self }) => ({ userId, username, role, self }))
+          .sort((a, b) => a.userId.localeCompare(b.userId)),
+        pending: current.pendingInvitations ?? []
+      })
+      if (structure === memberStructure) {
+        for (const row of memberList.querySelectorAll<HTMLElement>('[data-member-id]')) {
+          const member = users.find((user) => user.userId === row.dataset.memberId)
+          if (!member) continue
+          row.querySelector<HTMLElement>('.srb-member-avatar')!.dataset.online = String(member.online)
+          row.querySelector('small')!.textContent = member.online ? '正在画板中' : '未在当前画板'
+        }
+        return
+      }
+      memberStructure = structure
+      const scrollTop = memberList.scrollTop
+      memberList.replaceChildren()
+      pending.replaceChildren()
       memberList.append(uiText('h3', `成员 · ${users.length}`))
       for (const member of users) {
         const row = uiText('div', '', 'srb-member'),
@@ -2030,6 +2051,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
             Array.from(member.username)[0]?.toUpperCase() ?? '',
             'srb-member-avatar'
           )
+        row.dataset.memberId = member.userId
         avatar.style.setProperty('--srb-avatar-background', boardAvatarBackground(member.userId, member.userId === page.getState().account.user?.userId))
         avatar.dataset.self = String(member.userId === page.getState().account.user?.userId)
         const online = current.connection === 'online' && current.presence.some((p) => p.userId === member.userId)
@@ -2073,6 +2095,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
           row.append(uiText('span', member.role === 'owner' ? '创建者' : member.role === 'editor' ? '可编辑' : '可查看', 'srb-role'))
         memberList.append(row)
       }
+      memberList.scrollTop = scrollTop
       if (!current.permissions.manage || !current.pendingInvitations?.length)
         return
       pending.append(
