@@ -94,3 +94,33 @@ it('does not expose invitation and member mutation controls to a viewer', async 
   expect(dialog.querySelector('.srb-member select')).toBeNull()
   expect(dialog.textContent).toContain('退出协作')
 })
+
+it('keeps the open member permission control and scroll position through live cursor and presence updates', async () => {
+  const f = fixture()
+  manageBoard(f.page, 'b')
+  await Promise.resolve()
+  const list = f.w.document.querySelector('.srb-member-list')!
+  const select = list.querySelector('select[aria-label="成员3权限"]')! as unknown as HTMLSelectElement
+  select.focus()
+  list.scrollTop = 120
+  f.view.presence = [...f.view.presence.map((member: any) => ({ ...member, cursor: { x: 80, y: 40 }, selectedIds: ['card'] }))]
+  f.emit()
+  expect(list.querySelector('select[aria-label="成员3权限"]')).toBe(select)
+  expect(f.w.document.activeElement).toBe(select)
+  expect(list.scrollTop).toBe(120)
+  f.view.presence = f.view.presence.filter((member: any) => member.userId !== 'u3')
+  f.emit()
+  expect(list.querySelector('select[aria-label="成员3权限"]')).toBe(select)
+  expect(select.closest('.srb-member')!.textContent).toContain('未在当前画板')
+  select.value = 'viewer'
+  select.dispatchEvent(new f.w.Event('change') as unknown as Event)
+  await Promise.resolve()
+  expect(f.page.call).toHaveBeenCalledWith('member.role', { boardId: 'b', userId: 'u3', role: 'viewer' })
+  f.view.members.find((member: any) => member.userId === 'u3').role = 'viewer'
+  f.emit()
+  expect((list.querySelector('select[aria-label="成员3权限"]')! as unknown as HTMLSelectElement).value).toBe('viewer')
+  f.view.permissions.read = false
+  f.emit()
+  expect(f.w.document.querySelector('.srb-management')!.textContent).toContain('共享访问已结束')
+  expect(f.w.document.querySelector('.srb-member select')).toBeNull()
+})

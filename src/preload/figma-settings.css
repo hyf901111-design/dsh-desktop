@@ -32,6 +32,10 @@ body[data-ds-dark-theme] .sherlock-settings-logo{color:#fff!important}
 .VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_selector,.oY77xG_selector,.T1PP_q_selector,.hVGvvW_selector){flex:none;box-sizing:border-box;width:108px;max-width:none;white-space:nowrap;height:28px;padding:0 8px 0 10px;gap:6px;justify-content:space-between;border:0;border-radius:8px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif;color:var(--settings-text)}
 .VOzbGW_overlay .sherlock-settings-item .T1PP_q_selector{width:106px}.VOzbGW_overlay .sherlock-settings-item .hVGvvW_selector{width:96px}
 .VOzbGW_overlay .sherlock-settings-item button svg{width:12px;height:12px;flex:none}
+/* Figma 177:317/319 and 177:678: a 4×2 round chevron inside a 12px icon. */
+.VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_selector,.oY77xG_selector,.T1PP_q_selector,.hVGvvW_selector)>svg{background:#737373;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m4 5 2 2 2-2' fill='none' stroke='white' stroke-width='.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px 12px no-repeat}
+.VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_selector,.oY77xG_selector,.T1PP_q_selector,.hVGvvW_selector)>svg>*{visibility:hidden}
+body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_selector,.oY77xG_selector,.T1PP_q_selector,.hVGvvW_selector)>svg{background:rgb(159.86,159.86,159.86)}
 .VOzbGW_overlay ._8HJdBW_group{flex-direction:row}.VOzbGW_overlay ._8HJdBW_title{flex:1}
 .VOzbGW_overlay ._8HJdBW_cubeRow{display:flex;flex:none;width:210px;height:28px;box-sizing:border-box;flex-wrap:nowrap;gap:3px;padding:3px;border-radius:8px;background:rgba(0,0,0,.04)}
 .VOzbGW_overlay ._8HJdBW_themeCube{box-sizing:border-box;width:66px;height:22px;flex:0 0 66px;min-width:0;min-height:0;padding:0;border:0;border-radius:6px;background:transparent;font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--settings-text);display:flex;justify-content:center;align-items:center;gap:0}

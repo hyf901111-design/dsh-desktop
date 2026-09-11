@@ -78,6 +78,8 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .sRp_emptyState { min-height:0; box-sizing:border-box; padding-bottom:42px; display:flex; align-items:center; justify-content:center; font:500 19px/1.55 var(--odyssey-font-ui); color:#2a2b2d; text-align:center; }
 [data-ds-dark-theme] .sRp_emptyState { color:#e4e4e5; }
 .sRp_emptyState .pXSMma_root { padding:0; }
+.srb-discussion.srb-discussion-empty { height:100%; min-height:0; box-sizing:border-box; padding:0; gap:0; }
+.srb-discussion-empty>.sRp_emptyState { flex:1; margin:0; }
 .sRp_messages .Md3f7G_scroll { padding-inline:0; }
 .gdEzaW_userRow { justify-content:flex-end; }
 .gdEzaW_userStack { width:fit-content !important; max-width:100%; margin-left:auto; align-items:flex-end; }
