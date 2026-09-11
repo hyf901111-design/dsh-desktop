@@ -9,27 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首页曲面褶线与丝绸灰阶材质",
+        "featureName": "增强首页绸缎光泽和褶面流动",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "94c9043b9b0dccc3fd23cc808fad01a0094bc5c3",
-        "tipCommit": "90c892d23aeddc313ed2d8907f78924f546265ca",
+        "baseCommit": "90c892d23aeddc313ed2d8907f78924f546265ca",
+        "tipCommit": "c18baeec6dfed4926468f7a6fdf7f466765863aa",
         "commits": [
           {
-            "commit": "90c892d23aeddc313ed2d8907f78924f546265ca",
+            "commit": "c18baeec6dfed4926468f7a6fdf7f466765863aa",
             "parents": [
-              "94c9043b9b0dccc3fd23cc808fad01a0094bc5c3"
+              "90c892d23aeddc313ed2d8907f78924f546265ca"
             ],
-            "subject": "以局部曲面明暗褶线还原首页丝绸质感并去除全屏模糊"
+            "subject": "增强首页绸缎褶面的光泽明暗与局部流动幅度"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "scripts/verify-figma-home-fog.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-home.css"
           },
           {
             "status": "M",
@@ -49,9 +45,9 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Source assembly passed; /tmp/silk-sources.log",
-            "verifiedCommit": "90c892d23aeddc313ed2d8907f78924f546265ca",
-            "completedAt": "2026-09-11T09:15:32.072037+00:00",
+            "summary": "Source assembly passed; /tmp/silk-strong-sources.log",
+            "verifiedCommit": "c18baeec6dfed4926468f7a6fdf7f466765863aa",
+            "completedAt": "2026-09-11T09:28:51.485581+00:00",
             "timeoutMs": 180000
           },
           {
@@ -60,9 +56,9 @@
               "scripts/verify-figma-home-fog.mjs"
             ],
             "outcome": "passed",
-            "summary": "Four timestamps, both themes, two sizes, pause and cleanup passed; /tmp/silk-browser.log",
-            "verifiedCommit": "90c892d23aeddc313ed2d8907f78924f546265ca",
-            "completedAt": "2026-09-11T09:15:32.072508+00:00",
+            "summary": "Four timestamps, both themes, two sizes, pause and cleanup passed; /tmp/silk-strong-browser.log",
+            "verifiedCommit": "c18baeec6dfed4926468f7a6fdf7f466765863aa",
+            "completedAt": "2026-09-11T09:28:51.486011+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -71,88 +67,15 @@
           "summary": "Controlled Chromium validates grayscale deformation, stable foreground, reduced motion, hidden-page pause and route cleanup. Exact native package verification follows integration."
         },
         "acceptanceCriteria": [
-          "曲面亮暗交界保留窄边，移除全屏模糊与扩展",
-          "纯代码局部弯折，主体分布长时间保持稳定",
-          "0/4/8/12 秒、两主题、两尺寸与生命周期检查通过"
+          "宽幅绸缎光泽与更明确的亮暗转折",
+          "局部流动幅度加强，前景与整体背景位置固定",
+          "0/4/8/12 秒、两主题、两尺寸与暂停检查通过"
         ],
         "risks": [
           "No release, push, version bump or notarization",
           "Existing full Figma acceptance remains ongoing"
         ],
         "generatedAt": "2026-09-11T07:49:49.713709+00:00"
-      },
-      "merged": {
-        "mergeCommit": "73782b5e5e7cc65714c170fa5db4b3b5dc7f89d2",
-        "verificationCommit": "73782b5e5e7cc65714c170fa5db4b3b5dc7f89d2",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "73782b5e5e7cc65714c170fa5db4b3b5dc7f89d2",
-            "completedAt": "2026-09-11T09:16:21.400Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "73782b5e5e7cc65714c170fa5db4b3b5dc7f89d2",
-            "completedAt": "2026-09-11T09:16:21.400Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "73782b5e5e7cc65714c170fa5db4b3b5dc7f89d2",
-            "completedAt": "2026-09-11T09:16:21.400Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "73782b5e5e7cc65714c170fa5db4b3b5dc7f89d2",
-            "completedAt": "2026-09-11T09:16:21.400Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "73782b5e5e7cc65714c170fa5db4b3b5dc7f89d2",
-            "completedAt": "2026-09-11T09:16:21.400Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T09:16:21.400Z"
       }
     }
   ],
