@@ -136,8 +136,32 @@ describe('Figma shell patch installation', () => {
       expect(clientFunction(installed, name)).toBe(clientFunction(source, name))
     }
     const input = clientFunction(installed, 'InputBar')
-    expect(input).not.toContain('jsx)(ResearchCanvasContextBadge,')
+    expect(input).toContain('jsx)(ResearchCanvasContextBadge,')
     expect(input).toContain('"data-research-file-tag": researchFile?.id')
     expect(input).toContain('"data-research-artifact-tag": researchArtifact?.id')
+  })
+  it('shows the current canvas count and keeps the original scope toggle and explicit-reference precedence', () => {
+    const installed=patchFigmaFinalConversation(source)
+    let snapshot={files:[] as any[],artifacts:[] as any[],selection:{selectedNodeIds:[] as string[]}}
+    let optedOut=false
+    const badge=runInNewContext(clientFunction(installed,'ResearchCanvasContextBadge')+'\nResearchCanvasContextBadge',{
+      react:{useSyncExternalStore:()=>snapshot,useState:()=>[true,()=>{}],useId:()=> 'scope',useMemo:(fn:()=>unknown)=>fn()},
+      react_jsx_runtime:{jsx:(type:unknown,props:unknown)=>({type,props}),jsxs:(type:unknown,props:unknown)=>({type,props})},
+      researchPromptBasename:(name:string)=>name,FileReferenceIcon:'file',ResearchArtifactReferenceIcon:'artifact'
+    })
+    const props={workspace:{},input:{},keyboard:{setResearchContextOptOut:(next:boolean)=>{optedOut=next}},t:(key:string,value?:any)=>value?.total??key}
+    expect(badge(props)).toBe(null)
+    snapshot.artifacts=[{id:'one',title:'研究一'},{id:'two',title:'研究二'}]
+    snapshot.files=[{id:'three',name:'数据.csv'}]
+    const tree=badge(props)
+    expect(tree.props.children[0].props.children).toBe(3)
+    const directory=tree.props.children[1]
+    expect(directory.props.children[0].props.children).toHaveLength(3)
+    directory.props.children[1].props.onClick()
+    expect(optedOut).toBe(true)
+    expect(badge({...props,input:{researchContextOptOut:true}}).props.children[0].props.children).toBe('research.context.disabled')
+    expect(badge({...props,input:{occurrences:[{id:'inline'}]}})).toBe(null)
+    snapshot.selection.selectedNodeIds=['one']
+    expect(badge(props)).toBe(null)
   })
 })
