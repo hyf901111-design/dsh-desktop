@@ -1,6 +1,7 @@
 import { Window, type HTMLButtonElement as HappyButton } from 'happy-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mountAccountUi } from '../src/preload/account-ui'
+import { createHash } from 'node:crypto'
 let dispose: (() => void) | undefined
 afterEach(() => { dispose?.(); vi.unstubAllGlobals() })
 async function setup(user: {id:string;username:string;createdAt:number} | null = null) {
@@ -37,8 +38,15 @@ describe('real account auth rendering', () => {
     expect(document.querySelector('h1')?.textContent).toBe('欢迎回来')
     expect(document.querySelectorAll('input')).toHaveLength(2)
     expect(document.querySelector('.sherlock-auth-frame .sherlock-auth-close')).not.toBeNull()
+    const backdrop = document.querySelector('.sherlock-auth-backdrop')
+    expect(backdrop?.tagName).toBe('IMG')
+    const source = backdrop?.getAttribute('src') ?? ''
+    expect(source.startsWith('data:image/png;base64,')).toBe(true)
+    expect(createHash('sha256').update(Buffer.from(source.split(',')[1] ?? '', 'base64')).digest('hex')).toBe('cbdf888085d8c5a4d30b16ab00ff47bbb791c51212f0ed000004a49a308a860f')
+    expect(backdrop?.getAttribute('aria-hidden')).toBe('true')
     document.querySelector<HappyButton>('.sherlock-auth-switch')!.click()
     expect(document.querySelector('h1')?.textContent).toBe('创建账户')
+    expect(document.querySelector('.sherlock-auth-backdrop')).toBe(backdrop)
     expect([...document.querySelectorAll('input')].map(i=>i.name)).toEqual(['username','password','confirmPassword','invite'])
     document.querySelector<HappyButton>('button[type=submit]')!.click()
     expect(document.querySelectorAll('[aria-invalid=true]')).toHaveLength(4)

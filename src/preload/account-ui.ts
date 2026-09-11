@@ -30,7 +30,7 @@ export function mountAccountUi(
  .sherlock-field-heading .sherlock-field-error:empty{display:none}
  .sherlock-account-avatar svg{display:block;width:100%;height:100%}
  .sherlock-account-avatar[data-authenticated=true]{background:transparent url("${accountBackground}") center/cover no-repeat;color:#fff;font-weight:600;font-style:normal}
- .sherlock-auth-logo{display:block;width:88px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#000}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
+ .sherlock-auth-logo{display:block;width:88px;height:auto;fill:currentColor}.sherlock-auth-logo path{fill:#080909}body[data-ds-dark-theme] .sherlock-auth-logo path{fill:#fff}
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
  .VOzbGW_panel[data-account-active] .VOzbGW_options,.VOzbGW_panel[data-account-active] .VOzbGW_header{display:none!important}
@@ -153,7 +153,14 @@ export function mountAccountUi(
       dialog.setAttribute('aria-label', '登录 EWork Odyssey')
       const content = document.createElement('div')
       content.className = 'VOzbGW_content'
-      dialog.style.setProperty('--sherlock-auth-background', `url("${authBackground}")`)
+      // The original Figma fill exceeds Chromium's custom-property token limit.
+      // Keep the image intact and let the image decoder load it directly.
+      const backdrop = document.createElement('img')
+      backdrop.className = 'sherlock-auth-backdrop'
+      backdrop.alt = ''
+      backdrop.setAttribute('aria-hidden', 'true')
+      backdrop.draggable = false
+      backdrop.src = authBackground
       const close = button('', () => dialog.close(), 'sherlock-auth-close')
       const closeIcon = new DOMParser().parseFromString(authClose, 'image/svg+xml').documentElement
       closeIcon.setAttribute('aria-hidden', 'true')
@@ -162,7 +169,7 @@ export function mountAccountUi(
       const frame = document.createElement('div')
       frame.className = 'sherlock-auth-frame'
       frame.append(close, content)
-      dialog.append(frame)
+      dialog.append(backdrop, frame)
       dialog.addEventListener('close', () => {
         dialog.remove()
         if (authDialog === dialog) authDialog = undefined
@@ -464,15 +471,15 @@ export function mountAccountUi(
           submit.disabled = false
         })
     }
-    if (!user)
-      page.append(
-        button(
-          register ? '已有账户，去登录' : '没有账户？使用邀请码注册',
-          () => renderAccount(root, !register),
-          'sherlock-auth-switch'
-        )
-      )
-    else {
+    if (!user) {
+      const switchMode = button('', () => renderAccount(root, !register), 'sherlock-auth-switch')
+      const prompt = document.createElement('span')
+      prompt.textContent = register ? '已有账户？' : '没有账户？'
+      const action = document.createElement('strong')
+      action.textContent = register ? '去登录' : '使用邀请码注册'
+      switchMode.append(prompt, action)
+      page.append(switchMode)
+    } else {
       const usage = document.createElement('div')
       usage.className = 'sherlock-account-card'
       usage.textContent = '正在加载最近 30 天用量…'

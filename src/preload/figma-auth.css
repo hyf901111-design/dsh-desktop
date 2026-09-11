@@ -3,7 +3,7 @@
 .sherlock-auth-dialog{box-sizing:border-box;position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;padding:24px 20px 48px;border:0;border-radius:16px;background:transparent;color:#252525;overflow:auto;isolation:isolate;font-family:'Noto Sans SC',sans-serif}
 .sherlock-auth-dialog[open]{display:flex;align-items:center;justify-content:center}
 .sherlock-auth-dialog::backdrop{background:transparent}
-.sherlock-auth-dialog:before{content:'';position:fixed;z-index:-2;inset:0;background:var(--sherlock-auth-background) center/cover no-repeat;filter:contrast(.92) saturate(.74)}
+.sherlock-auth-backdrop{position:fixed;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;filter:contrast(.92) saturate(.74)}
 .sherlock-auth-dialog:after{content:'';position:fixed;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(255,255,255,.1)}
 .sherlock-auth-frame{box-sizing:border-box;position:relative;flex:none;width:408px;max-width:100%;border-radius:20px;background:rgba(250,250,250,.87);box-shadow:inset 0 0 0 1px rgba(255,255,255,.65),0 16px 42px rgba(0,0,0,.2);backdrop-filter:blur(18px)}
 .sherlock-auth-dialog .VOzbGW_content{padding:0;background:transparent}
@@ -15,9 +15,10 @@
 .sherlock-auth-dialog .sherlock-field-heading{font:400 12px/18px 'Noto Sans SC',sans-serif;min-height:18px;color:#737373}
 .sherlock-auth-dialog .sherlock-field-error{font:400 11px/18px 'Noto Sans SC',sans-serif;color:#bc574f}
 .sherlock-auth-dialog .sherlock-account-page input{box-sizing:border-box;height:44px;width:100%;border:0;border-radius:9px;padding:0 14px;background:rgba(0,0,0,.045);font:400 13px/22px 'Noto Sans SC',sans-serif;color:#252525}
-.sherlock-auth-dialog .sherlock-account-page input::placeholder{color:#929292}
+.sherlock-auth-dialog .sherlock-account-page input::placeholder{color:#737373}
 .sherlock-auth-dialog .sherlock-account-page button[type=submit]{box-sizing:border-box;height:44px;margin-top:8px;padding:0 14px;border:0;border-radius:10px;background:#272727;color:#fff;font:500 14px/22px 'Noto Sans SC',sans-serif}
-.sherlock-auth-dialog .sherlock-auth-switch{display:block;box-sizing:border-box;height:22px;min-height:22px;width:100%;margin:24px 0 0;padding:0;border:0;border-radius:0;background:transparent;color:#737373;font:400 12px/20px 'Noto Sans SC',sans-serif;text-align:center}
+.sherlock-auth-dialog .sherlock-auth-switch{display:flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;height:22px;min-height:22px;width:100%;margin:24px 0 0;padding:0;border:0;border-radius:0;background:transparent;color:#737373;font:400 12px/20px 'Noto Sans SC',sans-serif;text-align:center}
+.sherlock-auth-switch strong{font-weight:500;color:#252525}
 .sherlock-auth-dialog .sherlock-auth-close{position:absolute;right:12px;top:12px;display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:#737373;cursor:pointer}
 .sherlock-auth-close svg{display:block;width:7.66667px;height:7.66667px}.sherlock-auth-close svg path{stroke:currentColor}
 .sherlock-auth-dialog .sherlock-account-page [role=status]:empty{display:none}
@@ -27,6 +28,7 @@
 body[data-ds-dark-theme] .sherlock-auth-dialog{color:#efefef}body[data-ds-dark-theme] .sherlock-auth-dialog:after{background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(0,0,0,.3)}
 body[data-ds-dark-theme] .sherlock-auth-frame{background:rgba(23,23,23,.86);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 16px 42px rgba(0,0,0,.3)}
 body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page input{background:rgba(255,255,255,.065);color:#efefef}
-body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page button[type=submit]{background:#f0f0f0;color:#252525}
-body[data-ds-dark-theme] .sherlock-auth-dialog :is(.sherlock-auth-switch,.sherlock-field-heading,.sherlock-auth-close){color:#a6a6a6}
+body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page button[type=submit]{background:#f0f0f0;color:#222}
+body[data-ds-dark-theme] .sherlock-auth-dialog :is(.sherlock-auth-switch,.sherlock-field-heading,.sherlock-auth-close),body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page input::placeholder{color:#a9a9a9}
+body[data-ds-dark-theme] .sherlock-auth-switch strong{color:#efefef}
 @media(max-height:700px){.sherlock-auth-dialog[open]{align-items:safe center}.sherlock-auth-dialog{padding-top:24px;padding-bottom:24px}}
