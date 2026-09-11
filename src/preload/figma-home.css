@@ -5,6 +5,7 @@ body:has([data-odyssey-page="home"]) {
   --odyssey-home-input: rgb(255 255 255 / .49);
   --odyssey-home-title: #15181b;
   --odyssey-home-control: #f5f6f7;
+  --odyssey-home-fog-duration: 48s;
 }
 body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   --odyssey-shell: rgb(7 9 9 / .78);
@@ -26,6 +27,9 @@ body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   height:1136px;
   transform:rotate(90deg);
   background:url('/figma-glass-light-mesh.png') center/contain no-repeat;
+  animation:odyssey-home-fog-light var(--odyssey-home-fog-duration) ease-in-out infinite;
+  animation-play-state:paused;
+  will-change:transform;
   pointer-events:none;
   z-index:-1;
 }
@@ -39,6 +43,28 @@ body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   transform:none;
   background:url('/figma-glass-dark-overlay.png') center/1122px 1122px no-repeat,
     url('/figma-glass-dark-mesh.png') center/1202px 1202px no-repeat;
+  animation-name:odyssey-home-fog-dark;
+}
+:root[data-odyssey-home-motion="running"] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
+  animation-play-state:running;
+}
+@keyframes odyssey-home-fog-light {
+  0%, 100% { transform:rotate(90deg) translate3d(0, 0, 0) scale(1); }
+  50% { transform:rotate(90deg) translate3d(4px, -3px, 0) scale(1.006); }
+}
+@keyframes odyssey-home-fog-dark {
+  0%, 100% { transform:translate3d(0, 0, 0) scale(1); }
+  50% { transform:translate3d(-4px, 3px, 0) scale(1.008); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
+    animation:none;
+    transform:rotate(90deg);
+    will-change:auto;
+  }
+  [data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
+    transform:none;
+  }
 }
 .wSkVaW_root[data-odyssey-page="home"] { background:transparent; }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroGlow { display:none; }

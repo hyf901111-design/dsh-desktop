@@ -45,6 +45,29 @@ describe('Figma panel motion supplement', () => {
     first()
   })
 
+  it('pauses home atmosphere motion while the document is hidden', async () => {
+    const browserWindow = new Window()
+    let visibility: DocumentVisibilityState = 'visible'
+    Object.defineProperty(browserWindow.document, 'visibilityState', {
+      configurable: true,
+      get: () => visibility
+    })
+    const dispose = mountFigmaMotionController(browserWindow.document as unknown as Document)
+    expect(browserWindow.document.documentElement.dataset.odysseyHomeMotion).toBe('running')
+
+    visibility = 'hidden'
+    browserWindow.document.dispatchEvent(new browserWindow.Event('visibilitychange'))
+    expect(browserWindow.document.documentElement.dataset.odysseyHomeMotion).toBe('paused')
+
+    visibility = 'visible'
+    browserWindow.document.dispatchEvent(new browserWindow.Event('visibilitychange'))
+    expect(browserWindow.document.documentElement.dataset.odysseyHomeMotion).toBe('running')
+
+    dispose()
+    expect(browserWindow.document.documentElement.dataset.odysseyHomeMotion).toBeUndefined()
+    await browserWindow.happyDOM.close()
+  })
+
   it('scopes reversible panel, hover and press motion and disables it for drag and reduced motion', () => {
     const css = readFileSync(new URL('../src/preload/figma-motion.css', import.meta.url), 'utf8')
     expect(css).toContain('.t8lSSG_panel.t8lSSG_panelHidden')
@@ -58,5 +81,19 @@ describe('Figma panel motion supplement', () => {
     expect(css).toContain('@media (prefers-reduced-motion: reduce)')
     expect(css).not.toContain('.rScV5Q_root')
     expect(css).not.toContain('transition: all')
+  })
+
+  it('animates only the home fog layer from its exact static transforms', () => {
+    const css = readFileSync(new URL('../src/preload/figma-home.css', import.meta.url), 'utf8')
+    expect(css).toContain('@keyframes odyssey-home-fog-light')
+    expect(css).toContain('@keyframes odyssey-home-fog-dark')
+    expect(css).toContain('--odyssey-home-fog-duration: 48s')
+    expect(css).toContain(':root[data-odyssey-home-motion="running"]')
+    expect(css).toMatch(/animation-play-state:\s*running/)
+    expect(css).toMatch(/animation-play-state:\s*paused/)
+    expect(css).toContain('0%, 100% { transform:rotate(90deg) translate3d(0, 0, 0) scale(1); }')
+    expect(css).toContain('0%, 100% { transform:translate3d(0, 0, 0) scale(1); }')
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)')
+    expect(css).not.toMatch(/wSkVaW_(?:headline|composerHero|card)[^{]*\{[^}]*animation:/s)
   })
 })

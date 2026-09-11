@@ -1,7 +1,8 @@
 const mountedDocuments = new WeakMap<Document, () => void>()
 
 /**
- * Arm CSS motion after Better Sidebar has produced its first stable geometry.
+ * Arm CSS motion after Better Sidebar has produced its first stable geometry,
+ * and pause the decorative home atmosphere while the document is hidden.
  * State changes, click handling, stores and animation reversal remain native.
  */
 export function mountFigmaMotionController(targetDocument: Document = document): () => void {
@@ -12,6 +13,13 @@ export function mountFigmaMotionController(targetDocument: Document = document):
   let cancelled = false
   let firstFrame = 0
   let secondFrame = 0
+
+  const syncHomeMotion = () => {
+    targetDocument.documentElement.dataset.odysseyHomeMotion =
+      targetDocument.visibilityState === 'hidden' ? 'paused' : 'running'
+  }
+  targetDocument.addEventListener('visibilitychange', syncHomeMotion)
+  syncHomeMotion()
 
   const cancelFrame = (id: number) => {
     if (id === 0) return
@@ -48,9 +56,11 @@ export function mountFigmaMotionController(targetDocument: Document = document):
     if (cancelled) return
     cancelled = true
     observer.disconnect()
+    targetDocument.removeEventListener('visibilitychange', syncHomeMotion)
     cancelFrame(firstFrame)
     cancelFrame(secondFrame)
     targetDocument.documentElement.removeAttribute('data-odyssey-motion-ready')
+    targetDocument.documentElement.removeAttribute('data-odyssey-home-motion')
     mountedDocuments.delete(targetDocument)
   }
   mountedDocuments.set(targetDocument, dispose)
