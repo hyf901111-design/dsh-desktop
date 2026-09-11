@@ -3,6 +3,24 @@ import { describe, expect, it } from 'vitest'
 import { homeFlowLuminance, mountHomeFlow } from '../src/preload/home-flow'
 
 describe('procedural home atmosphere', () => {
+  it('has many distinct medium fog peaks instead of a few page-sized light masses', () => {
+    for (const seconds of [0, 4, 8, 12, 60, 120]) {
+      const width = 64, height = 56
+      const values = Array.from({length: width * height}, (_, i) => homeFlowLuminance(i % width / (width-1), Math.floor(i/width)/(height-1), seconds, true))
+      let peaks = 0
+      for (let y=2;y<height-2;y++) for (let x=2;x<width-2;x++) {
+        const v=values[y*width+x]!
+        if (v<78) continue
+        let highest=true
+        for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++) {
+          if((dx||dy) && values[(y+dy)*width+x+dx]! >= v + ((dy<0||dy===0&&dx<0)?0:1)) highest=false
+        }
+        if(highest) peaks++
+      }
+      expect(peaks, `medium fog peaks at ${seconds}s`).toBeGreaterThanOrEqual(8)
+      expect(values.filter(v=>v<25).length/values.length).toBeLessThan(.02)
+    }
+  })
   it('produces bounded grayscale in both themes and continuous, non-uniform changes', () => {
     const changes: number[] = []
     for (let y = 0; y <= 1; y += .05) for (let x = 0; x <= 1; x += .05) {
@@ -16,8 +34,8 @@ describe('procedural home atmosphere', () => {
       expect(Math.abs(homeFlowLuminance(x, y, .042, true) - dark)).toBeLessThanOrEqual(2)
     }
     // Some regions lighten while others darken: not global opacity breathing.
-    expect(Math.max(...changes)).toBeGreaterThan(20)
-    expect(Math.min(...changes)).toBeLessThan(-20)
+    expect(Math.max(...changes)).toBeGreaterThan(6)
+    expect(Math.min(...changes)).toBeLessThan(-6)
   })
 
   it('stops rendering off the home page and disposes canvas, observers and animation', async () => {

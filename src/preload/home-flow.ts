@@ -1,21 +1,46 @@
-/** A continuous grayscale field, evaluated afresh rather than moving a texture.
- * Domain warping makes neighbouring regions stretch and fold independently.
- * Low spatial frequencies keep the foreground calm; no bitmap assets are used.
+/** Fixed spatial coordinates, evolving local gradients. Medium frequencies
+ * carry the fog; the broad field only supplies atmosphere. There is no shared
+ * warp or animated spatial transform, so neighbouring clouds can change shape
+ * independently without stretching the whole page into diagonal bands.
  */
-export function homeFlowLuminance(x: number, y: number, seconds: number, dark: boolean): number {
-  const t = seconds * 0.16
-  const u = x + 0.16 * Math.sin(y * 5.2 + t) + 0.08 * Math.sin(x * 3.7 - y * 2.8 - t * 0.73)
-  const v = y + 0.14 * Math.sin(x * 4.3 - t * 0.81) + 0.09 * Math.cos(y * 4.1 + x * 2.4 + t * 0.61)
-  const cloud = (cx: number, cy: number, sx: number, sy: number) =>
-    Math.exp(-((u - cx) ** 2 / sx + (v - cy) ** 2 / sy))
-  const field = Math.min(1, Math.max(0,
-    0.82 * cloud(0.06, 0.25, 0.075, 0.14)
-    + 0.63 * cloud(0.63, 0.2, 0.055, 0.065)
-    + 0.44 * cloud(0.47, 0.83, 0.04, 0.085)
-    + 0.23 * cloud(0.9, 1.04, 0.2, 0.09)
-    + 0.09 * Math.sin(u * 5.6 + v * 4.5 + t * 0.47)))
-  return Math.round(dark ? 15 + 112 * field : 250 - 49 * field)
+export function createHomeFlowField() {
+  const permutation = new Uint8Array(512)
+  const gx = new Float64Array(256), gy = new Float64Array(256)
+  let seed = 0x71a93b25
+  const random = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296 }
+  for(let i=0;i<256;i++) permutation[i]=i
+  for(let i=255;i>0;i--) { const j=Math.floor(random()*(i+1));const v=permutation[i]!;permutation[i]=permutation[j]!;permutation[j]=v }
+  for(let i=0;i<256;i++) permutation[i+256]=permutation[i]!
+  const phase=Array.from({length:256},()=>random()*Math.PI*2)
+  const rate=Array.from({length:256},()=> (.028+random()*.035)*(random()<.5?-1:1))
+  let time = NaN
+  const fade = (t:number) => t*t*t*(t*(t*6-15)+10)
+  const noise = (x:number,y:number) => {
+    const ix=Math.floor(x),iy=Math.floor(y),u=x-ix,v=y-iy
+    const a=permutation[(ix&255)]!+(iy&255),b=permutation[(ix+1)&255]!+(iy&255)
+    const aa=permutation[a]!,ab=permutation[a+1]!,ba=permutation[b]!,bb=permutation[b+1]!
+    const n00=gx[aa]!*u+gy[aa]!*v,n10=gx[ba]!*(u-1)+gy[ba]!*v
+    const n01=gx[ab]!*u+gy[ab]!*(v-1),n11=gx[bb]!*(u-1)+gy[bb]!*(v-1)
+    const fx=fade(u),fy=fade(v),top=n00+(n10-n00)*fx,bottom=n01+(n11-n01)*fx
+    return top+(bottom-top)*fy
+  }
+  return (x:number,y:number,seconds:number,dark:boolean,aspect=1) => {
+    if(time!==seconds) {
+      time=seconds
+      // Trigonometry is evaluated once per gradient per frame, never per pixel.
+      for(let i=0;i<256;i++) { const angle=phase[i]!+seconds*rate[i]!;gx[i]=Math.cos(angle);gy[i]=Math.sin(angle) }
+    }
+    const px=x*aspect
+    const field=.64*noise(px*4.8+19.3,y*4.8+27.1)
+      +.23*noise(px*8.7+73.8,y*8.7+51.4)
+      +.08*noise(px*1.7+113.2,y*1.7+93.7)
+      +.05*noise(px*16.1+151.6,y*16.1+173.9)
+    const density=Math.max(0,Math.min(1,.5+field*1.45))
+    return Math.round(dark?25+91*density:250-49*density)
+  }
 }
+
+export const homeFlowLuminance = createHomeFlowField()
 
 const mounted = new WeakMap<Document, () => void>()
 
@@ -34,13 +59,14 @@ export function mountHomeFlow(doc: Document = document): () => void {
   let elapsed = 0
   let disposed = false
   let dark = doc.body.hasAttribute('data-ds-dark-theme')
+  const luminance = createHomeFlowField()
 
   const draw = () => {
     if (!canvas || !context || !pixels) return
     const { width, height, data } = pixels
     for (let row = 0; row < height; row++) {
       for (let col = 0; col < width; col++) {
-        const value = homeFlowLuminance(col / (width - 1), row / (height - 1), elapsed, dark)
+        const value = luminance(col / (width - 1), row / (height - 1), elapsed, dark, width / height)
         const index = (row * width + col) * 4
         data[index] = data[index + 1] = data[index + 2] = value
         data[index + 3] = 255

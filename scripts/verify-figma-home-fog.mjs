@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { build } from 'esbuild'
 const playwright = await import(process.env.PLAYWRIGHT_MODULE_PATH || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js')
 const chromium = playwright.chromium ?? playwright.default.chromium
-const output = resolve('output/figma-full-acceptance/home-flow')
+const output = resolve('output/figma-full-acceptance/home-flow-clouds')
 await mkdir(output, { recursive: true })
 const bundle = (await build({ entryPoints:['src/preload/home-flow.ts'], bundle:true, format:'iife', globalName:'HomeFlow', write:false })).outputFiles[0].text
 const css = await readFile('src/preload/figma-home.css','utf8')
@@ -21,16 +21,27 @@ try {
   await page.setContent(`<style>html,body{margin:0;height:100%;overflow:hidden}body{background:#888}.pI_x6G_centerCol{position:absolute;left:280px;top:10px;width:calc(100% - 292px);height:calc(100% - 20px);isolation:isolate;overflow:hidden}.wSkVaW_root{position:absolute;inset:0}#front{position:absolute;top:45%;left:15%;width:70%;height:126px;background:#2228;border-radius:12px;color:white;text-align:center;display:grid;place-content:center;font:24px sans-serif}</style><style>${css}</style><body ${theme==='dark'?'data-ds-dark-theme':''}><main class=pI_x6G_centerCol><section class=wSkVaW_root data-odyssey-page=home><div id=front>探索更远，洞见更深</div></section></main></body>`)
   await page.evaluate(()=>{let id=0;const pending=new Map();window.requestAnimationFrame=cb=>{pending.set(++id,cb);return id};window.cancelAnimationFrame=id=>pending.delete(id);window.step=t=>{const a=[...pending.values()];pending.clear();a.forEach(cb=>cb(t))};window.pending=()=>pending.size})
   await page.addScriptTag({content:bundle+';window.disposeFlow=HomeFlow.mountHomeFlow(document)'})
-  const data=await page.evaluate(()=>{
-   const c=document.querySelector('canvas'),ctx=c.getContext('2d'),front=document.querySelector('#front');const geometry=JSON.stringify(front.getBoundingClientRect())
-   const snapshots=[],durations=[]
-   for(let i=1;i<=193;i++) { const start=performance.now();window.step(i*1000/24+1);durations.push(performance.now()-start);if(i===1||i===97||i===193)snapshots.push([...ctx.getImageData(0,0,c.width,c.height).data]) }
-   return {snapshots,geometry,after:JSON.stringify(front.getBoundingClientRect()),width:c.width,height:c.height,maxFrameMs:Math.max(...durations),averageFrameMs:durations.reduce((a,b)=>a+b)/durations.length,transform:getComputedStyle(c).transform,pending:window.pending()}
-  })
+  const snapshots=[],durations=[]
+  let data
+  for(const seconds of [0,4,8,12]) {
+    const frame=await page.evaluate(seconds=>{
+      const c=document.querySelector('canvas'),ctx=c.getContext('2d'),front=document.querySelector('#front')
+      window.flowDurations??=[]
+      const first=seconds===0?1:(seconds-4)*24+2,last=seconds*24+1
+      for(let i=first;i<=last;i++){const start=performance.now();window.step(i*1000/24+1);window.flowDurations.push(performance.now()-start)}
+      return {pixels:[...ctx.getImageData(0,0,c.width,c.height).data],geometry:JSON.stringify(front.getBoundingClientRect()),width:c.width,height:c.height,transform:getComputedStyle(c).transform,durations:window.flowDurations}
+    },seconds)
+    snapshots.push(frame.pixels)
+    data={geometry:data?.geometry??frame.geometry,after:frame.geometry,width:frame.width,height:frame.height,transform:frame.transform}
+    durations.splice(0,durations.length,...frame.durations)
+    await page.screenshot({path:output+`/${theme}-${viewport.width}-${seconds}s.png`})
+  }
+  Object.assign(data,{snapshots,maxFrameMs:Math.max(...durations),averageFrameMs:durations.reduce((a,b)=>a+b)/durations.length})
   assert.equal(data.geometry,data.after);assert.equal(data.transform,'none');assert(data.width<=256&&data.height<=256)
   for(const pixels of data.snapshots)for(let i=0;i<pixels.length;i+=4){assert.equal(pixels[i],pixels[i+1]);assert.equal(pixels[i],pixels[i+2]);assert.equal(pixels[i+3],255)}
   const change=data.snapshots[0].reduce((s,v,i)=>s+(i%4===0?Math.abs(v-data.snapshots[2][i]):0),0)/(data.width*data.height)
-  assert(change>(theme==='dark'?8:3),'field must visibly deform over eight seconds')
+  assert(change>(theme==='dark'?2:1),'local fog must slowly deform over eight seconds')
+  assert(change<(theme==='dark'?12:7),'fog motion must remain restrained')
   await page.screenshot({path:output+`/${theme}-${viewport.width}.png`})
   await page.emulateMedia({reducedMotion:'reduce'})
   await page.waitForFunction(()=>window.pending()===0,null,{polling:50})
