@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext, Script } from 'node:vm'
-import { Window } from 'happy-dom'
+import { Window, type HTMLElement as HappyHTMLElement } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { patchFigmaFilePreview } from '../scripts/lib/figma-file-preview-client.mjs'
 
@@ -58,14 +58,18 @@ describe('Figma file entries and complete readers', () => {
     } finally { await mounted.cleanup() }
   })
 
-  it.each(['pdf', 'docx', 'xlsx', 'pptx', 'html', 'md', 'txt'])('does not authorize or render %s readers before explicit reading', async kind => {
+  it.each(['pdf', 'docx', 'xlsx', 'pptx', 'html', 'md', 'txt'])('loads the original %s reader directly on the canvas', async kind => {
     const mounted = await mount(fixtureFile(kind))
     try {
-      expect(mounted.host.querySelector('[data-research-file-entry]')).not.toBeNull()
-      expect(mounted.host.querySelector('iframe,[data-native-office],[data-research-pdf-scroll],[data-research-text-preview],[data-research-markdown-preview]')).toBeNull()
-      expect(mounted.restore).not.toHaveBeenCalled()
-      expect(mounted.host.textContent).not.toContain('正在载入')
-      expect(mounted.host.querySelector('[data-research-file-entry]')?.textContent).not.toContain('完整资料')
+      await mounted.settle()
+      const reader = mounted.host.querySelector('[data-research-original-reader]') as HappyHTMLElement
+      expect(reader.hidden).toBe(false)
+      expect(reader.hasAttribute('inert')).toBe(false)
+      expect(reader.children.length).toBeGreaterThan(0)
+      expect((mounted.host.querySelector('[data-research-file-entry]') as HappyHTMLElement).hidden).toBe(true)
+      expect(mounted.restore).toHaveBeenCalledTimes(1)
+      if (['docx', 'xlsx', 'pptx'].includes(kind)) expect(reader.querySelector('[data-native-office]')).not.toBeNull()
+      if (kind === 'html') expect(reader.querySelector('iframe')).not.toBeNull()
     } finally { await mounted.cleanup() }
   })
 
@@ -135,41 +139,31 @@ describe('Figma file entries and complete readers', () => {
     } finally { await mounted.cleanup() }
   })
 
-  it('keeps a visited HTML reader viewport inside an inert zero-size closed clip', async () => {
+  it('keeps the HTML preview visible at card size after closing the reader', async () => {
     const mounted = await mount(fixtureFile('html'))
     try {
+      await mounted.settle()
       const reader = mounted.host.querySelector('[data-research-original-reader]') as any
-      expect(reader.hasAttribute('data-research-retained-viewport')).toBe(false)
-      expect(mounted.restore).not.toHaveBeenCalled()
-      Object.defineProperties(reader, { clientWidth: { configurable: true, value: 1314 }, clientHeight: { configurable: true, value: 786 } })
-      await mounted.toggle(); await mounted.settle()
       const iframe = reader.querySelector('iframe')
-      expect(reader.style.getPropertyValue('--odyssey-reader-width')).toBe('1314px')
-      expect(reader.style.getPropertyValue('--odyssey-reader-height')).toBe('786px')
-      await mounted.toggle()
-      expect(reader.hidden).toBe(true); expect(reader.hasAttribute('inert')).toBe(true)
-      expect(reader.getAttribute('aria-hidden')).toBe('true')
-      const style = mounted.window.getComputedStyle(reader)
-      expect(style.width).toBe('0px'); expect(style.height).toBe('0px'); expect(style.visibility).toBe('hidden')
-      expect(mounted.window.getComputedStyle(iframe).width).toBe('1314px')
-      expect(mounted.window.getComputedStyle(iframe).height).toBe('786px')
-      await mounted.toggle()
-      expect(reader.querySelector('iframe')).toBe(iframe); expect(mounted.restore).toHaveBeenCalledTimes(1)
+      await mounted.toggle(); await mounted.settle(); await mounted.toggle()
+      expect(reader.hidden).toBe(false)
+      expect(reader.hasAttribute('inert')).toBe(false)
+      expect(reader.hasAttribute('data-research-retained-viewport')).toBe(false)
+      expect(reader.querySelector('iframe')).toBe(iframe)
+      expect(mounted.restore).toHaveBeenCalledTimes(1)
     } finally { await mounted.cleanup() }
   })
 
-  it('shows original loading and unavailable states only after opening', async () => {
+  it('shows loading and authorization failure directly on the canvas', async () => {
     let finish!: (value: null) => void
     const restore = vi.fn(() => new Promise(resolve => { finish = resolve }))
     const mounted = await mount(fixtureFile('pdf'), { restore })
     try {
-      expect(restore).not.toHaveBeenCalled()
-      await mounted.toggle()
+      expect(restore).toHaveBeenCalledTimes(1)
       expect(mounted.host.querySelector('[data-research-preview-loading]')?.textContent).toBe('正在载入 PDF…')
       await act(async () => finish(null)); await mounted.settle()
       expect(mounted.host.querySelector('[data-research-pdf-error]')?.textContent).toBe('PDF 预览不可用')
-      await mounted.toggle(); await mounted.settle()
-      expect(mounted.host.querySelector('[data-research-file-entry]')?.textContent).toContain('PDF 预览不可用')
+      expect((mounted.host.querySelector('[data-research-original-reader]') as HappyHTMLElement).hidden).toBe(false)
     } finally { await mounted.cleanup() }
   })
 

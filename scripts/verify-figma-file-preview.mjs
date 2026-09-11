@@ -85,21 +85,21 @@ async function snapshot(name) {
   await page.mouse.click(0, 0)
   await page.waitForFunction(() => getComputedStyle(document.querySelector('.rScV5Q_nodeTitleActions')).opacity === '0', null, { timeout: 3000 })
   await page.evaluate(() => document.fonts.ready)
-  await page.waitForFunction(() => !document.querySelector('[data-research-file-entry]') || document.querySelector('[data-research-file-entry]')?.clientHeight > 0)
+  await page.waitForFunction(() => !document.querySelector('[data-research-file-entry]') || document.querySelector('[data-research-file-entry]').hidden || document.querySelector('[data-research-file-entry]')?.clientHeight > 0)
   const value = await page.locator('[data-research-file-presentation]').evaluate(element => {
     const entry = element.querySelector('[data-research-file-entry]'), title = element.querySelector('.rScV5Q_nodeTitleText'), box = element.getBoundingClientRect(), label = title.getBoundingClientRect()
     const style = getComputedStyle(element), actions = getComputedStyle(element.querySelector('.rScV5Q_nodeTitleActions'));
-    return { material: { background: style.backgroundColor, borderColor: style.borderColor, radius: style.borderRadius, shadow: style.boxShadow }, actionsOpacity: actions.opacity, active: document.activeElement?.outerHTML?.slice(0, 240), hovered: element.matches(':hover'), focusWithin: element.matches(':focus-within'), open: element.open, width: box.width, height: box.height, entryClient: [entry.clientWidth, entry.clientHeight], entryScroll: [entry.scrollWidth, entry.scrollHeight], title: { x: label.x - box.x, y: label.y - box.y, font: getComputedStyle(title).font }, text: entry.innerText, visibleReaders: [...element.querySelectorAll('iframe,[data-research-pdf-scroll],[data-research-text-preview]')].filter(node => node.getClientRects().length > 0 && getComputedStyle(node).visibility !== 'hidden').length }
+    return { inlinePreview:element.getAttribute('data-research-file-presentation')!=='web', readerVisible:!element.querySelector('[data-research-original-reader]').hidden, material: { background: style.backgroundColor, borderColor: style.borderColor, radius: style.borderRadius, shadow: style.boxShadow }, actionsOpacity: actions.opacity, active: document.activeElement?.outerHTML?.slice(0, 240), hovered: element.matches(':hover'), focusWithin: element.matches(':focus-within'), open: element.open, width: box.width, height: box.height, entryClient: [entry.clientWidth, entry.clientHeight], entryScroll: [entry.scrollWidth, entry.scrollHeight], title: { x: label.x - box.x, y: label.y - box.y, font: getComputedStyle(title).font }, text: entry.innerText, visibleReaders: [...element.querySelectorAll('iframe,[data-research-pdf-scroll],[data-research-text-preview]')].filter(node => node.getClientRects().length > 0 && getComputedStyle(node).visibility !== 'hidden').length }
   })
   assert.deepEqual(value.entryScroll, value.entryClient, name + ' closed entry must fit semantically')
-  assert.equal(value.visibleReaders, 0)
+  if(value.inlinePreview) assert.equal(value.readerVisible,true); else assert.equal(value.visibleReaders,0)
   assert.equal(value.actionsOpacity, '0', name + ' normal entry has no persistent hover toolbar: ' + JSON.stringify(value))
   assert.equal(value.material.background, name.startsWith('light-') ? 'rgb(255, 255, 255)' : 'rgb(41, 42, 45)')
   assert.equal(value.material.radius, '12px'); assert.equal(value.material.shadow, 'none')
   assert.equal(value.title.x, 18); assert.equal(value.title.y, 16)
   if (name.endsWith('-pdf-entry')) {
     const { root } = await cdp.send('DOM.getDocument');
-    for (const selector of ['.odyssey-file-kind', '.rScV5Q_nodeTitleText']) {
+    for (const selector of ['.rScV5Q_nodeTitleText']) {
       const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector });
       const rendered = (await cdp.send('CSS.getPlatformFontsForNode', { nodeId })).fonts;
       assert(rendered.some(font => font.isCustomFont && (selector.includes('kind') ? /DIN/i.test(font.familyName) : /Noto Sans SC/i.test(font.familyName))), selector + ' actual custom font');
@@ -111,7 +111,7 @@ async function snapshot(name) {
 }
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}`)
-  await page.locator('[data-research-file-entry]').waitFor()
+  await page.locator('[data-research-file-presentation]').waitFor()
   if (interactionOnly) {
     const interactionMetrics = []; let focusLifecycle
     for (const format of (crossOriginReader ? ['html'] : ['html', 'pdf', 'web', 'txt', 'md'])) {
@@ -153,13 +153,9 @@ try {
         await page.locator('[data-research-container-expand]').dispatchEvent('click'); await page.waitForTimeout(1800)
         const hidden = await frameState()
         const clip = await page.locator('[data-research-original-reader]').evaluate(e => ({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height,inert:e.hasAttribute('inert'),ariaHidden:e.getAttribute('aria-hidden'),visibility:getComputedStyle(e).visibility,bodyClient:[e.parentElement.parentElement.clientWidth,e.parentElement.parentElement.clientHeight],bodyScroll:[e.parentElement.parentElement.scrollWidth,e.parentElement.parentElement.scrollHeight]}))
-        assert.equal(clip.width, 0); assert.equal(clip.height, 0); assert.equal(clip.inert, true); assert.equal(clip.ariaHidden, 'true'); assert.equal(clip.visibility, 'hidden'); assert.deepEqual(clip.bodyScroll, clip.bodyClient)
-        const {root:domRoot}=await cdp.send('DOM.getDocument'),{nodeId}=await cdp.send('DOM.querySelector',{nodeId:domRoot.nodeId,selector:iframeSelector})
-        const accessibility = await cdp.send('Accessibility.getPartialAXTree',{nodeId,fetchRelatives:false})
-        assert(accessibility.nodes.length > 0 && accessibility.nodes.every(node=>node.ignored), 'closed reader must stay excluded from the accessibility tree')
-        assert.equal(hidden.width,beforeClose.width); assert.equal(hidden.height,beforeClose.height); assert.equal(hidden.top,beforeClose.top)
+        assert(clip.width>0 && clip.height>0); assert.equal(clip.inert,false); assert.equal(clip.ariaHidden,null); assert.equal(clip.visibility,'visible'); assert.deepEqual(clip.bodyScroll,clip.bodyClient)
         await page.locator('[data-research-container-expand]').dispatchEvent('click'); await page.waitForTimeout(300)
-        focusLifecycle={beforeClose,hidden,reopened:await scrollState(),clip,closedReaderIgnoredByAX:true,targets:(await cdp.send('Target.getTargets')).targetInfos.filter(t=>t.type==='iframe').map(t=>({type:t.type,url:t.url}))}
+        focusLifecycle={beforeClose,inline: hidden,reopened:await scrollState(),clip,inlinePreviewVisible:true,targets:(await cdp.send('Target.getTargets')).targetInfos.filter(t=>t.type==='iframe').map(t=>({type:t.type,url:t.url}))}
         assert(focusLifecycle.targets.some(t=>t.url.includes('reader.localhost')), 'the test must use an actual cross-site OOPIF')
         console.log(JSON.stringify(focusLifecycle))
       } else { await toggleReader(); await toggleReader() }
@@ -175,9 +171,9 @@ try {
   } else {
   for (const theme of ['light', 'dark']) {
     await page.evaluate(theme => theme === 'dark' ? document.body.setAttribute('data-ds-dark-theme', '') : document.body.removeAttribute('data-ds-dark-theme'), theme)
-    await showFile('pdf'); await snapshot(`${theme}-pdf-entry`)
+    await showFile('pdf'); await page.locator('[data-research-pdf-rendered-page="1"]').waitFor({timeout:20000}); await snapshot(`${theme}-pdf-entry`)
     await page.locator('[data-research-file-presentation]').hover(); await page.screenshot({ path: join(out, `${theme}-pdf-hover.png`) })
-    assert.equal(await page.evaluate(() => window.requests.length), theme === 'light' ? 0 : 1)
+    assert(await page.evaluate(() => window.requests.length)>0)
     await toggleReader()
     await page.locator('[data-research-pdf-rendered-page="1"]').waitFor({ timeout: 20000 })
     const pdf = await page.locator('[data-research-pdf-scroll]').evaluate(element => ({ client: element.clientHeight, scroll: element.scrollHeight, pages: element.querySelectorAll('[data-research-pdf-page]').length }))
@@ -231,7 +227,7 @@ try {
   assert((await page.locator('[data-research-file-entry]').innerText()).includes('真实刷新失败'))
   await showFile('txt', { node: { width: 220, height: 100, sizeMode: 'manual', excerpt: '长摘要'.repeat(300) } }); await snapshot('dark-manual-small-summary')
   await showFile('web', { node: { excerpt: '真实网页长摘要。'.repeat(300), url: page.url() + 'document/web?' + 'long-source='.repeat(40) } }); await snapshot('dark-long-web-summary')
-  await showFile('pdf', { fail: true, delay: 700 }); await toggleReader(); await page.locator('[data-research-preview-loading]').waitFor(); await page.screenshot({ path: join(out, 'dark-pdf-loading-reader.png') }); await page.locator('[data-research-pdf-error]').waitFor(); await page.screenshot({ path: join(out, 'dark-pdf-unavailable-reader.png') }); await toggleReader(); await snapshot('dark-pdf-unavailable-entry')
+  await showFile('pdf', { fail: true, delay: 700 }); await page.locator('[data-research-preview-loading]').waitFor(); await page.screenshot({ path: join(out, 'dark-pdf-loading-reader.png') }); await page.locator('[data-research-pdf-error]').waitFor(); await page.screenshot({ path: join(out, 'dark-pdf-unavailable-reader.png') }); await snapshot('dark-pdf-unavailable-entry')
   assert.deepEqual(errors, [])
   await writeFile(join(out, 'results.json'), JSON.stringify({ evidence: 'controlled Chromium; production file/web frames and original PDF.js/HTML/web/text readers; Office adapter covered separately by focused identity tests', metrics, readers, fonts, generatedWeb: { editingSubmitted: true, closedRefreshAndErrorVisible: true, automaticRefresh: 'original controller verified in focused tests' }, errors }, null, 2))
   console.log(JSON.stringify({ passed: true, output: out, closedStates: metrics.length, readers, errors }, null, 2))
