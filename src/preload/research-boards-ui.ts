@@ -1435,10 +1435,8 @@ export function ResearchBoardPresence({
       'data-self': p.self, 'data-offline': !p.online,
       'aria-label': `${p.username}，${boardRoleLabel(p.role)}`,
       'aria-haspopup': 'dialog',
-      onClick: (event: React.MouseEvent<HTMLButtonElement>) => showBoardMembers(page, sessionId, event.currentTarget)
-    }, Array.from(p.username)[0]?.toUpperCase(),
-      h('span', { className: 'srb-tip', role: 'tooltip' }, p.username, p.self ? ' · 你' : '',
-        h('small', null, boardRoleLabel(p.role), p.online ? ' · 正在画板中' : ' · 未在当前画板')))),
+      onClick: (event: React.MouseEvent<HTMLButtonElement>) => showBoardAvatarInfo(page, sessionId, p.userId, event.currentTarget)
+    }, Array.from(p.username)[0]?.toUpperCase())),
     users.length > 3 && h('button', {
       className: 'srb-avatar-overflow', 'aria-label': `另外 ${users.length - 3} 位协作成员`,
       'aria-haspopup': 'dialog',
@@ -1450,8 +1448,70 @@ export function ResearchBoardPresence({
     }, h('span', { className: 'srb-plus-icon', 'aria-hidden': true })))
 }
 
+/** Figma 61: clicking an avatar reveals identity, while +N opens membership. */
+export function showBoardAvatarInfo(page: ResearchBoardsPage, sessionId: string, userId: string, anchor: HTMLElement) {
+  const doc = anchor.ownerDocument, win = doc.defaultView!
+  const existing = doc.querySelector<HTMLElement>('.srb-avatar-info')
+  const same = existing?.dataset.userId === userId && existing?.dataset.sessionId === sessionId
+  existing?.dispatchEvent(new win.Event('srb-close'))
+  if (same) return
+  doc.querySelectorAll('.srb-members-popover').forEach(el => el.dispatchEvent(new win.Event('srb-close')))
+  const popover = doc.createElement('div')
+  popover.className = 'srb-avatar-info'
+  popover.dataset.userId = userId; popover.dataset.sessionId = sessionId
+  popover.setAttribute('popover', 'manual')
+  popover.setAttribute('role', 'dialog'); popover.setAttribute('aria-label', '成员信息')
+  const name = uiText('strong', ''), permission = uiText('small', '')
+  const arrow = doc.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  arrow.setAttribute('viewBox', '0 0 12 8'); arrow.setAttribute('aria-hidden', 'true')
+  arrow.innerHTML = '<path d="M0 7L5.3 1.7Q6 1 6.7 1.7L12 7"/>'
+  popover.append(name, permission, arrow)
+  let off = () => {}, closed = false
+  const close = (focus = false) => {
+    if (closed) return
+    closed = true; off(); popover.hidePopover?.(); popover.remove()
+    anchor.setAttribute('aria-expanded', 'false')
+    doc.removeEventListener('pointerdown', outside, true); doc.removeEventListener('keydown', key, true)
+    win.removeEventListener('resize', position); doc.removeEventListener('scroll', position, true)
+    if (focus && anchor.isConnected) anchor.focus({ preventScroll: true })
+  }
+  const position = () => {
+    if (!anchor.isConnected) { close(); return }
+    const rect = anchor.getBoundingClientRect(), width = popover.getBoundingClientRect().width || 160
+    const height = popover.getBoundingClientRect().height || 66
+    const left = Math.max(12, Math.min(rect.left - 4, win.innerWidth - width - 12))
+    const above = rect.bottom + 8 + height > win.innerHeight - 12 && rect.top >= height + 20
+    popover.style.left = `${left}px`
+    popover.style.top = `${Math.max(12, above ? rect.top - height - 8 : rect.bottom + 8)}px`
+    popover.dataset.side = above ? 'top' : 'bottom'
+    popover.style.setProperty('--srb-arrow-x', `${Math.max(12, Math.min(width - 12, rect.left + rect.width / 2 - left))}px`)
+  }
+  const outside = (event: Event) => {
+    const target = event.target as Node
+    if (!popover.contains(target) && !anchor.contains(target)) close()
+  }
+  const key = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true) } }
+  const render = () => {
+    const view = page.getView(sessionId)
+    const member = view && boardMembers(view, page.getState().account.user?.userId).find(m => m.userId === userId)
+    if (!view?.permissions.read || view.board.sharingState !== 'shared' || !member) { close(); return }
+    name.textContent = member.username + (member.self ? ' · 你' : '')
+    permission.textContent = member.role === 'owner' ? '创建者 · 可编辑' : member.role === 'editor' ? '可编辑' : '仅可查看'
+    position()
+  }
+  popover.addEventListener('srb-close', () => close())
+  doc.body.append(popover); render()
+  if (closed) return
+  popover.showPopover?.(); position(); anchor.setAttribute('aria-expanded', 'true')
+  off = page.subscribe(render)
+  doc.addEventListener('pointerdown', outside, true); doc.addEventListener('keydown', key, true)
+  win.addEventListener('resize', position); doc.addEventListener('scroll', position, true)
+  return { popover, close }
+}
+
 export function showBoardMembers(page: ResearchBoardsPage, sessionId: string, anchor: HTMLElement) {
   const doc = anchor.ownerDocument, win = doc.defaultView!
+  doc.querySelectorAll('.srb-avatar-info').forEach(element => element.dispatchEvent(new win.Event('srb-close')))
   doc.querySelectorAll('.srb-members-popover').forEach(element => element.dispatchEvent(new win.Event('srb-close')))
   const popover = doc.createElement('div')
   popover.className = 'srb-members-popover'
