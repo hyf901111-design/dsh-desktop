@@ -196,12 +196,17 @@ export function patchFigmaFinalCanvas(source) {
                       if(viewport!==current.viewport)workspace.setViewport(viewport);
                     }
                     publishRegion(bounds,document.visibilityState!=="hidden");
+                    // Transforms do not trigger ResizeObserver. Follow the visible panel
+                    // through CSS motion, including a reversal, and sample its settled edge.
+                    if(document.visibilityState!=="hidden"&&panel?.getAnimations?.().some(animation=>animation.playState==='running'))scheduleSync();
                 };
                 `);
   source=source.replace('syncSize();\n\t\t\t\tconst observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleSync);', 'let observedPanel=null;\n                const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleSync);\n                syncSize();');
   source=source.replace('for(const panel of document.querySelectorAll(".t8lSSG_panel"))observer?.observe(panel);', `const panelMutations=typeof MutationObserver==='undefined'?null:new MutationObserver(records=>{if(records.some(record=>record.type==='attributes'?record.target?.closest?.('.t8lSSG_panel'):[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&(node.matches?.('.t8lSSG_panel')||node.closest?.('.t8lSSG_panel')||node.querySelector?.('.t8lSSG_panel')))))scheduleSync();});
-                if(document.body)panelMutations?.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-research-active','class','style']});`);
-  source=source.replace('observer?.disconnect();\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);','observer?.disconnect();panelMutations?.disconnect();\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);');
+                if(document.body)panelMutations?.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-research-active','class','style']});
+                const onPanelMotion=event=>{if(event.target?.matches?.('.t8lSSG_panel'))scheduleSync();};
+                for(const type of ['transitionrun','transitionend','transitioncancel','animationend','animationcancel'])document.addEventListener(type,onPanelMotion,true);`);
+  source=source.replace('observer?.disconnect();\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);','observer?.disconnect();panelMutations?.disconnect();for(const type of ["transitionrun","transitionend","transitioncancel","animationend","animationcancel"])document.removeEventListener(type,onPanelMotion,true);\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);');
   source=source.replace("(0,react_jsx_runtime.jsxs)('details',{children:", "(0,react_jsx_runtime.jsxs)('details',{onToggle:event=>{const details=event.currentTarget,card=details.closest('[data-research-compact-chrome]');if(details.open)card?.addEventListener('close',()=>{details.open=false;},{once:true});if(details.open&&!card?.open){details.open=false;card?.querySelector('[data-research-container-expand]')?.click();card?.ownerDocument.defaultView?.requestAnimationFrame(()=>{if(card.open)details.open=true;});}},children:");
   source=source.replaceAll("card=details.closest('[data-research-compact-chrome]');if(details.open&&!card?.open)","card=details.closest('[data-research-compact-chrome]');if(details.open)card?.addEventListener('close',()=>{details.open=false;},{once:true});if(details.open&&!card?.open)");
   source=source.replace('function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onHtmlSize, editingPrompt', 'function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onHtmlSize, onUpgradeSize, editingPrompt');

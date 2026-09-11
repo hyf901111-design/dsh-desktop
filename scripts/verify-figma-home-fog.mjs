@@ -25,7 +25,7 @@ const viewports = [
   { width: 1920, height: 1080 },
   { width: 1000, height: 1300 }
 ]
-const sampleTimes = [0, 12, 24, 36]
+const sampleTimes = [0, 7, 14, 21]
 const themes = ['light', 'dark']
 const assetNames = [
   'figma-glass-light-base.png',
@@ -189,8 +189,8 @@ try {
       }
 
       if (!expectRegression) {
-        assert.notEqual(transforms[0], transforms[2], `${viewport.width}x${viewport.height} ${theme} fog did not move by 24s`)
-        assert.notEqual(transforms[0], transforms[1], `${viewport.width}x${viewport.height} ${theme} fog did not move by 12s`)
+        assert.notEqual(transforms[0], transforms[2], `${viewport.width}x${viewport.height} ${theme} fog did not move by 14s`)
+        assert.notEqual(transforms[0], transforms[1], `${viewport.width}x${viewport.height} ${theme} fog did not move by 7s`)
       }
 
       await page.emulateMedia({ reducedMotion: 'reduce' })

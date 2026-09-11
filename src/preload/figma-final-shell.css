@@ -65,7 +65,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .sRp_composer .wSkVaW_composerStack { --dsh-composer-stack-gap:4px; }
 .sRp_composer .wSkVaW_heroWorkspaceRow { height:24px; gap:8px; margin:0; padding:0; }
 .sRp_composer .uV2eYG_root { padding:0; }
-.sRp_composer .uV2eYG_card { min-height:150px; border:0; border-radius:10.5px; padding-top:12px; gap:8px; background:var(--odyssey-input); backdrop-filter:blur(12px); box-shadow:var(--odyssey-input-shadow); font:400 14px/22px var(--odyssey-font-ui); }
+.sRp_composer .uV2eYG_card { min-height:120px; border:0; border-radius:10.5px; padding-top:12px; gap:8px; background:var(--odyssey-input); backdrop-filter:blur(12px); box-shadow:var(--odyssey-input-shadow); font:400 14px/22px var(--odyssey-font-ui); }
 .sRp_composer .uV2eYG_scroll { flex:1 1 auto; }
 .sRp_composer .uV2eYG_input,.sRp_composer .uV2eYG_mirror,.sRp_composer .uV2eYG_backdrop { padding:4px 17px 0; }
 .sRp_composer .uV2eYG_row { flex-wrap:nowrap; gap:4px; padding:0 8px 8px; }
