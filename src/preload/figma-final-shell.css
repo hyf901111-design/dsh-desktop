@@ -91,9 +91,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 [data-research-arrange-feedback] { width:max-content; max-width:calc(100% - 32px); display:inline-flex; padding:8px 12px; gap:6px; }
 
 .t8lSSG_panel { top:12px; bottom:12px; right:12px; padding-top:0; border:1px solid var(--odyssey-glass-border); border-radius:12px; background:transparent; box-shadow:var(--odyssey-panel-shadow); isolation:isolate; }
-.t8lSSG_panel:before { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-2; pointer-events:none; background: url('/figma-glass-light-mesh.png') center/1136px 1136px, url('/figma-glass-light-base.png') right center/1088px 880px; }
-.t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(16px); }
-[data-ds-dark-theme] .t8lSSG_panel:before { background: url('/figma-glass-dark-overlay.png') right center/1122px 1122px, url('/figma-glass-dark-mesh.png') right center/1202px 1202px, url('/figma-glass-dark-base.png') right center/1088px 880px; }
+.t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(32px); }
 .t8lSSG_panel .t8lSSG_tabBar { height:44px; box-sizing:border-box; padding:7px 8px; background:transparent; border-bottom:0; gap:6px; }
 .t8lSSG_panel .t8lSSG_tab { border:0; min-width:46px; height:30px; border-radius:7px; padding:0 6px 0 8px; font:400 12px/20px var(--odyssey-font-ui); }
 .t8lSSG_panel .t8lSSG_tabActive { background:var(--odyssey-active-fill); font-weight:500; }
@@ -107,7 +105,6 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .pI_x6G_centerCol { min-height:0; height:calc(100% - 20px); overflow:hidden; }
 body:has([data-odyssey-page="research"]) .t8lSSG_panel { top:22px; bottom:22px; right:24px; box-sizing:border-box; }
 .t8lSSG_panelBody { border-radius:0 0 12px 12px; overflow:hidden; }
-.t8lSSG_panel:before { z-index:0; }
 .t8lSSG_panel:after { z-index:0; }
 .t8lSSG_panel>.t8lSSG_tabBar,.t8lSSG_panel>.t8lSSG_panelBody { position:relative; z-index:1; }
 body:has([data-odyssey-page="research"]) .t8lSSG_toggleCluster { top:30px; right:32px; }
@@ -124,11 +121,9 @@ body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none
 [data-dsh-sidebar-root] .YDXeBa_title { font-size:14px; line-height:21px; }
 [data-dsh-sidebar-root] .YDXeBa_time { font-size:11px; line-height:17px; }
 
-/* Figma 361:5988/5989: preserve the source texture rotation and crop before the glass layer. */
-.t8lSSG_panel { background:#f2f2f2; overflow:clip; container-type:size; }
-.t8lSSG_panel:before { --odyssey-panel-fog-size:max(1136px, calc(100cqh + 280px), calc(100cqw + 72px)); inset:auto; right:-36px; top:50%; width:var(--odyssey-panel-fog-size); height:var(--odyssey-panel-fog-size); border-radius:0; transform:translateY(-50%) rotate(90deg); background:url('/figma-glass-light-mesh.png') center/contain no-repeat; }
-[data-ds-dark-theme] .t8lSSG_panel { background:#1f1f1f; }
-[data-ds-dark-theme] .t8lSSG_panel:before { inset:0; width:auto; height:auto; transform:none; background-image:url('/figma-glass-dark-overlay.png'); background-position:right -29px center; background-size:max(1122px, calc(100cqh + 266px), calc(100cqw + 58px)) max(1122px, calc(100cqh + 266px), calc(100cqw + 58px)); background-repeat:no-repeat; }
+/* Updated 304:879/1296: only 62% tint and 32 px background blur. */
+.t8lSSG_panel { background:transparent; overflow:clip; }
+.t8lSSG_panel:before { content:none; background:none; }
 .t8lSSG_panel .t8lSSG_panelResize { left:0; width:6px; }
 
 /* Settings lives inside the glass frame's stacking context; Better Sidebar is

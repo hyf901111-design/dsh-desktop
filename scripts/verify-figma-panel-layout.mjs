@@ -1,4 +1,4 @@
-// Focused Chromium regression for Figma panel geometry and responsive fog.
+// Focused Chromium regression for Figma panel geometry and pure backdrop glass.
 // It loads the production panel styles/assets in a controlled DOM fixture;
 // packaged-client validation remains a separate integration step.
 import assert from 'node:assert/strict'
@@ -145,18 +145,36 @@ try {
         await page.setContent(setup.html, { waitUntil: 'load' })
         await page.evaluate(() => document.fonts.ready)
         const rect = await page.evaluate(() => document.querySelector('.t8lSSG_panel').getBoundingClientRect().toJSON())
+        const material = await page.evaluate(() => {
+          const panel = document.querySelector('.t8lSSG_panel')
+          return { base: getComputedStyle(panel).backgroundColor, image: getComputedStyle(panel, '::before').backgroundImage,
+            content: getComputedStyle(panel, '::before').content, blur: getComputedStyle(panel, '::after').backdropFilter,
+            tint: getComputedStyle(panel, '::after').backgroundColor }
+        })
+        assert.equal(material.base, 'rgba(0, 0, 0, 0)', 'right panel must sample the real backdrop')
+        assert.equal(material.image, 'none', 'no decorative backing image in either theme')
+        assert.equal(material.content, 'none')
+        assert.equal(material.blur, 'blur(32px)')
+        assert.equal(material.tint, dark ? 'rgba(17, 18, 19, 0.62)' : 'rgba(255, 255, 255, 0.62)')
+
         const screenshot = await page.screenshot()
         const maxChroma = sampleChroma(screenshot, rect, ['right', 'bottom'])
-        // The translucent glass tint contributes up to seven RGB levels even
-        // over the grayscale fog. Exposed base pixels in the legacy crop reach
-        // 19 at 400 px wide and 94 in the tall fixture.
-        assert(maxChroma <= 8, `${dark ? 'dark' : 'light'} ${panelWidth}x${panelHeight} panel edge chroma ${maxChroma}`)
+        // The fixture puts a magenta scene behind the panel. The final 62%
+        // tint must transmit about 38% of its chroma, rather than covering it
+        // with the previously baked grayscale image.
+        assert(maxChroma >= 85 && maxChroma <= 105, `${dark ? 'dark' : 'light'} ${panelWidth}x${panelHeight} backdrop transmission ${maxChroma}`)
+        await page.evaluate(() => document.body.style.background = '#00ffff')
+        const changed = await page.screenshot()
+        const before = PNG.sync.read(screenshot), after = PNG.sync.read(changed)
+        const middle = (Math.floor(rect.y + rect.height / 2) * before.width + Math.floor(rect.x + rect.width / 2)) * 4
+        assert(before.data[middle] - after.data[middle] > 80, 'real backdrop red channel must propagate through glass')
+        assert(after.data[middle + 1] - before.data[middle + 1] > 80, 'real backdrop green channel must propagate through glass')
         await context.close()
       }
     }
   }
 
-  console.log('Figma panel geometry and responsive fog passed in controlled Chromium')
+  console.log('Figma panel geometry and pure backdrop glass passed in controlled Chromium')
 } finally {
   await browser.close()
 }
