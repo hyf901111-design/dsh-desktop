@@ -9,84 +9,66 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修正原生页签盒模型并按真实元素验证宽度",
+        "featureName": "最新主题卡片与模式图标还原",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "c49e7624185e6c31ee3d42d7749450bea2065366",
-        "tipCommit": "54881b7d4b06a7a8b8286071201cffeb158bacf6",
+        "baseCommit": "54881b7d4b06a7a8b8286071201cffeb158bacf6",
+        "tipCommit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
         "commits": [
           {
-            "commit": "54881b7d4b06a7a8b8286071201cffeb158bacf6",
+            "commit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
             "parents": [
-              "c49e7624185e6c31ee3d42d7749450bea2065366"
+              "54881b7d4b06a7a8b8286071201cffeb158bacf6"
             ],
-            "subject": "修正原生页签盒模型并按真实元素验证宽度"
+            "subject": "按最新设计还原主题预览卡片并统一模式图标与设置控件"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/verify-figma-panel-layout.mjs"
+            "path": "scripts/lib/figma-settings-client.d.mts"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-panels.css"
+            "path": "scripts/lib/figma-settings-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-home.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-settings-assets/mode-standard.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-settings-assets/theme-dark.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-settings-assets/theme-light.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-settings-assets/theme-system.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-theme-cards.test.ts"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "/tmp/panel66-sources.log",
-            "verifiedCommit": "54881b7d4b06a7a8b8286071201cffeb158bacf6",
-            "completedAt": "2026-09-11T11:59:50.132672+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-figma-panel-layout.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "/tmp/panel66-browser.log",
-            "verifiedCommit": "54881b7d4b06a7a8b8286071201cffeb158bacf6",
-            "completedAt": "2026-09-11T11:59:50.160940+00:00",
-            "timeoutMs": 180000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "Production CSS/runtime verified in controlled Chromium. Native verification follows integration."
-        },
-        "acceptanceCriteria": [
-          "独立圆角并列、10px间距、固定收放锚点",
-          "主视口调宽保留画布坐标和缩放，工具栏居中",
-          "两主题、小窗口、收放、拖动、草稿、阅读位置、27项聚焦检查通过"
-        ],
-        "risks": [
-          "No release, push, version bump or notarization"
-        ],
-        "generatedAt": "2026-09-11T11:33:13.461646+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3d5cc055274601301ec62d2aa0e529794aaa8ddd",
-        "verificationCommit": "3d5cc055274601301ec62d2aa0e529794aaa8ddd",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "3d5cc055274601301ec62d2aa0e529794aaa8ddd",
-            "completedAt": "2026-09-11T12:00:31.610Z",
-            "timeoutMs": 600000
-          },
           {
             "argv": [
               "npm",
@@ -94,56 +76,41 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3d5cc055274601301ec62d2aa0e529794aaa8ddd",
-            "completedAt": "2026-09-11T12:00:31.610Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "3d5cc055274601301ec62d2aa0e529794aaa8ddd",
-            "completedAt": "2026-09-11T12:00:31.610Z",
+            "summary": "/tmp/full-audit-types.log",
+            "verifiedCommit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
+            "completedAt": "2026-09-11T12:38:37.906729+00:00",
             "timeoutMs": 180000
           },
           {
             "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
+              "npx",
+              "vitest",
+              "run",
+              "test/figma-theme-cards.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/figma-settings-dismiss.test.ts",
+              "test/standard-agent-preset.test.ts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "3d5cc055274601301ec62d2aa0e529794aaa8ddd",
-            "completedAt": "2026-09-11T12:00:31.610Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "3d5cc055274601301ec62d2aa0e529794aaa8ddd",
-            "completedAt": "2026-09-11T12:00:31.610Z",
-            "timeoutMs": 300000
+            "summary": "17 focused checks passed; /tmp/full-audit-theme-tests.log and /tmp/full-audit-tests.log",
+            "verifiedCommit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
+            "completedAt": "2026-09-11T12:38:37.906729+00:00",
+            "timeoutMs": 180000
           }
         ],
-        "recordedAt": "2026-09-11T12:00:31.610Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "Native before-state compared with live Figma; updated native verification after integration build."
+        },
+        "acceptanceCriteria": [
+          "三张主题预览使用原始Figma矢量并保存真实主题偏好",
+          "标准/构建图标随实际模式变化",
+          "设置选择器与导航文字按浅深色稿还原"
+        ],
+        "risks": [
+          "Local build only; no release or push"
+        ],
+        "generatedAt": "2026-09-11T12:38:37.906729+00:00"
       }
     }
   ],
