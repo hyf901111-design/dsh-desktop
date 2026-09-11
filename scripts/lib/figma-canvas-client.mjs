@@ -144,6 +144,19 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('function ResearchContainerBody({ node, sessionId, visible, onHtmlSize })', 'function ResearchContainerBody({ node, sessionId, visible, onHtmlSize, preserveHeading = false })');
   source=source.replace('text: spec.content.replace(', 'text: preserveHeading ? spec.content : spec.content.replace(');
   source=block(source,source.includes('function ResearchDerivedSummary(')?'function ResearchDerivedSummary(':'function ResearchMindMap({', 'function researchGenerationPresentation(',derivedSource);
+  const sourceMeta = 'node.kind === "generated-container" ? null : (0, react_jsx_runtime.jsxs)("span", {';
+  const linkedMeta = 'node.kind === "generated-container" ? null : ["generated-summary","generated-mind-map"].includes(node.kind)&&node.generationStatus==="completed"?(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node}):(0, react_jsx_runtime.jsxs)("span", {';
+  if(!source.includes(linkedMeta))source=exact(source,sourceMeta,linkedMeta);
+  const sourceTitles = '(node.generationSources ?? []).map((source) => source.title).join("、")';
+  const linkedTitles = '(0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node,embedded:true})';
+  if(!source.includes(linkedTitles))source=exact(source,sourceTitles,linkedTitles);
+  // A reference jump keeps the user's zoom and centers in the unobscured area.
+  const focusStart=source.indexOf('function researchCanvasFocusViewport('),focusEnd=source.indexOf('function researchWorkbenchViewport(',focusStart);
+  if(focusStart<0||focusEnd<focusStart)throw Error('Figma source focus anchor missing');
+  let focus=source.slice(focusStart,focusEnd);
+  focus=focus.replace('canvasSize.width : 0;', 'Math.min(canvasSize.width,canvasSize.availableWidth>0?canvasSize.availableWidth:canvasSize.width) : 0;');
+  source=source.slice(0,focusStart)+focus+source.slice(focusEnd);
+
   const displayStart=source.indexOf('function ResearchMindMapDisplayNode('),displayEnd=source.indexOf('function ResearchMindMapBranches(',displayStart);
   if(displayStart>=0&&displayEnd>displayStart){const display=source.slice(displayStart,displayEnd).replace('children: node.label', 'children: node.displayLabel ?? node.label');source=source.slice(0,displayStart)+display+source.slice(displayEnd);}
   source=source.replace('observer?.observe(root);\n\t\t\t\twindow.addEventListener("resize", scheduleSync);', 'observer?.observe(root);\n                for(const panel of document.querySelectorAll(".t8lSSG_panel"))observer?.observe(panel);\n\t\t\t\twindow.addEventListener("resize", scheduleSync);');
@@ -338,10 +351,26 @@ const generatedPlacementSource = `function researchCanvasGeneratedPlacement(node
 }
 `;
 
+
+function ResearchDerivedSources({node,embedded=false}) {
+  const trigger=(0,react.useRef)(null),menu=(0,react.useRef)(null),[open,setOpen]=(0,react.useState)(false);
+  const frozen=new Map((node.generationSources??[]).map(source=>[source.id,source]));
+  const ids=Array.from(new Set(node.sourceNodeIds??[])),items=ids.map((id,index)=>({id,title:frozen.get(id)?.title||'来源组件 '+(index+1)}));
+  const close=()=>setOpen(false);
+  (0,react.useEffect)(()=>{if(!open)return;const doc=trigger.current?.ownerDocument;const dismiss=event=>{if(!trigger.current?.contains(event.target)&&!menu.current?.contains(event.target))close();};const key=event=>{if(event.key==='Escape'){event.preventDefault();close();trigger.current?.focus({preventScroll:true});}};doc?.addEventListener('pointerdown',dismiss,true);doc?.addEventListener('keydown',key,true);return()=>{doc?.removeEventListener('pointerdown',dismiss,true);doc?.removeEventListener('keydown',key,true);};},[open]);
+  const select=event=>{event.stopPropagation();close();trigger.current?.closest('dialog[open]')?.close();};
+  const link=item=>(0,react_jsx_runtime.jsx)('button',{type:'button',role:embedded||open?'menuitem':undefined,'data-research-reference-node-id':item.id,onClick:select,onDoubleClick:event=>event.stopPropagation(),children:item.title},item.id);
+  if(embedded)return (0,react_jsx_runtime.jsx)('div',{className:'odyssey-source-links',children:items.map(link)});
+  const rect=trigger.current?.getBoundingClientRect(),doc=trigger.current?.ownerDocument,view=doc?.defaultView;
+  const popup=open&&rect?(0,react_dom.createPortal)((0,react_jsx_runtime.jsx)('div',{ref:menu,className:'odyssey-source-menu','data-research-source-menu':'',role:'menu','aria-label':'来源组件',onPointerDown:event=>event.stopPropagation(),style:{position:'fixed',width:270,maxWidth:'calc(100vw - 24px)',maxHeight:Math.max(40,Math.min(300,view.innerHeight-24)),left:Math.max(12,Math.min(view.innerWidth-282,rect.left)),...(rect.top>Math.min(300,items.length*36+16)+20?{bottom:view.innerHeight-rect.top+8}:{top:rect.bottom+8})},children:items.map(link)}),trigger.current.closest('dialog[open]')??doc.body):null;
+  return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_artifactMeta odyssey-derived-sources','data-research-derived-sources':'',onPointerDown:event=>event.stopPropagation(),children:[(0,react_jsx_runtime.jsx)('button',{ref:trigger,type:'button',disabled:!items.length,'data-research-reference-node-id':items.length===1?items[0].id:undefined,'aria-haspopup':items.length>1?'menu':undefined,'aria-expanded':items.length>1?open:undefined,onClick:event=>{if(items.length===1)select(event);else{event.stopPropagation();setOpen(!open);}},children:node.kind==='generated-mind-map'?'来源：所选组件':'› 查看来源组件'}),node.kind==='generated-mind-map'?(0,react_jsx_runtime.jsx)('span',{children:' · 双击编辑节点'}):null,popup]});
+}
+
 const derivedSource = `function ResearchDerivedSummary({node,onUpgradeSize}) {
   const spec={version:1,type:'markdown',title:node.title,content:node.excerpt};
   return (0,react_jsx_runtime.jsx)('div',{'data-research-derived-summary':'',className:'odyssey-derived-summary',children:(0,react_jsx_runtime.jsx)(ResearchContainerContent,{node:{...node,height:Math.max(100,node.height-24),containerSpec:spec},preserveHeading:['pasted-text','assistant-result'].includes(node.kind),onUpgradeSize})});
 }
+${ResearchDerivedSources.toString()}
 function researchMindMapFitTree(tree,budget,labelLimit) {
   let remaining=Math.max(1,budget)-1,shortened=false;
   const copy=node=>{const label=String(node.label),limit=node===tree?labelLimit*2:labelLimit;const displayLabel=label.length>limit?label.slice(0,Math.max(1,limit-1))+'…':label;if(displayLabel!==label)shortened=true;return {...node,sourceLineIndex:node.sourceLineIndex,displayLabel,children:[]};};
@@ -465,6 +494,12 @@ body[data-ds-dark-theme] [data-research-compact-chrome][data-selected=true]{box-
 [data-research-compact-chrome] .rScV5Q_chartLabel{font:11px DINPro,'Noto Sans SC',sans-serif}\n[data-research-compact-chrome] .rScV5Q_chartLegend{padding:6px 0 0;font:11px/19px DINPro,'Noto Sans SC',sans-serif}
 [data-research-compact-chrome] .rScV5Q_artifactBody:has([data-research-derived-summary]),[data-research-compact-chrome][data-research-generated-mind-map] .rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important;gap:6px}
 .odyssey-derived-summary{display:flex;flex:1;min-height:0;flex-direction:column}
+.odyssey-derived-sources{position:relative;font:11px/19px DINPro,'Noto Sans SC',sans-serif!important;white-space:nowrap}
+.odyssey-derived-sources>button{border:0;padding:0;background:transparent;color:#4279d8;font:inherit;cursor:pointer}.odyssey-derived-sources>button:disabled{color:#85878d;cursor:default}.odyssey-derived-sources>span{color:#85878d}
+.odyssey-source-menu{z-index:1000;box-sizing:border-box;overflow:auto;padding:8px;border-radius:10px;background:#fff;outline:1px solid #e7e8ec;box-shadow:0 4px 16px #0000000e;color:#242529;font:12px/20px DINPro,'Noto Sans SC',sans-serif}
+.odyssey-source-menu>button,.odyssey-source-links>button{display:block;width:100%;border:0;border-radius:6px;padding:8px 10px;text-align:left;background:transparent;color:inherit;font:inherit;overflow-wrap:anywhere;cursor:pointer}.odyssey-source-menu>button:hover,.odyssey-source-links>button:hover{background:#f4f5f7}
+body[data-ds-dark-theme] .odyssey-derived-sources>button{color:#92b5fa}body[data-ds-dark-theme] .odyssey-source-menu{background:#292a2d;outline-color:#414247;color:#ececed;box-shadow:0 4px 16px #00000029}body[data-ds-dark-theme] :is(.odyssey-source-menu,.odyssey-source-links)>button:hover{background:#343538}
+
 [data-research-compact-chrome] .rScV5Q_artifactMeta{flex:none;padding:0 18px 6px;font-size:10px;line-height:18px}
 [data-research-compact-chrome] .rScV5Q_mindMap{height:auto;flex:1;min-height:0;padding:6px 18px 0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px;overflow:visible;font-family:DINPro,'Noto Sans SC',sans-serif}
 [data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapRoot{align-self:center;width:fit-content;max-width:100%}
