@@ -1,19 +1,15 @@
-/* Home: 121:2717 / 4337, 136:121 / 331. Images contain only the source
-   background layers, never controls or text. Final Research keeps its own fill. */
+/* Home atmosphere is computed by home-flow.ts; no background image assets. */
 body:has([data-odyssey-page="home"]) {
   --odyssey-shell: rgb(228 229 229 / .67);
   --odyssey-home-input: rgb(255 255 255 / .49);
   --odyssey-home-title: #15181b;
   --odyssey-home-control: #f5f6f7;
-  --odyssey-home-fog-duration: 24s;
-  --odyssey-home-fog-size: 1136px;
 }
 body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   --odyssey-shell: rgb(7 9 9 / .78);
   --odyssey-home-input: rgb(0 0 0 / .49);
   --odyssey-home-title: #e7e9e8;
   --odyssey-home-control: rgb(255 255 255 / .09);
-  --odyssey-home-fog-size: 1122px;
 }
 .pI_x6G_centerCol:has([data-odyssey-page="home"]) {
   position:relative;
@@ -21,59 +17,18 @@ body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   border-radius:12px;
   background:#f2f2f2 !important;
 }
-.pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
-  content:"";
+/* This fixed canvas is repainted with a deforming grayscale field. Overscan
+   supplies blur samples at the rounded edges without moving the surface. */
+.pI_x6G_centerCol:has([data-odyssey-page="home"])::before { content:none; }
+[data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"]) { background:#1f1f1f !important; }
+[data-odyssey-home-flow] {
   position:absolute;
-  left:50%;
-  top:50%;
-  /* Keep the original fog scale at the design size. Larger or taller windows
-     expand this opaque, grayscale square. The synchronized scale supplies
-     additional coverage as the cloud layer drifts away from its origin. */
-  width:max(var(--odyssey-home-fog-size), calc(100cqw + 16px), calc(100cqh + 16px));
-  height:auto;
-  aspect-ratio:1;
-  translate:-50% -50%;
-  transform:rotate(90deg);
-  background:url('/figma-glass-light-mesh.png') center/contain no-repeat;
-  animation:odyssey-home-fog-light var(--odyssey-home-fog-duration) ease-in-out infinite;
-  animation-play-state:paused;
-  will-change:transform;
+  inset:-24px;
+  width:calc(100% + 48px);
+  height:calc(100% + 48px);
+  filter:blur(16px);
   pointer-events:none;
   z-index:-1;
-}
-[data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"]) {
-  background:#1f1f1f !important;
-}
-[data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
-  transform:none;
-  background-image:url('/figma-glass-dark-overlay.png');
-  animation-name:odyssey-home-fog-dark;
-}
-:root[data-odyssey-home-motion="running"] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
-  animation-play-state:running;
-}
-@keyframes odyssey-home-fog-light {
-  0%, 100% { transform:rotate(90deg) translate3d(0, 0, 0) scale(1); }
-  25% { transform:rotate(90deg) translate3d(144px, -96px, 0) scale(1.28); }
-  50% { transform:rotate(90deg) translate3d(0, 0, 0) scale(1.32); }
-  75% { transform:rotate(90deg) translate3d(-144px, 96px, 0) scale(1.28); }
-}
-@keyframes odyssey-home-fog-dark {
-  0%, 100% { transform:translate3d(0, 0, 0) scale(1); }
-  25% { transform:translate3d(-144px, 96px, 0) scale(1.28); }
-  50% { transform:translate3d(0, 0, 0) scale(1.32); }
-  75% { transform:translate3d(144px, -96px, 0) scale(1.28); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
-    animation:none;
-    transform:rotate(90deg);
-    will-change:auto;
-  }
-  [data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
-    animation:none;
-    transform:none;
-  }
 }
 .wSkVaW_root[data-odyssey-page="home"] { background:transparent; }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroGlow { display:none; }

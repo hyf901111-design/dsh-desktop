@@ -1993,11 +1993,15 @@ if (process.argv.includes('--serve')) {
     assert.equal(await page.getByRole('menuitem',{name:'复制我的 ID',exact:true}).count(),0)
     await page.screenshot({animations:'disabled',path:join(out,'account-menu-dark.png')})
     await page.getByRole('menuitem',{name:'林研究员，查看账户信息',exact:true}).click()
-    await page.locator('.sherlock-account-profile').getByText('ID 0000 0000 01',{exact:true}).waitFor()
-    await page.getByRole('button',{name:'复制 ID',exact:true}).click()
-    await page.waitForFunction(async () => (await navigator.clipboard.readText()) === '0000000001')
-    await page.getByRole('button',{name:'已复制 ID',exact:true}).waitFor()
-    await page.screenshot({animations:'disabled',path:join(out,'account-details-id-dark.png')})
+    // Final settings design keeps the public ID in the account menu; the
+    // account page contains identity and an expandable password form.
+    await page.locator('.sherlock-account-profile').getByText('林研究员',{exact:true}).waitFor()
+    const passwordToggle = page.locator('.sherlock-account-security').getByRole('button',{name:'修改密码',exact:true})
+    assert.equal(await passwordToggle.getAttribute('aria-expanded'), 'false')
+    await passwordToggle.click()
+    await page.getByRole('form',{name:'修改密码',exact:true}).getByLabel('当前密码',{exact:true}).waitFor()
+    assert.equal(await passwordToggle.getAttribute('aria-expanded'), 'true')
+    await page.screenshot({animations:'disabled',path:join(out,'account-details-dark.png')})
     await page.getByRole('button',{name:'← 返回应用',exact:true}).click()
     assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'editor' })).ok, true)
     await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === true)
@@ -2155,15 +2159,22 @@ if (process.argv.includes('--serve')) {
     assert.ok(movedCanvas.length > 0)
     await peer.locator('[data-personal-import]').first().waitFor()
     console.log('BOARD_RETURN_LEGACY_PASSED transcript/files/imports/source-retained/new-folder')
-    // Real browser wheel delivery across the iframe boundary, using the native frame.
+    // Final design: overflowing HTML stays a summary on the canvas and is read in an expanded frame.
+    await page.setViewportSize({width:1380,height:900});
     await page.evaluate(async () => {
       const f=window.fixture; await f.page.openPersonal('original'); const w=f.registry.for('original');
       window.canvasWheelBefore=w.getSnapshot();
-      w.setArtifacts([{id:'wheel-iframe',messageId:'wheel-iframe',kind:'generated-container',title:'滚轮交互验收',excerpt:'内容',containerPrompt:'离线验收',refreshMinutes:0,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'滚轮交互验收',html:'<main style="height:1800px"><label>状态保留 <input id="state" value="原值"></label><p>顶部内容</p><p style="margin-top:1000px">底部内容</p></main>'},x:280,y:230,width:440,height:320,sizeMode:'manual'}]);
+      w.setArtifacts([{id:'wheel-iframe',messageId:'wheel-iframe',kind:'generated-container',title:'滚轮交互验收',excerpt:'内容',containerPrompt:'离线验收',refreshMinutes:0,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'滚轮交互验收',html:'<main id="scroll-content" style="position:absolute;inset:0;overflow:auto"><div style="height:1800px"><label>状态保留 <input id="state" value="原值"></label><p>顶部内容</p><p style="margin-top:1000px">底部内容</p></div></main>'},x:280,y:230,width:440,height:320,sizeMode:'manual'}]);
       w.setSelection({selectedNodeIds:[],orderedFileIds:[]});w.setViewport({x:0,y:0,scale:1});
     });
     const wheelCard=page.locator('[data-research-node-id="wheel-iframe"]');
     const wheelFrame=wheelCard.frameLocator('iframe').frameLocator('#preview');
+    await wheelCard.getByText('放大查看完整内容',{exact:true}).waitFor();
+    const viewport=()=>page.evaluate(()=>window.fixture.registry.for('original').getSnapshot().viewport);
+    let box=await wheelCard.boundingBox();
+    await page.mouse.move(box.x+40,box.y+110);await page.mouse.wheel(0,80);
+    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-80);
+    await wheelCard.locator('[data-research-container-expand]').click();
     await wheelFrame.locator('#state').waitFor();
     const typography = await wheelFrame.locator('body').evaluate(async body => {
       const loaded=await document.fonts.load('400 16px "EWork DIN Pro"','ETF 510300');
@@ -2179,38 +2190,34 @@ if (process.argv.includes('--serve')) {
     assert.match(await wheelCard.locator('.rScV5Q_containerContent').evaluate(e=>getComputedStyle(e).fontFamily),/DIN Pro/);
     await page.screenshot({path:join(out,'component-din-pro.png')});
     console.log('COMPONENT_DIN_PRO_PASSED offline-font-loaded/distinct-latin-glyphs/html-native-only/app-font-unchanged');
-    const viewport=()=>page.evaluate(()=>window.fixture.registry.for('original').getSnapshot().viewport);
-    const point=async()=>{const b=await wheelCard.locator('[data-research-preview-body]').boundingBox();assert.ok(b);return {x:b.x+b.width/2,y:b.y+Math.min(100,b.height/2)}};
-    let p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,80);
-    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-80);
-    assert.equal(await wheelFrame.locator('html').evaluate(()=>window.scrollY),0);
-    p=await point();await page.mouse.click(p.x,p.y);
-    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().selection.selectedNodeIds.includes('wheel-iframe'));
     await wheelFrame.locator('#state').fill('保留输入');
-    p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,120);
-    await wheelFrame.locator('html').evaluate(()=>new Promise(resolve=>{if(window.scrollY>0)return resolve();window.addEventListener('scroll',()=>resolve(),{once:true})}));
+    const content=wheelFrame.locator('#scroll-content');
+    const contentBox=await content.boundingBox();
+    await page.mouse.move(contentBox.x+80,contentBox.y+100);await page.mouse.wheel(0,120);
+    await page.waitForTimeout(300);
+    assert.ok(await content.evaluate(e=>e.scrollTop)>0);
     assert.equal((await viewport()).y,-80);
-    assert.ok(await wheelFrame.locator('html').evaluate(()=>window.scrollY)>0);
-    await page.screenshot({path:join(out,'canvas-selected-iframe-scroll.png')});
-    await page.evaluate(()=>window.fixture.registry.for('original').setSelection({selectedNodeIds:[],orderedFileIds:[]}));
-    const innerScroll=await wheelFrame.locator('html').evaluate(()=>window.scrollY);
-    p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,80);
-    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-160);
-    assert.equal(await wheelFrame.locator('html').evaluate(()=>window.scrollY),innerScroll);
+    await page.screenshot({path:join(out,'canvas-expanded-iframe-scroll.png')});
+    await wheelCard.locator('[data-research-container-expand]').click();
+    await wheelCard.getByText('放大查看完整内容',{exact:true}).waitFor();
+    await wheelCard.locator('[data-research-container-expand]').click();
+    await wheelFrame.locator('#state').waitFor();
     assert.equal(await wheelFrame.locator('#state').inputValue(),'保留输入');
-    await page.screenshot({path:join(out,'canvas-unselected-iframe-pan.png')});
-    console.log('CANVAS_WHEEL_SELECTION_PASSED unselected-pan/selected-inner-scroll/deselect-pan/iframe-state-retained');
+    await wheelCard.locator('[data-research-container-expand]').click();
+    console.log('CANVAS_WHEEL_SELECTION_PASSED summary-pan/expanded-inner-scroll/close-reopen/iframe-state-retained');
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),node=w.getSnapshot().artifacts[0];w.setArtifacts([{...node,containerSpec:undefined,generationStatus:'queued',generationStartedAt:Date.now()-20000,generationLastActivityAt:Date.now(),generationOutputChars:1420,generationEvents:[{seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{seq:2,type:'tool-finished',failed:false}],height:840}]);w.attachGenerationTask('wheel-iframe',{taskId:'progress',canvasNodeId:'wheel-iframe',state:'running',lastSeq:3,startedAt:Date.now()-20000,events:[{taskId:'progress',canvasNodeId:'wheel-iframe',seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:2,type:'tool-finished',failed:false},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:3,type:'assistant-delta',text:'{"version":1,'.padEnd(1420,' ')}]});w.setViewport({x:0,y:0,scale:1})});
     await wheelCard.locator('[data-research-generation-process]').waitFor();
-    assert.ok((await wheelCard.boundingBox()).height<=321);
+    assert.ok(Math.abs((await wheelCard.boundingBox()).height-840)<=1, 'manual component height is preserved during generation');
+    await wheelCard.locator('[data-research-generation-toggle]').click();
     assert.match(await wheelCard.textContent(),/000933.SH 历史行情/);
-    assert.match(await wheelCard.textContent(),/1,420/);
+    assert.match(await wheelCard.textContent(),/资料已返回，继续核对与整理/);
+    assert.equal(await wheelCard.locator('[data-research-generation-process]').getAttribute('aria-busy'),'true');
     await page.screenshot({path:join(out,'compact-generation-progress.png')});
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),node=w.getSnapshot().artifacts[0];w.setArtifacts([{...node,generationStatus:'completed',containerSpec:{version:1,type:'markdown',title:'已完成',content:'生成结果'}}])});
     await page.waitForFunction(()=>document.querySelector('[data-research-node-id="wheel-iframe"]').getBoundingClientRect().height>321);
     const overflow=await page.evaluate(()=>{const flow=document.createElement('div');flow.dataset.researchTaskConversation='';flow.style.width='320px';const p=document.createElement('p');p.textContent='const veryLongUnbrokenJavascriptIdentifier='.repeat(200);flow.append(p);document.body.append(flow);const result={width:flow.clientWidth,scroll:flow.scrollWidth};flow.remove();return result});
     assert.ok(overflow.scroll<=overflow.width+1);
-    console.log('GENERATION_FEEDBACK_PASSED compact-running/full-result/real-tool-activity/long-subagent-text-wrapping');
+    console.log('GENERATION_FEEDBACK_PASSED manual-size-preserved/expanded-process/full-result/real-tool-activity/long-subagent-text-wrapping');
 
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),b=window.canvasWheelBefore;w.setArtifacts(b.artifacts);w.setSelection(b.selection);w.setViewport(b.viewport)});
     console.log(
