@@ -9,68 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "EWork Odyssey 第五批：设置残影、认证投影及面板动效",
+        "featureName": "EWork Odyssey 第六批：设置菜单分层退出",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "21bce413024c1f01d1a4a56337f6dc0d47222126",
-        "tipCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
+        "baseCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
+        "tipCommit": "aa8a824c643e01cf63869a963461397ce299b54f",
         "commits": [
           {
-            "commit": "ff90cf25ed2076c5a72476584c0cda3157cd3d5d",
+            "commit": "aa8a824c643e01cf63869a963461397ce299b54f",
             "parents": [
-              "21bce413024c1f01d1a4a56337f6dc0d47222126"
+              "531a013cfdfa54a40ca4e1a78ccd84d01988588f"
             ],
-            "subject": "还原认证玻璃表单下方的完整投影层"
-          },
-          {
-            "commit": "dcca969402e02a16280b54448262ffcbf1042dbe",
-            "parents": [
-              "ff90cf25ed2076c5a72476584c0cda3157cd3d5d"
-            ],
-            "subject": "消除设置毛玻璃背后的侧栏文字和按钮残影"
-          },
-          {
-            "commit": "3d64b37d48e7ba807e2f2e8789b560029bd8d512",
-            "parents": [
-              "dcca969402e02a16280b54448262ffcbf1042dbe"
-            ],
-            "subject": "补齐面板控件动效并验证实例保持"
-          },
-          {
-            "commit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
-            "parents": [
-              "3d64b37d48e7ba807e2f2e8789b560029bd8d512"
-            ],
-            "subject": "稳定验证面板快速反向过渡"
+            "subject": "修复设置菜单与页面同时响应退出键"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+            "path": "scripts/lib/figma-settings-client.mjs"
           },
           {
             "status": "A",
-            "path": "scripts/verify-figma-panel-motion.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-figma-settings-overlay.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-auth.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-motion.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-settings.css"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-panel-motion-runtime.test.ts"
+            "path": "test/figma-settings-dismiss.test.ts"
           }
         ],
         "checks": [
@@ -80,9 +39,9 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "deps directly related validation passed; log checkpoint-5-deps.log",
-            "verifiedCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
-            "completedAt": "2026-09-11T01:53:17.271392+00:00",
+            "summary": "deps directly related validation passed; log checkpoint-6-deps.log",
+            "verifiedCommit": "aa8a824c643e01cf63869a963461397ce299b54f",
+            "completedAt": "2026-09-11T02:19:13.133951+00:00",
             "timeoutMs": 120000
           },
           {
@@ -92,9 +51,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "typecheck directly related validation passed; log checkpoint-5-typecheck.log",
-            "verifiedCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
-            "completedAt": "2026-09-11T01:53:21.807895+00:00",
+            "summary": "typecheck directly related validation passed; log checkpoint-6-typecheck.log",
+            "verifiedCommit": "aa8a824c643e01cf63869a963461397ce299b54f",
+            "completedAt": "2026-09-11T02:19:16.869334+00:00",
             "timeoutMs": 120000
           },
           {
@@ -102,45 +61,13 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/figma-settings-layout.test.ts",
-              "test/figma-auth-layout.test.ts",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/figma-motion-controller.test.ts",
-              "test/figma-panel-no-session.test.ts",
-              "test/figma-panel-tab-overflow.test.ts",
-              "test/figma-panel-drag-recovery.test.ts",
-              "test/figma-final-shell-patch.test.ts",
-              "test/research-tabbar-final-layout.test.ts"
+              "test/figma-settings-dismiss.test.ts",
+              "test/figma-settings-layout.test.ts"
             ],
             "outcome": "passed",
-            "summary": "focused directly related validation passed; log checkpoint-5-focused.log",
-            "verifiedCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
-            "completedAt": "2026-09-11T01:53:23.494122+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-figma-panel-motion.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "panels directly related validation passed; log checkpoint-5-panels.log",
-            "verifiedCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
-            "completedAt": "2026-09-11T01:53:28.194158+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "node",
-              "scripts/verify-figma-settings-overlay.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "settings directly related validation passed; log checkpoint-5-settings.log",
-            "verifiedCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
-            "completedAt": "2026-09-11T01:53:29.136366+00:00",
+            "summary": "focused directly related validation passed; log checkpoint-6-focused.log",
+            "verifiedCommit": "aa8a824c643e01cf63869a963461397ce299b54f",
+            "completedAt": "2026-09-11T02:19:17.911983+00:00",
             "timeoutMs": 120000
           },
           {
@@ -151,15 +78,15 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "sources directly related validation passed; log checkpoint-5-sources.log",
-            "verifiedCommit": "531a013cfdfa54a40ca4e1a78ccd84d01988588f",
-            "completedAt": "2026-09-11T01:53:38.313761+00:00",
+            "summary": "sources directly related validation passed; log checkpoint-6-sources.log",
+            "verifiedCommit": "aa8a824c643e01cf63869a963461397ce299b54f",
+            "completedAt": "2026-09-11T02:19:26.895551+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Checkpoint4 actual native screenshot and DOM reproduce sidebar headers under translucent settings. Controlled production CSS fails before and passes after correction, including restoring original draft node. Auth glass shadow comparison and panel motion tests passed; checkpoint5 actual package visual verification remains pending."
+          "summary": "Checkpoint5 actual native settings light and dark show zero background ghost nodes, preserve transparent frame and original safdsa draft. Native Escape closes both menu and settings; actual Menu plus SettingsPanel regression reproduces and focused fix passes. Checkpoint6 native verification pending."
         },
         "acceptanceCriteria": [
           "Build only the integration checkout and verify actual main interface while preserving existing user draft",
@@ -170,80 +97,7 @@
           "Full 258-case Figma acceptance is ongoing; controlled component screenshots do not count as native client acceptance",
           "No public release, push, version bump or notarization"
         ],
-        "generatedAt": "2026-09-11T01:53:38.313852+00:00"
-      },
-      "merged": {
-        "mergeCommit": "492ba1ec470f2e9682a0937b96f95496c87bb747",
-        "verificationCommit": "492ba1ec470f2e9682a0937b96f95496c87bb747",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "492ba1ec470f2e9682a0937b96f95496c87bb747",
-            "completedAt": "2026-09-11T01:56:29.823Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "492ba1ec470f2e9682a0937b96f95496c87bb747",
-            "completedAt": "2026-09-11T01:56:29.823Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "492ba1ec470f2e9682a0937b96f95496c87bb747",
-            "completedAt": "2026-09-11T01:56:29.823Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "492ba1ec470f2e9682a0937b96f95496c87bb747",
-            "completedAt": "2026-09-11T01:56:29.823Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "492ba1ec470f2e9682a0937b96f95496c87bb747",
-            "completedAt": "2026-09-11T01:56:29.823Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T01:56:29.823Z"
+        "generatedAt": "2026-09-11T02:19:26.895643+00:00"
       }
     }
   ],
