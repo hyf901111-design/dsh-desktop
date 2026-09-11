@@ -123,8 +123,21 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('...queued, containerSizePreset: researchComponentSize(current), ...(current.containerSpec || current.sizeMode === "manual" ? {} : { width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)] }),', '...queued, ...(current.containerSpec || current.sizeMode === "manual" ? {} : researchContainerPlannedGeometry(snapshot,current,prompt)),');
   source=source.replace('onCancel: onCancelGeneration\n', 'onCancel: onCancelGeneration, onExpand: onExpandGeneration\n');
   source=source.replace('onActivate, onAutoHeight, onWebInspection', 'onActivate, onAutoHeight, onExpandGeneration, onWebInspection');
-  if(!source.includes('onExpandGeneration:()=>'))source=source.replace('onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),', 'onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }), onExpandGeneration:()=>{if(node.height<456)workspace.updateNodeGeometry(node.id,{width:656,height:456,sizeMode:"auto"});},');
-  source=source.replace('if(node.height<456)workspace.updateNodeGeometry', 'if(node.height!==456||node.width!==656)workspace.updateNodeGeometry');
+  // Figma 43 manual dimensions are a user choice, not an automatic preset request.
+  // Read the latest node because a resize can finish before this render's callback is replaced.
+  const expandGeneration = 'onExpandGeneration:(requestedSize="large")=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current||current.sizeMode==="manual")return;const height=requestedSize==="medium"?220:456;if(height===220&&(current.width>320||current.height>220))return;if(current.height!==height||current.width!==656)workspace.updateNodeGeometry(current.id,{width:656,height,sizeMode:"auto"});},';
+  if (!source.includes(expandGeneration)) {
+    const oldExpand = [
+      'onExpandGeneration:()=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(current&&current.sizeMode!=="manual"&&(current.height!==456||current.width!==656))workspace.updateNodeGeometry(current.id,{width:656,height:456,sizeMode:"auto"});},',
+      'onExpandGeneration:()=>{if(node.height<456)workspace.updateNodeGeometry(node.id,{width:656,height:456,sizeMode:"auto"});},',
+      'onExpandGeneration:()=>{if(node.height!==456||node.width!==656)workspace.updateNodeGeometry(node.id,{width:656,height:456,sizeMode:"auto"});},'
+    ].find(anchor => source.includes(anchor));
+    if (oldExpand) source = exact(source, oldExpand, expandGeneration);
+    else if (!source.includes('onExpandGeneration:')) {
+      const autoHeight = 'onAutoHeight: (_artifact, height) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),';
+      source = exact(source, autoHeight, autoHeight + ' ' + expandGeneration);
+    } else throw Error('Figma generation expansion callback anchor missing');
+  }
 
   source=source.replace(`}) : node.kind === "pasted-text" || node.kind === "assistant-result" || node.kind === "generated-summary" && node.generationStatus === 'completed' ?`, `}) : node.kind === 'generated-summary'&&node.generationStatus==='completed'?(0,react_jsx_runtime.jsx)(ResearchDerivedSummary,{node,onUpgradeSize:onExpandGeneration}):node.kind === "pasted-text" || node.kind === "assistant-result" ?`);
   source=source.replace('node.kind === "pasted-text" || node.kind === "assistant-result" ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {\n\t\t\t\t\t\ttext: node.excerpt,\n\t\t\t\t\t\tstreaming: false\n\t\t\t\t\t})', 'node.kind === "pasted-text" || node.kind === "assistant-result" ? (0,react_jsx_runtime.jsx)(ResearchDerivedSummary,{node,onUpgradeSize:onExpandGeneration})');
@@ -367,9 +380,13 @@ const generationSource = `function ResearchGenerationProcess({node,onCancel,onEx
 const responsiveSource = `function ResearchContainerContent(props) {
   const {node}=props, ref=(0,react.useRef)(null);
   const [frameState,setFrameState]=(0,react.useState)({expanded:false,overflow:false});
-  const [fitRatio,setFitRatio]=(0,react.useState)(1);
-  const [kpiFit,setKpiFit]=(0,react.useState)([]);
-  (0,react.useLayoutEffect)(()=>setFitRatio(1),[node.id,node.width,node.height,node.containerSpec]);
+  const [fit,setFit]=(0,react.useState)(null);
+  const matchesFit=value=>value?.id===node.id&&value.width===node.width&&value.height===node.height&&value.spec===node.containerSpec;
+  const fitRatio=matchesFit(fit)?fit.ratio:1;
+  const setFitRatio=update=>setFit(previous=>{const before=matchesFit(previous)?previous.ratio:1,ratio=typeof update==='function'?update(before):update;return matchesFit(previous)&&ratio===before?previous:{id:node.id,width:node.width,height:node.height,spec:node.containerSpec,ratio};});
+  const [kpiMeasurement,setKpiMeasurement]=(0,react.useState)(null);
+  const kpiFit=matchesFit(kpiMeasurement)?kpiMeasurement.items:[];
+  const setKpiFit=update=>setKpiMeasurement(previous=>{const before=matchesFit(previous)?previous.items:[],items=typeof update==='function'?update(before):update;return matchesFit(previous)&&items===before?previous:{id:node.id,width:node.width,height:node.height,spec:node.containerSpec,items};});
   (0,react.useLayoutEffect)(()=>{if(frameState.expanded)return;const element=ref.current;if(!element)return;let active=true;const measure=()=>{if(!active||!element.isConnected||element.clientHeight<1)return;
       if(node.containerSpec?.type==='kpi'&&element.clientWidth>0){
         const doc=element.ownerDocument,canvas=doc.createElement('canvas'),context=canvas.getContext('2d'),strong=element.querySelector('strong'),label=element.querySelector('.rScV5Q_containerKpis span');
@@ -398,7 +415,7 @@ const responsiveSource = `function ResearchContainerContent(props) {
     if(spec.type==='kpi'){const columns=width<480?2:4,rows=Math.max(1,Math.floor((height-70)/76*fitRatio)),maximum=(kpiFit.some(item=>item.fullWidth)?1:columns)*rows;summary=spec.items.length>maximum||kpiFit.some(item=>item.shortened);spec={...spec,items:spec.items.slice(0,maximum).map((item,index)=>({...item,...kpiFit[index]}))};}
     if(spec.type==='markdown'||spec.type==='html'&&frameState.overflow){const text=spec.type==='html'?researchHtmlText(spec.html):spec.content;const maxChars=Math.max(24,Math.floor(Math.floor((width-36)/13)*Math.max(2,Math.floor((height-108)/21))*fitRatio));if(text.length>maxChars||spec.type==='html'||fitRatio<1){const sentences=text.split(/(?<=[。！？.!?])\\s*|\\n+/);let excerpt='';for(const sentence of sentences){if(excerpt.length+sentence.length>maxChars)break;excerpt+=(excerpt?'\\n':'')+sentence;}spec={version:1,type:'markdown',title:spec.title,content:(excerpt||text.slice(0,maxChars)+'…').replace(/^\\s{0,3}#{1,6}\\s+/gm,'').replace(/\\n+/g,' ').replace(/[*_]/g,'')};summary=true;}}
   }
-  (0,react.useLayoutEffect)(()=>{if(!frameState.expanded&&node.sizeMode!=='manual'&&(node.containerSpec.type==='kpi'||['generated-summary','pasted-text','assistant-result'].includes(node.kind))&&summary&&(width<656||height<456))props.onUpgradeSize?.();},[node.id,node.sizeMode,node.containerSpec.type,width,height,summary,frameState.expanded,props.onUpgradeSize]);
+  (0,react.useLayoutEffect)(()=>{if(!frameState.expanded&&node.sizeMode!=='manual'&&summary&&(width<656||height<456))props.onUpgradeSize?.(width<=320&&height<=220?'medium':'large');},[node.id,node.sizeMode,node.containerSpec.type,width,height,summary,frameState.expanded,props.onUpgradeSize]);
   const htmlSummary=node.containerSpec.type==='html'&&spec.type==='markdown';
   return (0,react_jsx_runtime.jsxs)('div',{ref,className:'odyssey-component-content','data-component-expanded':frameState.expanded,'data-component-summary':summary,'data-component-width':width<480?'narrow':width<760?'medium':'wide',children:[
     (0,react_jsx_runtime.jsx)('div',{className:'odyssey-component-primary',inert:htmlSummary?true:void 0,'aria-hidden':htmlSummary?true:void 0,style:{display:htmlSummary?'none':'flex'},children:(0,react_jsx_runtime.jsx)(ResearchContainerBody,{...props,node:node.containerSpec.type==='html'||spec===node.containerSpec?node:{...node,containerSpec:spec}})}),

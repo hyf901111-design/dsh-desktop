@@ -453,3 +453,52 @@ it.each([false, true])(
     }
   }
 )
+
+// Figma 325:700: failure keeps the original invitation actions available for retry.
+it.each(['accept', 'decline'] as const)('restores the compact %s action after a failed invitation response', async decision => {
+  const w = new Window({ url: 'http://localhost/' })
+  const host = w.document.createElement('div')
+  host.dataset.researchBoardBellHost = ''
+  w.document.body.append(host)
+  let emit: (event: any) => void = () => {}
+  const state: ResearchBoardsState = { version: 1, eventSeq: 1,
+    account: { status: 'ready', generation: 1, user: { userId: 'u', publicId: '0000000001', username: '甲' } },
+    favorites: [], boards: [], current: null, recoveries: [],
+    notifications: { cursor: 1, unreadCount: 0, pendingCount: 0, notifications: [] } }
+  let rejectResponse!: (error: Error) => void
+  const invoke = vi.fn((action: string) => action === 'invitation.respond'
+    ? new Promise<any>((_resolve, reject) => { rejectResponse = reject })
+    : Promise.resolve({ ok: true, value: state.notifications }))
+  const dispose = mountResearchBoardNotifications(w.document as unknown as Document, {
+    isSharedSession: () => false, getSnapshot: async () => state,
+    subscribe: fn => { emit = fn; return () => {} }, invoke
+  })
+  try {
+    await new Promise(r => setTimeout(r, 5))
+    emit({ type: 'state', state: { ...state, eventSeq: 2, notifications: {
+      cursor: 2, unreadCount: 1, pendingCount: 1, notifications: [{
+        notificationId: 'retry-note', eventVersion: 1, type: 'invitation', boardId: 'board',
+        boardTitle: '真实研究', createdAt: 1, readAt: null,
+        invitation: { invitationId: 'invite', version: 3, status: 'pending' }
+      }] } } })
+    await new Promise(r => setTimeout(r, 5))
+    const bubble = w.document.querySelector('.srb-bubble')!
+    const label = decision === 'accept' ? '接受' : '拒绝'
+    const action = [...bubble.querySelectorAll('button')].find(b => b.textContent === label)!
+    action.click()
+    expect(action.textContent).toBe(decision === 'accept' ? '加入中…' : '处理中…')
+    expect(action.disabled).toBe(true)
+    rejectResponse(Error('网络暂时不可用'))
+    await new Promise(r => setTimeout(r, 5))
+    expect(action.textContent).toBe(label)
+    expect(action.disabled).toBe(false)
+    expect(bubble.querySelector('[role=status]')?.textContent).toBe('网络暂时不可用')
+    action.click()
+    expect(invoke.mock.calls.filter(([action]) => action === 'invitation.respond')).toHaveLength(2)
+    expect(invoke).toHaveBeenLastCalledWith('invitation.respond', { invitationId: 'invite', version: 3, decision })
+    rejectResponse(Error('仍然离线'))
+    await new Promise(r => setTimeout(r, 5))
+    expect(bubble.querySelectorAll('[role=status]')).toHaveLength(1)
+    expect(bubble.querySelector('[role=status]')?.textContent).toBe('仍然离线')
+  } finally { dispose(); w.happyDOM.abort() }
+})

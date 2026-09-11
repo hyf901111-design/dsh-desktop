@@ -349,6 +349,10 @@ describe('EWork Odyssey About settings', () => {
     const root = createRoot(host)
     try {
       await act(async () => root.render(createElement(bundle.SherlockAboutSection, { t: (key: string) => key })))
+      await act(async () => listener?.({ ...available, phase: 'checking' }))
+      expect(host.querySelector('.sherlock-about-action-icon[data-loading=false]')).not.toBeNull()
+      expect(host.querySelector<HappyButton>('.sherlock-about-check')?.disabled).toBe(true)
+      await act(async () => listener?.({ ...available, phase: 'idle' }))
       await act(async () => host.querySelector<HappyButton>('[data-about-check-update]')!.click())
       const download = host.querySelector<HappyButton>('[data-about-download-update]')
       expect(download).not.toBeNull()

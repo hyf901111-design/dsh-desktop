@@ -22,13 +22,14 @@ export function researchBentoSize(node = {}, measured) {
 export function researchBentoLayout(nodes, canvasSize = {}, measured = new Map()) {
   if (!nodes.length) return { nodes: [], width: 0, height: 0, viewport: { x: 0, y: 0, scale: 1 } };
   const width = canvasSize.width > 0 ? canvasSize.width : 1380;
+  const availableWidth = canvasSize.availableWidth > 0 ? Math.min(width, canvasSize.availableWidth) : width;
   const height = canvasSize.height > 0 ? canvasSize.height : 900;
   const entries = nodes.map((node, index) => {
     const size = researchBentoSize(node, measured.get(node.id));
     return { node, index, size, ...RESEARCH_BENTO_SIZES[size] };
   });
   const minimumColumns = Math.max(...entries.map(entry => entry.columns));
-  const columns = Math.max(minimumColumns, Math.min(8, Math.floor((width - 64 + 16) / 336)));
+  const columns = Math.max(minimumColumns, Math.min(8, Math.floor((availableWidth - 64 + 16) / 336)));
   const occupied = new Set();
   const positions = new Map();
   const order = { large: 0, medium: 1, small: 2 };
@@ -47,7 +48,6 @@ export function researchBentoLayout(nodes, canvasSize = {}, measured = new Map()
     right = Math.max(right, x + entry.width); bottom = Math.max(bottom, y + entry.height);
     positions.set(entry.index, { x, y });
   }
-  const availableWidth = canvasSize.availableWidth > 0 ? Math.min(width, canvasSize.availableWidth) : width;
   const scale = Math.max(.08, Math.min(1, Math.max(1, availableWidth - 64) / right, Math.max(1, height - 64) / bottom));
   return {
     nodes: entries.map(entry => ({ ...entry.node, ...positions.get(entry.index), width: entry.width, height: entry.height, size: entry.size, containerSizePreset: entry.size })),

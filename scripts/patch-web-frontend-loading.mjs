@@ -1,6 +1,8 @@
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels } from './lib/figma-settings-client.mjs'
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
+import { patchFigmaInlineReferences } from './lib/figma-inline-references-client.mjs'
+import { patchFigmaTrajectory } from './lib/figma-trajectory-client.mjs'
 import { installResearchBoardClientPatches } from './lib/patch-research-board-client.mjs'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -101,7 +103,10 @@ patchStyles(asset('.css'))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(conversationPath, patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8')))
+writeFileSync(conversationPath, patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8'))))
+
+const trajectoryPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-trajectory/lib/client.js')
+writeFileSync(trajectoryPath, patchFigmaTrajectory(readFileSync(trajectoryPath, 'utf8')))
 
 const layoutPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js')
 writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')))

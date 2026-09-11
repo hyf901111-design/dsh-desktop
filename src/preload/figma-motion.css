@@ -1,0 +1,115 @@
+/*
+ * Supplemental interaction motion. Figma's recursive motion inventory for
+ * home 136:13 is empty, so these timings are a product motion spec rather
+ * than exported Figma animation values. Static geometry remains authoritative.
+ */
+:root {
+  --odyssey-motion-panel-duration: 260ms;
+  --odyssey-motion-panel-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --odyssey-motion-hover-duration: 140ms;
+  --odyssey-motion-press-duration: 90ms;
+}
+
+/* The controller adds readiness after the first stable panel layout. This
+   prevents a persisted open panel from animating on application boot. */
+:root[data-odyssey-motion-ready="true"] .t8lSSG_panel {
+  transform: translateX(0);
+  transition:
+    transform var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    width var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    visibility 0s linear 0s;
+}
+
+:root[data-odyssey-motion-ready="true"] .t8lSSG_panel.t8lSSG_panelHidden {
+  visibility: hidden;
+  transform: translateX(calc(100% + var(--odyssey-panel-edge, 24px)));
+  transition:
+    transform var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    width var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    visibility 0s linear var(--odyssey-motion-panel-duration);
+}
+
+/* Each target property interpolates its existing variable-driven geometry.
+   A rapid reversal therefore resumes from the browser's current frame. */
+:root[data-odyssey-motion-ready="true"] .wSkVaW_root[data-odyssey-page="conversation"] {
+  transition: width var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
+}
+
+:root[data-odyssey-motion-ready="true"]
+  .wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host] {
+  transition: width var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
+}
+
+:root[data-odyssey-motion-ready="true"]
+  .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero {
+  transition: max-width var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
+}
+
+:root[data-odyssey-motion-ready="true"]
+  body:has([data-odyssey-page="research"]) .wSkVaW_header {
+  transition: padding-right var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
+}
+
+:root[data-odyssey-motion-ready="true"] .t8lSSG_toggleCluster {
+  transition:
+    right var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    top var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
+}
+
+[data-dsh-panel-host] [data-odyssey-panel-entry],
+[data-dsh-panel-host] .t8lSSG_bottomClose {
+  transition:
+    color var(--odyssey-motion-hover-duration) ease-out,
+    background-color var(--odyssey-motion-hover-duration) ease-out,
+    transform var(--odyssey-motion-press-duration) ease-out;
+}
+
+[data-dsh-panel-host] [data-odyssey-panel-entry]:active:not(:disabled),
+[data-dsh-panel-host] .t8lSSG_bottomClose:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+[data-dsh-panel-host] [data-odyssey-panel-entry] > svg,
+[data-dsh-panel-host] .t8lSSG_bottomClose > svg {
+  transition: color var(--odyssey-motion-hover-duration) ease-out;
+}
+
+/* Drag frames must follow the pointer exactly; there is no size tween. */
+body[data-dsh-sidebar-dragging] :is(
+  .t8lSSG_panel,
+  .t8lSSG_toggleCluster,
+  .wSkVaW_root[data-odyssey-page="conversation"],
+  .wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host],
+  .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero,
+  .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header
+) {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --odyssey-motion-panel-duration: 0ms;
+    --odyssey-motion-hover-duration: 0ms;
+    --odyssey-motion-press-duration: 0ms;
+  }
+
+  :root[data-odyssey-motion-ready="true"] :is(
+    .t8lSSG_panel,
+    .t8lSSG_toggleCluster,
+    .wSkVaW_root[data-odyssey-page="conversation"],
+    .wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host],
+    .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero,
+    .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header
+  ),
+  [data-dsh-panel-host] [data-odyssey-panel-entry],
+  [data-dsh-panel-host] .t8lSSG_bottomClose,
+  [data-dsh-panel-host] [data-odyssey-panel-entry] > svg,
+  [data-dsh-panel-host] .t8lSSG_bottomClose > svg {
+    transition: none;
+  }
+
+  [data-dsh-panel-host] [data-odyssey-panel-entry]:active:not(:disabled),
+  [data-dsh-panel-host] .t8lSSG_bottomClose:active:not(:disabled) {
+    transform: none;
+  }
+}

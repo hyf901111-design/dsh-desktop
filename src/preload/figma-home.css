@@ -5,40 +5,70 @@ body:has([data-odyssey-page="home"]) {
   --odyssey-home-input: rgb(255 255 255 / .49);
   --odyssey-home-title: #15181b;
   --odyssey-home-control: #f5f6f7;
+  --odyssey-home-fog-duration: 48s;
+  --odyssey-home-fog-size: 1136px;
 }
 body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   --odyssey-shell: rgb(7 9 9 / .78);
   --odyssey-home-input: rgb(0 0 0 / .49);
   --odyssey-home-title: #e7e9e8;
   --odyssey-home-control: rgb(255 255 255 / .09);
+  --odyssey-home-fog-size: 1122px;
 }
 .pI_x6G_centerCol:has([data-odyssey-page="home"]) {
   position:relative;
+  container-type:size;
   border-radius:12px;
-  background:url('/figma-glass-light-base.png') center/cover no-repeat !important;
+  background:#f2f2f2 !important;
 }
 .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
   content:"";
   position:absolute;
-  left:calc(50% - 568px);
-  top:calc(50% - 568px);
-  width:1136px;
-  height:1136px;
+  left:50%;
+  top:50%;
+  /* Keep the original fog scale at the design size. Larger or taller windows
+     expand this opaque, grayscale square; 8 px per edge covers its motion. */
+  width:max(var(--odyssey-home-fog-size), calc(100cqw + 16px), calc(100cqh + 16px));
+  height:auto;
+  aspect-ratio:1;
+  translate:-50% -50%;
   transform:rotate(90deg);
   background:url('/figma-glass-light-mesh.png') center/contain no-repeat;
+  animation:odyssey-home-fog-light var(--odyssey-home-fog-duration) ease-in-out infinite;
+  animation-play-state:paused;
+  will-change:transform;
   pointer-events:none;
   z-index:-1;
 }
 [data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"]) {
-  background-image:url('/figma-glass-dark-base.png') !important;
+  background:#1f1f1f !important;
 }
 [data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
-  inset:0;
-  width:auto;
-  height:auto;
   transform:none;
-  background:url('/figma-glass-dark-overlay.png') center/1122px 1122px no-repeat,
-    url('/figma-glass-dark-mesh.png') center/1202px 1202px no-repeat;
+  background-image:url('/figma-glass-dark-overlay.png');
+  animation-name:odyssey-home-fog-dark;
+}
+:root[data-odyssey-home-motion="running"] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
+  animation-play-state:running;
+}
+@keyframes odyssey-home-fog-light {
+  0%, 100% { transform:rotate(90deg) translate3d(0, 0, 0) scale(1); }
+  50% { transform:rotate(90deg) translate3d(4px, -3px, 0) scale(1.006); }
+}
+@keyframes odyssey-home-fog-dark {
+  0%, 100% { transform:translate3d(0, 0, 0) scale(1); }
+  50% { transform:translate3d(-4px, 3px, 0) scale(1.008); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
+    animation:none;
+    transform:rotate(90deg);
+    will-change:auto;
+  }
+  [data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
+    animation:none;
+    transform:none;
+  }
 }
 .wSkVaW_root[data-odyssey-page="home"] { background:transparent; }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroGlow { display:none; }

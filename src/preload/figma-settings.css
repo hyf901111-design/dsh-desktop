@@ -75,8 +75,11 @@ body[data-ds-dark-theme] .VOzbGW_overlay ._8HJdBW_cubeRow{background:rgba(0,0,0,
 .VOzbGW_overlay .sherlock-about-release-items{padding-left:0;list-style:none}
 .VOzbGW_overlay .sherlock-about-release-items li{position:relative;padding-left:16px}
 .VOzbGW_overlay .sherlock-about-release-items li:before{content:'•';position:absolute;left:0}
-.VOzbGW_overlay .sherlock-about-check:disabled{opacity:.65}
-body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-about{--about-list:#262626;--about-border:rgba(255,255,255,.075);--about-items:#b7b7b7}
+.VOzbGW_overlay .sherlock-about-check:disabled{opacity:.6}
+.VOzbGW_overlay .sherlock-about:is([data-about-update-phase=downloaded],[data-about-update-phase=installing]) .sherlock-about-check:disabled{opacity:.65}
+.VOzbGW_overlay .sherlock-about-action-icon[data-loading=false]{animation:sherlock-about-spin 900ms linear infinite}
+body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-about-heading{color:#e5e5e5}
+body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-about{--about-text:#e9e9e9;--about-button:rgba(255,255,255,.085);--about-list:#262626;--about-border:rgba(255,255,255,.075);--about-items:#b7b7b7}
 @media(max-width:900px){.VOzbGW_overlay .VOzbGW_nav{width:200px;flex-basis:200px}.VOzbGW_overlay .sherlock-settings-back{width:168px}.VOzbGW_overlay .VOzbGW_options,.VOzbGW_overlay .sherlock-account-page{padding-left:24px;padding-right:24px}.VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_row,.oY77xG_row,.T1PP_q_row){padding-top:10px;padding-bottom:10px}.VOzbGW_overlay .sherlock-account-id-row{flex-wrap:wrap}}
 
 /* The real overlay is nested in the mounted sidebar; visibility preserves its stores. */
