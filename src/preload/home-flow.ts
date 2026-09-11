@@ -1,39 +1,77 @@
-/** Analytic, feathered fog volumes measured against the supplied reference.
- * Signed volumes carve quiet gaps between the main clouds. Small independent
- * changes reshape their overlaps; no shared warp, bitmap, or moving surface.
+/** Analytic grayscale surface: broad faces establish the composition, while
+ * curved reflection/shadow pairs give the folds a narrower turning edge.
+ * Only local curvature and lobe width evolve; the surface itself stays fixed.
  */
-const FOG_VOLUMES: ReadonlyArray<readonly [number, number, number, number, number]> = [
-  [219.9914, -0.0788, 0.2098, 0.1671, 0.1243],
-  [100.4557, 0.1796, 0.4407, 0.161, 0.3163],
-  [54.1371, 0.7864, 0.1853, 0.0897, 0.339],
-  [88.2991, 0.5971, 0.1528, 0.1478, 0.1636],
-  [184.159, -0.0928, 0.4216, 0.0824, 0.1713],
-  [98.0496, 0.4827, 0.804, 0.1063, 0.1298],
-  [27.9497, 0.6667, 0.6311, 0.0753, 0.1526],
-  [107.9931, 0.7687, 0.8392, 0.3721, 0.2215],
-  [-39.2704, 0.4031, 0.8081, 0.0491, 0.0712],
-  [-103.8972, 0.0474, 0.2807, 0.3034, 0.1294],
-  [45.4122, 0.3838, 0.3063, 0.117, 0.0788],
-  [-119.2775, 0.5936, 0.821, 0.38, 0.1736]
+const BROAD_FACES: ReadonlyArray<readonly [number, number, number, number, number]> = [
+  [218.8767, -0.0788, 0.2098, 0.1671, 0.1243],
+  [98.58246, 0.1796, 0.4407, 0.161, 0.3163],
+  [55.47828, 0.7864, 0.1853, 0.0897, 0.339],
+  [87.29486, 0.5971, 0.1528, 0.1478, 0.1636],
+  [176.99612, -0.0928, 0.4216, 0.0824, 0.1713],
+  [93.76949, 0.4827, 0.804, 0.1063, 0.1298],
+  [29.14748, 0.6667, 0.6311, 0.0753, 0.1526],
+  [107.0963, 0.7687, 0.8392, 0.3721, 0.2215],
+  [-38.1448, 0.4031, 0.8081, 0.0491, 0.0712],
+  [-99.33845, 0.0474, 0.2807, 0.3034, 0.1294],
+  [43.64759, 0.3838, 0.3063, 0.117, 0.0788],
+  [-117.42488, 0.5936, 0.821, 0.38, 0.1736]
 ]
 
+// amplitude, centre x/y, reflection width, axial extent, slope, curvature,
+// shadow-side offset. Unlike round clouds these lobes follow a curved crease.
+const FOLDS = [
+  [12, .797, .22, .021, .205, .075, -1.1, .032],
+  [15, .465, .81, .024, .14, -.10, .65, -.038],
+  [10, .018, .245, .032, .20, -.19, .55, .045]
+] as const
+
+// Gaussian lookup keeps the curved surfaces within the existing CPU budget.
+// This is a 1-D math lookup, not a spatial texture or a pre-rendered frame.
+const LOBE = Float64Array.from({ length: 2049 }, (_, i) => Math.exp(-.5 * (i / 256) ** 2))
+function lobe(distance: number): number {
+  const index = Math.abs(distance) * 256
+  if (index >= 2048) return 0
+  const low = Math.floor(index), blend = index - low
+  return LOBE[low]! * (1 - blend) + LOBE[low + 1]! * blend
+}
+
 export function createHomeFlowField() {
-  const state = new Float64Array(FOG_VOLUMES.length * 5)
+  const state = new Float64Array(BROAD_FACES.length * 5)
+  const folds = new Float64Array(FOLDS.length * 8)
+  let foldRows = new Float64Array(0)
   let time = NaN
   let xWeights = new Float64Array(0), yWeights = new Float64Array(0)
   const prepare = (seconds: number) => {
     if (time === seconds) return
     time = seconds
-    FOG_VOLUMES.forEach(([amplitude, x, y, rx, ry], i) => {
+    BROAD_FACES.forEach(([amplitude, x, y, rx, ry], i) => {
       const phase = i * 2.39996, t = seconds * (.031 + (i % 5) * .004)
       const local = Math.sin(t + phase) - Math.sin(phase)
       const cross = Math.sin(t * .79 + phase * 1.7) - Math.sin(phase * 1.7)
-      state[i*5] = amplitude * (1 + .018 * cross)
-      state[i*5+1] = x + .01 * local
-      state[i*5+2] = y + .01 * cross
-      state[i*5+3] = rx * (1 + .06 * local)
-      state[i*5+4] = ry * (1 - .055 * cross)
+      state[i*5] = amplitude * (1 + .006 * cross)
+      state[i*5+1] = x + .003 * local
+      state[i*5+2] = y + .003 * cross
+      state[i*5+3] = rx * (1 + .018 * local)
+      state[i*5+4] = ry * (1 - .018 * cross)
     })
+    FOLDS.forEach(([amplitude, x, y, width, extent, slope, curvature, shadow], i) => {
+      const phase = i * 2.1, t = seconds * (.085 + i * .01)
+      const bend = Math.sin(t + phase) - Math.sin(phase)
+      const turn = Math.sin(t * .71 + phase + .8) - Math.sin(phase + .8)
+      const offset = i * 8
+      folds.set([amplitude, x + .012 * bend, y, width * (1 + .13 * turn),
+        extent, slope + .035 * turn, curvature + .25 * bend, shadow], offset)
+    })
+  }
+  const foldAt = (x: number, y: number) => {
+    let value = 0
+    for (let i = 0; i < folds.length; i += 8) {
+      const along = y - folds[i + 2]!
+      const distance = x - folds[i + 1]! - folds[i + 5]! * along - folds[i + 6]! * along * along
+      value += folds[i]! * lobe(along / folds[i + 4]!) *
+        (lobe(distance / folds[i + 3]!) - .72 * lobe((distance - folds[i + 7]!) / (folds[i + 3]! * 1.3)))
+    }
+    return value
   }
   const color = (value: number, dark: boolean) => {
     const luminance = Math.max(12, Math.min(185, value))
@@ -46,11 +84,11 @@ export function createHomeFlowField() {
       const dx=(x-state[i+1]!)/state[i+3]!, dy=(y-state[i+2]!)/state[i+4]!
       value += state[i]! * Math.exp(-.5 * (dx*dx+dy*dy))
     }
-    return color(value,dark)
+    return color(value + foldAt(x, y),dark)
   }
   const paint = (pixels: ImageData, seconds: number, dark: boolean) => {
     prepare(seconds)
-    const {width,height,data}=pixels, count=FOG_VOLUMES.length
+    const {width,height,data}=pixels, count=BROAD_FACES.length
     if(xWeights.length!==width*count) xWeights=new Float64Array(width*count)
     if(yWeights.length!==height*count) yWeights=new Float64Array(height*count)
     // Separable Gaussian weights: a few thousand exponentials per frame,
@@ -60,9 +98,20 @@ export function createHomeFlowField() {
       for(let x=0;x<width;x++){const d=(x/(width-1)-state[i+1]!)/state[i+3]!;xWeights[c*width+x]=state[i]!*Math.exp(-.5*d*d)}
       for(let y=0;y<height;y++){const d=(y/(height-1)-state[i+2]!)/state[i+4]!;yWeights[c*height+y]=Math.exp(-.5*d*d)}
     }
+    if (foldRows.length !== height * FOLDS.length * 2) foldRows = new Float64Array(height * FOLDS.length * 2)
+    for (let y = 0; y < height; y++) for (let c = 0; c < FOLDS.length; c++) {
+      const i = c * 8, along = y / (height - 1) - folds[i + 2]!, row = (y * FOLDS.length + c) * 2
+      foldRows[row] = folds[i + 1]! + folds[i + 5]! * along + folds[i + 6]! * along * along
+      foldRows[row + 1] = folds[i]! * lobe(along / folds[i + 4]!)
+    }
     for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
       let value=9.8591
       for(let c=0;c<count;c++) value+=xWeights[c*width+x]!*yWeights[c*height+y]!
+      for (let c = 0; c < FOLDS.length; c++) {
+        const i = c * 8, row = (y * FOLDS.length + c) * 2, distance = x / (width - 1) - foldRows[row]!
+        value += foldRows[row + 1]! * (lobe(distance / folds[i + 3]!) -
+          .72 * lobe((distance - folds[i + 7]!) / (folds[i + 3]! * 1.3)))
+      }
       const index=(y*width+x)*4, gray=color(value,dark)
       data[index]=data[index+1]=data[index+2]=gray;data[index+3]=255
     }

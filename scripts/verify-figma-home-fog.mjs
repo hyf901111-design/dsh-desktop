@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { build } from 'esbuild'
 const playwright = await import(process.env.PLAYWRIGHT_MODULE_PATH || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js')
 const chromium = playwright.chromium ?? playwright.default.chromium
-const output = resolve('output/figma-full-acceptance/home-flow-reference')
+const output = resolve(process.env.HOME_FLOW_OUTPUT || '/tmp/ework-silk-verification')
 await mkdir(output, { recursive: true })
 const bundle = (await build({ entryPoints:['src/preload/home-flow.ts'], bundle:true, format:'iife', globalName:'HomeFlow', write:false })).outputFiles[0].text
 const css = await readFile('src/preload/figma-home.css','utf8')
@@ -29,9 +29,9 @@ try {
       window.flowDurations??=[]
       const first=seconds===0?1:(seconds-4)*24+2,last=seconds*24+1
       for(let i=first;i<=last;i++){const start=performance.now();window.step(i*1000/24+1);window.flowDurations.push(performance.now()-start)}
-      return {pixels:[...ctx.getImageData(0,0,c.width,c.height).data],geometry:JSON.stringify(front.getBoundingClientRect()),width:c.width,height:c.height,transform:getComputedStyle(c).transform,durations:window.flowDurations}
+      return {pixels:[...ctx.getImageData(0,0,c.width,c.height).data],geometry:JSON.stringify(front.getBoundingClientRect()),width:c.width,height:c.height,transform:getComputedStyle(c).transform,filter:getComputedStyle(c).filter,canvasGeometry:JSON.stringify(c.getBoundingClientRect()),hostGeometry:JSON.stringify(c.parentElement.getBoundingClientRect()),durations:window.flowDurations}
     },seconds)
-    snapshots.push(frame.pixels)
+    assert.equal(frame.filter,'none');assert.equal(frame.canvasGeometry,frame.hostGeometry);snapshots.push(frame.pixels)
     data={geometry:data?.geometry??frame.geometry,after:frame.geometry,width:frame.width,height:frame.height,transform:frame.transform}
     durations.splice(0,durations.length,...frame.durations)
     await page.screenshot({path:output+`/${theme}-${viewport.width}-${seconds}s.png`})

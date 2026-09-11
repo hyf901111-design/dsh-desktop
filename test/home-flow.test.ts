@@ -1,14 +1,16 @@
 import { Window } from 'happy-dom'
 import { describe, expect, it } from 'vitest'
-import { homeFlowLuminance, mountHomeFlow } from '../src/preload/home-flow'
+import { createHomeFlowField, homeFlowLuminance, mountHomeFlow } from '../src/preload/home-flow'
 
 describe('procedural home atmosphere', () => {
-  it('preserves the reference composition instead of distributing equal fog peaks across the page', () => {
+  it('keeps the reference faces and dark gaps after extended local animation', () => {
     // Median grayscale samples measured from unobstructed reference regions.
     const anchors = [[.04,.2,171],[.35,.08,45],[.65,.18,105],[.9,.3,42],[.2,.65,64],[.5,.78,83],[.23,.88,18],[.9,.85,31]]
     for (const [x,y,gray] of anchors) {
       expect(Math.abs(homeFlowLuminance(x!,y!,0,true)-gray!)).toBeLessThan(12)
-      expect(Math.abs(homeFlowLuminance(x!,y!,12,true)-gray!)).toBeLessThan(16)
+      for (const time of [12, 60, 300, 600]) {
+        expect(Math.abs(homeFlowLuminance(x!,y!,time,true)-gray!)).toBeLessThan(16)
+      }
     }
   })
   it('produces bounded grayscale in both themes and continuous, non-uniform changes', () => {
@@ -26,6 +28,19 @@ describe('procedural home atmosphere', () => {
     // Some regions lighten while others darken: not global opacity breathing.
     expect(Math.max(...changes)).toBeGreaterThan(1)
     expect(Math.min(...changes)).toBeLessThan(-1)
+  })
+
+  it('keeps the cached canvas rendering aligned with the analytic curved surface', () => {
+    const field = createHomeFlowField()
+    for (const [width, height] of [[73, 49], [41, 67]]) {
+      const pixels = { width: width!, height: height!, data: new Uint8ClampedArray(width! * height! * 4) } as ImageData
+      for (const time of [0, 8, 120]) for (const dark of [true, false]) {
+        field.paint(pixels, time, dark)
+        for (let y = 0; y < height!; y += 4) for (let x = 0; x < width!; x += 4) {
+          expect(pixels.data[(y * width! + x) * 4]).toBe(field(x / (width! - 1), y / (height! - 1), time, dark))
+        }
+      }
+    }
   })
 
   it('stops rendering off the home page and disposes canvas, observers and animation', async () => {

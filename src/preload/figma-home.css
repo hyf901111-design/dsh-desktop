@@ -17,16 +17,16 @@ body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   border-radius:12px;
   background:#f2f2f2 !important;
 }
-/* This fixed canvas is repainted with a deforming grayscale field. Overscan
-   supplies blur samples at the rounded edges without moving the surface. */
+/* Keep the generated surface in the same coordinate system as the reference.
+   Canvas interpolation softens sampling without erasing the folds globally. */
 .pI_x6G_centerCol:has([data-odyssey-page="home"])::before { content:none; }
 [data-ds-dark-theme] .pI_x6G_centerCol:has([data-odyssey-page="home"]) { background:#1f1f1f !important; }
 [data-odyssey-home-flow] {
   position:absolute;
-  inset:-24px;
-  width:calc(100% + 48px);
-  height:calc(100% + 48px);
-  filter:blur(16px);
+  inset:0;
+  width:100%;
+  height:100%;
+  filter:none;
   pointer-events:none;
   z-index:-1;
 }
