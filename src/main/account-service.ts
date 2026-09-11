@@ -10,8 +10,8 @@ import {
   type CollaborationEndpoint
 } from './collaboration-client'
 import { ResearchBoardsError } from '../shared/research-boards'
-const ORIGIN = 'https://updates.evanarts.com'
 export class AccountService {
+  private readonly origin: string
   private token?: string
   private server?: Server
   private serial: Promise<unknown> = Promise.resolve()
@@ -26,7 +26,7 @@ export class AccountService {
       fetch?: typeof fetch
     } = {}
   ) {
-    collaborationOrigin(collaborationOptions.origin)
+    this.origin = collaborationOrigin(collaborationOptions.origin)
   }
   get generation() {
     return this.sessionGeneration
@@ -178,7 +178,7 @@ export class AccountService {
           }
           chunks.push(chunk)
         }
-        const response = await fetch(`${ORIGIN}/v1/fund-research/query`, {
+        const response = await fetch(`${this.origin}/v1/fund-research/query`, {
           method: 'POST',
           redirect: 'error',
           headers: {
@@ -242,7 +242,7 @@ export class AccountService {
       this.changed()
     }
     try {
-      const response = await fetch(`${ORIGIN}/v1/account/${action}`, {
+      const response = await fetch(`${this.origin}/v1/account/${action}`, {
         method: ['me', 'usage'].includes(action) ? 'GET' : 'POST',
         redirect: 'error',
         headers: {

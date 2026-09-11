@@ -27,7 +27,8 @@ body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
   left:50%;
   top:50%;
   /* Keep the original fog scale at the design size. Larger or taller windows
-     expand this opaque, grayscale square; 8 px per edge covers its motion. */
+     expand this opaque, grayscale square. The synchronized scale supplies
+     additional coverage as the cloud layer drifts away from its origin. */
   width:max(var(--odyssey-home-fog-size), calc(100cqw + 16px), calc(100cqh + 16px));
   height:auto;
   aspect-ratio:1;
@@ -53,11 +54,11 @@ body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
 }
 @keyframes odyssey-home-fog-light {
   0%, 100% { transform:rotate(90deg) translate3d(0, 0, 0) scale(1); }
-  50% { transform:rotate(90deg) translate3d(4px, -3px, 0) scale(1.006); }
+  50% { transform:rotate(90deg) translate3d(24px, -18px, 0) scale(1.035); }
 }
 @keyframes odyssey-home-fog-dark {
   0%, 100% { transform:translate3d(0, 0, 0) scale(1); }
-  50% { transform:translate3d(-4px, 3px, 0) scale(1.008); }
+  50% { transform:translate3d(-24px, 18px, 0) scale(1.035); }
 }
 @media (prefers-reduced-motion: reduce) {
   .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {
@@ -147,7 +148,7 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
 }
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_folder { width:16px; height:16px; }
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_chevron { width:12px; height:12px; margin-left:-1px; }
-.wSkVaW_root[data-odyssey-page="home"] .cubgiG_seat {
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seat {
   box-sizing:border-box;
   height:24px;
   min-height:24px;
@@ -156,16 +157,16 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
   font:400 13.3333px/21.6667px "Noto Sans SC",sans-serif;
   transform:translateY(-2px);
 }
-.wSkVaW_root[data-odyssey-page="home"] .cubgiG_seatIcon { width:16px; height:16px; }
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon { width:16px; height:16px; }
 /* Empty slot anchors are retained by the plugin system but must not consume a
    flex gap. The target distance is 20 px from the project chevron to mode icon. */
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow>[data-slot="conversation.hero.workspace"]>span:empty { display:none; }
-.wSkVaW_root[data-odyssey-page="home"] .cubgiG_seatIcon[data-mode-icon="standard"] {
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon[data-mode-icon="standard"] {
   background:currentColor;
   mask:url('/figma-home-mode.svg') center/contain no-repeat;
 }
-.wSkVaW_root[data-odyssey-page="home"] .cubgiG_seatIcon[data-mode-icon="standard"]>* { display:none; }
-.wSkVaW_root[data-odyssey-page="home"] .cubgiG_chevron { width:12px; height:12px; }
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon[data-mode-icon="standard"]>* { display:none; }
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_root { padding:0; }
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_card {
   box-sizing:border-box;

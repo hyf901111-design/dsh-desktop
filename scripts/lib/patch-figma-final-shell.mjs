@@ -24,7 +24,9 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source, 'function ComposerSurface({ zone, hero, researchEmpty,', 'function ComposerSurface({ zone, hero, research = false, researchEmpty,')
   source = exact(source, '(hero || researchEmpty) && heroWorkspaceRow', '(hero || research || researchEmpty) && heroWorkspaceRow')
   source = exact(source, 'const composerSurface = (0, react_jsx_runtime.jsx)(ComposerSurface, {\n\t\t\t\tzone,', 'const composerSurface = (0, react_jsx_runtime.jsx)(ComposerSurface, {\n\t\t\t\tresearch,\n\t\t\t\tzone,')
-  source = exact(source, '"data-research-empty-state": "",\n\t\t\t\tchildren: (0, react_jsx_runtime.jsx)(HeroShell, { t })', '"data-research-empty-state": "",\n\t\t\t\tchildren: "探索更远，洞见更深。"')
+  // 370:607 / 620: final Research copy has no terminal punctuation.
+  source = source.replace('"data-research-empty-state": "",\n\t\t\t\tchildren: "探索更远，洞见更深。"', '"data-research-empty-state": "",\n\t\t\t\tchildren: "探索更远，洞见更深"')
+  source = exact(source, '"data-research-empty-state": "",\n\t\t\t\tchildren: (0, react_jsx_runtime.jsx)(HeroShell, { t })', '"data-research-empty-state": "",\n\t\t\t\tchildren: "探索更远，洞见更深"')
   // Figma 44: 361:5828 / 361:6121. Display-only fallback; never rename a session.
   source = exact(source, 'const ancestry = useSessions((s) => deriveAncestry(s, sessionId), equalBreadcrumbs);', 'const ancestry = useSessions((s) => deriveAncestry(s, sessionId), equalBreadcrumbs);\n\t\t\tconst explicitSessionTitle = useSessions((s) => s.byId[sessionId]?.title);')
   if (!source.includes('const blankResearchTitle =')) source = exact(source, 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;', 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;\n\t\t\tconst blankResearchTitle = active?.id === "research" && blank === true && composerPhase === "blank" && !explicitSessionTitle?.trim();')

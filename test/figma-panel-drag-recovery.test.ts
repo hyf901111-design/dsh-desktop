@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 import { describe, expect, it } from 'vitest'
 
-import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
+import { odysseyClampPanelWidth, patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
 
 const source = await readFile(new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
 const patched = patchBetterSidebarClient(source)
@@ -90,6 +90,10 @@ async function mountPatchedSidebar() {
   }
   const shellRoot = browserWindow.document.createElement('div')
   shellRoot.id = 'root'
+  const navigation = browserWindow.document.createElement('nav')
+  navigation.className = 'pI_x6G_sidebarCol'
+  navigation.getBoundingClientRect = () => new browserWindow.DOMRect(0, 0, 280, 900)
+  shellRoot.appendChild(navigation)
   const center = browserWindow.document.createElement('main')
   const conversation = browserWindow.document.createElement('div')
   conversation.setAttribute('data-slot', 'conversation')
@@ -155,4 +159,33 @@ describe('Figma panel drag recovery', () => {
       await mounted.restore()
     }
   })
+  it('keeps a full-width drag inside the workspace with a visible canvas column', async () => {
+    const mounted = await mountPatchedSidebar()
+    try {
+      const handle = mounted.host.querySelector('[class*="_panelResize"]')!
+      await act(async () => {
+        handle.dispatchEvent(new mounted.browserWindow.PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: 897 }))
+      })
+      await act(async () => {
+        mounted.browserWindow.dispatchEvent(new mounted.browserWindow.PointerEvent('pointermove', { bubbles: true, pointerId: 8, clientX: 0 }))
+        mounted.browserWindow.dispatchEvent(new mounted.browserWindow.PointerEvent('pointerup', { bubbles: true, pointerId: 8, clientX: 0 }))
+      })
+      expect(mounted.store.getSnapshot().state.width).toBe(756)
+      expect(mounted.host.querySelector('[class*="_panel"]')?.getAttribute('style')).toContain('width: 756px')
+      expect(mounted.browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('756px')
+    } finally { await mounted.restore() }
+  })
+
+  it('reclamps saved oversized widths for expanded, collapsed and small windows', () => {
+    let left = 280
+    const doc = { querySelector: () => ({ getBoundingClientRect: () => ({ right: left }) }) }
+    expect(odysseyClampPanelWidth(1300, 1380, doc)).toBe(756)
+    expect(odysseyClampPanelWidth(400, 1380, doc)).toBe(400)
+    expect(odysseyClampPanelWidth(1300, 900, doc)).toBe(280)
+    left = 64
+    expect(odysseyClampPanelWidth(1300, 1380, doc)).toBe(972)
+    expect(odysseyClampPanelWidth(1300, 320, doc)).toBe(232)
+    expect(odysseyClampPanelWidth(Number.NaN, 1380, doc)).toBe(340)
+  })
+
 })
