@@ -127,10 +127,18 @@ try {
   await page.waitForTimeout(320)
   await setBottom(true)
   await page.waitForTimeout(70)
-  const beforeReverse = await measureLayout()
-  await setBottom(false)
+  const reversal = await page.evaluate(() => {
+    const root = document.querySelector('.wSkVaW_root')
+    const host = document.querySelector('[data-dsh-panel-host]')
+    const bottom = document.querySelector('.t8lSSG_bottomPanel')
+    const before = root.getBoundingClientRect().height
+    host.setAttribute('data-odyssey-panel-bottom', 'closed')
+    document.documentElement.style.setProperty('--dsh-sidebar-height', '0px')
+    bottom.classList.add('t8lSSG_bottomPanelHidden')
+    return { before, after: root.getBoundingClientRect().height }
+  })
+  assert(Math.abs(reversal.after - reversal.before) < 1, `rapid reverse jumped: ${reversal.before} -> ${reversal.after}`)
   const atReverse = await measureLayout()
-  assert(Math.abs(atReverse.rootHeight - beforeReverse.rootHeight) < 4, `rapid reverse jumped: ${beforeReverse.rootHeight} -> ${atReverse.rootHeight}`)
   await page.waitForTimeout(55)
   const reversing = await measureLayout()
   assert(reversing.rootHeight > atReverse.rootHeight && reversing.rootHeight < 900, `rapid reverse did not continue from current frame: ${atReverse.rootHeight} -> ${reversing.rootHeight}`)
