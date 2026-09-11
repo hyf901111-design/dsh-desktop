@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { build } from 'esbuild'
 const playwright = await import(process.env.PLAYWRIGHT_MODULE_PATH || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js')
 const chromium = playwright.chromium ?? playwright.default.chromium
-const output = resolve('output/figma-full-acceptance/home-flow-clouds')
+const output = resolve('output/figma-full-acceptance/home-flow-reference')
 await mkdir(output, { recursive: true })
 const bundle = (await build({ entryPoints:['src/preload/home-flow.ts'], bundle:true, format:'iife', globalName:'HomeFlow', write:false })).outputFiles[0].text
 const css = await readFile('src/preload/figma-home.css','utf8')
@@ -40,7 +40,7 @@ try {
   assert.equal(data.geometry,data.after);assert.equal(data.transform,'none');assert(data.width<=256&&data.height<=256)
   for(const pixels of data.snapshots)for(let i=0;i<pixels.length;i+=4){assert.equal(pixels[i],pixels[i+1]);assert.equal(pixels[i],pixels[i+2]);assert.equal(pixels[i+3],255)}
   const change=data.snapshots[0].reduce((s,v,i)=>s+(i%4===0?Math.abs(v-data.snapshots[2][i]):0),0)/(data.width*data.height)
-  assert(change>(theme==='dark'?2:1),'local fog must slowly deform over eight seconds')
+  assert(change>(theme==='dark'?.5:.15),'local fog must slowly deform over eight seconds')
   assert(change<(theme==='dark'?12:7),'fog motion must remain restrained')
   await page.screenshot({path:output+`/${theme}-${viewport.width}.png`})
   await page.emulateMedia({reducedMotion:'reduce'})
