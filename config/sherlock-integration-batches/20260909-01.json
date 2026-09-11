@@ -9,27 +9,79 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "加大首页局部流动幅度并消除右上角孤立亮团",
+        "featureName": "按Figma第66组还原右侧屏独立并列布局与收放拖动",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "83b0af5b0458ac2be7ad21e8d500593125429540",
-        "tipCommit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
+        "baseCommit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
+        "tipCommit": "01b9f1dcff70ceb4d1efa9f7a9ba56b6524394be",
         "commits": [
           {
-            "commit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
+            "commit": "01b9f1dcff70ceb4d1efa9f7a9ba56b6524394be",
             "parents": [
-              "83b0af5b0458ac2be7ad21e8d500593125429540"
+              "0bb2adb5460adc46360525ce1487a3fd78d5aed3"
             ],
-            "subject": "加大首页局部流动幅度并消除右上角孤立亮团"
+            "subject": "按Figma第66组还原右侧屏独立并列布局与收放拖动"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "src/preload/home-flow.ts"
+            "status": "A",
+            "path": "docs/figma-panel66-evidence/README.md"
           },
           {
             "status": "M",
-            "path": "test/home-flow.test.ts"
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-figma-canvas-panel-reopen.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-figma-panel-layout.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-home.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-motion-controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-motion.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-resize-feedback.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-responsive-header.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-motion-controller.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-panel-drag-recovery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-bento-visible-layout.test.js"
           }
         ],
         "checks": [
@@ -41,110 +93,47 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Source assembly passed; /tmp/active-sources.log",
-            "verifiedCommit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
-            "completedAt": "2026-09-11T11:07:10.886354+00:00",
+            "summary": "/tmp/panel66-sources.log",
+            "verifiedCommit": "01b9f1dcff70ceb4d1efa9f7a9ba56b6524394be",
+            "completedAt": "2026-09-11T11:33:13.461389+00:00",
             "timeoutMs": 180000
           },
           {
             "argv": [
               "node",
-              "scripts/verify-figma-home-fog.mjs"
+              "scripts/verify-figma-panel-layout.mjs"
             ],
             "outcome": "passed",
-            "summary": "Four timestamps, both themes, two sizes, pause and cleanup passed; /tmp/active-browser.log",
-            "verifiedCommit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
-            "completedAt": "2026-09-11T11:07:10.886618+00:00",
-            "timeoutMs": 120000
+            "summary": "/tmp/panel66-browser.log",
+            "verifiedCommit": "01b9f1dcff70ceb4d1efa9f7a9ba56b6524394be",
+            "completedAt": "2026-09-11T11:33:13.461639+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-figma-canvas-panel-reopen.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/panel66-canvas.log",
+            "verifiedCommit": "01b9f1dcff70ceb4d1efa9f7a9ba56b6524394be",
+            "completedAt": "2026-09-11T11:33:13.461643+00:00",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Controlled Chromium validates grayscale deformation, stable foreground, reduced motion, hidden-page pause and route cleanup. Exact native package verification follows integration."
+          "summary": "Production CSS/runtime verified in controlled Chromium. Native verification follows integration."
         },
         "acceptanceCriteria": [
-          "比上一版提高约67%流速，局部形变幅度约3倍",
-          "消除右上角小亮帽及暗凹，衔接宽缓曲面",
-          "12项聚焦测试及四时间点、两主题、两尺寸、暂停检查通过"
+          "独立圆角并列、10px间距、固定收放锚点",
+          "主视口调宽保留画布坐标和缩放，工具栏居中",
+          "两主题、小窗口、收放、拖动、草稿、阅读位置、27项聚焦检查通过"
         ],
         "risks": [
-          "No release, push, version bump or notarization",
-          "Existing full Figma acceptance remains ongoing"
+          "No release, push, version bump or notarization"
         ],
-        "generatedAt": "2026-09-11T11:07:10.886622+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b8f5f054266fa51321d899066a1ee29528559e33",
-        "verificationCommit": "b8f5f054266fa51321d899066a1ee29528559e33",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "b8f5f054266fa51321d899066a1ee29528559e33",
-            "completedAt": "2026-09-11T11:07:49.148Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b8f5f054266fa51321d899066a1ee29528559e33",
-            "completedAt": "2026-09-11T11:07:49.148Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "b8f5f054266fa51321d899066a1ee29528559e33",
-            "completedAt": "2026-09-11T11:07:49.148Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "b8f5f054266fa51321d899066a1ee29528559e33",
-            "completedAt": "2026-09-11T11:07:49.148Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "b8f5f054266fa51321d899066a1ee29528559e33",
-            "completedAt": "2026-09-11T11:07:49.148Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T11:07:49.148Z"
+        "generatedAt": "2026-09-11T11:33:13.461646+00:00"
       }
     }
   ],
