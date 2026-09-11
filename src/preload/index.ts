@@ -16,6 +16,7 @@ import {
 } from './developer-mode'
 import { isPluginLoadError } from './plugin-error-view'
 import { mountDesktopShellStyles } from './shell-style'
+import { mountFigmaMotionController } from './figma-motion-controller'
 import { SidebarUpdateControl } from './sidebar-update-control'
 import { requestUpdatePagePreparation } from './update-preparation'
 import { mountNativeThemeSync, mountWindowsTitlebar } from './windows-titlebar'
@@ -134,6 +135,7 @@ function initializeUi(): void {
   } else if (process.platform === 'darwin') {
     mountNativeThemeSync({ document, ipcRenderer })
     mountDesktopShellStyles(document)
+    window.addEventListener('unload', mountFigmaMotionController(document), { once: true })
   }
   sidebarUpdateControl.mount()
   checkBootFailureInDom()

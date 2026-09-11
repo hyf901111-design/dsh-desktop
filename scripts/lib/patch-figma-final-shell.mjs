@@ -3,6 +3,9 @@ const css = await readFile(new URL('../../src/preload/figma-final-shell.css', im
 const homeCss = await readFile(new URL('../../src/preload/figma-home.css', import.meta.url), 'utf8')
 const panelCss = await readFile(new URL('../../src/preload/figma-panels.css', import.meta.url), 'utf8')
 const filePanelCss = await readFile(new URL('../../src/preload/figma-file-panel.css', import.meta.url), 'utf8')
+const trajectoryCss = await readFile(new URL('../../src/preload/figma-trajectory.css', import.meta.url), 'utf8')
+const inlineCss = await readFile(new URL('../../src/preload/figma-inline-references.css', import.meta.url), 'utf8')
+const motionCss = await readFile(new URL('../../src/preload/figma-motion.css', import.meta.url), 'utf8')
 const START = '/* ODYSSEY_FIGMA_FINAL_SHELL_START */'
 const END = '/* ODYSSEY_FIGMA_FINAL_SHELL_END */'
 function exact(source, from, to) {
@@ -48,7 +51,7 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source,
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };',
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || (Array.isArray(row.content) && contentParts(row.content).images.length > 0 ? t("image.pending") + " · " + contentParts(row.content).images.length : ""), frozenCanvasContext: true };')
-  const block = `${START}\nif(typeof document!=="undefined"&&!document.getElementById?.("sherlock-desktop-shell-style")){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.documentElement.appendChild(style);}style.textContent=${JSON.stringify(css + homeCss + panelCss + filePanelCss)};}\n${END}`
+  const block = `${START}\nif(typeof document!=="undefined"&&!document.getElementById?.("sherlock-desktop-shell-style")){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.documentElement.appendChild(style);}style.textContent=${JSON.stringify(css + homeCss + panelCss + filePanelCss + trajectoryCss + inlineCss + motionCss)};}\n${END}`
   const starts=source.split(START).length-1, ends=source.split(END).length-1
   if(starts!==ends || starts>1 || (starts===1 && source.indexOf(END)<source.indexOf(START))) throw Error('Figma final shell marker is incomplete or duplicated')
   if(starts===1) return source.slice(0,source.indexOf(START))+block+source.slice(source.indexOf(END)+END.length)
