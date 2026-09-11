@@ -37,7 +37,7 @@ export function createHomeFlowField() {
     if (time === seconds) return
     time = seconds
     FOG_VOLUMES.forEach(([amplitude, x, y, rx, ry], i) => {
-      const phase = i * 2.39996, t = seconds * 1.45 * (.067 + (i % 7) * .006)
+      const phase = i * 2.39996, t = seconds * 2.03 * (.067 + (i % 7) * .006)
       const local = Math.sin(t + phase) - Math.sin(phase)
       const cross = Math.sin(t * .79 + phase * 1.7) - Math.sin(phase * 1.7)
       state[i*5] = amplitude * (1 + .008 * cross)
