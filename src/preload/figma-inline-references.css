@@ -1,0 +1,59 @@
+/* 253:23/30/39/46/53/62: six reference variants. Text size remains page-owned. */
+.uV2eYG_root[data-figma-inline-ready] :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) {
+  font-family:var(--sherlock-reference-font),"Noto Sans SC",sans-serif!important;
+}
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip {
+  display:inline!important; position:relative; width:auto!important; min-width:0!important;
+  max-width:none!important; height:auto!important; line-height:inherit!important;
+  padding:0!important; margin:0!important; border:0!important; outline:none!important; background:none!important;
+  vertical-align:baseline!important; font:inherit!important; color:transparent!important;
+  overflow:visible!important; white-space:pre!important;
+}
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip::before { content:attr(data-inline-cell); }
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel,
+.gdEzaW_refChip {
+  box-sizing:border-box!important; height:24px!important; padding:0 6px!important; margin:0!important;
+  border:0!important; border-radius:6px!important; box-shadow:inset 0 0 0 1px #d8d8db!important;
+  background:#f6f6f7!important; color:#29292d!important; font:400 13px/20px "Noto Sans SC",sans-serif!important;
+  display:inline-flex!important; align-items:center!important; gap:5px!important;
+  white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important;
+}
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel {
+  position:absolute!important; inset:auto!important; left:0!important; top:50%!important;
+  transform:translateY(-50%)!important; width:100%!important; pointer-events:auto!important;
+}
+.gdEzaW_refChip { width:164px!important; min-width:164px!important; max-width:164px!important; vertical-align:middle!important; }
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel > :is(svg,.uV2eYG_fileReferenceIcon,.uV2eYG_researchReferenceIcon),
+.gdEzaW_refChip > :is(svg,.uV2eYG_fileReferenceIcon,.uV2eYG_researchReferenceIcon) {
+  width:18px!important; height:18px!important; flex:0 0 18px!important;
+}
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabelText,.gdEzaW_refChipLabel {
+  flex:1 1 0!important; min-width:0!important; font:inherit!important;
+  line-height:20px!important; text-overflow:ellipsis!important; overflow:hidden!important; white-space:nowrap!important;
+}
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip[data-selected] .uV2eYG_chipLabel {
+  background:#eaf1fc!important; box-shadow:inset 0 0 0 1px #78a4e8!important;
+}
+.sherlock-inline-reference-remove {
+  display:inline-flex!important; flex:0 0 14px!important; align-items:center; justify-content:center;
+  width:14px!important; height:14px!important; padding:0!important; border:0!important; border-radius:0!important;
+  margin:0!important; background:transparent!important; box-shadow:none!important; color:#59759e!important; cursor:pointer;
+}
+.sherlock-inline-reference-remove svg { width:14px!important; height:14px!important; }
+body[data-ds-dark-theme] .uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel,
+body[data-ds-dark-theme] .gdEzaW_refChip {
+  background:#333335!important; box-shadow:inset 0 0 0 1px #505054!important; color:#ececee!important;
+}
+body[data-ds-dark-theme] .uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip[data-selected] .uV2eYG_chipLabel {
+  background:#2c3d56!important; box-shadow:inset 0 0 0 1px #91b9f4!important;
+}
+body[data-ds-dark-theme] .sherlock-inline-reference-remove { color:#d8e5f8!important; }
+
+/* Original Figma component icon, 253:14/15; underlying artifact kind stays available. */
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel > .uV2eYG_researchReferenceIcon, .gdEzaW_refChip > .uV2eYG_researchReferenceIcon {position:relative!important;background:transparent!important;border:0!important;border-radius:0!important;}
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel > .uV2eYG_researchReferenceIcon::before,.gdEzaW_refChip > .uV2eYG_researchReferenceIcon::before {content:"";position:absolute;inset:0;background:url(data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiB2aWV3Qm94PSIwIDAgMTggMTgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJGcmFtZSIgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwXzBfMTApIj4KPHBhdGggaWQ9IlZlY3RvciIgZD0iTTE0IDBINEMxLjc5MDg2IDAgMCAxLjc5MDg2IDAgNFYxNEMwIDE2LjIwOTEgMS43OTA4NiAxOCA0IDE4SDE0QzE2LjIwOTEgMTggMTggMTYuMjA5MSAxOCAxNFY0QzE4IDEuNzkwODYgMTYuMjA5MSAwIDE0IDBaIiBmaWxsPSIjOEI1QkM3Ii8+CjxwYXRoIGlkPSJWZWN0b3JfMiIgZD0iTTEyIDQuNUg2QzUuNDQ3NzIgNC41IDUgNC45NDc3MiA1IDUuNVYxMi41QzUgMTMuMDUyMyA1LjQ0NzcyIDEzLjUgNiAxMy41SDEyQzEyLjU1MjMgMTMuNSAxMyAxMy4wNTIzIDEzIDEyLjVWNS41QzEzIDQuOTQ3NzIgMTIuNTUyMyA0LjUgMTIgNC41WiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIwLjg1Ii8+CjxnIGlkPSJWZWN0b3JfMyI+CjxwYXRoIGQ9Ik03IDdIMTFaTTcgOUgxMVpNNyAxMUg5LjVaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNNyA3SDExTTcgOUgxMU03IDExSDkuNSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIwLjg1IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9nPgo8L2c+CjxkZWZzPgo8Y2xpcFBhdGggaWQ9ImNsaXAwXzBfMTAiPgo8cmVjdCB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIGZpbGw9IndoaXRlIi8+CjwvY2xpcFBhdGg+CjwvZGVmcz4KPC9zdmc+Cg==) center/18px 18px no-repeat;}
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel > .uV2eYG_researchReferenceIcon > svg,.gdEzaW_refChip > .uV2eYG_researchReferenceIcon > svg {visibility:hidden!important;}
+/* Existing invalid-reference feedback survives the normal/selected palette. */
+.uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipInvalid .uV2eYG_chipLabel {
+  background:#d8616133!important; text-decoration:line-through!important;
+}
