@@ -9,23 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "将首页局部流动速度再提高四成",
+        "featureName": "加大首页局部流动幅度并消除右上角孤立亮团",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "56953b0e905b466beaadd501d7db98d39df7f5f3",
-        "tipCommit": "83b0af5b0458ac2be7ad21e8d500593125429540",
+        "baseCommit": "83b0af5b0458ac2be7ad21e8d500593125429540",
+        "tipCommit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
         "commits": [
           {
-            "commit": "83b0af5b0458ac2be7ad21e8d500593125429540",
+            "commit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
             "parents": [
-              "56953b0e905b466beaadd501d7db98d39df7f5f3"
+              "83b0af5b0458ac2be7ad21e8d500593125429540"
             ],
-            "subject": "将首页局部流动速度再提高四成"
+            "subject": "加大首页局部流动幅度并消除右上角孤立亮团"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "src/preload/home-flow.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-flow.test.ts"
           }
         ],
         "checks": [
@@ -37,9 +41,9 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Source assembly passed; /tmp/faster-sources.log",
-            "verifiedCommit": "83b0af5b0458ac2be7ad21e8d500593125429540",
-            "completedAt": "2026-09-11T10:54:00.090726+00:00",
+            "summary": "Source assembly passed; /tmp/active-sources.log",
+            "verifiedCommit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
+            "completedAt": "2026-09-11T11:07:10.886354+00:00",
             "timeoutMs": 180000
           },
           {
@@ -48,9 +52,9 @@
               "scripts/verify-figma-home-fog.mjs"
             ],
             "outcome": "passed",
-            "summary": "Four timestamps, both themes, two sizes, pause and cleanup passed; /tmp/faster-browser.log",
-            "verifiedCommit": "83b0af5b0458ac2be7ad21e8d500593125429540",
-            "completedAt": "2026-09-11T10:54:00.090955+00:00",
+            "summary": "Four timestamps, both themes, two sizes, pause and cleanup passed; /tmp/active-browser.log",
+            "verifiedCommit": "0bb2adb5460adc46360525ce1487a3fd78d5aed3",
+            "completedAt": "2026-09-11T11:07:10.886618+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -59,88 +63,15 @@
           "summary": "Controlled Chromium validates grayscale deformation, stable foreground, reduced motion, hidden-page pause and route cleanup. Exact native package verification follows integration."
         },
         "acceptanceCriteria": [
-          "在上一版基础上提高40%流动速度",
-          "保持曲面形状、光泽和前景位置",
-          "11项聚焦测试及四时间点、两主题、两尺寸、暂停检查通过"
+          "比上一版提高约67%流速，局部形变幅度约3倍",
+          "消除右上角小亮帽及暗凹，衔接宽缓曲面",
+          "12项聚焦测试及四时间点、两主题、两尺寸、暂停检查通过"
         ],
         "risks": [
           "No release, push, version bump or notarization",
           "Existing full Figma acceptance remains ongoing"
         ],
-        "generatedAt": "2026-09-11T10:54:00.090959+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d346eeb94420c7c6624e6a8ebf7f9c32663a495f",
-        "verificationCommit": "d346eeb94420c7c6624e6a8ebf7f9c32663a495f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "d346eeb94420c7c6624e6a8ebf7f9c32663a495f",
-            "completedAt": "2026-09-11T10:54:33.412Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d346eeb94420c7c6624e6a8ebf7f9c32663a495f",
-            "completedAt": "2026-09-11T10:54:33.412Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "d346eeb94420c7c6624e6a8ebf7f9c32663a495f",
-            "completedAt": "2026-09-11T10:54:33.412Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "d346eeb94420c7c6624e6a8ebf7f9c32663a495f",
-            "completedAt": "2026-09-11T10:54:33.412Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "d346eeb94420c7c6624e6a8ebf7f9c32663a495f",
-            "completedAt": "2026-09-11T10:54:33.412Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T10:54:33.412Z"
+        "generatedAt": "2026-09-11T11:07:10.886622+00:00"
       }
     }
   ],
