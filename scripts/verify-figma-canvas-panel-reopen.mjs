@@ -1,5 +1,5 @@
 // Execute the production canvas geometry observer in Chromium with real CSS
-// transitions. Transform-only reopen used to leave availableWidth at full width.
+// transitions. Figma 66 now resizes the actual canvas and preserves its view.
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import playwright from '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
@@ -13,7 +13,7 @@ const css=await readFile('src/preload/figma-motion.css','utf8')
 const browser=await playwright.chromium.launch({executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 try {
  const page=await browser.newPage({viewport:{width:1380,height:900}})
- await page.setContent(`<style>body{margin:0}.canvas{position:absolute;left:280px;top:92px;right:12px;bottom:10px}.t8lSSG_panel{position:absolute;right:24px;top:22px;bottom:22px;width:340px}.toolbar{position:absolute;width:272px;height:48px;bottom:24px;transform:translateX(-50%)}</style><style>${css}</style><div class="canvas"><div class="toolbar"></div></div><aside class="t8lSSG_panel t8lSSG_panelHidden"></aside>`)
+ await page.setContent(`<style>body{margin:0}.canvas{position:absolute;left:280px;top:92px;right:calc(10px + var(--reserve,0px));bottom:10px}body:has(.t8lSSG_panel:not(.t8lSSG_panelHidden)){--reserve:350px}.t8lSSG_panel{position:absolute;right:10px;top:10px;bottom:10px;width:340px}.toolbar{position:absolute;width:272px;height:48px;bottom:24px;transform:translateX(-50%)}</style><style>${css}</style><div class="canvas"><div class="toolbar"></div></div><aside class="t8lSSG_panel t8lSSG_panelHidden"></aside>`)
  await page.evaluate(effect=>{
    document.documentElement.dataset.odysseyMotionReady='true'
    window.snapshot={canvasSize:{width:0,height:0,availableWidth:0},viewport:{x:0,y:0,scale:1},files:[],artifacts:[]}
@@ -28,7 +28,8 @@ try {
  const check=async open=>{
    await settle()
    const r=await page.evaluate(()=>{const c=document.querySelector('.canvas').getBoundingClientRect(),p=document.querySelector('.t8lSSG_panel').getBoundingClientRect(),t=document.querySelector('.toolbar').getBoundingClientRect();return {available:window.snapshot.canvasSize.availableWidth,expected:p.left-c.left-8,full:c.width,center:t.left+t.width/2-c.left}})
-   const expected=open?r.expected:r.full
+   const expected=r.full
+   assert(Math.abs(r.full-(open?(await page.viewportSize()).width-640:(await page.viewportSize()).width-290))<.1,JSON.stringify(r))
    assert(Math.abs(r.available-expected)<.1,JSON.stringify(r))
    assert(Math.abs(r.center-expected/2)<.1,JSON.stringify(r))
  }

@@ -93,7 +93,7 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('const interactivePreview = event.target?.closest?.("[data-research-selection-actions],[data-research-create-popover]")', 'const interactivePreview = event.target?.closest?.("[data-research-selection-actions],[data-research-create-popover],[data-research-voice-feedback],[data-research-global-toolbar]")');
   source=source.replace('workspace.setCanvasSize({ width: bounds.width, height: bounds.height });', `const panel=root.ownerDocument.querySelector('.t8lSSG_panel:has([data-research-active=true])');
                     const panelBounds=panel?.getBoundingClientRect();
-                    const availableWidth=panelBounds&&panelBounds.width>0&&panelBounds.left>bounds.left&&panelBounds.left<bounds.right&&panelBounds.bottom>bounds.top?Math.max(0,panelBounds.left-bounds.left-8):bounds.width;
+                    const availableWidth=bounds.width;
                     workspace.setCanvasSize({ width: bounds.width, height: bounds.height, availableWidth });`);
   // One viewport contract is used by the floating toolbar, drafts, and automatic growth.
   source=block(source,source.includes('function researchCanvasVisibleArea(')?'function researchCanvasVisibleArea(':'function researchCanvasViewportPlacement(', 'function researchCanvasGeneratedPlacement(', placementSource);
@@ -186,7 +186,7 @@ export function patchFigmaFinalCanvas(source) {
                     if(!active)return;
                     const bounds=root.getBoundingClientRect();
                     const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),panelBounds=panel?.getBoundingClientRect();
-                    const availableWidth=panelBounds&&panelBounds.width>0&&panelBounds.left>bounds.left&&panelBounds.left<bounds.right&&panelBounds.bottom>bounds.top?Math.max(0,panelBounds.left-bounds.left-8):bounds.width;
+                    const availableWidth=bounds.width;
                     if(panel!==observedPanel){if(observedPanel)observer?.unobserve(observedPanel);if(panel)observer?.observe(panel);observedPanel=panel;}
                     const current=workspace.getSnapshot(),previous=current.canvasSize;
                     if(previous.width!==bounds.width||previous.height!==bounds.height||previous.availableWidth!==availableWidth){
@@ -322,12 +322,8 @@ const placementSource = `function researchCanvasVisibleArea(snapshot) {
   return {width:size.availableWidth>0?Math.min(size.width,size.availableWidth):size.width,height:Math.max(0,(size.height??0)-88)};
 }
 function researchCanvasViewportForAreaChange(snapshot,next) {
-  const previous=snapshot.canvasSize,view=snapshot.viewport;
-  if(!(previous?.width>0&&previous?.height>0&&next.width>0&&next.height>0))return view;
-  if(previous.width===next.width&&previous.height===next.height&&previous.availableWidth===next.availableWidth)return view;
-  const nodes=[...(snapshot.files??[]),...(snapshot.artifacts??[])];
-  if(!nodes.length)return view;
-  return researchWorkbenchViewport(nodes,view,{...next,height:Math.max(100,next.height-88)});
+  // Figma 66: resizing the viewport must never reframe existing components.
+  return snapshot.viewport;
 }
 function researchCanvasContainedAutoNode(snapshot,node) {
   if(!snapshot||node.sizeMode==='manual'||node.workbenchId||!['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result','web-link'].includes(node.kind))return node;

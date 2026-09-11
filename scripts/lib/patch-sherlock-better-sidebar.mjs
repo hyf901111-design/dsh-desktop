@@ -741,14 +741,20 @@ function patchFigmaFilePanel(source) {
 export function odysseyClampPanelWidth(width, viewport = globalThis.window?.innerWidth ?? 640, doc = globalThis.document) {
   const sidebar = doc?.querySelector?.('.pI_x6G_sidebarCol');
   const left = Math.max(0, sidebar?.getBoundingClientRect?.().right ?? 0);
-  const edge = Number.parseFloat(doc?.defaultView?.getComputedStyle?.(doc.body).getPropertyValue('--odyssey-panel-edge')) || 24;
-  const available = Math.max(0, viewport - left - edge);
+  const edge = Number.parseFloat(doc?.defaultView?.getComputedStyle?.(doc.body).getPropertyValue('--odyssey-panel-edge')) || 10;
+  const gap = Number.parseFloat(doc?.defaultView?.getComputedStyle?.(doc.body).getPropertyValue('--odyssey-panel-gap')) || 10;
+  const available = Math.max(0, viewport - left - edge - gap);
   const maximum = Math.min(available, Math.max(280, available - 320));
   return Math.min(maximum, Math.max(Math.min(280, maximum), Math.round(Number.isFinite(width) ? width : 340)));
 }
 function patchFigmaPanelBounds(source) {
   const marker = '/* sherlock:figma-panel-workspace-bounds:v1 */';
-  if (source.includes(marker)) return source;
+  if (source.includes(marker)) {
+    const start = source.indexOf('function odysseyClampPanelWidth(');
+    const end = source.indexOf('\n\t\tfunction setWidth(', start);
+    if (start < 0 || end < 0) throw new Error('Missing panel bounds helper');
+    return source.slice(0, start) + odysseyClampPanelWidth.toString() + source.slice(end);
+  }
   source = replaceExact(source, '\t\tfunction setWidth(state, width) {', '\t\t' + marker + '\n' + odysseyClampPanelWidth.toString() + '\n\t\tfunction setWidth(state, width) {', 'workspace width helper');
   source = replaceExact(source, 'width: Math.min(max, Math.max(280, Math.round(width)))', 'width: odysseyClampPanelWidth(width)', 'stored width bounds');
   source = replaceExact(source, 'width: Math.max(280, Math.min(record.width, maxWidth))', 'width: odysseyClampPanelWidth(record.width)', 'restored width bounds');

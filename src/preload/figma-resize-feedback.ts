@@ -39,10 +39,11 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
     }
     const top = rect.top + (sidebar ? 18 : 2)
     const height = Math.max(0, rect.height - (sidebar ? 36 : 4))
-    overlay.style.left = `${sidebar ? rect.right : rect.left}px`
+    overlay.style.left = `${sidebar ? rect.right : rect.left - 5}px`
     overlay.style.top = `${top}px`
     overlay.style.height = `${height}px`
-    grip!.style.top = `${Math.max(0, Math.min(height - 70, pointerY - top - 35))}px`
+    const gripHeight = sidebar ? 70 : 120
+    grip!.style.top = `${Math.max(0, Math.min(height - gripHeight, pointerY - top - gripHeight / 2))}px`
     if (sidebar && pointer !== null) {
       if (!label) {
         label = doc.createElement('div')

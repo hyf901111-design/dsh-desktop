@@ -1,11 +1,13 @@
 /*
- * Better Sidebar control geometry measured from Figma groups 13, 15, 17,
- * 22, 23, and 44. This sheet must load after figma-final-shell.css.
+ * Figma 66 (589:686 / 590:686): independent adjacent panes.
+ * Supersedes the overlay geometry in groups 13–17. This sheet must load after figma-final-shell.css.
  */
 
 body {
   --odyssey-right-occupancy: 0px;
-  --odyssey-panel-edge:24px;
+  --odyssey-panel-edge:10px;
+  --odyssey-panel-gap:10px;
+  --odyssey-right-surface:#eee;
 }
 
 /* Narrow-window adaptation retains every action and its font/target size. */
@@ -17,31 +19,28 @@ body {
 .wSkVaW_header[data-odyssey-header-layout="narrow"][data-srb-session-header]:has(.srb-actions) [data-srb-utilities] { grid-column:1 / -1; grid-row:3; height:30px; margin-top:0; justify-self:end; }
 .wSkVaW_header[data-odyssey-header-layout="narrow"] [data-srb-tabs] { grid-column:1 / -1; margin-top:0; }
 
-/* Conversation frames use a 20 px right edge in 03/06/13/17. Home and
-   Research keep 24 px regardless of the left sidebar state. */
-body:has([data-odyssey-page="conversation"]) {
-  --odyssey-panel-edge:20px;
-}
+body[data-ds-dark-theme] { --odyssey-right-surface:#242424; }
 
 body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {
-  --odyssey-right-occupancy: calc(var(--dsh-sidebar-width, 340px) + var(--odyssey-panel-edge));
+  --odyssey-right-occupancy: calc(var(--dsh-sidebar-width, 340px) + var(--odyssey-panel-gap));
 }
 
-/* The one-piece window remains full width. Only the usable content region
-   yields to a workspace panel; margins on #root used to cut off the glass. */
+/* Keep the native window full width; the main pane alone yields to the
+   adjacent panel, including its header, atmosphere and canvas. */
 #root:has([data-odyssey-page]) {
   width:100% !important;
   margin-right:0 !important;
 }
 #root [data-dsh-frame]>[data-pane="conversation"] {
-  margin-bottom:10px;
+  margin:10px calc(var(--odyssey-panel-edge) + var(--odyssey-right-occupancy)) 10px 0;
+  border-radius:16px;
 }
 .wSkVaW_root[data-odyssey-page] {
   height:calc(100% - var(--dsh-sidebar-height, 0px));
 }
-/* Header material spans the entire workspace; only conversation content yields. */
+/* The pane already reserves the panel width. Never reserve it again inside. */
 .wSkVaW_root[data-odyssey-page="conversation"] > :is(.wSkVaW_scrollBody,[data-center-composer-host]) {
-  width:calc(100% - var(--odyssey-right-occupancy));
+  width:100%;
 }
 .wSkVaW_root[data-odyssey-page="research"] { height:100%; }
 .wSkVaW_root[data-odyssey-page="research"] [data-research-global-toolbar] {
@@ -53,16 +52,26 @@ body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {
 @media(prefers-reduced-motion:reduce){.wSkVaW_root[data-odyssey-page="research"] [data-research-global-toolbar]{transition:none}}
 body:has([data-odyssey-page]) .t8lSSG_panel {
   box-sizing:border-box;
-  top:22px;
+  top:10px;
   right:var(--odyssey-panel-edge);
-  bottom:22px;
+  bottom:10px;
+  border-radius:16px;
+  outline:0;
+  box-shadow:none;
+  overflow:visible;
 }
-body:has([data-odyssey-page="home"]) .t8lSSG_panel { background:transparent; }
-body:has([data-odyssey-page="home"]) .t8lSSG_panel:before { content:none; }
+body:has([data-odyssey-page]) .t8lSSG_panel:after { background:var(--odyssey-right-surface); border-radius:16px; }
+body:has([data-odyssey-page]) .t8lSSG_panel .t8lSSG_tabBar { border-radius:16px 16px 0 0; }
+body:has([data-odyssey-page]) .t8lSSG_panelBody { border-radius:0 0 16px 16px; }
+body:has([data-odyssey-page]) .wSkVaW_header { padding-right:20px; }
+body:has([data-odyssey-panel-right="closed"]) .wSkVaW_header { padding-right:56px; }
+.sRp_conversation { padding-inline:16px; }
+.sRp_composer .uV2eYG_card { background:rgb(255 255 255 / .7); box-shadow:none; }
+[data-ds-dark-theme] .sRp_composer .uV2eYG_card { background:rgb(0 0 0 / .49); }
 body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
   box-sizing:border-box;
   bottom:22px;
-  right:calc(var(--odyssey-right-occupancy) + 24px) !important;
+  right:calc(var(--odyssey-right-occupancy) + 22px) !important;
   margin-left:12px;
   border:0 !important;
   border-radius:12px;
@@ -76,12 +85,12 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
 }
 
 [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleCluster {
-  top: 28px !important;
-  right: 30px !important;
+  top: 17px !important;
+  right: 18px !important;
 }
 
 [data-dsh-panel-host][data-odyssey-panel-right="open"] .t8lSSG_toggleCluster {
-  top: 29px !important;
+  top: 17px !important;
   right: calc(var(--odyssey-panel-edge) + 8px) !important;
 }
 
@@ -112,13 +121,15 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
 
 /* Groups 14–15: native drag handlers own width and persistence. This layer
    only follows their rendered boundary, without taking pointer capture. */
-.t8lSSG_panel .t8lSSG_panelResize { z-index:5; }
+.t8lSSG_panel .t8lSSG_panelResize { z-index:5; left:-10px; width:10px; }
 .t8lSSG_panelResizeActive { background:transparent !important; }
 [data-odyssey-resize-feedback] { position:fixed; z-index:90; pointer-events:none; width:0; }
 [data-odyssey-resize-feedback]::before {
   content:''; position:absolute; inset:0 auto 0 -1px; width:2px; border-radius:1px;
   background:linear-gradient(transparent, rgb(76 134 237 / .32) 20%, rgb(76 134 237 / .56) 50%, rgb(76 134 237 / .32) 80%, transparent);
 }
+[data-odyssey-resize-feedback="right"]::before { content:none; }
+[data-odyssey-resize-feedback="right"] [data-odyssey-resize-grip] { left:-3px; width:6px; height:120px; border-radius:3px; }
 [data-odyssey-resize-grip] {
   position:absolute; left:-1.5px; width:3px; height:70px; border-radius:1.5px;
   background:linear-gradient(transparent, rgb(76 134 237 / .6) 20%, #4c86ed 50%, rgb(76 134 237 / .6) 80%, transparent);
@@ -331,7 +342,7 @@ body[data-ds-dark-theme] .t8lSSG_bottomPanel { background:rgb(21 21 21 / .92); }
 [data-ds-dark-theme] .t8lSSG_bottomPanel .t8lSSG_tabActive { background:#484a4e; }
 .t8lSSG_bottomPanel .t8lSSG_terminalWrap { background:transparent; border-radius:0 0 12px 12px; overflow:hidden; }
 .t8lSSG_bottomPanel .t8lSSG_terminal { padding:20px 20px 12px; }
-body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-panel-right="open"] .t8lSSG_bottomPanel { right:calc(var(--odyssey-right-occupancy) + 20px) !important; }
+body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-panel-right="open"] .t8lSSG_bottomPanel { right:calc(var(--odyssey-right-occupancy) + 22px) !important; }
 
 /* Clip the pane backing, while leaving the sibling resize hit area accessible. */
 .t8lSSG_bottomPanel>.t8lSSG_panelBody { border-radius:inherit; overflow:hidden; }
