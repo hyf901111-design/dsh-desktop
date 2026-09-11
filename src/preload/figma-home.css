@@ -5,7 +5,7 @@ body:has([data-odyssey-page="home"]) {
   --odyssey-home-input: rgb(255 255 255 / .49);
   --odyssey-home-title: #15181b;
   --odyssey-home-control: #f5f6f7;
-  --odyssey-home-fog-duration: 48s;
+  --odyssey-home-fog-duration: 36s;
   --odyssey-home-fog-size: 1136px;
 }
 body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
@@ -54,11 +54,11 @@ body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
 }
 @keyframes odyssey-home-fog-light {
   0%, 100% { transform:rotate(90deg) translate3d(0, 0, 0) scale(1); }
-  50% { transform:rotate(90deg) translate3d(24px, -18px, 0) scale(1.035); }
+  50% { transform:rotate(90deg) translate3d(64px, -44px, 0) scale(1.12); }
 }
 @keyframes odyssey-home-fog-dark {
   0%, 100% { transform:translate3d(0, 0, 0) scale(1); }
-  50% { transform:translate3d(-24px, 18px, 0) scale(1.035); }
+  50% { transform:translate3d(-64px, 44px, 0) scale(1.12); }
 }
 @media (prefers-reduced-motion: reduce) {
   .pI_x6G_centerCol:has([data-odyssey-page="home"])::before {

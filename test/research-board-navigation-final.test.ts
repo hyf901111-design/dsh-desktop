@@ -7,7 +7,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconBranchOutline16: () => null, IconFolderOpenOutline16: () => null,
   IconEditOutline16: () => null, IconTriangleRightFill14: () => null
 }))
-import { addBoardCollaborator, manageBoard, showBoardMembers } from '../src/preload/research-boards-ui'
+import { addBoardCollaborator, manageBoard, showBoardMembers, showBoardAvatarInfo } from '../src/preload/research-boards-ui'
 const windows: Window[] = []
 afterEach(() => { for (const window of windows.splice(0)) window.happyDOM.abort(); vi.unstubAllGlobals() })
 function fixture(role = 'owner') {
@@ -132,4 +132,47 @@ it('keeps the open member permission control and scroll position through live cu
   f.emit()
   expect(f.w.document.querySelector('.srb-management')!.textContent).toContain('共享访问已结束')
   expect(f.w.document.querySelector('.srb-member select')).toBeNull()
+})
+
+it('keeps one live identity bubble, toggles it, dismisses it and preserves the separate +N list', () => {
+  const f = fixture(), a = f.w.document.createElement('button'), b = f.w.document.createElement('button')
+  f.w.document.body.append(a, b)
+  a.getBoundingClientRect = () => new f.w.DOMRect(100, 40, 28, 28)
+  b.getBoundingClientRect = () => new f.w.DOMRect(134, 40, 28, 28)
+  const first = showBoardAvatarInfo(f.page, 's', 'u0', a as unknown as HTMLElement)!
+  expect(first.popover.textContent).toBe('自己 · 你创建者 · 可编辑')
+  expect(first.popover.style.top).toBe('76px')
+  expect(first.popover.style.left).toBe('96px')
+  showBoardAvatarInfo(f.page, 's', 'u0', a as unknown as HTMLElement)
+  expect(first.popover.isConnected).toBe(false)
+  expect(f.listeners.size).toBe(0)
+  showBoardAvatarInfo(f.page, 's', 'u0', a as unknown as HTMLElement)
+  const second = showBoardAvatarInfo(f.page, 's', 'u1', b as unknown as HTMLElement)!
+  expect(f.w.document.querySelectorAll('.srb-avatar-info')).toHaveLength(1)
+  expect(second.popover.textContent).toBe('成员1可编辑')
+  f.view.members[1].role = 'viewer'; f.emit()
+  expect(second.popover.textContent).toBe('成员1仅可查看')
+  expect(second.popover.querySelector('button,select,input')).toBeNull()
+  f.w.document.dispatchEvent(new f.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  expect(second.popover.isConnected).toBe(false)
+  expect(f.w.document.activeElement).toBe(b)
+  showBoardAvatarInfo(f.page, 's', 'u0', a as unknown as HTMLElement)
+  const list = showBoardMembers(f.page, 's', b as unknown as HTMLElement)!
+  expect(f.w.document.querySelector('.srb-avatar-info')).toBeNull()
+  expect(list.popover.querySelectorAll('.srb-member')).toHaveLength(11)
+  list.close()
+  const last = showBoardAvatarInfo(f.page, 's', 'u0', a as unknown as HTMLElement)!
+  f.w.document.body.dispatchEvent(new f.w.Event('pointerdown', { bubbles: true }))
+  expect(last.popover.isConnected).toBe(false)
+  expect(f.listeners.size).toBe(0)
+})
+it('keeps identity bubbles on screen, flips at the bottom and removes stale identities on access loss', () => {
+  const f = fixture(), a = f.w.document.createElement('button'); f.w.document.body.append(a)
+  a.getBoundingClientRect = () => new f.w.DOMRect(f.w.innerWidth - 30, f.w.innerHeight - 34, 28, 28)
+  const info = showBoardAvatarInfo(f.page, 's', 'u0', a as unknown as HTMLElement)!
+  expect(info.popover.dataset.side).toBe('top')
+  expect(Number.parseFloat(info.popover.style.left) + 160).toBeLessThanOrEqual(f.w.innerWidth - 12)
+  f.view.permissions.read = false; f.emit()
+  expect(info.popover.isConnected).toBe(false)
+  expect(f.listeners.size).toBe(0)
 })

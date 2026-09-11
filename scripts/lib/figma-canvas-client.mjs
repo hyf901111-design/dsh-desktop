@@ -88,6 +88,7 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace(/const RESEARCH_CANVAS_GRID_SIZE = [\d.]+;/, 'const RESEARCH_CANVAS_GRID_SIZE = 13.71;');
   source=source.replace('backgroundPosition: `${viewport.x - gridSize / 2 + 1}px ${viewport.y - gridSize / 2 + 1}px`', 'backgroundPosition: `${viewport.x + 12.5499 * viewport.scale}px ${viewport.y + 7.6871 * viewport.scale}px`');
   source=source.replace('"data-research-global-toolbar": "",\n', '"data-research-global-toolbar": "", style:{left:(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width)/2},\n');
+  source=source.replace('"data-research-empty-viewport": "",\n', '"data-research-empty-viewport": "", style:{left:(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width)/2,maxWidth:Math.max(0,(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width)-24)},\n');
   source=source.replace('right: (canvasSize.width - 12 - x) / scale, top: (12 - y) / scale, bottom: (canvasSize.height - 12 - y) / scale', 'right: (researchCanvasVisibleArea(context).width - 32 - x) / scale, top: (32 - y) / scale, bottom: (researchCanvasVisibleArea(context).height - 32 - y) / scale');
   source=source.replace('const interactivePreview = event.target?.closest?.("[data-research-selection-actions],[data-research-create-popover]")', 'const interactivePreview = event.target?.closest?.("[data-research-selection-actions],[data-research-create-popover],[data-research-voice-feedback],[data-research-global-toolbar]")');
   source=source.replace('workspace.setCanvasSize({ width: bounds.width, height: bounds.height });', `const panel=root.ownerDocument.querySelector('.t8lSSG_panel:has([data-research-active=true])');
@@ -184,11 +185,16 @@ export function patchFigmaFinalCanvas(source) {
   source=block(source,'const syncSize = () => {','const cancelScheduledSync = () => {', `const syncSize = () => {
                     if(!active)return;
                     const bounds=root.getBoundingClientRect();
-                    const panel=root.ownerDocument.querySelector('.t8lSSG_panel:has([data-research-active=true])'),panelBounds=panel?.getBoundingClientRect();
+                    const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),panelBounds=panel?.getBoundingClientRect();
                     const availableWidth=panelBounds&&panelBounds.width>0&&panelBounds.left>bounds.left&&panelBounds.left<bounds.right&&panelBounds.bottom>bounds.top?Math.max(0,panelBounds.left-bounds.left-8):bounds.width;
                     if(panel!==observedPanel){if(observedPanel)observer?.unobserve(observedPanel);if(panel)observer?.observe(panel);observedPanel=panel;}
-                    const previous=workspace.getSnapshot().canvasSize;
-                    if(previous.width!==bounds.width||previous.height!==bounds.height||previous.availableWidth!==availableWidth)workspace.setCanvasSize({width:bounds.width,height:bounds.height,availableWidth});
+                    const current=workspace.getSnapshot(),previous=current.canvasSize;
+                    if(previous.width!==bounds.width||previous.height!==bounds.height||previous.availableWidth!==availableWidth){
+                      const next={width:bounds.width,height:bounds.height,availableWidth};
+                      const viewport=researchCanvasViewportForAreaChange(current,next);
+                      workspace.setCanvasSize(next);
+                      if(viewport!==current.viewport)workspace.setViewport(viewport);
+                    }
                     publishRegion(bounds,document.visibilityState!=="hidden");
                 };
                 `);
@@ -205,6 +211,12 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('const usableHeight = Math.max(100, canvasSize.height - 180);','const usableHeight = Math.max(100, canvasSize.height); const availableWidth=canvasSize.availableWidth>0?Math.min(canvasSize.width,canvasSize.availableWidth):canvasSize.width;');
   source=source.replace('Math.max(1, canvasSize.width - 64) / (right - left)', 'Math.max(1, availableWidth - 64) / (right - left)');
   source=source.replace('return { scale, x: canvasSize.width / 2 - (left + right) / 2 * scale, y: usableHeight / 2', 'return { scale, x: availableWidth / 2 - (left + right) / 2 * scale, y: usableHeight / 2');
+  for(const name of ['researchCanvasHasVisibleNodes','researchCanvasReturnViewport']) {
+    const start=source.indexOf('function '+name+'('),end=source.indexOf('\n\t\tfunction ',start+1);
+    if(start<0||end<0)throw Error('Visible canvas function missing: '+name);
+    const part=source.slice(start,end).replace('canvasSize.width : 0;', 'Math.min(canvasSize.width,canvasSize.availableWidth>0?canvasSize.availableWidth:canvasSize.width) : 0;');
+    source=source.slice(0,start)+part+source.slice(end);
+  }
   source=source.replace('workspace.organizeCanvas(researchCanvasMeasureForArrange(rootRef.current, canvasNodes));', 'if(workspace.organizeCanvas(researchCanvasMeasureForArrange(rootRef.current, canvasNodes)))setClipboardFeedback({state:"success",kind:"arrange",message:"已整理 "+canvasNodes.length+" 个组件"});');
   source=source.replace('"data-research-clipboard-feedback": "", "data-state": clipboardFeedback.state,', '"data-research-clipboard-feedback": "", "data-research-arrange-feedback":clipboardFeedback.kind==="arrange"?"":undefined, "data-state": clipboardFeedback.state,');
   source=source.replace("pointerEvents: 'none' }, children: clipboardFeedback.message", `pointerEvents: 'none' }, children: clipboardFeedback.kind==='arrange'?(0,react_jsx_runtime.jsxs)('span',{className:'odyssey-arrange-toast',children:[(0,react_jsx_runtime.jsx)('img',{src:${JSON.stringify(iconData.check)},width:16,height:16,alt:''}),clipboardFeedback.message]}):clipboardFeedback.message`);
@@ -303,6 +315,14 @@ function canvasStyleInstaller() {
 const placementSource = `function researchCanvasVisibleArea(snapshot) {
   const size=snapshot?.canvasSize??{};
   return {width:size.availableWidth>0?Math.min(size.width,size.availableWidth):size.width,height:Math.max(0,(size.height??0)-88)};
+}
+function researchCanvasViewportForAreaChange(snapshot,next) {
+  const previous=snapshot.canvasSize,view=snapshot.viewport;
+  if(!(previous?.width>0&&previous?.height>0&&next.width>0&&next.height>0))return view;
+  if(previous.width===next.width&&previous.height===next.height&&previous.availableWidth===next.availableWidth)return view;
+  const nodes=[...(snapshot.files??[]),...(snapshot.artifacts??[])];
+  if(!nodes.length)return view;
+  return researchWorkbenchViewport(nodes,view,{...next,height:Math.max(100,next.height-88)});
 }
 function researchCanvasContainedAutoNode(snapshot,node) {
   if(!snapshot||node.sizeMode==='manual'||node.workbenchId||!['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result','web-link'].includes(node.kind))return node;
@@ -524,6 +544,8 @@ const responsiveSource = `function ResearchContainerContent(props) {
 }`
 
 export const canvasCss = `
+.rScV5Q_root[data-space-pressed=true]:after{content:none;border:0}
+[data-research-empty-viewport]{box-sizing:border-box;white-space:nowrap}
 .rScV5Q_root{--sherlock-research-dot:rgba(139,139,139,.4)!important;background-image:none!important}body[data-ds-dark-theme] .rScV5Q_root{--sherlock-research-dot:rgba(184,184,184,.46)!important}
 .rScV5Q_root>.odyssey-canvas-dots{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;color:var(--sherlock-research-dot)}
 .odyssey-global-icon{display:inline-block;width:16px;height:16px;flex:0 0 16px;background:center/16px 16px no-repeat}

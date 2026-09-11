@@ -5,6 +5,23 @@ import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento
 import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
 const nodes = ['large','large','small','small','small'].map((size,index)=>({id:String(index),containerSizePreset:size,content:'原始数据'+index}));
 describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
+  it('recenters the unchanged board in the unobscured area when a panel or window changes size',async()=>{
+    const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+    const extract=name=>{const start=source.indexOf('function '+name+'(');let at=source.indexOf('{',start),depth=1;for(at++;depth;at++){if(source[at]==='{')depth++;if(source[at]==='}')depth--;}return source.slice(start,at);};
+    const fit=runInNewContext(extract('researchWorkbenchViewport')+'\n'+extract('researchCanvasViewportForAreaChange')+'\nresearchCanvasViewportForAreaChange',{RESEARCH_CANVAS_MIN_SCALE:.1});
+    const snapshot={canvasSize:{width:1508,height:844,availableWidth:1508},viewport:{x:100,y:80,scale:1},files:[],artifacts:[{x:400,y:300,width:656,height:456},{x:1060,y:300,width:320,height:220}]};
+    const before=JSON.stringify(snapshot.artifacts);
+    for(const availableWidth of [1090,388,728]){
+      const result=fit(snapshot,{width:1508,height:844,availableWidth});
+      const left=Math.min(...snapshot.artifacts.map(n=>(n.x-n.width/2)*result.scale+result.x));
+      const right=Math.max(...snapshot.artifacts.map(n=>(n.x+n.width/2)*result.scale+result.x));
+      expect(left).toBeGreaterThanOrEqual(31.99);expect(right).toBeLessThanOrEqual(availableWidth-31.99);
+      expect((left+right)/2).toBeCloseTo(availableWidth/2);
+    }
+    expect(JSON.stringify(snapshot.artifacts)).toBe(before);
+    expect(fit(snapshot,snapshot.canvasSize)).toBe(snapshot.viewport);
+    expect(source).toContain("querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)')");
+  });
   it('packs two L and three S into two visible columns when the right panel covers the third',()=>{
     const result=researchBentoLayout(nodes,{width:1088,availableWidth:728,height:800});
     expect(result.width).toBe(656);
