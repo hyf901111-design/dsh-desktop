@@ -5,7 +5,12 @@
 .sherlock-auth-dialog::backdrop{background:transparent}
 .sherlock-auth-backdrop{position:fixed;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;filter:contrast(.92) saturate(.74)}
 .sherlock-auth-dialog:after{content:'';position:fixed;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(255,255,255,.1)}
-.sherlock-auth-frame{box-sizing:border-box;position:relative;flex:none;width:408px;max-width:100%;border-radius:20px;background:rgba(250,250,250,.87);box-shadow:inset 0 0 0 1px rgba(255,255,255,.65),0 16px 42px rgba(0,0,0,.2);backdrop-filter:blur(18px)}
+.sherlock-auth-frame{--auth-glass-fill:rgba(250,250,250,.87);--auth-glass-stroke:rgba(255,255,255,.65);--auth-shadow-fill:rgba(0,0,0,.2);box-sizing:border-box;position:relative;isolation:isolate;flex:none;width:408px;max-width:100%;border-radius:20px;background:transparent}
+/* Figma sets showShadowBehindNode=true. A CSS outer box-shadow is clipped
+   beneath the translucent fill, so render the full shadow before the glass.
+   The 42px shadow blur uses a 21px Gaussian radius; the final offset is 16px. */
+.sherlock-auth-frame:before{content:'';position:absolute;inset:0;z-index:-2;border-radius:inherit;background:var(--auth-shadow-fill);filter:blur(21px);transform:translateY(16px);pointer-events:none}
+.sherlock-auth-frame:after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--auth-glass-fill);backdrop-filter:blur(18px);box-shadow:inset 0 0 0 1px var(--auth-glass-stroke);pointer-events:none}
 .sherlock-auth-dialog .VOzbGW_content{padding:0;background:transparent}
 .sherlock-auth-dialog .sherlock-account-page{box-sizing:border-box;padding:36px 32px 32px;overflow:visible;display:flex;flex-direction:column;gap:0;color:inherit;font:400 13px/22px 'Noto Sans SC',sans-serif}
 .sherlock-auth-dialog .sherlock-auth-logo{display:block;width:88px;height:29px;margin:0 auto}
@@ -26,7 +31,7 @@
 .sherlock-auth-dialog input[aria-invalid=true]{box-shadow:inset 0 0 0 1px #bc574f}
 .sherlock-auth-dialog button:focus-visible,.sherlock-auth-dialog input:focus-visible{outline:1.5px solid #6b96d9;outline-offset:2px}
 body[data-ds-dark-theme] .sherlock-auth-dialog{color:#efefef}body[data-ds-dark-theme] .sherlock-auth-dialog:after{background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(0,0,0,.3)}
-body[data-ds-dark-theme] .sherlock-auth-frame{background:rgba(23,23,23,.86);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 16px 42px rgba(0,0,0,.3)}
+body[data-ds-dark-theme] .sherlock-auth-frame{--auth-glass-fill:rgba(23,23,23,.86);--auth-glass-stroke:rgba(255,255,255,.1);--auth-shadow-fill:rgba(0,0,0,.3)}
 body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page input{background:rgba(255,255,255,.065);color:#efefef}
 body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page button[type=submit]{background:#f0f0f0;color:#222}
 body[data-ds-dark-theme] .sherlock-auth-dialog :is(.sherlock-auth-switch,.sherlock-field-heading,.sherlock-auth-close),body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page input::placeholder{color:#a9a9a9}

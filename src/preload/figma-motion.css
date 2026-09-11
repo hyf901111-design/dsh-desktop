@@ -8,6 +8,7 @@
   --odyssey-motion-panel-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --odyssey-motion-hover-duration: 140ms;
   --odyssey-motion-press-duration: 90ms;
+  --odyssey-motion-menu-duration: 160ms;
 }
 
 /* The controller adds readiness after the first stable panel layout. This
@@ -29,10 +30,34 @@
     visibility 0s linear var(--odyssey-motion-panel-duration);
 }
 
+:root[data-odyssey-motion-ready="true"] .t8lSSG_bottomPanel {
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    transform var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    height var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    visibility 0s linear 0s;
+}
+
+:root[data-odyssey-motion-ready="true"] .t8lSSG_bottomPanel.t8lSSG_bottomPanelHidden {
+  visibility: hidden;
+  transform: translateY(calc(100% + 22px));
+  transition:
+    transform var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    height var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    visibility 0s linear var(--odyssey-motion-panel-duration);
+}
+
 /* Each target property interpolates its existing variable-driven geometry.
    A rapid reversal therefore resumes from the browser's current frame. */
+:root[data-odyssey-motion-ready="true"] .wSkVaW_root[data-odyssey-page] {
+  transition: height var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
+}
+
 :root[data-odyssey-motion-ready="true"] .wSkVaW_root[data-odyssey-page="conversation"] {
-  transition: width var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
+  transition:
+    width var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    height var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
 }
 
 :root[data-odyssey-motion-ready="true"]
@@ -57,7 +82,11 @@
 }
 
 [data-dsh-panel-host] [data-odyssey-panel-entry],
-[data-dsh-panel-host] .t8lSSG_bottomClose {
+[data-dsh-panel-host] .t8lSSG_bottomClose,
+.hHd-Xa_toggle,
+.t8lSSG_tabBarPlus,
+.t8lSSG_tabClose,
+[data-odyssey-tab-overflow-trigger] {
   transition:
     color var(--odyssey-motion-hover-duration) ease-out,
     background-color var(--odyssey-motion-hover-duration) ease-out,
@@ -65,8 +94,37 @@
 }
 
 [data-dsh-panel-host] [data-odyssey-panel-entry]:active:not(:disabled),
-[data-dsh-panel-host] .t8lSSG_bottomClose:active:not(:disabled) {
+[data-dsh-panel-host] .t8lSSG_bottomClose:active:not(:disabled),
+.hHd-Xa_toggle:active:not(:disabled),
+.t8lSSG_tabBarPlus:active:not(:disabled),
+.t8lSSG_tabClose:active:not(:disabled),
+[data-odyssey-tab-overflow-trigger]:active:not(:disabled) {
   transform: scale(0.94);
+}
+
+.t8lSSG_tab,
+[data-odyssey-tab-overflow-option],
+body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"] {
+  transition:
+    color var(--odyssey-motion-hover-duration) ease-out,
+    background-color var(--odyssey-motion-hover-duration) ease-out,
+    transform var(--odyssey-motion-press-duration) ease-out;
+}
+
+.t8lSSG_tab:active,
+[data-odyssey-tab-overflow-option]:active:not(:disabled),
+body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@keyframes odyssey-panel-menu-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+[data-odyssey-tab-overflow-menu],
+body [role="menu"]:has([data-odyssey-file-menu-label]) {
+  animation: odyssey-panel-menu-enter var(--odyssey-motion-menu-duration) ease-out both;
 }
 
 [data-dsh-panel-host] [data-odyssey-panel-entry] > svg,
@@ -77,8 +135,9 @@
 /* Drag frames must follow the pointer exactly; there is no size tween. */
 body[data-dsh-sidebar-dragging] :is(
   .t8lSSG_panel,
+  .t8lSSG_bottomPanel,
   .t8lSSG_toggleCluster,
-  .wSkVaW_root[data-odyssey-page="conversation"],
+  .wSkVaW_root[data-odyssey-page],
   .wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host],
   .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero,
   .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header
@@ -91,25 +150,46 @@ body[data-dsh-sidebar-dragging] :is(
     --odyssey-motion-panel-duration: 0ms;
     --odyssey-motion-hover-duration: 0ms;
     --odyssey-motion-press-duration: 0ms;
+    --odyssey-motion-menu-duration: 0ms;
   }
 
   :root[data-odyssey-motion-ready="true"] :is(
     .t8lSSG_panel,
+    .t8lSSG_bottomPanel,
     .t8lSSG_toggleCluster,
-    .wSkVaW_root[data-odyssey-page="conversation"],
+    .wSkVaW_root[data-odyssey-page],
     .wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host],
     .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero,
     .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header
   ),
   [data-dsh-panel-host] [data-odyssey-panel-entry],
   [data-dsh-panel-host] .t8lSSG_bottomClose,
+  .hHd-Xa_toggle,
+  .t8lSSG_tab,
+  .t8lSSG_tabBarPlus,
+  .t8lSSG_tabClose,
+  [data-odyssey-tab-overflow-trigger],
+  [data-odyssey-tab-overflow-option],
+  body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"],
   [data-dsh-panel-host] [data-odyssey-panel-entry] > svg,
   [data-dsh-panel-host] .t8lSSG_bottomClose > svg {
     transition: none;
   }
 
   [data-dsh-panel-host] [data-odyssey-panel-entry]:active:not(:disabled),
-  [data-dsh-panel-host] .t8lSSG_bottomClose:active:not(:disabled) {
+  [data-dsh-panel-host] .t8lSSG_bottomClose:active:not(:disabled),
+  .hHd-Xa_toggle:active:not(:disabled),
+  .t8lSSG_tab:active,
+  .t8lSSG_tabBarPlus:active:not(:disabled),
+  .t8lSSG_tabClose:active:not(:disabled),
+  [data-odyssey-tab-overflow-trigger]:active:not(:disabled),
+  [data-odyssey-tab-overflow-option]:active:not(:disabled),
+  body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"]:active:not(:disabled) {
     transform: none;
+  }
+
+  [data-odyssey-tab-overflow-menu],
+  body [role="menu"]:has([data-odyssey-file-menu-label]) {
+    animation: none;
   }
 }
