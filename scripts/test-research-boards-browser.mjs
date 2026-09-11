@@ -2159,8 +2159,8 @@ if (process.argv.includes('--serve')) {
     assert.ok(movedCanvas.length > 0)
     await peer.locator('[data-personal-import]').first().waitFor()
     console.log('BOARD_RETURN_LEGACY_PASSED transcript/files/imports/source-retained/new-folder')
-    // Real browser wheel delivery through an HTML component with its own scroll area.
-    // Whole-document overflow now intentionally renders a summary under the final design.
+    // Final design: overflowing HTML stays a summary on the canvas and is read in an expanded frame.
+    await page.setViewportSize({width:1380,height:900});
     await page.evaluate(async () => {
       const f=window.fixture; await f.page.openPersonal('original'); const w=f.registry.for('original');
       window.canvasWheelBefore=w.getSnapshot();
@@ -2169,6 +2169,12 @@ if (process.argv.includes('--serve')) {
     });
     const wheelCard=page.locator('[data-research-node-id="wheel-iframe"]');
     const wheelFrame=wheelCard.frameLocator('iframe').frameLocator('#preview');
+    await wheelCard.getByText('放大查看完整内容',{exact:true}).waitFor();
+    const viewport=()=>page.evaluate(()=>window.fixture.registry.for('original').getSnapshot().viewport);
+    let box=await wheelCard.boundingBox();
+    await page.mouse.move(box.x+40,box.y+110);await page.mouse.wheel(0,80);
+    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-80);
+    await wheelCard.locator('[data-research-container-expand]').click();
     await wheelFrame.locator('#state').waitFor();
     const typography = await wheelFrame.locator('body').evaluate(async body => {
       const loaded=await document.fonts.load('400 16px "EWork DIN Pro"','ETF 510300');
@@ -2184,27 +2190,21 @@ if (process.argv.includes('--serve')) {
     assert.match(await wheelCard.locator('.rScV5Q_containerContent').evaluate(e=>getComputedStyle(e).fontFamily),/DIN Pro/);
     await page.screenshot({path:join(out,'component-din-pro.png')});
     console.log('COMPONENT_DIN_PRO_PASSED offline-font-loaded/distinct-latin-glyphs/html-native-only/app-font-unchanged');
-    const viewport=()=>page.evaluate(()=>window.fixture.registry.for('original').getSnapshot().viewport);
-    const point=async()=>{const b=await wheelCard.locator('[data-research-preview-body]').boundingBox();assert.ok(b);return {x:b.x+b.width/2,y:b.y+Math.min(100,b.height/2)}};
-    let p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,80);
-    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-80);
-    assert.equal(await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop),0);
-    p=await point();await page.mouse.click(p.x,p.y);
-    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().selection.selectedNodeIds.includes('wheel-iframe'));
     await wheelFrame.locator('#state').fill('保留输入');
-    p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,120);
-    await wheelFrame.locator('#scroll-content').evaluate(e=>new Promise(resolve=>{if(e.scrollTop>0)return resolve();e.addEventListener('scroll',()=>resolve(),{once:true})}));
+    const content=wheelFrame.locator('#scroll-content');
+    const contentBox=await content.boundingBox();
+    await page.mouse.move(contentBox.x+80,contentBox.y+100);await page.mouse.wheel(0,120);
+    await page.waitForTimeout(300);
+    assert.ok(await content.evaluate(e=>e.scrollTop)>0);
     assert.equal((await viewport()).y,-80);
-    assert.ok(await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop)>0);
-    await page.screenshot({path:join(out,'canvas-selected-iframe-scroll.png')});
-    await page.evaluate(()=>window.fixture.registry.for('original').setSelection({selectedNodeIds:[],orderedFileIds:[]}));
-    const innerScroll=await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop);
-    p=await point();await page.mouse.move(p.x,p.y);await page.mouse.wheel(0,80);
-    await page.waitForFunction(()=>window.fixture.registry.for('original').getSnapshot().viewport.y===-160);
-    assert.equal(await wheelFrame.locator('#scroll-content').evaluate(e=>e.scrollTop),innerScroll);
+    await page.screenshot({path:join(out,'canvas-expanded-iframe-scroll.png')});
+    await page.keyboard.press('Escape');
+    await wheelCard.getByText('放大查看完整内容',{exact:true}).waitFor();
+    await wheelCard.locator('[data-research-container-expand]').click();
+    await wheelFrame.locator('#state').waitFor();
     assert.equal(await wheelFrame.locator('#state').inputValue(),'保留输入');
-    await page.screenshot({path:join(out,'canvas-unselected-iframe-pan.png')});
-    console.log('CANVAS_WHEEL_SELECTION_PASSED unselected-pan/selected-inner-scroll/deselect-pan/iframe-state-retained');
+    await page.keyboard.press('Escape');
+    console.log('CANVAS_WHEEL_SELECTION_PASSED summary-pan/expanded-inner-scroll/close-reopen/iframe-state-retained');
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),node=w.getSnapshot().artifacts[0];w.setArtifacts([{...node,containerSpec:undefined,generationStatus:'queued',generationStartedAt:Date.now()-20000,generationLastActivityAt:Date.now(),generationOutputChars:1420,generationEvents:[{seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{seq:2,type:'tool-finished',failed:false}],height:840}]);w.attachGenerationTask('wheel-iframe',{taskId:'progress',canvasNodeId:'wheel-iframe',state:'running',lastSeq:3,startedAt:Date.now()-20000,events:[{taskId:'progress',canvasNodeId:'wheel-iframe',seq:1,type:'tool-started',tool:'查询金融数据',detail:'000933.SH 历史行情'},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:2,type:'tool-finished',failed:false},{taskId:'progress',canvasNodeId:'wheel-iframe',seq:3,type:'assistant-delta',text:'{"version":1,'.padEnd(1420,' ')}]});w.setViewport({x:0,y:0,scale:1})});
     await wheelCard.locator('[data-research-generation-process]').waitFor();
     assert.ok((await wheelCard.boundingBox()).height<=321);
