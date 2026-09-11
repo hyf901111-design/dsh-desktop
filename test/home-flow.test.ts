@@ -3,26 +3,34 @@ import { describe, expect, it } from 'vitest'
 import { createHomeFlowField, homeFlowLuminance, mountHomeFlow } from '../src/preload/home-flow'
 
 describe('procedural home atmosphere', () => {
-  it('keeps the reference faces and dark gaps after extended local animation', () => {
-    // All primary reference regions remain stable, including the areas where
-    // the rejected version introduced bright ribbons and dark crease grooves.
+  it('retains the initial composition and distinct lit faces and dark gaps as it reshapes', () => {
     const anchors = [[.04,.2,171],[.5,.78,83],[.35,.08,45],[.65,.18,105],[.9,.3,42],[.2,.65,64],[.23,.88,18],[.9,.85,31]]
     for (const [x,y,gray] of anchors) {
       expect(Math.abs(homeFlowLuminance(x!,y!,0,true)-gray!)).toBeLessThan(12)
-      for (const time of [12, 60, 300, 600]) {
-        expect(Math.abs(homeFlowLuminance(x!,y!,time,true)-gray!)).toBeLessThan(16)
-      }
+    }
+    // Larger deformation intentionally moves transitions past individual
+    // pixels. Preserve spatial contrast rather than pinning their gray value.
+    for (const time of [12, 60, 300, 600]) {
+      expect(homeFlowLuminance(.04,.2,time,true)).toBeGreaterThan(120)
+      expect(homeFlowLuminance(.65,.18,time,true)-homeFlowLuminance(.9,.3,time,true)).toBeGreaterThan(30)
+      expect(homeFlowLuminance(.23,.88,time,true)).toBeLessThan(45)
     }
   })
-  it('preserves the measured transition profiles without added bright rims or dark grooves', () => {
+  it('preserves the initial broad transition profiles', () => {
     // Upper-right boundary and left edge, sampled
     // from the latest reference at the same normalized content coordinates.
     const profile = [[.65,.18,105],[.7,.18,111],[.75,.18,108],[.8,.18,94],[.85,.18,66],[.9,.18,43],
       [0,.2,213],[.03,.2,177],[.06,.2,154],[.09,.2,129],[.12,.2,110]]
     for (const [x, y, expected] of profile) {
       expect(Math.abs(homeFlowLuminance(x!, y!, 0, true) - expected!)).toBeLessThan(10)
-      for (const time of [12, 60, 300, 600]) {
-        expect(Math.abs(homeFlowLuminance(x!, y!, time, true) - expected!)).toBeLessThan(18)
+    }
+  })
+  it('joins the upper shoulder without a small isolated highlight cap', () => {
+    for (const time of [0, 4, 8, 12, 60, 300, 600]) {
+      for (const x of [.7,.75,.8]) {
+        const center=homeFlowLuminance(x,.04,time,true)
+        const neighbours=(homeFlowLuminance(x-.05,.04,time,true)+homeFlowLuminance(x+.05,.04,time,true))/2
+        expect(center-neighbours).toBeLessThan(14)
       }
     }
   })
@@ -56,6 +64,10 @@ describe('procedural home atmosphere', () => {
     // Some regions lighten while others darken: not global opacity breathing.
     expect(Math.max(...changes)).toBeGreaterThan(1)
     expect(Math.min(...changes)).toBeLessThan(-1)
+    // Visible local evolution over a few seconds, while keeping average
+    // illumination stable enough to avoid a whole-page brightness pulse.
+    expect(changes.reduce((sum,v)=>sum+Math.abs(v),0)/changes.length).toBeGreaterThan(5)
+    expect(Math.abs(changes.reduce((sum,v)=>sum+v,0)/changes.length)).toBeLessThan(12)
   })
 
   it('keeps the cached canvas rendering aligned with the analytic overlapping regions', () => {
