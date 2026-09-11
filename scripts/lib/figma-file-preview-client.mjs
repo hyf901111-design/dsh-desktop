@@ -85,20 +85,21 @@ function researchFigmaFitEntryText(text,width,rows,context) {
 function ResearchFilePreviewPresentation({node,expanded:explicitExpanded,children}) {
   const [containerExpanded,setContainerExpanded]=(0,react.useState)(false);
   const expanded=typeof explicitExpanded==='boolean'?explicitExpanded:containerExpanded;
+  const inlinePreview=researchFigmaFilePreviewKind(node)!=='web',readerVisible=expanded||inlinePreview;
   const ref=(0,react.useRef)(null),readerRef=(0,react.useRef)(null),entryRef=(0,react.useRef)(null);
   (0,react.useLayoutEffect)(()=>{if(typeof explicitExpanded==='boolean')return;const frame=ref.current?.closest('[data-research-node-id]');if(!frame)return;const update=()=>setContainerExpanded(frame.open===true);update();const Observer=frame.ownerDocument.defaultView?.MutationObserver,observer=Observer?new Observer(update):null;observer?.observe(frame,{attributes:true,attributeFilter:['open']});return()=>observer?.disconnect();},[node.id,explicitExpanded]);
-  const [visited,setVisited]=(0,react.useState)(expanded),[copy,setCopy]=(0,react.useState)(()=>researchFigmaFileEntryCopy(node,null));
+  const [visited,setVisited]=(0,react.useState)(readerVisible),[copy,setCopy]=(0,react.useState)(()=>researchFigmaFileEntryCopy(node,null));
   const [readerViewport,setReaderViewport]=(0,react.useState)(null);
   const [layout,setLayout]=(0,react.useState)({text:'',url:'',status:'',compact:false,hideKind:false,measured:false});
-  (0,react.useLayoutEffect)(()=>{if(expanded)setVisited(true);},[expanded]);
+  (0,react.useLayoutEffect)(()=>{if(readerVisible)setVisited(true);},[readerVisible]);
   // Electron OOPIFs lose their document scroll offset if hidden at the closed card size.
-  // Keep only visited HTML/web reader layout stable inside a zero-size, inert clip.
+  // Keep only visited web-link reader layout stable inside a zero-size, inert clip.
   (0,react.useLayoutEffect)(()=>{
-    if(!expanded||!['html','web'].includes(copy.kind))return;
+    if(!expanded||inlinePreview||copy.kind!=='web')return;
     const reader=readerRef.current;if(!reader)return;
     const measure=()=>{if(!reader.closest('[data-research-node-id]')?.open)return;const width=reader.clientWidth,height=reader.clientHeight;if(width<1||height<1)return;setReaderViewport(old=>old?.width===width&&old?.height===height?old:{width,height});};
     measure();const Observer=reader.ownerDocument.defaultView?.ResizeObserver,observer=Observer?new Observer(measure):null;observer?.observe(reader);return()=>observer?.disconnect();
-  },[expanded,copy.kind,node.id]);
+  },[expanded,inlinePreview,copy.kind,node.id]);
   (0,react.useLayoutEffect)(()=>{
     const reader=readerRef.current,update=()=>{const next=researchFigmaFileEntryCopy(node,reader);setCopy(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);};
     update();const Observer=reader?.ownerDocument.defaultView?.MutationObserver,observer=Observer?new Observer(update):null;
@@ -119,12 +120,12 @@ function ResearchFilePreviewPresentation({node,expanded:explicitExpanded,childre
     measure();const Observer=entry.ownerDocument.defaultView?.ResizeObserver,observer=Observer?new Observer(measure):null;observer?.observe(entry);entry.ownerDocument.fonts?.ready.then(measure);return()=>observer?.disconnect();
   },[copy,expanded,node.width,node.height]);
   return (0,react_jsx_runtime.jsxs)('div',{ref,className:'odyssey-file-presentation','data-research-reader-open':expanded,children:[
-    (0,react_jsx_runtime.jsxs)('div',{ref:entryRef,className:'odyssey-file-entry','data-research-file-entry':copy.kind,'data-entry-compact':layout.compact,hidden:expanded,children:[
+    (0,react_jsx_runtime.jsxs)('div',{ref:entryRef,className:'odyssey-file-entry','data-research-file-entry':copy.kind,'data-entry-compact':layout.compact,hidden:readerVisible,children:[
       !layout.hideKind?(0,react_jsx_runtime.jsxs)('span',{className:'odyssey-file-kind',children:[(0,react_jsx_runtime.jsx)('img',{src:odysseyFileEntryIcons[copy.kind==='web'?'web':'file'],width:16,height:16,alt:'','aria-hidden':true}),copy.label]}):null,
       (layout.measured?layout.status:copy.status)?(0,react_jsx_runtime.jsx)('span',{className:'odyssey-file-status',role:'status',title:copy.status,children:layout.measured?layout.status:copy.status}):null,
       (layout.measured?layout.url:copy.url)?(0,react_jsx_runtime.jsx)('span',{className:'odyssey-file-source',title:copy.url,children:layout.measured?layout.url:copy.url}):null,
       layout.text?(0,react_jsx_runtime.jsx)('p',{className:'odyssey-file-excerpt',children:layout.text}):null]}),
-    (0,react_jsx_runtime.jsx)('div',{ref:readerRef,className:'odyssey-file-reader','data-research-original-reader':'','data-research-retained-viewport':readerViewport&&['html','web'].includes(copy.kind)?true:void 0,style:readerViewport?{'--odyssey-reader-width':readerViewport.width+'px','--odyssey-reader-height':readerViewport.height+'px'}:void 0,hidden:!expanded,inert:!expanded?'':void 0,'aria-hidden':!expanded?true:void 0,children:expanded||visited?children:null})]});
+    (0,react_jsx_runtime.jsx)('div',{ref:readerRef,className:'odyssey-file-reader','data-research-original-reader':'','data-research-retained-viewport':readerViewport&&!inlinePreview&&copy.kind==='web'?true:void 0,style:readerViewport?{'--odyssey-reader-width':readerViewport.width+'px','--odyssey-reader-height':readerViewport.height+'px'}:void 0,hidden:!readerVisible,inert:!readerVisible?'':void 0,'aria-hidden':!readerVisible?true:void 0,children:readerVisible||visited?children:null})]});
 }
 `
 
@@ -149,11 +150,11 @@ body[data-ds-dark-theme] [data-research-file-presentation]{--odyssey-card-text:#
 [data-research-file-presentation][data-research-generated-container] .rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important}
 [data-research-file-presentation][data-research-generated-container] .rScV5Q_containerContent{flex:1;min-height:0;padding:0!important}
 .odyssey-file-reader>.rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important}.odyssey-file-reader>.rScV5Q_artifactBody:has(.rScV5Q_webFrameShell){display:flex;flex-direction:column}.odyssey-file-reader .rScV5Q_webFrameShell{flex:1;min-height:0}
-[data-research-file-presentation]:not([open])>.rScV5Q_previewBody{overflow:visible!important}
+[data-research-file-presentation]:not([open])>.rScV5Q_previewBody{overflow:hidden!important}
 [data-research-file-presentation]:not([open])>.rScV5Q_nodeTitle{height:54px!important;min-height:54px!important;flex-basis:54px!important;padding:15px 17px 0!important;align-items:flex-start!important}
 [data-research-file-presentation]:not([open])>.rScV5Q_previewBody{height:calc(100% - 54px)}
 [data-research-file-presentation] .rScV5Q_nodeTitleText{font:500 15px/23px "Noto Sans SC",sans-serif!important}
-[data-research-file-presentation]:not([open]) .rScV5Q_pageIndicator{display:none}
+[data-research-file-presentation=web]:not([open]) .rScV5Q_pageIndicator{display:none}
 [data-research-file-presentation] [data-research-preview-loading]:before{content:'';display:inline-block;width:14px;height:14px;box-sizing:border-box;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:odyssey-file-loading .9s linear infinite}
 @keyframes odyssey-file-loading{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){[data-research-file-presentation] [data-research-preview-loading]:before{animation:none}}
 `

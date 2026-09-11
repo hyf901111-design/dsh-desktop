@@ -1105,6 +1105,20 @@ export async function patchBetterSidebarPackage(packageRoot) {
   const source = await readFile(clientPath, 'utf8')
   const patched = patchBetterSidebarClient(source)
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
+  const terminalPath = path.join(packageRoot, 'lib', 'client-terminal.js')
+  const terminal = await readFile(terminalPath, 'utf8')
+  const glassTerminal = patchFigmaTerminalSurface(terminal)
+  if (glassTerminal !== terminal) await writeFile(terminalPath, glassTerminal, 'utf8')
+}
+
+export function patchFigmaTerminalSurface(source) {
+  const marker = '/* sherlock:figma-terminal-glass:v1 */'
+  if (source.includes(marker)) return source
+  return marker + '\n' + replaceExact(source,
+    'const background = effectiveTokenValue("--dsw-alias-bg-base") || (dark ? "#111114" : "#ffffff");',
+    'const background = "#00000000";',
+    'Figma terminal transparent canvas over themed panel')
+    .replace('cursorAccent: background,', 'cursorAccent: dark ? "#151515" : "#fafafa",')
 }
 
 // An external media file is readable only when this exact path was attached by

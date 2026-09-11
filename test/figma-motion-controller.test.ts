@@ -87,7 +87,7 @@ describe('Figma panel motion supplement', () => {
     const css = readFileSync(new URL('../src/preload/figma-home.css', import.meta.url), 'utf8')
     expect(css).toContain('@keyframes odyssey-home-fog-light')
     expect(css).toContain('@keyframes odyssey-home-fog-dark')
-    expect(css).toContain('--odyssey-home-fog-duration: 28s')
+    expect(css).toContain('--odyssey-home-fog-duration: 24s')
     expect(css).toContain(':root[data-odyssey-home-motion="running"]')
     expect(css).toMatch(/animation-play-state:\s*running/)
     expect(css).toMatch(/animation-play-state:\s*paused/)
