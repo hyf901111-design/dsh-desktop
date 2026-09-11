@@ -358,7 +358,7 @@ function ResearchDerivedSources({node,embedded=false}) {
   const ids=Array.from(new Set(node.sourceNodeIds??[])),items=ids.map((id,index)=>({id,title:frozen.get(id)?.title||'来源组件 '+(index+1)}));
   const close=()=>setOpen(false);
   (0,react.useEffect)(()=>{if(!open)return;const doc=trigger.current?.ownerDocument;const dismiss=event=>{if(!trigger.current?.contains(event.target)&&!menu.current?.contains(event.target))close();};const key=event=>{if(event.key==='Escape'){event.preventDefault();close();trigger.current?.focus({preventScroll:true});}};doc?.addEventListener('pointerdown',dismiss,true);doc?.addEventListener('keydown',key,true);return()=>{doc?.removeEventListener('pointerdown',dismiss,true);doc?.removeEventListener('keydown',key,true);};},[open]);
-  const select=event=>{event.stopPropagation();close();trigger.current?.closest('dialog[open]')?.close();};
+  const select=event=>{event.stopPropagation();close();(event.currentTarget.closest('dialog[open]')??trigger.current?.closest('dialog[open]'))?.close();};
   const link=item=>(0,react_jsx_runtime.jsx)('button',{type:'button',role:embedded||open?'menuitem':undefined,'data-research-reference-node-id':item.id,onClick:select,onDoubleClick:event=>event.stopPropagation(),children:item.title},item.id);
   if(embedded)return (0,react_jsx_runtime.jsx)('div',{className:'odyssey-source-links',children:items.map(link)});
   const rect=trigger.current?.getBoundingClientRect(),doc=trigger.current?.ownerDocument,view=doc?.defaultView;

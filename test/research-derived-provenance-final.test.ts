@@ -46,9 +46,10 @@ it('retains source navigation in a read-only board and closes expanded reading b
   expect(JSON.stringify(f.workspace.getSnapshot().artifacts)).toBe(frozen)
  }finally{await f.cleanup()}
 })
-it('turns selection-created provenance titles into source links without enabling refresh',async()=>{
+it.each([false,true])('turns selection-created provenance titles into source links without enabling refresh (expanded %s)',async(expanded)=>{
  const f=await derivedFixture('generated-container',2)
  try{
+  if(expanded)await act(async()=>f.host.querySelector('[data-research-container-expand]')!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))
   await act(async()=>f.host.querySelector('[data-research-container-more]')!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))
   const provenance=Array.from(f.host.querySelectorAll('button')).find(b=>b.textContent==='查看创建来源')
   expect(provenance).not.toBeUndefined()
@@ -57,6 +58,7 @@ it('turns selection-created provenance titles into source links without enabling
   expect(link).not.toBeNull()
   await act(async()=>link!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))
   expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual(['source-1'])
+  expect(f.host.querySelector('dialog')!.hasAttribute('open')).toBe(false)
   expect(f.host.querySelector('[data-research-container-refresh]')).toBeNull()
  }finally{await f.cleanup()}
 })
