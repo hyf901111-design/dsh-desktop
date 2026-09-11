@@ -737,6 +737,34 @@ function patchFigmaFilePanel(source) {
   return source
 }
 
+// Bound every width writer to the usable workspace, including restored state.
+export function odysseyClampPanelWidth(width, viewport = globalThis.window?.innerWidth ?? 640, doc = globalThis.document) {
+  const sidebar = doc?.querySelector?.('.pI_x6G_sidebarCol');
+  const left = Math.max(0, sidebar?.getBoundingClientRect?.().right ?? 0);
+  const edge = Number.parseFloat(doc?.defaultView?.getComputedStyle?.(doc.body).getPropertyValue('--odyssey-panel-edge')) || 24;
+  const available = Math.max(0, viewport - left - edge);
+  const maximum = Math.min(available, Math.max(280, available - 320));
+  return Math.min(maximum, Math.max(Math.min(280, maximum), Math.round(Number.isFinite(width) ? width : 340)));
+}
+function patchFigmaPanelBounds(source) {
+  const marker = '/* sherlock:figma-panel-workspace-bounds:v1 */';
+  if (source.includes(marker)) return source;
+  source = replaceExact(source, '\t\tfunction setWidth(state, width) {', '\t\t' + marker + '\n' + odysseyClampPanelWidth.toString() + '\n\t\tfunction setWidth(state, width) {', 'workspace width helper');
+  source = replaceExact(source, 'width: Math.min(max, Math.max(280, Math.round(width)))', 'width: odysseyClampPanelWidth(width)', 'stored width bounds');
+  source = replaceExact(source, 'width: Math.max(280, Math.min(record.width, maxWidth))', 'width: odysseyClampPanelWidth(record.width)', 'restored width bounds');
+  source = replaceExact(source, 'const clampWidth = (width) => Math.min(Math.max(280, Math.round(width)), Math.max(280, window.innerWidth));', 'const clampWidth = odysseyClampPanelWidth;', 'pointer width bounds');
+  for (const target of ['state?.width ?? 0', 'snapshot.state.width', 'committed.width', 'state.width']) {
+    source = source.split('Math.min(' + target + ', window.innerWidth)').join('odysseyClampPanelWidth(' + target + ')');
+  }
+  source = replaceExact(source,
+    '\t\t\t\tsnapshot.state?.bottomHeight\n\t\t\t]);',
+    '\t\t\t\tsnapshot.state?.bottomHeight,\n\t\t\t\tcenterRect.left,\n\t\t\t\tcenterRect.right\n\t\t\t]);', 'workspace geometry on resize');
+  source = replaceExact(source,
+    '\t\t\t\tcenterRect.right\n\t\t\t]);\n\t\t\t(0, react.useEffect)(() => {\n\t\t\t\tif (anyDragging)',
+    '\t\t\t\tcenterRect.right,\n\t\t\t\tcenterRect.left\n\t\t\t]);\n\t\t\t(0, react.useEffect)(() => {\n\t\t\t\tif (anyDragging)', 'panel surface on sidebar resize');
+  return source;
+}
+
 /**
  * Reserve 0 as the persisted "design default" sentinel. New sessions then
  * start at the measured 340px, while every pre-existing non-zero percentage
@@ -993,7 +1021,7 @@ export function patchBetterSidebarClient(source) {
     'committed panel surface dimensions'
   )
 
-  if (source.includes(PATCH_MARKER)) return patchTabBarOverflow(patchTabBarMenuLayout(next))
+  if (source.includes(PATCH_MARKER)) return patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))
 
   const moveBefore = `\t\t\t\t\tconst insertAt = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
   const moveAfter = `\t\t\t\t\tconst requestedIndex = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tconst pinnedCount = leaf.tabs.filter((tab) => tab.meta?.sherlockPinned === true).length;\n\t\t\t\t\tconst insertAt = moved.meta?.sherlockPinned === true ? 0 : Math.max(pinnedCount, requestedIndex);\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
@@ -1058,7 +1086,7 @@ export function patchBetterSidebarClient(source) {
     'tab render closure'
   )
 
-  return patchTabBarOverflow(patchTabBarMenuLayout(next))
+  return patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))
 }
 
 export async function patchBetterSidebarPackage(packageRoot) {
