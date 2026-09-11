@@ -263,6 +263,18 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-members-scroll .srb-member{height:48px;min-height:48px;padding:0 4px;gap:8px}.srb-members-scroll .srb-member-avatar{width:28px;height:28px}.srb-members-scroll .srb-member-identity strong{font-size:12px;line-height:18px}.srb-members-scroll .srb-member-identity small,.srb-members-scroll .srb-role{font-size:10px;line-height:16px}.srb-members-empty{font-size:12px;color:var(--srb-muted);padding:14px 4px}
 .srb-members-footer{border-top:1px solid var(--srb-control-border);padding-top:12px;flex:none}.srb-members-footer button{height:32px;width:100%;border:0;border-radius:6px;background:var(--srb-control-muted);color:var(--srb-label);font:inherit;cursor:pointer}.srb-members-footer button:hover{background:var(--srb-control-strong)}
 
+/* Figma 286:1053–1059 / 1713–1719: independent peer frame, label and vector cursor. */
+.srb-canvas-presence{--srb-occupied-stroke:#4d91b3;--srb-occupied-fill:#e2f2f7;--srb-occupied-text:#386e88;--srb-cursor-color:#8b6cb3}
+body[data-ds-dark-theme] .srb-canvas-presence{--srb-occupied-stroke:#74adc5;--srb-occupied-fill:#243b49;--srb-occupied-text:#a6d8e7;--srb-cursor-color:#c1a8e0}
+.srb-occupied{border:0;border-radius:10px;color:var(--srb-occupied-stroke);pointer-events:none}
+.srb-occupied-outline{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.srb-occupied .srb-occupied-label{position:absolute;left:0;top:-31.42px;display:flex;align-items:center;box-sizing:border-box;height:30px;padding:6px 10px;border-radius:7px;background:var(--srb-occupied-fill);color:var(--srb-occupied-text);font:12px/18px 'Noto Sans SC',sans-serif;white-space:nowrap}
+.srb-cursor{display:flex;align-items:center;gap:4px;width:max-content;min-width:72px;height:28px;padding:0;border-radius:0;background:transparent;color:var(--srb-cursor-color);transform:none;font:11px/17px 'Noto Sans SC',sans-serif;pointer-events:none}
+.srb-cursor svg{display:block;flex:none}
+.srb-create-collaboration-dialog .srb-recipient{padding:0 12px;border-radius:9px;background:var(--srb-info)}
+body[data-ds-dark-theme] .srb-create-collaboration-dialog .srb-recipient{background:rgba(255,255,255,.05)}
+.srb-create-collaboration-dialog .srb-recipient .srb-member-identity{height:40px;gap:0;align-content:start}
+
 @media(max-width:700px){.srb-actions{gap:4px}.srb-presence{gap:3px}.srb-avatar{width:25px;height:25px}}
 `
   doc.head.append(style)

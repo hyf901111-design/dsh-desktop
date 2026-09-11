@@ -1361,10 +1361,12 @@ export function ResearchBoardHeader({
     return null
   const v = currentBoard(page, sessionId),
     f = s.favorites.find((f) => f.sessionId === sessionId)
+  const dedicatedBoard = v?.board.sharingState === 'ownerOnly' && v.permissions.read
+  const pinned = dedicatedBoard ? s.boards.some(board => board.boardId === v.boardId && board.pinned) : !!f && f.pinned !== false
   return h(
     'div',
     { className: 'srb-actions' },
-    v
+    v && !dedicatedBoard
       ? h(
           React.Fragment,
           null,
@@ -1385,13 +1387,15 @@ export function ResearchBoardHeader({
       : h(
           'button',
           {
-            'aria-label': f?.pinned !== false && f ? '取消常用' : '设为常用',
-            'aria-pressed': !!f && f.pinned !== false,
+            'aria-label': pinned ? '取消常用' : '设为常用',
+            'aria-pressed': pinned,
             className: 'srb-favorite-button',
-            onClick: safely(page, () => page.favorite(sessionId))
+            onClick: safely(page, () => dedicatedBoard
+              ? page.call(pinned ? 'board.unpin' : 'board.pin', { boardId: v.boardId })
+              : page.favorite(sessionId))
           },
           h('span', { className: 'srb-favorite-icon', 'aria-hidden': true }),
-          f && f.pinned !== false ? '已设为常用' : '设为常用'
+          pinned ? '已设为常用' : '设为常用'
         ),
     v?.board.sharingState === 'shared'
       ? v.permissions.read && h('button', {
@@ -1408,10 +1412,6 @@ export function ResearchBoardHeader({
         }, boardIcon('people'), '创建协作')
   )
 }
-const colorFor = (id: string) =>
-  ['#b6cfca', '#d5c7a9', '#c9bfd9', '#b9cce0', '#ddbfb4'][
-    Array.from(id).reduce((n, c) => n + c.charCodeAt(0), 0) % 5
-  ]
 export function ResearchBoardPresence({
   page,
   sessionId
@@ -2553,13 +2553,13 @@ export function ResearchBoardCanvasOverlay({
                 style: {
                   left: p.cursor.x * viewport.scale + viewport.x,
                   top: p.cursor.y * viewport.scale + viewport.y,
-                  '--srb-color': colorFor(p.userId)
                 } as React.CSSProperties
               },
-              '↖ ',
-              p.username
+              h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': true, focusable: false },
+                h('path', { d: 'M 3 2 L 13 9 L 8 9.699999809265137 L 5.5 14 L 3 2 Z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.35, strokeLinecap: 'round', strokeLinejoin: 'round' })),
+              h('span', null, p.username)
             ),
-          ...(p.selectedIds ?? []).slice(0, 100).map((id) => {
+          ...(p.role !== 'viewer' && v.board.lifecycle === 'active' ? p.selectedIds ?? [] : []).slice(0, 100).map((id) => {
             const accepted = [...snapshot.files, ...snapshot.artifacts].find(
               (n) => n.id === id
             )
@@ -2582,10 +2582,11 @@ export function ResearchBoardCanvasOverlay({
                     top: (n.y - n.height / 2) * viewport.scale + viewport.y,
                     width: n.width * viewport.scale,
                     height: n.height * viewport.scale,
-                    '--srb-color': colorFor(p.userId)
                   } as React.CSSProperties
                 },
-                h('span', null, p.username, ' 正在操作')
+                h('svg', { className: 'srb-occupied-outline', width: n.width * viewport.scale, height: n.height * viewport.scale, 'aria-hidden': true, focusable: false },
+                  h('rect', { x: .7, y: .7, width: Math.max(0, n.width * viewport.scale - 1.4), height: Math.max(0, n.height * viewport.scale - 1.4), rx: 9.3, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeDasharray: '4 4' })),
+                h('span', { className: 'srb-occupied-label' }, p.username, '正在编辑')
               )
             )
           })
