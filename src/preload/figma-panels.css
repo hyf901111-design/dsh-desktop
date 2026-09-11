@@ -65,6 +65,13 @@ body:has([data-odyssey-page]) .t8lSSG_panel .t8lSSG_tabBar { border-radius:16px 
 body:has([data-odyssey-page]) .t8lSSG_panelBody { border-radius:0 0 16px 16px; }
 body:has([data-odyssey-page]) .wSkVaW_header { padding-right:20px; }
 body:has([data-odyssey-panel-right="closed"]) .wSkVaW_header { padding-right:56px; }
+/* Figma 66: welcome baseline at 325px inside the 880px pane. */
+.sRp_emptyState { padding-bottom:97px; }
+.t8lSSG_panel .t8lSSG_tab { padding-inline:8px; }
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { width:46px; }
+.t8lSSG_panel .t8lSSG_tabTitle { flex:0 1 auto; width:auto; }
+.t8lSSG_panel .t8lSSG_tab[title="Files"]>svg { display:none; }
+.t8lSSG_panel .t8lSSG_tabClose,.t8lSSG_panel .t8lSSG_tabClose>svg { width:12px; height:12px; }
 .sRp_conversation { padding-inline:16px; }
 .sRp_composer .uV2eYG_card { background:rgb(255 255 255 / .7); box-shadow:none; }
 [data-ds-dark-theme] .sRp_composer .uV2eYG_card { background:rgb(0 0 0 / .49); }
