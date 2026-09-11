@@ -324,7 +324,7 @@ body[data-dsh-title-bar-compat]
 
 /* Figma 580:824–845 / 581:824–845: 204px terminal inside the 220px overlay. */
 body[data-ds-dark-theme] .t8lSSG_bottomPanel { background:rgb(21 21 21 / .92); }
-.t8lSSG_bottomPanel .t8lSSG_tabBar { height:40px; min-height:40px; padding:6px 52px 6px 16px; gap:8px; border:0; border-radius:12px 12px 0 0; background:#e4e6e9; }
+.t8lSSG_bottomPanel .t8lSSG_tabBar { box-sizing:border-box; align-items:center; height:40px; min-height:40px; padding:6px 52px 6px 16px; gap:8px; border:0; border-radius:12px 12px 0 0; background:#e4e6e9; }
 [data-ds-dark-theme] .t8lSSG_bottomPanel .t8lSSG_tabBar { background:#303134; }
 .t8lSSG_bottomPanel .t8lSSG_tab { height:28px; min-height:28px; border-radius:7px; }
 .t8lSSG_bottomPanel .t8lSSG_tabActive { background:#fff; }
@@ -332,3 +332,13 @@ body[data-ds-dark-theme] .t8lSSG_bottomPanel { background:rgb(21 21 21 / .92); }
 .t8lSSG_bottomPanel .t8lSSG_terminalWrap { background:transparent; border-radius:0 0 12px 12px; overflow:hidden; }
 .t8lSSG_bottomPanel .t8lSSG_terminal { padding:20px 20px 12px; }
 body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-panel-right="open"] .t8lSSG_bottomPanel { right:calc(var(--odyssey-right-occupancy) + 20px) !important; }
+
+/* Clip the pane backing, while leaving the sibling resize hit area accessible. */
+.t8lSSG_bottomPanel>.t8lSSG_panelBody { border-radius:inherit; overflow:hidden; }
+.t8lSSG_bottomPanel .t8lSSG_pane { background:transparent; }
+.t8lSSG_bottomPanel .t8lSSG_tabList { flex:0 1 auto; max-width:calc(100% - 36px); min-width:0; }
+.t8lSSG_bottomPanel .t8lSSG_tabBar>:has(>.t8lSSG_tabBarPlus) { display:flex; flex:0 0 28px; align-self:center; height:28px; line-height:0; }
+.t8lSSG_bottomPanel .t8lSSG_tabBarPlus { box-sizing:border-box; display:flex; align-items:center; justify-content:center; width:28px; height:28px; min-width:28px; margin:0; padding:6px; border:0; border-radius:7px; background:transparent; color:var(--odyssey-muted); }
+.t8lSSG_bottomPanel .t8lSSG_tabBarPlus>svg { display:block; width:16px; height:16px; }
+.t8lSSG_bottomPanel .t8lSSG_tabBarPlus:hover { background:rgb(0 0 0 / .045); color:var(--odyssey-text); }
+[data-ds-dark-theme] .t8lSSG_bottomPanel .t8lSSG_tabBarPlus:hover { background:rgb(255 255 255 / .08); }
