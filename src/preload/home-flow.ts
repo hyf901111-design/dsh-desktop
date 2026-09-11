@@ -1,90 +1,52 @@
-/** Analytic grayscale surface: broad faces establish the composition, while
- * curved reflection/shadow pairs give the folds a narrower turning edge.
- * Only local curvature and lobe width evolve; the surface itself stays fixed.
+/** Reference-led grayscale regions with irregular overlapping transitions.
+ * Signed broad and local volumes reproduce the supplied spatial composition;
+ * there are no added highlight ribbons, crease paths or uniform blur layer.
+ * Independent bounded changes reshape overlaps without moving the surface.
  */
-const BROAD_FACES: ReadonlyArray<readonly [number, number, number, number, number]> = [
-  [218.8767, -0.0788, 0.2098, 0.1671, 0.1243],
-  [98.58246, 0.1796, 0.4407, 0.161, 0.3163],
-  [55.47828, 0.7864, 0.1853, 0.0897, 0.339],
-  [87.29486, 0.5971, 0.1528, 0.1478, 0.1636],
-  [176.99612, -0.0928, 0.4216, 0.0824, 0.1713],
-  [93.76949, 0.4827, 0.804, 0.1063, 0.1298],
-  [29.14748, 0.6667, 0.6311, 0.0753, 0.1526],
-  [107.0963, 0.7687, 0.8392, 0.3721, 0.2215],
-  [-38.1448, 0.4031, 0.8081, 0.0491, 0.0712],
-  [-99.33845, 0.0474, 0.2807, 0.3034, 0.1294],
-  [43.64759, 0.3838, 0.3063, 0.117, 0.0788],
-  [-117.42488, 0.5936, 0.821, 0.38, 0.1736]
+const FOG_VOLUMES: ReadonlyArray<readonly [number, number, number, number, number]> = [
+  [220.03405, -0.0788, 0.2098, 0.1671, 0.1243],
+  [99.92567, 0.1796, 0.4407, 0.161, 0.3163],
+  [53.22624, 0.7864, 0.1853, 0.0897, 0.339],
+  [89.0972, 0.5971, 0.1528, 0.1478, 0.1636],
+  [189.77068, -0.0928, 0.4216, 0.0824, 0.1713],
+  [96.39304, 0.4827, 0.804, 0.1063, 0.1298],
+  [28.55129, 0.6667, 0.6311, 0.0753, 0.1526],
+  [108.47596, 0.7687, 0.8392, 0.3721, 0.2215],
+  [-35.64271, 0.4031, 0.8081, 0.0491, 0.0712],
+  [-102.68613, 0.0474, 0.2807, 0.3034, 0.1294],
+  [44.63898, 0.3838, 0.3063, 0.117, 0.0788],
+  [-119.78286, 0.5936, 0.821, 0.38, 0.1736],
+  [29.25272, 0.78757, 0.01084, 0.0334, 0.04447],
+  [-14.03266, 0.7576, 0.04699, 0.05043, 0.04357],
+  [14.72107, 0.49938, 0.73901, 0.03014, 0.02708],
+  [-19.31934, 0.45058, 0.76801, 0.02319, 0.03052],
+  [15.66448, -0.01524, 0.16689, 0.03547, 0.01912],
+  [-12.07471, -0.01974, 0.08657, 0.04407, 0.03209],
+  [-6.30752, 0.49245, 0.67547, 0.02835, 0.03661],
+  [13.23989, 0.46735, 0.78399, 0.02203, 0.0279]
 ]
 
-// amplitude, centre x/y, reflection width, axial extent, slope, curvature,
-// shadow-side offset. Unlike round clouds these lobes follow a curved crease.
-const FOLDS = [
-  [28, .797, .22, .015, .205, .075, -1.1, .027],
-  [34, .465, .81, .017, .14, -.10, .65, -.030],
-  [24, .018, .245, .023, .20, -.19, .55, .038]
-] as const
-
-// Gaussian lookup keeps the curved surfaces within the existing CPU budget.
-// This is a 1-D math lookup, not a spatial texture or a pre-rendered frame.
-const LOBE = Float64Array.from({ length: 2049 }, (_, i) => Math.exp(-.5 * (i / 256) ** 2))
-function lobe(distance: number): number {
-  const index = Math.abs(distance) * 256
-  if (index >= 2048) return 0
-  const low = Math.floor(index), blend = index - low
-  return LOBE[low]! * (1 - blend) + LOBE[low + 1]! * blend
-}
-
-// Satin keeps a broad directional sheen on the lit face, then turns into
-// a narrower shadow. The shoulder follows the crease rather than blurring
-// the entire surface or producing an isolated glowing outline.
-function foldProfile(distance: number, width: number, shadow: number): number {
-  const shoulder = distance + Math.sign(shadow) * width
-  return lobe(distance / width) + .30 * lobe(shoulder / (width * 2.4)) -
-    .9 * lobe((distance - shadow) / (width * 1.15))
-}
-
 export function createHomeFlowField() {
-  const state = new Float64Array(BROAD_FACES.length * 5)
-  const folds = new Float64Array(FOLDS.length * 8)
-  let foldRows = new Float64Array(0)
+  const state = new Float64Array(FOG_VOLUMES.length * 5)
   let time = NaN
   let xWeights = new Float64Array(0), yWeights = new Float64Array(0)
   const prepare = (seconds: number) => {
     if (time === seconds) return
     time = seconds
-    BROAD_FACES.forEach(([amplitude, x, y, rx, ry], i) => {
-      const phase = i * 2.39996, t = seconds * (.031 + (i % 5) * .004)
+    FOG_VOLUMES.forEach(([amplitude, x, y, rx, ry], i) => {
+      const phase = i * 2.39996, t = seconds * (.067 + (i % 7) * .006)
       const local = Math.sin(t + phase) - Math.sin(phase)
       const cross = Math.sin(t * .79 + phase * 1.7) - Math.sin(phase * 1.7)
-      state[i*5] = amplitude * (1 + .006 * cross)
-      state[i*5+1] = x + .003 * local
-      state[i*5+2] = y + .003 * cross
-      state[i*5+3] = rx * (1 + .018 * local)
-      state[i*5+4] = ry * (1 - .018 * cross)
+      state[i*5] = amplitude * (1 + .008 * cross)
+      state[i*5+1] = x + .004 * local
+      state[i*5+2] = y + .004 * cross
+      state[i*5+3] = rx * (1 + .030 * local)
+      state[i*5+4] = ry * (1 - .028 * cross)
     })
-    FOLDS.forEach(([amplitude, x, y, width, extent, slope, curvature, shadow], i) => {
-      const phase = i * 2.1, t = seconds * (.135 + i * .018)
-      const bend = Math.sin(t + phase) - Math.sin(phase)
-      const turn = Math.sin(t * .71 + phase + .8) - Math.sin(phase + .8)
-      const offset = i * 8
-      folds.set([amplitude, x + .026 * bend, y, width * (1 + .20 * turn),
-        extent, slope + .075 * turn, curvature + .55 * bend, shadow], offset)
-    })
-  }
-  const foldAt = (x: number, y: number) => {
-    let value = 0
-    for (let i = 0; i < folds.length; i += 8) {
-      const along = y - folds[i + 2]!
-      const distance = x - folds[i + 1]! - folds[i + 5]! * along - folds[i + 6]! * along * along
-      value += folds[i]! * lobe(along / folds[i + 4]!) *
-        foldProfile(distance, folds[i + 3]!, folds[i + 7]!)
-    }
-    return value
   }
   const color = (value: number, dark: boolean) => {
-    const luminance = Math.max(12, Math.min(185, value))
-    return Math.round(dark ? luminance : 250 - 49 * (luminance - 12) / 173)
+    const luminance = Math.max(12, Math.min(215, value))
+    return Math.round(dark ? luminance : 250 - 49 * (Math.min(185, luminance) - 12) / 173)
   }
   const sample = (x: number, y: number, seconds: number, dark: boolean) => {
     prepare(seconds)
@@ -93,11 +55,11 @@ export function createHomeFlowField() {
       const dx=(x-state[i+1]!)/state[i+3]!, dy=(y-state[i+2]!)/state[i+4]!
       value += state[i]! * Math.exp(-.5 * (dx*dx+dy*dy))
     }
-    return color(value + foldAt(x, y),dark)
+    return color(value,dark)
   }
   const paint = (pixels: ImageData, seconds: number, dark: boolean) => {
     prepare(seconds)
-    const {width,height,data}=pixels, count=BROAD_FACES.length
+    const {width,height,data}=pixels, count=FOG_VOLUMES.length
     if(xWeights.length!==width*count) xWeights=new Float64Array(width*count)
     if(yWeights.length!==height*count) yWeights=new Float64Array(height*count)
     // Separable Gaussian weights: a few thousand exponentials per frame,
@@ -107,19 +69,9 @@ export function createHomeFlowField() {
       for(let x=0;x<width;x++){const d=(x/(width-1)-state[i+1]!)/state[i+3]!;xWeights[c*width+x]=state[i]!*Math.exp(-.5*d*d)}
       for(let y=0;y<height;y++){const d=(y/(height-1)-state[i+2]!)/state[i+4]!;yWeights[c*height+y]=Math.exp(-.5*d*d)}
     }
-    if (foldRows.length !== height * FOLDS.length * 2) foldRows = new Float64Array(height * FOLDS.length * 2)
-    for (let y = 0; y < height; y++) for (let c = 0; c < FOLDS.length; c++) {
-      const i = c * 8, along = y / (height - 1) - folds[i + 2]!, row = (y * FOLDS.length + c) * 2
-      foldRows[row] = folds[i + 1]! + folds[i + 5]! * along + folds[i + 6]! * along * along
-      foldRows[row + 1] = folds[i]! * lobe(along / folds[i + 4]!)
-    }
     for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
       let value=9.8591
       for(let c=0;c<count;c++) value+=xWeights[c*width+x]!*yWeights[c*height+y]!
-      for (let c = 0; c < FOLDS.length; c++) {
-        const i = c * 8, row = (y * FOLDS.length + c) * 2, distance = x / (width - 1) - foldRows[row]!
-        value += foldRows[row + 1]! * foldProfile(distance, folds[i + 3]!, folds[i + 7]!)
-      }
       const index=(y*width+x)*4, gray=color(value,dark)
       data[index]=data[index+1]=data[index+2]=gray;data[index+3]=255
     }

@@ -40,7 +40,7 @@ try {
   assert.equal(data.geometry,data.after);assert.equal(data.transform,'none');assert(data.width<=256&&data.height<=256)
   for(const pixels of data.snapshots)for(let i=0;i<pixels.length;i+=4){assert.equal(pixels[i],pixels[i+1]);assert.equal(pixels[i],pixels[i+2]);assert.equal(pixels[i+3],255)}
   const change=data.snapshots[0].reduce((s,v,i)=>s+(i%4===0?Math.abs(v-data.snapshots[2][i]):0),0)/(data.width*data.height)
-  assert(change>(theme==='dark'?1.8:.5),'satin folds must visibly reshape over eight seconds')
+  assert(change>(theme==='dark'?.7:.18),'overlapping regions must gradually reshape over eight seconds')
   assert(change<(theme==='dark'?12:7),'fog motion must remain restrained')
   await page.screenshot({path:output+`/${theme}-${viewport.width}.png`})
   await page.emulateMedia({reducedMotion:'reduce'})
