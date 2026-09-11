@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首页纯代码灰阶流动背景",
+        "featureName": "首页代码流动背景及集成发现的更新入口布局修复",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "1fd352d18747165bc340501ccf79974da360d385",
-        "tipCommit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
+        "tipCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
         "commits": [
           {
             "commit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
@@ -20,6 +20,13 @@
               "1fd352d18747165bc340501ccf79974da360d385"
             ],
             "subject": "以实时灰阶雾场替换首页背景图片平移动画"
+          },
+          {
+            "commit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
+            "parents": [
+              "9d7a0f38613557b87c59b1a67d8f3a0141b0427b"
+            ],
+            "subject": "修复更新入口挤到侧栏账户下方的布局回归"
           }
         ],
         "files": [
@@ -41,6 +48,10 @@
           },
           {
             "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "M",
             "path": "test/figma-motion-controller.test.ts"
           },
           {
@@ -57,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "Procedural home flow typecheck passed; log /tmp/odyssey-figma-full-20260911/flow-typecheck.log",
-            "verifiedCommit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
-            "completedAt": "2026-09-11T07:49:49.713709+00:00",
+            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
+            "completedAt": "2026-09-11T07:57:15.659426+00:00",
             "timeoutMs": 120000
           },
           {
@@ -67,12 +78,13 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/home-flow.test.ts",
-              "test/figma-motion-controller.test.ts"
+              "test/figma-motion-controller.test.ts",
+              "test/sidebar-update-control.test.ts"
             ],
             "outcome": "passed",
             "summary": "Procedural home flow tests passed; log /tmp/odyssey-figma-full-20260911/flow-tests.log",
-            "verifiedCommit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
-            "completedAt": "2026-09-11T07:49:49.713709+00:00",
+            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
+            "completedAt": "2026-09-11T07:57:16.499158+00:00",
             "timeoutMs": 120000
           },
           {
@@ -82,8 +94,8 @@
             ],
             "outcome": "passed",
             "summary": "Procedural home flow browser passed; log /tmp/odyssey-figma-full-20260911/flow-browser.log",
-            "verifiedCommit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
-            "completedAt": "2026-09-11T07:49:49.713709+00:00",
+            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
+            "completedAt": "2026-09-11T07:57:24.694295+00:00",
             "timeoutMs": 120000
           },
           {
@@ -95,8 +107,8 @@
             ],
             "outcome": "passed",
             "summary": "Procedural home flow sources passed; log /tmp/odyssey-figma-full-20260911/flow-sources.log",
-            "verifiedCommit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
-            "completedAt": "2026-09-11T07:49:49.713709+00:00",
+            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
+            "completedAt": "2026-09-11T07:57:35.008433+00:00",
             "timeoutMs": 120000
           }
         ],
