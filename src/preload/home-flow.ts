@@ -6,8 +6,8 @@
 const FOG_VOLUMES: ReadonlyArray<readonly [number, number, number, number, number]> = [
   [220.03405, -0.0788, 0.2098, 0.1671, 0.1243],
   [99.92567, 0.1796, 0.4407, 0.161, 0.3163],
-  [53.22624, 0.7864, 0.1853, 0.0897, 0.339],
-  [89.0972, 0.5971, 0.1528, 0.1478, 0.1636],
+  [53, 0.765, 0.195, 0.104, 0.31],
+  [73, 0.60, 0.07, 0.18, 0.235],
   [189.77068, -0.0928, 0.4216, 0.0824, 0.1713],
   [88, 0.51, 0.85, 0.12, 0.188],
   [28.55129, 0.6667, 0.6311, 0.0753, 0.1526],
@@ -16,8 +16,10 @@ const FOG_VOLUMES: ReadonlyArray<readonly [number, number, number, number, numbe
   [-102.68613, 0.0474, 0.2807, 0.3034, 0.1294],
   [44.63898, 0.3838, 0.3063, 0.117, 0.0788],
   [-119.78286, 0.5936, 0.821, 0.38, 0.1736],
-  [29.25272, 0.78757, 0.01084, 0.0334, 0.04447],
-  [-14.03266, 0.7576, 0.04699, 0.05043, 0.04357],
+  // Join the upper shoulder to the edge instead of capping it with a tiny
+  // bright bead and a dark notch that separate it from the surrounding face.
+  [9, 0.77, -0.04, 0.075, 0.125],
+  [-4, 0.73, 0.08, 0.07, 0.10],
   // Broad overlapping shoulders replace the tiny cap / notch pair that read
   // as a round head on a narrow stalk after curvature lighting was applied.
   [6, 0.480, 0.739, 0.052, 0.062],
@@ -37,14 +39,14 @@ export function createHomeFlowField() {
     if (time === seconds) return
     time = seconds
     FOG_VOLUMES.forEach(([amplitude, x, y, rx, ry], i) => {
-      const phase = i * 2.39996, t = seconds * 2.03 * (.067 + (i % 7) * .006)
+      const phase = i * 2.39996, t = seconds * 3.4 * (.067 + (i % 7) * .006)
       const local = Math.sin(t + phase) - Math.sin(phase)
       const cross = Math.sin(t * .79 + phase * 1.7) - Math.sin(phase * 1.7)
-      state[i*5] = amplitude * (1 + .008 * cross)
-      state[i*5+1] = x + .004 * local
-      state[i*5+2] = y + .004 * cross
-      state[i*5+3] = rx * (1 + .030 * local)
-      state[i*5+4] = ry * (1 - .028 * cross)
+      state[i*5] = amplitude * (1 + .015 * cross)
+      state[i*5+1] = x + .012 * local
+      state[i*5+2] = y + .012 * cross
+      state[i*5+3] = rx * (1 + .085 * local)
+      state[i*5+4] = ry * (1 - .075 * cross)
     })
   }
   const color = (value: number, curvature: number, dark: boolean) => {
