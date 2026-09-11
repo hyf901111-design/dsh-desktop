@@ -221,7 +221,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-favorite-button[aria-pressed=true] .srb-favorite-icon{mask-image:url(/figma-favorite-selected.svg)}
 .srb-people-icon{mask-image:url(/figma-people.svg)}
 .srb-plus-icon{mask-image:url(/figma-collaboration-plus.svg)}.srb-close-icon{mask-image:url(/figma-close.svg)}.srb-check-icon{mask-image:url(/figma-check.svg);color:var(--srb-blue)}
-.srb-actions .srb-manage-button{height:28px;padding:0 10px;border:1px solid var(--srb-control-border);border-radius:6px;background:var(--srb-control)}
+.srb-actions .srb-manage-button{width:44px;height:28px;padding:0;border:1px solid var(--srb-control-border);border-radius:6px;background:var(--srb-control)}
 .srb-actions .srb-presence{gap:6px;padding:0}
 .srb-avatar.srb-avatar{width:28px;height:28px;border:0!important;background:var(--srb-avatar-background)!important;color:#fff!important;font-size:13px;font-weight:500;line-height:18px}
 .srb-avatar.srb-avatar:after{display:none}

@@ -1465,9 +1465,11 @@ export function showBoardMembers(page: ResearchBoardsPage, sessionId: string, an
   const footer = uiText('div', '', 'srb-members-footer')
   const close = () => { popover.hidePopover?.(); popover.remove(); off(); win.removeEventListener('resize', position) }
   const position = () => {
-    const rect = anchor.getBoundingClientRect()
+    // Figma 305:614 is aligned with the management button's right edge,
+    // regardless of which avatar or overflow count opened it.
+    const rect = (anchor.closest('.srb-actions') ?? anchor).getBoundingClientRect()
     popover.style.left = Math.max(12, Math.min(rect.right - 340, win.innerWidth - 352)) + 'px'
-    popover.style.top = Math.max(12, Math.min(rect.bottom + 8, win.innerHeight - popover.getBoundingClientRect().height - 12)) + 'px'
+    popover.style.top = Math.max(12, Math.min(rect.bottom + 21, win.innerHeight - popover.getBoundingClientRect().height - 12)) + 'px'
   }
   const render = () => {
     const v = page.getView(sessionId)
