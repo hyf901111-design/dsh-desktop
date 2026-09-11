@@ -93,14 +93,18 @@ export function mountResearchBoardNotifications(
     pause()
     const buttons = [...root.querySelectorAll('button')]
     buttons.forEach((b) => (b.disabled = true))
+    root.querySelector('[role=status]')?.remove()
     const status = doc.createElement('p')
     status.role = 'status'
     root.append(status)
     status.textContent = decision === 'accept' ? '加入中…' : '处理中…'
-    if (root.closest('.srb-bubble')) {
+    const pendingAction = root.closest('.srb-bubble')
+      ? buttons[decision === 'accept' ? buttons.length - 1 : 0]
+      : undefined
+    const actionLabel = pendingAction?.textContent ?? ''
+    if (pendingAction) {
       status.hidden = true
-      const action = buttons[decision === 'accept' ? buttons.length - 1 : 0]
-      if (action) action.textContent = status.textContent
+      pendingAction.textContent = status.textContent
     }
     try {
       const result = await call<{ invitation: { status: string } }>(
@@ -139,6 +143,7 @@ export function mountResearchBoardNotifications(
         n.invitation.status = e.details.invitation.status
         root.querySelector('.srb-notification-actions')?.remove()
       }
+      if (pendingAction) pendingAction.textContent = actionLabel
       status.hidden = false
       status.textContent = e.message
       buttons.forEach((b) => (b.disabled = false))

@@ -23,7 +23,8 @@ export function patchFigmaAboutUpdates(source) {
   source = exact(source, 'const label = verifying ? t("about.verifyingButton")', 'const label = stageCopy ? stageCopy[1] : verifying ? t("about.verifyingButton")')
   const previousUpToDate = '(update.phase === "up-to-date" || update.phase === "updated") ? t("about.upToDate")'
   source = exact(source, source.includes(previousUpToDate) ? previousUpToDate : 'update.phase === "up-to-date" ? t("about.upToDate")', previousUpToDate + '.replace(/^EWork Odyssey\\s*/, "")')
-  // Figma 12/34/35 only shows a spinner for an active indeterminate action.
+  // Figma 34 keeps the rotating update arrows; 37 uses the verification ring.
   source = exact(source, 'children: [downloading ? null : jsx("span", { className: "sherlock-about-action-icon"', 'children: [!active || downloading ? null : jsx("span", { className: "sherlock-about-action-icon"')
+  source = exact(source, '"data-loading": active,', '"data-loading": verifying,')
   return source
 }
