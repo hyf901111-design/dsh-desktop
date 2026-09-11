@@ -9,96 +9,42 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "EWork Odyssey 第七批：面板边界、顶栏与雾层动效及原生协作验收环境",
+        "featureName": "EWork Odyssey 第八批：真实协作验收中的权限菜单稳定性与图稿细节",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "aa8a824c643e01cf63869a963461397ce299b54f",
-        "tipCommit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
+        "baseCommit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
+        "tipCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
         "commits": [
           {
-            "commit": "8fd03501ccc34264a59d7a3970b764113c7738bb",
+            "commit": "1208e2034e65bf387a4598fc5ca8790916bba1c8",
             "parents": [
-              "aa8a824c643e01cf63869a963461397ce299b54f"
+              "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a"
             ],
-            "subject": "限制右侧面板拖宽范围并同步窗口尺寸变化"
+            "subject": "修复协作在线刷新中断成员权限菜单和滚动位置"
           },
           {
-            "commit": "677dbdec6d7b53d619b9a33b399270918d40ae5a",
+            "commit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
             "parents": [
-              "8fd03501ccc34264a59d7a3970b764113c7738bb"
+              "1208e2034e65bf387a4598fc5ca8790916bba1c8"
             ],
-            "subject": "统一视图顶栏并修复面板背景及首页雾层动效"
-          },
-          {
-            "commit": "17a28aa1fdd973a39c01cddfda302b7c9ac3812b",
-            "parents": [
-              "677dbdec6d7b53d619b9a33b399270918d40ae5a"
-            ],
-            "subject": "支持使用隔离服务验收真实双客户端协作与认证页面"
-          },
-          {
-            "commit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
-            "parents": [
-              "17a28aa1fdd973a39c01cddfda302b7c9ac3812b"
-            ],
-            "subject": "按最终稿修正空白研究标语文案和文字颜色"
+            "subject": "按设计节点还原设置下拉箭头及协作空白页标语"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/sherlock-local-test-runbook.md"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.d.mts"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/start-native-acceptance-services.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/account-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/local-acceptance-services.ts"
-          },
           {
             "status": "M",
             "path": "src/preload/figma-final-shell.css"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-home.css"
+            "path": "src/preload/figma-settings.css"
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
+            "path": "src/preload/research-boards-ui.ts"
           },
           {
             "status": "M",
-            "path": "test/account-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-panel-drag-recovery.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/local-acceptance-services.test.ts"
+            "path": "test/research-board-navigation-final.test.ts"
           }
         ],
         "checks": [
@@ -108,9 +54,9 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "deps directly related validation passed; log checkpoint-7-deps.log",
-            "verifiedCommit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
-            "completedAt": "2026-09-11T03:10:39.467090+00:00",
+            "summary": "deps directly related validation passed; log checkpoint-8-deps.log",
+            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
+            "completedAt": "2026-09-11T03:59:36.479422+00:00",
             "timeoutMs": 120000
           },
           {
@@ -120,9 +66,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "typecheck directly related validation passed; log checkpoint-7-typecheck.log",
-            "verifiedCommit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
-            "completedAt": "2026-09-11T03:10:43.691788+00:00",
+            "summary": "typecheck directly related validation passed; log checkpoint-8-typecheck.log",
+            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
+            "completedAt": "2026-09-11T03:59:40.063255+00:00",
             "timeoutMs": 120000
           },
           {
@@ -130,17 +76,13 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/figma-panel-drag-recovery.test.ts",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/figma-motion-controller.test.ts",
-              "test/local-acceptance-services.test.ts",
-              "test/account-service.test.ts",
+              "test/research-board-navigation-final.test.ts",
               "test/figma-final-shell-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "focused directly related validation passed; log checkpoint-7-focused.log",
-            "verifiedCommit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
-            "completedAt": "2026-09-11T03:10:44.669894+00:00",
+            "summary": "focused directly related validation passed; log checkpoint-8-focused.log",
+            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
+            "completedAt": "2026-09-11T03:59:40.991316+00:00",
             "timeoutMs": 120000
           },
           {
@@ -151,101 +93,26 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "sources directly related validation passed; log checkpoint-7-sources.log",
-            "verifiedCommit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
-            "completedAt": "2026-09-11T03:10:53.158324+00:00",
+            "summary": "sources directly related validation passed; log checkpoint-8-sources.log",
+            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
+            "completedAt": "2026-09-11T03:59:50.620087+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Actual checkpoint6 reproduced panel overlapping navigation and colored exposure; header mode controls and tab baseline shift between conversation and research; home fog moves only about 3px in 12 seconds. Production renderer bounds tests and 32 home fog plus 8 panel material captures verified fixes. Local production account and collaboration service started; checkpoint7 packaged-client and dual-instance verification pending."
+          "summary": "Checkpoint7 actual packaged Owner and Editor clients registered/logged in, created a shared board, sent and accepted invitation, and observed editor container creation on owner. Native member permission select was repeatedly replaced by cursor/presence updates; regression fails before and passes after fix. Settings chevron Figma 177:319 measured 4x2 with 0.75 round stroke; shared empty slogan now matches 370:607/620. Native checkpoint8 retest required."
         },
         "acceptanceCriteria": [
-          "在真实集成客户端重复右侧面板最大拖宽、窗口及左側栏变化，确认不覆盖导航且保存尺寸正确",
-          "对话与研究切换时顶栏固定82px、模式按钮112×30且图标基线一致",
-          "首页浅深灰雾缓慢流动，文字和输入框保持静止，无彩色边缘或露底",
-          "空白研究标语按370:607和370:620显示无句号原文及对应颜色",
-          "同一集成产物的两个隔离实例实际验证创建、邀请、成员权限及取消协作；按Figma逐页记录对照与差异"
+          "Build only the integration checkout and verify actual main interface while preserving existing user draft",
+          "Confirm no background sidebar text or buttons bleed through light/dark settings, and preserve draft on return",
+          "Continue per-frame native Figma acceptance for panels, derived components, auth and settings"
         ],
         "risks": [
           "Full 258-case Figma acceptance is ongoing; controlled component screenshots do not count as native client acceptance",
           "No public release, push, version bump or notarization"
         ],
-        "generatedAt": "2026-09-11T03:10:53.158430+00:00"
-      },
-      "merged": {
-        "mergeCommit": "577ea4ff86d0b20209dfcade08a108345edc1dd3",
-        "verificationCommit": "577ea4ff86d0b20209dfcade08a108345edc1dd3",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "577ea4ff86d0b20209dfcade08a108345edc1dd3",
-            "completedAt": "2026-09-11T03:13:07.316Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "577ea4ff86d0b20209dfcade08a108345edc1dd3",
-            "completedAt": "2026-09-11T03:13:07.316Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "577ea4ff86d0b20209dfcade08a108345edc1dd3",
-            "completedAt": "2026-09-11T03:13:07.316Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "577ea4ff86d0b20209dfcade08a108345edc1dd3",
-            "completedAt": "2026-09-11T03:13:07.316Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "577ea4ff86d0b20209dfcade08a108345edc1dd3",
-            "completedAt": "2026-09-11T03:13:07.316Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T03:13:07.316Z"
+        "generatedAt": "2026-09-11T03:59:50.620166+00:00"
       }
     }
   ],
