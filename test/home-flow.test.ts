@@ -4,8 +4,9 @@ import { createHomeFlowField, homeFlowLuminance, mountHomeFlow } from '../src/pr
 
 describe('procedural home atmosphere', () => {
   it('keeps the reference faces and dark gaps after extended local animation', () => {
-    // Median grayscale samples measured from unobstructed reference regions.
-    const anchors = [[.04,.2,171],[.35,.08,45],[.65,.18,105],[.9,.3,42],[.2,.65,64],[.5,.78,83],[.23,.88,18],[.9,.85,31]]
+    // Quiet face regions retain the composition; the crease regions are now
+    // intentionally stronger and move farther following the latest feedback.
+    const anchors = [[.35,.08,45],[.65,.18,105],[.9,.3,42],[.2,.65,64],[.23,.88,18],[.9,.85,31]]
     for (const [x,y,gray] of anchors) {
       expect(Math.abs(homeFlowLuminance(x!,y!,0,true)-gray!)).toBeLessThan(12)
       for (const time of [12, 60, 300, 600]) {

@@ -20,9 +20,9 @@ const BROAD_FACES: ReadonlyArray<readonly [number, number, number, number, numbe
 // amplitude, centre x/y, reflection width, axial extent, slope, curvature,
 // shadow-side offset. Unlike round clouds these lobes follow a curved crease.
 const FOLDS = [
-  [12, .797, .22, .021, .205, .075, -1.1, .032],
-  [15, .465, .81, .024, .14, -.10, .65, -.038],
-  [10, .018, .245, .032, .20, -.19, .55, .045]
+  [28, .797, .22, .015, .205, .075, -1.1, .027],
+  [34, .465, .81, .017, .14, -.10, .65, -.030],
+  [24, .018, .245, .023, .20, -.19, .55, .038]
 ] as const
 
 // Gaussian lookup keeps the curved surfaces within the existing CPU budget.
@@ -33,6 +33,15 @@ function lobe(distance: number): number {
   if (index >= 2048) return 0
   const low = Math.floor(index), blend = index - low
   return LOBE[low]! * (1 - blend) + LOBE[low + 1]! * blend
+}
+
+// Satin keeps a broad directional sheen on the lit face, then turns into
+// a narrower shadow. The shoulder follows the crease rather than blurring
+// the entire surface or producing an isolated glowing outline.
+function foldProfile(distance: number, width: number, shadow: number): number {
+  const shoulder = distance + Math.sign(shadow) * width
+  return lobe(distance / width) + .30 * lobe(shoulder / (width * 2.4)) -
+    .9 * lobe((distance - shadow) / (width * 1.15))
 }
 
 export function createHomeFlowField() {
@@ -55,12 +64,12 @@ export function createHomeFlowField() {
       state[i*5+4] = ry * (1 - .018 * cross)
     })
     FOLDS.forEach(([amplitude, x, y, width, extent, slope, curvature, shadow], i) => {
-      const phase = i * 2.1, t = seconds * (.085 + i * .01)
+      const phase = i * 2.1, t = seconds * (.135 + i * .018)
       const bend = Math.sin(t + phase) - Math.sin(phase)
       const turn = Math.sin(t * .71 + phase + .8) - Math.sin(phase + .8)
       const offset = i * 8
-      folds.set([amplitude, x + .012 * bend, y, width * (1 + .13 * turn),
-        extent, slope + .035 * turn, curvature + .25 * bend, shadow], offset)
+      folds.set([amplitude, x + .026 * bend, y, width * (1 + .20 * turn),
+        extent, slope + .075 * turn, curvature + .55 * bend, shadow], offset)
     })
   }
   const foldAt = (x: number, y: number) => {
@@ -69,7 +78,7 @@ export function createHomeFlowField() {
       const along = y - folds[i + 2]!
       const distance = x - folds[i + 1]! - folds[i + 5]! * along - folds[i + 6]! * along * along
       value += folds[i]! * lobe(along / folds[i + 4]!) *
-        (lobe(distance / folds[i + 3]!) - .72 * lobe((distance - folds[i + 7]!) / (folds[i + 3]! * 1.3)))
+        foldProfile(distance, folds[i + 3]!, folds[i + 7]!)
     }
     return value
   }
@@ -109,8 +118,7 @@ export function createHomeFlowField() {
       for(let c=0;c<count;c++) value+=xWeights[c*width+x]!*yWeights[c*height+y]!
       for (let c = 0; c < FOLDS.length; c++) {
         const i = c * 8, row = (y * FOLDS.length + c) * 2, distance = x / (width - 1) - foldRows[row]!
-        value += foldRows[row + 1]! * (lobe(distance / folds[i + 3]!) -
-          .72 * lobe((distance - folds[i + 7]!) / (folds[i + 3]! * 1.3)))
+        value += foldRows[row + 1]! * foldProfile(distance, folds[i + 3]!, folds[i + 7]!)
       }
       const index=(y*width+x)*4, gray=color(value,dark)
       data[index]=data[index+1]=data[index+2]=gray;data[index+3]=255
