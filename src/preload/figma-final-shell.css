@@ -115,7 +115,8 @@ body:has([data-odyssey-page="research"]) .t8lSSG_toggleCluster { top:30px !impor
 
 .t8lSSG_panel { border:0; outline:1px solid var(--odyssey-glass-border); outline-offset:-1px; }
 body:has([data-odyssey-page]) .wSkVaW_header { padding-right:20px; }
-body:has([data-research-empty-state]) .wSkVaW_header .srb-actions { display:none; }
+/* An empty conversation in the right panel does not make the research canvas empty. */
+body:has([data-research-empty-state]):not(:has([data-research-node-id])) .wSkVaW_header .srb-actions:not([data-srb-board-bound="true"]) { display:none; }
 [data-sidebar-collapsed=true] .srb-account-controls > [data-research-board-bell-host] { order:-1; }
 /* Figma 286:469–477: workspace session typography shares the measured navigation baseline. */
 [data-dsh-sidebar-root] .YDXeBa_title { font-size:14px; line-height:21px; }
