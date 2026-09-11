@@ -9,31 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复左栏快速拖动最终宽度提交",
+        "featureName": "对齐邀请ID错误的字段反馈",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "523c9857ba88bceea152dda4cb425f1fa5b6c9b5",
-        "tipCommit": "d1d2704f03b79bd1948c669fb59320d6d78519cf",
+        "baseCommit": "d1d2704f03b79bd1948c669fb59320d6d78519cf",
+        "tipCommit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
         "commits": [
           {
-            "commit": "d1d2704f03b79bd1948c669fb59320d6d78519cf",
+            "commit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
             "parents": [
-              "523c9857ba88bceea152dda4cb425f1fa5b6c9b5"
+              "d1d2704f03b79bd1948c669fb59320d6d78519cf"
             ],
-            "subject": "修复左侧栏快速拖动松手时未提交最终宽度"
+            "subject": "按设计稿将邀请ID错误放到字段下方并在编辑时清除"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
+            "path": "src/preload/research-board-dialogs.ts"
           },
           {
             "status": "M",
-            "path": "test/figma-final-shell-patch.test.ts"
+            "path": "src/preload/research-boards-ui.ts"
           },
           {
-            "status": "M",
-            "path": "test/figma-resize-feedback.test.ts"
+            "status": "A",
+            "path": "test/research-invitation-field-error.test.ts"
           }
         ],
         "checks": [
@@ -42,44 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-resize-feedback.test.ts"
+              "test/research-invitation-field-error.test.ts",
+              "test/research-board-navigation-final.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10 focused checks passed; pointerup without pointermove failed before fix (0 instead of -40)",
-            "verifiedCommit": "d1d2704f03b79bd1948c669fb59320d6d78519cf",
-            "completedAt": "2026-09-11T15:12:51.273495+00:00",
+            "summary": "11 focused invitation and navigation checks passed",
+            "verifiedCommit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
+            "completedAt": "2026-09-11T15:20:13.100806+00:00",
             "timeoutMs": 180000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "Native 6546581 reproduces the no-move quick drag issue; final integrated client will verify 280 to 240 resize."
-        },
-        "acceptanceCriteria": [
-          "快速拖动松手读取最终坐标",
-          "240px最小宽度与收起80px规则保持",
-          "并列面板10px间隙的提示线位置保持"
-        ],
-        "risks": [
-          "本地修复，不发布不推送"
-        ],
-        "generatedAt": "2026-09-11T15:12:51.273495+00:00"
-      },
-      "merged": {
-        "mergeCommit": "48b0f759d91d170193a8297388dbed037b959e71",
-        "verificationCommit": "48b0f759d91d170193a8297388dbed037b959e71",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "48b0f759d91d170193a8297388dbed037b959e71",
-            "completedAt": "2026-09-11T15:15:07.248Z",
-            "timeoutMs": 600000
           },
           {
             "argv": [
@@ -88,56 +58,25 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "48b0f759d91d170193a8297388dbed037b959e71",
-            "completedAt": "2026-09-11T15:15:07.248Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "48b0f759d91d170193a8297388dbed037b959e71",
-            "completedAt": "2026-09-11T15:15:07.248Z",
+            "summary": "TypeScript check passed",
+            "verifiedCommit": "e378220b7a349640d2fd45a91a2c92d3cfb6df55",
+            "completedAt": "2026-09-11T15:20:13.100806+00:00",
             "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "48b0f759d91d170193a8297388dbed037b959e71",
-            "completedAt": "2026-09-11T15:15:07.248Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "48b0f759d91d170193a8297388dbed037b959e71",
-            "completedAt": "2026-09-11T15:15:07.248Z",
-            "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-11T15:15:07.248Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "Native 6546581 shows invalid ID feedback in dialog footer; final package will verify field-local alert and clear-on-edit."
+        },
+        "acceptanceCriteria": [
+          "错误紧邻ID字段且保留输入",
+          "编辑后清除旧错误",
+          "核对用户前发送保持禁用"
+        ],
+        "risks": [
+          "本地隔离验收，不发布不推送"
+        ],
+        "generatedAt": "2026-09-11T15:20:13.100806+00:00"
       }
     }
   ],
