@@ -8,6 +8,15 @@ body {
   --odyssey-panel-edge:24px;
 }
 
+/* Narrow-window adaptation retains every action and its font/target size. */
+.wSkVaW_header[data-odyssey-header-layout]:not([data-odyssey-header-layout="regular"])[data-srb-session-header]:has(.srb-actions) [data-srb-title-cluster] { grid-column:1 / -1; }
+.wSkVaW_header[data-odyssey-header-layout="stacked"][data-srb-session-header]:has(.srb-actions) [data-srb-utilities] { grid-row:2; height:30px; margin-top:0; align-self:center; }
+.wSkVaW_header[data-odyssey-header-layout="narrow"][data-srb-session-header]:has(.srb-actions) {
+  height:114px; min-height:114px; flex-basis:114px; grid-template-rows:30px 30px 32px; row-gap:2px;
+}
+.wSkVaW_header[data-odyssey-header-layout="narrow"][data-srb-session-header]:has(.srb-actions) [data-srb-utilities] { grid-column:1 / -1; grid-row:3; height:30px; margin-top:0; justify-self:end; }
+.wSkVaW_header[data-odyssey-header-layout="narrow"] [data-srb-tabs] { grid-column:1 / -1; margin-top:0; }
+
 /* Conversation frames use a 20 px right edge in 03/06/13/17. Home and
    Research keep 24 px regardless of the left sidebar state. */
 body:has([data-odyssey-page="conversation"]) {
@@ -63,6 +72,54 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
   top: 29px !important;
   right: calc(var(--odyssey-panel-edge) + 8px) !important;
 }
+
+/* 304:1297/1313: tabs start at 6; all three 28 px actions at 7.
+   A Menu's inline wrapper otherwise contributes a text baseline below +. */
+.t8lSSG_panel:not(.t8lSSG_panelHidden) .t8lSSG_tabBar {
+  padding:6px 72px 6px 8px;
+}
+.t8lSSG_panel .t8lSSG_tabBar>:has(>.t8lSSG_tabBarPlus) {
+  display:flex;
+  align-items:center;
+  align-self:flex-start;
+  height:28px;
+  margin-top:1px;
+  line-height:0;
+}
+.t8lSSG_panel .t8lSSG_tabBarPlus {
+  position:static;
+  display:flex;
+  padding:6px;
+  color:#777;
+}
+.t8lSSG_panel .t8lSSG_tabBarPlus>svg { display:block; flex:none; }
+.t8lSSG_panel .t8lSSG_tabBarPlus>svg path { stroke-width:1; }
+[data-ds-dark-theme] .t8lSSG_panel .t8lSSG_tabBarPlus { color:#a0a0a0; }
+.t8lSSG_panel .t8lSSG_tabBarPlus:hover { background:rgb(0 0 0 / .045); color:var(--odyssey-text); }
+[data-ds-dark-theme] .t8lSSG_panel .t8lSSG_tabBarPlus:hover { background:rgb(255 255 255 / .08); }
+
+/* Groups 14–15: native drag handlers own width and persistence. This layer
+   only follows their rendered boundary, without taking pointer capture. */
+.t8lSSG_panel .t8lSSG_panelResize { z-index:5; }
+.t8lSSG_panelResizeActive { background:transparent !important; }
+[data-odyssey-resize-feedback] { position:fixed; z-index:90; pointer-events:none; width:0; }
+[data-odyssey-resize-feedback]::before {
+  content:''; position:absolute; inset:0 auto 0 -1px; width:2px; border-radius:1px;
+  background:linear-gradient(transparent, rgb(76 134 237 / .32) 20%, rgb(76 134 237 / .56) 50%, rgb(76 134 237 / .32) 80%, transparent);
+}
+[data-odyssey-resize-grip] {
+  position:absolute; left:-1.5px; width:3px; height:70px; border-radius:1.5px;
+  background:linear-gradient(transparent, rgb(76 134 237 / .6) 20%, #4c86ed 50%, rgb(76 134 237 / .6) 80%, transparent);
+}
+[data-odyssey-resize-width] {
+  position:absolute; left:18px; box-sizing:border-box; min-width:76px; height:28px;
+  padding:4px 20px; border-radius:8px; white-space:nowrap;
+  background:#fff; color:#292b2e; font:400 12px/20px var(--odyssey-font-ui);
+  box-shadow:0 2px 8px rgb(0 0 0 / .22);
+}
+[data-ds-dark-theme] [data-odyssey-resize-width] { background:rgb(51 51 51 / .96); color:#e5e5e5; }
+.pI_x6G_handle[data-side="sidebar"], .t8lSSG_panelResize,
+body[data-odyssey-resizing] * { cursor:ew-resize !important; }
 
 [data-dsh-panel-host] [data-odyssey-panel-entry] {
   width: 28px;

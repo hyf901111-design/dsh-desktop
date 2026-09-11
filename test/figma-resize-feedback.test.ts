@@ -1,0 +1,59 @@
+import { Window, DOMRect, type HTMLElement } from 'happy-dom'
+import { expect, it } from 'vitest'
+import { mountFigmaResizeFeedback } from '../src/preload/figma-resize-feedback'
+
+it('follows actual clamped width without taking over native drag, and cleans cancellation', async () => {
+  const win = new Window()
+  const doc = win.document
+  doc.body.innerHTML = '<aside class="pI_x6G_sidebarCol"></aside><div class="pI_x6G_handle" data-side="sidebar"></div>'
+  let width = 280
+  const surface = doc.querySelector('aside')!
+  surface.getBoundingClientRect = () => ({ left:0, top:0, right:width, width, height:900 }) as DOMRect
+  const queue = new Map<number, FrameRequestCallback>()
+  let id = 0
+  win.requestAnimationFrame = ((callback: FrameRequestCallback) => { queue.set(++id, callback); return id }) as unknown as typeof win.requestAnimationFrame
+  win.cancelAnimationFrame = ((key: number) => { queue.delete(key) }) as unknown as typeof win.cancelAnimationFrame
+  const tick = () => { const jobs = [...queue.values()]; queue.clear(); jobs.forEach(fn => fn(0)) }
+  const dispose = mountFigmaResizeFeedback(doc as unknown as Document)
+  const handle = doc.querySelector('.pI_x6G_handle')!
+  const start = new win.PointerEvent('pointerdown', { bubbles:true, button:0, pointerId:1, clientY:436, cancelable:true })
+  handle.dispatchEvent(start)
+  expect(start.defaultPrevented).toBe(false)
+  tick()
+  expect(doc.querySelector('[data-odyssey-resize-width]')?.textContent).toBe('280 px')
+  width = 240
+  tick()
+  const feedback = doc.querySelector<HTMLElement>('[data-odyssey-resize-feedback]')!
+  expect(feedback.style.left).toBe('240px')
+  expect(feedback.style.top).toBe('18px')
+  expect(doc.querySelector('[data-odyssey-resize-width]')?.textContent).toBe('240 px')
+  doc.dispatchEvent(new win.PointerEvent('pointerup', { pointerId:2 }))
+  expect(feedback.isConnected).toBe(true)
+  doc.dispatchEvent(new win.PointerEvent('pointercancel', { pointerId:1 }))
+  expect(feedback.isConnected).toBe(false)
+  expect(queue.size).toBe(0)
+  expect(doc.body.hasAttribute('data-odyssey-resizing')).toBe(false)
+  dispose()
+  handle.dispatchEvent(start)
+  expect(queue.size).toBe(0)
+  await win.happyDOM.close()
+})
+
+it('follows the right panel left edge, with no invented width label, and clears on removal', async () => {
+  const win = new Window()
+  const doc = win.document
+  doc.body.innerHTML = '<aside class="t8lSSG_panel"><div class="t8lSSG_panelResize"></div></aside>'
+  doc.querySelector('aside')!.getBoundingClientRect = () => ({ left:956, top:22, right:1356, width:400, height:856 }) as DOMRect
+  const dispose = mountFigmaResizeFeedback(doc as unknown as Document)
+  const handle = doc.querySelector('.t8lSSG_panelResize')!
+  handle.dispatchEvent(new win.PointerEvent('pointerover', { bubbles:true, clientY:436 }))
+  const feedback = doc.querySelector<HTMLElement>('[data-odyssey-resize-feedback]')!
+  expect(feedback.style.left).toBe('956px')
+  expect(feedback.style.height).toBe('852px')
+  expect(doc.querySelector('[data-odyssey-resize-width]')).toBe(null)
+  handle.remove()
+  doc.dispatchEvent(new win.PointerEvent('pointermove', { clientY:460 }))
+  expect(feedback.isConnected).toBe(false)
+  dispose()
+  await win.happyDOM.close()
+})

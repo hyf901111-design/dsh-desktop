@@ -117,6 +117,31 @@
   height:16px;
 }
 
+/* Keep Figma's icon/text anchors. Give hover ink an inset around the row,
+   and place the existing reference action at its trailing edge. */
+[data-odyssey-project-root], [data-odyssey-file-row] { position:relative; transition:background-color 120ms ease, box-shadow 120ms ease; }
+[data-odyssey-project-root]:is(:hover,:focus-within),
+[data-odyssey-file-row]:is(:hover,:focus-within) {
+  background:rgb(0 0 0 / .045);
+  box-shadow:-6px 0 0 rgb(0 0 0 / .045);
+}
+[data-ds-dark-theme] :is([data-odyssey-project-root],[data-odyssey-file-row]):is(:hover,:focus-within) {
+  background:rgb(255 255 255 / .06);
+  box-shadow:-6px 0 0 rgb(255 255 255 / .06);
+}
+:is([data-odyssey-project-root],[data-odyssey-file-row]) .t8lSSG_explorerRef {
+  display:inline-flex; visibility:hidden; opacity:0; pointer-events:none; margin-left:auto;
+  border:0; border-radius:5px; background:transparent; padding:0 5px;
+  transition:opacity 120ms ease, background-color 120ms ease;
+}
+:is([data-odyssey-project-root],[data-odyssey-file-row]):is(:hover,:focus-within) .t8lSSG_explorerRef {
+  visibility:visible; opacity:1; pointer-events:auto;
+}
+:is([data-odyssey-project-root],[data-odyssey-file-row]) .t8lSSG_explorerCopied { margin-left:auto; }
+@media (prefers-reduced-motion:reduce) {
+  [data-odyssey-project-root], [data-odyssey-file-row], .t8lSSG_explorerRef { transition:none; }
+}
+
 [data-odyssey-file-icon] {
   display:block;
   background:currentColor;
