@@ -16,14 +16,14 @@ type NavigationEvent = {
   url?: string
   isMainFrame?: boolean
   initiator?: { processId: number; routingId: number; url?: string } | null
-  frame?: { url: string }
+  frame?: { url: string; parent?: { processId: number; routingId: number } | null }
 }
 
 function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false) {
   const listeners = new Map<string, (event: NavigationEvent, url?: string) => void>()
   const permissionCheck = vi.fn()
   const permissionRequest = vi.fn()
-  const mainFrame = { processId: 7, routingId: 41 }
+  const mainFrame = { processId: 7, routingId: 41, url: 'http://127.0.0.1:4310/' }
   const webContents = {
     mainFrame,
     on: vi.fn((event: string, listener: (event: NavigationEvent, url?: string) => void) => {
@@ -40,6 +40,50 @@ function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = 
 }
 
 describe('main-window navigation security', () => {
+  it('loads shell-created sidebar HTML and PDF frames without granting child documents the same access', () => {
+    const { listeners, mainFrame } = secureWindowFixture()
+    const navigate = listeners.get('will-frame-navigate')!
+    const child = { processId: 7, routingId: 42, url: 'about:blank' }
+    const frame = { url: 'about:blank', parent: mainFrame }
+    for (const url of [
+      'http://127.0.0.1:4310/sidebar/html/session-1/project/report.html',
+      'blob:http://127.0.0.1:4310/5d37d35a-1366-4bce-a177-50b6fb5f3cab'
+    ]) {
+      const allowed = vi.fn()
+      navigate({ url, isMainFrame: false, frame, initiator: mainFrame, preventDefault: allowed })
+      expect(allowed).not.toHaveBeenCalled()
+      for (const origin of [child, null, undefined]) {
+        const blocked = vi.fn()
+        navigate({ url, isMainFrame: false, frame, initiator: origin, preventDefault: blocked })
+        expect(blocked).toHaveBeenCalledOnce()
+      }
+      const nested = vi.fn()
+      navigate({ url, isMainFrame: false, frame: { url: 'about:blank', parent: child }, initiator: mainFrame, preventDefault: nested })
+      expect(nested).toHaveBeenCalledOnce()
+    }
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+  })
+
+  it('does not turn sidebar preview admission into access to other local origins, routes or generated documents', () => {
+    const { listeners, mainFrame } = secureWindowFixture()
+    for (const url of [
+      'http://127.0.0.1:4311/sidebar/html/session-1/report.html',
+      'http://127.0.0.1:4310/settings',
+      'http://127.0.0.1:4310/sidebar/file?path=/private.txt',
+      'blob:http://127.0.0.1:4311/5d37d35a-1366-4bce-a177-50b6fb5f3cab',
+      'blob:https://example.com/5d37d35a-1366-4bce-a177-50b6fb5f3cab',
+      'data:text/html,private',
+      'file:///private.txt'
+    ]) {
+      const blocked = vi.fn()
+      listeners.get('will-frame-navigate')!({ url, isMainFrame: false, frame: { url: 'about:blank', parent: mainFrame }, initiator: mainFrame, preventDefault: blocked })
+      expect(blocked, url).toHaveBeenCalledOnce()
+    }
+    const srcdoc = vi.fn()
+    listeners.get('will-frame-navigate')!({ url: 'http://127.0.0.1:4310/sidebar/html/session-1/report.html', isMainFrame: false, frame: { url: 'about:srcdoc', parent: mainFrame }, initiator: mainFrame, preventDefault: srcdoc })
+    expect(srcdoc).toHaveBeenCalledOnce()
+  })
+
   it('blocks offline srcdoc navigation even to a URL authorized by another research link', () => {
     const allows = vi.fn(() => true)
     const { listeners } = secureWindowFixture(allows)

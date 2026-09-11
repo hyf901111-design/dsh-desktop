@@ -37,6 +37,12 @@ export function secureWindow(
       return
     }
     if (isPreviewUrl(event.url)) return
+    // Sidebar documents are direct child frames created by the trusted shell.
+    // Keep this separate from document-initiated navigation: an embedded page
+    // must not inherit the shell's access to local routes or PDF blob URLs.
+    const mainFrame = window.webContents.mainFrame
+    if (sameFrame(event.initiator, mainFrame) && sameFrame(event.frame?.parent, mainFrame) &&
+      isSidebarPreviewUrl(event.url, mainFrame.url)) return
     try {
       if (options.allowsResearchFrameUrl?.(event.url) === true) return
     } catch {
@@ -61,6 +67,32 @@ export function secureWindow(
       )
     }
   )
+}
+
+function sameFrame(
+  frame: { processId: number; routingId: number } | null | undefined,
+  mainFrame: { processId: number; routingId: number }
+): boolean {
+  return !!frame && frame.processId === mainFrame.processId && frame.routingId === mainFrame.routingId
+}
+
+function isSidebarPreviewUrl(rawUrl: string, shellUrl: string): boolean {
+  try {
+    const shell = new URL(shellUrl)
+    if (shell.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(shell.hostname)) return false
+    const target = new URL(rawUrl)
+    if (target.username || target.password || target.search || target.hash) return false
+    if (target.protocol === 'blob:') {
+      return target.origin === shell.origin &&
+        target.pathname.startsWith(`${shell.origin}/`) &&
+        /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(target.pathname.slice(shell.origin.length + 1))
+    }
+    // The route enforces session/workspace file access; its iframe remains
+    // sandboxed without allow-same-origin, Node, or the application preload.
+    return target.origin === shell.origin && /^\/sidebar\/html\/[^/]+\/.+/.test(target.pathname)
+  } catch {
+    return false
+  }
 }
 
 function isPreviewUrl(rawUrl: string): boolean {
