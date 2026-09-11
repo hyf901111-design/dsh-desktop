@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "EWork Odyssey 全文件还原第二批：实拍修正、文件面板与真实更新状态",
+        "featureName": "EWork Odyssey 全文件还原第二批：实拍修正、原图认证与协作几何",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "1c0b86d68e480a81316d5e00ff2a59bd8a2b6a14",
-        "tipCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
+        "tipCommit": "58d769cb07c7c29760bb84819f433704346ce2d5",
         "commits": [
           {
             "commit": "1ac939d212100584ab86a1ad1bdfd7643c882d00",
@@ -62,6 +62,20 @@
               "868839c014dd6a20d3e19a3644ccff12f783a9c5"
             ],
             "subject": "将面板和常用交互动效纳入逐状态验收范围"
+          },
+          {
+            "commit": "7043b8b565e3b8755bbedaf2786f25a7555ebeab",
+            "parents": [
+              "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d"
+            ],
+            "subject": "修正协作顶栏与侧栏标题几何"
+          },
+          {
+            "commit": "58d769cb07c7c29760bb84819f433704346ce2d5",
+            "parents": [
+              "7043b8b565e3b8755bbedaf2786f25a7555ebeab"
+            ],
+            "subject": "修复登录注册原图加载并校准四张原稿文字细节"
           }
         ],
         "files": [
@@ -108,6 +122,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
           },
           {
             "status": "A",
@@ -168,6 +186,10 @@
           {
             "status": "M",
             "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
           },
           {
             "status": "M",
@@ -297,23 +319,21 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
-            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
-            "completedAt": "2026-09-10T23:44:40.051Z",
-            "timeoutMs": 600000
+            "summary": "Dependencies valid",
+            "verifiedCommit": "58d769cb07c7c29760bb84819f433704346ce2d5",
+            "completedAt": "2026-09-11T00:03:12.405589+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
+              "npm",
+              "run",
+              "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
-            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
-            "completedAt": "2026-09-10T23:44:40.051Z",
+            "summary": "TypeScript passed",
+            "verifiedCommit": "58d769cb07c7c29760bb84819f433704346ce2d5",
+            "completedAt": "2026-09-11T00:03:12.405589+00:00",
             "timeoutMs": 120000
           },
           {
@@ -321,70 +341,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/figma-final-shell-patch.test.ts",
-              "test/sidebar-vibrancy.test.ts",
-              "test/desktop-shell-controls.test.ts",
-              "test/research-tabbar-final-layout.test.ts",
-              "test/sidebar-new-session-actions.test.ts",
-              "test/figma-file-panel.test.ts",
-              "test/figma-panel-default-width.test.ts",
-              "test/figma-panel-drag-recovery.test.ts",
-              "test/figma-update-client.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/figma-auth-layout.test.ts",
-              "test/update-restart-preparation.test.ts",
-              "test/update-restart-receipt.test.ts",
-              "test/update-page-preparation.test.ts",
-              "test/update-state.test.ts",
-              "test/update-manager.test.ts",
-              "test/update-freshness.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/sidebar-update-control.test.ts",
-              "test/update-ui.test.ts",
-              "test/update-notification-store.test.ts",
-              "test/settings-about.test.ts",
-              "test/figma-coverage.test.js",
-              "test/figma-coverage-manifest.test.js"
+              "test/figma-auth-layout.test.ts"
             ],
             "outcome": "passed",
-            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
-            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
-            "completedAt": "2026-09-10T23:44:40.051Z",
+            "summary": "2 focused auth tests passed including unchanged original asset hash and switch lifecycle",
+            "verifiedCommit": "58d769cb07c7c29760bb84819f433704346ce2d5",
+            "completedAt": "2026-09-11T00:03:12.405589+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
               "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "-t",
-              "update preparation"
+              "scripts/test-research-boards-browser.mjs",
+              "--figma-collaboration-focus"
             ],
             "outcome": "passed",
-            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
-            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
-            "completedAt": "2026-09-10T23:44:40.051Z",
+            "summary": "Real local worker/member/permission/mutual updates and exact header/avatar/sidebar geometry passed; no browser errors",
+            "verifiedCommit": "58d769cb07c7c29760bb84819f433704346ce2d5",
+            "completedAt": "2026-09-11T00:03:12.405589+00:00",
             "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "Exact committed feature verified: dependencies, TypeScript,24 focused files/156 tests,3 update-preparation tests,and clean source fixture all passed.",
-            "verifiedCommit": "8f2d425a9b8fd80ebaa207984b94f2ffcc9f428d",
-            "completedAt": "2026-09-10T23:44:40.051Z",
-            "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Intermediate source checkpoint for integration-only local packaging. Checkpoint1 actual 1380x900 Electron home/settings both themes were compared; discovered differences fixed here and require new packaged screenshots. No full Figma acceptance claimed."
+          "summary": "Intermediate integration packaging checkpoint; actual previous package auth both themes captured. Chromium CSS custom property drops 4.57MB original data URL, reproduced in isolated Chromium. Replaced with native img; geometry/color/link refinements source verified and awaiting new actual package screenshots. All-file acceptance remains pending."
         },
         "acceptanceCriteria": [
           "258 currently enumerated states across100 frames and6 variants retain individual references",
@@ -396,7 +376,7 @@
           "No public release, push, version bump or notarization",
           "Native update installation not exercised against user production feed; isolated restart provenance still required"
         ],
-        "generatedAt": "2026-09-10T23:44:40.051Z"
+        "generatedAt": "2026-09-11T00:03:12.405589+00:00"
       }
     }
   ],
