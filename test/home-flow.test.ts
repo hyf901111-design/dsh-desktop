@@ -15,10 +15,9 @@ describe('procedural home atmosphere', () => {
     }
   })
   it('preserves the measured transition profiles without added bright rims or dark grooves', () => {
-    // Upper-right boundary, lower irregular column, and left edge, sampled
+    // Upper-right boundary and left edge, sampled
     // from the latest reference at the same normalized content coordinates.
     const profile = [[.65,.18,105],[.7,.18,111],[.75,.18,108],[.8,.18,94],[.85,.18,66],[.9,.18,43],
-      [.36,.8,24],[.4,.8,26],[.44,.8,43],[.52,.8,76],[.56,.8,63],[.6,.8,52],
       [0,.2,213],[.03,.2,177],[.06,.2,154],[.09,.2,129],[.12,.2,110]]
     for (const [x, y, expected] of profile) {
       expect(Math.abs(homeFlowLuminance(x!, y!, 0, true) - expected!)).toBeLessThan(10)
@@ -27,15 +26,19 @@ describe('procedural home atmosphere', () => {
       }
     }
   })
-  it('gives the existing lower ridge a lit shoulder and a restrained shadow side', () => {
-    // The latest direction explicitly strengthens this crest beyond the old
-    // flat reference profile (74). Its neighbours retain the reference bounds.
+  it('connects the lower lit surface without an isolated bright cap or pinched neck', () => {
+    // The old small cap exceeded the lower body by around 30 levels, reading
+    // as a detached round clump. The latest direction replaces that profile.
     for (const time of [0, 12, 60, 300, 600]) {
-      const crest = homeFlowLuminance(.48, .8, time, true)
-      const shadow = homeFlowLuminance(.44, .8, time, true)
-      expect(crest).toBeGreaterThanOrEqual(78)
-      expect(crest).toBeLessThanOrEqual(92)
-      expect(crest - shadow).toBeGreaterThan(40)
+      const cap = homeFlowLuminance(.52, .74, time, true)
+      const body = homeFlowLuminance(.52, .9, time, true)
+      const shoulder = homeFlowLuminance(.52, .82, time, true)
+      const shadow = homeFlowLuminance(.4, .82, time, true)
+      expect(cap - body).toBeLessThanOrEqual(3)
+      expect(shoulder).toBeGreaterThanOrEqual(65)
+      expect(shoulder).toBeLessThanOrEqual(85)
+      expect(shoulder - shadow).toBeGreaterThan(30)
+      expect(shoulder - shadow).toBeLessThan(65)
     }
   })
   it('produces bounded grayscale in both themes and continuous, non-uniform changes', () => {
