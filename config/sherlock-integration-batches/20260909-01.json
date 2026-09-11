@@ -12,7 +12,7 @@
         "featureName": "首页代码流动背景及集成发现的更新入口布局修复",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "1fd352d18747165bc340501ccf79974da360d385",
-        "tipCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
+        "tipCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
         "commits": [
           {
             "commit": "9d7a0f38613557b87c59b1a67d8f3a0141b0427b",
@@ -27,9 +27,20 @@
               "9d7a0f38613557b87c59b1a67d8f3a0141b0427b"
             ],
             "subject": "修复更新入口挤到侧栏账户下方的布局回归"
+          },
+          {
+            "commit": "180531009558d5b98a38b77675753a0ef119a3ad",
+            "parents": [
+              "72ae6137280b3c4fe0d0afe0fb58d1fef670d300"
+            ],
+            "subject": "按新版账户页更新身份与密码展开验收"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/verify-figma-home-fog.mjs"
@@ -68,8 +79,8 @@
             ],
             "outcome": "passed",
             "summary": "Procedural home flow typecheck passed; log /tmp/odyssey-figma-full-20260911/flow-typecheck.log",
-            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
-            "completedAt": "2026-09-11T07:57:15.659426+00:00",
+            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
+            "completedAt": "2026-09-11T08:05:02.925782+00:00",
             "timeoutMs": 120000
           },
           {
@@ -83,8 +94,8 @@
             ],
             "outcome": "passed",
             "summary": "Procedural home flow tests passed; log /tmp/odyssey-figma-full-20260911/flow-tests.log",
-            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
-            "completedAt": "2026-09-11T07:57:16.499158+00:00",
+            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
+            "completedAt": "2026-09-11T08:05:03.981600+00:00",
             "timeoutMs": 120000
           },
           {
@@ -94,8 +105,8 @@
             ],
             "outcome": "passed",
             "summary": "Procedural home flow browser passed; log /tmp/odyssey-figma-full-20260911/flow-browser.log",
-            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
-            "completedAt": "2026-09-11T07:57:24.694295+00:00",
+            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
+            "completedAt": "2026-09-11T08:05:12.183134+00:00",
             "timeoutMs": 120000
           },
           {
@@ -107,8 +118,8 @@
             ],
             "outcome": "passed",
             "summary": "Procedural home flow sources passed; log /tmp/odyssey-figma-full-20260911/flow-sources.log",
-            "verifiedCommit": "72ae6137280b3c4fe0d0afe0fb58d1fef670d300",
-            "completedAt": "2026-09-11T07:57:35.008433+00:00",
+            "verifiedCommit": "180531009558d5b98a38b77675753a0ef119a3ad",
+            "completedAt": "2026-09-11T08:05:22.257896+00:00",
             "timeoutMs": 120000
           }
         ],
