@@ -9,27 +9,50 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "EWork Odyssey 第八批：真实协作验收中的权限菜单稳定性与图稿细节",
+        "featureName": "EWork Odyssey 第九批：协作十一人列表和浮层定位及模型空态边界",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a",
-        "tipCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
+        "baseCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
+        "tipCommit": "f61d944fb38f70d7b43f199c6b6677aaf6c8b071",
         "commits": [
           {
-            "commit": "1208e2034e65bf387a4598fc5ca8790916bba1c8",
+            "commit": "d2ae273b06e59e75005bf0192d815d2ff5bca49a",
             "parents": [
-              "54460d391e90997a35c7d3e3c1a0372dbf4d1d2a"
+              "aefcbbfba59c394874fab6db719ad52e1228c32e"
             ],
-            "subject": "修复协作在线刷新中断成员权限菜单和滚动位置"
+            "subject": "按最终稿支持十一人协作并保留隔离验收场景"
           },
           {
-            "commit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
+            "commit": "2bf59c2db9d9df3168544b2b34734656d5fddf1e",
             "parents": [
-              "1208e2034e65bf387a4598fc5ca8790916bba1c8"
+              "d2ae273b06e59e75005bf0192d815d2ff5bca49a"
             ],
-            "subject": "按设计节点还原设置下拉箭头及协作空白页标语"
+            "subject": "对齐协作顶栏按钮与成员浮层的最终稿锚点"
+          },
+          {
+            "commit": "f61d944fb38f70d7b43f199c6b6677aaf6c8b071",
+            "parents": [
+              "2bf59c2db9d9df3168544b2b34734656d5fddf1e"
+            ],
+            "subject": "补齐模型设置空列表卡片的圆角边界"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-local-test-runbook.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-collaboration/protocol.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/start-native-acceptance-services.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/PROTOCOL.md"
+          },
           {
             "status": "M",
             "path": "src/preload/figma-final-shell.css"
@@ -37,6 +60,10 @@
           {
             "status": "M",
             "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
           },
           {
             "status": "M",
@@ -54,9 +81,9 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "deps directly related validation passed; log checkpoint-8-deps.log",
-            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
-            "completedAt": "2026-09-11T03:59:36.479422+00:00",
+            "summary": "deps directly related validation passed; log checkpoint-9-deps.log",
+            "verifiedCommit": "f61d944fb38f70d7b43f199c6b6677aaf6c8b071",
+            "completedAt": "2026-09-11T04:41:33.309037+00:00",
             "timeoutMs": 120000
           },
           {
@@ -66,9 +93,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "typecheck directly related validation passed; log checkpoint-8-typecheck.log",
-            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
-            "completedAt": "2026-09-11T03:59:40.063255+00:00",
+            "summary": "typecheck directly related validation passed; log checkpoint-9-typecheck.log",
+            "verifiedCommit": "f61d944fb38f70d7b43f199c6b6677aaf6c8b071",
+            "completedAt": "2026-09-11T04:41:37.414554+00:00",
             "timeoutMs": 120000
           },
           {
@@ -80,9 +107,9 @@
               "test/figma-final-shell-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "focused directly related validation passed; log checkpoint-8-focused.log",
-            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
-            "completedAt": "2026-09-11T03:59:40.991316+00:00",
+            "summary": "focused directly related validation passed; log checkpoint-9-focused.log",
+            "verifiedCommit": "f61d944fb38f70d7b43f199c6b6677aaf6c8b071",
+            "completedAt": "2026-09-11T04:41:38.602971+00:00",
             "timeoutMs": 120000
           },
           {
@@ -93,15 +120,15 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "sources directly related validation passed; log checkpoint-8-sources.log",
-            "verifiedCommit": "aefcbbfba59c394874fab6db719ad52e1228c32e",
-            "completedAt": "2026-09-11T03:59:50.620087+00:00",
+            "summary": "sources directly related validation passed; log checkpoint-9-sources.log",
+            "verifiedCommit": "f61d944fb38f70d7b43f199c6b6677aaf6c8b071",
+            "completedAt": "2026-09-11T04:41:47.717820+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Checkpoint7 actual packaged Owner and Editor clients registered/logged in, created a shared board, sent and accepted invitation, and observed editor container creation on owner. Native member permission select was repeatedly replaced by cursor/presence updates; regression fails before and passes after fix. Settings chevron Figma 177:319 measured 4x2 with 0.75 round stroke; shared empty slogan now matches 370:607/620. Native checkpoint8 retest required."
+          "summary": "Checkpoint8 native dual-client verification covered 11-member list/search/scroll, owner permission changes and editor/viewer gating, and synchronized container movement. Figma 304:982 popup x652/y82/w340 measured; current bundle x558/y69. Source now anchors popup to action-group right edge and uses 21px vertical gap, 44px manage button and 8px header correction. Local production service accepted member 11 and rejected member 12. Provider empty card top corners restored to 12px. Native checkpoint9 retest required."
         },
         "acceptanceCriteria": [
           "Build only the integration checkout and verify actual main interface while preserving existing user draft",
@@ -112,80 +139,7 @@
           "Full 258-case Figma acceptance is ongoing; controlled component screenshots do not count as native client acceptance",
           "No public release, push, version bump or notarization"
         ],
-        "generatedAt": "2026-09-11T03:59:50.620166+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8872c761d900b48c286c8c84568e9c7413720b5b",
-        "verificationCommit": "8872c761d900b48c286c8c84568e9c7413720b5b",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "8872c761d900b48c286c8c84568e9c7413720b5b",
-            "completedAt": "2026-09-11T04:00:46.678Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8872c761d900b48c286c8c84568e9c7413720b5b",
-            "completedAt": "2026-09-11T04:00:46.678Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "8872c761d900b48c286c8c84568e9c7413720b5b",
-            "completedAt": "2026-09-11T04:00:46.678Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "8872c761d900b48c286c8c84568e9c7413720b5b",
-            "completedAt": "2026-09-11T04:00:46.678Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "8872c761d900b48c286c8c84568e9c7413720b5b",
-            "completedAt": "2026-09-11T04:00:46.678Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-11T04:00:46.678Z"
+        "generatedAt": "2026-09-11T04:41:47.717904+00:00"
       }
     }
   ],
