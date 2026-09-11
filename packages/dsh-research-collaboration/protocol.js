@@ -23,7 +23,8 @@ export const LIMITS = Object.freeze({
   boardAssetBytes: 1024 * 1024 * 1024,
   requestBytes: 25 * 1024 * 1024,
   history: 100,
-  members: 10,
+  // Final Figma 304:980 / 306:569 includes 11 members (3 avatars + 8).
+  members: 11,
   inviteDays: 7,
   leaseMs: 30000
 })

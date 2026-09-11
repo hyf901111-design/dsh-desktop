@@ -4,10 +4,17 @@ import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve, relative, isAbsolute } from 'node:path'
 import { hash } from '../services/accounts/auth.js'
 
-const directory = await mkdtemp(join(tmpdir(), 'ework-native-acceptance-'))
+const resume = process.argv.find(value => value.startsWith('--resume='))?.slice('--resume='.length)
+const directory = resume ? resolve(resume) : await mkdtemp(join(tmpdir(), 'ework-native-acceptance-'))
+if (resume) {
+  const suffix = relative(resolve(tmpdir()), directory)
+  if (!suffix || suffix.startsWith('..') || isAbsolute(suffix)) throw Error('Resume directory must stay inside the system temporary directory')
+  const fixture = JSON.parse(await readFile(join(directory, 'fixture.json'), 'utf8'))
+  if (fixture.directory !== directory || fixture.origin !== 'http://127.0.0.1:8773') throw Error('Not a native acceptance fixture')
+}
 const source = await build({
   stdin: { resolveDir: process.cwd(), sourcefile: 'native-acceptance-worker.js', contents: `
     import collaboration from './services/collaboration/worker.js';
@@ -35,6 +42,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({
 }))
 const origin = (await mf.ready).origin
 const db = await mf.getD1Database('ACCOUNTS_DB')
+if (!resume) {
 for (const name of ['0001_accounts.sql','0002_research_boards.sql']) await db.exec((await readFile('services/accounts/migrations/'+name,'utf8')).replaceAll('\n',' '))
 const invite = 'local-acceptance-20260911'
 await db.prepare('INSERT INTO invites(hash,expires_at,max_uses) VALUES(?,?,10)').bind(hash(invite), Math.floor(Date.now()/1000)+86400).run()
@@ -48,4 +56,5 @@ for (const username of users) {
 }
 await writeFile(join(directory,'fixture.json'), JSON.stringify({origin,directory,users,password,invite},null,2), {mode:0o600})
 console.log(JSON.stringify({origin,directory,users,service:'production account and collaboration handlers; local storage only'}))
+} else console.log(JSON.stringify({origin,directory,resumed:true,service:'production account and collaboration handlers; existing local fixture'}))
 for (const signal of ['SIGINT','SIGTERM']) process.once(signal, async () => { await mf.dispose(); process.exit(0) })
