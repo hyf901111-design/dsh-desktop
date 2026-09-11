@@ -65,6 +65,9 @@ function patchCanvasGraphicPrimitives(source) {
 
 export function patchFigmaFinalCanvas(source) {
   source=patchCanvasGraphicPrimitives(source);
+  source=source.replace('"strong", { children: String(item.value) }', '"strong", { "data-research-metric-positive": /涨跌|增长|变化|收益率|回报|change|growth|return/i.test(item.label) && /^\\+\\s*\\d/.test(String(item.value).trim()) || void 0, children: String(item.value) }');
+  source=source.replaceAll('"aria-label": "更多", "aria-haspopup": "menu"', '"aria-label": "更多操作", "aria-haspopup": "menu"');
+  source=source.replace('title: expanded ? "关闭放大阅读" : "放大阅读", ', '');
   for(const [icon,key] of [['IconBranchOutline16','branch'],['IconChevronDownOutline14','chevron'],['IconListPenOutline16','summary']]) {
     const old='(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.'+icon+', { size: '+(key==='chevron'?14:16)+' })';
     const start=source.indexOf('\"aria-label\": \"选中组件操作\"');
@@ -91,6 +94,10 @@ export function patchFigmaFinalCanvas(source) {
   source=source.replace('"data-research-empty-viewport": "",\n', '"data-research-empty-viewport": "", style:{left:(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width)/2,maxWidth:Math.max(0,(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width)-24)},\n');
   source=source.replace('right: (canvasSize.width - 12 - x) / scale, top: (12 - y) / scale, bottom: (canvasSize.height - 12 - y) / scale', 'right: (researchCanvasVisibleArea(context).width - 32 - x) / scale, top: (32 - y) / scale, bottom: (researchCanvasVisibleArea(context).height - 32 - y) / scale');
   source=source.replace('const interactivePreview = event.target?.closest?.("[data-research-selection-actions],[data-research-create-popover]")', 'const interactivePreview = event.target?.closest?.("[data-research-selection-actions],[data-research-create-popover],[data-research-voice-feedback],[data-research-global-toolbar]")');
+  // Figma 55: a selected card is still a canvas surface. Only readers and
+  // actual editing/menu controls own scrolling; selection must not change it.
+  source=source.replace(' || (selected && event.target?.closest?.("[data-research-preview-interactive]"))', ' || event.target?.closest?.("[role=menu],textarea,[contenteditable=true]")');
+  source=source.replace('.rScV5Q_richNode:not([data-selected=true]):not([open])>.rScV5Q_previewBody:has(iframe)>.rScV5Q_previewShield{pointer-events:auto}', '.rScV5Q_richNode:not([open])>.rScV5Q_previewBody:has(iframe)>.rScV5Q_previewShield{pointer-events:auto}');
   source=source.replace('workspace.setCanvasSize({ width: bounds.width, height: bounds.height });', `const panel=root.ownerDocument.querySelector('.t8lSSG_panel:has([data-research-active=true])');
                     const panelBounds=panel?.getBoundingClientRect();
                     const availableWidth=bounds.width;
@@ -533,7 +540,14 @@ const responsiveSource = `function ResearchContainerContent(props) {
       const compact=cell=>{if(typeof cell!=='string'||cell.length<=cellLimit)return cell;const link=cell.match(/^\\[([^\\]]+)\\]\\((https?:[^)]+)\\)$/);if(link){if(link[1].length<=cellLimit)return cell;summary=true;return '['+link[1].slice(0,cellLimit)+'…]('+link[2]+')';}const url=cell.match(/^https?:\\/\\/[^\\s]+$/);if(url){summary=true;return '['+cell.slice(0,cellLimit)+'…]('+cell+')';}summary=true;return cell.slice(0,cellLimit)+'…';};
       spec={...spec,columns:indices.map(i=>compact(spec.columns[i])),rows:spec.rows.slice(0,maxRows).map(row=>indices.map(i=>compact(row[i])))};
     }
-    if(spec.type==='kpi'){const columns=width<480?2:4,rows=Math.max(1,Math.floor((height-70)/76*fitRatio)),maximum=(kpiFit.some(item=>item.fullWidth)?1:columns)*rows;summary=spec.items.length>maximum||kpiFit.some(item=>item.shortened);spec={...spec,items:spec.items.slice(0,maximum).map((item,index)=>({...item,...kpiFit[index]}))};}
+    if(spec.type==='kpi'){
+      const columns=kpiFit.some(item=>item.fullWidth)?1:width<480?2:4;
+      // Match the rendered label/value rows (19 + 2 + 32), optional change
+      // line and 12px row gap. Reserve the reader hint only when truncated.
+      const capacity=reserve=>{let used=0,count=0;for(let index=0;index<spec.items.length;index+=columns){const row=spec.items.slice(index,index+columns),rowHeight=row.some(item=>item.change!==undefined)?76:53;const next=used+(count?12:0)+rowHeight;if(next>Math.max(0,(height-70-reserve)*fitRatio))break;used=next;count+=row.length;}return Math.max(1,count);};
+      let maximum=capacity(0);if(maximum<spec.items.length||kpiFit.some(item=>item.shortened))maximum=capacity(30);
+      summary=spec.items.length>maximum||kpiFit.some(item=>item.shortened);spec={...spec,items:spec.items.slice(0,maximum).map((item,index)=>({...item,...kpiFit[index]}))};
+    }
     if(spec.type==='markdown'||spec.type==='html'&&frameState.overflow){const text=spec.type==='html'?researchHtmlText(spec.html):spec.content;const maxChars=Math.max(24,Math.floor(Math.floor((width-36)/13)*Math.max(2,Math.floor((height-108)/21))*fitRatio));if(text.length>maxChars||spec.type==='html'||fitRatio<1){const sentences=text.split(/(?<=[。！？.!?])\\s*|\\n+/);let excerpt='';for(const sentence of sentences){if(excerpt.length+sentence.length>maxChars)break;excerpt+=(excerpt?'\\n':'')+sentence;}spec={version:1,type:'markdown',title:spec.title,content:(excerpt||text.slice(0,maxChars)+'…').replace(/^\\s{0,3}#{1,6}\\s+/gm,'').replace(/\\n+/g,' ').replace(/[*_]/g,'')};summary=true;}}
   }
   (0,react.useLayoutEffect)(()=>{if(!frameState.expanded&&node.sizeMode!=='manual'&&summary&&(width<656||height<456))props.onUpgradeSize?.(width<=320&&height<=220?'medium':'large');},[node.id,node.sizeMode,node.containerSpec.type,width,height,summary,frameState.expanded,props.onUpgradeSize]);
@@ -573,9 +587,10 @@ body[data-ds-dark-theme] [data-research-compact-chrome][data-selected=true]{box-
 .odyssey-component-summary-note{flex:none;padding:0 18px 12px;font-size:10px;line-height:18px;color:var(--odyssey-card-muted)}
 [data-research-compact-chrome] .rScV5Q_containerKpis{padding:6px 18px 16px;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px;align-content:start}
 [data-research-compact-chrome] [data-component-width=narrow] .rScV5Q_containerKpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-[data-research-compact-chrome] .rScV5Q_containerKpis>div{min-height:60px;padding:0;gap:2px;border:0;background:transparent;justify-content:flex-start}
-[data-research-compact-chrome] .rScV5Q_containerKpis span{font:10px/18px DINPro,'Noto Sans SC',sans-serif;color:var(--odyssey-card-muted)}
+[data-research-compact-chrome] .rScV5Q_containerKpis>div{min-height:53px;padding:0;gap:2px;border:0;background:transparent;justify-content:flex-start}
+[data-research-compact-chrome] .rScV5Q_containerKpis span{font:11px/19px DINPro,'Noto Sans SC',sans-serif;color:var(--odyssey-card-muted)}
 [data-research-compact-chrome] .rScV5Q_containerKpis strong{font:500 24px/32px DINPro,'Noto Sans SC',sans-serif;letter-spacing:0;color:var(--odyssey-card-text)}
+[data-research-compact-chrome] .rScV5Q_containerKpis strong[data-research-metric-positive=true]{color:#cd7269}
 [data-research-compact-chrome] .rScV5Q_containerKpis em{font:13px/21px DINPro,'Noto Sans SC',sans-serif}
 [data-research-compact-chrome] .rScV5Q_containerTableScroll{padding:0 18px 12px;overflow:visible}
 [data-research-compact-chrome] .rScV5Q_containerTableScroll :is(th,td){height:33px;padding:6px 0;line-height:21px;border:0;border-bottom:1px solid var(--odyssey-card-border);overflow-wrap:anywhere}
@@ -664,5 +679,5 @@ body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 [data-research-compact-chrome] .rScV5Q_generationFailure{min-height:0;padding:8px 18px 18px;align-items:flex-start;justify-content:flex-start;text-align:left;gap:12px;font:13px/21px 'Noto Sans SC',sans-serif}
 .rScV5Q_generationFailure>strong{font-size:16px;font-weight:500}.rScV5Q_generationFailure>span{color:var(--odyssey-card-muted)}.rScV5Q_generationFailure details{font-size:12px;line-height:20px}.rScV5Q_generationFailure details p{margin:8px 0}.rScV5Q_generationFailure button{margin-left:auto}
 @keyframes odyssey-ring{to{transform:rotate(360deg)}}@keyframes odyssey-skeleton{50%{opacity:.45}}
-@media(prefers-reduced-motion:reduce){.rScV5Q_generationSpinner,.odyssey-generation-skeleton i{animation:none}}
+@media(prefers-reduced-motion:reduce){.rScV5Q_generationSpinner,.odyssey-generation-skeleton i,.odyssey-derived-skeleton>i{animation:none}}
 ` + derivedMenuCss

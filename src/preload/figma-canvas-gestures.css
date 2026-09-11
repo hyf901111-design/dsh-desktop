@@ -28,4 +28,8 @@
 [data-research-compact-chrome]:where(:hover,[data-research-content-hover],[open]) .rScV5Q_nodeTitleActions,
 [data-research-compact-chrome] .rScV5Q_nodeTitleActions:where(:focus-within){transition:opacity 100ms cubic-bezier(.2,0,0,1)!important}
 [data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand){border-radius:6px!important}
+/* Keep the 24px controls in place; their labels appear above the card. */
+[data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand){position:relative}
+[data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand)::after{content:attr(aria-label);position:absolute;bottom:calc(100% + 8px);right:0;z-index:60;width:max-content;max-width:180px;padding:5px 8px;border:1px solid var(--odyssey-card-border);border-radius:6px;background:var(--odyssey-card);color:var(--odyssey-card-text);font:11px/18px 'Noto Sans SC',sans-serif;white-space:nowrap;pointer-events:none;visibility:hidden;opacity:0}
+[data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand):is(:hover,:focus-visible)::after{visibility:visible;opacity:1}
 @media(prefers-reduced-motion:reduce){[data-research-compact-chrome] .rScV5Q_nodeTitleActions{transition:none!important}}
