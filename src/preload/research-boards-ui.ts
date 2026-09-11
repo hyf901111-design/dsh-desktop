@@ -2449,9 +2449,9 @@ export function ResearchBoardDiscussion({
   }
   return h(
     'div',
-    { className: 'srb-discussion', 'data-shared-discussion': sessionId },
+    { className: 'srb-discussion' + (!groups.length ? ' srb-discussion-empty' : ''), 'data-shared-discussion': sessionId },
     !groups.length &&
-      h('p', { className: 'srb-status' }, '围绕这份画板继续研究。'),
+      h('p', { className: 'sRp_emptyState' }, '探索更远，洞见更深'),
     ...groups.map((group) =>
       h(
         'section',
