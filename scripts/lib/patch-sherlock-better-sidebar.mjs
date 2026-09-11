@@ -15,6 +15,7 @@ const FIGMA_FILE_PANEL_PATCH_MARKER = '/* sherlock:figma-file-panel:v1 */'
 const FIGMA_PANEL_DEFAULT_WIDTH_PATCH_MARKER = '/* sherlock:figma-panel-default-width:v1 */'
 const FIGMA_PANEL_PENDING_PATCH_MARKER = '/* sherlock:figma-panel-no-session-pending:v1 */'
 const FIGMA_BOTTOM_CLOSE_PATCH_MARKER = '/* sherlock:figma-bottom-close:v1 */'
+const FIGMA_PANEL_MOTION_SYNC_PATCH_MARKER = '/* sherlock:figma-panel-motion-sync:v1 */'
 
 export function sherlockResearchGenerationOwnsFocus(state, doc = globalThis.document) {
   const hasResearch = node => node?.kind === 'leaf'
@@ -416,6 +417,22 @@ function patchFigmaBottomClose(source) {
     'children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelBottomOutline16, { active: true })',
     'Figma bottom close glyph')
   return `${FIGMA_BOTTOM_CLOSE_PATCH_MARKER}\n${source.slice(0, start)}${after}${source.slice(end)}`
+}
+
+// Commit the shell-reservation variables in the same layout phase as the
+// panel class change. CSS can then interpolate the bottom panel and the
+// conversation/composer frame from one visual frame instead of lagging it.
+function patchFigmaPanelMotionSync(source) {
+  if (source.includes(FIGMA_PANEL_MOTION_SYNC_PATCH_MARKER)) return source
+  return replaceExact(source,
+    `(0, react.useEffect)(() => {
+\t\t\t\tconst width = !narrow && snapshot.state?.panelOpen === true ? Math.min(snapshot.state.width, window.innerWidth) : 0;
+\t\t\t\tconst height = !narrow && snapshot.state?.bottomOpen === true ? Math.min(snapshot.state.bottomHeight, window.innerHeight) : 0;`,
+    `(0, react.useLayoutEffect)(() => {
+\t\t\t\t${FIGMA_PANEL_MOTION_SYNC_PATCH_MARKER}
+\t\t\t\tconst width = !narrow && snapshot.state?.panelOpen === true ? Math.min(snapshot.state.width, window.innerWidth) : 0;
+\t\t\t\tconst height = !narrow && snapshot.state?.bottomOpen === true ? Math.min(snapshot.state.bottomHeight, window.innerHeight) : 0;`,
+    'panel motion geometry phase')
 }
 
 /**
@@ -833,10 +850,12 @@ function patchFigmaPanelDefaultWidth(source) {
 export function patchBetterSidebarClient(source) {
   let next = patchFigmaPanelDefaultWidth(
     patchFigmaFilePanel(
-      patchPanelWindowPointerFallback(
-        patchFigmaBottomClose(
-          patchNoSessionPanelPending(
-            patchFigmaPanelLayout(patchPanelToggleGlyphs(source))
+      patchFigmaPanelMotionSync(
+        patchPanelWindowPointerFallback(
+          patchFigmaBottomClose(
+            patchNoSessionPanelPending(
+              patchFigmaPanelLayout(patchPanelToggleGlyphs(source))
+            )
           )
         )
       )
