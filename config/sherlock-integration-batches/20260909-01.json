@@ -12,7 +12,7 @@
         "featureName": "最新主题卡片与模式图标还原",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "54881b7d4b06a7a8b8286071201cffeb158bacf6",
-        "tipCommit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
+        "tipCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
         "commits": [
           {
             "commit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
@@ -20,6 +20,13 @@
               "54881b7d4b06a7a8b8286071201cffeb158bacf6"
             ],
             "subject": "按最新设计还原主题预览卡片并统一模式图标与设置控件"
+          },
+          {
+            "commit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
+            "parents": [
+              "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4"
+            ],
+            "subject": "补齐主题和模式插件的干净源码集成验证"
           }
         ],
         "files": [
@@ -34,6 +41,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-collaboration-e2e.mjs"
           },
           {
             "status": "M",
@@ -77,7 +88,7 @@
             ],
             "outcome": "passed",
             "summary": "/tmp/full-audit-types.log",
-            "verifiedCommit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
+            "verifiedCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
             "completedAt": "2026-09-11T12:38:37.906729+00:00",
             "timeoutMs": 180000
           },
@@ -93,8 +104,21 @@
             ],
             "outcome": "passed",
             "summary": "17 focused checks passed; /tmp/full-audit-theme-tests.log and /tmp/full-audit-tests.log",
-            "verifiedCommit": "d0bc7f33da9fa226ed46c4b9a72fd6a8ca65d9d4",
+            "verifiedCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
             "completedAt": "2026-09-11T12:38:37.906729+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "sources"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/full-audit-sources.log",
+            "verifiedCommit": "b2aec397d49e5f7ffb464aa852ef4f3270acd019",
+            "completedAt": "2026-09-11T12:41:51.067519+00:00",
             "timeoutMs": 180000
           }
         ],
