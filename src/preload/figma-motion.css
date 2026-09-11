@@ -7,7 +7,7 @@
   --odyssey-motion-panel-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --odyssey-motion-hover-duration: 120ms;
   --odyssey-motion-press-duration: 80ms;
-  --odyssey-motion-menu-duration: 160ms;
+  --odyssey-motion-menu-duration: 140ms;
 }
 
 /* The controller adds readiness after the first stable panel layout. This

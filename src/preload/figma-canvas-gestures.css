@@ -23,7 +23,9 @@
 [data-research-snap-guides]>i{position:absolute;background:#76a4ff}
 [data-research-snap-guides]>span{position:absolute;border-radius:4px;padding:3px 6px;background:var(--dsw-alias-bg-layer-3,#3e3f43);color:var(--dsw-alias-label-primary,#e7e7e9);font:11px/17px 'EWork DIN Pro','Noto Sans SC',sans-serif;white-space:nowrap}
 
-/* 354:870 + 49: retain the existing absolute toolbar geometry; fade without translation. */
-[data-research-compact-chrome] .rScV5Q_nodeTitleActions{transform:none!important;transition:opacity 120ms ease!important}
+/* 354:870 + 52: retain the absolute geometry; enter 100ms / leave 80ms. */
+[data-research-compact-chrome] .rScV5Q_nodeTitleActions{transform:none!important;transition:opacity 80ms cubic-bezier(.4,0,1,1)!important}
+[data-research-compact-chrome]:where(:hover,[data-research-content-hover],[open]) .rScV5Q_nodeTitleActions,
+[data-research-compact-chrome] .rScV5Q_nodeTitleActions:where(:focus-within){transition:opacity 100ms cubic-bezier(.2,0,0,1)!important}
 [data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand){border-radius:6px!important}
 @media(prefers-reduced-motion:reduce){[data-research-compact-chrome] .rScV5Q_nodeTitleActions{transition:none!important}}
