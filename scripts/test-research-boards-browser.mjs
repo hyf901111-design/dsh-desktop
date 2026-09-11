@@ -2210,7 +2210,8 @@ if (process.argv.includes('--serve')) {
     assert.ok(Math.abs((await wheelCard.boundingBox()).height-840)<=1, 'manual component height is preserved during generation');
     await wheelCard.locator('[data-research-generation-toggle]').click();
     assert.match(await wheelCard.textContent(),/000933.SH 历史行情/);
-    assert.match(await wheelCard.textContent(),/1,420/);
+    assert.match(await wheelCard.textContent(),/资料已返回，继续核对与整理/);
+    assert.equal(await wheelCard.locator('[data-research-generation-process]').getAttribute('aria-busy'),'true');
     await page.screenshot({path:join(out,'compact-generation-progress.png')});
     await page.evaluate(()=>{const w=window.fixture.registry.for('original'),node=w.getSnapshot().artifacts[0];w.setArtifacts([{...node,generationStatus:'completed',containerSpec:{version:1,type:'markdown',title:'已完成',content:'生成结果'}}])});
     await page.waitForFunction(()=>document.querySelector('[data-research-node-id="wheel-iframe"]').getBoundingClientRect().height>321);
