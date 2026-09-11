@@ -40,6 +40,7 @@ export async function derivedFixture(kind = 'generated-summary', count = 1, over
     const node = snapshot.artifacts.find((node:any)=>node.id==='derived')
     return React.createElement('div',{onClickCapture:locate},React.createElement(client.ResearchCanvasArtifactCard, {
       node, sessionId: 'text-final', editingContent: editing,
+      onMindMapNodeCommit:(line:number,label:string)=>workspace.updateMindMapNodeLabel(node.id,line,label),
       onContentEdit: () => setEditing(true), onContentCancel: () => setEditing(false),
       onContentCommit: (text: string) => { workspace.updateArtifactContent(node.id, text); setEditing(false) },
       onExpandGeneration: () => workspace.updateNodeGeometry(node.id, { width: 656, height: 456, sizeMode: 'auto' }),
