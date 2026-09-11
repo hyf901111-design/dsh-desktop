@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "EWork Odyssey 第十二批：底部覆盖画布、全宽圆角顶栏和四段灰雾流动",
+        "featureName": "EWork Odyssey 第十二批：恢复文件预览、底部覆盖画布及全宽圆角顶栏",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "d1d449739c1e8f7b50cacb5024ca3511be2ab795",
-        "tipCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
+        "tipCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
         "commits": [
           {
             "commit": "7804697fcbee03b07685580ee61631232c19d0e4",
@@ -20,6 +20,13 @@
               "d1d449739c1e8f7b50cacb5024ca3511be2ab795"
             ],
             "subject": "还原底部浮层与全宽圆角顶栏并增强首页四段灰雾流动"
+          },
+          {
+            "commit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "parents": [
+              "7804697fcbee03b07685580ee61631232c19d0e4"
+            ],
+            "subject": "恢复画布内各类文件真实预览并保留放大阅读状态"
           }
         ],
         "files": [
@@ -29,7 +36,15 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/figma-file-preview-client.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-figma-file-preview.mjs"
           },
           {
             "status": "M",
@@ -53,6 +68,10 @@
           },
           {
             "status": "M",
+            "path": "test/figma-file-preview.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/figma-motion-controller.test.ts"
           }
         ],
@@ -63,9 +82,9 @@
               "scripts/ensure-local-dependencies.mjs"
             ],
             "outcome": "passed",
-            "summary": "deps directly related validation passed; log checkpoint-12-deps.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:32:41.562775+00:00",
+            "summary": "deps directly related validation passed; log checkpoint-12b-deps.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:43:48.738104+00:00",
             "timeoutMs": 120000
           },
           {
@@ -75,9 +94,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "typecheck directly related validation passed; log checkpoint-12-typecheck.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:32:45.454698+00:00",
+            "summary": "typecheck directly related validation passed; log checkpoint-12b-typecheck.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:43:52.595935+00:00",
             "timeoutMs": 120000
           },
           {
@@ -85,6 +104,9 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/figma-file-preview.test.ts",
+              "test/research-file-preview.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
               "test/research-board-navigation-final.test.ts",
               "test/figma-final-shell-patch.test.ts",
               "test/figma-motion-controller.test.ts",
@@ -93,9 +115,9 @@
               "test/research-bento-visible-layout.test.js"
             ],
             "outcome": "passed",
-            "summary": "focused directly related validation passed; log checkpoint-12-focused.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:32:46.717767+00:00",
+            "summary": "focused directly related validation passed; log checkpoint-12b-focused.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:43:56.627265+00:00",
             "timeoutMs": 120000
           },
           {
@@ -106,10 +128,24 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "sources directly related validation passed; log checkpoint-12-sources.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:32:56.421390+00:00",
+            "summary": "sources directly related validation passed; log checkpoint-12b-sources.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:44:06.422248+00:00",
             "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "node",
+              "scripts/verify-figma-file-preview.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "file-preview directly related validation passed; log checkpoint-12b-file-preview.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:44:14.237442+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -117,9 +153,9 @@
               "scripts/verify-figma-workspace-overlays.mjs"
             ],
             "outcome": "passed",
-            "summary": "overlays directly related validation passed; log checkpoint-12-overlays.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:32:57.470526+00:00",
+            "summary": "overlays directly related validation passed; log checkpoint-12b-overlays.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:44:15.289784+00:00",
             "timeoutMs": 120000
           },
           {
@@ -128,9 +164,9 @@
               "scripts/verify-figma-canvas-panel-reopen.mjs"
             ],
             "outcome": "passed",
-            "summary": "reopen directly related validation passed; log checkpoint-12-reopen.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:33:00.898473+00:00",
+            "summary": "reopen directly related validation passed; log checkpoint-12b-reopen.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:44:18.660988+00:00",
             "timeoutMs": 120000
           },
           {
@@ -139,9 +175,9 @@
               "scripts/verify-figma-home-fog.mjs"
             ],
             "outcome": "passed",
-            "summary": "fog directly related validation passed; log checkpoint-12-fog.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:33:06.168791+00:00",
+            "summary": "fog directly related validation passed; log checkpoint-12b-fog.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:44:23.887052+00:00",
             "timeoutMs": 120000
           },
           {
@@ -150,9 +186,9 @@
               "scripts/verify-figma-header-hover.mjs"
             ],
             "outcome": "passed",
-            "summary": "header-hover directly related validation passed; log checkpoint-12-header-hover.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:33:06.954561+00:00",
+            "summary": "header-hover directly related validation passed; log checkpoint-12b-header-hover.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:44:24.659487+00:00",
             "timeoutMs": 120000
           },
           {
@@ -161,17 +197,18 @@
               "scripts/verify-figma-panel-layout.mjs"
             ],
             "outcome": "passed",
-            "summary": "glass directly related validation passed; log checkpoint-12-glass.log",
-            "verifiedCommit": "7804697fcbee03b07685580ee61631232c19d0e4",
-            "completedAt": "2026-09-11T06:33:08.982278+00:00",
+            "summary": "glass directly related validation passed; log checkpoint-12b-glass.log",
+            "verifiedCommit": "c0fc41e50055afb53eb04f928dc9e699c0e0f18a",
+            "completedAt": "2026-09-11T06:44:26.583278+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Read final Figma groups64 and65 including application bounds, glass fills, 32/24px blur and bottom overlay notes. Controlled Chromium verifies full-width header across three views and two themes; bottom 220px overlay leaves canvas/component rectangles unchanged and shifts only toolbar; native acceptance must run on the new integration artifact."
+          "summary": "Read final Figma groups64 and65 including application bounds, glass fills, 32/24px blur and bottom overlay notes. Controlled Chromium verifies full-width header across three views and two themes; bottom 220px overlay leaves canvas/component rectangles unchanged and shifts only toolbar; native acceptance must run on the new integration artifact. File preview regression reproduced in 9 failing cases then restored inline readers, with actual PDF.js/HTML/text rendering and isolated Electron cross-origin reader checks; native Office file acceptance remains pending."
         },
         "acceptanceCriteria": [
+          "Verify PDF, DOCX, PPTX, XLSX, HTML and TXT contents render directly on native canvas and retain original readers across expand/collapse",
           "Verify native header reaches workspace right edge with correctly clipped top corners in chat/research/trajectory",
           "Verify bottom panel height204 within 220 overlay; native canvas/component geometry unchanged and toolbar moves220",
           "Verify sidebar reopen recenters toolbar, composer120 and actual homepage motion visibly moves with stable foreground",
@@ -181,7 +218,7 @@
           "Full Figma board-by-board acceptance remains ongoing; controlled checks are not native evidence",
           "No public release, push, version bump, notarization or main promotion"
         ],
-        "generatedAt": "2026-09-11T06:33:08.982371+00:00"
+        "generatedAt": "2026-09-11T06:44:26.583403+00:00"
       }
     }
   ],
