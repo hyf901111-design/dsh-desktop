@@ -13,6 +13,8 @@ const RESEARCH_GENERATION_FOCUS_PATCH_MARKER = '/* sherlock:research-generation-
 const FIGMA_PANEL_LAYOUT_PATCH_MARKER = '/* sherlock:figma-panel-layout:v1 */'
 const FIGMA_FILE_PANEL_PATCH_MARKER = '/* sherlock:figma-file-panel:v1 */'
 const FIGMA_PANEL_DEFAULT_WIDTH_PATCH_MARKER = '/* sherlock:figma-panel-default-width:v1 */'
+const FIGMA_PANEL_PENDING_PATCH_MARKER = '/* sherlock:figma-panel-no-session-pending:v1 */'
+const FIGMA_BOTTOM_CLOSE_PATCH_MARKER = '/* sherlock:figma-bottom-close:v1 */'
 
 export function sherlockResearchGenerationOwnsFocus(state, doc = globalThis.document) {
   const hasResearch = node => node?.kind === 'leaf'
@@ -56,6 +58,159 @@ function patchTabBarMenuLayout(source) {
     '\t\t\t\t\t})]\n\t\t\t});',
     'TabBar sibling closure')
   tabBar = tabBar.replace('function TabBar(props) {', 'function TabBar(props) {\n\t\t\t' + marker)
+  return source.slice(0, start) + tabBar + source.slice(end)
+}
+
+function patchTabBarOverflow(source) {
+  const marker = '/* sherlock:figma-tab-overflow:v1 */'
+  if (source.includes(marker)) return source
+  source = replaceExact(source, 'newTab: "新建标签页",', 'newTab: "新建标签页",\n\t\t\topenTabs: "已打开的页签",', 'overflow zh locale')
+  source = replaceExact(source, 'newTab: "New tab",', 'newTab: "New tab",\n\t\t\topenTabs: "Open tabs",', 'overflow en locale')
+  const start = source.indexOf('\t\tfunction TabBar(props) {')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  if (start < 0 || end < 0) throw new Error('Unable to patch Better Sidebar overflow boundary')
+  let tabBar = source.slice(start, end)
+  tabBar = replaceExact(tabBar,
+    '\t\t\t/* sherlock:tabbar-independent-menu:v1 */',
+    `\t\t\t/* sherlock:tabbar-independent-menu:v1 */
+\t\t\t${marker}`,
+    'overflow marker')
+  tabBar = replaceExact(tabBar,
+    `\t\t\tconst middlePressed = (0, react.useRef)(null);
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tonCloseRef.current = onClose;
+\t\t\t});`,
+    `\t\t\tconst middlePressed = (0, react.useRef)(null);
+\t\t\tconst overflowTriggerRef = (0, react.useRef)(null);
+\t\t\tconst overflowMenuRef = (0, react.useRef)(null);
+\t\t\tconst tabNodes = (0, react.useRef)(/* @__PURE__ */ new Map());
+\t\t\tconst [hasOverflow, setHasOverflow] = (0, react.useState)(false);
+\t\t\tconst [overflowOpen, setOverflowOpen] = (0, react.useState)(false);
+\t\t\tconst closeOverflowMenu = () => {
+\t\t\t\tsetOverflowOpen(false);
+\t\t\t\trequestAnimationFrame(() => overflowTriggerRef.current?.focus());
+\t\t\t};
+\t\t\tconst closeTabAndRestore = (tabId) => {
+\t\t\t\tconst index = tabs.findIndex((tab) => tab.id === tabId);
+\t\t\t\tconst fallback = active === tabId ? tabs[index + 1] ?? tabs[index - 1] : tabs.find((tab) => tab.id === active);
+\t\t\t\tonClose(tabId);
+\t\t\t\tif (fallback !== void 0) requestAnimationFrame(() => tabNodes.current.get(fallback.id)?.focus());
+\t\t\t};
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tonCloseRef.current = closeTabAndRestore;
+\t\t\t});
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tconst el = listRef.current;
+\t\t\t\tif (el === null) return;
+\t\t\t\tlet frame = null;
+\t\t\t\tconst measure = () => {
+\t\t\t\t\tframe = null;
+\t\t\t\t\tconst tabsWidth = Array.from(el.querySelectorAll("[data-odyssey-panel-tab]")).reduce((sum, node) => sum + node.offsetWidth, 0);
+\t\t\t\t\tsetHasOverflow(tabsWidth > el.clientWidth + 1);
+\t\t\t\t};
+\t\t\t\tconst schedule = () => {
+\t\t\t\t\tif (frame === null) frame = requestAnimationFrame(measure);
+\t\t\t\t};
+\t\t\t\tconst observer = new ResizeObserver(schedule);
+\t\t\t\tobserver.observe(el);
+\t\t\t\tfor (const node of el.querySelectorAll("[data-odyssey-panel-tab]")) observer.observe(node);
+\t\t\t\tmeasure();
+\t\t\t\treturn () => {
+\t\t\t\t\tobserver.disconnect();
+\t\t\t\t\tif (frame !== null) cancelAnimationFrame(frame);
+\t\t\t\t};
+\t\t\t}, [tabs]);
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tif (hasOverflow) return;
+\t\t\t\tsetOverflowOpen(false);
+\t\t\t}, [hasOverflow]);
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tif (!overflowOpen) return;
+\t\t\t\tconst onPointerDown = (event) => {
+\t\t\t\t\tconst target = event.target;
+\t\t\t\t\tif (overflowMenuRef.current?.contains(target) || overflowTriggerRef.current?.contains(target)) return;
+\t\t\t\t\tcloseOverflowMenu();
+\t\t\t\t};
+\t\t\t\tconst onKeyDown = (event) => {
+\t\t\t\t\tif (event.key !== "Escape") return;
+\t\t\t\t\tevent.preventDefault();
+\t\t\t\t\tcloseOverflowMenu();
+\t\t\t\t};
+\t\t\t\tdocument.addEventListener("pointerdown", onPointerDown, true);
+\t\t\t\tdocument.addEventListener("keydown", onKeyDown);
+\t\t\t\treturn () => {
+\t\t\t\t\tdocument.removeEventListener("pointerdown", onPointerDown, true);
+\t\t\t\t\tdocument.removeEventListener("keydown", onKeyDown);
+\t\t\t\t};
+\t\t\t}, [overflowOpen]);`,
+    'overflow state and lifecycle')
+  tabBar = replaceExact(tabBar,
+    '\t\t\t\t\tchildren: tabs.map((tab) => {',
+    '\t\t\t\t\tchildren: [tabs.map((tab) => {',
+    'overflow tab list children')
+  tabBar = replaceExact(tabBar,
+    `\t\t\t\t\t\treturn /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.tab, active === tab.id && sidebar_module_css_default.tabActive),`,
+    `\t\t\t\t\t\treturn /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\t\tref: (node) => {
+\t\t\t\t\t\t\tif (node === null) tabNodes.current.delete(tab.id);
+\t\t\t\t\t\t\telse tabNodes.current.set(tab.id, node);
+\t\t\t\t\t\t},
+\t\t\t\t\t\trole: "tab",
+\t\t\t\t\t\t"aria-selected": active === tab.id,
+\t\t\t\t\t\ttabIndex: active === tab.id ? 0 : -1,
+\t\t\t\t\t\t"data-odyssey-panel-tab": true,
+\t\t\t\t\t\t"data-odyssey-panel-tab-id": tab.id,
+\t\t\t\t\t\tclassName: clsx(sidebar_module_css_default.tab, active === tab.id && sidebar_module_css_default.tabActive),`,
+    'overflow tab identity')
+  tabBar = replaceExact(tabBar,
+    `\t\t\t\t\t\t\t\t\tevent.stopPropagation();
+\t\t\t\t\t\t\t\t\tonClose(tab.id);`,
+    `\t\t\t\t\t\t\t\t\tevent.stopPropagation();
+\t\t\t\t\t\t\t\t\tcloseTabAndRestore(tab.id);`,
+    'overflow close focus restore')
+  tabBar = replaceExact(tabBar,
+    `\t\t\t\t\t}, tab.id); })
+\t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {`,
+    `\t\t\t\t\t}, tab.id); }), hasOverflow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\tref: overflowTriggerRef,
+\t\t\t\t\t\t"data-odyssey-tab-overflow-trigger": true,
+\t\t\t\t\t\t"aria-label": t("openTabs"),
+\t\t\t\t\t\t"aria-expanded": overflowOpen,
+\t\t\t\t\t\t"aria-haspopup": "menu",
+\t\t\t\t\t\tonClick: () => setOverflowOpen((value) => !value),
+\t\t\t\t\t\tchildren: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
+\t\t\t\t\t\t\twidth: 16,
+\t\t\t\t\t\t\theight: 16,
+\t\t\t\t\t\t\tviewBox: "0 0 16 16",
+\t\t\t\t\t\t\t"aria-hidden": true,
+\t\t\t\t\t\t\tchildren: [4, 8, 12].map((cx) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", { cx, cy: 8, r: 1, fill: "currentColor" }, cx))
+\t\t\t\t\t\t})
+\t\t\t\t\t})]
+\t\t\t\t}), overflowOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\tref: overflowMenuRef,
+\t\t\t\t\trole: "menu",
+\t\t\t\t\t"data-odyssey-tab-overflow-menu": true,
+\t\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\t\t"data-odyssey-tab-overflow-heading": true,
+\t\t\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("openTabs") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: tabs.length })]
+\t\t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { "data-odyssey-tab-overflow-divider": true }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t\t\t"data-odyssey-tab-overflow-list": true,
+\t\t\t\t\t\tchildren: tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\trole: "menuitemradio",
+\t\t\t\t\t\t\t"aria-checked": active === tab.id,
+\t\t\t\t\t\t\t"data-odyssey-tab-overflow-option": tab.id,
+\t\t\t\t\t\t\tonClick: () => {
+\t\t\t\t\t\t\t\tonActivate(tab.id);
+\t\t\t\t\t\t\t\tcloseOverflowMenu();
+\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "data-odyssey-tab-overflow-icon": true, children: getTabIcon?.(tab) ?? null }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "data-odyssey-tab-overflow-title": true, children: tab.title }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "data-odyssey-tab-overflow-check": true, children: active === tab.id ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {}) : null })]
+\t\t\t\t\t\t}, tab.id))
+\t\t\t\t\t})]
+\t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {`,
+    'overflow trigger and menu')
   return source.slice(0, start) + tabBar + source.slice(end)
 }
 
@@ -189,6 +344,78 @@ function patchFigmaPanelLayout(source) {
     '\t\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.bottomClose,\n\t\t\t\t\t\t\t\t\t"aria-controls": "odyssey-bottom-workspace-panel",\n\t\t\t\t\t\t\t\t\t"aria-expanded": state.bottomOpen,\n\t\t\t\t\t\t\t\t\t"aria-label": t("collapseBottomPanel"),',
     'Figma bottom close semantics')
   return source
+}
+
+function patchNoSessionPanelPending(source) {
+  if (source.includes(FIGMA_PANEL_PENDING_PATCH_MARKER)) return source
+  source = replaceExact(source,
+    `\t\t\tconst [keyboardInset, setKeyboardInset] = (0, react.useState)(0);`,
+    `\t\t\t${FIGMA_PANEL_PENDING_PATCH_MARKER}
+\t\t\tconst [keyboardInset, setKeyboardInset] = (0, react.useState)(0);
+\t\t\tconst [noSessionStarting, setNoSessionStarting] = (0, react.useState)(false);
+\t\t\tconst noSessionPending = (0, react.useRef)(false);
+\t\t\tconst noSessionMounted = (0, react.useRef)(true);
+\t\t\tconst noSessionResetTimer = (0, react.useRef)(null);
+\t\t\tconst finishNoSessionStart = () => {
+\t\t\t\tnoSessionPending.current = false;
+\t\t\t\tif (noSessionResetTimer.current !== null) window.clearTimeout(noSessionResetTimer.current);
+\t\t\t\tnoSessionResetTimer.current = null;
+\t\t\t\tif (noSessionMounted.current) setNoSessionStarting(false);
+\t\t\t};
+\t\t\t(0, react.useEffect)(() => {
+\t\t\t\tnoSessionMounted.current = true;
+\t\t\t\treturn () => {
+\t\t\t\t\tnoSessionMounted.current = false;
+\t\t\t\t\tnoSessionPending.current = false;
+\t\t\t\t\tif (noSessionResetTimer.current !== null) window.clearTimeout(noSessionResetTimer.current);
+\t\t\t\t\tnoSessionResetTimer.current = null;
+\t\t\t\t};
+\t\t\t}, []);`,
+    'no-session pending state')
+  source = replaceExact(source,
+    `\t\t\t\t\t\t\t"aria-label": t("expand"),
+\t\t\t\t\t\t\t"aria-expanded": false,
+\t\t\t\t\t\t\tonClick: () => {
+\t\t\t\t\t\t\t\tctx.workspaces.startSession(void 0, (nextSessionId) => {
+\t\t\t\t\t\t\t\t\tstore.reduceFor(nextSessionId, (current) => current.panelOpen ? current : { ...current, panelOpen: true });
+\t\t\t\t\t\t\t\t\twindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId: nextSessionId } }));
+\t\t\t\t\t\t\t\t});
+\t\t\t\t\t\t\t},`,
+    `\t\t\t\t\t\t\t"aria-label": t("expand"),
+\t\t\t\t\t\t\t"aria-expanded": false,
+\t\t\t\t\t\t\t"aria-busy": noSessionStarting || void 0,
+\t\t\t\t\t\t\tdisabled: noSessionStarting,
+\t\t\t\t\t\t\tonClick: () => {
+\t\t\t\t\t\t\t\tif (noSessionPending.current) return;
+\t\t\t\t\t\t\t\tnoSessionPending.current = true;
+\t\t\t\t\t\t\t\tsetNoSessionStarting(true);
+\t\t\t\t\t\t\t\tnoSessionResetTimer.current = window.setTimeout(finishNoSessionStart, 1e4);
+\t\t\t\t\t\t\t\ttry {
+\t\t\t\t\t\t\t\t\tctx.workspaces.startSession(void 0, (nextSessionId) => {
+\t\t\t\t\t\t\t\t\t\tfinishNoSessionStart();
+\t\t\t\t\t\t\t\t\t\tstore.reduceFor(nextSessionId, (current) => current.panelOpen ? current : { ...current, panelOpen: true });
+\t\t\t\t\t\t\t\t\t\twindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId: nextSessionId } }));
+\t\t\t\t\t\t\t\t\t});
+\t\t\t\t\t\t\t\t} catch (error) {
+\t\t\t\t\t\t\t\t\tfinishNoSessionStart();
+\t\t\t\t\t\t\t\t\tconsole.error("[dsh-better-sidebar] unable to start session", error);
+\t\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\t},`,
+    'no-session pending interaction')
+  return source
+}
+
+function patchFigmaBottomClose(source) {
+  if (source.includes(FIGMA_BOTTOM_CLOSE_PATCH_MARKER)) return source
+  const start = source.indexOf('\t\t\t\t\t\t\t\t\tclassName: sidebar_module_css_default.bottomClose,')
+  const end = source.indexOf('\n\t\t\t\t\t\t\t\t})', start)
+  if (start < 0 || end < 0) throw new Error('Unable to patch Better Sidebar Figma bottom close boundary')
+  const before = source.slice(start, end)
+  const after = replaceExact(before,
+    'children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseFill14, {})',
+    'children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelBottomOutline16, { active: true })',
+    'Figma bottom close glyph')
+  return `${FIGMA_BOTTOM_CLOSE_PATCH_MARKER}\n${source.slice(0, start)}${after}${source.slice(end)}`
 }
 
 /**
@@ -604,7 +831,17 @@ function patchFigmaPanelDefaultWidth(source) {
 }
 
 export function patchBetterSidebarClient(source) {
-  let next = patchFigmaPanelDefaultWidth(patchFigmaFilePanel(patchPanelWindowPointerFallback(patchFigmaPanelLayout(patchPanelToggleGlyphs(source)))))
+  let next = patchFigmaPanelDefaultWidth(
+    patchFigmaFilePanel(
+      patchPanelWindowPointerFallback(
+        patchFigmaBottomClose(
+          patchNoSessionPanelPending(
+            patchFigmaPanelLayout(patchPanelToggleGlyphs(source))
+          )
+        )
+      )
+    )
+  )
 
   if (!next.includes(RESEARCH_GENERATION_FOCUS_PATCH_MARKER)) {
     next = replaceExact(next,
@@ -737,7 +974,7 @@ export function patchBetterSidebarClient(source) {
     'committed panel surface dimensions'
   )
 
-  if (source.includes(PATCH_MARKER)) return patchTabBarMenuLayout(next)
+  if (source.includes(PATCH_MARKER)) return patchTabBarOverflow(patchTabBarMenuLayout(next))
 
   const moveBefore = `\t\t\t\t\tconst insertAt = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
   const moveAfter = `\t\t\t\t\tconst requestedIndex = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tconst pinnedCount = leaf.tabs.filter((tab) => tab.meta?.sherlockPinned === true).length;\n\t\t\t\t\tconst insertAt = moved.meta?.sherlockPinned === true ? 0 : Math.max(pinnedCount, requestedIndex);\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
@@ -802,7 +1039,7 @@ export function patchBetterSidebarClient(source) {
     'tab render closure'
   )
 
-  return patchTabBarMenuLayout(next)
+  return patchTabBarOverflow(patchTabBarMenuLayout(next))
 }
 
 export async function patchBetterSidebarPackage(packageRoot) {
