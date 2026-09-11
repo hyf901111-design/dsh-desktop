@@ -83,7 +83,7 @@ body[data-dsh-sidebar-dragging] :is(
   .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero,
   .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header
 ) {
-  transition: none;
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

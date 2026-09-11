@@ -19,18 +19,22 @@ export function mountFigmaMotionController(targetDocument: Document = document):
   }
 
   const scheduleReady = () => {
-    if (cancelled || firstFrame !== 0 || targetDocument.documentElement.dataset.odysseyMotionReady === 'true') return
+    if (cancelled || firstFrame !== 0 || secondFrame !== 0 || targetDocument.documentElement.dataset.odysseyMotionReady === 'true') return
     if (targetDocument.querySelector('[data-dsh-panel-host]') === null) return
     const requestFrame = targetWindow?.requestAnimationFrame.bind(targetWindow)
     if (requestFrame === undefined) {
       targetDocument.documentElement.dataset.odysseyMotionReady = 'true'
+      observer.disconnect()
       return
     }
     firstFrame = requestFrame(() => {
       firstFrame = 0
       secondFrame = requestFrame(() => {
         secondFrame = 0
-        if (!cancelled) targetDocument.documentElement.dataset.odysseyMotionReady = 'true'
+        if (!cancelled) {
+          targetDocument.documentElement.dataset.odysseyMotionReady = 'true'
+          observer.disconnect()
+        }
       })
     })
   }
