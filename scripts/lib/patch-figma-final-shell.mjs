@@ -62,6 +62,11 @@ export function patchFigmaFinalConversation(source) {
 }
 
 export function patchFigmaFinalLayout(source) {
+  // A coalesced/quick drag may deliver the final position only on pointerup.
+  // Commit that coordinate before releasing capture and flushing the rAF.
+  source = exact(source,
+    '\t\t\t\te.currentTarget.releasePointerCapture(e.pointerId);',
+    '\t\t\t\tlatest.current = e.clientX;\n\t\t\t\te.currentTarget.releasePointerCapture(e.pointerId);')
   // 194:4 / 370 explicitly show 280 → 240. Apply the same minimum when
   // dragging and when restoring persisted widths; the initial width stays 280.
   if (source.includes('clampWidth(sidebar, 280, 420)')) {

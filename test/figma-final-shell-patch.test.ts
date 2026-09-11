@@ -12,6 +12,24 @@ function clientFunction(bundle: string, name: string) {
 }
 
 describe('Figma shell patch installation', () => {
+  it('commits the pointer-up position when a quick sidebar drag has no delivered move event', async () => {
+    const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
+    const moves: number[] = [], lifecycle: string[] = []
+    const DragHandle = runInNewContext(clientFunction(layout, 'DragHandle') + '\nDragHandle', {
+      react: { useState: () => [false, () => {}], useRef: (current: unknown) => ({ current }), useCallback: (fn: unknown) => fn },
+      react_jsx_runtime: { jsx: (_tag: string, props: unknown) => props }, AppFrame_module_css_default: { handle: 'handle' },
+      requestAnimationFrame: () => 1, cancelAnimationFrame: () => {}
+    })
+    let captured = false
+    const target = { setPointerCapture: () => { captured = true }, hasPointerCapture: () => captured, releasePointerCapture: () => { captured = false } }
+    const handle = DragHandle({ side: 'sidebar', left: 280, onStart: () => lifecycle.push('start'), onDrag: (dx: number) => moves.push(dx), onEnd: () => lifecycle.push('end') })
+    handle.onPointerDown({ pointerId: 1, clientX: 280, currentTarget: target, preventDefault() {} })
+    handle.onPointerUp({ pointerId: 1, clientX: 240, currentTarget: target })
+    expect(moves).toEqual([-40])
+    expect(lifecycle).toEqual(['start', 'end'])
+    expect(captured).toBe(false)
+  })
+
   it('keeps a 240 px sidebar after dragging and layout restoration, with the original collapse/default behavior', async () => {
     const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
     expect(patchFigmaFinalLayout(layout)).toBe(layout)
