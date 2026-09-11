@@ -12,7 +12,7 @@
         "featureName": "EWork Odyssey 第十批：最新纯毛玻璃右栏与头像信息气泡及加强首页动效",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "f61d944fb38f70d7b43f199c6b6677aaf6c8b071",
-        "tipCommit": "61474c770e8f6fd5e38ba13e0640313f77d30fc3",
+        "tipCommit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
         "commits": [
           {
             "commit": "7d605e485b6237b252dad72280889b262e619a7b",
@@ -41,6 +41,13 @@
               "c3c8f78aa684a28ecb017170558713650d11ba99"
             ],
             "subject": "修复面板控件对齐并补齐拖动反馈与窄窗画布适配"
+          },
+          {
+            "commit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
+            "parents": [
+              "61474c770e8f6fd5e38ba13e0640313f77d30fc3"
+            ],
+            "subject": "按右栏实际占用修正窄窗判断并更新头像交互验收"
           }
         ],
         "files": [
@@ -51,6 +58,10 @@
           {
             "status": "M",
             "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
           },
           {
             "status": "A",
@@ -105,6 +116,10 @@
             "path": "test/figma-resize-feedback.test.ts"
           },
           {
+            "status": "A",
+            "path": "test/figma-responsive-header.test.ts"
+          },
+          {
             "status": "M",
             "path": "test/research-bento-visible-layout.test.js"
           },
@@ -121,8 +136,8 @@
             ],
             "outcome": "passed",
             "summary": "deps directly related validation passed; log checkpoint-10-deps.log",
-            "verifiedCommit": "61474c770e8f6fd5e38ba13e0640313f77d30fc3",
-            "completedAt": "2026-09-11T05:43:59.848376+00:00",
+            "verifiedCommit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
+            "completedAt": "2026-09-11T05:47:31.793773+00:00",
             "timeoutMs": 120000
           },
           {
@@ -133,8 +148,8 @@
             ],
             "outcome": "passed",
             "summary": "typecheck directly related validation passed; log checkpoint-10-typecheck.log",
-            "verifiedCommit": "61474c770e8f6fd5e38ba13e0640313f77d30fc3",
-            "completedAt": "2026-09-11T05:44:03.460196+00:00",
+            "verifiedCommit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
+            "completedAt": "2026-09-11T05:47:35.297235+00:00",
             "timeoutMs": 120000
           },
           {
@@ -146,12 +161,13 @@
               "test/figma-final-shell-patch.test.ts",
               "test/figma-motion-controller.test.ts",
               "test/figma-resize-feedback.test.ts",
+              "test/figma-responsive-header.test.ts",
               "test/research-bento-visible-layout.test.js"
             ],
             "outcome": "passed",
             "summary": "focused directly related validation passed; log checkpoint-10-focused.log",
-            "verifiedCommit": "61474c770e8f6fd5e38ba13e0640313f77d30fc3",
-            "completedAt": "2026-09-11T05:44:04.715244+00:00",
+            "verifiedCommit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
+            "completedAt": "2026-09-11T05:47:36.511078+00:00",
             "timeoutMs": 120000
           },
           {
@@ -163,8 +179,8 @@
             ],
             "outcome": "passed",
             "summary": "sources directly related validation passed; log checkpoint-10-sources.log",
-            "verifiedCommit": "61474c770e8f6fd5e38ba13e0640313f77d30fc3",
-            "completedAt": "2026-09-11T05:44:13.609905+00:00",
+            "verifiedCommit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
+            "completedAt": "2026-09-11T05:47:44.106756+00:00",
             "timeoutMs": 300000
           },
           {
@@ -174,8 +190,8 @@
             ],
             "outcome": "passed",
             "summary": "header-hover directly related validation passed; log checkpoint-10-header-hover.log",
-            "verifiedCommit": "61474c770e8f6fd5e38ba13e0640313f77d30fc3",
-            "completedAt": "2026-09-11T05:44:14.391334+00:00",
+            "verifiedCommit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
+            "completedAt": "2026-09-11T05:47:44.826219+00:00",
             "timeoutMs": 120000
           },
           {
@@ -185,8 +201,8 @@
             ],
             "outcome": "passed",
             "summary": "glass directly related validation passed; log checkpoint-10-glass.log",
-            "verifiedCommit": "61474c770e8f6fd5e38ba13e0640313f77d30fc3",
-            "completedAt": "2026-09-11T05:44:16.305492+00:00",
+            "verifiedCommit": "e58e7d411d98406e57e7aba9b06944473d3c8b31",
+            "completedAt": "2026-09-11T05:47:46.784377+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -203,7 +219,7 @@
           "Full 258-case Figma acceptance is ongoing; controlled component screenshots do not count as native client acceptance",
           "No public release, push, version bump or notarization"
         ],
-        "generatedAt": "2026-09-11T05:44:16.305578+00:00"
+        "generatedAt": "2026-09-11T05:47:46.784478+00:00"
       }
     }
   ],
