@@ -25,8 +25,16 @@ it('follows actual clamped width without taking over native drag, and cleans can
   tick()
   const feedback = doc.querySelector<HTMLElement>('[data-odyssey-resize-feedback]')!
   expect(feedback.style.left).toBe('240px')
-  expect(Number.parseFloat(feedback.style.top)).toBeGreaterThan(100)
-  expect(feedback.querySelector<HTMLElement>('[data-odyssey-resize-grip]')!.style.height).toBe(feedback.style.height)
+  expect(feedback.style.top).toBe('0px')
+  const grip = feedback.querySelector<HTMLElement>('[data-odyssey-resize-grip]')!
+  const center = () => parseFloat(feedback.style.top) + parseFloat(grip.style.top) + parseFloat(grip.style.height) / 2
+  expect(center()).toBe(436)
+  doc.dispatchEvent(new win.PointerEvent('pointermove', { pointerId:1, clientY:80 }))
+  tick()
+  expect(center()).toBe(80)
+  doc.dispatchEvent(new win.PointerEvent('pointermove', { pointerId:2, clientY:650 }))
+  tick()
+  expect(center()).toBe(80)
   expect(doc.querySelector('[data-odyssey-resize-width]')?.textContent).toBeUndefined()
   doc.dispatchEvent(new win.PointerEvent('pointerup', { pointerId:2 }))
   expect(feedback.isConnected).toBe(true)
@@ -50,8 +58,10 @@ it('centers feedback in the 10px parallel-panel gutter, without a width label, a
   handle.dispatchEvent(new win.PointerEvent('pointerover', { bubbles:true, clientY:436 }))
   const feedback = doc.querySelector<HTMLElement>('[data-odyssey-resize-feedback]')!
   expect(feedback.style.left).toBe('951px')
-  expect(Number.parseFloat(feedback.style.height)).toBeGreaterThan(450)
-  expect(Number.parseFloat(feedback.style.height)).toBeLessThan(540)
+  const grip = feedback.querySelector<HTMLElement>('[data-odyssey-resize-grip]')!
+  expect(parseFloat(feedback.style.top) + parseFloat(grip.style.top) + parseFloat(grip.style.height) / 2).toBe(436)
+  handle.dispatchEvent(new win.PointerEvent('pointermove', { bubbles:true, clientY:760 }))
+  expect(parseFloat(feedback.style.top) + parseFloat(grip.style.top) + parseFloat(grip.style.height) / 2).toBe(760)
   expect(doc.querySelector('[data-odyssey-resize-width]')).toBe(null)
   handle.remove()
   doc.dispatchEvent(new win.PointerEvent('pointermove', { clientY:460 }))

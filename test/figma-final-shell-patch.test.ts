@@ -111,16 +111,19 @@ describe('Figma shell patch installation', () => {
       ['research', false, 'active', undefined, '已有研究', '已有研究'],
       ['research', true, 'sending', undefined, '正在研究', '正在研究'],
       ['chat', false, 'active', undefined, '原对话标题', '原对话标题'],
-      ['chat', true, 'blank', undefined, '测试集', null]
+      ['chat', true, 'blank', undefined, '测试集', '测试集'],
+      ['trajectory', true, 'blank', undefined, '测试集', '测试集']
     ] as const) {
       const tree = header({
         sessionId: 'current',
         useSession: (select: (s: unknown) => unknown) => select({ blank, composerPhase: phase }),
         useSessions: (select: (s: unknown) => unknown) => select({ byId: { current: { id: 'current', displayTitle, title } } }),
         useStore: (select: (s: unknown) => unknown) => select({ view }),
-        views: { subscribe() {}, version: () => 1, list: () => [{ id: 'chat' }, { id: 'research' }] },
+        views: { subscribe() {}, version: () => 1, list: () => [{ id: 'chat' }, { id: 'research' }, { id: 'trajectory' }] },
         actions: {}, renderSlot: () => null, open() {}, t: (key: string) => key
       })
+      expect(tree.props['aria-hidden']).toBeUndefined()
+      expect(tree.props['data-odyssey-home-header']).toBe(view === 'chat' && blank && phase === 'blank')
       const titles: unknown[] = []
       const visit = (node: any) => {
         if (!node || typeof node !== 'object') return

@@ -203,13 +203,6 @@ body[data-ds-dark-theme]{--srb-surface:rgba(39,39,39,.97);--srb-input:#202020;--
 .srb-section .srb-section-toggle,[data-srb-workspaces] .srb-section-toggle{font-size:13px;line-height:20px;height:32px;gap:2px;color:var(--srb-muted)}
 .srb-section [data-srb-section-header]{min-height:32px;height:32px;gap:2px;margin:0 0 4px;padding:0}
 .srb-section.srb-section{padding-top:0;padding-bottom:12px}
-.srb-section .srb-row{box-sizing:border-box;min-height:32px;height:32px;padding-left:8px;padding-right:6px;gap:6px;border-radius:7px;font-size:14px;line-height:21px}
-.srb-section .srb-row[aria-current=true]{background:var(--srb-row-active)}
-.srb-section .srb-row:is(:hover,[data-menu-open=true]){background:var(--srb-row-active)}
-.srb-row .srb-board-title{font-weight:400;flex:1;min-width:0;line-height:21px}.srb-row .srb-edit-time{font-size:11px;line-height:17px;color:var(--srb-tertiary)}
-.srb-row-more.srb-row-more,.srb-row-more.srb-row-more:is(:hover,:active,:focus){background:transparent!important;border:0!important;box-shadow:none!important;color:var(--srb-muted);padding:0;width:20px;height:20px;border-radius:0}
-.srb-row-more.srb-row-more:hover{color:var(--srb-label)}.srb-row-more svg{width:16px;height:16px}
-.srb-row-actions{display:none!important}.srb-row:is(:hover,:focus-within,[data-menu-open=true]) .srb-row-actions{display:flex!important}.srb-row:is(:hover,:focus-within,[data-menu-open=true]) .srb-row-time{display:none!important}
 [data-sidebar-collapsed=true] .srb-section [aria-label='搜索研究看板'],[data-dsh-sidebar-wide=false] .srb-section [aria-label='搜索研究看板']{display:none!important}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu]{box-sizing:border-box;width:min(280px,calc(100vw - 24px));min-width:0;padding:6px;border:1px solid var(--srb-border);border-radius:10px;background:var(--srb-surface);backdrop-filter:blur(12px);box-shadow:var(--srb-shadow);font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui);color:var(--srb-label)}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]{min-height:32px;height:32px;padding:0 10px;border-radius:6px;font:inherit;gap:8px}

@@ -5,6 +5,14 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   type Bar = { port: HTMLElement; track: HTMLDivElement; thumb: HTMLDivElement; until: number; dragging: boolean; update: () => void; remove: () => void }
   const bars = new Map<HTMLElement, Bar>()
   const scope = '[data-dsh-sidebar-root], .t8lSSG_panelBody'
+  // The conversation has 16 px content padding; its thumb belongs to the
+  // panel edge, not that inset text column. Nested previews retain their own edge.
+  const rightEdge = (port: HTMLElement) => {
+    const shell = port.closest<HTMLElement>('[data-dsh-sidebar-root]') ??
+      (port.matches('.sRp_messages') ? port.closest<HTMLElement>('.t8lSSG_panel') : null)
+    const shellRect = shell?.getBoundingClientRect()
+    return shellRect?.width ? shellRect.right : port.getBoundingClientRect().right
+  }
   let scheduled = 0, timer = 0, disposed = false
   const refresh = () => {
     scheduled = 0
@@ -33,7 +41,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
       if (!visible) return
       const height = Math.max(32, r.height * port.clientHeight / port.scrollHeight)
       ratio = max / Math.max(1, r.height - height)
-      track.style.left = `${r.right - 12}px`; track.style.top = `${r.top}px`; track.style.height = `${r.height}px`
+      track.style.left = `${rightEdge(port) - 12}px`; track.style.top = `${r.top}px`; track.style.height = `${r.height}px`
       thumb.style.height = `${height}px`; thumb.style.top = `${Math.max(0,Math.min(max,port.scrollTop)) / ratio}px`
       track.dataset.visible = String(alwaysShow || bar.dragging || track.matches(':hover') || Date.now() < bar.until)
     }
@@ -72,7 +80,8 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   const edge = (e: PointerEvent) => {
     for (const bar of bars.values()) {
       const r = bar.port.getBoundingClientRect()
-      if (e.clientX >= r.right-12 && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) { bar.until = Date.now()+700; bar.update(); win.clearTimeout(timer); timer = win.setTimeout(schedule,720) }
+      const edge = rightEdge(bar.port)
+      if (e.clientX >= edge-12 && e.clientX <= edge && e.clientY >= r.top && e.clientY <= r.bottom) { bar.until = Date.now()+700; bar.update(); win.clearTimeout(timer); timer = win.setTimeout(schedule,720) }
     }
   }
   const blur = () => { for(const bar of bars.values()) { bar.dragging=false; delete bar.track.dataset.dragging } schedule() }
