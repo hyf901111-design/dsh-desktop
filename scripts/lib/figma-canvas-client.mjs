@@ -622,6 +622,8 @@ body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-component-prima
 [data-research-compact-chrome] .rScV5Q_containerTableScroll :is(th,td)[data-numeric=true]+:is(th,td):not([data-numeric=true]){padding-left:18px}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown{padding:0 18px 12px;overflow:visible;font-size:13px;line-height:21px}
 [data-research-compact-chrome] .odyssey-component-primary .rScV5Q_containerMarkdown{color:var(--odyssey-card-text)}
+/* Text 349:1036 uses the 40/41 content palette; SML table 379:668 keeps its own. */
+body:not([data-ds-dark-theme]) [data-research-compact-chrome] .odyssey-component-primary .rScV5Q_containerMarkdown{--odyssey-card-text:#242529}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown>:first-child{font:inherit;color:var(--odyssey-card-text);overflow-wrap:anywhere}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown p{margin:0 0 8px}
 [data-research-compact-chrome] .rScV5Q_containerChart{padding:0 18px 16px;flex:1;justify-content:flex-start}

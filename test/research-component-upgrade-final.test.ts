@@ -158,17 +158,17 @@ it('adapts manual native markdown without changing dimensions or source content'
 // Use the real native renderer and theme rules: parent-only colors previously
 // passed inspection while the final paragraph/table leaves remained #fafafa.
 it.each([
-  { type:'markdown', content:'最终正文', selector:'.rScV5Q_containerMarkdown [data-test-markdown]', color:'#ececed' },
-  { type:'table', columns:['日期','数值','说明'], rows:[['九月',120,'合成样本']], selector:'.rScV5Q_containerTableScroll td:last-child span', color:'#e7e7e9' }
-])('applies the generated $type theme through to its final text leaves', async item => {
-  const {selector,color,...spec}=item
+  { type:'markdown', content:'最终正文', selector:'.rScV5Q_containerMarkdown [data-test-markdown]', color:'#ececed', lightColor:'#242529' },
+  { type:'table', columns:['日期','数值','说明'], rows:[['九月',120,'合成样本']], selector:'.rScV5Q_containerTableScroll td:last-child span', color:'#e7e7e9', lightColor:'#292b2f' }
+].flatMap(item=>['light','dark'].map(theme=>({...item,theme}))))('applies the generated $type $theme theme through to its final text leaves', async item => {
+  const {selector,color,lightColor,theme,...spec}=item
   const f=await fixture({version:1,title:'内容样式',...spec})
   try {
-    f.browser.document.body.setAttribute('data-ds-dark-theme','')
+    if(theme==='dark') f.browser.document.body.setAttribute('data-ds-dark-theme','')
     const style=(selector:string)=>f.browser.getComputedStyle(f.host.querySelector(selector)!)
-    expect(style(selector).color).toBe(color)
+    expect(style(selector).color).toBe(theme==='dark'?color:lightColor)
     if(item.type==='table') {
-      expect(style('th').color).toBe('#989aa0')
+      expect(style('th').color).toBe(theme==='dark'?'#989aa0':'#81858c')
       expect(style('td[data-numeric=true]').textAlign).toBe('right')
       expect(style('td[data-numeric=true]+td').paddingLeft).toBe('18px')
       expect(f.host.textContent).toContain('120')
