@@ -16,6 +16,15 @@ body .wSkVaW_header [data-srb-tabs] { order:2; margin:0!important; padding:0; he
 body .wSkVaW_header .wSkVaW_tab { width:56px; min-width:56px; height:28px; padding:4px 8px; flex:none; }
 body .wSkVaW_header .wSkVaW_tabActive { color:#17191c; background:#fff; }
 body[data-ds-dark-theme] .wSkVaW_header .wSkVaW_tabActive { color:#fff; background:#ffffff17; }
+/* Figma 737:27462/80 and A 688:27611/28227: only the regular title-to-nav
+   space is 24px. Keep the other flex gaps and 697 compact/narrow typography. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_crumb { line-height:20px; color:#252525; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) [data-srb-tabs] { margin-left:12px!important; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tab:not(.wSkVaW_tabActive) { color:#777; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tabActive { color:#000; background:rgb(255 255 255 / .8); }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_crumb { color:#e5e5e5; }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tab:not(.wSkVaW_tabActive) { color:#a0a0a0; }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tabActive { color:#fff; background:rgb(255 255 255 / .085); }
 body .wSkVaW_header .wSkVaW_headerActions { order:3; display:flex; align-items:center; flex:none; gap:6px; margin:0; }
 body .wSkVaW_header [data-srb-utilities] { order:4; flex:none; height:28px!important; min-height:0; margin:0 0 0 auto!important; align-self:center!important; align-items:center; }
 body .wSkVaW_header .cubgiG_seat { width:auto; min-width:0; height:28px; min-height:28px; padding:0 8px; gap:6px; border-radius:7px; transform:none; font:400 13px/20px var(--odyssey-font-ui); }
