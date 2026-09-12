@@ -116,14 +116,31 @@ body .odyssey-menu-check { margin-left:auto; width:14px; height:14px; flex:none;
 body .h8S2Va_trigger { height:28px; min-height:28px; border-radius:7px; padding:0 8px; gap:5px; background:#00000008; }
 body[data-ds-dark-theme] .h8S2Va_trigger { background:#ffffff0a; }
 body .h8S2Va_count { margin:0; }
-body .h8S2Va_menu { position:fixed; width:440px; max-height:min(560px,calc(100vh - 100px)); z-index:3000; }
+body .h8S2Va_menu { position:fixed; width:440px; max-height:min(560px,calc(100vh - 100px)); z-index:3000; padding:6px 7px; background:#fff; color:#212121; }
+body[data-ds-dark-theme] .h8S2Va_menu { background:#262626; color:#e6e6e6; }
 body .h8S2Va_menu>.h8S2Va_node { margin-left:0; }
-body .h8S2Va_row { padding:8px; min-height:68px; gap:8px; }
-body .h8S2Va_clickarea { padding:8px; margin:-8px; border-radius:6px; }
-body .h8S2Va_label { font-size:13px; line-height:20px; }
-body .h8S2Va_summary,body .h8S2Va_metrics { font-size:11px; line-height:18px; }
-.odyssey-subagent-state { display:block; color:var(--odyssey-menu-muted); font-size:11px; line-height:18px; }
-.odyssey-subagent-menu-title { padding:4px 8px; color:var(--odyssey-menu-muted); font-size:11px; }
+body .h8S2Va_node+.h8S2Va_node { margin-top:2px; }
+body .h8S2Va_row { padding:5px 16px 6px 6px; height:70px; min-height:70px; gap:7px; border-radius:7px; }
+body .h8S2Va_clickarea { padding:0; margin:0; border-radius:0; }
+body .h8S2Va_row:is(:hover,:focus-visible) { background:#f0f0f0; }
+body[data-ds-dark-theme] .h8S2Va_row:is(:hover,:focus-visible) { background:#333; }
+body .h8S2Va_row:is(:hover,:focus-visible)>.h8S2Va_clickarea { background:transparent; }
+body .h8S2Va_row[aria-disabled=true]:hover { background:transparent; }
+body :is(.h8S2Va_disclosure,.h8S2Va_disclosureSpace) { width:12px; height:12px; margin-top:5px; }
+body .h8S2Va_disclosure svg { width:12px; height:12px; }
+body .h8S2Va_children { margin-left:20px; padding-left:0; }
+body .h8S2Va_children::before,body .h8S2Va_children>.h8S2Va_node::before,body .h8S2Va_children>.h8S2Va_node>.h8S2Va_row::before { display:none; }
+body [data-odyssey-subagent-activity] { width:10px; height:10px; flex:none; box-sizing:border-box; margin-top:6px; border-radius:50%; background:#8f8f8f; }
+body [data-odyssey-subagent-activity=running] { background:transparent; border:2px solid #5c8fed; }
+body .h8S2Va_label { font-size:14px; font-weight:500; line-height:20px; }
+body .h8S2Va_summary,body .h8S2Va_metrics { color:#737373; font-size:12px; line-height:18px; }
+body .h8S2Va_summary { margin-top:3px; }
+body .h8S2Va_summary>span:first-child { display:block; overflow:hidden; text-overflow:ellipsis; }
+body .h8S2Va_metrics { margin-top:1px; grid-template-rows:18px 18px; row-gap:4px; }
+body .h8S2Va_metricDuration { line-height:18px; }
+.odyssey-subagent-state { display:block; margin-top:1px; font-size:11px; line-height:17px; }
+.odyssey-subagent-menu-title { box-sizing:border-box; height:26px; padding:2px 7px 6px; color:#737373; font:400 12px/18px var(--odyssey-font-ui); }
+body[data-ds-dark-theme] :is(.h8S2Va_summary,.h8S2Va_metrics,.odyssey-subagent-menu-title) { color:#8f8f8f; }
 /* Goal/task dock, kept above the composer so collapsing it never pauses work. */
 body .lXshSW_root { border:1px solid var(--odyssey-menu-border); border-radius:12px; background:#ffffff70; }
 body[data-ds-dark-theme] .lXshSW_root { background:#ffffff08; }
