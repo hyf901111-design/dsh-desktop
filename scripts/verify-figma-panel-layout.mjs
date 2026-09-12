@@ -32,7 +32,7 @@ await page.locator('[data-odyssey-panel-entry="right"]').click();await settle();
 }
 // The handle lives in the gap and the feedback is centered there, without intercepting native resize.
 const g=await measure();await page.mouse.move(g.panel.left-5,330);await page.mouse.down();await page.waitForTimeout(30)
-const grip=await page.locator('[data-odyssey-resize-grip]').boundingBox();near(grip.width,6,'grip width');near(grip.height,120,'grip height');near(grip.x+3,g.panel.left-5,'grip gap center');await page.mouse.up();assert.equal(await page.locator('[data-odyssey-resize-feedback]').count(),0)
+const grip=await page.locator('[data-odyssey-resize-grip]').boundingBox();near(grip.width,4,'grip width');near(grip.height,Math.round(Math.min(g.panel.height,page.viewportSize().height)*536/900),'grip height');near(grip.x+2,g.panel.left-5,'grip gap center');await page.mouse.up();assert.equal(await page.locator('[data-odyssey-resize-feedback]').count(),0)
 // Reversal and reduced motion use the same anchor and final layout.
 await page.locator('[data-odyssey-panel-entry="right"]').click();await page.waitForTimeout(50);await page.locator('[data-odyssey-panel-entry="right"]').click();await settle();near((await measure()).panel.left-(await measure()).main.right,10,'reversal')
 await page.emulateMedia({reducedMotion:'reduce'});await page.locator('[data-odyssey-panel-entry="right"]').click();assert.equal(await page.locator('.t8lSSG_panel').evaluate(e=>getComputedStyle(e).visibility),'hidden')

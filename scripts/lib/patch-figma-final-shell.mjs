@@ -64,9 +64,52 @@ export function patchFigmaFinalConversation(source) {
 export function patchFigmaFinalLayout(source) {
   // A coalesced/quick drag may deliver the final position only on pointerup.
   // Commit that coordinate before releasing capture and flushing the rAF.
-  source = exact(source,
+  if (!source.includes('/* ODYSSEY_RESIZE_POINTER_LIFETIME */')) source = exact(source,
     '\t\t\t\te.currentTarget.releasePointerCapture(e.pointerId);',
     '\t\t\t\tlatest.current = e.clientX;\n\t\t\t\te.currentTarget.releasePointerCapture(e.pointerId);')
+  // Native capture can be lost before pointerup. Track the gesture identity and
+  // finish through window events instead of leaving the handle stuck in drag.
+  if (!source.includes('/* ODYSSEY_RESIZE_POINTER_LIFETIME */')) {
+    const start = source.indexOf('function DragHandle(props) {')
+    const end = source.indexOf('\n\t\t/** The three-column frame', start)
+    if (start < 0 || end < 0) throw Error('Layout DragHandle lifetime anchor drifted')
+    let handle = source.slice(start, end)
+    handle = exact(handle, 'const frame = (0, react.useRef)(null);', 'const frame = (0, react.useRef)(null);\n\t\t\tconst activePointer = (0, react.useRef)(null); /* ODYSSEY_RESIZE_POINTER_LIFETIME */')
+    handle = exact(handle, 'e.preventDefault();\n\t\t\t\te.currentTarget.setPointerCapture(e.pointerId);', 'if (e.button !== 0) return;\n\t\t\t\te.preventDefault();\n\t\t\t\tactivePointer.current = { id: e.pointerId, target: e.currentTarget };\n\t\t\t\te.currentTarget.setPointerCapture(e.pointerId);')
+    handle = handle.replaceAll('if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;', 'if (activePointer.current === null || activePointer.current.id !== e.pointerId) return;')
+    handle = exact(handle, 'e.currentTarget.releasePointerCapture(e.pointerId);', 'const target = activePointer.current.target;\n\t\t\t\tactivePointer.current = null;\n\t\t\t\tif (target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);')
+    const lifetime = `
+      const onPointerCancel = (0, react.useCallback)((e) => {
+        if (activePointer.current === null || activePointer.current.id !== e.pointerId) return;
+        activePointer.current = null;
+        if (frame.current !== null) cancelAnimationFrame(frame.current);
+        frame.current = null;
+        setDragging(false);
+        callbacks.current.onEnd();
+      }, []);
+      (0, react.useEffect)(() => {
+        if (!dragging) return;
+        const win = activePointer.current?.target.ownerDocument.defaultView;
+        if (!win) return;
+        const blur = () => onPointerCancel({ pointerId: activePointer.current?.id });
+        win.addEventListener("pointermove", onPointerMove);
+        win.addEventListener("pointerup", onPointerUp);
+        win.addEventListener("pointercancel", onPointerCancel);
+        win.addEventListener("blur", blur);
+        return () => {
+          win.removeEventListener("pointermove", onPointerMove);
+          win.removeEventListener("pointerup", onPointerUp);
+          win.removeEventListener("pointercancel", onPointerCancel);
+          win.removeEventListener("blur", blur);
+          if (frame.current !== null) cancelAnimationFrame(frame.current);
+          frame.current = null;
+        };
+      }, [dragging, onPointerMove, onPointerUp, onPointerCancel]);
+`
+    handle = exact(handle, '\t\t\treturn (0, react_jsx_runtime.jsx)("div", {', lifetime + '\t\t\treturn (0, react_jsx_runtime.jsx)("div", {')
+    handle = exact(handle, '\t\t\t\tonPointerUp\n', '\t\t\t\tonPointerUp, onPointerCancel\n')
+    source = source.slice(0, start) + handle + source.slice(end)
+  }
   // 194:4 / 370 explicitly show 280 → 240. Apply the same minimum when
   // dragging and when restoring persisted widths; the initial width stays 280.
   if (source.includes('clampWidth(sidebar, 280, 420)')) {
