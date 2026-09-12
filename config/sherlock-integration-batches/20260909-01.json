@@ -9,80 +9,37 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复工作区菜单、画布选中与整理动效、设置滚动条和隔离更新入口",
+        "featureName": "修复整理画布遮挡与更新失败重试并增加隔离下载验收",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
-        "tipCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
+        "baseCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
+        "tipCommit": "19be6fb375409990f93686a14b853491c24619b9",
         "commits": [
           {
-            "commit": "d5532c73010df05a0b8c2e7b04e981d11367da82",
+            "commit": "943c1e8f4a463655a2f3177ff3a38dda912219cb",
             "parents": [
-              "64b71526db3bc45af7f9b774cd72d7efef7d04a2"
+              "b102167075d5f0b00d5139922ae5ddbce12369d5"
             ],
-            "subject": "校准工作区选择菜单分隔间距与文字样式"
+            "subject": "区分更新检查与下载失败并修正重试路由"
           },
           {
-            "commit": "94209f61fff458d93d0e5f20608717b464eee816",
+            "commit": "e160335fbc2cc9b9c8b76cb35bd773112d3113de",
             "parents": [
-              "d5532c73010df05a0b8c2e7b04e981d11367da82"
+              "943c1e8f4a463655a2f3177ff3a38dda912219cb"
             ],
-            "subject": "修复隔离更新检查入口的打包模块路径并验证原生导入"
+            "subject": "增加隔离本地更新下载验收并严格禁止安装"
           },
           {
-            "commit": "4e467ff8a07b9858bb1cc72043162517b2cd19f0",
+            "commit": "19be6fb375409990f93686a14b853491c24619b9",
             "parents": [
-              "94209f61fff458d93d0e5f20608717b464eee816"
+              "e160335fbc2cc9b9c8b76cb35bd773112d3113de"
             ],
-            "subject": "记录第十六批原生布局复验与表格主题验收边界"
-          },
-          {
-            "commit": "cc19f7c6fb93a7908616a26d068bbf4cf22e4a2f",
-            "parents": [
-              "4e467ff8a07b9858bb1cc72043162517b2cd19f0"
-            ],
-            "subject": "修复画布选中内描边的亚像素绘制"
-          },
-          {
-            "commit": "9252d2b4ca78064c66e12863ff9e152b9ca412e4",
-            "parents": [
-              "cc19f7c6fb93a7908616a26d068bbf4cf22e4a2f"
-            ],
-            "subject": "校正画布缩放圆柄描边与浅色吸附线颜色"
-          },
-          {
-            "commit": "e94d8f6e66852da80738aa46a6906d4043390866",
-            "parents": [
-              "9252d2b4ca78064c66e12863ff9e152b9ca412e4"
-            ],
-            "subject": "修复设置页滚动条误用主侧栏边界定位"
-          },
-          {
-            "commit": "87f66a3e1c610953ae13ac37998ad14c280469c4",
-            "parents": [
-              "e94d8f6e66852da80738aa46a6906d4043390866"
-            ],
-            "subject": "修复画布整理缺少260毫秒位置过渡"
-          },
-          {
-            "commit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-            "parents": [
-              "87f66a3e1c610953ae13ac37998ad14c280469c4"
-            ],
-            "subject": "支持配置画布动效验收的浏览器运行时"
+            "subject": "修复整理画布多列适配与底部工具栏避让"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/design-audits/2026-09-12-figma-client-audit.md"
-          },
-          {
-            "status": "M",
-            "path": "docs/design-audits/2026-09-12-figma-page-ledger.json"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-canvas-arrange-motion.mjs"
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
           },
           {
             "status": "M",
@@ -90,39 +47,91 @@
           },
           {
             "status": "A",
+            "path": "scripts/local-update-download-fixture.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/verify-figma-canvas-arrange-motion.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
             "path": "src/main/update/local-check-updater.ts"
           },
           {
+            "status": "A",
+            "path": "src/main/update/local-download-http.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/update/local-download-updater.ts"
+          },
+          {
             "status": "M",
-            "path": "src/preload/figma-canvas-gestures.css"
+            "path": "src/main/update/local-update-guard.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "path": "src/main/update/update-manager.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-scrollbars.ts"
+            "path": "src/main/update/update-state.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-notification-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/contracts.ts"
           },
           {
             "status": "A",
-            "path": "test/figma-canvas-selected-stroke.test.js"
+            "path": "test/local-download-fixture.test.js"
           },
           {
             "status": "A",
-            "path": "test/figma-settings-scrollbar.test.js"
+            "path": "test/local-update-download.test.ts"
           },
           {
             "status": "A",
-            "path": "test/figma-workspace-picker-layout.test.js"
+            "path": "test/local-update-quit.test.ts"
           },
           {
             "status": "A",
-            "path": "test/local-update-esm.test.ts"
+            "path": "test/research-bento-arrange-fit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-bento-visible-layout.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/update-check-error-routing.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-error-stage.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-notification-store.test.ts"
           }
         ],
         "checks": [
@@ -133,18 +142,26 @@
               "--",
               "vitest",
               "run",
-              "test/figma-workspace-picker-layout.test.js",
-              "test/figma-menu-scope.test.ts",
-              "test/figma-canvas-selected-stroke.test.js",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/figma-canvas-context-menu.test.js",
-              "test/figma-settings-scrollbar.test.js",
-              "test/figma-scrollbars.test.ts"
+              "test/local-update-download.test.ts",
+              "test/local-update-quit.test.ts",
+              "test/local-update-esm.test.ts",
+              "test/local-update-manager.test.ts",
+              "test/local-download-fixture.test.js",
+              "test/local-update-fixture.test.ts",
+              "test/update-install-lifecycle.test.ts",
+              "test/update-error-stage.test.ts",
+              "test/update-check-error-routing.test.ts",
+              "test/sidebar-update-control.test.ts",
+              "test/update-state.test.ts",
+              "test/update-ui.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/update-manager.test.ts",
+              "test/update-freshness.test.ts"
             ],
             "outcome": "passed",
-            "summary": "27 directly affected menu, canvas and scrollbar checks in seven files passed",
-            "verifiedCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-            "completedAt": "2026-09-12T22:20:43.705Z",
+            "summary": "106 directly affected updater, error routing, notification and lifecycle tests passed in 15 files",
+            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
+            "completedAt": "2026-09-12T22:54:41.652Z",
             "timeoutMs": 120000
           },
           {
@@ -154,16 +171,13 @@
               "--",
               "vitest",
               "run",
-              "test/local-update-esm.test.ts",
-              "test/local-update-manager.test.ts",
-              "test/local-update-fixture.test.ts",
-              "test/update-manager.test.ts",
-              "test/update-freshness.test.ts"
+              "test/research-bento-arrange-fit.test.js",
+              "test/research-bento-visible-layout.test.js"
             ],
             "outcome": "passed",
-            "summary": "43 ESM import and local updater checks in five files passed",
-            "verifiedCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-            "completedAt": "2026-09-12T22:20:43.705Z",
+            "summary": "11 arrange-fit and legacy layout tests passed",
+            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
+            "completedAt": "2026-09-12T22:54:41.652Z",
             "timeoutMs": 120000
           },
           {
@@ -174,8 +188,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-            "completedAt": "2026-09-12T22:20:43.705Z",
+            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
+            "completedAt": "2026-09-12T22:54:41.652Z",
             "timeoutMs": 120000
           },
           {
@@ -184,20 +198,9 @@
               "scripts/verify-figma-canvas-arrange-motion.mjs"
             ],
             "outcome": "passed",
-            "summary": "Real ResearchCanvas and workspace in isolated Chromium: 260ms intermediate frames, undo, interruption and cleanup passed",
-            "verifiedCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-            "completedAt": "2026-09-12T22:20:43.705Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/dsh/output/figma-audit-20260912/d66-browser-check.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "24 themed and zoomed handle cases, guide colors and read-only hiding passed in isolated Chromium",
-            "verifiedCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-            "completedAt": "2026-09-12T22:20:43.705Z",
+            "summary": "Real ResearchCanvas: themed fit/toolbar clearance and 260ms motion, undo, interruption and cleanup passed in isolated Chromium",
+            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
+            "completedAt": "2026-09-12T22:54:41.652Z",
             "timeoutMs": 120000
           },
           {
@@ -208,105 +211,30 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "17 locked rc.7 packages and two local runtimes converted twice and verified; Office registry archive is outside this stage",
-            "verifiedCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-            "completedAt": "2026-09-12T22:20:43.705Z",
+            "summary": "17 locked rc.7 packages and two local runtimes converted twice and verified",
+            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
+            "completedAt": "2026-09-12T22:54:41.652Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "第16包58组原生证据记录布局修复及新差异。D62–67待本次新包原生复验；S14第16包启动失败不得计通过。versioned台账129局部/169待逐项/0整页通过。"
+          "summary": "17包50组PNG/JSON及两组真实动画已记录；D68错误阶段与D69整理遮挡待18原生复核，安全下载限定第二阶段仅聚焦验证。没有宣称整页或全部客户端通过。"
         },
         "acceptanceCriteria": [
-          "Workspace picker footer spacing and labels match their specific Figma menu",
-          "Selected canvas cards render a 1.5px inside stroke without moving content",
-          "Arrange animates for 260ms and cancels before direct geometry gestures; one undo preserves existing semantics",
-          "Resize handles use 1px themed borders and snap lines use their own theme colors",
-          "Settings scrollbars align with visible Settings surfaces independently of the mounted main sidebar",
-          "Packaged local updater ESM imports succeed and metadata-only checking uses the isolated localhost feed",
-          "Every native claim records exact package, theme and interaction boundaries"
+          "Arrange chooses an appropriate column count within the toolbar-safe visible area and preserves selection/reference/undo semantics",
+          "Check failure retries only checking, while real download failures preserve download retry",
+          "Explicit isolated download mode uses real progress/hash/cache and refuses install/receipt/recovery/native actions",
+          "Actual quit cleanup awaits cancellation and private temporary cache cleanup within existing deadline",
+          "Native evidence is bound to the exact installed package"
         ],
         "risks": [
-          "S14 is metadata-only: download/install/completeUpdate reject; no public updater interaction",
-          "Native D64–67 verification pending; synthetic browser checks do not replace it",
-          "S07 sustained pointer states, snap thresholds and some layout edge cases remain unverified; toolbar overlap is recorded separately",
-          "No main promotion, release, version change, remote upload or source/tag push"
+          "18 native verification remains pending",
+          "The isolated downloaded state never installs or restarts; visual copy is not proof of installation",
+          "Other design states remain unverified according to the ledger",
+          "No main promotion, release, version increment, public upload or remote push"
         ],
-        "generatedAt": "2026-09-12T22:20:43.705Z"
-      },
-      "merged": {
-        "mergeCommit": "2aed41b4f099130f7a267afe8db3a27ca1063812",
-        "verificationCommit": "2aed41b4f099130f7a267afe8db3a27ca1063812",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "2aed41b4f099130f7a267afe8db3a27ca1063812",
-            "completedAt": "2026-09-12T22:22:51.865Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2aed41b4f099130f7a267afe8db3a27ca1063812",
-            "completedAt": "2026-09-12T22:22:51.865Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "2aed41b4f099130f7a267afe8db3a27ca1063812",
-            "completedAt": "2026-09-12T22:22:51.865Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "2aed41b4f099130f7a267afe8db3a27ca1063812",
-            "completedAt": "2026-09-12T22:22:51.865Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "2aed41b4f099130f7a267afe8db3a27ca1063812",
-            "completedAt": "2026-09-12T22:22:51.865Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T22:22:51.865Z"
+        "generatedAt": "2026-09-12T22:54:41.652Z"
       }
     }
   ],
