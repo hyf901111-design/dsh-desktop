@@ -16,18 +16,44 @@ describe('Figma shell patch installation', () => {
     const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
     const moves: number[] = [], lifecycle: string[] = []
     const DragHandle = runInNewContext(clientFunction(layout, 'DragHandle') + '\nDragHandle', {
-      react: { useState: () => [false, () => {}], useRef: (current: unknown) => ({ current }), useCallback: (fn: unknown) => fn },
+      react: { useState: () => [false, () => {}], useRef: (current: unknown) => ({ current }), useCallback: (fn: unknown) => fn, useEffect: () => {} },
       react_jsx_runtime: { jsx: (_tag: string, props: unknown) => props }, AppFrame_module_css_default: { handle: 'handle' },
       requestAnimationFrame: () => 1, cancelAnimationFrame: () => {}
     })
     let captured = false
     const target = { setPointerCapture: () => { captured = true }, hasPointerCapture: () => captured, releasePointerCapture: () => { captured = false } }
     const handle = DragHandle({ side: 'sidebar', left: 280, onStart: () => lifecycle.push('start'), onDrag: (dx: number) => moves.push(dx), onEnd: () => lifecycle.push('end') })
-    handle.onPointerDown({ pointerId: 1, clientX: 280, currentTarget: target, preventDefault() {} })
+    handle.onPointerDown({ button: 0, pointerId: 1, clientX: 280, currentTarget: target, preventDefault() {} })
     handle.onPointerUp({ pointerId: 1, clientX: 240, currentTarget: target })
     expect(moves).toEqual([-40])
     expect(lifecycle).toEqual(['start', 'end'])
     expect(captured).toBe(false)
+  })
+
+  it('finishes outside the handle after pointer capture is lost, and clears cancellation', async () => {
+    const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
+    const effects: (() => void)[] = [], moves: number[] = [], lifecycle: string[] = []
+    const listeners = new Map<string, (event: unknown) => void>()
+    const win = { addEventListener: (name: string, fn: (event: unknown) => void) => listeners.set(name, fn), removeEventListener: (name: string) => listeners.delete(name) }
+    const DragHandle = runInNewContext(clientFunction(layout, 'DragHandle') + '\nDragHandle', {
+      react: { useState: () => [true, () => {}], useRef: (current: unknown) => ({ current }), useCallback: (fn: unknown) => fn, useEffect: (fn: () => void) => effects.push(fn) },
+      react_jsx_runtime: { jsx: (_tag: string, props: unknown) => props }, AppFrame_module_css_default: { handle: 'handle' },
+      requestAnimationFrame: () => 1, cancelAnimationFrame: () => {}
+    })
+    // Mirrors the native failure: capture is gone before the next move/up.
+    const target = { ownerDocument: { defaultView: win }, setPointerCapture() {}, hasPointerCapture: () => false, releasePointerCapture() { throw Error('No capture to release') } }
+    const handle = DragHandle({ side: 'sidebar', left: 280, onStart: () => lifecycle.push('start'), onDrag: (dx: number) => moves.push(dx), onEnd: () => lifecycle.push('end') })
+    handle.onPointerDown({ button: 0, pointerId: 1, clientX: 280, currentTarget: target, preventDefault() {} })
+    effects.forEach(fn => fn())
+    listeners.get('pointermove')!({ pointerId: 1, clientX: 252 })
+    listeners.get('pointerup')!({ pointerId: 1, clientX: 240 })
+    expect(moves).toEqual([-40])
+    expect(lifecycle).toEqual(['start', 'end'])
+    handle.onPointerDown({ button: 0, pointerId: 2, clientX: 240, currentTarget: target, preventDefault() {} })
+    listeners.get('pointercancel')!({ pointerId: 2 })
+    listeners.get('pointerup')!({ pointerId: 2, clientX: 400 })
+    expect(moves).toEqual([-40])
+    expect(lifecycle).toEqual(['start', 'end', 'start', 'end'])
   })
 
   it('keeps a 240 px sidebar after dragging and layout restoration, with the original collapse/default behavior', async () => {
