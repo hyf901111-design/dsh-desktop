@@ -62,6 +62,17 @@ body .cubgiG_item { width:100%; min-width:0; padding:8px 10px; border-radius:6px
 body .cubgiG_itemName { font:400 13px/20px var(--odyssey-font-ui); gap:8px; }
 body .cubgiG_itemName svg { width:16px; height:16px; flex:none; }
 body .cubgiG_itemDesc { display:block; padding-left:24px; white-space:normal; overflow:visible; text-overflow:clip; font:400 12px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+/* Permission picker shared by the composer and Settings (665:828). */
+body [role=menu]:has(.odyssey-permission-item) { width:320px; min-width:0; padding:5px; }
+body [role=menu]:has(.odyssey-permission-item)>[role=presentation] { padding:0; gap:2px; }
+body [role=menu]:has(.odyssey-permission-item) [role=menuitem] { position:relative; min-height:64px; padding:7px 10px; align-items:flex-start; }
+body [role=menu]:has(.odyssey-permission-item) [role=menuitem]>svg { width:14px; height:14px; flex:none; margin-top:2px; }
+body .odyssey-permission-item { display:flex; min-width:0; flex-direction:column; gap:3px; white-space:normal; }
+body .odyssey-permission-name { font:400 13px/20px var(--odyssey-font-ui); }
+body .odyssey-permission-description { font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+body [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) .odyssey-permission-name { font-weight:500; }
+body[data-ds-dark-theme] [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { background:#373737; }
+body[data-ds-dark-theme] .odyssey-permission-description { color:#9c9c9c; }
 body .h8S2Va_trigger { height:28px; min-height:28px; border-radius:7px; padding:0 8px; gap:5px; background:#00000008; }
 body[data-ds-dark-theme] .h8S2Va_trigger { background:#ffffff0a; }
 body .h8S2Va_count { margin:0; }
