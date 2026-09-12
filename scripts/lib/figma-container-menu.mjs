@@ -40,8 +40,8 @@ export function patchFigmaContainerMenu(source) {
       if(!refreshOpen)return;
       const r=refreshTriggerRef.current?.getBoundingClientRect(),m=menuRef.current?.getBoundingClientRect();if(!r||!m)return;
       const width=Math.min(220,window.innerWidth-24),height=submenuRef.current?.offsetHeight||190;
-      const left=m.right+8+width>window.innerWidth-12?-width-8:m.width+8;
-      setSubmenuStyle({left,top:Math.max(12,Math.min(r.top,window.innerHeight-height-12))-m.top,width});
+      const left=(m.right+8+width>window.innerWidth-12?-width-8:m.width+8)-menuRef.current.clientLeft;
+      setSubmenuStyle({left,top:Math.max(12,Math.min(r.top,window.innerHeight-height-12))-m.top-menuRef.current.clientTop,width});
       if(focusSubmenuRef.current){focusSubmenuRef.current=false;submenuRef.current?.querySelector('[aria-checked=true]')?.focus({preventScroll:true});}
     },[refreshOpen]);`)
   exact('if (event.key === "Escape") { event.preventDefault(); close(); return; }', `if (refreshOpen && (event.key === 'Escape' || event.key === 'ArrowLeft')) {
