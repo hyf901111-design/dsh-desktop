@@ -9,31 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Figma trajectory sidebar and composer detail parity",
+        "featureName": "Prevent secondary launches from replacing the active sidebar plugin",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "96373b979fcf2adae5973c87d87309d88be908e4",
-        "tipCommit": "9d1d8f714375d3e1bf539b06ec816591c851efe2",
+        "baseCommit": "9d1d8f714375d3e1bf539b06ec816591c851efe2",
+        "tipCommit": "cf3d03b39304d5471319bfe85d3af8c591f16eeb",
         "commits": [
           {
-            "commit": "9d1d8f714375d3e1bf539b06ec816591c851efe2",
+            "commit": "cf3d03b39304d5471319bfe85d3af8c591f16eeb",
             "parents": [
-              "96373b979fcf2adae5973c87d87309d88be908e4"
+              "9d1d8f714375d3e1bf539b06ec816591c851efe2"
             ],
-            "subject": "修复侧栏拖动丢失指针捕获后无法调整和结束的问题"
+            "subject": "修复重复启动在单实例锁前覆盖共享侧栏插件的问题"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
+            "path": "src/main/index.ts"
           },
           {
-            "status": "M",
-            "path": "scripts/verify-figma-panel-layout.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-final-shell-patch.test.ts"
+            "status": "A",
+            "path": "test/single-instance-profile.test.ts"
           }
         ],
         "checks": [
@@ -42,104 +38,28 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-resize-feedback.test.ts"
+              "test/single-instance-profile.test.ts",
+              "test/app-identity.test.ts"
             ],
             "outcome": "passed",
-            "summary": "11 focused tests passed including lost capture and cancellation; typecheck passed",
-            "verifiedCommit": "9d1d8f714375d3e1bf539b06ec816591c851efe2",
-            "completedAt": "2026-09-12T02:08:54.798943+00:00",
+            "summary": "7 focused tests passed; typecheck passed. Losing lock performs no shared-data writes.",
+            "verifiedCommit": "cf3d03b39304d5471319bfe85d3af8c591f16eeb",
+            "completedAt": "2026-09-12T04:16:25.253361+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Native verification found lost pointer capture can leave sidebar dragging stuck; focused regression added and passed; final native verification follows build."
+          "summary": "Actual running app served unpatched sidebar hash 4c605de885de548c whereas its packaged sidebar is 1d912611688ecb40. Native revalidation after integration build."
         },
         "acceptanceCriteria": [
-          "Trajectory dock separated from ledger with Figma toolbar spacing",
-          "Tab overflow reserves its own space",
-          "Shared workspace and board menu styling",
-          "Narrow composer controls do not overlap",
-          "Both dividers and 2px hollow resize rings match Figma"
+          "Only the single-instance owner migrates data and synchronizes bundled plugins",
+          "Restore independent right pane from packaged plugin"
         ],
         "risks": [
-          "Local only; no push or release. Native verification pending build."
+          "Local only; no publish or push. Older binaries retain their original startup behavior."
         ],
-        "generatedAt": "2026-09-12T02:08:54.799644+00:00"
-      },
-      "merged": {
-        "mergeCommit": "fdfb44c8c879109b51d1cc620fc55f84f0010c92",
-        "verificationCommit": "fdfb44c8c879109b51d1cc620fc55f84f0010c92",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "fdfb44c8c879109b51d1cc620fc55f84f0010c92",
-            "completedAt": "2026-09-12T02:09:39.883Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fdfb44c8c879109b51d1cc620fc55f84f0010c92",
-            "completedAt": "2026-09-12T02:09:39.883Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "fdfb44c8c879109b51d1cc620fc55f84f0010c92",
-            "completedAt": "2026-09-12T02:09:39.883Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "fdfb44c8c879109b51d1cc620fc55f84f0010c92",
-            "completedAt": "2026-09-12T02:09:39.883Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "fdfb44c8c879109b51d1cc620fc55f84f0010c92",
-            "completedAt": "2026-09-12T02:09:39.883Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T02:09:39.883Z"
+        "generatedAt": "2026-09-12T04:16:25.253361+00:00"
       }
     }
   ],
