@@ -296,6 +296,12 @@ body[data-ds-dark-theme] [data-odyssey-trajectory] {
 
 /* Figma 08: shared composer is a separate dock, outside the event ledger. */
 .wSkVaW_root:has([data-odyssey-trajectory]) { --dsh-composer-card-max-width:652px; }
+/* A 688:29180/29205: run information starts at the shared input edge.
+   Keep the functional details control within that same responsive width. */
+body .wSkVaW_root:has([data-odyssey-trajectory]) [data-center-composer-host] .odyssey-run-info {
+  width:100%;
+  max-width:652px;
+}
 .wSkVaW_root:has([data-odyssey-trajectory]) [data-center-composer-host] {
   position:relative; box-sizing:border-box; flex:0 0 auto; padding:10px 20px 30px; background:transparent;
 }

@@ -31,7 +31,7 @@ function replaceAllExact(source, anchor, replacement, expected, label) {
 export function patchFigmaTrajectory(source) {
   // Also upgrade already-patched installations without reapplying the structural transform.
   source = source.replace('children: "No timing data"', 'children: laneLabels?.[0] === "输入" ? "暂无执行时长数据" : "No timing data"')
-  if (source.includes(FIGMA_TRAJECTORY_MARKER)) return source.replace('"toolbar.searchPlaceholder": "搜索"', '"toolbar.searchPlaceholder": "搜索轨迹"')
+  if (source.includes(FIGMA_TRAJECTORY_MARKER)) return patchTrajectoryTurnLabels(source.replace('"toolbar.searchPlaceholder": "搜索"', '"toolbar.searchPlaceholder": "搜索轨迹"'))
 
   source = replaceInSection(source, '\t\tconst zh = {', '\n\t\t};', section => {
     for (const [before, after] of [
@@ -180,5 +180,26 @@ export function patchFigmaTrajectory(source) {
     return section
   }, 'view')
 
-  return source.replace('"toolbar.searchPlaceholder": "搜索"', '"toolbar.searchPlaceholder": "搜索轨迹"')
+  return patchTrajectoryTurnLabels(source.replace('"toolbar.searchPlaceholder": "搜索"', '"toolbar.searchPlaceholder": "搜索轨迹"'))
+}
+
+// Figma 176:590/645 and adopted A 688:29115/29170. Keep the real
+// record numbers and inspector selection; only translate their presentation.
+function patchTrajectoryTurnLabels(source) {
+  if (source.includes('/* sherlock:figma-trajectory-turn-labels:v1 */')) return source
+  source = replaceExact(source,
+    'function sectionLabel(turn) {\n\t\t\treturn turn === null ? "Between turns" : `Turn ${turn}`;',
+    '/* sherlock:figma-trajectory-turn-labels:v1 */\n\t\tfunction sectionLabel(turn, labels = ["Turn", "Between turns"]) {\n\t\t\treturn turn === null ? labels[1] : `${labels[0]} ${turn}`;',
+    'turn label formatter')
+  for (const [locale, turn, between] of [['zh', '轮', '轮次之间'], ['en', 'Turn', 'Between turns']]) {
+    source = replaceInSection(source, `\t\tconst ${locale} = {`, '\n\t\t};', section => section.replace('{', `{\n\t\t\t"table.turn": "${turn}",\n\t\t\t"table.betweenTurns": "${between}",`), `${locale} turn labels`)
+  }
+  source = replaceInSection(source, '\t\tfunction TrajectoryTable(', '\n\t\t//#endregion', section => {
+    section = replaceExact(section, 'function TrajectoryTable({ requestNumbers:', 'function TrajectoryTable({ turnLabels, requestNumbers:', 'table turn labels prop')
+    for (const [value, count] of [['record.turn', 3], ['selectedRequest.turn', 2], ['selected.turn', 2]]) {
+      section = replaceAllExact(section, `sectionLabel(${value})`, `sectionLabel(${value}, turnLabels)`, count, `localized ${value}`)
+    }
+    return section
+  }, 'localized table labels')
+  return replaceExact(source, 'children: (0, react_jsx_runtime.jsx)(TrajectoryTable, {\n', 'children: (0, react_jsx_runtime.jsx)(TrajectoryTable, {\n\t\t\t\t\t\t\tturnLabels: [t("table.turn"), t("table.betweenTurns")],\n', 'view turn labels')
 }
