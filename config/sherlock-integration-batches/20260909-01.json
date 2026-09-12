@@ -12,7 +12,7 @@
         "featureName": "Sidebar title preview, bounded canvas context menu and settings navigation state",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "cea168c013dab9cd3362625f2f975a213c160e9c",
-        "tipCommit": "6888f30f23bba58133a885ca9a7630dbab73d707",
+        "tipCommit": "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd",
         "commits": [
           {
             "commit": "6888f30f23bba58133a885ca9a7630dbab73d707",
@@ -20,6 +20,13 @@
               "cea168c013dab9cd3362625f2f975a213c160e9c"
             ],
             "subject": "统一长标题悬停预览并修复引用菜单溢出与设置目录状态"
+          },
+          {
+            "commit": "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd",
+            "parents": [
+              "6888f30f23bba58133a885ca9a7630dbab73d707"
+            ],
+            "subject": "同步返回应用按钮的无障碍名称验收定位"
           }
         ],
         "files": [
@@ -30,6 +37,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
           },
           {
             "status": "M",
@@ -68,8 +79,8 @@
             ],
             "outcome": "passed",
             "summary": "13 focused tests and node typecheck passed.",
-            "verifiedCommit": "6888f30f23bba58133a885ca9a7630dbab73d707",
-            "completedAt": "2026-09-12T10:05:52.912Z",
+            "verifiedCommit": "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd",
+            "completedAt": "2026-09-12T10:09:01.894Z",
             "timeoutMs": 300000
           }
         ],
@@ -86,7 +97,7 @@
         "risks": [
           "Local only; no release, version change, push or main promotion."
         ],
-        "generatedAt": "2026-09-12T10:05:52.912Z"
+        "generatedAt": "2026-09-12T10:09:01.894Z"
       }
     }
   ],
