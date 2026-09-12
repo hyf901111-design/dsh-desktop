@@ -9,27 +9,51 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Resident home header and consistent sidebar interactions",
+        "featureName": "Sidebar title preview, bounded canvas context menu and settings navigation state",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "ba37ae3afa78be493ff70b3bb6a884036aafd05a",
-        "tipCommit": "cea168c013dab9cd3362625f2f975a213c160e9c",
+        "baseCommit": "cea168c013dab9cd3362625f2f975a213c160e9c",
+        "tipCommit": "6888f30f23bba58133a885ca9a7630dbab73d707",
         "commits": [
           {
-            "commit": "cea168c013dab9cd3362625f2f975a213c160e9c",
+            "commit": "6888f30f23bba58133a885ca9a7630dbab73d707",
             "parents": [
-              "ba37ae3afa78be493ff70b3bb6a884036aafd05a"
+              "cea168c013dab9cd3362625f2f975a213c160e9c"
             ],
-            "subject": "修正右栏真实消息滚动容器的边缘对齐"
+            "subject": "统一长标题悬停预览并修复引用菜单溢出与设置目录状态"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/figma-scrollbars.ts"
+            "path": "scripts/lib/figma-refinements-client.mjs"
           },
           {
             "status": "M",
-            "path": "test/figma-scrollbars.test.ts"
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/navigation-title-preview.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
           }
         ],
         "checks": [
@@ -39,104 +63,30 @@
               "vitest",
               "run",
               "test/figma-final-shell-patch.test.ts",
-              "test/figma-resize-feedback.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-panel-motion-runtime.test.ts"
+              "test/figma-settings-layout.test.ts",
+              "test/figma-settings-dismiss.test.ts"
             ],
             "outcome": "passed",
-            "summary": "17 focused tests and typecheck passed.",
-            "verifiedCommit": "cea168c013dab9cd3362625f2f975a213c160e9c",
-            "completedAt": "2026-09-12T09:30:31.772361+00:00",
+            "summary": "13 focused tests and node typecheck passed.",
+            "verifiedCommit": "6888f30f23bba58133a885ca9a7630dbab73d707",
+            "completedAt": "2026-09-12T10:05:52.912Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Controlled Chromium confirms 56px aligned headers, fixed toggle at 1380/801 widths, identical board/session row geometry and stable hover in both themes. Packaged native verification follows integration."
+          "summary": "Controlled Chromium verifies board/conversation real hover preview, fade and reset, stable controls, keyboard and reduced motion; 16 context menu geometry combinations; 12 settings state/theme combinations. Packaged native acceptance follows integration."
         },
         "acceptanceCriteria": [
-          "Resident home header with composer-only mode on blank chat",
-          "Fixed toggle and 56px independent panel header",
-          "Shared navigation row layout",
-          "Panel edge scrollbars and pointer-centered resize feedback"
+          "Long navigation titles fade without ellipsis and scroll only on hover/focus",
+          "Canvas context directory fits composer width including narrow independent right panel",
+          "Settings account selection clears prior native section color and weight",
+          "Return button 14px text, 16px arrow, aligned padding"
         ],
         "risks": [
-          "Local only; no release, push or main promotion. This supersedes the rejected narrow overlay behavior."
+          "Local only; no release, version change, push or main promotion."
         ],
-        "generatedAt": "2026-09-12T09:30:31.772361+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0558a9b13b130b540b2d20e37588c47289940555",
-        "verificationCommit": "0558a9b13b130b540b2d20e37588c47289940555",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "0558a9b13b130b540b2d20e37588c47289940555",
-            "completedAt": "2026-09-12T09:31:14.022Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0558a9b13b130b540b2d20e37588c47289940555",
-            "completedAt": "2026-09-12T09:31:14.022Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "0558a9b13b130b540b2d20e37588c47289940555",
-            "completedAt": "2026-09-12T09:31:14.022Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "0558a9b13b130b540b2d20e37588c47289940555",
-            "completedAt": "2026-09-12T09:31:14.022Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "0558a9b13b130b540b2d20e37588c47289940555",
-            "completedAt": "2026-09-12T09:31:14.022Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T09:31:14.022Z"
+        "generatedAt": "2026-09-12T10:05:52.912Z"
       }
     }
   ],
