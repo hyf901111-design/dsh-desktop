@@ -18,6 +18,7 @@ export function patchFigmaCanvasContextMenu(source) {
   if (!source.includes(anchor)) throw Error('ResearchCanvas function missing');
   const menu = 'className: "rScV5Q_contextMenu",';
   if (source.split(menu).length !== 2) throw Error('Canvas context menu boundary drifted');
-  source = source.replace(menu, menu + '\nref: element => positionFigmaCanvasContextMenu(element, contextMenu, rootRef.current),');
+  const binding = 'ref: element => positionFigmaCanvasContextMenu(element, contextMenu, rootRef.current),';
+  if (!source.includes(binding)) source = source.replace(menu, menu + '\n' + binding);
   return source.replace(anchor, marker + '\n' + positionFigmaCanvasContextMenu.toString() + '\n' + anchor);
 }

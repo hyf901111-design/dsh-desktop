@@ -286,3 +286,9 @@ body .rScV5Q_contextMenu [data-research-context-remove] { position:relative; mar
 body .rScV5Q_contextMenu [data-research-context-remove]::before { content:''; position:absolute; left:6px; right:6px; top:-5px; height:1px; background:var(--odyssey-menu-border); }
 body .rScV5Q_contextMenuShortcut { margin-left:auto; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
 body .rScV5Q_contextDownloadFormats[role=menu] { width:180px; padding:5px; }
+
+/* 12D tab overflow: keep the content geometry independent of the outline. */
+body [data-odyssey-tab-overflow-menu][role=menu] { padding:8px 6px; border:0; outline:1px solid #00000012; outline-offset:-1px; border-radius:12px; background:#fafafaf5; backdrop-filter:blur(16px); box-shadow:0 8px 24px #00000029; }
+body[data-ds-dark-theme] [data-odyssey-tab-overflow-menu][role=menu] { outline-color:#ffffff1a; background:#282828f5; box-shadow:0 8px 24px #00000052; }
+body [data-odyssey-tab-overflow-heading] { font-size:11px; }
+body [data-odyssey-tab-overflow-option][role=menuitemradio] { padding:0 10px; gap:10px; border-radius:7px; font:400 12px/21px var(--odyssey-font-ui); }

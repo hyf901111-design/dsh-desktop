@@ -22,5 +22,7 @@ describe('Figma canvas context placement', () => {
     const once = patchFigmaCanvasContextMenu(source)
     expect(patchFigmaCanvasContextMenu(once)).toBe(once)
     expect(once).toContain('children:action')
+    const rebuilt = patchFigmaCanvasContextMenu(once.slice(once.indexOf('function ResearchCanvas(')))
+    expect(rebuilt.match(/ref: element =>/g)).toHaveLength(1)
   })
 })
