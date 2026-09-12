@@ -776,7 +776,9 @@ function patchFigmaFilePanel(source) {
 // Bound every width writer to the usable workspace, including restored state.
 export function odysseyClampPanelWidth(width, viewport = globalThis.window?.innerWidth ?? 640, doc = globalThis.document) {
   const sidebar = doc?.querySelector?.('.pI_x6G_sidebarCol');
-  const left = Math.max(0, sidebar?.getBoundingClientRect?.().right ?? 0);
+  // An expanded overlay paints beyond its reserved 80 px rail, without taking workspace width.
+  const overlayFrame = sidebar?.closest?.('[data-odyssey-sidebar-overlay=true]');
+  const left = Math.max(0, overlayFrame ? overlayFrame.getBoundingClientRect().left + 80 : sidebar?.getBoundingClientRect?.().right ?? 0);
   const edge = Number.parseFloat(doc?.defaultView?.getComputedStyle?.(doc.body).getPropertyValue('--odyssey-panel-edge')) || 10;
   const gap = Number.parseFloat(doc?.defaultView?.getComputedStyle?.(doc.body).getPropertyValue('--odyssey-panel-gap')) || 10;
   const available = Math.max(0, viewport - left - edge - gap);

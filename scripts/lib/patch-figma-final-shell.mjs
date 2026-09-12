@@ -69,6 +69,43 @@ export function patchFigmaFinalConversation(source) {
 }
 
 export function patchFigmaFinalLayout(source) {
+  // At the desktop minimum, reopening the auto-collapsed rail is an overlay.
+  // Keep the grid track and mounted canvas stable; only the sidebar paints wider.
+  if (!source.includes('/* ODYSSEY_LEFT_SIDEBAR_OVERLAY */')) {
+    source = exact(source,
+      'const cols = computeColumns(viewport, sidebarCollapsed ? 0 : panels.sidebar === 0 ? 280 : panels.sidebar, detailsSession === void 0 ? 0 : panels.details);',
+      `const sidebarOverlay = viewport <= 840 && !sidebarCollapsed; /* ODYSSEY_LEFT_SIDEBAR_OVERLAY */
+      const sidebarWidth = sidebarCollapsed ? COLLAPSED_SIDEBAR_WIDTH : clampWidth(panels.sidebar || 280, 240, 420);
+      const cols = computeColumns(viewport, sidebarOverlay || sidebarCollapsed ? 0 : sidebarWidth, detailsSession === void 0 ? 0 : panels.details);
+      const restoreSidebarFocus = (0, react.useRef)(false);
+      (0, react.useLayoutEffect)(() => {
+        if (!sidebarOverlay && restoreSidebarFocus.current) {
+          restoreSidebarFocus.current = false;
+          frameRef.current?.querySelector(".hHd-Xa_toggle")?.focus();
+        }
+      }, [sidebarOverlay]);
+      (0, react.useEffect)(() => {
+        if (!sidebarOverlay) return;
+        const escape = event => {
+          if (event.key !== "Escape" || event.defaultPrevented || event.target?.closest?.('[role="menu"],[role="dialog"]')) return;
+          event.preventDefault();
+          restoreSidebarFocus.current = true;
+          actions.toggleSidebar();
+        };
+        window.addEventListener("keydown", escape);
+        return () => window.removeEventListener("keydown", escape);
+      }, [sidebarOverlay, actions]);`)
+    source = exact(source, '"data-sidebar-collapsed": sidebarCollapsed || void 0,',
+      `"data-sidebar-collapsed": sidebarCollapsed || void 0,
+        "data-odyssey-sidebar-overlay": sidebarOverlay || void 0,
+        onPointerDownCapture: event => {
+          if (sidebarOverlay && !event.target?.closest?.('.pI_x6G_sidebarCol,[data-shell-overlay],[role="menu"],[role="dialog"]')) actions.toggleSidebar();
+        },`)
+    source = exact(source, 'className: AppFrame_module_css_default.sidebarCol,',
+      'className: AppFrame_module_css_default.sidebarCol,\n            style: sidebarOverlay ? { width: sidebarWidth, position: "relative", zIndex: 19 } : void 0,')
+    source = exact(source, '\t\t\t\t\t\t\twidth: cols.sidebar', '\t\t\t\t\t\t\twidth: sidebarWidth')
+    source = exact(source, '!sidebarCollapsed && (0, react_jsx_runtime.jsx)(DragHandle,', '!sidebarCollapsed && !sidebarOverlay && (0, react_jsx_runtime.jsx)(DragHandle,')
+  }
   // A coalesced/quick drag may deliver the final position only on pointerup.
   // Commit that coordinate before releasing capture and flushing the rAF.
   if (!source.includes('/* ODYSSEY_RESIZE_POINTER_LIFETIME */')) source = exact(source,
