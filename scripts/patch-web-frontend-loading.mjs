@@ -4,6 +4,8 @@ import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
 import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
 import { patchFigmaContainerMenu } from './lib/figma-container-menu.mjs'
+import { patchFigmaProviderMenu } from './lib/figma-provider-menu.mjs'
+import { patchFigmaMenuPlacement } from './lib/figma-menu-placement.mjs'
 import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger, patchFigmaNavigationTitles, patchFigmaContextDirectory } from './lib/figma-refinements-client.mjs'
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
@@ -107,8 +109,8 @@ function patchStyles(path) {
 patchPrimitives(primitivesPath)
 writeFileSync(primitivesPath, patchFigmaReadingTables(readFileSync(primitivesPath, 'utf8')))
 patchJavaScript(asset('.js'))
-writeFileSync(primitivesPath, patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8')))
-writeFileSync(asset('.js'), patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true))
+writeFileSync(primitivesPath, patchFigmaMenuPlacement(patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8'))))
+writeFileSync(asset('.js'), patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true))
 patchStyles(asset('.css'))
 
 await installResearchBoardClientPatches()
@@ -128,7 +130,7 @@ for (const [name, patch] of [
   ['dsh-client-ui-workspace', source => patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source))],
   ['dsh-client-ui-conversation', source => patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))))],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
-  ['dsh-client-ui-settings-models', patchFigmaSettingsModels],
+  ['dsh-client-ui-settings-models', source => patchFigmaProviderMenu(patchFigmaSettingsModels(source))],
   ['dsh-client-ui-theme', patchFigmaSettingsAppearance],
   ['dsh-client-ui-agent-preset', source => patchFigmaSettingsModeDescription(patchFigmaRefinementPreset(patchFigmaSettingsPreset(source)))],
   ['dsh-client-ui-subagent', patchFigmaRefinementSubagent],

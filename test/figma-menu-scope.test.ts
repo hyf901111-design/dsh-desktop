@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { expect, it, vi } from 'vitest'
 import { patchFigmaMenuScope } from '../scripts/lib/figma-menu-scope.mjs'
+import { placeFigmaMenu } from '../scripts/lib/figma-menu-placement.mjs'
 
 it('keeps portaled settings menus within the modal and other menus on the document', async () => {
   const require = createRequire(import.meta.url)
@@ -15,7 +16,7 @@ it('keeps portaled settings menus within the modal and other menus on the docume
   const source = patchFigmaMenuScope(raw)
   expect(patchFigmaMenuScope(source)).toBe(source)
   const start = source.indexOf('function Menu('), end = source.indexOf('\n//#endregion',start)
-  const bindings = {...React,...jsx,createPortal,clsx:(...values:unknown[])=>values.filter(Boolean).join(' '),
+  const bindings = {...React,...jsx,createPortal,placeFigmaMenu,clsx:(...values:unknown[])=>values.filter(Boolean).join(' '),
     Menu_module_css_default:new Proxy({}, {get:(_,key)=>String(key)}),MEASURE_STYLE:{},
     usePointerGrace:()=>({arm:()=>{},cancel:()=>{}}),isSeparator:(x:{type?:string})=>x.type==='separator',isLabel:(x:{type?:string})=>x.type==='label',IconCheckOutline16:()=>null}
   const Menu = new Function(...Object.keys(bindings),source.slice(start,end)+'\nreturn Menu;')(...Object.values(bindings))
