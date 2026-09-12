@@ -3,6 +3,8 @@ import { prepareNativeMacInstall } from './native-install'
 import { cancelUpdateRestartReceipt, consumeUpdateRestartReceipt, writeUpdateRestartReceipt } from './restart-receipt'
 import { armMacRenameRecovery, repairRenamedMacDock } from './mac-update-recovery'
 import electronUpdater from 'electron-updater'
+import { validateLocalUpdateEnvironment, type LocalUpdateEnvironment } from './local-update-guard'
+import type { LocalCheckUpdater } from './local-check-updater'
 import type { UpdateStatus } from '../../shared/contracts'
 import {
   shouldCheckAfterResume,
@@ -21,7 +23,9 @@ import {
   type TrustedWindow
 } from '../ipc-trust'
 
-const { autoUpdater } = electronUpdater
+let autoUpdater: typeof electronUpdater.autoUpdater | LocalCheckUpdater = electronUpdater.autoUpdater
+let updateAccess: 'production' | 'blocked' | 'check-only' =
+  app.commandLine?.hasSwitch('sherlock-local-acceptance-origin') || app.commandLine?.hasSwitch('sherlock-local-update-feed') ? 'blocked' : 'production'
 const TRANSIENT_STATUS_MS = 8_000
 
 let status = initialUpdateStatus(app.getVersion())
@@ -37,6 +41,29 @@ let installing = false
 let started = false
 let handlersRegistered = false
 let prepareForRestart: (() => Promise<void>) | undefined
+
+/** Called before IPC/menu registration. An attempted local setup can never fall back to production. */
+export async function initializeLocalUpdateChecks(input: LocalUpdateEnvironment, temporaryDirectory: string): Promise<void> {
+  if (!input.acceptanceOrigin && !input.feedRequested && updateAccess === 'production') return
+  updateAccess = 'blocked'
+  if (started || checkPromise) throw Error('Local update setup must precede update actions.')
+  if (!input.feedRequested && input.acceptanceOrigin) return
+  const paths = await validateLocalUpdateEnvironment(input, temporaryDirectory)
+  const { LocalCheckUpdater } = await import('./local-check-updater')
+  const local = new LocalCheckUpdater(paths, {
+    version: app.getVersion(), name: app.getName(), isPackaged: app.isPackaged,
+    whenReady: async () => { await app.whenReady() }
+  })
+  autoUpdater = local
+  configureUpdater(true)
+  updateAccess = 'check-only'
+  console.info('[updater] isolated metadata checks only', paths.feed)
+}
+
+function assertUpdateAccess(installation = false): void {
+  if (updateAccess === 'blocked') throw Error('Local update checks are disabled until isolated initialization succeeds.')
+  if (installation && updateAccess === 'check-only') throw Error('隔离更新验收仅允许检查，禁止下载或安装。')
+}
 
 export function setUpdateRestartPreparation(prepare: () => Promise<void>): void {
   prepareForRestart = prepare
@@ -68,6 +95,7 @@ export function registerUpdateHandlers(getMainWindow: () => TrustedWindow | unde
 }
 
 export function startUpdateManager(): void {
+  if (updateAccess !== 'production') return
   if (started) return
   started = true
 
@@ -92,6 +120,7 @@ export function startUpdateManager(): void {
 }
 
 export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
+  assertUpdateAccess()
   if (!supportsUpdates()) {
     transition(
       {
@@ -126,17 +155,20 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
 }
 
 export async function installDownloadedUpdate(): Promise<void> {
+  assertUpdateAccess(true)
   if (status.phase !== 'downloaded') return
   await completeUpdate()
 }
 
 export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
+  assertUpdateAccess(true)
   if (status.phase !== 'available') return getUpdateStatus()
   await completeUpdate()
   return getUpdateStatus()
 }
 
 async function completeUpdate(): Promise<void> {
+  assertUpdateAccess(true)
   if (installing || installRequested || downloading) return
   installRequested = true
   try {
@@ -192,10 +224,10 @@ export function stopUpdateManager(): void {
   if (started && app.isReady()) powerMonitor.removeListener('resume', checkAfterResume)
 }
 
-function configureUpdater(): void {
-  autoUpdater.autoDownload = false
+function configureUpdater(localCheckOnly = false): void {
+  if (!localCheckOnly) autoUpdater.autoDownload = false
   // Do not hand an archive to Squirrel before the final freshness check.
-  autoUpdater.autoInstallOnAppQuit = false
+  if (!localCheckOnly) autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowPrerelease = false
   autoUpdater.logger = {
     info: (...args: unknown[]) => console.info('[updater]', ...args),

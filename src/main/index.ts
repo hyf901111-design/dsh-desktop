@@ -51,6 +51,7 @@ import {
 import { isAbortedNavigationError, shouldLoadHarnessUrl } from './window-navigation'
 import {
   checkForUpdates,
+  initializeLocalUpdateChecks,
   registerUpdateHandlers,
   setUpdateRestartPreparation,
   startUpdateManager,
@@ -1123,6 +1124,18 @@ function installMenu(): void {
 async function bootstrap(): Promise<void> {
   if (process.platform === 'darwin') app.dock?.setIcon(desktopIconPath())
   launchDirectory = await ensureLaunchRoot(app.getPath('userData'))
+  const acceptanceOrigin = localAcceptanceOrigin({
+    origin: app.commandLine.getSwitchValue('sherlock-local-acceptance-origin'),
+    userData: app.commandLine.getSwitchValue('sherlock-user-data-dir'),
+    appData: app.commandLine.getSwitchValue('sherlock-app-data-dir')
+  }, tmpdir())
+  await initializeLocalUpdateChecks({
+    acceptanceOrigin,
+    feed: app.commandLine.getSwitchValue('sherlock-local-update-feed'),
+    feedRequested: app.commandLine.hasSwitch('sherlock-local-update-feed'),
+    userData: app.getPath('userData'),
+    appData: app.getPath('appData')
+  }, tmpdir())
   registerUpdateHandlers(() => mainWindow)
   setUpdateRestartPreparation(() => prepareUpdateRestart(mainWindow, ipcMain, async () => {
     if (!researchBoardsService) throw Error('研究服务尚未就绪，应用尚未退出。')
@@ -1162,11 +1175,6 @@ async function bootstrap(): Promise<void> {
       request
     )
   )
-  const acceptanceOrigin = localAcceptanceOrigin({
-    origin: app.commandLine.getSwitchValue('sherlock-local-acceptance-origin'),
-    userData: app.commandLine.getSwitchValue('sherlock-user-data-dir'),
-    appData: app.commandLine.getSwitchValue('sherlock-app-data-dir')
-  }, tmpdir())
   accountService = new AccountService(join(app.getPath('userData'), 'accounts'), { origin: acceptanceOrigin })
   const accountEndpoint = await accountService.start()
   const collaborationClient=new CollaborationClient(accountService, { origin: acceptanceOrigin })
