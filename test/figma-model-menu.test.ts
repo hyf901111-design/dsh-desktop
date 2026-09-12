@@ -10,7 +10,7 @@ const jsx = require('react/jsx-runtime')
 const reactDOM = require('react-dom')
 const {createRoot} = require('react-dom/client')
 
-it('opens the searchable model list, filters provider names, selects real IDs and restores focus', async () => {
+it.each([false, true])('opens the searchable model list, preserves empty-state recovery and selection (Chinese=%s)', async (chinese) => {
   const win = new Window()
   for (const key of ['window','document','Node','HTMLElement','Event','CustomEvent'] as const) vi.stubGlobal(key, key === 'window' ? win : win[key])
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
@@ -31,7 +31,7 @@ it('opens the searchable model list, filters provider names, selects real IDs an
   const root=createRoot(host)
   const click=async(el:Element)=>react.act(async()=>{ (el as unknown as {focus():void}).focus(); el.dispatchEvent(new win.MouseEvent('click',{bubbles:true})) })
   try {
-    await react.act(async()=>root.render(jsx.jsx(ModelSelect,{locked:false,available:true,directory,load:()=>{},select,t:(key:string)=>key})))
+    await react.act(async()=>root.render(jsx.jsx(ModelSelect,{locked:false,available:true,directory,load:()=>{},select,t:(key:string)=>chinese && key === 'menu.model' ? '模型' : key})))
     const trigger=host.querySelector('button')!
     trigger.getBoundingClientRect=()=>new DOMRect(600,200,140,28)
     await click(trigger)
@@ -43,7 +43,19 @@ it('opens the searchable model list, filters provider names, selects real IDs an
     expect(win.document.querySelector('[role=menuitemradio]')?.textContent).toContain('Kimi K3')
     await react.act(async()=>{Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype,'value')!.set!.call(search,'unmatched');search.dispatchEvent(new win.Event('input',{bubbles:true}))})
     expect(win.document.querySelectorAll('[role=menuitemradio]')).toHaveLength(0)
-    await react.act(async()=>search.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})))
+    expect(search.value).toBe('unmatched')
+    expect(win.document.querySelector('.odyssey-model-empty-title')?.textContent).toBe(chinese ? '未找到匹配的模型' : 'No matching models')
+    expect(win.document.querySelector('.odyssey-model-empty-description')?.textContent).toBe(chinese ? '尝试其他关键词，或前往模型设置。' : 'Try another keyword, or go to model settings.')
+    const manage = [...win.document.querySelectorAll('.odyssey-model-footer')].find(el => el.textContent === (chinese ? '管理模型…' : 'Manage models…'))
+    expect(manage).toBeDefined()
+    const openSettings = vi.fn()
+    win.addEventListener('sherlock:model-settings-open', openSettings)
+    await click(manage!)
+    expect(openSettings).toHaveBeenCalledOnce()
+    expect(win.document.querySelector('[role=menu]')).toBeNull()
+    await click(trigger)
+    expect(win.document.querySelector<HTMLInputElement>('input[type=search]')!.value).toBe('')
+    await react.act(async()=>win.document.querySelector('input[type=search]')!.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})))
     expect(win.document.querySelector('[role=menu]')).toBeNull()
     expect(win.document.activeElement).toBe(trigger)
     await click(trigger)

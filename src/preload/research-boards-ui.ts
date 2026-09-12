@@ -658,6 +658,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (next.current) acceptView(next.current)
     if (next.account.status === 'signedOut') clearEditors()
     notify()
+    // Login retires the host's active board without remounting the selected
+    // conversation. Re-enter only a still-selected research session present in
+    // this account's fresh directory; activate performs the permission check.
+    const selected = current()
+    if (
+      next.account.status === 'ready' && next.account.user && selected &&
+      activeResearch.has(selected) && activeSession !== selected &&
+      next.boards.some(board => board.localSessionId === selected)
+    ) void activate(selected, true)
   }
   const receive = (event: ResearchBoardsEvent) => {
     if (
@@ -810,6 +819,11 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       }
     }
     const wanted = active && isShared(id) ? id : null
+    // The active research intent survives logout; reads wait for fresh identity.
+    if (wanted && (state.account.status !== 'ready' || !state.account.user)) {
+      notify()
+      return
+    }
     if (activeSession === wanted) {
       notify()
       return
@@ -817,13 +831,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (activeSession) clearPresence(activeSession)
     activeSession = wanted
     const turn = ++navigation
+    const generation = state.account.generation, accountId = state.account.user?.userId
+    const valid = () => !disposed && turn === navigation &&
+      generation === state.account.generation && accountId === state.account.user?.userId
     try {
       const v = await call<BoardView | null>('board.activate', {
         localSessionId: wanted
       })
-      if (turn === navigation && v) acceptView(v)
+      if (valid() && v) acceptView(v)
     } catch (error) {
-      if (turn === navigation && wanted) {
+      if (valid() && wanted) {
+        // Permit a later explicit activation or fresh state to retry this read.
+        activeSession = null
         const e = editors.get(wanted)
         if (e) {
           e.workspace.setCollaborationAccess(false)

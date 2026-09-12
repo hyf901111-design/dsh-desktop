@@ -293,7 +293,8 @@ export function mountAccountUi(
       error.className = 'sherlock-field-error'
       error.id = `sherlock-field-error-${name}`
       error.setAttribute('aria-live', 'polite')
-      heading.append(caption, error)
+      heading.append(caption)
+      if (user) heading.append(error)
       l.append(heading)
       const i = document.createElement('input')
       i.name = name
@@ -312,6 +313,7 @@ export function mountAccountUi(
       i.maxLength = type === 'password' ? 128 : name === 'username' ? 32 : 128
       if (type === 'password') i.minLength = 10
       l.append(i)
+      if (!user) l.append(error)
       form.append(l)
       return i
     }
