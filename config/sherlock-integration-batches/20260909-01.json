@@ -9,59 +9,80 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "任务滚动条、主导航、首页连续背景与命令菜单对齐",
+        "featureName": "修复真实插槽样式、正文列宽、表格主题与隔离更新检查",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "da0076fee15c7e316a1d9316d7712e2bb2573264",
-        "tipCommit": "d455ef706de322ed44961c8985300fd38d303caa",
+        "baseCommit": "d455ef706de322ed44961c8985300fd38d303caa",
+        "tipCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
         "commits": [
           {
-            "commit": "0c5977131e71ac080479927e87e428432a073ba2",
+            "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
             "parents": [
-              "da0076fee15c7e316a1d9316d7712e2bb2573264"
+              "d455ef706de322ed44961c8985300fd38d303caa"
             ],
-            "subject": "还原空态首页顶部连续背景与收栏圆角"
+            "subject": "统一普通会话正文与输入区域列宽"
           },
           {
-            "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
+            "commit": "e492bd2b7a39ed8d21e39e3ff050e9c2106db4af",
             "parents": [
-              "0c5977131e71ac080479927e87e428432a073ba2"
+              "d7505dec8de242c09c3b7639642f836c14fcab32"
             ],
-            "subject": "校准常规宽度主导航标题颜色与局部间距"
+            "subject": "校准主对话宽表辅助文案的颜色与行高"
           },
           {
-            "commit": "26c5f46d07b4c911e5db68caf102edf7aebf6339",
+            "commit": "e039935a7a875a08f4062d32b6736dc925fa9d63",
             "parents": [
-              "719941787de38c95fbc1e381dfd4332d99905ec9"
+              "e492bd2b7a39ed8d21e39e3ff050e9c2106db4af"
             ],
-            "subject": "按任务清单设计添加独立覆盖滚动条"
+            "subject": "限定宽表辅助文案修正不覆盖轨迹阅读区"
           },
           {
-            "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
+            "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
             "parents": [
-              "26c5f46d07b4c911e5db68caf102edf7aebf6339"
+              "e039935a7a875a08f4062d32b6736dc925fa9d63"
             ],
-            "subject": "确保真实首页顶栏优先采用连续背景规则"
+            "subject": "适配真实会话插槽修正页眉样式与首页圆角"
           },
           {
-            "commit": "c247596a8d236de133912eda6d36a4cac0dc8275",
+            "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
             "parents": [
-              "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a"
+              "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6"
             ],
-            "subject": "按专用设计修正主对话命令菜单尺寸与排版"
+            "subject": "增加隔离实例的本地更新检查验收入口"
           },
           {
-            "commit": "5a206808f91d66e75bc3a67fff6a0b60c38fbd23",
+            "commit": "cb6de2d38fc5e314a271681ff4b8328ad326bc26",
             "parents": [
-              "c247596a8d236de133912eda6d36a4cac0dc8275"
+              "ab00395e5c34ed4fab7562f3f8cd3049a286eb19"
             ],
-            "subject": "限定混合候选菜单中命令组的专用样式"
+            "subject": "修复表格预览主题跟随并保留显式单元格颜色"
           },
           {
-            "commit": "d455ef706de322ed44961c8985300fd38d303caa",
+            "commit": "488089352cd2e482c94ca530c2c9cde4f530de3e",
             "parents": [
-              "5a206808f91d66e75bc3a67fff6a0b60c38fbd23"
+              "cb6de2d38fc5e314a271681ff4b8328ad326bc26"
             ],
-            "subject": "补录第十四批原生局部证据并保留待验边界"
+            "subject": "对齐模式菜单标题和深色说明文字颜色"
+          },
+          {
+            "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
+            "parents": [
+              "488089352cd2e482c94ca530c2c9cde4f530de3e"
+            ],
+            "subject": "校准首页工作区与模式入口间距并保持输入居中"
+          },
+          {
+            "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
+            "parents": [
+              "608b7bd131dd5e37e49d39dee9cf669840e59455"
+            ],
+            "subject": "校准权限与模型目录文字及选中分隔色"
+          },
+          {
+            "commit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
+            "parents": [
+              "79f0846bfc1400a12f8261904b1482bd3ad4ebf1"
+            ],
+            "subject": "补录第十五批原生局部证据并明确第十六批待验边界"
           }
         ],
         "files": [
@@ -74,40 +95,72 @@
             "path": "docs/design-audits/2026-09-12-figma-page-ledger.json"
           },
           {
+            "status": "A",
+            "path": "scripts/lib/office-spreadsheet-theme.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-office-preview.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/local-update-check-fixture.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/update/local-check-updater.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/update/local-update-guard.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-manager.ts"
+          },
+          {
             "status": "M",
             "path": "src/preload/figma-home.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
             "path": "src/preload/figma-refinements.css"
           },
           {
-            "status": "A",
-            "path": "src/preload/figma-task-scrollbar.css"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/figma-task-scrollbar.ts"
-          },
-          {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-command-menu-layout.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/figma-header-layout.test.js"
           },
           {
             "status": "A",
+            "path": "test/figma-home-entry-spacing.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/figma-home-materials.test.js"
           },
           {
             "status": "A",
-            "path": "test/figma-task-scrollbar.test.ts"
+            "path": "test/figma-reading-column.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/local-update-fixture.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/local-update-manager.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/sherlock-office-theme.test.js"
           }
         ],
         "checks": [
@@ -118,16 +171,20 @@
               "--",
               "vitest",
               "run",
-              "test/figma-task-scrollbar.test.ts",
+              "test/figma-reading-column.test.js",
+              "test/figma-reading-layout.test.ts",
               "test/figma-home-materials.test.js",
-              "test/figma-motion-controller.test.ts",
+              "test/figma-home-entry-spacing.test.js",
               "test/figma-header-layout.test.js",
-              "test/figma-command-menu-layout.test.js"
+              "test/figma-final-shell-patch.test.ts",
+              "test/figma-menu-scope.test.ts",
+              "test/figma-model-menu.test.ts",
+              "test/figma-model-empty-style.test.ts"
             ],
             "outcome": "passed",
-            "summary": "29 directly affected checks in five files passed",
-            "verifiedCommit": "d455ef706de322ed44961c8985300fd38d303caa",
-            "completedAt": "2026-09-12T20:50:57.070526+00:00",
+            "summary": "40 directly affected UI checks in nine files passed",
+            "verifiedCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
+            "completedAt": "2026-09-12T21:28:13.666121+00:00",
             "timeoutMs": 120000
           },
           {
@@ -137,14 +194,50 @@
               "--",
               "vitest",
               "run",
-              "test/figma-responsive-header.test.ts",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-task-compact.test.ts"
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/sherlock-office-theme.test.js"
             ],
             "outcome": "passed",
-            "summary": "Directly affected header, shell patch and task compact regressions passed",
-            "verifiedCommit": "d455ef706de322ed44961c8985300fd38d303caa",
-            "completedAt": "2026-09-12T20:50:57.070526+00:00",
+            "summary": "13 actual Office engine and adapter checks passed",
+            "verifiedCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
+            "completedAt": "2026-09-12T21:28:13.666121+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/bundled-plugin-profile.test.ts",
+              "-t",
+              "prepares the bundled Office adapter reproducibly and fails closed on a drifted bundle"
+            ],
+            "outcome": "passed",
+            "summary": "Fixed previous Office hash migration and repeated preparation passed; registry pristine historical boundary remains documented",
+            "verifiedCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
+            "completedAt": "2026-09-12T21:28:13.666121+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/local-update-manager.test.ts",
+              "test/local-update-fixture.test.ts",
+              "test/update-manager.test.ts",
+              "test/update-freshness.test.ts",
+              "test/update-state.test.ts",
+              "test/local-acceptance-services.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "49 isolated local-check and related update checks passed",
+            "verifiedCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
+            "completedAt": "2026-09-12T21:28:13.666121+00:00",
             "timeoutMs": 120000
           },
           {
@@ -155,8 +248,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "d455ef706de322ed44961c8985300fd38d303caa",
-            "completedAt": "2026-09-12T20:50:57.070526+00:00",
+            "verifiedCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
+            "completedAt": "2026-09-12T21:28:13.666121+00:00",
             "timeoutMs": 120000
           },
           {
@@ -167,103 +260,32 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Pristine locked sources transformed twice and verified for this exact commit",
-            "verifiedCommit": "d455ef706de322ed44961c8985300fd38d303caa",
-            "completedAt": "2026-09-12T20:50:57.070526+00:00",
+            "summary": "17 locked rc.7 packages and two local runtimes transformed twice and verified; this stage does not include registry Office",
+            "verifiedCommit": "64b71526db3bc45af7f9b774cd72d7efef7d04a2",
+            "completedAt": "2026-09-12T21:28:13.666121+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "14b真实包D45-50局部证据已入版控；119帧局部、179待逐项、0整页通过。D51-54须本次集成包原生复验。"
+          "summary": "第15批真实包D51与D54局部验收；D52/D53原生失配由D58代码修正，D55–61均待本次集成包复验。129帧局部、169待逐项、0整页通过。"
         },
         "acceptanceCriteria": [
-          "Main task list has its independent 4px/14 percent overlay thumb without changing right-panel or task-sheet scrollbars",
-          "Regular main navigation follows Figma title colors, line-height and 24px title-to-tab gap while compact rules remain intact",
-          "Home empty header is continuous with its background, with radius12 closed and16 right-open, restoring normal headers on navigation",
-          "Main command menu has a360px outer width,40px command rows and specified fonts/colors; mixed skill rows retain their own styles, original anchor and short-window scrolling remain valid",
-          "Audit ledger preserves per-frame evidence and keeps whole-page acceptance at zero until every functional state is checked"
+          "Real native slot wrappers allow regular header typography and home continuous header/radius rules to match",
+          "Ordinary conversation reading width and table helper typography align with their specific Figma columns while trajectory/child stay distinct",
+          "Home workspace/mode controls have8px left inset,12px gap and8px distance to the stationary composer",
+          "Mode, permission and model catalog colors match their own menu specifications",
+          "XLSX live theme follows the app and preserves content, selection and explicit workbook colors",
+          "Isolated local update checks use real updater metadata events, with all download/install paths rejected and no public feed access",
+          "Versioned audit records exact package evidence and does not promote partial evidence to whole-page acceptance"
         ],
         "risks": [
-          "D51-54新包原生待验，不能以源码测试代替逐页通过",
-          "D55工作簿深色及D56正文列宽已独立发现，将在下一批处理，本批不包含",
-          "D45按压持续帧、系统Always和减少动态仍待原生；CUA拖动事件过快不冒充长按可见证据",
-          "正式main、线上版本、公开更新源未改变；不得运行真实公开检查更新"
+          "D55 registry pristine Office input has a pre-existing PPTX anchor mismatch; fixed old-hash migration is verified, sources check does not cover Office registry archive",
+          "Native verification remains required for new changes",
+          "Update checking fixture only covers checking/available/up-to-date/error/retry, not download, signatures, installation or relaunch",
+          "No main promotion, version change, release upload, public feed or source/tag push"
         ],
-        "generatedAt": "2026-09-12T20:50:57.070526+00:00"
-      },
-      "merged": {
-        "mergeCommit": "df3dda14aba2f9f70428f46d8db14de93a9c111d",
-        "verificationCommit": "df3dda14aba2f9f70428f46d8db14de93a9c111d",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "df3dda14aba2f9f70428f46d8db14de93a9c111d",
-            "completedAt": "2026-09-12T20:52:45.397Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "df3dda14aba2f9f70428f46d8db14de93a9c111d",
-            "completedAt": "2026-09-12T20:52:45.397Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "df3dda14aba2f9f70428f46d8db14de93a9c111d",
-            "completedAt": "2026-09-12T20:52:45.397Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "df3dda14aba2f9f70428f46d8db14de93a9c111d",
-            "completedAt": "2026-09-12T20:52:45.397Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "df3dda14aba2f9f70428f46d8db14de93a9c111d",
-            "completedAt": "2026-09-12T20:52:45.397Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T20:52:45.397Z"
+        "generatedAt": "2026-09-12T21:28:13.666121+00:00"
       }
     }
   ],
