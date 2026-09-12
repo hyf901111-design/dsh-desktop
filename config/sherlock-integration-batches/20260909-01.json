@@ -9,34 +9,41 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "文件原生菜单和任务页签图标设计对齐",
+        "featureName": "右侧子代理记录与菜单排版设计对齐",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
-        "tipCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
+        "baseCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
+        "tipCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
         "commits": [
           {
-            "commit": "a4b7ba0e01186bb94e96a17df3bee5734b4e0608",
+            "commit": "67dc39a611b5614a8275676e24799514e4c73562",
             "parents": [
-              "53196896d23dffb04e4a36bbee4a44c89fb1c970"
+              "4b82ff616e22dc625d040d84d95f5d7c49c7d666"
             ],
-            "subject": "按设计将文件和文件夹操作切换为系统原生菜单"
+            "subject": "固定页签溢出菜单宽度并保留窄面板边界"
           },
           {
-            "commit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
+            "commit": "c3a22ca6c1c8686900d69873576e7f55d82a4026",
             "parents": [
-              "a4b7ba0e01186bb94e96a17df3bee5734b4e0608"
+              "67dc39a611b5614a8275676e24799514e4c73562"
             ],
-            "subject": "使用设计稿任务清单图标统一页签和新建菜单"
+            "subject": "按设计修正子代理菜单层级排版与空闲状态"
+          },
+          {
+            "commit": "41d02b3e267aa819f1187f196389d5160a0c297a",
+            "parents": [
+              "c3a22ca6c1c8686900d69873576e7f55d82a4026"
+            ],
+            "subject": "将子代理记录放入独立右侧页签并保留父研究画布"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "scripts/lib/figma-native-file-menu.mjs"
+            "status": "M",
+            "path": "scripts/lib/figma-refinements-client.mjs"
           },
           {
             "status": "A",
-            "path": "scripts/lib/figma-task-tab-icon.mjs"
+            "path": "scripts/lib/figma-subagent-panel.mjs"
           },
           {
             "status": "M",
@@ -44,23 +51,27 @@
           },
           {
             "status": "M",
-            "path": "src/main/context-menu.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/native-file-menu.ts"
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
+            "path": "scripts/test-research-collaboration-e2e.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "A",
-            "path": "test/figma-native-file-menu.test.js"
+            "path": "test/figma-subagent-menu.test.js"
           },
           {
             "status": "A",
-            "path": "test/native-file-menu.test.ts"
+            "path": "test/figma-subagent-panel.test.js"
           }
         ],
         "checks": [
@@ -70,16 +81,16 @@
               "exec",
               "vitest",
               "run",
-              "test/native-file-menu.test.ts",
-              "test/figma-native-file-menu.test.js",
-              "test/figma-file-panel.test.js",
-              "test/context-menu.test.ts",
-              "test/figma-panel-tab-overflow.test.js"
+              "test/figma-subagent-panel.test.js",
+              "test/figma-subagent-menu.test.js",
+              "test/figma-panel-tab-overflow.test.ts",
+              "test/figma-file-panel.test.ts",
+              "test/figma-native-file-menu.test.js"
             ],
             "outcome": "passed",
-            "summary": "20 focused checks passed: native validation, bridge lifecycle, file actions and tab transforms",
-            "verifiedCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
-            "completedAt": "2026-09-12T13:52:30.496694+00:00",
+            "summary": "17 focused checks passed: retained child scope, selection, release, renderer and sidebar",
+            "verifiedCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
+            "completedAt": "2026-09-12T14:35:00.713326+00:00",
             "timeoutMs": 120000
           },
           {
@@ -90,8 +101,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
-            "completedAt": "2026-09-12T13:52:30.496694+00:00",
+            "verifiedCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
+            "completedAt": "2026-09-12T14:35:00.713326+00:00",
             "timeoutMs": 120000
           },
           {
@@ -102,98 +113,26 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Pristine dependencies patched twice and executed",
-            "verifiedCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
-            "completedAt": "2026-09-12T13:52:30.496694+00:00",
+            "summary": "Pristine locked dependencies including runtime and renderer patched twice and executed",
+            "verifiedCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
+            "completedAt": "2026-09-12T14:35:00.713326+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "b49a476 real package revealed web file menu and atom task glyph. Native replacement and Figma vector require rebuilt package verification."
+          "summary": "Real package 1d03bd24 exposed 365px overflow menu, 72px subagent rows and global child navigation. Corrected sources require the next integrated native package."
         },
         "acceptanceCriteria": [
-          "File and folder context menus use platform-native presentation preserving existing actions",
-          "Task tabs and new-tab menu use original Figma task-list vector",
-          "Browser fallback and repeated patching remain functional"
+          "Overflow menu keeps 324px width within available panel bounds",
+          "Subagent menu uses 70px rows, correct typography and gray idle dots",
+          "Child records open in right tabs while the parent canvas remains selected",
+          "One-shot and offline composer permissions retain existing runtime guards"
         ],
         "risks": [
-          "All-page audit in progress; no global visual acceptance claimed"
+          "All-page audit remains in progress; native child-pane acceptance pending"
         ],
-        "generatedAt": "2026-09-12T13:52:30.496694+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d0c7f997679ad3389391f1632a0873a0b435f71d",
-        "verificationCommit": "d0c7f997679ad3389391f1632a0873a0b435f71d",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "d0c7f997679ad3389391f1632a0873a0b435f71d",
-            "completedAt": "2026-09-12T13:53:27.951Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d0c7f997679ad3389391f1632a0873a0b435f71d",
-            "completedAt": "2026-09-12T13:53:27.951Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "d0c7f997679ad3389391f1632a0873a0b435f71d",
-            "completedAt": "2026-09-12T13:53:27.951Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "d0c7f997679ad3389391f1632a0873a0b435f71d",
-            "completedAt": "2026-09-12T13:53:27.951Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "d0c7f997679ad3389391f1632a0873a0b435f71d",
-            "completedAt": "2026-09-12T13:53:27.951Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T13:53:27.951Z"
+        "generatedAt": "2026-09-12T14:35:00.713326+00:00"
       }
     }
   ],
