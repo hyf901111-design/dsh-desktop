@@ -1,3 +1,4 @@
+import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -957,7 +958,7 @@ function patchFigmaCompactPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
-  source = patchFigmaNativeFileMenu(source)
+  source = patchFigmaTaskTabIcon(patchFigmaNativeFileMenu(source))
   let next = patchFigmaPanelDefaultWidth(
     patchFigmaFilePanel(
       patchFigmaPanelMotionSync(
