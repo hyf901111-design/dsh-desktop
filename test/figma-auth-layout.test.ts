@@ -20,6 +20,19 @@ async function setup(user: {id:string;username:string;createdAt:number} | null =
   return {window,document,invoke}
 }
 describe('real account auth rendering', () => {
+  it('opens the existing models settings section from the model picker', async () => {
+    const {window,document} = await setup({id:'account',username:'hyf90',createdAt:1})
+    const target = document.createElement('button')
+    target.dataset.settingsSectionId = 'models'
+    const select = vi.fn()
+    target.addEventListener('click',select)
+    document.querySelector('.VOzbGW_navList')!.append(target)
+    window.dispatchEvent(new window.CustomEvent('sherlock:model-settings-open'))
+    await window.happyDOM.waitUntilComplete()
+    expect(select).toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.sherlock-account-page')).toBeNull()
+    expect(document.activeElement).toBe(target)
+  })
   it('shows only the designed profile and password controls while preserving real account services', async () => {
     const { document, invoke } = await setup({id:'account',username:'hyf90',createdAt:1})
     const page = document.querySelector('.sherlock-account-page')!
