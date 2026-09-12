@@ -204,7 +204,8 @@ body[data-ds-dark-theme]{--srb-surface:rgba(39,39,39,.97);--srb-input:#202020;--
 .srb-section [data-srb-section-header]{min-height:32px;height:32px;gap:2px;margin:0 0 4px;padding:0}
 .srb-section.srb-section{padding-top:0;padding-bottom:12px}
 [data-sidebar-collapsed=true] .srb-section [aria-label='搜索研究看板'],[data-dsh-sidebar-wide=false] .srb-section [aria-label='搜索研究看板']{display:none!important}
-body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu]{box-sizing:border-box;width:min(280px,calc(100vw - 24px));min-width:0;padding:6px;border:1px solid var(--srb-border);border-radius:10px;background:var(--srb-surface);backdrop-filter:blur(12px);box-shadow:var(--srb-shadow);font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui);color:var(--srb-label)}
+body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu]{box-sizing:border-box;width:min(280px,calc(100vw - 24px));min-width:0;padding:5px;border:1px solid var(--srb-border);border-radius:10px;background:var(--srb-surface);backdrop-filter:blur(12px);box-shadow:var(--srb-shadow);font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui);color:var(--srb-label)}
+body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [class*=_itemWrap_]+[class*=_itemWrap_]{margin-top:2px}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]{min-height:32px;height:32px;padding:0 10px;border-radius:6px;font:inherit;gap:8px}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]:is(:hover,:focus-visible){background:var(--srb-row-hover)}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]>svg{display:none}
