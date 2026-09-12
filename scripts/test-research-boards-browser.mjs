@@ -705,7 +705,7 @@ if (process.argv.includes('--serve')) {
         }
       ])
     )
-    await page.getByRole('button', { name: '设为常用', exact: true }).click()
+    await page.getByRole('button', { name: '添加至研究看板', exact: true }).click()
     const favoriteRow = page.locator('.srb-row').filter({ hasText: '黄金市场研究' }).first()
     const workspaceRow = page.locator('.fixture-workspaces [role="treeitem"]').filter({ hasText: '黄金市场研究' }).first()
     await favoriteRow.locator('button').first().click()
@@ -829,7 +829,12 @@ if (process.argv.includes('--serve')) {
     assert.deepEqual(users[0].workspaceData.get(privatePath).sessionIds, [privateBoardId])
     await page.evaluate(() => window.fixture.page.openPersonal('original'))
     console.log('BOARD_NAVIGATION_V2_PASSED new/empty-directory/right-click/rename/search/sort/hover-menu/return-to-workspace')
-    await page.getByRole('button', { name: '取消常用', exact: true }).click()
+    // Figma A: repeated header clicks retain the board. Prepare the separate
+    // direct-collaboration scenario through the existing service fixture.
+    await page.getByRole('button', { name: '已添加至研究看板', exact: true }).click()
+    const retainedFavorite = users[0].service.getSnapshot().favorites.find(f => f.sessionId === 'original')
+    assert.ok(retainedFavorite, 'added header action must not remove the board')
+    await users[0].service.invoke('favorite.remove', { favoriteId: retainedFavorite.favoriteId })
     await until(async () => await favoriteRow.count() === 0, 'source removed from favorites before direct collaboration')
     await page.getByRole('button', { name: '创建协作', exact: true }).click()
     await page.getByLabel('对方专有 ID').fill('0000 0000 02')
@@ -1833,7 +1838,7 @@ if (process.argv.includes('--serve')) {
     )
     await peer.screenshot({ path: join(out, 'personal-import-light.png') })
     const reshareCalls = users.map(u => u.modelCalls())
-    await peer.getByRole('button', { name: '设为常用', exact: true }).click()
+    await peer.getByRole('button', { name: '添加至研究看板', exact: true }).click()
     await peer.getByRole('button', { name: '创建协作', exact: true }).click()
     await peer.getByLabel('协作名称').fill('第二代独立协作')
     // Preview has completed. Later private transcript/file edits must stay private.
@@ -2123,8 +2128,8 @@ if (process.argv.includes('--serve')) {
     await peer.evaluate((id) => window.fixture.sessions.open(id), personal.personalId)
     await peer.locator('[data-personal-import]').first().waitFor()
     const oldFavorite = users[1].service.getSnapshot().favorites.find(f => f.sessionId === personal.personalId)
-    if (oldFavorite) await peer.getByRole('button', { name: '取消常用', exact: true }).click()
-    await peer.getByRole('button', { name: '设为常用', exact: true }).click()
+    if (oldFavorite) await users[1].service.invoke('favorite.remove', { favoriteId: oldFavorite.favoriteId })
+    await peer.getByRole('button', { name: '添加至研究看板', exact: true }).click()
     await until(() => users[1].service.getSnapshot().favorites.some(f => f.sessionId === personal.personalId), 'signed-out favorite created')
     const signedOutFavorite = { value: users[1].service.getSnapshot().favorites.find(f => f.sessionId === personal.personalId) }
     assert.equal((await users[1].service.invoke('favorite.rename', { favoriteId: signedOutFavorite.value.favoriteId, title: '本机常用重命名' })).ok, true)

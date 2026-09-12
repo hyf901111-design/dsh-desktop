@@ -9,10 +9,10 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ Menu: () => null, Icon
 import { ResearchBoardCanvasOverlay, ResearchBoardHeader, shareFavorite } from '../src/preload/research-boards-ui'
 const cleanup: Array<() => Promise<void>> = []
 afterEach(async () => { for (const done of cleanup.splice(0)) await done(); vi.unstubAllGlobals() })
-async function mount(kind: 'header' | 'presence', sharingState = 'shared', role = 'owner') {
+async function mount(kind: 'header' | 'presence', sharingState = 'shared', role = 'owner', pinned = true) {
   const w = new Window({ url: 'http://localhost/' })
   vi.stubGlobal('document', w.document); vi.stubGlobal('window', w); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-  const state: any = { account: { user: { userId: 'self' } }, favorites: [], boards: [{ boardId: 'b', localSessionId: 's', pinned: true }] }
+  const state: any = { account: { user: { userId: 'self' } }, favorites: [], boards: [{ boardId: 'b', localSessionId: 's', pinned }] }
   const view: any = { boardId: 'b', board: { sharingState, title: '专用研究', lifecycle: 'active' }, permissions: { read: true, edit: role !== 'viewer', manage: role === 'owner' }, connection: 'online', members: [{ userId: 'self', username: '自己', role: 'owner' }], presence: [{ userId: 'peer', username: '林然', role: 'editor', cursor: { x: 100, y: 200 }, selectedIds: ['card'] }], seq: 1 }
   const listeners = new Set<() => void>(); let currentState = state
   const actions: string[] = []
@@ -24,17 +24,25 @@ async function mount(kind: 'header' | 'presence', sharingState = 'shared', role 
   cleanup.push(async () => { await act(async () => root.unmount()); await w.happyDOM.abort() })
   return { host, view, actions, setSnapshot: async (next: any) => { snapshot = next; await act(async () => listeners.forEach(fn => fn())) }, emit: async () => { currentState = { ...currentState }; await act(async () => listeners.forEach(fn => fn())) } }
 }
-it('keeps cancelled collaboration on the board pin state when toggling the dedicated favorite button', async () => {
+it('keeps an added private board when its header icon is clicked again', async () => {
   const f = await mount('header', 'shared')
   expect(f.host.querySelector('.srb-favorite-button')).toBeNull()
   f.view.board.sharingState = 'ownerOnly'; await f.emit()
-  const get = () => f.host.querySelector('.srb-favorite-button') as unknown as HTMLButtonElement
-  expect(get()?.textContent).toBe('已设为常用')
-  expect(get().getAttribute('aria-pressed')).toBe('true')
-  await act(async () => get().click())
-  expect(get().textContent).toBe('设为常用'); expect(get().getAttribute('aria-pressed')).toBe('false')
-  await act(async () => get().click())
-  expect(get().textContent).toBe('已设为常用'); expect(f.actions).toEqual(['board.unpin', 'board.pin'])
+  const button = f.host.querySelector('.srb-favorite-button') as unknown as HTMLButtonElement
+  expect(button.getAttribute('aria-label')).toBe('已添加至研究看板')
+  expect(button.getAttribute('aria-pressed')).toBe('true')
+  expect(button.textContent).toBe('')
+  await act(async () => button.click())
+  expect(f.actions).toEqual([])
+  expect(button.getAttribute('aria-pressed')).toBe('true')
+})
+it('adds a dedicated private board through board pin instead of deleting its favorite', async () => {
+  const f = await mount('header', 'ownerOnly', 'owner', false)
+  const button = f.host.querySelector('.srb-favorite-button') as unknown as HTMLButtonElement
+  expect(button.getAttribute('aria-label')).toBe('添加至研究看板')
+  await act(async () => button.click())
+  expect(f.actions).toEqual(['board.pin'])
+  expect(button.getAttribute('aria-label')).toBe('已添加至研究看板')
 })
 it('keeps shared viewer management without dedicated pin or invitation actions', async () => {
   const f = await mount('header', 'shared', 'viewer')
