@@ -235,6 +235,8 @@ for (let i = 0; i < 2; i++) {
     { surfaceOp: 'append' }
   )
   const sessionData = new Map([['original', original]])
+  // Keep durable fixture history distinct from the Host's temporary live attachment.
+  const liveSessions = new Map([['original', original]])
   const workspaceData = new Map(), archivedSessions = new Set()
   let modelCalls = 0
   const control = {
@@ -290,7 +292,20 @@ for (let i = 0; i < 2; i++) {
           if (!item.sessionIds.includes(id)) item.sessionIds.push(id)
         } }; workspaceData.set(path, item); return item
       } },
-      sessions: { get: (id) => sessionData.get(id), flush: async () => true, create: (id, options) => { const s = Session.create(id, options?.seed, { version: 0, id, createdAt: Date.now(), ...options?.meta }); sessionData.set(id, s); return s } },
+      sessions: {
+        get: id => liveSessions.get(id),
+        prepare: (id, options) => Session.create(id, options?.seed, { version: 0, id, createdAt: Date.now(), ...options?.meta }),
+        enter: session => {
+          assert.equal(liveSessions.has(session.id), false)
+          liveSessions.set(session.id, session)
+          return () => {
+            assert.equal(liveSessions.get(session.id), session)
+            liveSessions.delete(session.id)
+          }
+        },
+        announce: () => {},
+        flush: async session => { sessionData.set(session.id, session); return true }
+      },
       sessionPersistence: {
         inspect: async (id) => {
           const s = sessionData.get(id)
@@ -431,6 +446,7 @@ for (let i = 0; i < 2; i++) {
     integration,
     registry,
     sessionData,
+    liveSessions,
     execution,
     runtimeServer,
     disposeRuntime,
@@ -600,6 +616,7 @@ const server = createServer(async (req, res) => {
       else if (channel === 'fixture:session-create') {
         if (args[1]?.cwd) await mkdir(args[1].cwd, { recursive: true })
         u.sessionData.set(args[0], Session.create(args[0], [], { version: 0, id: args[0], createdAt: Date.now(), cwd: args[1]?.cwd ?? u.dir }))
+        u.liveSessions.set(args[0], u.sessionData.get(args[0]))
         value = true
       } else if (channel === 'fixture:default-directory') value = u.dir
       else if (channel === 'fixture:workspace-list') value = [...u.workspaceData.values()].map(w => ({workspaceId: w.id, path: w.path, title: w.title, sessionIds: w.sessionIds}))
@@ -1754,6 +1771,7 @@ if (process.argv.includes('--serve')) {
     assert.equal(copy.ok, true, JSON.stringify(copy))
     const personalId = 'personal-' + randomUUID()
     users[1].sessionData.set(personalId, Session.create(personalId))
+    users[1].liveSessions.set(personalId, users[1].sessionData.get(personalId))
     const copied = await users[1].service.invoke(
       'board.finalizePersonalCopy',
       { copyId: copy.value.copyId, localSessionId: personalId }
@@ -2187,6 +2205,7 @@ if (process.argv.includes('--serve')) {
     assert.notEqual(movedPersonal, personal.personalId)
     assert.ok(users[1].archivedSessions.has(personal.personalId))
     assert.ok(users[1].sessionData.get(movedPersonal).events.length >= users[1].sessionData.get(personal.personalId).events.length)
+    assert.equal(users[1].liveSessions.has(movedPersonal), false, 'return-to-workspace releases its temporary Host session after persisting history')
     assert.equal(users[1].integration.snapshots.importFor(movedPersonal).history.length, users[1].integration.snapshots.importFor(personal.personalId).history.length)
     const movedCanvas = JSON.parse(users[1].storage.getItem('sherlock.research.canvas.files.v1:' + movedPersonal))
     for (const node of movedCanvas) assert.ok(node.path.startsWith(users[1].sessionData.get(movedPersonal).header.cwd + '/'))
