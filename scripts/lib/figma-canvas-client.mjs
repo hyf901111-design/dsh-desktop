@@ -607,6 +607,7 @@ body[data-ds-dark-theme] [data-research-compact-chrome] :is(.rScV5Q_containerMen
 [data-research-compact-chrome] [data-component-width=narrow] .rScV5Q_containerKpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 [data-research-compact-chrome] .rScV5Q_containerKpis>div{min-height:53px;padding:0;gap:2px;border:0;background:transparent;justify-content:flex-start}
 [data-research-compact-chrome] .rScV5Q_containerKpis span{font:11px/19px DINPro,'Noto Sans SC',sans-serif;color:var(--odyssey-card-muted)}
+[data-research-compact-chrome] [data-component-width=narrow] .rScV5Q_containerKpis span{font-size:10px;line-height:18px}
 [data-research-compact-chrome] .rScV5Q_containerKpis strong{font:500 24px/32px DINPro,'Noto Sans SC',sans-serif;letter-spacing:0;color:var(--odyssey-card-text)}
 [data-research-compact-chrome] .rScV5Q_containerKpis strong[data-research-metric-positive=true]{color:#cd7269}
 [data-research-compact-chrome] .rScV5Q_containerKpis em{font:13px/21px DINPro,'Noto Sans SC',sans-serif}
@@ -614,10 +615,18 @@ body[data-ds-dark-theme] [data-research-compact-chrome] :is(.rScV5Q_containerMen
 [data-research-compact-chrome] .rScV5Q_containerTableScroll :is(th,td){box-sizing:border-box;height:33px;padding:6px 0;line-height:21px;border:0;border-bottom:1px solid var(--odyssey-card-border);overflow-wrap:anywhere}
 [data-research-compact-chrome] .rScV5Q_containerTableScroll [data-numeric=true]{text-align:right}
 [data-research-compact-chrome] .rScV5Q_containerTableScroll th{font-size:11px;line-height:19px;font-weight:400}
+[data-research-compact-chrome] .odyssey-component-primary .rScV5Q_containerTableScroll table{color:var(--odyssey-card-text)}
+[data-research-compact-chrome] .odyssey-component-primary .rScV5Q_containerTableScroll th{color:var(--odyssey-card-muted)}
+body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-component-primary .rScV5Q_containerTableScroll table{color:#e7e7e9}
+body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-component-primary .rScV5Q_containerTableScroll th{color:#989aa0}
+[data-research-compact-chrome] .rScV5Q_containerTableScroll :is(th,td)[data-numeric=true]+:is(th,td):not([data-numeric=true]){padding-left:18px}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown{padding:0 18px 12px;overflow:visible;font-size:13px;line-height:21px}
-[data-research-compact-chrome] .rScV5Q_containerMarkdown>:first-child{font:inherit;color:inherit;overflow-wrap:anywhere}
+[data-research-compact-chrome] .odyssey-component-primary .rScV5Q_containerMarkdown{color:var(--odyssey-card-text)}
+[data-research-compact-chrome] .rScV5Q_containerMarkdown>:first-child{font:inherit;color:var(--odyssey-card-text);overflow-wrap:anywhere}
 [data-research-compact-chrome] .rScV5Q_containerMarkdown p{margin:0 0 8px}
 [data-research-compact-chrome] .rScV5Q_containerChart{padding:0 18px 16px;flex:1;justify-content:flex-start}
+[data-research-compact-chrome] .odyssey-component-primary [data-research-container-chart=line]{background:transparent}
+[data-research-compact-chrome] [data-research-container-chart=line] .rScV5Q_chartLabel{font:10px/18px DINPro,'Noto Sans SC',sans-serif}
 [data-research-compact-chrome] .rScV5Q_containerChart svg{flex:1;width:100%;height:100%;max-height:none;min-height:0}
 [data-research-compact-chrome] .rScV5Q_chartLabel{font:11px DINPro,'Noto Sans SC',sans-serif}\n[data-research-compact-chrome] .rScV5Q_chartLegend{padding:6px 0 0;font:11px/19px DINPro,'Noto Sans SC',sans-serif}
 [data-research-compact-chrome] .rScV5Q_artifactBody:has([data-research-derived-summary]),[data-research-compact-chrome][data-research-generated-mind-map] .rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important;gap:6px}
