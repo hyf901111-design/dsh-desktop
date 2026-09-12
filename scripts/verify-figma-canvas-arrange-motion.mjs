@@ -2,7 +2,9 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { build } from 'esbuild'
-import playwright from '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
+import { pathToFileURL } from 'node:url'
+const playwrightModule = await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
+const playwright = playwrightModule.default ?? playwrightModule
 import { patchFigmaFinalCanvas } from './lib/figma-canvas-client.mjs'
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
 const installed = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
@@ -10,7 +12,7 @@ const once = patchFigmaCanvasContextMenu(patchFigmaFinalCanvas(installed))
 const source = patchFigmaCanvasContextMenu(patchFigmaFinalCanvas(once))
 assert.equal(source.split('function researchCanvasArrangeWithMotion(').length,2,'repeat patch has exactly one arrange helper')
 const dependencies = await build({stdin:{contents:`import * as react from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot} from 'react-dom/client';window.testDeps={react,jsx,dom,createRoot};`,resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser'})
-const browser = await playwright.chromium.launch({executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
+const browser = await playwright.chromium.launch({executablePath:process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 try {
  const page = await browser.newPage({viewport:{width:1100,height:800}})
  page.on('pageerror', e=>console.error('PAGE',e.message))
