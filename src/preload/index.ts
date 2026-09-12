@@ -21,6 +21,7 @@ import { mountHomeFlow } from './home-flow'
 import { mountFigmaResizeFeedback } from './figma-resize-feedback'
 import { mountFigmaScrollbars } from './figma-scrollbars'
 import { mountFigmaResponsiveHeader } from './figma-responsive-header'
+import { mountNavigationTitlePreview } from './navigation-title-preview'
 import { SidebarUpdateControl } from './sidebar-update-control'
 import { requestUpdatePagePreparation } from './update-preparation'
 import { mountNativeThemeSync, mountWindowsTitlebar } from './windows-titlebar'
@@ -143,6 +144,7 @@ function initializeUi(): void {
     window.addEventListener('unload', mountHomeFlow(document), { once: true })
     window.addEventListener('unload', mountFigmaResizeFeedback(document), { once: true })
     window.addEventListener('unload', mountFigmaResponsiveHeader(document), { once: true })
+    window.addEventListener('unload', mountNavigationTitlePreview(document), { once: true })
     void ipcRenderer.invoke('desktop-scrollbars:always-show').then((always: boolean) => {
       window.addEventListener('unload', mountFigmaScrollbars(document, always === true), { once: true })
     }).catch(() => {

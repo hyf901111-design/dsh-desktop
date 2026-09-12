@@ -14,6 +14,20 @@ export function patchFigmaRefinementPreset(source) {
   seat=exact(seat,'onClick: () => {\n\t\t\t\t\t\tsetOpen((value) => !value);','onClick: (event) => {\n\t\t\t\t\t\tconst anchor = event.currentTarget.getBoundingClientRect();\n\t\t\t\t\t\tsetMenuSide(window.innerHeight - anchor.bottom < 220 ? "top" : "bottom");\n\t\t\t\t\t\tsetOpen((value) => !value);')
   return source.slice(0,start)+seat+source.slice(end)
 }
+export function patchFigmaNavigationTitles(source) {
+  return exact(source,
+    'className: Rows_module_css_default.title,\n\t\t\t\t\t\t\tchildren: title',
+    'className: Rows_module_css_default.title + " odyssey-nav-title",\n\t\t\t\t\t\t\tchildren: (0, react_jsx_runtime.jsx)("span", { className: "odyssey-nav-title-text", children: title })')
+}
+export function patchFigmaContextDirectory(source) {
+  // The popover belongs to the composer, which can be much narrower than the window.
+  source = exact(source,
+    'style: { position: "relative", margin: "0 14px", alignSelf: "flex-start", maxWidth: "calc(100% - 28px)" },',
+    '"data-research-context-anchor": "", style: { position: "relative", margin: "0 14px", alignSelf: "stretch", minWidth: 0, width: "calc(100% - 28px)", maxWidth: "calc(100% - 28px)" },')
+  return exact(source,
+    'left: 0, width: "min(320px, calc(100vw - 64px))", boxSizing:',
+    'left: 0, width: "min(320px, 100%)", boxSizing:')
+}
 export function patchFigmaRefinementConversation(source) {
   const marker='/* odyssey:task-dock:20260912 */'
   if (source.includes(marker)) return source
