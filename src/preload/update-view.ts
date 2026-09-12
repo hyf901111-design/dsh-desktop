@@ -2,6 +2,28 @@ import type { UpdateStatus } from '../shared/contracts'
 
 export type UpdateLocale = 'en' | 'zh'
 
+/** Legacy errors without a target version must never imply a download. */
+export function updateErrorStage(status: UpdateStatus): NonNullable<UpdateStatus['errorStage']> {
+  return status.errorStage ?? (status.availableVersion ? 'download' : 'check')
+}
+
+export function updateErrorCopy(status: UpdateStatus, locale: UpdateLocale): { title: string; description: string; retryLabel: string } {
+  const zh = locale === 'zh', stage = updateErrorStage(status), message = status.message ?? ''
+  if (stage === 'check') {
+    let description = zh ? '暂时无法检查更新，请稍后重试。' : 'Unable to check for updates. Please try again later.'
+    if (/timed?\s*out|timeout|ETIMEDOUT|超时/i.test(message)) description = zh ? '检查更新超时，请稍后重试。' : 'The update check timed out. Please try again later.'
+    else if (/ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|offline|network|网络/i.test(message)) description = zh ? '请检查网络连接后重试。' : 'Check your network connection and try again.'
+    else if (/\b50[0234]\b|service unavailable|bad gateway/i.test(message)) description = zh ? '更新服务暂时不可用，请稍后重试。' : 'The update service is temporarily unavailable. Please try again later.'
+    return { title: zh ? '检查更新失败' : 'Update check failed', description, retryLabel: zh ? '重新检查' : 'Check again' }
+  }
+  const checksum = /checksum|sha.?512|校验|signature/i.test(message)
+  return {
+    title: zh ? checksum ? '更新文件校验失败' : stage === 'install' ? '更新未完成' : '下载未完成' : 'Update failed',
+    description: message || (zh ? '更新失败，请重试。' : 'Update failed. Please retry.'),
+    retryLabel: stage === 'install' ? (zh ? '重试更新' : 'Retry update') : (zh ? '重新下载' : 'Retry download')
+  }
+}
+
 export type UpdateAction =
   | { kind: 'hidden' }
   | { kind: 'download'; version: string }
@@ -63,7 +85,7 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
     case 'unsupported':
       return zh ? '当前版本不支持自动更新' : 'Automatic updates are unavailable in this build'
     case 'error':
-      return status.message || (zh ? '更新失败，请重试' : 'Update failed. Please retry.')
+      return updateErrorCopy(status, locale).description
     case 'idle':
       return ''
   }

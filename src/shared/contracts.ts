@@ -27,6 +27,8 @@ export type UpdatePhase =
 
 export interface UpdateStatus {
   phase: UpdatePhase
+  /** Operation that failed; optional for statuses produced by older clients. */
+  errorStage?: 'check' | 'download' | 'install'
   installStage?: 'preparing' | 'saving' | 'restarting'
   currentVersion: string
   availableVersion?: string

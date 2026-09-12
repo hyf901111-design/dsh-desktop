@@ -14,8 +14,9 @@ assert.equal(source.split('function researchCanvasArrangeWithMotion(').length,2,
 const dependencies = await build({stdin:{contents:`import * as react from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot} from 'react-dom/client';window.testDeps={react,jsx,dom,createRoot};`,resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser'})
 const browser = await playwright.chromium.launch({executablePath:process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 try {
- const page = await browser.newPage({viewport:{width:1100,height:800}})
- page.on('pageerror', e=>console.error('PAGE',e.message))
+ const page = await browser.newPage({viewport:{width:1100,height:920}})
+ const pageErrors=[]
+ page.on('pageerror', e=>{pageErrors.push(e.message);console.error('PAGE',e.message)})
  await page.route('**/*', route => route.request().isNavigationRequest() ? route.fulfill({contentType:'text/html',body:'<div id="mount" style="height:760px;width:1000px"></div>'}) : route.abort())
  await page.goto('https://canvas.fixture/')
  await page.addScriptTag({content:dependencies.outputFiles[0].text})
@@ -40,7 +41,7 @@ try {
    window.metrics=()=>{const el=document.querySelector('[data-research-node-id="a"]'),r=el.getBoundingClientRect(),style=getComputedStyle(el),text=el.querySelector('[data-research-node-title]');return{x:r.x,y:r.y,width:r.width,height:r.height,left:parseFloat(style.left),top:parseFloat(style.top),font:getComputedStyle(text).fontSize,transform:style.transform,animations:document.getAnimations().map(a=>({duration:a.effect.getTiming().duration,property:a.transitionProperty,target:a.effect.target.className,playState:a.playState,transition:getComputedStyle(a.effect.target).transition})),snapshot:JSON.parse(JSON.stringify(workspace.getSnapshot()))}}
  })
  await page.waitForSelector('[data-research-node-id="a"]')
- const arrange=async()=>{await page.locator('[data-research-canvas]').click({button:'right',position:{x:850,y:40}});await page.locator('[data-research-context-arrange]').click({timeout:3000})}
+ const arrange=async()=>{await page.locator('[data-research-canvas]').click({button:'right',position:{x:(await page.locator('[data-research-canvas]').boundingBox()).width-24,y:40}});await page.locator('[data-research-context-arrange]').click({timeout:3000})}
  await page.waitForTimeout(80)
  const inlineBefore=await page.evaluate(()=>[...document.querySelectorAll('[data-research-content-layer],[data-research-node-id]')].map(el=>[el.style.getPropertyValue('transition'),el.style.getPropertyPriority('transition')]))
  const before=await page.evaluate(()=>metrics())
@@ -90,11 +91,49 @@ try {
  await page.emulateMedia({reducedMotion:'reduce'})
  await page.waitForFunction(()=>typeof document.querySelector('[data-research-canvas]').__odysseyArrangeMotion==='undefined',{},{timeout:150})
  assert.equal((await page.evaluate(()=>metrics())).animations.filter(a=>a.duration===260).length,0,'preference change cancels an active arrange')
+ // D69: the real canvas applies one viewport scale to the candidate layout,
+ // and its fixed toolbar must not obscure cards in either theme or short panes.
+ const fitCases=[]
+ for(const theme of ['light','dark']) for(const [name,width,height,sizes,expectedWidth] of [
+   ['figma',940,824,['large','small','small','medium','small'],992],
+   ['native',740,824,['large','medium','medium','large','small','large'],1328],
+   ['short',740,528,['large','medium','medium','large','small','large'],null]
+ ]) {
+   await page.evaluate(({theme,width,height,sizes})=>{
+     document.body.toggleAttribute('data-ds-dark-theme',theme==='dark')
+     document.querySelector('#mount').style.width=width+'px';document.querySelector('#mount').style.height=height+'px'
+     testDeps.dom.flushSync(()=>{
+       workspace.setArtifacts(sizes.map((size,i)=>({id:'fit-'+i,kind:'generated-container',creationMode:'selection',messageId:'fit-'+i,title:'组件'+i,excerpt:'保留内容 '+i,sourceNodeIds:['source'],containerPrompt:'保留内容',refreshMinutes:0,generationStatus:'completed',containerSpec:{version:1,type:'markdown',title:'组件'+i,content:'保留内容 '+i},x:150+i*13,y:200+i*17,width:size==='small'?320:656,height:size==='large'?456:220,sizeMode:'manual',containerSizePreset:size})))
+       workspace.setViewport({x:0,y:0,scale:1});workspace.updateSelection(['fit-0'],'replace')
+     })
+   },{theme,width,height,sizes})
+   await page.waitForFunction(({width,height})=>workspace.getSnapshot().canvasSize.width===width&&workspace.getSnapshot().canvasSize.height===height,{width,height})
+   await arrange();await page.waitForTimeout(330)
+   const fit=await page.evaluate(()=>{
+     const box=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}}
+     const snapshot=workspace.getSnapshot()
+     return{canvas:box(document.querySelector('[data-research-canvas]')),toolbar:box(document.querySelector('[data-research-global-toolbar]')),cards:[...document.querySelectorAll('[data-research-node-id]')].map(el=>({id:el.dataset.researchNodeId,...box(el),transform:getComputedStyle(el).transform})),snapshot}
+   })
+   if(expectedWidth) assert.equal(Math.max(...fit.snapshot.artifacts.map(n=>n.x+n.width/2))-Math.min(...fit.snapshot.artifacts.map(n=>n.x-n.width/2)),expectedWidth)
+   for(const card of fit.cards) {
+     assert(card.x>=fit.canvas.x+32-.1 && card.right<=fit.canvas.right-32+.1,`${name}: horizontal fit`)
+     assert(card.y>=fit.canvas.y+32-.1 && card.bottom<=fit.canvas.bottom-88-32+.1,`${name}: reserved vertical fit`)
+     assert(card.bottom<=fit.toolbar.y || card.y>=fit.toolbar.bottom || card.right<=fit.toolbar.x || card.x>=fit.toolbar.right,`${name}: toolbar cannot obscure card`)
+     assert(card.transform.startsWith('matrix(1, 0, 0, 1,'),'card only translates; zoom is on common viewport')
+   }
+   assert.equal(fit.cards.length,sizes.length)
+   assert.deepEqual(fit.snapshot.selection.selectedNodeIds,['fit-0'])
+   assert.deepEqual(fit.snapshot.artifacts.map(n=>n.sourceNodeIds),sizes.map(()=>['source']))
+   fitCases.push({theme,name,canvas:fit.canvas,toolbar:fit.toolbar,cards:fit.cards,viewport:fit.snapshot.viewport})
+   if(process.env.SHERLOCK_TEST_SCREENSHOT_DIR) await page.screenshot({path:process.env.SHERLOCK_TEST_SCREENSHOT_DIR+'/d69-'+name+'-'+theme+'.png'})
+ }
+ console.log(JSON.stringify({arrangeFit:fitCases},null,2))
  await page.emulateMedia({reducedMotion:'no-preference'})
  await page.evaluate(()=>reset())
  await arrange()
  await page.evaluate(()=>{window.detachedCanvas=document.querySelector('[data-research-canvas]');testDeps.dom.flushSync(()=>root.unmount())})
  assert.equal(await page.evaluate(()=>typeof detachedCanvas.__odysseyArrangeMotion),'undefined','unmount releases cleanup state')
  assert.equal(await page.evaluate(()=>document.getAnimations().length),0)
+ assert.deepEqual(pageErrors,[],'no framework errors during the real canvas interaction')
  console.log(JSON.stringify({result:'PASS',before:{x:before.x,y:before.y},middle:{x:middle.x,y:middle.y,animations:middle.animations},after:{x:after.x,y:after.y},font:after.font,checks:'260ms intermediate geometry; no card glyph scaling; selection; one undo; pointer interruption; reduced motion; unmount'},null,2))
 } finally { await browser.close() }

@@ -264,6 +264,7 @@ function patchFigmaCanvasContent(source) {
   if(creationStart>=0&&plusStart>=0&&plusEnd>plusStart&&plusEnd-plusStart<1500)source=source.slice(0,plusStart)+"(0,react_jsx_runtime.jsx)('img',{src:"+JSON.stringify(iconData.plus)+",width:14,height:14,alt:'',className:'odyssey-canvas-icon'})"+source.slice(plusEnd);
   if (source.includes('/* SHERLOCK_FIGMA_CANVAS_FINAL_20260910 */')) {
     source=block(source,'const RESEARCH_BENTO_SIZES', 'function researchCanvasOrganizedLayout(',bentoSource.slice(bentoSource.indexOf('const RESEARCH_BENTO_SIZES')));
+    source=block(source,'function researchCanvasOrganizedLayout(', 'function researchCanvasVisibleArea(',organizedLayoutSource);
     source=block(source,'function ResearchGenerationProcess(', 'function isResearchWechatArticleUrl(',generationSource);
     source=block(source,'function ResearchContainerContent(props) {', 'function ResearchContainerBody(',responsiveSource);
     const marker=source.indexOf('/* SHERLOCK_FIGMA_CANVAS_FINAL_20260910 */');
@@ -275,13 +276,7 @@ function patchFigmaCanvasContent(source) {
   source = exact(source, 'const RESEARCH_CANVAS_ORGANIZE_PADDING = 48;', 'const RESEARCH_CANVAS_ORGANIZE_PADDING = 32;')
   source = exact(source, 'const RESEARCH_CANVAS_ORGANIZE_NODE_GAP = 32;', 'const RESEARCH_CANVAS_ORGANIZE_NODE_GAP = 16;')
   source = block(source, 'function researchCanvasOrganizedLayout(', 'function researchCanvasVisibleArea(', `${bentoSource}
-function researchCanvasOrganizedLayout(files, artifacts, canvasSize, measured = new Map()) {
-  const nodes = [...files, ...artifacts].filter(n => typeof n?.id === 'string' && Number.isFinite(n.x) && Number.isFinite(n.y));
-  if (!nodes.length) return null;
-  const packed = researchBentoLayout(nodes, canvasSize, measured);
-  const byId = new Map(packed.nodes.map(n => [n.id, { ...n, x:n.x+n.width/2, y:n.y+n.height/2, sizeMode:'manual' }]));
-  return { files:files.map(n=>byId.get(n.id)??n), artifacts:artifacts.map(n=>byId.get(n.id)??n), viewport:packed.viewport };
-}`)
+${organizedLayoutSource}`)
   source = block(source, 'const RESEARCH_COMPONENT_SIZES =', 'function researchCanvasReflowGrowth(', `const RESEARCH_COMPONENT_SIZES = { small:220, medium:220, large:456 };
 function researchComponentSize(node) { return researchBentoSize(node); }
 function researchComponentPrompt(node, prompt) {
@@ -343,6 +338,14 @@ function capDerivedNodes(source) {
 function canvasStyleInstaller() {
   return `if(typeof document!=='undefined'){const style=document.createElement('style');style.dataset.sherlockFigmaCanvas='';style.textContent=${JSON.stringify(canvasCss)};document.head.appendChild(style);const Observer=document.defaultView?.MutationObserver;if(Observer){const observer=new Observer(records=>{if(!style.isConnected){observer.disconnect();return;}if(records.some(record=>[...record.addedNodes].some(node=>node.nodeType===1&&node.matches?.('style[data-research-compact-style],style[data-plugin-css="@deepseek-ai/dsh-client-ui-conversation/ResearchCanvas.module.css"]')&&(style.compareDocumentPosition(node)&4))))document.head.appendChild(style);});observer.observe(document.head,{childList:true});}}`;
 }
+const organizedLayoutSource = `function researchCanvasOrganizedLayout(files, artifacts, canvasSize, measured = new Map()) {
+  const nodes = [...files, ...artifacts].filter(n => typeof n?.id === 'string' && Number.isFinite(n.x) && Number.isFinite(n.y));
+  if (!nodes.length) return null;
+  const packed = researchBentoLayout(nodes, researchCanvasVisibleArea({canvasSize}), measured, {fitColumns:true});
+  const byId = new Map(packed.nodes.map(n => [n.id, { ...n, x:n.x+n.width/2, y:n.y+n.height/2, sizeMode:'manual' }]));
+  return { files:files.map(n=>byId.get(n.id)??n), artifacts:artifacts.map(n=>byId.get(n.id)??n), viewport:packed.viewport };
+}`;
+
 const placementSource = `function researchCanvasVisibleArea(snapshot) {
   const size=snapshot?.canvasSize??{};
   return {width:size.availableWidth>0?Math.min(size.width,size.availableWidth):size.width,height:Math.max(0,(size.height??0)-88)};

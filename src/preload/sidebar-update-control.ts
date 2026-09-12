@@ -1,5 +1,5 @@
 import type { UpdateStatus } from '../shared/contracts'
-import { updateAction, updateInstallCopy, updateMessage, updateTransferMessage, type UpdateLocale } from './update-view'
+import { updateAction, updateErrorCopy, updateErrorStage, updateInstallCopy, updateMessage, updateTransferMessage, type UpdateLocale } from './update-view'
 import { installSidebarNoticeStyles, noticeIcon, positionSidebarNotice } from './sidebar-notice'
 
 const BUTTON_ID = 'sherlock-sidebar-update-button'
@@ -66,7 +66,7 @@ export class SidebarUpdateControl {
       this.document.addEventListener('ework-update-action', (event) => {
         const action = (event as CustomEvent).detail
         if (action === 'download') void this.invoke(this.callbacks.download)
-        else if (action === 'retry') void this.retryDownload()
+        else if (action === 'retry') void this.retryUpdate()
         else if (action === 'show') { this.dismissed = ''; if (this.status) this.render(this.status) }
       })
     }
@@ -79,7 +79,7 @@ export class SidebarUpdateControl {
     if (!this.mount() || !this.button || !this.panel) return
     const doc = this.document, panel = this.panel, button = this.button
     const action = updateAction(status), zh = this.locale === 'zh'
-    const phaseKey = `${status.availableVersion ?? status.currentVersion}:${status.phase}`
+    const phaseKey = `${status.availableVersion ?? status.currentVersion}:${status.phase}:${status.phase === 'error' ? updateErrorStage(status) : ''}`
     const active = ['downloading', 'downloaded', 'installing'].includes(status.phase)
     button.dataset.action = action.kind
     button.replaceChildren(noticeIcon(doc, active ? 'loading' : 'update'))
@@ -97,12 +97,12 @@ export class SidebarUpdateControl {
     const checking = status.phase === 'downloaded' || status.phase === 'installing'
     const completed = status.phase === 'updated'
     const installCopy = updateInstallCopy(status, this.locale)
-    const failedChecksum = status.phase === 'error' && /checksum|sha.?512|校验|signature/i.test(status.message ?? '')
+    const errorCopy = updateErrorCopy(status, this.locale)
     header.append(noticeIcon(doc, checking ? 'loading' : completed ? 'check' : status.phase === 'downloading' ? 'download' : status.phase === 'error' ? 'warning' : 'update'), title)
     title.textContent = checking ? installCopy.title
       : completed ? (zh ? `已更新至 ${status.currentVersion}` : `Updated to ${status.currentVersion}`)
       : status.phase === 'downloading' ? (zh ? `正在下载更新 · ${Math.round(status.percent ?? 0)}%` : `Downloading update · ${Math.round(status.percent ?? 0)}%`)
-      : status.phase === 'error' ? (zh ? failedChecksum ? '更新文件校验失败' : '下载未完成' : 'Update failed')
+      : status.phase === 'error' ? errorCopy.title
       : (zh ? `发现新版本 ${status.availableVersion}` : `Version ${status.availableVersion} is available`)
     if (!checking) {
       const close = this.action('', () => { this.dismissed = phaseKey; this.render(status) })
@@ -128,7 +128,7 @@ export class SidebarUpdateControl {
       description.textContent = updateTransferMessage(status)
     } else description.textContent = checking ? installCopy.description
       : completed ? (zh ? '更新完成，当前已是最新版本。' : 'Update complete. You are up to date.')
-      : status.phase === 'error' ? (status.message || (zh ? '更新失败，请重新下载。' : 'Please retry the download.'))
+      : status.phase === 'error' ? errorCopy.description
       : (zh ? '优化研究体验，修复已知问题。' : 'Research improvements and fixes.')
     if (description.textContent) children.push(description)
     if (status.phase === 'available' || status.phase === 'error' || completed) {
@@ -143,7 +143,7 @@ export class SidebarUpdateControl {
         download.className = 'ework-notice-primary'
         actions.append(download)
       } else {
-        const retry = this.action(zh ? '重新下载' : 'Retry download', () => this.retryDownload())
+        const retry = this.action(errorCopy.retryLabel, () => this.retryUpdate())
         retry.className = 'ework-notice-primary'
         actions.append(retry)
       }
@@ -171,16 +171,23 @@ export class SidebarUpdateControl {
     this.document.dispatchEvent(new this.document.defaultView!.CustomEvent('ework-update-status', { detail: serialized }))
   }
 
-  private async retryDownload(): Promise<void> {
-    await this.invoke(async () => { await this.callbacks.retry(); if (this.status?.phase === 'available') await this.callbacks.download(); else if (this.status?.phase === 'downloaded') await this.callbacks.install() })
+  private async retryUpdate(): Promise<void> {
+    // Capture the failed operation before the check publishes a new status.
+    const resumeTransfer = this.status && updateErrorStage(this.status) !== 'check'
+    let errorStage: NonNullable<UpdateStatus['errorStage']> = 'check'
+    await this.invoke(async () => {
+      await this.callbacks.retry()
+      if (resumeTransfer && this.status?.phase === 'available') { errorStage = 'download'; await this.callbacks.download() }
+      else if (resumeTransfer && this.status?.phase === 'downloaded') { errorStage = 'install'; await this.callbacks.install() }
+    }, () => errorStage)
   }
 
-  private async invoke(callback: () => void | Promise<unknown>): Promise<void> {
+  private async invoke(callback: () => void | Promise<unknown>, failureStage?: () => UpdateStatus['errorStage']): Promise<void> {
     if (this.pending) return
     this.pending = true
     this.panel?.querySelectorAll('button').forEach(button => { button.disabled = true })
     try { await callback() } catch (error) {
-      if (this.status) this.render({ ...this.status, phase: 'error', manual: true, message: error instanceof Error ? error.message : String(error) })
+      if (this.status) this.render({ ...this.status, phase: 'error', errorStage: failureStage?.() ?? updateErrorStage(this.status), manual: true, message: error instanceof Error ? error.message : String(error) })
     } finally { this.pending = false; this.panel?.querySelectorAll('button').forEach(button => { button.disabled = false }) }
   }
 }

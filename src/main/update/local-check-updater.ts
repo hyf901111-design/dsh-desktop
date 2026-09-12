@@ -23,7 +23,7 @@ function validateMetadata(text: string): void {
 }
 
 /** Only metadata GETs. Node HTTP has no system proxy, cookie store, disk cache or automatic redirects. */
-class LocalMetadataExecutor extends HttpExecutor<ClientRequest> {
+export class LocalMetadataExecutor extends HttpExecutor<ClientRequest> {
   constructor(private readonly origin: string) { super() }
   override request(options: RequestOptions, token = new CancellationToken(), data?: Record<string, unknown> | null): Promise<string> {
     if (data != null || (options.method && options.method.toUpperCase() !== 'GET') || options.auth || options.socketPath ||

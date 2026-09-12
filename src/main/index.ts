@@ -1133,6 +1133,7 @@ async function bootstrap(): Promise<void> {
     acceptanceOrigin,
     feed: app.commandLine.getSwitchValue('sherlock-local-update-feed'),
     feedRequested: app.commandLine.hasSwitch('sherlock-local-update-feed'),
+    downloadRequested: app.commandLine.hasSwitch('sherlock-local-update-download'),
     userData: app.getPath('userData'),
     appData: app.getPath('appData')
   }, tmpdir())
@@ -1319,14 +1320,13 @@ if (!singleInstance) {
     researchBoardsService?.stop()
     accountService?.stop()
     researchVoiceController.dispose()
-    if (quitting || !runtime) return
+    if (quitting) return
     event.preventDefault()
     quitting = true
     stopHarnessThemePreferenceSync()
-    stopUpdateManager()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )

@@ -59,7 +59,7 @@ describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
     expect(result.nodes[0]).toMatchObject({width:656,height:456});
     expect(result.viewport.scale).toBeCloseTo((520-64)/656);
   });
-  it('uses the same visible-area rule through the production organize command and preserves stored content',async()=>{
+  it('fits organize within the visible area while the default generation policy remains unchanged',async()=>{
     const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
     let descriptor;runInNewContext(source,{window:{__ModuleLoader__:{load:value=>descriptor=value}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
     let fallback;fallback=new Proxy(function(){},{get:()=>fallback,apply:()=>fallback});const client=descriptor.factory(()=>fallback);
@@ -67,7 +67,13 @@ describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
     const artifacts=nodes.map((node,index)=>({...node,kind:'generated-container',messageId:node.id,title:'内容'+index,excerpt:node.content,containerPrompt:'内容',refreshMinutes:0,sourceNodeIds:[],generationStatus:'completed',containerSpec:{version:1,type:'markdown',title:'内容',content:node.content},x:500,y:500,width:index<2?656:320,height:index<2?456:220,sizeMode:'auto'}));
     storage.setItem('sherlock.research.canvas.artifacts.v1:visible',JSON.stringify(artifacts));const workspace=client.createResearchWorkspaceSession(storage,'visible');workspace.setCanvasSize({width:1088,availableWidth:728,height:800});
     workspace.organizeCanvas();const arranged=workspace.getSnapshot().artifacts;
-    expect(Math.max(...arranged.map(n=>n.x+n.width/2))-Math.min(...arranged.map(n=>n.x-n.width/2))).toBe(656);
+    const {viewport}=workspace.getSnapshot();
+    expect(viewport.scale).toBeGreaterThan(researchBentoLayout(nodes,{width:728,height:800-88}).viewport.scale);
+    for(const n of arranged){
+      expect(viewport.x+(n.x-n.width/2)*viewport.scale).toBeGreaterThanOrEqual(32-1e-6);
+      expect(viewport.x+(n.x+n.width/2)*viewport.scale).toBeLessThanOrEqual(728-32+1e-6);
+      expect(viewport.y+(n.y+n.height/2)*viewport.scale).toBeLessThanOrEqual(800-88-32+1e-6);
+    }
     expect(arranged.map(n=>n.containerSpec.content)).toEqual(nodes.map(n=>n.content));
     const before=JSON.stringify(arranged);workspace.organizeCanvas();expect(JSON.stringify(workspace.getSnapshot().artifacts)).toBe(before);
   });

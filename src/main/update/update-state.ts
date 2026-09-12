@@ -13,7 +13,7 @@ export type UpdateStateEvent =
   | { type: 'downloaded'; version: string }
   | { type: 'install'; stage?: UpdateStatus['installStage'] }
   | { type: 'not-available' }
-  | { type: 'error'; message: string }
+  | { type: 'error'; message: string; errorStage?: UpdateStatus['errorStage'] }
   | { type: 'unsupported'; message: string }
   | { type: 'reset' }
 
@@ -51,7 +51,16 @@ export function reduceUpdateStatus(
     case 'not-available':
       return { ...base, phase: 'up-to-date' }
     case 'error':
-      return { ...base, availableVersion: current.availableVersion, phase: 'error', message: event.message }
+      return {
+        ...base, availableVersion: current.availableVersion, phase: 'error', message: event.message,
+        errorStage: event.errorStage ?? (
+          current.phase === 'checking' ? 'check'
+            : current.phase === 'available' || current.phase === 'downloading' ? 'download'
+              : current.phase === 'downloaded' || current.phase === 'installing' ? 'install'
+                : current.phase === 'error' ? current.errorStage ?? (current.availableVersion ? 'download' : 'check')
+                  : 'check'
+        )
+      }
     case 'unsupported':
       return { ...base, phase: 'unsupported', message: event.message }
     case 'reset':

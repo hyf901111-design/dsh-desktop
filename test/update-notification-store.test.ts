@@ -69,3 +69,20 @@ it('never restores cached transfer progress as a live operation and reconciles t
  expect(updateNotificationVersionInstalled('0.10.0','0.9.6')).toBe(true)
  dispose()
 })
+
+it('retains the live check failure stage when a cached version supplies only the notification history',async()=>{
+ const {w,mount}=fixture()
+ saveUpdateNotification(w.localStorage,{phase:'available',currentVersion:'0.9.5',availableVersion:'0.9.6',manual:false})
+ const dispose=mount();await new Promise(r=>setTimeout(r,0));(w.document.querySelector('.srb-bell') as any).click()
+ for(const explicit of [true,false]){
+  w.document.documentElement.dataset.eworkUpdateStatus=JSON.stringify({phase:'error',currentVersion:'0.9.5',manual:true,message:'HTTP 503 at internal URL',...(explicit?{errorStage:'check'}:{})})
+  w.document.dispatchEvent(new w.CustomEvent('ework-update-status'))
+  const record=w.document.querySelector('[data-update-notification]')!
+  expect(record.textContent).toContain('重新检查');expect(record.textContent).not.toContain('重新下载')
+  expect(record.textContent).toContain('更新服务暂时不可用');expect(record.textContent).not.toContain('internal URL')
+ }
+ expect(normalizeUpdateNotification({phase:'error',currentVersion:'0.9.5',availableVersion:'0.9.6',manual:true,errorStage:'check'})?.errorStage).toBe('check')
+ expect(normalizeUpdateNotification({phase:'error',currentVersion:'0.9.5',availableVersion:'0.9.6',manual:true,errorStage:'invented'})?.errorStage).toBeUndefined()
+ expect(readUpdateNotification(w.localStorage)?.errorStage).toBeUndefined()
+ dispose()
+})

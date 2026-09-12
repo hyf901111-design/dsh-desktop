@@ -6,6 +6,8 @@ export interface LocalUpdateEnvironment {
   acceptanceOrigin?: string
   feed: string
   feedRequested: boolean
+  /** Explicit main-process-only second-stage capability. */
+  downloadRequested?: boolean
   userData: string
   appData: string
 }
