@@ -862,12 +862,13 @@ if (process.argv.includes('--serve')) {
     await page.locator('.srb-row[aria-current=true]').hover()
     await page.locator('.srb-row[aria-current=true] .srb-row-more').click()
     await page.getByRole('menuitem', { name: '管理协作', exact: true }).click()
-    await page.getByLabel('周同事待处理邀请权限').selectOption('viewer')
+    await page.getByRole('button', { name: '周同事待处理邀请权限', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: '仅查看', exact: true }).click()
     await peer
       .locator('.srb-bubble')
       .getByText(/仅查看/)
       .waitFor()
-    await until(async () => await page.getByLabel('周同事待处理邀请权限').inputValue() === 'viewer', 'updated invitation permission')
+    await until(async () => await page.getByRole('button', { name: '周同事待处理邀请权限', exact: true }).getAttribute('value') === 'viewer', 'updated invitation permission')
     await page.screenshot({
       animations: 'disabled',
       path: join(out, 'pending-invitation-owner.png')

@@ -11,7 +11,7 @@ body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
 body .wSkVaW_header :is([data-srb-title-row],[data-srb-title-cluster]) { display:contents!important; }
 body .wSkVaW_header .wSkVaW_crumbs { order:1; flex:0 1 auto; min-width:0; max-width:200px; overflow:hidden; }
 body .wSkVaW_header .wSkVaW_crumbSeg { min-width:0; flex-shrink:1; }
-body .wSkVaW_header .wSkVaW_crumb { text-overflow:ellipsis; overflow:hidden; white-space:nowrap; font:500 13px/20px var(--odyssey-font-ui); }
+body .wSkVaW_header .wSkVaW_crumb { text-overflow:ellipsis; overflow:hidden; white-space:nowrap; font:500 14px/21px var(--odyssey-font-ui); }
 body .wSkVaW_header [data-srb-tabs] { order:2; margin:0!important; padding:0; height:28px; min-height:28px; display:flex; flex:none; gap:4px; }
 body .wSkVaW_header .wSkVaW_tab { width:56px; min-width:56px; height:28px; padding:4px 8px; flex:none; }
 body .wSkVaW_header .wSkVaW_tabActive { color:#17191c; background:#fff; }
@@ -26,11 +26,11 @@ body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaborat
 body .wSkVaW_header .srb-actions .srb-favorite-button[aria-pressed=true] { color:var(--odyssey-muted); }
 .srb-board-add-icon { display:block; width:16px; height:16px; background:currentColor; mask:var(--odyssey-board-add-icon) center/contain no-repeat; }
 body .wSkVaW_header[data-odyssey-header-layout=compact] .wSkVaW_crumbs { max-width:96px; }
-body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:4px!important; padding-left:12px!important; padding-right:12px!important; }
-body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-odyssey-header-layout=narrow] { padding-right:44px; }
-body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_crumbs { max-width:80px; }
+body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:12px!important; padding-left:16px!important; padding-right:20px!important; }
+body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_headerActions { gap:8px; margin-right:-4px; }
+body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_crumbs { flex:1 1 80px; max-width:80px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_tab { min-width:48px; width:48px; }
-body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .cubgiG_seat { font-size:0; gap:4px; padding:0 4px; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .cubgiG_seat { font-size:0; gap:4px; padding:0 4px; width:40px; flex:none; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .odyssey-mode-label { display:none; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger { width:28px; padding:0; justify-content:center; font-size:0; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger>* { display:none; }
@@ -236,7 +236,7 @@ body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header
 /* The detached panel entry remains at the window corner when the pane is closed.
    Reserve its 28 px target plus 8 px gap, including compact windows. */
 body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) { padding-right:56px; }
-body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=narrow]:not([aria-hidden=true]) { padding-right:44px!important; }
+body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=narrow]:not([aria-hidden=true]) { padding-right:56px!important; }
 
 /* Home navigation is resident; the composer owns mode selection until a turn starts. */
 body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; }
@@ -327,3 +327,7 @@ body[data-ds-dark-theme] [data-odyssey-subagent-panel] .XJ7liG_frame{background:
 .odyssey-subagent-panel-header .odyssey-subagent-panel-state{position:relative;display:block;padding-left:20px;white-space:nowrap}
 .odyssey-subagent-panel-header .odyssey-subagent-panel-state [data-odyssey-subagent-activity]{position:absolute;left:1px;top:6px}
 .odyssey-subagent-panel-header .odyssey-subagent-panel-metrics{margin-top:2px;font:400 11px/17px 'Noto Sans SC',sans-serif}
+
+/* The rail keeps its 80 px grid track while the expanded navigation paints over
+   the canvas. Use opaque material so covered canvas content cannot bleed through. */
+body [data-odyssey-sidebar-overlay=true] > .pI_x6G_sidebarCol { background:var(--odyssey-workspace)!important; box-shadow:8px 0 24px #00000024; }

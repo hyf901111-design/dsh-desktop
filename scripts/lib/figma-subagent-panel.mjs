@@ -169,12 +169,46 @@ const subagentHeader=`function OdysseySubagentPanelHeader({sessionId,useSession,
 function finishSubagentPanelScope(source) {
   source=exact(source,'function ConversationRoot({ subagentPanel=false, sessionId,','function ConversationRoot({ subagentPanel=false, useProjection, sessionId,')
   source=exact(source,'OdysseySubagentPanelHeader,{sessionId,useSession,useSessions}', 'OdysseySubagentPanelHeader,{sessionId,useSession,useSessions,useProjection}')
-  const a=source.indexOf('function OdysseySubagentPanelHeader('),b=source.indexOf('\nclass ResearchSidebarCoordinator',a)
+  const a=source.indexOf('function OdysseySubagentPanelHeader(')
+  const portal=source.indexOf('/* odyssey:subagent-parent-portals:v1 */',a)
+  const b=portal<0?source.indexOf('\nclass ResearchSidebarCoordinator',a):portal-1
   if(a<0||b<a)throw Error('Subagent header boundary missing')
   source=source.slice(0,a)+subagentHeader+source.slice(b)
 
   source=exact(source, "slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel'},ConversationRoot);", "slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel',children:undefined},ConversationRoot);")
-  return exact(source, "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true},{sessionId:id}),", "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true,renderSlot,renderSlotChain},{sessionId:id}),")
+  source=exact(source, "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true},{sessionId:id}),", "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true,renderSlot,renderSlotChain},{sessionId:id}),")
+  return finishSubagentPanelPortal(source)
+}
+function finishSubagentPanelPortal(source) {
+  const marker='/* odyssey:subagent-parent-portals:v1 */'
+  if(source.includes(marker))return source
+  source=exact(source,"meta:{subagentAddress:address}},scope);","meta:{subagentAddress:address,sherlockPanel:'right'}},scope);")
+  source=exact(source,`  const store=react.useMemo(()=>coordinator.storeFor(scope.sessionId),[coordinator,scope.sessionId]);
+  const snapshot=react.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot);`, '')
+  source=exact(source,'  const address=tab.meta?.subagentAddress;',`  const address=tab.meta?.subagentAddress;
+  const hostRef=react.useCallback(host=>coordinator.setSubagentHost(scope.sessionId,tab.id,address?.childSessionId,host),[coordinator,scope.sessionId,tab.id,address?.childSessionId]);`)
+  source=exact(source,'state.ready&&snapshot.binding?.renderSubagent?snapshot.binding.renderSubagent(address.childSessionId):',"state.ready?react_jsx_runtime.jsx('div',{ref:hostRef,style:{display:'contents'},'data-odyssey-subagent-host':address.childSessionId}):")
+  source=exact(source,'class ResearchSidebarCoordinator {',`${marker}
+function OdysseySubagentPortals({snapshot,renderSlot,renderSlotChain}) {
+  return [...(snapshot.subagentHosts??new Map())].map(([tabId,{childSessionId,host}])=>react_dom.createPortal(
+    renderSlot('conversation.subagent.panel',{subagentPanel:true,renderSlot,renderSlotChain},{sessionId:childSessionId}),host,tabId));
+}
+class ResearchSidebarCoordinator {
+  setSubagentHost(sessionId,tabId,childSessionId,host) {
+    const store=this.storeFor(sessionId),previous=store.getSnapshot().subagentHosts;
+    if(previous?.get(tabId)?.host===host)return;
+    const subagentHosts=new Map(previous);
+    if(host===null)subagentHosts.delete(tabId);else subagentHosts.set(tabId,{childSessionId,host});
+    store.update({subagentHosts});
+  }`)
+  return exact(source,'}), composerPortal, researchConversationPortal,', '}), composerPortal, researchConversationPortal, react_jsx_runtime.jsx(OdysseySubagentPortals,{snapshot:researchSidebarSnapshot,renderSlot,renderSlotChain}),')
+}
+// Only this record type requests a right-side destination. Ordinary tabs keep
+// following activePane; unlike pinned Research tabs, child records stay closable.
+export function patchSubagentPanelDestination(source) {
+  source=exact(source,'let targetId = pinned ? firstLeaf(state.splits).id : state.activePane ?? firstLeaf(state.splits).id;',`const rightTarget = tab.type === 'sherlock-subagent-conversation' && tab.meta?.sherlockPanel === 'right';
+      let targetId = pinned || (rightTarget && treeOf(state, state.activePane ?? '') === 'bottomSplits') ? firstLeaf(state.splits).id : state.activePane ?? firstLeaf(state.splits).id;`)
+  return exact(source,'if (!pinned) return activateTab(state, leaf.id, existing.id);',"if (!pinned && !(rightTarget && treeOf(state, leaf.id) === 'bottomSplits')) return activateTab(state, leaf.id, existing.id);")
 }
 export function patchSubagentPanelEntry(source, sidebar=false) {
   if(sidebar)return exact(source,'onOpenChild?.(address);\n\t\t\t\ttry {\n\t\t\t\t\tsessions.openSubagent?.(address);',`try {

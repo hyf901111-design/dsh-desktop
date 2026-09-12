@@ -65,6 +65,132 @@ export function boardButton(
   })
   return b
 }
+/** A dialog-owned top-layer permission menu; choosing a value only emits change. */
+export function boardRolePicker(doc: Document, label: string, value = 'editor') {
+  const win = doc.defaultView!
+  const picker = doc.createElement('button')
+  picker.type = 'button'
+  picker.className = 'srb-role-picker'
+  picker.value = value
+  picker.setAttribute('aria-label', label)
+  picker.setAttribute('aria-haspopup', 'menu')
+  picker.setAttribute('aria-expanded', 'false')
+  const title = doc.createElement('span'), chevron = doc.createElement('span')
+  title.id = 'srb-role-value-' + win.crypto.randomUUID()
+  picker.setAttribute('aria-describedby', title.id)
+  chevron.className = 'srb-chevron'
+  chevron.setAttribute('aria-hidden', 'true')
+  const update = () => { title.textContent = picker.value === 'editor' ? '可编辑' : '仅查看' }
+  picker.append(title, chevron)
+  picker.addEventListener('change', update)
+  update()
+  let dismiss: (() => void) | undefined
+  const open = () => {
+    if (picker.disabled || picker.closest('[inert]') || !picker.isConnected) return
+    if (dismiss) { dismiss(); return }
+    doc.querySelectorAll('.srb-role-menu').forEach(menu => menu.dispatchEvent(new win.Event('srb-close')))
+    const menu = doc.createElement('div')
+    menu.className = 'srb-role-menu'
+    menu.id = 'srb-role-menu-' + win.crypto.randomUUID()
+    menu.setAttribute('popover', 'manual')
+    menu.setAttribute('role', 'menu')
+    menu.setAttribute('aria-label', label + '选项')
+    picker.setAttribute('aria-controls', menu.id)
+    const dialog = picker.closest('dialog')
+    const options = [
+      ['editor', '可编辑', '查看并编辑画板中的内容。'],
+      ['viewer', '仅查看', '查看画板内容，不能进行编辑。']
+    ].map(([role, name, description]) => {
+      const option = doc.createElement('button')
+      option.type = 'button'
+      option.setAttribute('role', 'menuitemradio')
+      option.setAttribute('aria-checked', String(role === picker.value))
+      option.tabIndex = -1
+      option.dataset.value = role
+      const text = doc.createElement('span'), detail = doc.createElement('small'), check = doc.createElement('span')
+      text.textContent = name!
+      detail.textContent = description!
+      detail.id = menu.id + '-' + role
+      option.setAttribute('aria-label', name!)
+      option.setAttribute('aria-describedby', detail.id)
+      check.className = 'srb-role-check'
+      check.setAttribute('aria-hidden', 'true')
+      option.append(text, detail, check)
+      option.addEventListener('click', () => {
+        if (!picker.isConnected || picker.disabled || picker.closest('[inert]')) { close(); return }
+        close(true)
+        if (picker.value === role) return
+        picker.value = role!
+        picker.dispatchEvent(new win.Event('change', { bubbles: true }))
+      })
+      menu.append(option)
+      return option
+    })
+    const close = (focus = false) => {
+      if (!dismiss) return
+      dismiss = undefined
+      observer.disconnect()
+      menu.hidePopover?.(); menu.remove()
+      picker.setAttribute('aria-expanded', 'false')
+      picker.removeAttribute('aria-controls')
+      doc.removeEventListener('pointerdown', outside, true)
+      doc.removeEventListener('focusin', outside, true)
+      doc.removeEventListener('keydown', key, true)
+      doc.removeEventListener('scroll', position, true)
+      win.removeEventListener('resize', position)
+      dialog?.removeEventListener('close', onDialogClose)
+      if (focus && picker.isConnected && !picker.disabled) picker.focus({ preventScroll: true })
+    }
+    const position = () => {
+      if (!picker.isConnected || picker.disabled || picker.closest('[inert],[hidden]')) { close(); return }
+      const rect = picker.getBoundingClientRect()
+      const width = menu.getBoundingClientRect().width || 280, height = menu.getBoundingClientRect().height || 142
+      const above = rect.bottom + 8 + height > win.innerHeight - 12 && rect.top >= height + 20
+      menu.style.left = `${Math.max(12, Math.min(rect.right - width, win.innerWidth - width - 12))}px`
+      menu.style.top = `${Math.max(12, Math.min(above ? rect.top - height - 8 : rect.bottom + 8, win.innerHeight - height - 12))}px`
+    }
+    const outside = (event: Event) => {
+      const target = event.target as Node
+      if (!menu.contains(target) && !picker.contains(target)) close()
+    }
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true); return }
+      if (event.key === 'Tab') { close(true); return }
+      if (!menu.contains(doc.activeElement)) return
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault()
+        const index = options.indexOf(doc.activeElement as HTMLButtonElement)
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length
+        options[next]!.focus({ preventScroll: true })
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault(); (doc.activeElement as HTMLButtonElement).click()
+      }
+    }
+    const observer = new win.MutationObserver(position)
+    const onDialogClose = () => close()
+    dismiss = () => close(true)
+    menu.addEventListener('srb-close', () => close())
+    // Descendant ownership avoids the modal dialog's inert backdrop; popover
+    // promotion escapes its clipped scroll body and appears above the dialog.
+    ;(dialog ?? doc.body).append(menu)
+    menu.showPopover?.()
+    picker.setAttribute('aria-expanded', 'true')
+    position()
+    options.find(option => option.dataset.value === picker.value)?.focus({ preventScroll: true })
+    doc.addEventListener('pointerdown', outside, true)
+    doc.addEventListener('focusin', outside, true)
+    doc.addEventListener('keydown', key, true)
+    doc.addEventListener('scroll', position, true)
+    win.addEventListener('resize', position)
+    dialog?.addEventListener('close', onDialogClose)
+    observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'inert', 'hidden'] })
+  }
+  picker.addEventListener('click', open)
+  picker.addEventListener('keydown', event => {
+    if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !dismiss) { event.preventDefault(); open() }
+  })
+  return picker
+}
 export function boardDialog(doc: Document, title: string) {
   const dialog = doc.createElement('dialog')
   dialog.className = 'srb-dialog'
@@ -193,7 +319,14 @@ export function installBoardUiStyles(doc: Document) {
 .srb-action-menu{position:fixed;inset:auto;margin:0;box-sizing:border-box;width:208px;padding:5px;border:1px solid var(--dsw-alias-border-l2,#ddd);border-radius:12px;background:var(--dsw-alias-bg-layer-2,#fff);color:var(--dsw-alias-label-primary,#222);box-shadow:0 8px 32px #0002;z-index:4000;font:13px/1.5 system-ui}.srb-action-menu button{display:block;width:100%;padding:9px 12px;text-align:left;border:0;border-radius:7px;background:transparent;color:inherit;font:inherit;cursor:pointer}.srb-action-menu button:is(:hover,:focus-visible){outline:none;background:var(--dsw-alias-interactive-bg-hover,#8882)}
 .srb-dialog{width:min(520px,calc(100vw - 32px));padding:0;overflow:hidden}.srb-dialog>header{padding:20px 24px 16px;border-bottom:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-dialog h2{font-size:16px}.srb-dialog .srb-close,.srb-notifications header button,.srb-bubble header button{display:grid;place-items:center;width:28px;height:28px;padding:0;font-size:21px;line-height:1;color:var(--dsw-alias-label-tertiary,#888)}.srb-dialog-body{margin:0;padding:20px 24px 24px;max-height:calc(100vh - 170px);overflow:auto;gap:16px}.srb-dialog p{margin:0;line-height:1.65}.srb-dialog .srb-status{padding:12px 24px;border-top:1px solid var(--dsw-alias-border-l2,#ddd);background:var(--dsw-alias-interactive-bg-hover,#8881)}.srb-dialog button{min-height:34px;padding:7px 12px;font-size:12px;white-space:nowrap;box-sizing:border-box}.srb-dialog :is(input,select){height:36px;padding:7px 10px;border-radius:8px;background:transparent}.srb-dialog label{font-size:12px;font-weight:500;gap:8px}.srb-dialog label input,.srb-dialog label select{font-weight:400;font-size:13px}.srb-description{font-size:12px!important;font-weight:400;color:var(--dsw-alias-label-secondary,#777);line-height:1.6}.srb-dialog-intro{display:grid;gap:5px}.srb-dialog-intro>strong{font-size:14px;overflow-wrap:anywhere}.srb-field-row{display:flex;align-items:center;gap:8px;min-width:0}.srb-field-row input{flex:1;width:0}.srb-field-row button{flex:none;border:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-info-panel{padding:12px 14px;border-radius:10px;background:var(--dsw-alias-interactive-bg-hover,#8881);font-size:12px;color:var(--dsw-alias-label-secondary,#777)}
 .srb-dialog-tabs{display:flex;gap:20px;border-bottom:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-dialog-tabs button{padding:0 0 10px;border-radius:0;color:var(--dsw-alias-label-secondary,#777);position:relative}.srb-dialog-tabs button:hover{background:transparent}.srb-dialog-tabs button[aria-selected=true]{color:var(--dsw-alias-label-primary,#222);font-weight:600}.srb-dialog-tabs button[aria-selected=true]:after{content:'';height:2px;position:absolute;bottom:-1px;left:0;right:0;background:currentColor;border-radius:2px}.srb-tab-panel{display:grid;gap:22px}.srb-tab-panel[hidden]{display:none}.srb-invite-form{display:grid;gap:10px;border:1px solid var(--dsw-alias-border-l2,#ddd);border-radius:12px;padding:16px}.srb-recipient:empty{display:none}.srb-recipient{font-size:12px;padding:10px 12px;background:var(--dsw-alias-interactive-bg-hover,#8881);border-radius:8px}.srb-invite-controls{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}.srb-invite-controls label{min-width:112px}.srb-invite-controls>button{min-width:100px}.srb-dialog h3{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary,#666)}.srb-member{padding:10px 0;gap:10px}.srb-member+.srb-member{border-top:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-member-avatar{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:var(--srb-color);color:#263b3a;position:relative}.srb-member-avatar[data-online=true]:after{content:'';position:absolute;bottom:0;right:0;width:6px;height:6px;background:#588a76;border-radius:50%;border:2px solid var(--dsw-alias-bg-layer-2,#fff)}.srb-member-identity{display:grid;gap:2px;flex:1;min-width:0}.srb-member-identity strong{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.srb-member-identity small,.srb-member .srb-role{color:var(--dsw-alias-label-secondary,#777);font-size:11px}.srb-member .srb-role{flex:none}.srb-member select{width:90px;height:32px;font-size:12px}.srb-member button{padding:6px 8px}.srb-setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;border-top:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-setting-label{display:grid;gap:4px;min-width:0}.srb-setting-label strong{font-size:12px;font-weight:500}.srb-setting-row>button{border:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-dialog .srb-quiet-danger{color:#bf5550}.srb-danger-button{background:#b74c47!important;color:white!important}.srb-dialog-footer{display:flex;justify-content:flex-end;gap:8px;padding-top:6px}
-.srb-notifications{padding:0;display:flex;flex-direction:column;overflow:hidden;width:min(360px,calc(100vw - 24px))}.srb-notifications>header{padding:16px 18px 8px;font-size:14px;flex:none}.srb-notifications nav{margin:0;padding:0 12px 10px;border-bottom:1px solid var(--dsw-alias-border-l2,#ddd);align-items:center;flex:none}.srb-notifications nav button{font-size:12px;padding:5px 9px}.srb-notifications nav button:last-child{margin-left:auto;color:var(--dsw-alias-label-tertiary,#888);font-size:11px}.srb-notification-list{overflow:auto;padding:0 16px 8px}.srb-notification{position:relative;padding:16px 0;display:grid;gap:6px}.srb-notification:last-child{border-bottom:0}.srb-notification p{margin:0}.srb-notification-title{font-size:13px;font-weight:600;line-height:1.5;padding-right:10px;overflow-wrap:anywhere}.srb-notification[data-unread=true] .srb-notification-title:after{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:#d55f59;margin:0 0 2px 7px}.srb-notification-subtitle{font-size:12px;color:var(--dsw-alias-label-secondary,#777);line-height:1.6}.srb-notification small{font-size:11px;color:var(--dsw-alias-label-tertiary,#999)}.srb-notification-actions{align-items:center;margin-top:5px;gap:8px}.srb-notification-actions button{font-size:12px;padding:6px 16px;border:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-notification-status{font-size:11px;color:var(--dsw-alias-label-tertiary,#999)}.srb-notification-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.srb-notification-footer button{font-size:12px}.srb-notification-empty{padding:38px 20px;text-align:center;color:var(--dsw-alias-label-tertiary,#999);font-size:12px}.srb-bubble{padding:14px 16px}.srb-bubble>header{font-size:12px}.srb-bubble .srb-notification{padding-bottom:0}
+/* Message center: Figma 682:26753 / 682:26151. Keep toast styling independent. */
+.srb-notifications{--center-bg:rgba(255,255,255,.97);--center-border:#dfe0e3;--center-text:#292b2d;--center-secondary:#555;--center-muted:#808080;--center-selected:#ededed;--center-card:rgba(247,247,248,.88);--center-card-border:rgba(213,215,219,.65);--center-button:rgba(255,255,255,.55);--center-button-border:rgba(213,215,219,.65);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;width:min(384px,calc(100vw - 24px));border:0;outline:1px solid var(--center-border);outline-offset:-1px;border-radius:14px;background:var(--center-bg);color:var(--center-text);box-shadow:0 8px 24px -4px rgba(0,0,0,.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+body[data-ds-dark-theme] .srb-notifications{--center-bg:rgba(41,42,45,.97);--center-border:#444549;--center-text:#e6e6e6;--center-secondary:#ccc;--center-selected:#383838;--center-card:rgba(51,51,51,.88);--center-card-border:rgba(88,88,88,.45);--center-button:rgba(69,69,69,.55);--center-button-border:rgba(81,81,81,.65)}
+.srb-notifications>header{height:32px;min-height:32px;gap:8px;flex:none;padding:0}.srb-notifications>header h2{flex:1;min-width:0;margin:0;font-size:15px;font-weight:500;line-height:23px}.srb-notifications>header button.srb-notifications-read{display:block;width:auto;height:28px;padding:0 4px;font-size:12px;line-height:20px;color:var(--center-muted);white-space:nowrap}.srb-notifications>header button.srb-notifications-close{flex:none;width:28px;height:28px;padding:0;color:var(--center-muted)}.srb-notifications-close .ework-notice-icon{width:12px;height:12px;flex-basis:12px;color:inherit}
+.srb-notifications nav{display:flex;height:32px;min-height:32px;margin:0;padding:0;gap:4px;align-items:center;border:0;flex:none}.srb-notifications nav button{height:28px;padding:0 12px;border-radius:7px;font-size:13px;line-height:21px;font-weight:400;color:var(--center-muted)}.srb-notifications nav [aria-selected=true]{background:var(--center-selected);color:var(--center-secondary)}
+.srb-notification-list{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;padding:0}.srb-notifications .srb-notification{position:relative;flex:none;display:flex;flex-direction:column;gap:6px;padding:12px;border:0;outline:1px solid var(--center-card-border);outline-offset:-1px;border-radius:10px;background:var(--center-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}.srb-notifications .srb-notification p{margin:0}.srb-notification-title{font-size:13px;font-weight:500;line-height:20px;padding-right:10px;overflow-wrap:anywhere}.srb-notification[data-unread=true] .srb-notification-title:after{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:#d55f59;margin:0 0 2px 7px}.srb-notification-subtitle{font-size:12px;color:var(--dsw-alias-label-secondary,#777);line-height:18px}.srb-notifications .srb-notification-subtitle{color:var(--center-secondary)}.srb-notification small{font-size:11px;line-height:17px;color:var(--dsw-alias-label-tertiary,#999)}.srb-notifications .srb-notification small,.srb-notifications .srb-notification-status{color:var(--center-muted)}.srb-notification-actions{align-items:center;margin-top:0;gap:6px}.srb-notification-actions button{font-size:12px;padding:6px 16px;border:1px solid var(--dsw-alias-border-l2,#ddd)}.srb-notification-status{font-size:11px;line-height:17px;color:var(--dsw-alias-label-tertiary,#999)}.srb-notification-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}.srb-notification-footer:empty{display:none}.srb-notifications :is(.srb-notification-actions,.srb-notification-footer) button{height:26px;min-height:26px;padding:0 10px;border:0;border-radius:6px;background:var(--center-button);box-shadow:inset 0 0 0 1px var(--center-button-border);font-size:12px;line-height:18px}.srb-notifications .srb-primary{background:var(--center-text)!important;color:var(--center-bg)!important;box-shadow:none!important}
+.srb-notification-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;gap:8px;box-sizing:border-box;height:190px;padding:12px;text-align:center;color:var(--center-muted)}.srb-notification-empty strong{font-size:15px;font-weight:500;line-height:23px;color:var(--center-secondary)}.srb-notification-empty p{margin:0;font-size:12px;line-height:20px}.srb-notifications-service{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;font-size:12px;color:var(--center-muted)}
+.srb-bubble{padding:14px 16px}.srb-bubble>header{font-size:12px}.srb-bubble .srb-notification{padding-bottom:0}
 /* Figma 50: field errors remain adjacent to the input, outside the dialog footer. */
 .srb-field-error{color:var(--dsw-alias-state-error-primary,#c64d47);font-size:12px;font-weight:400;line-height:18px;white-space:normal}.srb-field-error[hidden]{display:none}.srb-invite-form input[aria-invalid=true]{border-color:var(--dsw-alias-state-error-primary,#c64d47)}
 /* Figma final 22–30: measured chrome, menus, dialogs and membership surfaces. */
@@ -223,6 +356,11 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-avatar.srb-avatar:after{display:none}
 .srb-actions .srb-add-collaborator,.srb-presence .srb-avatar-overflow{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:var(--srb-control-strong);color:var(--srb-muted);flex:none}
 .srb-presence .srb-avatar-overflow{width:32px;border-radius:14px;font-size:11px;font-weight:500}.srb-actions .srb-add-collaborator:hover{color:var(--srb-label);background:var(--srb-control-strong)}
+/* Dialog-local Figma 288/290 materials; other popovers retain their palettes. */
+.srb-dialog{--srb-surface:rgba(252,252,252,.97);--srb-border:rgba(223,224,226,.9);--srb-label:#292b2d;--srb-muted:#74777b;--srb-control-border:#dfe0e2;--srb-tab-selected:rgba(0,0,0,.055)}
+body[data-ds-dark-theme] .srb-dialog{--srb-surface:rgba(39,39,39,.97);--srb-border:rgba(61,61,61,.9);--srb-label:#e6e6e6;--srb-muted:#a1a3a8;--srb-control-border:#3d3d3d;--srb-tab-selected:rgba(255,255,255,.09)}
+body[data-ds-dark-theme] .srb-dialog .srb-quiet-danger{color:#cc716b}
+.srb-dialog .srb-setting-row>button{border-color:var(--srb-control-border)}
 .srb-dialog{border:0;outline:1px solid var(--srb-border);outline-offset:-1px;border-radius:14px;background:var(--srb-surface);box-shadow:var(--srb-shadow);backdrop-filter:blur(12px)}
 .srb-dialog::backdrop{background:rgba(0,0,0,.18)}
 .srb-dialog>header{padding:20px 24px 0;border:0;height:30px;box-sizing:content-box;gap:12px}.srb-dialog h2{font-size:18px;font-weight:500;line-height:27px}
@@ -230,7 +368,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-dialog-body{padding:16px 24px 20px;gap:16px;max-height:calc(100vh - 142px)}
 .srb-dialog button{height:30px;min-height:30px;padding:0 10px;font-size:12px;line-height:18px;font-weight:400;border-radius:7px}
 .srb-dialog :is(input,select){height:38px;border:1px solid var(--srb-control-border);border-radius:7px;font-size:13px;line-height:20px;background:transparent;padding:0 10px}
-.srb-dialog input{background:var(--srb-input)}
+.srb-dialog input{background:var(--srb-input);border-radius:8px}
 .srb-dialog label{gap:6px;font-size:12px;line-height:18px;font-weight:400;color:var(--srb-muted)}
 .srb-dialog :is(input,select){color:var(--srb-label)}.srb-dialog p{line-height:18px}.srb-dialog .srb-primary{background:var(--srb-primary)!important;color:var(--srb-primary-text)!important}
 .srb-dialog .srb-description{font-size:12px!important;line-height:18px;color:var(--srb-muted)}
@@ -242,7 +380,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-invite-controls{align-items:center;gap:10px;min-height:32px}.srb-invite-controls label{display:flex;align-items:center;justify-content:space-between;width:100%;font-size:13px;line-height:20px;color:var(--srb-label)}.srb-invite-controls select{height:30px;width:100px;font-size:12px}.srb-invite-controls>button{min-width:100px}
 .srb-dialog-footer{padding-top:0;min-height:32px;align-items:center;gap:8px}.srb-dialog-footer .srb-primary{min-width:100px}
 .srb-management .srb-dialog-body{gap:12px;padding-top:12px}.srb-management .srb-board-name{font-size:13px;line-height:20px;color:var(--srb-muted)}
-.srb-management .srb-dialog-tabs{height:36px;gap:4px;border:0;align-items:flex-start}.srb-dialog-tabs button{height:30px;padding:0 10px;border-radius:7px;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]{background:var(--srb-row-hover);font-weight:400;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]:after{display:none}
+.srb-management .srb-dialog-tabs{height:36px;gap:4px;border:0;align-items:flex-start}.srb-dialog-tabs button{height:30px;padding:0 10px;border-radius:7px;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]{background:var(--srb-tab-selected);font-weight:400;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]:after{display:none}
 .srb-tab-panel{gap:12px}.srb-management .srb-invite-form{gap:12px}.srb-management .srb-invite-controls label{width:auto}.srb-management .srb-invite-controls select{width:88px;height:30px}
 .srb-dialog h3{font-size:14px;line-height:21px;font-weight:500;color:var(--srb-label);margin:0 0 4px}
 .srb-management h3{margin-bottom:12px}
@@ -252,16 +390,19 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-settings-list{display:grid;gap:0}.srb-setting-row{padding:0;min-height:63px;height:63px;box-sizing:content-box;gap:12px;border-top:0}.srb-setting-row+.srb-setting-row{border-top:1px solid var(--srb-control-border)}.srb-setting-label{gap:2px}.srb-setting-label strong{font-size:13px;line-height:20px}.srb-setting-row>button{flex:none;width:132px;background:var(--srb-form-button)}.srb-setting-row>button.srb-quiet-danger{border:0;background:transparent}
 .srb-add-collaborator-dialog .srb-dialog-body{padding-top:14px}.srb-add-collaborator-dialog .srb-dialog-body,.srb-add-collaborator-dialog .srb-invite-form{gap:14px}.srb-add-collaborator-dialog .srb-description{font-size:13px!important;line-height:20px}
 .srb-message[data-role=user]{width:fit-content;box-sizing:border-box;text-align:left}.srb-message[data-role=user] :is(.srb-message-body,p){text-align:left}.srb-message{line-height:24px}
-.srb-members-popover{position:fixed;inset:auto;margin:0;padding:16px;width:min(340px,calc(100vw - 24px));box-sizing:border-box;border-radius:14px;border:0;outline:1px solid var(--srb-border);outline-offset:-1px;background:var(--srb-surface);backdrop-filter:blur(24px);box-shadow:var(--srb-shadow);max-height:calc(100vh - 24px);overflow:hidden;font-size:12px;line-height:18px;z-index:4100}
+.srb-members-popover{position:fixed;inset:auto;margin:0;padding:16px;width:min(340px,calc(100vw - 24px));box-sizing:border-box;border-radius:14px;border:0;outline:1px solid var(--srb-border);outline-offset:-1px;background:var(--srb-surface);backdrop-filter:blur(12px);box-shadow:var(--srb-shadow);max-height:calc(100vh - 24px);overflow:hidden;font-size:12px;line-height:18px;z-index:4100}
+/* Figma 304:980: member-popover colors are independent of the management dialog. */
+body[data-ds-dark-theme] .srb-members-popover{--srb-label:#e6e6e6;--srb-muted:#999;--srb-control-muted:#303030;--srb-members-title:#e8e8e8;--srb-members-footer-bg:#333;--srb-members-separator:rgba(255,255,255,.08);--srb-members-scroll-track:rgba(255,255,255,.06);--srb-members-scroll-thumb:rgba(255,255,255,.22)}
 .srb-avatar-info{position:fixed;inset:auto;margin:0;box-sizing:border-box;width:min(160px,calc(100vw - 24px));min-height:66px;padding:12px;gap:4px;border:0;outline:1px solid #dfe0e2;outline-offset:-1px;border-radius:10px;background:#fcfcfc;color:rgb(40.8 43.35 45.9);backdrop-filter:blur(24px);box-shadow:0 12px 32px -6px #00000024;overflow:visible;z-index:4101;font-family:'Noto Sans SC',sans-serif}
 .srb-avatar-info:popover-open{display:flex;flex-direction:column}.srb-avatar-info strong{font-size:13px;line-height:20px;font-weight:500;overflow-wrap:anywhere}.srb-avatar-info small{font-size:12px;line-height:18px;color:rgb(117.3 119.85 124.95)}
 .srb-avatar-info>svg{position:absolute;left:calc(var(--srb-arrow-x,18px) - 6px);top:-6px;width:12px;height:8px;overflow:visible;fill:#fcfcfc;stroke:#dfe0e2;stroke-width:1;stroke-linejoin:round}.srb-avatar-info[data-side=top]>svg{top:auto;bottom:-6px;transform:rotate(180deg)}
 [data-ds-dark-theme] .srb-avatar-info{background:#272727;color:rgb(232.05 232.05 232.05);outline-color:#3d3d3d;box-shadow:0 12px 32px -6px #0000004d}[data-ds-dark-theme] .srb-avatar-info small{color:rgb(153.3686 153.3686 153.3686)}[data-ds-dark-theme] .srb-avatar-info>svg{fill:#272727;stroke:#3d3d3d}
-.srb-members-popover:popover-open{display:flex;flex-direction:column;gap:12px}.srb-members-popover h2{font-size:16px;font-weight:500;line-height:22px;margin:0}.srb-members-popover p{margin:0}.srb-members-online{font-size:11px;line-height:17px;color:var(--srb-muted)}
+.srb-members-popover:popover-open{display:flex;flex-direction:column;gap:12px}.srb-members-popover h2{font-size:16px;font-weight:500;line-height:22px;margin:0;color:var(--srb-members-title,var(--srb-label))}.srb-members-popover p{margin:0}.srb-members-popover .srb-members-online{font-size:11px;line-height:17px;color:var(--srb-muted)}
 .srb-members-popover>input{width:100%;height:32px;min-height:32px;padding:0 10px;border:0;border-radius:6px;background:var(--srb-control-muted);color:var(--srb-label);font:inherit;outline:none}.srb-members-popover>input:focus-visible{box-shadow:inset 0 0 0 1px var(--srb-blue)}.srb-members-popover>input::placeholder{color:var(--srb-muted)}
-.srb-members-scroll{max-height:328px;min-height:48px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--srb-tertiary) transparent}.srb-members-scroll::-webkit-scrollbar{width:3px}.srb-members-scroll::-webkit-scrollbar-thumb{border-radius:2px;background:var(--srb-tertiary)}
-.srb-members-scroll .srb-member{height:48px;min-height:48px;padding:0 4px;gap:8px}.srb-members-scroll .srb-member-avatar{width:28px;height:28px}.srb-members-scroll .srb-member-identity strong{font-size:12px;line-height:18px}.srb-members-scroll .srb-member-identity small,.srb-members-scroll .srb-role{font-size:10px;line-height:16px}.srb-members-empty{font-size:12px;color:var(--srb-muted);padding:14px 4px}
-.srb-members-footer{border-top:1px solid var(--srb-control-border);padding-top:12px;flex:none}.srb-members-footer button{height:32px;width:100%;border:0;border-radius:6px;background:var(--srb-control-muted);color:var(--srb-label);font:inherit;cursor:pointer}.srb-members-footer button:hover{background:var(--srb-control-strong)}
+/* Keep the 3px Chromium scrollbar plus a 5px gap inside the 308px viewport. */
+.srb-members-popover .srb-members-scroll{max-height:328px;min-height:48px;padding-right:5px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;scrollbar-width:auto;scrollbar-color:auto}.srb-members-popover .srb-members-scroll::-webkit-scrollbar{width:3px}.srb-members-popover .srb-members-scroll::-webkit-scrollbar-track{border-radius:2px;background:var(--srb-members-scroll-track,transparent)}.srb-members-popover .srb-members-scroll::-webkit-scrollbar-thumb{border-radius:2px;background:var(--srb-members-scroll-thumb,var(--srb-tertiary))}
+.srb-members-popover .srb-members-scroll .srb-member{height:48px;min-height:48px;padding:0 4px;gap:8px}.srb-members-popover .srb-members-scroll .srb-member-avatar{width:28px;height:28px}.srb-members-popover .srb-members-scroll .srb-member-identity strong{font-size:12px;line-height:18px}.srb-members-popover .srb-members-scroll .srb-member-identity small{font-size:10px;line-height:16px}.srb-members-popover .srb-members-scroll .srb-role{font-size:10px;line-height:18px}.srb-members-popover .srb-members-empty{font-size:12px;color:var(--srb-muted);padding:14px 4px}
+.srb-members-popover .srb-members-footer{border-top:1px solid var(--srb-members-separator,var(--srb-control-border));padding-top:12px;flex:none}.srb-members-popover .srb-members-footer button{height:32px;width:100%;border:0;border-radius:6px;background:var(--srb-members-footer-bg,var(--srb-control-muted));color:var(--srb-label);font:inherit;cursor:pointer}.srb-members-popover .srb-members-footer button:hover{background:var(--srb-control-strong)}
 
 /* Figma 286:1053–1059 / 1713–1719: independent peer frame, label and vector cursor. */
 .srb-canvas-presence{--srb-occupied-stroke:#4d91b3;--srb-occupied-fill:#e2f2f7;--srb-occupied-text:#386e88;--srb-cursor-color:#8b6cb3}
@@ -274,6 +415,18 @@ body[data-ds-dark-theme] .srb-canvas-presence{--srb-occupied-stroke:#74adc5;--sr
 .srb-create-collaboration-dialog .srb-recipient{padding:0 12px;border-radius:9px;background:var(--srb-info)}
 body[data-ds-dark-theme] .srb-create-collaboration-dialog .srb-recipient{background:rgba(255,255,255,.05)}
 .srb-create-collaboration-dialog .srb-recipient .srb-member-identity{height:40px;gap:0;align-content:start}
+
+
+/* Figma 667:27507 / 28002 / 28497 / 28992: shared permission picker. */
+.srb-dialog .srb-role-picker{display:flex;align-items:center;justify-content:space-between;flex:none;gap:8px;width:100px;height:30px;min-height:30px;padding:0 10px;border:1px solid var(--srb-control-border);border-radius:7px;background:transparent;color:var(--srb-label);font-size:12px;font-weight:400;line-height:20px}
+.srb-management .srb-role-picker,.srb-member .srb-role-picker{width:88px}.srb-role-picker>span{flex:none}.srb-role-picker .srb-chevron{width:12px;height:12px}
+.srb-role-menu{--role-bg:rgba(255,255,255,.97);--role-border:#dfe0e3;--role-selected:#f0f0f0;--role-label:#242424;--role-description:#757575;position:fixed;inset:auto;margin:0;box-sizing:border-box;width:280px;max-width:calc(100vw - 24px);height:142px;padding:5px;border:1px solid var(--role-border);border-radius:10px;background:var(--role-bg);box-shadow:0 8px 24px -4px rgba(0,0,0,.14);backdrop-filter:blur(12px);z-index:4200;font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui)}
+body[data-ds-dark-theme] .srb-role-menu{--role-bg:rgba(41,42,45,.97);--role-border:#444549;--role-selected:#373737;--role-label:#e6e6e6;--role-description:#9c9c9c}
+.srb-role-menu:popover-open{display:flex;flex-direction:column;gap:2px}
+.srb-role-menu button{position:relative;display:block;box-sizing:border-box;flex:none;width:100%;height:64px;min-height:64px;margin:0;padding:7px 10px;border:0;border-radius:5px;text-align:left;background:transparent;color:var(--role-label);font:400 13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui);cursor:pointer}
+.srb-role-menu button>span:first-child{display:block;font:inherit}.srb-role-menu button small{display:block;margin-top:3px;color:var(--role-description);font-size:11px;font-weight:400;line-height:18px;white-space:nowrap}
+.srb-role-menu button[aria-checked=true],.srb-role-menu button:hover,.srb-role-menu button:focus-visible{background:var(--role-selected)}.srb-role-menu button[aria-checked=true]>span:first-child{font-weight:500}.srb-role-menu button:focus-visible{outline:1px solid var(--srb-blue,#6099d3);outline-offset:-1px}
+.srb-role-check{display:none;position:absolute;right:12px;top:10px;width:14px;height:14px;background:currentColor;mask:url(/figma-check.svg) center/contain no-repeat}.srb-role-menu [aria-checked=true] .srb-role-check{display:block}
 
 @media(max-width:700px){.srb-actions{gap:4px}.srb-presence{gap:3px}.srb-avatar{width:25px;height:25px}}
 `

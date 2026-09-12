@@ -1,4 +1,4 @@
-import { Window } from 'happy-dom'
+import { Window, type HTMLButtonElement } from 'happy-dom'
 import { expect, it, vi } from 'vitest'
 import { mountResearchBoardNotifications } from '../src/preload/research-board-notifications-ui'
 import { boardErrorMessage, showBoardError } from '../src/preload/research-board-dialogs'
@@ -431,6 +431,7 @@ it.each([false, true])(
     try {
       await new Promise((r) => setTimeout(r, 5))
       host.querySelector('button')!.click()
+      w.document.querySelector<HTMLButtonElement>('.srb-notifications [aria-label="全部已读"]')!.click()
       await new Promise((r) => setTimeout(r, 10))
       expect(batches.every((ids) => ids.length <= 100)).toBe(true)
       if (fail)

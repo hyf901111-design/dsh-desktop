@@ -69,6 +69,72 @@ export function patchFigmaFinalConversation(source) {
 }
 
 export function patchFigmaFinalLayout(source) {
+  // At the desktop minimum, reopening the auto-collapsed rail is an overlay.
+  // Keep the grid track and mounted canvas stable; only the sidebar paints wider.
+  if (!source.includes('/* ODYSSEY_LEFT_SIDEBAR_OVERLAY */')) {
+    source = exact(source,
+      'const cols = computeColumns(viewport, sidebarCollapsed ? 0 : panels.sidebar === 0 ? 280 : panels.sidebar, detailsSession === void 0 ? 0 : panels.details);',
+      `const sidebarOverlay = viewport <= 840 && !sidebarCollapsed; /* ODYSSEY_LEFT_SIDEBAR_OVERLAY */
+      const sidebarWidth = sidebarCollapsed ? COLLAPSED_SIDEBAR_WIDTH : clampWidth(panels.sidebar || 280, 240, 420);
+      const cols = computeColumns(viewport, sidebarOverlay || sidebarCollapsed ? 0 : sidebarWidth, detailsSession === void 0 ? 0 : panels.details);
+      const restoreSidebarFocus = (0, react.useRef)(false);
+      (0, react.useLayoutEffect)(() => {
+        if (!sidebarOverlay && restoreSidebarFocus.current) {
+          restoreSidebarFocus.current = false;
+          frameRef.current?.querySelector(".hHd-Xa_toggle")?.focus();
+        }
+      }, [sidebarOverlay]);
+      (0, react.useEffect)(() => {
+        if (!sidebarOverlay) return;
+        const escape = event => {
+          if (event.key !== "Escape" || event.defaultPrevented || event.target?.closest?.('[role="menu"],[role="dialog"]')) return;
+          event.preventDefault();
+          restoreSidebarFocus.current = true;
+          actions.toggleSidebar();
+        };
+        window.addEventListener("keydown", escape);
+        return () => window.removeEventListener("keydown", escape);
+      }, [sidebarOverlay, actions]);`)
+    source = exact(source, '"data-sidebar-collapsed": sidebarCollapsed || void 0,',
+      `"data-sidebar-collapsed": sidebarCollapsed || void 0,
+        "data-odyssey-sidebar-overlay": sidebarOverlay || void 0,
+        onPointerDownCapture: event => {
+          if (sidebarOverlay && !event.target?.closest?.('.pI_x6G_sidebarCol,[data-shell-overlay],[role="menu"],[role="dialog"]')) actions.toggleSidebar();
+        },`)
+    source = exact(source, 'className: AppFrame_module_css_default.sidebarCol,',
+      'className: AppFrame_module_css_default.sidebarCol,\n            style: sidebarOverlay ? { width: sidebarWidth, position: "relative", zIndex: 19 } : void 0,')
+    source = exact(source, '\t\t\t\t\t\t\twidth: cols.sidebar', '\t\t\t\t\t\t\twidth: sidebarWidth')
+    source = exact(source, '!sidebarCollapsed && (0, react_jsx_runtime.jsx)(DragHandle,', '!sidebarCollapsed && !sidebarOverlay && (0, react_jsx_runtime.jsx)(DragHandle,')
+  }
+  // Menu and Modal close on document keydown without preventing default, and
+  // focus may still be on their trigger. Remember the layer before it unmounts.
+  if (!source.includes('/* ODYSSEY_SIDEBAR_ESCAPE_LAYER */')) source = exact(source,
+    `const escape = event => {
+          if (event.key !== "Escape" || event.defaultPrevented || event.target?.closest?.('[role="menu"],[role="dialog"]')) return;
+          event.preventDefault();
+          restoreSidebarFocus.current = true;
+          actions.toggleSidebar();
+        };
+        window.addEventListener("keydown", escape);
+        return () => window.removeEventListener("keydown", escape);`,
+    `const layerEscapes = new WeakSet(); /* ODYSSEY_SIDEBAR_ESCAPE_LAYER */
+        const captureEscape = event => {
+          if (event.key !== "Escape") return;
+          const layers = window.document.querySelectorAll('[role="menu"],[role="dialog"]');
+          if (Array.from(layers).some(layer => !layer.closest('[hidden],[aria-hidden="true"]') && window.getComputedStyle(layer).display !== "none")) layerEscapes.add(event);
+        };
+        const escape = event => {
+          if (event.key !== "Escape" || layerEscapes.has(event) || event.defaultPrevented || event.target?.closest?.('[role="menu"],[role="dialog"]')) return;
+          event.preventDefault();
+          restoreSidebarFocus.current = true;
+          actions.toggleSidebar();
+        };
+        window.addEventListener("keydown", captureEscape, true);
+        window.addEventListener("keydown", escape);
+        return () => {
+          window.removeEventListener("keydown", captureEscape, true);
+          window.removeEventListener("keydown", escape);
+        };`)
   // A coalesced/quick drag may deliver the final position only on pointerup.
   // Commit that coordinate before releasing capture and flushing the rAF.
   if (!source.includes('/* ODYSSEY_RESIZE_POINTER_LIFETIME */')) source = exact(source,
