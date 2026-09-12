@@ -199,8 +199,10 @@ body[data-odyssey-resizing] * { cursor:ew-resize !important; }
 [data-odyssey-tab-overflow-menu] {
   position: absolute;
   top: 48px;
-  left: 8px;
+  left: auto;
   right: 8px;
+  width: 324px;
+  max-width: calc(100% - 16px);
   z-index: 8;
   box-sizing: border-box;
   max-height: 329px;
