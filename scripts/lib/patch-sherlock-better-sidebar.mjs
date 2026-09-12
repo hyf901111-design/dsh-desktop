@@ -1,3 +1,4 @@
+import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { patchSidebarPdfPreview } from './sidebar-pdf-preview.mjs'
@@ -956,6 +957,7 @@ function patchFigmaCompactPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
+  source = patchFigmaNativeFileMenu(source)
   let next = patchFigmaPanelDefaultWidth(
     patchFigmaFilePanel(
       patchFigmaPanelMotionSync(
