@@ -12,7 +12,7 @@
         "featureName": "Figma single-row header and menu refinements",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "afe468dc52ec08223df5e6dc4be33d7af97fd466",
-        "tipCommit": "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1",
+        "tipCommit": "40177cada352dbf402312da83b480233c00cc835",
         "commits": [
           {
             "commit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
@@ -27,6 +27,20 @@
               "3adf9422947931d8d781bac8b5a19aa3648ea9bc"
             ],
             "subject": "修复：补齐菜单集成验证依赖并兼容现有中文命令补丁"
+          },
+          {
+            "commit": "ad545fa51906d634b8983029f7250ee71280a2c4",
+            "parents": [
+              "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1"
+            ],
+            "subject": "测试：按新版顶栏校验画板添加和重复点击行为"
+          },
+          {
+            "commit": "40177cada352dbf402312da83b480233c00cc835",
+            "parents": [
+              "ad545fa51906d634b8983029f7250ee71280a2c4"
+            ],
+            "subject": "测试：更新单行顶栏的高度与成员居中验收"
           }
         ],
         "files": [
@@ -45,6 +59,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
           },
           {
             "status": "M",
@@ -93,6 +111,10 @@
           {
             "status": "A",
             "path": "test/figma-scrollbars.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-presence-final.test.ts"
           }
         ],
         "checks": [
@@ -101,12 +123,12 @@
               "node",
               "scripts/test-research-collaboration-e2e.mjs",
               "--stage",
-              "sources"
+              "browser"
             ],
             "outcome": "passed",
-            "summary": "Clean locked package transforms and factory evaluation pass for feature/main baselines; repeated transforms are byte-identical. Existing Chinese command patch retained.",
-            "verifiedCommit": "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1",
-            "completedAt": "2026-09-12T06:21:06.793302+00:00",
+            "summary": "Real browser research flow passed with Figma A 56 px header, centered membership, icon-only board action and repeated-add preservation. Focused presence tests 6 passed. Clean source baselines verified.",
+            "verifiedCommit": "40177cada352dbf402312da83b480233c00cc835",
+            "completedAt": "2026-09-12T06:28:37.375231+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -124,7 +146,7 @@
         "risks": [
           "Local only; no publication, push, version changes or main promotion."
         ],
-        "generatedAt": "2026-09-12T06:21:06.793302+00:00"
+        "generatedAt": "2026-09-12T06:28:37.375231+00:00"
       }
     }
   ],
