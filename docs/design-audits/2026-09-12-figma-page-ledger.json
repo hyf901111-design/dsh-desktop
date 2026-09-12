@@ -876,8 +876,11 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=288-432",
-      "status": "已实测核对成员与创建本地副本；几何逐项比对中",
-      "differences": [],
+      "status": "已核对创建协作几何与本地邀请；菜单待新包",
+      "differences": [
+        "D26",
+        "D27"
+      ],
       "evidence": [
         "v8-isolated-create-collaboration-recipient-light"
       ],
@@ -904,9 +907,13 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=289-444",
-      "status": "已进入实际成员和待处理邀请页；完整角色待核对",
-      "differences": [],
+      "status": "已核对成员与邀请及设置主要几何；材质待新包",
+      "differences": [
+        "D26",
+        "D27"
+      ],
       "evidence": [
+        "v8-isolated-collaboration-settings-light",
         "v8-isolated-collaboration-members-pending-light"
       ],
       "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
@@ -948,8 +955,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=290-947",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已核对设置520×457几何；材质已修待新包",
+      "differences": [
+        "D27"
+      ],
+      "evidence": [
+        "v8-isolated-collaboration-settings-dark-details"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "04 协作与权限",
@@ -996,8 +1009,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=304-980",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已核对真实11人溢出、滚动和搜索；材质待新包",
+      "differences": [
+        "D28"
+      ],
+      "evidence": [
+        "v8-isolated-members-overflow-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "04 协作与权限",
