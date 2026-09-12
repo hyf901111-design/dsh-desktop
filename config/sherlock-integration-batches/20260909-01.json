@@ -12,7 +12,7 @@
         "featureName": "按最新 Figma 修正模型菜单与深色浮层材质",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "76440e19e243f96eb19085261191563f4cd2d4a9",
-        "tipCommit": "375bc24325e74cb3eba98f581f14583e00669b7d",
+        "tipCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
         "commits": [
           {
             "commit": "375bc24325e74cb3eba98f581f14583e00669b7d",
@@ -20,6 +20,13 @@
               "76440e19e243f96eb19085261191563f4cd2d4a9"
             ],
             "subject": "按 Figma 还原可搜索模型菜单与深色浮层材质"
+          },
+          {
+            "commit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
+            "parents": [
+              "375bc24325e74cb3eba98f581f14583e00669b7d"
+            ],
+            "subject": "补齐模型菜单的干净安装与幂等补丁验证"
           }
         ],
         "files": [
@@ -34,6 +41,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-collaboration-e2e.mjs"
           },
           {
             "status": "M",
@@ -64,7 +75,7 @@
             ],
             "outcome": "passed",
             "summary": "4 focused behavior checks passed",
-            "verifiedCommit": "375bc24325e74cb3eba98f581f14583e00669b7d",
+            "verifiedCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
             "completedAt": "2026-09-12T11:45:26.687138+00:00",
             "timeoutMs": 120000
           },
@@ -76,9 +87,22 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript check passed",
-            "verifiedCommit": "375bc24325e74cb3eba98f581f14583e00669b7d",
+            "verifiedCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
             "completedAt": "2026-09-12T11:45:26.687861+00:00",
             "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "sources"
+            ],
+            "outcome": "passed",
+            "summary": "Pristine locked dependencies transformed twice; model module factory executes",
+            "verifiedCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
+            "completedAt": "2026-09-12T11:48:58.694234+00:00",
+            "timeoutMs": 300000
           }
         ],
         "uiVerification": {
@@ -93,7 +117,7 @@
         "risks": [
           "All-page visual audit remains in progress; no global acceptance claimed"
         ],
-        "generatedAt": "2026-09-12T11:45:43.604564+00:00"
+        "generatedAt": "2026-09-12T11:48:58.694234+00:00"
       }
     }
   ],
