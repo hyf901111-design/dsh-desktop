@@ -5,7 +5,7 @@ import { expect, it } from 'vitest'
 it('keeps portal child reading and readonly footer independent of the central bottom dock', async () => {
   const win = new Window(), doc = win.document
   const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-  const native = [...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1])).join('\n')
+  const native = [...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1]!)).join('\n')
   const styles = await Promise.all(['figma-final-shell', 'figma-panels', 'figma-refinements', 'figma-reading'].map(name => readFile(`src/preload/${name}.css`, 'utf8')))
   doc.head.innerHTML = `<style>${native}\n${styles.join('\n')}</style>`
   const conversation = `<div class="wSkVaW_root" data-odyssey-page="conversation">
