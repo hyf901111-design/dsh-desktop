@@ -20,3 +20,18 @@ export function patchFigmaSettingsModeDescription(source) {
   if (source.split(before).length !== 2) throw Error('Settings mode description anchor drifted')
   return source.replace(before, after)
 }
+
+export function patchFigmaEnterDescription(source) {
+  const marker='/* odyssey:busy-enter-description:20260912 */'
+  if(source.includes(marker))return source
+  const start=source.indexOf('function EnterBehaviorRow('),end=source.indexOf('\n\t\t//#endregion',start)
+  if(start<0||end<start)throw Error('Enter settings boundary drifted')
+  let part=source.slice(start,end)
+  const before='label: t(option.label)'
+  if(part.split(before).length!==2)throw Error('Enter label anchor drifted')
+  part=part.replace(before,`label: (0,react_jsx_runtime.jsxs)('span',{className:'odyssey-permission-item odyssey-enter-item',children:[
+    (0,react_jsx_runtime.jsx)('span',{className:'odyssey-permission-name',children:t(option.label)}),
+    (0,react_jsx_runtime.jsx)('span',{className:'odyssey-permission-description',children:t('settings.enter.queue')==='排队发送' ? (option.id==='queue'?'当前任务完成后再处理新消息。':'在运行中的任务中补充指令。') : (option.id==='queue'?'Process the message after the current task finishes.':'Add instructions to the running task.')})
+  ]})${marker}`)
+  return source.slice(0,start)+part+source.slice(end)
+}
