@@ -91,6 +91,8 @@ it('shows only real optional usage and timing in the child header',async()=>{
   const actual=Header({...props,useProjection:key=>key==='tokenUsage'?{uncachedInputTokens:10,outputTokens:20,cacheReadTokens:30,cacheWriteTokens:40}:{settledMs:54000}})
   expect(actual.props.children[2].props.children).toBe('100 tok · 54秒')
   expect(actual.props.children[0].props.children).toBe('真实子任务')
+  const continuing=Header({...props,useSession:fn=>fn({running:true,subagent:{address:{mode:'continuable'}}}),useProjection:()=>undefined})
+  expect(continuing.props.children[1].props.children.slice(1)).toEqual(['可继续',' · ','正在运行'])
   const addressed={...props,useSession:fn=>fn({running:false,subagent:{address:{parentSessionId:'parent',childSessionId:'child',mode:'one-shot'}}}),useProjection:()=>undefined}
   const titleFor=(entries,displayTitle='内部交付指令摘要')=>Header({...addressed,useSessions:fn=>fn({byId:{child:{displayTitle}},subagentsByParent:{parent:{entries}}})}).props.children[0].props.children
   expect(titleFor([{kind:'child',id:'child',mode:'one-shot',label:'画布生成任务'}])).toBe('画布生成任务')

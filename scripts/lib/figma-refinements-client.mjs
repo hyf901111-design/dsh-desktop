@@ -47,6 +47,9 @@ export function patchFigmaRefinementConversation(source) {
 }
 export function patchFigmaRefinementSubagent(source) {
   source=exact(source,
+    '"aria-label": t(descendants.runningCount > 0 ? runningCountKey : totalCountKey, { count: descendants.runningCount > 0 ? descendants.runningCount : descendantCount }),',
+    '"aria-label": [t(totalCountKey, { count: descendantCount }), descendants.runningCount > 0 ? t(runningCountKey, { count: descendants.runningCount }) : null].filter(Boolean).join("，"),');
+  source=exact(source,
     '(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, { state: entry.activity === "running" ? "ongoing" : "done" })',
     '(0, react_jsx_runtime.jsx)("span", { "data-odyssey-subagent-activity": entry.activity === "running" ? "running" : "idle", "aria-hidden": "true" })');
   source=exact(source,
