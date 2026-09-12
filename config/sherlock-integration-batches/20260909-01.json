@@ -12,7 +12,7 @@
         "featureName": "文件引用与预览、菜单布局及会话恢复",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "9924578f9285284af665c1fd5289f5cfb9e1892e",
-        "tipCommit": "287be749ecd412a6e614ed9e1633839fe7fa5751",
+        "tipCommit": "88725fe9d882eefa7082ad253a9b800c0d231c6c",
         "commits": [
           {
             "commit": "18413863d61af3066dfa3976883c775edd79175e",
@@ -76,6 +76,13 @@
               "3aabba9b1971d5d924bf9a03c93f96dc4f387c3f"
             ],
             "subject": "补齐菜单原生动作与第十三批待包修复记录"
+          },
+          {
+            "commit": "88725fe9d882eefa7082ad253a9b800c0d231c6c",
+            "parents": [
+              "287be749ecd412a6e614ed9e1633839fe7fa5751"
+            ],
+            "subject": "修复协作验收夹具的临时会话生命周期"
           }
         ],
         "files": [
@@ -126,6 +133,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
           },
           {
             "status": "M",
@@ -187,8 +198,8 @@
             ],
             "outcome": "passed",
             "summary": "66 focused checks in 12 directly affected files passed",
-            "verifiedCommit": "287be749ecd412a6e614ed9e1633839fe7fa5751",
-            "completedAt": "2026-09-12 18:56:03 UTC",
+            "verifiedCommit": "88725fe9d882eefa7082ad253a9b800c0d231c6c",
+            "completedAt": "2026-09-12 19:03:56 UTC",
             "timeoutMs": 120000
           },
           {
@@ -199,8 +210,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "287be749ecd412a6e614ed9e1633839fe7fa5751",
-            "completedAt": "2026-09-12 18:56:41 UTC",
+            "verifiedCommit": "88725fe9d882eefa7082ad253a9b800c0d231c6c",
+            "completedAt": "2026-09-12 19:03:57 UTC",
             "timeoutMs": 120000
           },
           {
@@ -212,8 +223,8 @@
             ],
             "outcome": "passed",
             "summary": "Pristine locked sources transformed twice and verified",
-            "verifiedCommit": "287be749ecd412a6e614ed9e1633839fe7fa5751",
-            "completedAt": "2026-09-12 18:56:58 UTC",
+            "verifiedCommit": "88725fe9d882eefa7082ad253a9b800c0d231c6c",
+            "completedAt": "2026-09-12 19:04:13 UTC",
             "timeoutMs": 300000
           }
         ],
@@ -227,14 +238,16 @@
           "Returning a legacy board to the workspace persists and releases only its temporary migration Session, preserving history, model, directory and draft relationships while allowing Agent/model resolution and retaining the live Session safety guard",
           "Saved Markdown preview retains the saved text and ignores stale async completions from another editor",
           "Files reference action uses native inline reference metadata at the current selection and restores focus only to the same visible conversation draft",
-          "Workspace folder and conversation action menus match 260x127 light/dark geometry with preserved actions and keyboard behavior"
+          "Workspace folder and conversation action menus match 260x127 light/dark geometry with preserved actions and keyboard behavior",
+          "Browser fixture distinguishes durable history from live sessions and verifies migrated sessions release their temporary attachment while personal-copy destinations remain live"
         ],
         "risks": [
           "91帧局部证据、207未逐帧、0整页通过；本批仍需集成签名包原生复验",
           "D43工作中一次旧测试筛选参数错误导致广泛执行并出现89失败；仅4项基线对照确认同样失败，未将全部归为基线。正确筛选的原生引用2项及本批66项聚焦通过。",
-          "临时迁移会话失败保留原历史并抛错，供后续重试"
+          "临时迁移会话失败保留原历史并抛错，供后续重试",
+          "13b集成gate暴露浏览器夹具缺少prepare/enter/announce；13c修正夹具后完整既定browser stage已通过，未削弱生产校验"
         ],
-        "generatedAt": "2026-09-12 18:57:35 UTC"
+        "generatedAt": "2026-09-12 19:04:45 UTC"
       }
     }
   ],
