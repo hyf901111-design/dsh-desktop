@@ -1,3 +1,4 @@
+import { patchFigmaTaskProgress } from './figma-task-progress.mjs'
 /** Figma 748:27747: the reading viewport and opaque footer each own space. */
 function exact(source, before, after) {
   if (source.includes(after)) return source
@@ -50,7 +51,7 @@ function OdysseyTaskSheet({children,onClose}) {
 `;
 export function patchFigmaReadingConversation(source) {
   const marker='/* odyssey:reading-layout:20260912 */';
-  if(source.includes(marker))return source;
+  if(source.includes(marker))return patchFigmaTaskProgress(source);
   source=exact(source,'function scrollerOf(from) {\n\t\t\treturn from.closest("[data-conversation-scroll]") ?? from;', 'function scrollerOf(from) {\n\t\t\treturn from.closest(".sRp_messages,[data-conversation-scroll]") ?? from;');
   source=exact(source,'return appendedUser || appendedSteering || runningStarted || tipMoved && atBottom;', 'return appendedUser || (appendedSteering || runningStarted || tipMoved) && atBottom;');
   source=exact(source,'if (saved === null || runningStarted) toBottom(el);','if (saved === null) toBottom(el);');
@@ -86,7 +87,7 @@ export function patchFigmaReadingConversation(source) {
   todo=todo.slice(0,listStart)+`!folded && taskList, sheet && react_jsx_runtime.jsx(OdysseyTaskSheet,{onClose:()=>setSheet(false),children:taskList})`+todo.slice(listEnd);
   todo=todo.replace('if (todos.length === 0) return null;',`if (todos.length === 0) return null;\nconst taskList=${list};`);
   source=source.slice(0,a)+todo+source.slice(b);
-  return source.replace('function scrollerOf(', marker+'\n'+helpers+'\n\t\tfunction scrollerOf(');
+  return patchFigmaTaskProgress(source.replace('function scrollerOf(', marker+'\n'+helpers+'\n\t\tfunction scrollerOf('));
 }
 export function patchFigmaReadingTables(source) {
   const marker='/* odyssey:reading-table:20260912 */';

@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from '../scripts/lib/figma-reading-client.mjs'
-const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+const source = patchFigmaReadingConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
 function fn(name: string) {
   const a=source.indexOf(`function ${name}(`), b=source.indexOf('\n\t\t}',a)
   return source.slice(a,b+5)
