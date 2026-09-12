@@ -8,6 +8,9 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   // The conversation has 16 px content padding; its thumb belongs to the
   // panel edge, not that inset text column. Nested previews retain their own edge.
   const rightEdge = (port: HTMLElement) => {
+    // Settings is mounted in the sidebar footer, but its fixed surface has
+    // independent navigation/content edges even when the main sidebar is 80px.
+    if (port.closest('.VOzbGW_overlay')) return port.getBoundingClientRect().right
     const shell = port.closest<HTMLElement>('[data-dsh-sidebar-root]') ??
       (port.closest('.sRp_messages') && port.matches('.sRp_messages,.wSkVaW_scrollBody,.Md3f7G_scroll')
         ? port.closest<HTMLElement>('.t8lSSG_panel') : null)
