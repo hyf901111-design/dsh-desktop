@@ -46,7 +46,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
       thumb.style.height = `${height}px`; thumb.style.top = `${Math.max(0,Math.min(max,port.scrollTop)) / ratio}px`
       track.dataset.visible = String(alwaysShow || bar.dragging || track.matches(':hover') || (keyboardMode && port.contains(doc.activeElement)) || Date.now() < bar.until)
     }
-    function show() { bar.until = Date.now() + 700; update(); win.clearTimeout(timer); timer = win.setTimeout(schedule, 720) }
+    function show() { bar.until = Date.now() + 700; update(); win.clearTimeout(timer); timer = win.setTimeout(schedule, 700) }
     function down(e: PointerEvent) {
       if (e.button !== 0) return
       e.preventDefault(); e.stopPropagation(); bar.dragging = true; track.dataset.dragging = 'true'
