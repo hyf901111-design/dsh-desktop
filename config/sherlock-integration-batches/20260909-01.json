@@ -9,23 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Research header clearance and small container drafts",
+        "featureName": "Figma trajectory sidebar and composer detail parity",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "4a601cdac87f65fa184142326052414fd7fb81bd",
-        "tipCommit": "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b",
+        "baseCommit": "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b",
+        "tipCommit": "40f6b85e635b43cf5258c57a23662f0ffef3cb51",
         "commits": [
           {
-            "commit": "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b",
+            "commit": "40f6b85e635b43cf5258c57a23662f0ffef3cb51",
             "parents": [
-              "4a601cdac87f65fa184142326052414fd7fb81bd"
+              "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b"
             ],
-            "subject": "修复研究顶栏按钮重叠并将新建容器改为小号"
+            "subject": "还原轨迹页面并统一侧栏页签菜单和拖拽反馈"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
+            "path": "scripts/lib/figma-trajectory-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-canvas-gestures.css"
           },
           {
             "status": "M",
@@ -33,11 +45,23 @@
           },
           {
             "status": "M",
-            "path": "test/research-bento-visible-layout.test.js"
+            "path": "src/preload/figma-panels.css"
           },
           {
             "status": "M",
-            "path": "test/research-file-drop.test.ts"
+            "path": "src/preload/figma-resize-feedback.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-trajectory.css"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-panel-tab-overflow.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-resize-feedback.test.ts"
           }
         ],
         "checks": [
@@ -46,103 +70,35 @@
               "npx",
               "vitest",
               "run",
-              "test/research-bento-visible-layout.test.js",
-              "test/research-board-client-adapter.test.js",
-              "test/figma-final-shell-patch.test.ts"
+              "test/figma-final-shell-patch.test.ts",
+              "test/figma-trajectory-client.test.ts",
+              "test/figma-resize-feedback.test.ts",
+              "test/figma-panel-tab-overflow.test.ts",
+              "test/research-boards-ui.test.ts",
+              "test/figma-canvas-gestures-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "45 focused tests passed; placement test separately passed",
-            "verifiedCommit": "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b",
-            "completedAt": "2026-09-12T00:22:07.130832+00:00",
+            "summary": "31 focused tests passed; typecheck passed; actual tab and trajectory browser fixture checked at 280/300/340/400 widths",
+            "verifiedCommit": "40f6b85e635b43cf5258c57a23662f0ffef3cb51",
+            "completedAt": "2026-09-12T01:37:07.928434+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Playwright with production CSS verifies 56px closed / 20px open header padding at 900 and 1380 widths; native final verification follows build"
+          "summary": "Figma measured references and actual-component browser layout verified. Packaged native verification follows integration build."
         },
         "acceptanceCriteria": [
-          "New empty containers are 320x220 small presets",
-          "Existing geometry and content preserved",
-          "Closed right-panel toggle keeps reserved header space"
+          "Trajectory dock separated from ledger with Figma toolbar spacing",
+          "Tab overflow reserves its own space",
+          "Shared workspace and board menu styling",
+          "Narrow composer controls do not overlap",
+          "Both dividers and 2px hollow resize rings match Figma"
         ],
         "risks": [
-          "Local testing only; no release or push"
+          "Local only; no push or release. Native verification pending build."
         ],
-        "generatedAt": "2026-09-12T00:22:07.130832+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9b2f2c426a2b6fc30dca70af57d2304d2e733dcf",
-        "verificationCommit": "9b2f2c426a2b6fc30dca70af57d2304d2e733dcf",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "9b2f2c426a2b6fc30dca70af57d2304d2e733dcf",
-            "completedAt": "2026-09-12T00:22:58.071Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9b2f2c426a2b6fc30dca70af57d2304d2e733dcf",
-            "completedAt": "2026-09-12T00:22:58.071Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "9b2f2c426a2b6fc30dca70af57d2304d2e733dcf",
-            "completedAt": "2026-09-12T00:22:58.071Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "9b2f2c426a2b6fc30dca70af57d2304d2e733dcf",
-            "completedAt": "2026-09-12T00:22:58.071Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "9b2f2c426a2b6fc30dca70af57d2304d2e733dcf",
-            "completedAt": "2026-09-12T00:22:58.071Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T00:22:58.071Z"
+        "generatedAt": "2026-09-12T01:37:07.928835+00:00"
       }
     }
   ],
