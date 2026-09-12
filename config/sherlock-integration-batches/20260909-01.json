@@ -9,42 +9,59 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "提供方选择目录、浅色菜单选中态和真实包刷新菜单修复",
+        "featureName": "画布与页签菜单实机差异修正",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
-        "tipCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
+        "baseCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
+        "tipCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
         "commits": [
           {
-            "commit": "1a43804058f1adcda844cc490d8150094bae2e2b",
+            "commit": "a1cfb7a8689cd5db033ba2c7590fcd8cc12e925e",
             "parents": [
-              "b5ef31ff43e968c1a8bc741b426823555069de37"
+              "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf"
             ],
-            "subject": "按设计新增提供方搜索菜单并修复浅色选中态和弹层避让"
+            "subject": "补齐已安装菜单补丁的定位修正升级路径"
           },
           {
-            "commit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
+            "commit": "57d1df492c5b89b6d3ac806c6ef4b9979e5d49ab",
             "parents": [
-              "1a43804058f1adcda844cc490d8150094bae2e2b"
+              "a1cfb7a8689cd5db033ba2c7590fcd8cc12e925e"
             ],
-            "subject": "修复实机刷新子菜单文字被旧图标宽度压缩的问题"
+            "subject": "按实机差异修正思维导图与新建页签菜单尺寸"
+          },
+          {
+            "commit": "535dd17d4387d81b637acb3e27221e90636f2bc7",
+            "parents": [
+              "57d1df492c5b89b6d3ac806c6ef4b9979e5d49ab"
+            ],
+            "subject": "修复悬停后点击自动刷新误关子菜单的问题"
+          },
+          {
+            "commit": "6005c5d4213cb91eb1a478f0b254a982278d1b03",
+            "parents": [
+              "535dd17d4387d81b637acb3e27221e90636f2bc7"
+            ],
+            "subject": "按设计还原画布右键菜单并补齐可见区域避让"
+          },
+          {
+            "commit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
+            "parents": [
+              "6005c5d4213cb91eb1a478f0b254a982278d1b03"
+            ],
+            "subject": "修正页签溢出菜单几何并保证定位补丁重复构建一致"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-canvas-context-menu.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/lib/figma-container-menu.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/figma-menu-placement.d.mts"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-menu-placement.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-provider-menu.mjs"
+            "status": "M",
+            "path": "scripts/lib/figma-derived-menu-client.mjs"
           },
           {
             "status": "M",
@@ -56,15 +73,15 @@
           },
           {
             "status": "A",
-            "path": "test/figma-menu-placement.test.js"
+            "path": "test/figma-canvas-context-menu.test.js"
           },
           {
             "status": "M",
-            "path": "test/figma-menu-scope.test.ts"
+            "path": "test/research-canvas-clipboard-ui.test.ts"
           },
           {
-            "status": "A",
-            "path": "test/figma-provider-menu.test.js"
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
           }
         ],
         "checks": [
@@ -74,15 +91,16 @@
               "exec",
               "vitest",
               "run",
+              "test/research-canvas-clipboard-ui.test.ts",
+              "test/figma-canvas-context-menu.test.js",
               "test/research-container-chrome.test.ts",
-              "test/figma-menu-placement.test.js",
-              "test/figma-provider-menu.test.js",
-              "test/figma-menu-scope.test.ts"
+              "test/research-derived-menu-final.test.ts",
+              "test/figma-provider-menu.test.js"
             ],
             "outcome": "passed",
-            "summary": "Focused component, placement, provider flow and modal scope checks passed",
-            "verifiedCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
-            "completedAt": "2026-09-12T12:57:53.280565+00:00",
+            "summary": "84 focused checks passed, including hover then click regression and canvas edge placement",
+            "verifiedCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
+            "completedAt": "2026-09-12T13:27:23.343901+00:00",
             "timeoutMs": 120000
           },
           {
@@ -93,8 +111,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
-            "completedAt": "2026-09-12T12:57:53.280565+00:00",
+            "verifiedCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
+            "completedAt": "2026-09-12T13:27:23.343901+00:00",
             "timeoutMs": 120000
           },
           {
@@ -106,98 +124,26 @@
             ],
             "outcome": "passed",
             "summary": "Pristine dependencies patched twice and executed",
-            "verifiedCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
-            "completedAt": "2026-09-12T12:57:53.280565+00:00",
+            "verifiedCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
+            "completedAt": "2026-09-12T13:27:23.343901+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "003cfb21 real package menu dimensions 248x118 and 220x190 verified; rendering exposed legacy 12px label width, now fixed in this handoff. Rebuilt UI verification still required."
+          "summary": "21d40167 real package measurements recorded for mindmap, new-tab, canvas and component context menus, overflow, provider and refresh. This correction batch still requires rebuilt native UI verification."
         },
         "acceptanceCriteria": [
-          "Provider menu lists real data, disables configured providers and opens existing editor after selection",
-          "Menu flips with 8px anchor gap and 12px viewport boundary",
-          "Refresh labels remain horizontal; exact nested menu spacing",
-          "Light permission selection matches Figma #f0f0f0"
+          "Mindmap 280x208 and neutral selected state",
+          "New-tab 238x250 with 42px rows; overflow dedicated material and 312px rows",
+          "Provider directory caps at 309px and remains constrained by available height",
+          "Context menus use 260/240 widths and remain inside visible canvas",
+          "Hover then clicking refresh keeps submenu open"
         ],
         "risks": [
-          "All-page visual audit remains in progress; no global acceptance claimed"
+          "All-page audit in progress; no global visual acceptance claimed"
         ],
-        "generatedAt": "2026-09-12T12:57:53.280565+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9c62183721cf4b82ccc11775c0980d415c90129a",
-        "verificationCommit": "9c62183721cf4b82ccc11775c0980d415c90129a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "9c62183721cf4b82ccc11775c0980d415c90129a",
-            "completedAt": "2026-09-12T12:58:32.102Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9c62183721cf4b82ccc11775c0980d415c90129a",
-            "completedAt": "2026-09-12T12:58:32.102Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "9c62183721cf4b82ccc11775c0980d415c90129a",
-            "completedAt": "2026-09-12T12:58:32.102Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "9c62183721cf4b82ccc11775c0980d415c90129a",
-            "completedAt": "2026-09-12T12:58:32.102Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "9c62183721cf4b82ccc11775c0980d415c90129a",
-            "completedAt": "2026-09-12T12:58:32.102Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T12:58:32.102Z"
+        "generatedAt": "2026-09-12T13:27:23.343901+00:00"
       }
     }
   ],
