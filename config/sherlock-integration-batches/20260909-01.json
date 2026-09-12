@@ -9,34 +9,46 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "按最新 Figma 修正模型菜单与深色浮层材质",
+        "featureName": "按 Figma 补齐权限和设置菜单并修正模型切换焦点",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "76440e19e243f96eb19085261191563f4cd2d4a9",
-        "tipCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
+        "baseCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
+        "tipCommit": "ad384346907165ed5d3c0dfd6cbf7d99b52c948b",
         "commits": [
           {
-            "commit": "375bc24325e74cb3eba98f581f14583e00669b7d",
+            "commit": "9026e01a61f0edc9ef63fb559b9f2b550137508f",
             "parents": [
-              "76440e19e243f96eb19085261191563f4cd2d4a9"
+              "5d05dd4383a53de23798c456bd442a356ad34ebd"
             ],
-            "subject": "按 Figma 还原可搜索模型菜单与深色浮层材质"
+            "subject": "按 Figma 补齐输入区和设置权限菜单说明及行距"
           },
           {
-            "commit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
+            "commit": "ad384346907165ed5d3c0dfd6cbf7d99b52c948b",
             "parents": [
-              "375bc24325e74cb3eba98f581f14583e00669b7d"
+              "9026e01a61f0edc9ef63fb559b9f2b550137508f"
             ],
-            "subject": "补齐模型菜单的干净安装与幂等补丁验证"
+            "subject": "修复模型菜单焦点切换并补齐设置菜单的描述和浮层归属"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "scripts/lib/figma-model-menu.d.mts"
+            "path": "scripts/lib/figma-menu-scope.d.mts"
           },
           {
             "status": "A",
+            "path": "scripts/lib/figma-menu-scope.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/figma-model-menu.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-permission-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-settings-client.mjs"
           },
           {
             "status": "M",
@@ -48,19 +60,19 @@
           },
           {
             "status": "M",
-            "path": "src/preload/account-ui.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/figma-refinements.css"
           },
           {
-            "status": "M",
-            "path": "test/figma-auth-layout.test.ts"
+            "status": "A",
+            "path": "test/figma-menu-scope.test.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/figma-model-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/permission-localization.test.ts"
           }
         ],
         "checks": [
@@ -70,13 +82,15 @@
               "exec",
               "vitest",
               "run",
+              "test/figma-menu-scope.test.ts",
               "test/figma-model-menu.test.ts",
+              "test/permission-localization.test.ts",
               "test/figma-auth-layout.test.ts"
             ],
             "outcome": "passed",
-            "summary": "4 focused behavior checks passed",
-            "verifiedCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
-            "completedAt": "2026-09-12T11:45:26.687138+00:00",
+            "summary": "8 focused checks passed",
+            "verifiedCommit": "ad384346907165ed5d3c0dfd6cbf7d99b52c948b",
+            "completedAt": "2026-09-12T12:09:20.915598+00:00",
             "timeoutMs": 120000
           },
           {
@@ -86,9 +100,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript check passed",
-            "verifiedCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
-            "completedAt": "2026-09-12T11:45:26.687861+00:00",
+            "summary": "TypeScript passed",
+            "verifiedCommit": "ad384346907165ed5d3c0dfd6cbf7d99b52c948b",
+            "completedAt": "2026-09-12T12:09:20.915598+00:00",
             "timeoutMs": 120000
           },
           {
@@ -99,98 +113,25 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Pristine locked dependencies transformed twice; model module factory executes",
-            "verifiedCommit": "5d05dd4383a53de23798c456bd442a356ad34ebd",
-            "completedAt": "2026-09-12T11:48:58.694234+00:00",
+            "summary": "Pristine dependencies patched twice and executed",
+            "verifiedCommit": "ad384346907165ed5d3c0dfd6cbf7d99b52c948b",
+            "completedAt": "2026-09-12T12:09:20.915598+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Real existing client confirmed obsolete two-level menu; updated package visual verification pending."
+          "summary": "First model package verified on real client; follow-up permission and modal scope require updated package."
         },
         "acceptanceCriteria": [
-          "Direct searchable model menu and reasoning choice retain Host state",
-          "Menu fits viewport with 12px edge and 8px anchor gap",
-          "Manage models opens existing settings section"
+          "Model pane focus survives navigation and Escape",
+          "Settings menu belongs to its modal",
+          "Permission choices display descriptions without changing commands or approval"
         ],
         "risks": [
           "All-page visual audit remains in progress; no global acceptance claimed"
         ],
-        "generatedAt": "2026-09-12T11:48:58.694234+00:00"
-      },
-      "merged": {
-        "mergeCommit": "485d42eb928cb9c4f7d0a1bb6aff0ee125870037",
-        "verificationCommit": "485d42eb928cb9c4f7d0a1bb6aff0ee125870037",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "485d42eb928cb9c4f7d0a1bb6aff0ee125870037",
-            "completedAt": "2026-09-12T11:49:38.043Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "485d42eb928cb9c4f7d0a1bb6aff0ee125870037",
-            "completedAt": "2026-09-12T11:49:38.043Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "485d42eb928cb9c4f7d0a1bb6aff0ee125870037",
-            "completedAt": "2026-09-12T11:49:38.043Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "485d42eb928cb9c4f7d0a1bb6aff0ee125870037",
-            "completedAt": "2026-09-12T11:49:38.043Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "485d42eb928cb9c4f7d0a1bb6aff0ee125870037",
-            "completedAt": "2026-09-12T11:49:38.043Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T11:49:38.043Z"
+        "generatedAt": "2026-09-12T12:09:20.915598+00:00"
       }
     }
   ],
