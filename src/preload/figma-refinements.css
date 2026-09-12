@@ -311,13 +311,15 @@ body [data-odyssey-tab-overflow-heading] { font-size:11px; }
 body [data-odyssey-tab-overflow-option][role=menuitemradio] { padding:0 10px; gap:10px; border-radius:7px; font:400 12px/21px var(--odyssey-font-ui); }
 /* Figma 711:29359: a child record owns a real, independent right-tab viewport. */
 [data-odyssey-subagent-panel]{display:flex;flex:1;flex-direction:column;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
-[data-odyssey-subagent-panel]>.wSkVaW_root{flex:1;min-height:0;height:100%}
+/* Portal wrappers use display:contents. The child fills the right tab and never
+   subtracts the central bottom panel's inherited height a second time. */
+body [data-odyssey-subagent-panel] .wSkVaW_root[data-odyssey-page]{flex:1;min-height:0;height:100%;--dsh-sidebar-height:0px}
 .odyssey-subagent-panel-header{flex:none;display:flex;flex-direction:column;gap:5px;margin:16px 16px 0;padding:0 0 13px;border-bottom:1px solid rgba(0,0,0,.07)}
 .odyssey-subagent-panel-header strong{font:500 16px/22px 'Noto Sans SC',sans-serif;color:#252525;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .odyssey-subagent-panel-header>div{display:flex;align-items:center;gap:4px;font:400 12px/18px 'Noto Sans SC',sans-serif;color:#737373}
 .odyssey-subagent-panel-header [data-odyssey-subagent-activity]{margin:0;width:10px;height:10px;flex:none}
 .odyssey-subagent-panel-error{display:flex;flex-direction:column;gap:12px;padding:20px;font:400 13px/20px 'Noto Sans SC',sans-serif}
-[data-odyssey-subagent-panel] .XJ7liG_frame{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;margin:12px 16px 16px;padding:14px 12px;min-height:120px;box-sizing:border-box;border:0;border-radius:10px;background:#f0f0f0;font:400 12px/20px 'Noto Sans SC',sans-serif}
+[data-odyssey-subagent-panel] .XJ7liG_frame{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;margin:0 16px;padding:14px 12px;min-height:120px;box-sizing:border-box;border:0;border-radius:10px;background:#f0f0f0;font:400 12px/20px 'Noto Sans SC',sans-serif}
 [data-odyssey-subagent-panel] .XJ7liG_frame strong{font-size:14px;line-height:20px;font-weight:500}
 body[data-ds-dark-theme] .odyssey-subagent-panel-header{border-color:rgba(255,255,255,.075)}
 body[data-ds-dark-theme] .odyssey-subagent-panel-header strong{color:#e6e6e6}
@@ -327,6 +329,18 @@ body[data-ds-dark-theme] [data-odyssey-subagent-panel] .XJ7liG_frame{background:
 .odyssey-subagent-panel-header .odyssey-subagent-panel-state{position:relative;display:block;padding-left:20px;white-space:nowrap}
 .odyssey-subagent-panel-header .odyssey-subagent-panel-state [data-odyssey-subagent-activity]{position:absolute;left:1px;top:6px}
 .odyssey-subagent-panel-header .odyssey-subagent-panel-metrics{margin-top:2px;font:400 11px/17px 'Noto Sans SC',sans-serif}
+
+/* D29: independent reading area; the footer owns the 16 px gap and 12 px inset.
+   At 824 px tab height, the 99 px header leaves a 562 px reading viewport. */
+body [data-odyssey-subagent-panel] .wSkVaW_root[data-odyssey-page=conversation]>.wSkVaW_scrollBody{margin-top:15px;overscroll-behavior-y:contain}
+body [data-odyssey-subagent-panel] .Md3f7G_scroll{padding:0 16px}
+body [data-odyssey-subagent-panel] .Md3f7G_column{min-width:0;max-width:100%}
+body [data-odyssey-subagent-panel] :is(.Sxvs8a_root,.Sxvs8a_body,[class*=_markdown_],.gdEzaW_bubble){font-size:14px;line-height:24px}
+body [data-odyssey-subagent-panel] .wSkVaW_root[data-odyssey-page=conversation]>[data-center-composer-host]:has(.XJ7liG_frame){padding:16px 0 12px}
+body [data-odyssey-subagent-panel] [data-research-task-input]{box-sizing:border-box;min-height:100px;padding:12px!important;border:0!important;border-radius:10px;background:#f0f0f0;font-size:13px!important;line-height:19px!important}
+body [data-odyssey-subagent-panel] [data-research-task-input]>div:first-child{margin-bottom:9px!important}
+body [data-odyssey-subagent-panel] [data-research-task-input-details]>summary{font-size:12px;line-height:18px}
+body[data-ds-dark-theme] [data-odyssey-subagent-panel] [data-research-task-input]{background:#2e2e2e}
 
 /* The rail keeps its 80 px grid track while the expanded navigation paints over
    the canvas. Use opaque material so covered canvas content cannot bleed through. */

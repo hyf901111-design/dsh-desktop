@@ -91,4 +91,11 @@ it('shows only real optional usage and timing in the child header',async()=>{
   const actual=Header({...props,useProjection:key=>key==='tokenUsage'?{uncachedInputTokens:10,outputTokens:20,cacheReadTokens:30,cacheWriteTokens:40}:{settledMs:54000}})
   expect(actual.props.children[2].props.children).toBe('100 tok · 54秒')
   expect(actual.props.children[0].props.children).toBe('真实子任务')
+  const addressed={...props,useSession:fn=>fn({running:false,subagent:{address:{parentSessionId:'parent',childSessionId:'child',mode:'one-shot'}}}),useProjection:()=>undefined}
+  const titleFor=(entries,displayTitle='内部交付指令摘要')=>Header({...addressed,useSessions:fn=>fn({byId:{child:{displayTitle}},subagentsByParent:{parent:{entries}}})}).props.children[0].props.children
+  expect(titleFor([{kind:'child',id:'child',mode:'one-shot',label:'画布生成任务'}])).toBe('画布生成任务')
+  expect(titleFor([{kind:'child',id:'sibling',mode:'one-shot',label:'旁支任务'}])).toBe('内部交付指令摘要')
+  expect(titleFor([{kind:'child',id:'child',mode:'persistent',label:'旧模式任务'}])).toBe('内部交付指令摘要')
+  expect(titleFor([{kind:'child',id:'child',mode:'one-shot',label:'  '}])).toBe('内部交付指令摘要')
+  expect(titleFor([],null)).toBe('child')
 })
