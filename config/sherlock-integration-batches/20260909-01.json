@@ -9,68 +9,52 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "右侧子代理记录与菜单排版设计对齐",
+        "featureName": "子代理页签注册修复与空白研究入口对齐",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
-        "tipCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
+        "baseCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
+        "tipCommit": "877f98817d158680fa25d0b81ce1f9496a1205d7",
         "commits": [
           {
-            "commit": "67dc39a611b5614a8275676e24799514e4c73562",
+            "commit": "6e36437ba4b7524f5a7bddda758fb7d5281de486",
             "parents": [
-              "4b82ff616e22dc625d040d84d95f5d7c49c7d666"
+              "41d02b3e267aa819f1187f196389d5160a0c297a"
             ],
-            "subject": "固定页签溢出菜单宽度并保留窄面板边界"
+            "subject": "移除空白研究输入区重复的模式选择入口"
           },
           {
-            "commit": "c3a22ca6c1c8686900d69873576e7f55d82a4026",
+            "commit": "51f2f02964f3792a0c47ec8acbae5d1a8f698f2a",
             "parents": [
-              "67dc39a611b5614a8275676e24799514e4c73562"
+              "6e36437ba4b7524f5a7bddda758fb7d5281de486"
             ],
-            "subject": "按设计修正子代理菜单层级排版与空闲状态"
+            "subject": "记录逐页设计索引和客户端差异核验进展"
           },
           {
-            "commit": "41d02b3e267aa819f1187f196389d5160a0c297a",
+            "commit": "877f98817d158680fa25d0b81ce1f9496a1205d7",
             "parents": [
-              "c3a22ca6c1c8686900d69873576e7f55d82a4026"
+              "51f2f02964f3792a0c47ec8acbae5d1a8f698f2a"
             ],
-            "subject": "将子代理记录放入独立右侧页签并保留父研究画布"
+            "subject": "修正子代理页签注册并对齐记录标题与真实用量"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "scripts/lib/figma-refinements-client.mjs"
+            "status": "A",
+            "path": "docs/design-audits/2026-09-12-figma-client-audit.md"
           },
           {
             "status": "A",
+            "path": "docs/design-audits/2026-09-12-figma-page-ledger.json"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/figma-subagent-panel.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-collaboration-e2e.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
           },
           {
             "status": "M",
             "path": "src/preload/figma-refinements.css"
           },
           {
-            "status": "A",
-            "path": "test/figma-subagent-menu.test.js"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "test/figma-subagent-panel.test.js"
           }
         ],
@@ -84,13 +68,14 @@
               "test/figma-subagent-panel.test.js",
               "test/figma-subagent-menu.test.js",
               "test/figma-panel-tab-overflow.test.ts",
+              "test/figma-responsive-header.test.ts",
               "test/figma-file-panel.test.ts",
               "test/figma-native-file-menu.test.js"
             ],
             "outcome": "passed",
-            "summary": "17 focused checks passed: retained child scope, selection, release, renderer and sidebar",
-            "verifiedCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
-            "completedAt": "2026-09-12T14:35:00.713326+00:00",
+            "summary": "20 focused checks passed including the real SlotCore registration, optional metrics and responsive header",
+            "verifiedCommit": "877f98817d158680fa25d0b81ce1f9496a1205d7",
+            "completedAt": "2026-09-12T14:45:56.211056+00:00",
             "timeoutMs": 120000
           },
           {
@@ -101,8 +86,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
-            "completedAt": "2026-09-12T14:35:00.713326+00:00",
+            "verifiedCommit": "877f98817d158680fa25d0b81ce1f9496a1205d7",
+            "completedAt": "2026-09-12T14:45:56.211056+00:00",
             "timeoutMs": 120000
           },
           {
@@ -114,98 +99,25 @@
             ],
             "outcome": "passed",
             "summary": "Pristine locked dependencies including runtime and renderer patched twice and executed",
-            "verifiedCommit": "41d02b3e267aa819f1187f196389d5160a0c297a",
-            "completedAt": "2026-09-12T14:35:00.713326+00:00",
+            "verifiedCommit": "877f98817d158680fa25d0b81ce1f9496a1205d7",
+            "completedAt": "2026-09-12T14:45:56.211056+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Real package 1d03bd24 exposed 365px overflow menu, 72px subagent rows and global child navigation. Corrected sources require the next integrated native package."
+          "summary": "1f8a3778 native startup reproduced duplicate conversation.session declaration. The real registry regression now passes with delegated rendering and a single declaration. New native acceptance pending."
         },
         "acceptanceCriteria": [
-          "Overflow menu keeps 324px width within available panel bounds",
-          "Subagent menu uses 70px rows, correct typography and gray idle dots",
-          "Child records open in right tabs while the parent canvas remains selected",
-          "One-shot and offline composer permissions retain existing runtime guards"
+          "Right-side child panes reuse declared parent render bindings without duplicate slot registration",
+          "Actual optional usage and timing, one-shot read-only card and header geometry follow Figma",
+          "Research mode control appears only in the header",
+          "Native application restores the existing main interface"
         ],
         "risks": [
           "All-page audit remains in progress; native child-pane acceptance pending"
         ],
-        "generatedAt": "2026-09-12T14:35:00.713326+00:00"
-      },
-      "merged": {
-        "mergeCommit": "84957d54648e27c8edaca61a9dafa077bd9d6dcd",
-        "verificationCommit": "84957d54648e27c8edaca61a9dafa077bd9d6dcd",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "84957d54648e27c8edaca61a9dafa077bd9d6dcd",
-            "completedAt": "2026-09-12T14:35:48.851Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "84957d54648e27c8edaca61a9dafa077bd9d6dcd",
-            "completedAt": "2026-09-12T14:35:48.851Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "84957d54648e27c8edaca61a9dafa077bd9d6dcd",
-            "completedAt": "2026-09-12T14:35:48.851Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "84957d54648e27c8edaca61a9dafa077bd9d6dcd",
-            "completedAt": "2026-09-12T14:35:48.851Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "84957d54648e27c8edaca61a9dafa077bd9d6dcd",
-            "completedAt": "2026-09-12T14:35:48.851Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T14:35:48.851Z"
+        "generatedAt": "2026-09-12T14:45:56.211056+00:00"
       }
     }
   ],
