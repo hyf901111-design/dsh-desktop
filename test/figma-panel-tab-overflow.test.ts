@@ -120,6 +120,8 @@ describe('Figma panel tab overflow', () => {
 
       const trigger = host.querySelector('[data-odyssey-tab-overflow-trigger]') as unknown as HTMLButtonElement
       expect(trigger).not.toBeNull()
+      expect(trigger.parentElement).toBe(list.parentElement)
+      expect(list.contains(trigger)).toBe(false)
       await act(async () => { trigger.click() })
       const menu = host.querySelector('[data-odyssey-tab-overflow-menu]')
       expect(menu?.querySelectorAll('[data-odyssey-tab-overflow-option]')).toHaveLength(7)

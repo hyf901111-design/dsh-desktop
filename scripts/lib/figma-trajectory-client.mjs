@@ -29,7 +29,9 @@ function replaceAllExact(source, anchor, replacement, expected, label) {
  * history loading, table selection and detail inspection stay in the package.
  */
 export function patchFigmaTrajectory(source) {
-  if (source.includes(FIGMA_TRAJECTORY_MARKER)) return source
+  // Also upgrade already-patched installations without reapplying the structural transform.
+  source = source.replace('children: "No timing data"', 'children: laneLabels?.[0] === "输入" ? "暂无执行时长数据" : "No timing data"')
+  if (source.includes(FIGMA_TRAJECTORY_MARKER)) return source.replace('"toolbar.searchPlaceholder": "搜索"', '"toolbar.searchPlaceholder": "搜索轨迹"')
 
   source = replaceInSection(source, '\t\tconst zh = {', '\n\t\t};', section => {
     for (const [before, after] of [
@@ -178,5 +180,5 @@ export function patchFigmaTrajectory(source) {
     return section
   }, 'view')
 
-  return source
+  return source.replace('"toolbar.searchPlaceholder": "搜索"', '"toolbar.searchPlaceholder": "搜索轨迹"')
 }

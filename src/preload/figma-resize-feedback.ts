@@ -6,18 +6,16 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
   if (!win) return () => {}
   let handle: HTMLElement | null = null
   let pointer: number | null = null
-  let pointerY = 0
   let frame = 0
   let overlay: HTMLDivElement | null = null
   let grip: HTMLDivElement | null = null
-  let label: HTMLDivElement | null = null
   const clear = () => {
     win.cancelAnimationFrame(frame)
     frame = 0
     handle = null
     pointer = null
     overlay?.remove()
-    overlay = grip = label = null
+    overlay = grip = null
     delete doc.body.dataset.odysseyResizing
   }
   const draw = () => {
@@ -37,22 +35,14 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
       overlay.append(grip)
       doc.body.append(overlay)
     }
-    const top = rect.top + (sidebar ? 18 : 2)
-    const height = Math.max(0, rect.height - (sidebar ? 36 : 4))
+    // Figma 194:360/1091: 536px at a 900px window, centered vertically.
+    const height = Math.round(Math.min(rect.height, win.innerHeight) * 536 / 900)
+    const top = rect.top + (rect.height - height) / 2
     overlay.style.left = `${sidebar ? rect.right : rect.left - 5}px`
     overlay.style.top = `${top}px`
     overlay.style.height = `${height}px`
-    const gripHeight = sidebar ? 70 : 120
-    grip!.style.top = `${Math.max(0, Math.min(height - gripHeight, pointerY - top - gripHeight / 2))}px`
-    if (sidebar && pointer !== null) {
-      if (!label) {
-        label = doc.createElement('div')
-        label.dataset.odysseyResizeWidth = ''
-        overlay.append(label)
-      }
-      label.textContent = `${Math.round(rect.width)} px`
-      label.style.top = `${Math.max(0, Math.min(height - 28, pointerY - top + 16))}px`
-    }
+    grip!.style.top = '0px'
+    grip!.style.height = `${height}px`
     if (pointer !== null) frame = win.requestAnimationFrame(draw)
   }
   const match = (event: PointerEvent) => (event.target as Element | null)?.closest?.<HTMLElement>(handles) ?? null
@@ -61,7 +51,6 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
     const next = match(event)
     if (!next) return
     handle = next
-    pointerY = event.clientY
     draw()
   }
   const down = (event: PointerEvent) => {
@@ -71,13 +60,11 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
     clear()
     handle = next
     pointer = event.pointerId
-    pointerY = event.clientY
     doc.body.dataset.odysseyResizing = ''
     frame = win.requestAnimationFrame(draw)
   }
   const move = (event: PointerEvent) => {
     if (pointer !== null && pointer !== event.pointerId) return
-    pointerY = event.clientY
     if (pointer === null && handle) draw()
   }
   const out = (event: PointerEvent) => {
