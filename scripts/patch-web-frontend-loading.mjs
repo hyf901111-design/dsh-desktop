@@ -1,4 +1,4 @@
-import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger } from './lib/figma-refinements-client.mjs'
+import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger, patchFigmaNavigationTitles, patchFigmaContextDirectory } from './lib/figma-refinements-client.mjs'
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
@@ -114,6 +114,8 @@ const layoutPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-
 writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')))
 
 for (const [name, patch] of [
+  ['dsh-client-ui-workspace', patchFigmaNavigationTitles],
+  ['dsh-client-ui-conversation', patchFigmaContextDirectory],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', patchFigmaSettingsModels],
   ['dsh-client-ui-theme', patchFigmaSettingsAppearance],

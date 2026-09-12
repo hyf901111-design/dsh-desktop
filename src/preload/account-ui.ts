@@ -39,7 +39,6 @@ export function mountAccountUi(
  .sherlock-auth-close{position:absolute;right:12px;top:10px;border:0;background:transparent;color:inherit;font:22px system-ui;cursor:pointer;width:30px;height:30px}
  .VOzbGW_trigger{display:none!important}
  .VOzbGW_panel[data-account-active] .VOzbGW_options,.VOzbGW_panel[data-account-active] .VOzbGW_header{display:none!important}
- .VOzbGW_panel[data-account-active] .VOzbGW_navCell:not([data-account-nav]).VOzbGW_active{background:transparent!important}
  .sherlock-account-button,.sherlock-account-menu button,.sherlock-account-nav{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer;text-align:left;border-radius:8px;padding:9px 12px}
  .sherlock-account-button{display:flex;width:100%;align-items:center;gap:10px;height:42px;margin:4px 0;color:var(--dsw-alias-label-primary)}
  .sherlock-account-button:hover,.sherlock-account-menu button:hover,.sherlock-account-nav:hover{background:var(--dsw-alias-interactive-bg-hover)}
@@ -605,11 +604,16 @@ export function mountAccountUi(
     root.setAttribute('aria-label', 'EWork Odyssey 设置')
     root.removeAttribute('aria-labelledby')
     const nav = root.querySelector('nav')!
-    const back = button('← 返回应用', () => {
+    const back = button('返回应用', () => {
       root.querySelector<HTMLButtonElement>('.VOzbGW_close')?.click()
       trigger?.focus()
     })
     back.className = 'sherlock-settings-back'
+    const backIcon = new DOMParser().parseFromString(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3m4-4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      'image/svg+xml'
+    ).documentElement
+    back.prepend(document.importNode(backIcon, true))
     const brand = document.createElement('span')
     brand.className = 'sherlock-settings-logo'
     brand.setAttribute('aria-label', 'EWork Odyssey')

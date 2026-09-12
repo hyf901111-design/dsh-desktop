@@ -2007,7 +2007,7 @@ if (process.argv.includes('--serve')) {
     await page.getByRole('form',{name:'修改密码',exact:true}).getByLabel('当前密码',{exact:true}).waitFor()
     assert.equal(await passwordToggle.getAttribute('aria-expanded'), 'true')
     await page.screenshot({animations:'disabled',path:join(out,'account-details-dark.png')})
-    await page.getByRole('button',{name:'← 返回应用',exact:true}).click()
+    await page.getByRole('button',{name:'返回应用',exact:true}).click()
     assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'editor' })).ok, true)
     await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === true)
     networks[1].offline = true

@@ -9,10 +9,15 @@ body[data-ds-dark-theme] .VOzbGW_overlay{--settings-surface:rgb(30.5026,30.5026,
 .VOzbGW_overlay .sherlock-settings-logo{position:absolute;left:20px;top:45px;width:88px;height:29px;color:#090909}
 .sherlock-settings-logo svg{display:block;width:88px;height:29px}.sherlock-settings-logo path{fill:currentColor}
 body[data-ds-dark-theme] .sherlock-settings-logo{color:#fff!important}
-.VOzbGW_overlay .sherlock-settings-back{box-sizing:border-box;flex:none;width:208px;height:32px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:inherit;font:400 13px/20px 'Noto Sans SC',sans-serif;text-align:left;cursor:pointer}
+.VOzbGW_overlay .sherlock-settings-back{box-sizing:border-box;display:flex;align-items:center;gap:10px;flex:none;width:100%;height:32px;padding:0 12px;border:0;border-radius:7px;background:transparent;color:var(--settings-text);font:400 14px/22px 'Noto Sans SC',sans-serif;text-align:left;cursor:pointer}
+.VOzbGW_overlay .sherlock-settings-back svg{display:block;width:16px;height:16px;flex:none}
 .VOzbGW_overlay .VOzbGW_navList{gap:4px}
 .VOzbGW_overlay .VOzbGW_navCell{height:32px;padding:0 12px;gap:10px;border-radius:7px;font:400 14px/22px 'Noto Sans SC',sans-serif;color:var(--settings-muted)}
 .VOzbGW_overlay .VOzbGW_navCell.VOzbGW_active,.VOzbGW_overlay [data-account-nav][aria-current=page]{background:var(--settings-active);font-weight:500;color:var(--settings-text)}
+/* Account is an additional section: the hidden native section must lose all of
+   its selected styling, even though its original tab remains mounted. */
+.VOzbGW_overlay .VOzbGW_panel[data-account-active] .VOzbGW_navCell:not([data-account-nav]){background:transparent;font-weight:400;color:var(--settings-muted)}
+.VOzbGW_overlay .VOzbGW_navCell:hover,.VOzbGW_overlay .VOzbGW_panel[data-account-active] .VOzbGW_navCell:not([data-account-nav]):hover{background:var(--settings-active)}
 .VOzbGW_overlay .VOzbGW_navIcon{width:16px;height:16px;flex:none}
 .VOzbGW_overlay .VOzbGW_content{position:relative;min-height:0;border-radius:16px;background:var(--settings-surface);padding:0;overflow:hidden}
 .VOzbGW_overlay .VOzbGW_header{position:absolute;z-index:1;top:12px;right:12px;height:auto;padding:0}

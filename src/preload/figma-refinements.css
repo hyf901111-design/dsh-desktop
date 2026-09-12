@@ -175,3 +175,10 @@ body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; 
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button { box-sizing:border-box; display:flex; align-items:center; justify-content:center; width:24px; height:24px; min-width:24px; padding:4px; margin:0; border:0; border-radius:5px; background:transparent; box-shadow:none; color:var(--srb-muted); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button:hover { background:var(--srb-row-hover); color:var(--srb-label); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button svg { width:16px; height:16px; flex:none; }
+
+/* Overflow is clipped by a fading viewport; icons and the trailing slot never move. */
+[data-dsh-sidebar-root] .YDXeBa_sessionRow .odyssey-nav-title { display:block; flex:1 1 0; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:clip; }
+[data-dsh-sidebar-root] .odyssey-nav-title-text { display:inline-block; width:max-content; min-width:100%; white-space:nowrap; vertical-align:top; }
+[data-dsh-sidebar-root] .odyssey-nav-title[data-odyssey-title-overflow=true] { mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent); }
+[data-dsh-sidebar-root] .odyssey-nav-title[data-odyssey-title-preview=moving] { mask-image:linear-gradient(to right,transparent,#000 12px,#000 calc(100% - 24px),transparent); }
+[data-dsh-sidebar-root] .odyssey-nav-title[data-odyssey-title-preview=end] { mask-image:linear-gradient(to right,transparent,#000 12px); }
