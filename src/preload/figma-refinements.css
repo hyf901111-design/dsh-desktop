@@ -35,9 +35,9 @@ body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger { width:28px; padding:0; justify-content:center; font-size:0; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger>* { display:none; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger::before { content:'⋯'; font:18px/28px var(--odyssey-font-ui); }
-/* The composer context remains available on a blank home/research conversation.
-   Once messages exist, the persistent header supplies the mode control. */
-.sRp_composer[data-odyssey-has-conversation=true] .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
+/* Figma 699:26789: home uses the composer; Research always uses the header.
+   Keep the workspace selector available above the Research composer. */
+.sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
 .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat) { box-sizing:border-box; height:28px; min-height:28px; padding:0 8px; min-width:0; width:auto; gap:6px; border-radius:7px; transform:none; }
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat):hover { background:var(--odyssey-menu-row); }
