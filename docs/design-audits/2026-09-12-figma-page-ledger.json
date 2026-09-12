@@ -270,8 +270,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=214-302",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已核对三页签溢出与关闭；更多状态待验",
+      "differences": [
+        "D17"
+      ],
+      "evidence": [
+        "v8-tab-overflow-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "01 首页与导航",
@@ -414,8 +420,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-8",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已记录字号与层级差异；修复待实机",
+      "differences": [
+        "D23"
+      ],
+      "evidence": [
+        "v8-markdown-preview-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "02 对话与文件",
@@ -618,8 +630,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=361-5791",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已核对空白研究直达与模式唯一入口",
+      "differences": [
+        "D22"
+      ],
+      "evidence": [
+        "v8-isolated-empty-research-light"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "03 研究与生成",
@@ -858,8 +876,12 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=288-432",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已实测核对成员与创建本地副本；几何逐项比对中",
+      "differences": [],
+      "evidence": [
+        "v8-isolated-create-collaboration-recipient-light"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "04 协作与权限",
@@ -882,8 +904,12 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=289-444",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已进入实际成员和待处理邀请页；完整角色待核对",
+      "differences": [],
+      "evidence": [
+        "v8-isolated-collaboration-members-pending-light"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "04 协作与权限",
@@ -906,8 +932,12 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=290-468",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已进入实际设置页；操作与几何待核对",
+      "differences": [],
+      "evidence": [
+        "v8-isolated-collaboration-settings-light"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "04 协作与权限",
@@ -1410,13 +1440,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=219-2",
-      "status": "已核对主体与交互；短窗仍待复验",
+      "status": "已核对主体、登录与840×640短窗",
       "differences": [],
       "evidence": [
-        "v6-isolated-login-light"
+        "v8-isolated-login-short-light"
       ],
       "verifiedPackage": "1d03bd24d3941aeca25c4d10622be980d7f0db51",
-      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。"
+      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。",
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "07 账户与设置",
@@ -1444,13 +1475,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=219-86",
-      "status": "已核对主体与交互；短窗仍待复验",
+      "status": "已核对主体、错误与短窗滚动到底部",
       "differences": [],
       "evidence": [
-        "v6-isolated-register-light"
+        "v8-isolated-register-short-scrolled-light"
       ],
       "verifiedPackage": "1d03bd24d3941aeca25c4d10622be980d7f0db51",
-      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。"
+      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。",
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "07 账户与设置",
@@ -2831,8 +2863,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-23563",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已修复并实测324px宽及三项169px高",
+      "differences": [
+        "D17"
+      ],
+      "evidence": [
+        "v8-tab-overflow-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "12D 文件与页签 · 菜单展开",
@@ -3317,8 +3355,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-26753",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已记录位置、宽度、筛选与空态差异；修复待实机",
+      "differences": [
+        "D24"
+      ],
+      "evidence": [
+        "v8-notifications-empty-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "13B 对话首页 · 顶部导航优化对比",
@@ -3461,8 +3505,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=697-28737",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已记录窄顶栏与侧栏展开挤压；修复待实机",
+      "differences": [
+        "D25"
+      ],
+      "evidence": [
+        "v8-responsive-840-sidebar-open-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
@@ -3629,8 +3679,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-27691",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "已实测空闲菜单几何；运行与嵌套待验",
+      "differences": [
+        "D20"
+      ],
+      "evidence": [
+        "v8-subagents-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
@@ -3677,8 +3733,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-29359",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "真实子页签渲染报错；修复待下一包",
+      "differences": [
+        "D21"
+      ],
+      "evidence": [
+        "v8-subagent-render-error-dark"
+      ],
+      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
