@@ -33,4 +33,9 @@ describe('account teardown preview console classification', () => {
       expect(isExpectedAuthTeardownPreviewDenial(message, origin, [record])).toBe(false)
     }
   })
+  it('keeps a reused URL failure if any denial occurred after login', () => {
+    const signedIn = { ...record, before: { authenticated: true, current: null }, after: { authenticated: true, current: null } }
+    expect(isExpectedAuthTeardownPreviewDenial(entry, origin, [record, signedIn])).toBe(false)
+    expect(isExpectedAuthTeardownPreviewDenial(entry, origin, [signedIn, record])).toBe(false)
+  })
 })

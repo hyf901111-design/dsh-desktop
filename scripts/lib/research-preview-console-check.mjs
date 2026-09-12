@@ -8,9 +8,11 @@ export function isExpectedAuthTeardownPreviewDenial(entry, origin, diagnostics) 
     const location = JSON.parse(entry.slice(prefix.length))
     const url = new URL(location.url)
     if (url.origin !== origin || url.pathname !== '/preview') return false
-    return diagnostics.some(record =>
-      record.kind === 'preview' && record.url === url.href &&
-      record.status === 403 && record.reason === 'Preview capability denied.' &&
+    const denials = diagnostics.filter(record => record.kind === 'preview' && record.url === url.href && record.status === 403)
+    // Console strings do not carry request identity. If this URL ever also
+    // failed outside teardown, keep every occurrence as an unexpected error.
+    return denials.length > 0 && denials.every(record =>
+      record.reason === 'Preview capability denied.' &&
       ['peer-account-reactivation-signout', 'owner-account-isolation-signout'].includes(record.phase) &&
       record.completedPhase === record.phase &&
       record.before?.authenticated === false && record.before.current === null &&
