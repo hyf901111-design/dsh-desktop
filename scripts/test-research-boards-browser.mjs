@@ -1687,8 +1687,13 @@ if (process.argv.includes('--serve')) {
     users[1].signIn()
     await peer.waitForFunction(() => window.fixture.page.getState().account.status === 'ready')
     assert.equal(await peer.evaluate(() => window.fixture.sessions.list.getSnapshot().current), selectedBeforeLogin)
-    await peer.evaluate(boardId => window.fixture.page.openBoard(boardId), boardId)
-    await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.read === true)
+    // No sidebar click/openBoard: login must recover the still-mounted session.
+    await peer.waitForFunction(({ boardId, selected }) => {
+      const page = window.fixture.page, view = page.getView(selected)
+      return window.fixture.sessions.list.getSnapshot().current === selected &&
+        view?.boardId === boardId && view.connection === 'online' && view.permissions.read === true
+    }, { boardId, selected: selectedBeforeLogin })
+    assert.equal(users[1].service.getSnapshot().current?.boardId, boardId)
     await until(() => users[1].service.getSnapshot().current?.presence.some(p => p.userId === 'u0'), 'same-session live presence after login')
     assert.deepEqual(users.map(u => u.modelCalls()), lifecycleModelCalls)
     await peer.screenshot({ path: join(out, 'same-session-account-reactivation.png') })

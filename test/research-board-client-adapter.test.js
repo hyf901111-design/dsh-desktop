@@ -1130,14 +1130,14 @@ it.each(['u', 'other'])(
         expect(f.page.localRecovery().map((r) => r.text)).toContain(
           'A private recovery'
         )
-        await f.page.openBoard('board')
+        await new Promise(resolve => setTimeout(resolve, 0))
         expect(
           f.bridge.invoke.mock.calls.filter(
             ([action, p]) =>
               action === 'board.activate' && p.localSessionId === 'shared'
           )
         ).toHaveLength(2)
-        expect(f.sessions.open).toHaveBeenCalledWith('shared')
+        expect(f.sessions.open).not.toHaveBeenCalled()
         expect(f.page.getView('shared').permissions.edit).toBe(true)
       }
     } finally {
@@ -1294,4 +1294,75 @@ it('completed generated HTML and table provide real content to selection tools',
     )
   }
   window.happyDOM.abort()
+})
+
+// Login recovery must use fresh authority without requiring a sidebar round trip.
+it('restores only the selected research board after ready and ignores stale activation across accounts', async () => {
+  const f = await pageFixture(), waiting = []
+  vi.stubGlobal('Event', f.window.Event)
+  const emitAccount = (status, generation, userId, boards = f.page.getState().boards) => f.emit({
+    type: 'state', accountGeneration: generation,
+    state: { ...f.page.getState(), eventSeq: f.page.getState().eventSeq + 1,
+      account: { status, generation, user: userId ? { userId } : null }, boards, current: null }
+  })
+  try {
+    await f.page.activate('shared', true)
+    f.bridge.invoke.mockClear()
+    f.bridge.invoke.mockImplementation((action, input) => action === 'board.activate' && input.localSessionId
+      ? new Promise(resolve => waiting.push(resolve)) : Promise.resolve({ ok: true }))
+    emitAccount('signedOut', 2, null)
+    await f.page.activate('shared', true)
+    emitAccount('loading', 3, null)
+    expect(f.bridge.invoke.mock.calls.filter(([action]) => action !== 'presence.update')).toEqual([])
+    emitAccount('ready', 3, 'u')
+    emitAccount('ready', 3, 'u')
+    expect(waiting).toHaveLength(1)
+    expect(f.page.getView('shared')).toBeNull()
+    emitAccount('signedOut', 4, null)
+    emitAccount('loading', 5, null)
+    emitAccount('ready', 5, 'other', [])
+    waiting[0]({ ok: true, value: f.view })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(f.page.getView('shared')).toBeNull()
+    expect(f.registry.for('shared').getSnapshot().artifacts).toEqual([])
+    expect(f.bridge.invoke.mock.calls.map(([action]) => action).filter(action => action !== 'presence.update')).toEqual(['board.activate'])
+  } finally { f.dispose(); vi.unstubAllGlobals() }
+})
+it('does not hydrate a login activation after leaving research and permits explicit retry after failure', async () => {
+  const f = await pageFixture()
+  let release
+  const emitReady = generation => f.emit({ type: 'state', accountGeneration: generation,
+    state: { ...f.page.getState(), eventSeq: f.page.getState().eventSeq + 1,
+      account: { status: 'ready', generation, user: { userId: 'u' } }, current: null } })
+  try {
+    await f.page.activate('shared', true)
+    f.bridge.invoke.mockImplementation((action, input) => action === 'board.activate' && input.localSessionId
+      ? new Promise(resolve => { release = resolve }) : Promise.resolve({ ok: true, value: null }))
+    emitReady(2)
+    expect(release).toBeTypeOf('function')
+    await f.page.activate('shared', false)
+    release({ ok: true, value: f.view })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(f.page.getView('shared')).toBeNull()
+    f.bridge.invoke.mockResolvedValueOnce({ ok: false, error: { code: 'NETWORK', message: 'offline' } })
+    await f.page.activate('shared', true)
+    f.bridge.invoke.mockResolvedValue({ ok: true, value: f.view })
+    await f.page.activate('shared', true)
+    expect(f.page.getView('shared')?.permissions.read).toBe(true)
+  } finally { f.dispose() }
+})
+
+it.each(['personal', 'conversation'])('does not reactivate an old board when login returns to %s', async selected => {
+  const f = await pageFixture()
+  try {
+    await f.page.activate('shared', true)
+    if (selected === 'conversation') await f.page.activate('shared', false)
+    else f.sessions.list.getSnapshot().current = 'personal'
+    f.bridge.invoke.mockClear()
+    f.emit({ type: 'state', accountGeneration: 2, state: { ...f.page.getState(),
+      eventSeq: f.page.getState().eventSeq + 1, account: { status: 'ready', generation: 2, user: { userId: 'u' } }, current: null } })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(f.bridge.invoke.mock.calls.filter(([action]) => action === 'board.activate' || action === 'request.submit')).toEqual([])
+    expect(f.page.getView('shared')).toBeNull()
+  } finally { f.dispose() }
 })
