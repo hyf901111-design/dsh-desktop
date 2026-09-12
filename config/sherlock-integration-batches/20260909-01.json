@@ -12,7 +12,7 @@
         "featureName": "Figma trajectory sidebar and composer detail parity",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b",
-        "tipCommit": "40f6b85e635b43cf5258c57a23662f0ffef3cb51",
+        "tipCommit": "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1",
         "commits": [
           {
             "commit": "40f6b85e635b43cf5258c57a23662f0ffef3cb51",
@@ -20,6 +20,13 @@
               "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b"
             ],
             "subject": "还原轨迹页面并统一侧栏页签菜单和拖拽反馈"
+          },
+          {
+            "commit": "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1",
+            "parents": [
+              "40f6b85e635b43cf5258c57a23662f0ffef3cb51"
+            ],
+            "subject": "收紧工作区菜单补丁锚点并验证模块语法"
           }
         ],
         "files": [
@@ -62,25 +69,24 @@
           {
             "status": "M",
             "path": "test/figma-resize-feedback.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-trajectory-client.test.ts",
-              "test/figma-resize-feedback.test.ts",
-              "test/figma-panel-tab-overflow.test.ts",
-              "test/research-boards-ui.test.ts",
-              "test/figma-canvas-gestures-ui.test.ts"
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "sources"
             ],
             "outcome": "passed",
-            "summary": "31 focused tests passed; typecheck passed; actual tab and trajectory browser fixture checked at 280/300/340/400 widths",
-            "verifiedCommit": "40f6b85e635b43cf5258c57a23662f0ffef3cb51",
-            "completedAt": "2026-09-12T01:37:07.928434+00:00",
+            "summary": "Source E2E passed; generated workspace module compilation and idempotency passed; previous 31 focused tests and width fixtures passed",
+            "verifiedCommit": "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1",
+            "completedAt": "2026-09-12T01:40:21.547368+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -98,7 +104,7 @@
         "risks": [
           "Local only; no push or release. Native verification pending build."
         ],
-        "generatedAt": "2026-09-12T01:37:07.928835+00:00"
+        "generatedAt": "2026-09-12T01:40:21.547368+00:00"
       }
     }
   ],
