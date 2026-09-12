@@ -2,6 +2,8 @@
 export function patchFigmaContainerMenu(source) {
   const marker='/* odyssey:container-refresh-submenu:20260912 */'
   if(source.includes(marker))return source
+    .replace('const left=m.right+8+width>window.innerWidth-12?-width-8:m.width+8;', 'const left=(m.right+8+width>window.innerWidth-12?-width-8:m.width+8)-menuRef.current.clientLeft;')
+    .replace('))-m.top,width});', '))-m.top-menuRef.current.clientTop,width});')
   const start=source.indexOf('function ResearchContainerMenu('),end=source.indexOf('\n\t\tfunction ResearchGeneratedContainer(',start)
   if(start<0||end<start)throw Error('Container menu boundary drifted')
   let part=source.slice(start,end)
