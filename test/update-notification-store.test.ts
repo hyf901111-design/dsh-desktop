@@ -20,6 +20,8 @@ it('retains one latest version message and its read state after a fresh document
  ;(a.w.document.querySelector('.srb-bell') as any).click()
  expect(a.w.document.querySelectorAll('[data-update-notification]')).toHaveLength(1)
  expect(a.w.document.querySelector('[data-update-notification]')?.textContent).toContain('0.9.6')
+ ;(a.w.document.querySelector('.srb-notifications [aria-label="全部已读"]') as any).click()
+ await new Promise(r=>setTimeout(r,0))
  const saved=a.w.localStorage.getItem('ework.update.latest.v1')!,read=a.w.localStorage.getItem('ework.update.read')!
  off()
  const b=fixture();b.w.localStorage.setItem('ework.update.latest.v1',saved);b.w.localStorage.setItem('ework.update.read',read)
