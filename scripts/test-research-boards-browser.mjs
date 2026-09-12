@@ -1,4 +1,5 @@
 import { Session } from '@deepseek-ai/dsh-session'
+import { isExpectedAuthTeardownPreviewDenial } from './lib/research-preview-console-check.mjs'
 import { randomUUID, createHash } from 'node:crypto'
 import {
   SharedExecutionRuntime,
@@ -2292,6 +2293,7 @@ if (process.argv.includes('--serve')) {
     console.log('ERRORS=' + JSON.stringify([...new Set(errors)]))
     console.log('REQUEST_FAILURES=' + JSON.stringify(failedRequests))
     const unexpectedErrors = errors.filter(entry => {
+      if (isExpectedAuthTeardownPreviewDenial(entry, url, previewDiagnostics)) return false
       const prefix = 'Failed to load resource: net::ERR_INVALID_URL '
       if (!entry.startsWith(prefix)) return true
       try {
