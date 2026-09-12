@@ -1629,10 +1629,10 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
             onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') { setQuery(''); setSearch(false) } } }),
           search && h('button', { className: B.clearButton, 'aria-label': '关闭看板搜索', onClick: (e: React.MouseEvent) => { e.stopPropagation(); setQuery(''); setSearch(false) } }, h(IconCloseFill14)))),
       h('div', { className: classes(B.headerActions, search && B.headerActionsHidden) },
-        h(Menu, { className: 'srb-navigation-menu', open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
+        h(Menu, { className: 'odyssey-view-menu', open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
           selectedIds: [preferences.groupBy, preferences.sort],
-          items: [{ type: 'label', id: 'groups-label', text: '分组方式' }, { id: 'type', label: '按类型' }, { id: 'flat', label: '单列表' },
-            { type: 'separator', id: 'sort-separator' }, { type: 'label', id: 'sort-label', text: '排序方式' }, { id: 'manual', label: '手动排序' }, { id: 'updated', label: '最近更新' }],
+          items: [{ type: 'label', id: 'groups-label', text: '显示方式' }, { id: 'type', label: '按类型' }, { id: 'flat', label: '单列表' },
+            { type: 'separator', id: 'sort-separator' }, { type: 'label', id: 'sort-label', text: '排序' }, { id: 'manual', label: '手动排序' }, { id: 'updated', label: '最近更新' }],
           onSelect: (id: string) => {
             setOptionsOpen(false)
             if (id === 'type' || id === 'flat') save({ ...preferences, groupBy: id })
