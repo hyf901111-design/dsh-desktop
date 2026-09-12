@@ -1,3 +1,4 @@
+const readingCss = await readFile(new URL('../../src/preload/figma-reading.css', import.meta.url), 'utf8')
 import { readFile } from 'node:fs/promises'
 const css = await readFile(new URL('../../src/preload/figma-final-shell.css', import.meta.url), 'utf8')
 const homeCss = await readFile(new URL('../../src/preload/figma-home.css', import.meta.url), 'utf8')
@@ -60,7 +61,7 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source,
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };',
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || (Array.isArray(row.content) && contentParts(row.content).images.length > 0 ? t("image.pending") + " · " + contentParts(row.content).images.length : ""), frozenCanvasContext: true };')
-  const block = `${START}\nif(typeof document!=="undefined"&&!document.getElementById?.("sherlock-desktop-shell-style")){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.documentElement.appendChild(style);}style.textContent=${JSON.stringify(css + homeCss + panelCss + filePanelCss + trajectoryCss + inlineCss + motionCss + refinementCss)};}\n${END}`
+  const block = `${START}\nif(typeof document!=="undefined"&&!document.getElementById?.("sherlock-desktop-shell-style")){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.documentElement.appendChild(style);}style.textContent=${JSON.stringify(css + homeCss + panelCss + filePanelCss + trajectoryCss + inlineCss + motionCss + refinementCss + readingCss)};}\n${END}`
   const starts=source.split(START).length-1, ends=source.split(END).length-1
   if(starts!==ends || starts>1 || (starts===1 && source.indexOf(END)<source.indexOf(START))) throw Error('Figma final shell marker is incomplete or duplicated')
   if(starts===1) return source.slice(0,source.indexOf(START))+block+source.slice(source.indexOf(END)+END.length)

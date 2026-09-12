@@ -9,7 +9,7 @@ body[data-ds-dark-theme] .VOzbGW_overlay{--settings-surface:rgb(30.5026,30.5026,
 .VOzbGW_overlay .sherlock-settings-logo{position:absolute;left:20px;top:45px;width:88px;height:29px;color:#090909}
 .sherlock-settings-logo svg{display:block;width:88px;height:29px}.sherlock-settings-logo path{fill:currentColor}
 body[data-ds-dark-theme] .sherlock-settings-logo{color:#fff!important}
-.VOzbGW_overlay .sherlock-settings-back{box-sizing:border-box;display:flex;align-items:center;gap:10px;flex:none;width:100%;height:32px;padding:0 12px;border:0;border-radius:7px;background:transparent;color:var(--settings-text);font:400 14px/22px 'Noto Sans SC',sans-serif;text-align:left;cursor:pointer}
+.VOzbGW_overlay .sherlock-settings-back{box-sizing:border-box;display:flex;align-items:center;gap:10px;flex:none;width:100%;height:32px;padding:0 12px;border:0;border-radius:7px;background:transparent;color:var(--settings-text);font:400 12px/20px 'Noto Sans SC',sans-serif;text-align:left;cursor:pointer}
 .VOzbGW_overlay .sherlock-settings-back svg{display:block;width:16px;height:16px;flex:none}
 .VOzbGW_overlay .VOzbGW_navList{gap:4px}
 .VOzbGW_overlay .VOzbGW_navCell{height:32px;padding:0 12px;gap:10px;border-radius:7px;font:400 14px/22px 'Noto Sans SC',sans-serif;color:var(--settings-muted)}
@@ -132,3 +132,5 @@ body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-account-page{--settings-text:
 
 @media(max-width:760px){.VOzbGW_overlay .sherlock-theme-preview{height:110px}.VOzbGW_overlay ._8HJdBW_themeCube{height:138px}.VOzbGW_overlay [data-settings-item=appearance] ._8HJdBW_group{min-height:204px}}
 @media(prefers-reduced-motion:reduce){.VOzbGW_overlay .sherlock-theme-preview:after{transition:none}}
+
+.sherlock-settings-back svg path{stroke:currentColor}

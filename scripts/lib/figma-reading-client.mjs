@@ -1,0 +1,114 @@
+/** Figma 748:27747: the reading viewport and opaque footer each own space. */
+function exact(source, before, after) {
+  if (source.includes(after)) return source
+  if (source.split(before).length !== 2) throw Error('Figma reading anchor drifted: ' + before.slice(0, 100))
+  return source.replace(before, after)
+}
+const helpers = `
+function OdysseyReadingStatus({ listRef, visible, onClick }) {
+  const [host, setHost] = react.useState(null);
+  react.useLayoutEffect(() => {
+    const local = listRef.current;
+    const pane = local?.closest('.sRp_root,.wSkVaW_root');
+    setHost(pane?.querySelector('[data-odyssey-reading-status]') ?? null);
+  });
+  if (!host || !visible) return null;
+  return react_dom.createPortal(react_jsx_runtime.jsx('button', {
+    type:'button', onClick, children:'回到最新', 'aria-label':'回到最新'
+  }), host);
+}
+function OdysseyRunInfo({ groups, running }) {
+  const popup = react.useRef(null);
+  return react_jsx_runtime.jsxs('div', { className:'odyssey-run-info', children:[
+    react_jsx_runtime.jsx('span', { className:'odyssey-run-summary', children:[groups[0], running ? ' · 执行中' : ' · 已完成'] }),
+    react_jsx_runtime.jsx('button', { type:'button', 'aria-haspopup':'dialog', onClick:()=>popup.current?.togglePopover(), children:'运行详情⌄' }),
+    react_jsx_runtime.jsxs('div', { ref:popup, popover:'auto', role:'dialog', 'aria-label':'运行详情', className:'odyssey-run-details', children:[
+      react_jsx_runtime.jsx('strong', {children:'运行详情'}), ...groups.map((text,i)=>react_jsx_runtime.jsx('div',{children:text},i))
+    ] })
+  ] });
+}
+function useOdysseyCompactTasks(ref) {
+  const [compact,setCompact] = react.useState(false);
+  react.useLayoutEffect(()=>{
+    const pane=ref.current?.closest('.sRp_root,.wSkVaW_root');
+    if(!pane) return;
+    const measure=()=>setCompact(pane.clientHeight < 740);
+    measure(); const observer=new ResizeObserver(measure); observer.observe(pane);
+    return ()=>observer.disconnect();
+  },[]);
+  return compact;
+}
+function OdysseyTaskSheet({children,onClose}) {
+  const dialog=react.useRef(null);
+  react.useLayoutEffect(()=>{const el=dialog.current;el?.showModal();return()=>el?.close();},[]);
+  return react_dom.createPortal(react_jsx_runtime.jsxs('dialog',{
+    ref:dialog, className:'odyssey-task-sheet', 'aria-label':'任务清单', onCancel:onClose,
+    onClick:e=>{if(e.target===dialog.current){const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)onClose();}},
+    children:[react_jsx_runtime.jsxs('header',{children:[react_jsx_runtime.jsx('strong',{children:'任务清单'}),react_jsx_runtime.jsx('button',{type:'button',onClick:onClose,children:'关闭'})]}),children]
+  }),document.body);
+}
+`;
+export function patchFigmaReadingConversation(source) {
+  const marker='/* odyssey:reading-layout:20260912 */';
+  if(source.includes(marker))return source;
+  source=exact(source,'function scrollerOf(from) {\n\t\t\treturn from.closest("[data-conversation-scroll]") ?? from;', 'function scrollerOf(from) {\n\t\t\treturn from.closest(".sRp_messages,[data-conversation-scroll]") ?? from;');
+  source=exact(source,'return appendedUser || appendedSteering || runningStarted || tipMoved && atBottom;', 'return appendedUser || (appendedSteering || runningStarted || tipMoved) && atBottom;');
+  source=exact(source,'if (saved === null || runningStarted) toBottom(el);','if (saved === null) toBottom(el);');
+  source=exact(source,'ref: centerComposerHostRef,\n\t\t\t\t\t"data-center-composer-host": ""','"data-odyssey-reading-status": ""\n\t\t\t\t}), (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\tref: centerComposerHostRef,\n\t\t\t\t\t"data-center-composer-host": ""');
+  source=exact(source,'ref: composerHostRef,\n\t\t\t\t\t\tclassName: "sRp_composer",','"data-odyssey-reading-status": ""\n\t\t\t\t\t}), (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tref: composerHostRef,\n\t\t\t\t\t\tclassName: "sRp_composer",');
+  const start=source.indexOf('!atBottom && (0, react_jsx_runtime.jsx)("div", {');
+  const end=source.indexOf('\n\t\t\t\t\t})]',start)+ '\n\t\t\t\t\t})'.length;
+  if(start<0||end<start)throw Error('Missing reading status');
+  source=source.slice(0,start)+`(0, react_jsx_runtime.jsx)(OdysseyReadingStatus, { listRef, visible:!atBottom, onClick:()=>{const local=listRef.current;if(local)toBottom(scrollerOf(local));} })`+source.slice(end);
+  source=exact(source,'const host = target?.closest?.("[data-conversation-scroll]") ?? null;', 'const pane = target?.closest?.(".sRp_root,.wSkVaW_root");\n\t\t\tconst host = pane?.querySelector?.(".sRp_messages,.wSkVaW_scrollBody") ?? target?.closest?.("[data-conversation-scroll]") ?? null;');
+  // A single summary with a real disclosure replaces the clipped metrics sentence.
+  const statsStart=source.indexOf('const line = groups.join(" | ");');
+  const statsEnd=source.indexOf('\n\t\t});',statsStart);
+  source=source.slice(0,statsStart)+`const running=useSession(s=>s.running);
+    if(groups.length===0)return null;
+    return react_jsx_runtime.jsx(OdysseyRunInfo,{groups,running});`+source.slice(statsEnd);
+  // Keep task state local; compact mode shows the same live list in a right sheet.
+  const a=source.indexOf('function TodoPanel('),b=source.indexOf('function TodoDock(',a);
+  let todo=source.slice(a,b);
+  todo=exact(todo,'const [collapsed, setCollapsed] = (0, react.useState)(false);',`const [collapsed, setCollapsed] = react.useState(()=>todos.length>0 && todos.every(item=>item.status==='completed'));
+    const rootRef=react.useRef(null), compact=useOdysseyCompactTasks(rootRef);
+    const [sheet,setSheet]=react.useState(false);
+    const folded=collapsed||compact;
+    const initialized=react.useRef(todos.length>0);
+    react.useEffect(()=>{if(!initialized.current && todos.length){initialized.current=true;setCollapsed(todos.every(item=>item.status==='completed'));}},[todos]);`);
+  todo=exact(todo,'className: TodoPanel_module_css_default.root,','className: TodoPanel_module_css_default.root, ref:rootRef, "data-odyssey-task-collapsed":folded,');
+  todo=todo.replace('"aria-expanded": !collapsed,','"aria-expanded": compact ? sheet : !collapsed,');
+  todo=todo.replace('setCollapsed((v) => !v);','if(compact)setSheet(true);else setCollapsed((v) => !v);');
+  todo=todo.replace('children: collapsed ?','children: folded ?');
+  const listStart=todo.indexOf('!collapsed && (0, react_jsx_runtime.jsx)("ul", {');
+  const listEnd=todo.indexOf('\n\t\t\t\t\t})]',listStart)+'\n\t\t\t\t\t})'.length;
+  const list=todo.slice(listStart+'!collapsed && '.length,listEnd);
+  todo=todo.slice(0,listStart)+`!folded && taskList, sheet && react_jsx_runtime.jsx(OdysseyTaskSheet,{onClose:()=>setSheet(false),children:taskList})`+todo.slice(listEnd);
+  todo=todo.replace('if (todos.length === 0) return null;',`if (todos.length === 0) return null;\nconst taskList=${list};`);
+  source=source.slice(0,a)+todo+source.slice(b);
+  return source.replace('function scrollerOf(', marker+'\n'+helpers+'\n\t\tfunction scrollerOf(');
+}
+export function patchFigmaReadingTables(source) {
+  const marker='/* odyssey:reading-table:20260912 */';
+  if(source.includes(marker))return source;
+  const a=source.indexOf('function renderTable(node, key, context) {'),b=source.indexOf('function renderTableRow(',a);
+  if(a<0||b<a)throw Error('Missing markdown table renderer');
+  const old=source.slice(a,b);
+  const table=old.slice(old.indexOf('children: jsxs("table", {')+'children: '.length,old.lastIndexOf('\n\t}, key);'));
+  const helper=`${marker}
+function OdysseyReadingTable({children}) {
+ const viewport=useRef(null), dialog=useRef(null), [wide,setWide]=useState(false);
+ useEffect(()=>{const el=viewport.current;if(!el)return;const measure=()=>setWide(el.scrollWidth>el.clientWidth+1);measure();const ro=new ResizeObserver(measure);ro.observe(el);if(el.firstElementChild)ro.observe(el.firstElementChild);return()=>ro.disconnect();},[children]);
+ return jsxs('div',{className:'odyssey-table-block',children:[
+  jsx('div',{ref:viewport,className:MarkdownText_module_css_default.tableScroll,tabIndex:wide?0:undefined,'aria-label':wide?'表格，可横向滚动':undefined,children}),
+  wide&&jsxs('div',{className:'odyssey-table-actions',children:[jsx('span',{children:'左右滚动查看完整列'}),jsx('button',{type:'button',onClick:()=>dialog.current?.showModal(),children:'打开完整表格 ↗'})]}),
+  jsxs('dialog',{ref:dialog,className:'odyssey-table-dialog','aria-label':'完整表格',children:[jsx('button',{type:'button',onClick:()=>dialog.current?.close(),children:'关闭'}),jsx('div',{className:MarkdownText_module_css_default.tableScroll,tabIndex:0,children})]})
+ ]});
+}
+function renderTable(node,key,context) {
+ const align=node.align??null; const [headRow,...bodyRows]=node.children;
+ return jsx(OdysseyReadingTable,{children:${table}},key);
+}
+`;
+  return source.slice(0,a)+helper+source.slice(b);
+}
