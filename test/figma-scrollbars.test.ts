@@ -47,8 +47,8 @@ it('honors Always and suppresses overlays while the containing panel is hidden',
 
 it('places the message thumb at the panel edge outside the padded reading column', async () => {
   const win=new Window(), doc=win.document
-  doc.body.innerHTML='<aside class="t8lSSG_panel"><section class="t8lSSG_panelBody"><div class="sRp_messages" style="overflow-y:auto"></div></section></aside>'
-  const panel=doc.querySelector('aside')!, port=doc.querySelector('.sRp_messages')!
+  doc.body.innerHTML='<aside class="t8lSSG_panel"><section class="t8lSSG_panelBody"><div class="sRp_messages"><div class="Md3f7G_scroll" style="overflow-y:auto"></div></div></section></aside>'
+  const panel=doc.querySelector('aside')!, port=doc.querySelector('.Md3f7G_scroll')!
   panel.getBoundingClientRect=()=>new DOMRect(1030,10,340,880)
   port.getBoundingClientRect=()=>new DOMRect(1046,66,308,650)
   Object.defineProperties(port,{scrollHeight:{value:1500},clientHeight:{value:650}})

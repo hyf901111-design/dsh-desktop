@@ -9,7 +9,8 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   // panel edge, not that inset text column. Nested previews retain their own edge.
   const rightEdge = (port: HTMLElement) => {
     const shell = port.closest<HTMLElement>('[data-dsh-sidebar-root]') ??
-      (port.matches('.sRp_messages') ? port.closest<HTMLElement>('.t8lSSG_panel') : null)
+      (port.closest('.sRp_messages') && port.matches('.sRp_messages,.wSkVaW_scrollBody,.Md3f7G_scroll')
+        ? port.closest<HTMLElement>('.t8lSSG_panel') : null)
     const shellRect = shell?.getBoundingClientRect()
     return shellRect?.width ? shellRect.right : port.getBoundingClientRect().right
   }
