@@ -9,23 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "按 Figma 补齐工作区搜索与两类侧栏菜单尺寸",
+        "featureName": "按 Figma 修复组件自动刷新子菜单、设置说明及实测间距",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "ad384346907165ed5d3c0dfd6cbf7d99b52c948b",
-        "tipCommit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
+        "baseCommit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
+        "tipCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
         "commits": [
           {
-            "commit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
+            "commit": "5fedee7a63c9e35ae0af7c7fbc25f3e8111ab455",
             "parents": [
-              "ad384346907165ed5d3c0dfd6cbf7d99b52c948b"
+              "10a50f3a3355f58ca01dc7bab0f84237a30b84e5"
             ],
-            "subject": "按设计补齐工作区搜索并校准侧栏菜单分组和行距"
+            "subject": "按设计还原组件刷新二级菜单和设置选项说明"
+          },
+          {
+            "commit": "a0e159e0e6e23681bd0888b89667eff950299aff",
+            "parents": [
+              "5fedee7a63c9e35ae0af7c7fbc25f3e8111ab455"
+            ],
+            "subject": "依据实机测量校准模式菜单内边距和选项间距"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "scripts/lib/figma-workspace-menus.mjs"
+            "path": "scripts/lib/figma-container-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-menu-scope.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-menu-scope.mjs"
           },
           {
             "status": "M",
@@ -37,15 +52,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-workspace-search.test.ts"
+            "path": "test/research-container-chrome.test.ts"
           }
         ],
         "checks": [
@@ -55,12 +62,13 @@
               "exec",
               "vitest",
               "run",
-              "test/figma-workspace-search.test.ts"
+              "test/research-container-chrome.test.ts",
+              "test/figma-menu-scope.test.ts"
             ],
             "outcome": "passed",
-            "summary": "Real workspace filtering and add-directory flow verified",
-            "verifiedCommit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
-            "completedAt": "2026-09-12T12:17:32.969896+00:00",
+            "summary": "27 focused menu behavior tests passed",
+            "verifiedCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
+            "completedAt": "2026-09-12T12:36:20.285257+00:00",
             "timeoutMs": 120000
           },
           {
@@ -71,8 +79,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
-            "completedAt": "2026-09-12T12:17:32.969896+00:00",
+            "verifiedCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
+            "completedAt": "2026-09-12T12:36:20.285257+00:00",
             "timeoutMs": 120000
           },
           {
@@ -84,97 +92,24 @@
             ],
             "outcome": "passed",
             "summary": "Pristine dependencies patched twice and executed",
-            "verifiedCommit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
-            "completedAt": "2026-09-12T12:17:32.969896+00:00",
+            "verifiedCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
+            "completedAt": "2026-09-12T12:36:20.285257+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "First model package verified on real client; follow-up permission and modal scope require updated package."
+          "summary": "Current d2741e2 package measured permissions 320x208 and view menus 260x219; new submenu and spacing require rebuilt runtime verification."
         },
         "acceptanceCriteria": [
-          "Workspace search filters real IDs and preserves directory flow",
-          "View menus match 260x219 with independent persisted choices",
-          "Board action menus retain private/shared boundary and 280px width"
+          "Three-row component menu and nested refresh options preserve callbacks and keyboard focus",
+          "Settings Enter descriptions and language sizes match design",
+          "Measured workspace separator and mode row gaps match design"
         ],
         "risks": [
           "All-page visual audit remains in progress; no global acceptance claimed"
         ],
-        "generatedAt": "2026-09-12T12:17:32.969896+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4b21308176fb030bfd7d0d9fb17657be867c4427",
-        "verificationCommit": "4b21308176fb030bfd7d0d9fb17657be867c4427",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "4b21308176fb030bfd7d0d9fb17657be867c4427",
-            "completedAt": "2026-09-12T12:18:41.164Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4b21308176fb030bfd7d0d9fb17657be867c4427",
-            "completedAt": "2026-09-12T12:18:41.164Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "4b21308176fb030bfd7d0d9fb17657be867c4427",
-            "completedAt": "2026-09-12T12:18:41.164Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "4b21308176fb030bfd7d0d9fb17657be867c4427",
-            "completedAt": "2026-09-12T12:18:41.164Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "4b21308176fb030bfd7d0d9fb17657be867c4427",
-            "completedAt": "2026-09-12T12:18:41.164Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T12:18:41.164Z"
+        "generatedAt": "2026-09-12T12:36:20.285257+00:00"
       }
     }
   ],
