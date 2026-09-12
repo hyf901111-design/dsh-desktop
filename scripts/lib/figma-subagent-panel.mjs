@@ -258,16 +258,56 @@ export function patchSubagentContinuableComposer(source) {
 }
 
 function patchSubagentComposerFooter(source) {
+  if(source.includes('/* odyssey:child-command-catalog:v1 */'))return source;
   // The native dock owns live run details. Relocate its React element into the
   // child tools disclosure instead of leaving a second footer below the card.
   source=exact(source,'function OdysseySubagentComposerRow({compact,className,children}) {','function OdysseySubagentComposerRow({compact,className,children,footer}) {');
   source=exact(source,'children:[leading,extensions,context]','children:[leading,extensions,context,footer]');
-  // Addressed children have no host or model command catalog; the remaining
-  // permission contribution is available only with a permissions projection.
-  source=exact(source,'disabled: locked || toggleCommandMenu === void 0,','disabled: locked || toggleCommandMenu === void 0 || subagentPanel && continuable && permissions === void 0,');
+  source=source.replace('disabled: locked || toggleCommandMenu === void 0 || subagentPanel && continuable && permissions === void 0,','disabled: locked || toggleCommandMenu === void 0,');
   source=exact(source,'compact: subagentPanel && continuable,','compact: subagentPanel && continuable,\n                                footer: subagentPanel && continuable ? footer : void 0,');
   const start=source.indexOf('function InputBar('),end=source.indexOf('\n\t\t//#endregion',start);
   if(start<0||end<start)throw Error('Subagent composer footer boundary missing');
   const input=exact(source.slice(start,end),'\t\t\t\t\tfooter\n\t\t\t\t]','\t\t\t\t\t(subagentPanel && continuable ? null : footer)\n\t\t\t\t]');
-  return source.slice(0,start)+input+source.slice(end);
+  return patchSubagentCommandAvailability(source.slice(0,start)+input+source.slice(end));
+}
+
+
+const childCommandAvailability = `
+function useOdysseyChildCommands(sessionId,query) {
+  const [state,setState]=react.useState({sessionId,status:'unknown'}),pending=react.useRef(null);
+  react.useEffect(()=>()=>pending.current?.abort(),[sessionId]);
+  const reload=async selection=>{
+    pending.current?.abort();const request=new AbortController();pending.current=request;
+    setState({sessionId,status:'loading'});
+    try {
+      const rows=await query?.(selection,request.signal)??[];
+      if(!request.signal.aborted)setState({sessionId,status:rows.length?'available':'empty'});
+    } catch {
+      if(!request.signal.aborted)setState({sessionId,status:'failed'});
+    }
+  };
+  return {status:state.sessionId===sessionId?state.status:'unknown',reload};
+}
+`;
+function patchSubagentCommandAvailability(source) {
+  const marker='/* odyssey:child-command-catalog:v1 */';
+  if(source.includes(marker))return source;
+  source=exact(source,'function OdysseySubagentComposerRow(',marker+'\n'+childCommandAvailability+'\nfunction OdysseySubagentComposerRow(');
+  source=exact(source,'function OdysseySubagentComposerRow({compact,className,children,footer}) {','function OdysseySubagentComposerRow({compact,className,children,footer,onToolsOpen}) {');
+  source=exact(source,"onClick:()=>setOpen(value=>!value),children:'可继续发送后续消息'","onClick:()=>{if(!open)onToolsOpen?.();setOpen(value=>!value);},children:'可继续发送后续消息'");
+  const start=source.indexOf('function InputBar('),end=source.indexOf('\n\t\t//#endregion',start);
+  let input=source.slice(start,end);
+  input=exact(input,'resolveSubmitMode, toggleCommandMenu, stop,','resolveSubmitMode, toggleCommandMenu, queryCommandCandidates, stop,');
+  input=exact(input,'const inputRef = (0, react.useRef)(null);','const inputRef = (0, react.useRef)(null);\n            const childCommands=useOdysseyChildCommands(sessionId,queryCommandCandidates);');
+  input=exact(input,'disabled: locked || toggleCommandMenu === void 0,',"disabled: locked || toggleCommandMenu === void 0 || subagentPanel && continuable && childCommands.status !== 'available',");
+  input=exact(input,'footer: subagentPanel && continuable ? footer : void 0,',"footer: subagentPanel && continuable ? footer : void 0,\n                                onToolsOpen:()=>childCommands.reload(inputRef.current===null?{start:0,end:0}:selectionOf(inputRef.current)),");
+  input=exact(input,'command: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {\n\t\t\t\t\t\t\t\t\t\t\tlabel: t("input.commands"),',`command: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+                                            label: subagentPanel && continuable && childCommands.status==='failed' ? '命令目录暂不可用，重新打开消息工具可重试' : subagentPanel && continuable && childCommands.status==='empty' ? '当前会话暂无可用命令' : t("input.commands"),`);
+  source=source.slice(0,start)+input+source.slice(end);
+  source=exact(source,'toggleCommandMenu: inputTriggers === void 0 ? void 0 : (selection) => {',`queryCommandCandidates: inputTriggers === void 0 ? void 0 : (selection,signal)=> {
+                            const commands=ctx.get('commandUi');
+                            return commands?.candidates(inputTriggers.project(),{query:'',position:shell.snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',signal})??[];
+                        },
+                        toggleCommandMenu: inputTriggers === void 0 ? void 0 : (selection) => {`);
+  return source;
 }

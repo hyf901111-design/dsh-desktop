@@ -210,8 +210,22 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-2",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实左栏280→240，右400不变，中央x240/宽720，草稿与两个终端保留；连续拖动与所有边界待验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-left-sidebar-240-right400-light"
+      ],
+      "evidencePackages": {
+        "v12-left-sidebar-240-right400-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -222,8 +236,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-368",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色保留左240状态后反向原生拖回280（中央x280）；草稿与两个终端保留；未冒充深色280→240正向过程",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-resized-panels-terminal-dark",
+        "v12-panels-restored-280-340-dark"
+      ],
+      "evidencePackages": {
+        "v12-resized-panels-terminal-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-restored-280-340-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -234,8 +264,22 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-734",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实右栏340→400，右栏x970/宽400；中央680、草稿与两个终端保留，拖动连续动效待验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-right-panel-400-light"
+      ],
+      "evidencePackages": {
+        "v12-right-panel-400-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -246,8 +290,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-1099",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色保留右400状态后反向原生拖回340（x1030）；草稿与两个终端保留；本证据为反向拖动，未冒充深色340→400正向过程",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-resized-panels-terminal-dark",
+        "v12-panels-restored-280-340-dark"
+      ],
+      "evidencePackages": {
+        "v12-resized-panels-terminal-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-restored-280-340-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -343,8 +403,25 @@
         "height": 1380.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-588",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实关闭右侧与底部面板，草稿保留；重开后已选zsh与原pwd输出、草稿恢复，连续动画与键盘收放仍待验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-panels-closed-draft-retained-light",
+        "v12-panels-reopened-draft-terminal-light"
+      ],
+      "evidencePackages": {
+        "v12-panels-closed-draft-retained-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-reopened-draft-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "关闭采用移出视口保留实例：右栏x1390、底栏y900；display:flex不等于窗口内可见。只以原生关闭结果和重开保留证明局部行为，不顺带验原型示意各帧。"
     },
     {
       "section": "01 首页与导航",
@@ -415,8 +492,30 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-5",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色MD h1 23/39、首h2 17/29、x1046/宽308及#2B2B2B实测；保存后预览仍旧文，关页签重开才见marker，D42源码修复待下一包",
+      "differences": [
+        "D23",
+        "D42"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-files-md-top-light",
+        "v12-files-md-bottom-light",
+        "v12-files-md-reopened-saved-light"
+      ],
+      "evidencePackages": {
+        "v12-files-md-top-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-md-bottom-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-md-reopened-saved-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "FIGMA_EDIT_PERSIST_20260913已由主线程磁盘确认；重开截图可见，不能把保存成功当预览同步成功。efb28b82acc19746a384b99766834a789adc3fa9/10项聚焦与类型检查仅源码通过。"
     },
     {
       "section": "02 对话与文件",
@@ -427,10 +526,11 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-8",
-      "status": "深色MD/CSV/PNG/PDF真实读取；XLSX到N44=132；DOCX100%左侧不可达D39，编辑与浅色待验",
+      "status": "12b深色DOCX100%左右及底端可达；PPTX三页含图片/表格49/末页marker实际可见；MD保存已落盘但随后预览未刷新列D42，更多格式/编辑与浅色分别验",
       "differences": [
         "D23",
-        "D39"
+        "D39",
+        "D42"
       ],
       "evidence": [
         "v8-markdown-preview-dark",
@@ -444,11 +544,77 @@
         "v11-files-docx-top-dark",
         "v11-files-docx-min-bottom-dark",
         "v11-files-xlsx-top-dark",
-        "v11-files-xlsx-n44-dark"
+        "v11-files-xlsx-n44-dark",
+        "v12-files-docx-left-top-dark",
+        "v12-files-docx-right-keyboard-dark",
+        "v12-files-docx-left-bottom-dark",
+        "v12-files-pptx-top-dark",
+        "v12-files-md-edited-saved-dark"
       ],
-      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
       "verificationLevel": "partial",
-      "verifiedTheme": "dark"
+      "verifiedTheme": "dark",
+      "verificationHistory": [
+        {
+          "status": "深色MD/CSV/PNG/PDF真实读取；XLSX到N44=132；DOCX100%左侧不可达D39，编辑与浅色待验",
+          "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+          "evidence": [
+            "v8-markdown-preview-dark",
+            "v9-markdown-preview-dark",
+            "v11-files-md-top-dark",
+            "v11-files-md-bottom-dark",
+            "v11-files-csv-end-dark",
+            "v11-files-image-dark",
+            "v11-files-pdf-top-dark",
+            "v11-files-pdf-bottom-dark",
+            "v11-files-docx-top-dark",
+            "v11-files-docx-min-bottom-dark",
+            "v11-files-xlsx-top-dark",
+            "v11-files-xlsx-n44-dark"
+          ]
+        },
+        {
+          "status": "12b深色DOCX100%左上、键盘右端552及左侧底端1503可达，D39局部复验通过；MD/CSV/PNG/PDF/XLSX保留旧包证据，PPTX、编辑与浅色待验",
+          "evidence": [
+            "v8-markdown-preview-dark",
+            "v9-markdown-preview-dark",
+            "v11-files-md-top-dark",
+            "v11-files-md-bottom-dark",
+            "v11-files-csv-end-dark",
+            "v11-files-image-dark",
+            "v11-files-pdf-top-dark",
+            "v11-files-pdf-bottom-dark",
+            "v11-files-docx-top-dark",
+            "v11-files-docx-min-bottom-dark",
+            "v11-files-xlsx-top-dark",
+            "v11-files-xlsx-n44-dark",
+            "v12-files-docx-left-top-dark",
+            "v12-files-docx-right-keyboard-dark",
+            "v12-files-docx-left-bottom-dark"
+          ],
+          "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+        }
+      ],
+      "evidencePackages": {
+        "v8-markdown-preview-dark": "dc26e8ed5738e7837bbaab5339f0dab1cc042872",
+        "v9-markdown-preview-dark": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1",
+        "v11-files-md-top-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-md-bottom-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-csv-end-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-image-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-pdf-top-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-pdf-bottom-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-docx-top-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-docx-min-bottom-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-xlsx-top-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-files-xlsx-n44-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v12-files-docx-left-top-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-docx-right-keyboard-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-docx-left-bottom-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-pptx-top-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-md-edited-saved-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "PPTX仅实际文件预览能力，无专属Figma帧；保存成功与预览刷新缺陷分开。其他文件保留逐项旧包证据，跨主题失败过程见161:5。"
     },
     {
       "section": "02 对话与文件",
@@ -483,8 +649,27 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=179-2",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实底部zsh执行pwd；左栏收起80/中央940，底部x92/y674/916×204；输入780未宣称匹配旧稿652，仍仅终端功能与高度局部核验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-side-terminal-light",
+        "v12-bottom-terminal-collapsed-sidebar-light",
+        "v12-panels-reopened-draft-terminal-light"
+      ],
+      "evidencePackages": {
+        "v12-side-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-bottom-terminal-collapsed-sidebar-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-reopened-draft-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "右侧与底部是两个真实终端；所选zsh、已有pwd输出和未发送草稿在收放重开后保留。普通对话780与旧179的652存在场景差异，见d44-d45-design-review.md，不新增D44。"
     },
     {
       "section": "02 对话与文件",
@@ -495,8 +680,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=179-218",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b切深色后底部/右侧zsh原输出、草稿和调宽状态保留；底部高204；两面板恢复280/340后仍可见，未宣称旧稿整页几何通过",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-resized-panels-terminal-dark",
+        "v12-panels-restored-280-340-dark"
+      ],
+      "evidencePackages": {
+        "v12-resized-panels-terminal-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-restored-280-340-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "02 对话与文件",
@@ -507,8 +708,33 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-2",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色Files @引用输入与发送均普通文字的D43已复现；fdfe762源码修复及聚焦检查通过，待下一包真实文件标签与发送复验",
+      "differences": [
+        "D43"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-file-reference-plain-text-light",
+        "v12-file-reference-sent-plain-text-light"
+      ],
+      "evidencePackages": {
+        "v12-file-reference-plain-text-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-file-reference-sent-plain-text-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "sourceFix": {
+        "difference": "D43",
+        "commit": "fdfe762d9c9c7952adb94be1cba49f2504f2b971",
+        "nativeVerified": false,
+        "validation": "主线程报告37项主聚焦+2项原引用、typecheck及pristine通过；误跑旧文件157通过/89失败，仅4项关联对照已验证无D43同样失败，其他项为分类诊断，未声称89项全有基线证明。",
+        "evidence": "d43-legacy-failure-classification.md"
+      }
     },
     {
       "section": "02 对话与文件",
@@ -519,8 +745,22 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-298",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色原生正文前+组件引用标签+正文后已输入；模式切换保留文本/恢复引用有主线程操作记录；发送后气泡和预览仍未验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "evidence": [
+        "v11-component-reference-mixed-text-dark"
+      ],
+      "evidencePackages": {
+        "v11-component-reference-mixed-text-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678"
+      }
     },
     {
       "section": "02 对话与文件",
@@ -543,8 +783,25 @@
         "height": 760.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-594",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色Right后Backspace仅删组件标签、两段正文保留；CmdZ恢复有主线程原生记录；多标签/长名/失败重试待验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "evidence": [
+        "v11-component-reference-mixed-text-dark",
+        "v11-component-reference-deleted-text-preserved-dark"
+      ],
+      "evidencePackages": {
+        "v11-component-reference-mixed-text-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-component-reference-deleted-text-preserved-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678"
+      },
+      "evidenceNotes": "inline-edit初次输入未成功，不计通过。撤销与模式切换依据native-batch11-late-evidence.md，不虚构独立截图。"
     },
     {
       "section": "02 对话与文件",
@@ -741,8 +998,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=176-331",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色真实两轮执行及research_workbench_create收据后的轨迹入口已截图；统计宽度/中文轮次D41源码修复待下一包，完整时间轴及失败/运行分支待验",
+      "differences": [
+        "D41"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "evidence": [
+        "v11-trajectory-research-completed-dark"
+      ],
+      "evidencePackages": {
+        "v11-trajectory-research-completed-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678"
+      }
     },
     {
       "section": "03 研究与生成",
@@ -1129,7 +1402,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=291-492",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1141,7 +1415,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=291-950",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1185,7 +1460,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-711",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1197,7 +1473,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-1460",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1209,7 +1486,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-858",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1221,7 +1499,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-1607",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1233,7 +1512,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-588",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1245,7 +1525,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-986",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1257,7 +1538,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-680",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1269,7 +1551,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-1078",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1281,7 +1564,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-783",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1293,7 +1577,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-1181",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1305,7 +1590,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-883",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "05 消息与更新",
@@ -1317,7 +1603,8 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-1281",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [],
+      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。"
     },
     {
       "section": "06 组件与画布排版",
@@ -1328,8 +1615,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-802",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色生成Markdown正文#242529实测且段落可见；只验证该内容属性，表格采用独立SML稿，不计此帧全内容通过",
+      "differences": [
+        "D38"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-b-generated-content-light"
+      ],
+      "evidencePackages": {
+        "v12-b-generated-content-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "06 组件与画布排版",
@@ -1340,17 +1643,35 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-909",
-      "status": "深色五类真实内容已出现；四件内容与节点属性逐项比对发现D38，导图详细样式待验",
+      "status": "12b深色生成Markdown最终正文#ECECED已实测，四类内容D38定向复验；导图详细样式及全部适配状态待验",
       "differences": [
         "D38"
       ],
       "evidence": [
         "v11-canvas-completed-dark",
-        "v11-canvas-five-types-dark"
+        "v11-canvas-five-types-dark",
+        "v12-generated-content-dark",
+        "v12-generated-content-arranged-dark"
       ],
-      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
       "verificationLevel": "partial",
-      "verifiedTheme": "dark"
+      "verifiedTheme": "dark",
+      "verificationHistory": [
+        {
+          "status": "深色五类真实内容已出现；四件内容与节点属性逐项比对发现D38，导图详细样式待验",
+          "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+          "evidence": [
+            "v11-canvas-completed-dark",
+            "v11-canvas-five-types-dark"
+          ]
+        }
+      ],
+      "evidencePackages": {
+        "v11-canvas-completed-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-canvas-five-types-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v12-generated-content-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-generated-content-arranged-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "06 组件与画布排版",
@@ -1417,8 +1738,24 @@
         "height": 1380.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=379-644",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色生成表格#292B2F/#81858C、数值右对齐和18px留白、图表与KPI标签10/18为真实CSS实测；部分组件在屏外，不计全组件可见布局通过",
+      "differences": [
+        "D38"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-b-generated-content-light"
+      ],
+      "evidencePackages": {
+        "v12-b-generated-content-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "06 组件与画布排版",
@@ -1429,16 +1766,32 @@
         "height": 1380.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=379-759",
-      "status": "深色生成S320×220/M656×220/L656×456与16间距实测；正文颜色/标签字号等D38待修",
+      "status": "12b深色SML生成组件正文/表格色、数值右对齐及后续文本18px留白、透明图表与10/18轴、KPI标签10/18实测；其他尺寸与全状态待验",
       "differences": [
         "D38"
       ],
       "evidence": [
-        "v11-canvas-completed-dark"
+        "v11-canvas-completed-dark",
+        "v12-generated-content-dark",
+        "v12-generated-content-arranged-dark"
       ],
-      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
       "verificationLevel": "partial",
-      "verifiedTheme": "dark"
+      "verifiedTheme": "dark",
+      "verificationHistory": [
+        {
+          "status": "深色生成S320×220/M656×220/L656×456与16间距实测；正文颜色/标签字号等D38待修",
+          "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+          "evidence": [
+            "v11-canvas-completed-dark"
+          ]
+        }
+      ],
+      "evidencePackages": {
+        "v11-canvas-completed-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v12-generated-content-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-generated-content-arranged-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "06 组件与画布排版",
@@ -1461,16 +1814,32 @@
         "height": 1500.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=375-814",
-      "status": "深色双端整理同步，SML尺寸和16间距有JSON；全视口布局、过渡和整理撤销待验",
+      "status": "12b深色整理后全局布局已截图，既有双端整理同步保留；整理撤销与连续过渡待验",
       "differences": [],
       "evidence": [
         "v11-a-shared-arranged-dark",
-        "v11-b-shared-arranged-light"
+        "v11-b-shared-arranged-light",
+        "v12-generated-content-arranged-dark"
       ],
-      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
       "verificationLevel": "partial",
       "verifiedTheme": "dark",
-      "evidenceNotes": "v11-b-*-light为文件名误标；对应JSON theme=dark，仅计深色；未改名以保留引用。"
+      "evidenceNotes": "v11-b-*-light为文件名误标；对应JSON theme=dark，仅计深色；未改名以保留引用。",
+      "verificationHistory": [
+        {
+          "status": "深色双端整理同步，SML尺寸和16间距有JSON；全视口布局、过渡和整理撤销待验",
+          "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+          "evidence": [
+            "v11-a-shared-arranged-dark",
+            "v11-b-shared-arranged-light"
+          ]
+        }
+      ],
+      "evidencePackages": {
+        "v11-a-shared-arranged-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-b-shared-arranged-light": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v12-generated-content-arranged-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "06 组件与画布排版",
@@ -2498,8 +2867,26 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-8017",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色工作区显示菜单260×219、选项248×34；实际切单列表取消分组并保留选中会话/草稿；其他排序动作、拖动与全部主题待验",
+      "differences": [
+        "D07"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-workspace-view-menu-dark",
+        "v12-workspace-single-list-dark"
+      ],
+      "evidencePackages": {
+        "v12-workspace-view-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-workspace-single-list-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "12B 侧栏与看板 · 菜单展开",
@@ -2522,19 +2909,38 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-8585",
-      "status": "深色私有看板菜单280×112、3行268×32与放回工作区实际结果已核对；重命名/共享菜单其他状态待验",
+      "status": "深色私有菜单/放回工作区和组件保留已核对；返回后模型菜单live错误且重试未恢复列D40，1841386源码修复待下一包",
       "differences": [
-        "D08"
+        "D08",
+        "D40"
       ],
       "evidence": [
         "actual/private-board-menu-dark.png",
         "actual/private-board-menu-dark.json",
         "v11-private-board-menu-dark",
-        "v11-private-return-workspace-dark"
+        "v11-private-return-workspace-dark",
+        "v11-private-return-model-live-error-dark"
       ],
       "verificationLevel": "partial",
       "verifiedTheme": "dark",
-      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678"
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationHistory": [
+        {
+          "status": "深色私有看板菜单280×112、3行268×32与放回工作区实际结果已核对；重命名/共享菜单其他状态待验",
+          "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+          "evidence": [
+            "actual/private-board-menu-dark.png",
+            "actual/private-board-menu-dark.json",
+            "v11-private-board-menu-dark",
+            "v11-private-return-workspace-dark"
+          ]
+        }
+      ],
+      "evidencePackages": {
+        "v11-private-board-menu-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-private-return-workspace-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-private-return-model-live-error-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678"
+      }
     },
     {
       "section": "12B 侧栏与看板 · 菜单展开",
@@ -2581,8 +2987,43 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-9704",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b工作区文件夹菜单218×110/204×32的D44已复现；空白重命名禁提交，成功改名/重开保持/还原有原生证据；几何源码修复待下一包",
+      "differences": [
+        "D44"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        },
+        {
+          "status": "12b深色工作区文件夹菜单实际218×110/行204×32、padding6/gap0、有16px图标，与260×127/248×34/无图标设计不符；D44待源码及新包复验",
+          "evidence": [
+            "v12-workspace-folder-menu-dark"
+          ],
+          "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-workspace-folder-menu-dark",
+        "v12-workspace-rename-blank-dark",
+        "v12-workspace-renamed-dark"
+      ],
+      "evidencePackages": {
+        "v12-workspace-folder-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-workspace-rename-blank-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-workspace-renamed-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "主线程精读667:9704/665:1046：行x5/y5,41,86，分隔x11/y81/236×1；13/20，正文#E6E6E6/危险#FA827A，无图标。实际危险#F25A5A。此D44为文件夹菜单，与此前未立项的普通对话652/780宽度候选不同。；重开保持新名及还原原名来自主线程连续CUA记录，不虚构独立截图。",
+      "sourceFix": {
+        "difference": "D44",
+        "commit": "3aabba9b1971d5d924bf9a03c93f96dc4f387c3f",
+        "nativeVerified": false,
+        "scope": "workspace-folder与session-entry两种菜单，当前实际仍7c1ffc旧包；原生几何/颜色/动作待下一包。",
+        "validation": "责任agent报告4项聚焦、typecheck及两主题精确几何验证通过；workspace模块定向刷新，不是原生包复验。"
+      }
     },
     {
       "section": "12B 侧栏与看板 · 菜单展开",
@@ -2605,8 +3046,36 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-10255",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b会话条目菜单实际218×110/204×32与设计260×127/248×34不符列D44；重命名后分叉保留两消息，副本草稿空，返回原会话草稿与两终端仍在；归档动作未验",
+      "differences": [
+        "D44"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-session-row-menu-dark",
+        "v12-session-fork-history-dark",
+        "v12-session-fork-original-draft-retained-dark"
+      ],
+      "evidencePackages": {
+        "v12-session-row-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-session-fork-history-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-session-fork-original-draft-retained-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "Figma667:10255/665:1062及Light665:1054：三行与分隔同260×127规范，归档保持普通文字色，不是危险红。源码修复不代表当前7c1ffc原生菜单已符合；分叉回原会话图只证明草稿/终端存在，不冒称原pwd输出仍可见。",
+      "sourceFix": {
+        "difference": "D44",
+        "commit": "3aabba9b1971d5d924bf9a03c93f96dc4f387c3f",
+        "nativeVerified": false,
+        "scope": "workspace-folder与session-entry两种菜单，当前实际仍7c1ffc旧包；原生几何/颜色/动作待下一包。",
+        "validation": "责任agent报告4项聚焦、typecheck及两主题精确几何验证通过；workspace模块定向刷新，不是原生包复验。"
+      }
     },
     {
       "section": "12C 研究与组件 · 菜单展开",
@@ -2683,14 +3152,33 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-17788",
-      "status": "已记录差异；局部实机复验中",
+      "status": "深色真实HTML更多菜单248×118、padding5/gap2/radius10、13/20及三入口已核对；编辑请求修改后取消并重开保留原文，未执行重新生成",
       "differences": [
         "D09"
       ],
       "evidence": [
         "actual/component-more-dark.png",
-        "actual/component-more-dark.json"
-      ]
+        "actual/component-more-dark.json",
+        "v11-container-more-menu-dark",
+        "v11-container-edit-request-dark"
+      ],
+      "verificationHistory": [
+        {
+          "status": "已记录差异；局部实机复验中",
+          "evidence": [
+            "actual/component-more-dark.png",
+            "actual/component-more-dark.json"
+          ]
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "evidencePackages": {
+        "v11-container-more-menu-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-container-edit-request-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678"
+      },
+      "evidenceNotes": "AX分类menu不等于macOS原生菜单；与240×163组件上下文菜单分开。取消重开依据主线程原生记录。"
     },
     {
       "section": "12C 研究与组件 · 菜单展开",
@@ -2726,14 +3214,30 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-18519",
-      "status": "已记录差异；局部实机复验中",
+      "status": "深色自动刷新二级菜单220×190、五频率、End定位30分钟与Esc返回父项已核对；未改变频率，未验真实刷新触发",
       "differences": [
         "D09"
       ],
       "evidence": [
         "actual/component-more-dark.png",
-        "actual/component-more-dark.json"
-      ]
+        "actual/component-more-dark.json",
+        "v11-container-refresh-menu-dark"
+      ],
+      "verificationHistory": [
+        {
+          "status": "已记录差异；局部实机复验中",
+          "evidence": [
+            "actual/component-more-dark.png",
+            "actual/component-more-dark.json"
+          ]
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "evidencePackages": {
+        "v11-container-refresh-menu-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678"
+      }
     },
     {
       "section": "12C 研究与组件 · 菜单展开",
@@ -2951,10 +3455,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-22499",
-      "status": "238×250及行间距已实测；任务图标第六批待复验",
-      "differences": [],
+      "status": "12b浅色新建页签菜单238×250、五行218×42实测；实际选择终端并进入zsh，pwd返回验收工作区；其他四项动作待验",
+      "differences": [
+        "D15"
+      ],
       "evidence": [
-        "actual/v4-newtab-light.json"
+        "actual/v4-newtab-light.json",
+        "v12-new-tab-menu-light",
+        "v12-side-terminal-light"
       ],
       "runtimeEvidence": [
         {
@@ -2962,7 +3470,22 @@
           "image": "actual/v5-newtab-light.png",
           "measurement": "actual/v5-newtab-light.json"
         }
-      ]
+      ],
+      "verificationHistory": [
+        {
+          "status": "238×250及行间距已实测；任务图标第六批待复验",
+          "evidence": [
+            "actual/v4-newtab-light.json"
+          ]
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidencePackages": {
+        "v12-new-tab-menu-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-side-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "12D 文件与页签 · 菜单展开",
@@ -3030,8 +3553,25 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-24235",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色真实原生文件菜单六项及点击Finder后定位MD由主线程CUA核验；CDP图不捕获系统外层，其他菜单动作与全部键盘规则待验",
+      "differences": [
+        "D18"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-file-context-menu-dark"
+      ],
+      "evidencePackages": {
+        "v12-file-context-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "Figma667:24565明确系统菜单由平台原生渲染，240×46为示意。六项/访达单选1/7与正文来自主线程CUA记录，见native-batch12-late-evidence.md；此CDP截图只作包和页面状态来源，不能冒充菜单可见截图。"
     },
     {
       "section": "12D 文件与页签 · 菜单展开",
@@ -3898,18 +4438,44 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-28520",
-      "status": "深色续接、工具入口与运行排队已原生操作，输入308×120；footer额外32px列D35，bd3486f待包",
+      "status": "12b深色续接空闲/运行排队/排队成为下一轮并完成、历史保留和详情入口已实际操作；308×120底距12通过；恢复后无目录命令仍enabled，D35未整体验收",
       "differences": [
         "D35"
       ],
       "evidence": [
         "v11-child-idle-dark",
         "v11-child-tools-dark",
-        "v11-child-running-queued-dark"
+        "v11-child-running-queued-dark",
+        "v12-child-continuable-idle-dark",
+        "v12-child-running-queued-dark",
+        "v12-child-queued-completed-dark",
+        "v12-child-run-details-tools-dark",
+        "v12-child-empty-command-after-resume-dark"
       ],
-      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
       "verificationLevel": "partial",
-      "verifiedTheme": "dark"
+      "verifiedTheme": "dark",
+      "verificationHistory": [
+        {
+          "status": "深色续接、工具入口与运行排队已原生操作，输入308×120；footer额外32px列D35，bd3486f待包",
+          "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+          "evidence": [
+            "v11-child-idle-dark",
+            "v11-child-tools-dark",
+            "v11-child-running-queued-dark"
+          ]
+        }
+      ],
+      "evidencePackages": {
+        "v11-child-idle-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-child-tools-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v11-child-running-queued-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+        "v12-child-continuable-idle-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-child-running-queued-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-child-queued-completed-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-child-run-details-tools-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-child-empty-command-after-resume-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",

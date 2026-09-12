@@ -103,6 +103,36 @@ const copy: Record<string, string> = {
 }
 
 describe('Figma trajectory client patch', () => {
+  it('localizes visible and accessible turn labels while keeping the English fallback', () => {
+    const start = patched.indexOf('\t\tfunction sectionLabel(')
+    const end = patched.indexOf('\n\t\t}', start)
+    const label = runInNewContext(patched.slice(start, end + 5) + '\nsectionLabel')
+    expect(label(1, ['轮', '轮次之间'])).toBe('轮 1')
+    expect(label(2, ['轮', '轮次之间'])).toBe('轮 2')
+    expect(label(null, ['轮', '轮次之间'])).toBe('轮次之间')
+    expect(label(1)).toBe('Turn 1')
+    expect(label(null)).toBe('Between turns')
+    expect(patched).toContain('turnLabels: [t("table.turn"), t("table.betweenTurns")]')
+    expect(patched).toContain('"aria-label": sectionLabel(record.turn, turnLabels)')
+    expect(patched).toContain('children: sectionLabel(record.turn, turnLabels)')
+  })
+
+  it('bounds trajectory run information to its composer without changing ordinary conversation', async () => {
+    const browserWindow = new Window()
+    const style = browserWindow.document.createElement('style')
+    style.textContent = ['figma-trajectory.css', 'figma-reading.css'].map(file => readFileSync(new URL('../src/preload/' + file, import.meta.url), 'utf8')).join('\n')
+    browserWindow.document.head.appendChild(style)
+    browserWindow.document.body.innerHTML = '<div class="wSkVaW_root" data-odyssey-page="conversation"><div data-odyssey-trajectory></div><div data-center-composer-host><div class="odyssey-run-info">2 轮 · 3 步 · 已完成<button>运行详情</button></div></div></div>'
+    try {
+      const info = browserWindow.document.querySelector('.odyssey-run-info')!
+      expect(browserWindow.getComputedStyle(info).maxWidth).toBe('652px')
+      expect(browserWindow.getComputedStyle(info).width).toBe('100%')
+      expect(info.textContent).toContain('运行详情')
+      browserWindow.document.querySelector('[data-odyssey-trajectory]')!.remove()
+      expect(browserWindow.getComputedStyle(info).maxWidth).toBe('780px')
+    } finally { await browserWindow.happyDOM.close() }
+  })
+
   it('patches the installed package once and exposes stable surface selectors', () => {
     expect(patched).toContain('/* sherlock:figma-trajectory:v1 */')
     expect(patchFigmaTrajectory(patched)).toBe(patched)

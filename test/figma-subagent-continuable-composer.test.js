@@ -1,4 +1,6 @@
 import { readFile } from 'node:fs/promises'
+import { runInNewContext } from 'node:vm'
+import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { expect, it, vi } from 'vitest'
 import { patchSubagentPanelConversation } from '../scripts/lib/figma-subagent-panel.mjs'
@@ -83,13 +85,69 @@ it('overrides later main reading styles only for the 120px child input and keeps
 })
 
 
-it('disables the child command launcher when its only optional command capability is absent', () => {
+it('uses resolved command availability rather than a permissions projection to disable the child launcher', () => {
   const start=patched.indexOf('disabled: locked || toggleCommandMenu === void 0 || subagentPanel')
   expect(start).toBeGreaterThan(-1)
   const expression=patched.slice(start+'disabled: '.length,patched.indexOf(',\n',start))
-  const disabled=new Function('locked','toggleCommandMenu','subagentPanel','continuable','permissions','return '+expression)
-  expect(disabled(false,()=>{},true,true,undefined)).toBe(true)
-  expect(disabled(false,()=>{},true,true,{options:[]})).toBe(false)
-  expect(disabled(false,()=>{},false,true,undefined)).toBe(false)
-  expect(disabled(true,()=>{},true,true,{options:[]})).toBe(true)
+  expect(expression).not.toContain('permissions')
+  const disabled=new Function('locked','toggleCommandMenu','subagentPanel','continuable','childCommands','return '+expression)
+  for(const status of ['unknown','loading','empty','failed'])expect(disabled(false,()=>{},true,true,{status})).toBe(true)
+  expect(disabled(false,()=>{},true,true,{status:'available'})).toBe(false)
+  expect(disabled(false,()=>{},false,true,{status:'empty'})).toBe(false)
+  expect(disabled(true,()=>{},true,true,{status:'available'})).toBe(true)
+})
+
+it('retries failed and empty candidate queries and discards superseded or disposed results',async()=>{
+  const start=patched.indexOf('function useOdysseyChildCommands('),end=patched.indexOf('function OdysseySubagentComposerRow(',start)
+  let state,cleanup
+  const pending={current:null}
+  const react={useState:initial=>[state??=initial,value=>{state=value}],useRef:()=>pending,useEffect:effect=>{cleanup=effect()}}
+  const hook=new Function('react',patched.slice(start,end)+';return useOdysseyChildCommands')(react)
+  let mode='failed'
+  const query=vi.fn(async()=>{if(mode==='failed')throw Error('transport failure');return mode==='empty'?[]:[{name:'valid-child-command'}]})
+  await hook('child',query).reload({start:0,end:0})
+  expect(hook('child',query).status).toBe('failed')
+  mode='empty';await hook('child',query).reload({start:0,end:0})
+  expect(hook('child',query).status).toBe('empty')
+  mode='available';await hook('child',query).reload({start:0,end:0})
+  expect(hook('child',query).status).toBe('available')
+  let finish
+  const slow=()=>new Promise(resolve=>{finish=resolve})
+  const old=hook('child',slow).reload({start:0,end:0})
+  await hook('child',async()=>[]).reload({start:0,end:0})
+  finish([{name:'stale'}]);await old
+  expect(hook('child',query).status).toBe('empty')
+  const closing=hook('child',slow).reload({start:0,end:0});cleanup()
+  finish([{name:'after-unmount'}]);await closing
+  expect(state.status).toBe('loading')
+  expect(hook('other-child',query).status).toBe('unknown')
+})
+
+it('queries the real command runtime: Custom permission decoration does not invent child commands, available contributions do',async()=>{
+  const require=createRequire(import.meta.url)
+  let descriptor
+  runInNewContext(await readFile('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8'),{window:{__ModuleLoader__:{load:value=>{descriptor=value}}},AbortController})
+  const runtime=descriptor.factory(id=>id==='@deepseek-ai/cordis'?{Service:class{constructor(ctx){this.ctx=ctx}}}:id.startsWith('react')?require(id):{})
+  const list=vi.fn(async()=>({ok:true,value:[{name:'host-only',description:'host',input:{hint:'argument'}}]}))
+  const services={sessions:{subagentAddress:id=>id==='child'?{parentSessionId:'parent'}:undefined},inputTriggers:{registerSource:()=>()=>{}}}
+  const ctx={remote:{commands:{list},$on:()=>()=>{}},get:name=>services[name],effect:fn=>fn(),on:()=>()=>{}}
+  const commands=new runtime.CommandUiRuntime(ctx)
+  services.commandUi=commands
+  commands.live.decorations.set('permission',{name:'permission',available:()=>true})
+  const at=patched.indexOf('queryCommandCandidates: inputTriggers'),until=patched.indexOf(',\n                        toggleCommandMenu:',at)
+  const expression=patched.slice(at+'queryCommandCandidates: '.length,until)
+  const inputTriggers={project:()=>({sessionId:'child'})},shell={snapshot:{draft:''}}
+  const query=new Function('ctx','inputTriggers','shell','return '+expression)(ctx,inputTriggers,shell)
+  const signal=new AbortController().signal
+  expect(await query({start:0,end:0},signal)).toEqual([])
+  expect(list).not.toHaveBeenCalled()
+  let available=false
+  commands.live.contributions.set('child-action',{name:'child-action',description:'child action',available:()=>available})
+  expect(await query({start:0,end:0},signal)).toEqual([])
+  available=true
+  expect((await query({start:0,end:0},signal)).map(item=>item.name)).toEqual(['child-action'])
+  inputTriggers.project=()=>({sessionId:'parent'})
+  expect((await query({start:0,end:0},signal)).map(item=>item.name)).toContain('host-only')
+  shell.snapshot.draft='正文'
+  expect((await query({start:2,end:2},signal)).map(item=>item.name)).not.toContain('host-only')
 })
