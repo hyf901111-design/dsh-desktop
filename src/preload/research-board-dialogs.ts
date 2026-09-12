@@ -356,6 +356,11 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-avatar.srb-avatar:after{display:none}
 .srb-actions .srb-add-collaborator,.srb-presence .srb-avatar-overflow{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:var(--srb-control-strong);color:var(--srb-muted);flex:none}
 .srb-presence .srb-avatar-overflow{width:32px;border-radius:14px;font-size:11px;font-weight:500}.srb-actions .srb-add-collaborator:hover{color:var(--srb-label);background:var(--srb-control-strong)}
+/* Dialog-local Figma 288/290 materials; other popovers retain their palettes. */
+.srb-dialog{--srb-surface:rgba(252,252,252,.97);--srb-border:rgba(223,224,226,.9);--srb-label:#292b2d;--srb-muted:#74777b;--srb-control-border:#dfe0e2;--srb-tab-selected:rgba(0,0,0,.055)}
+body[data-ds-dark-theme] .srb-dialog{--srb-surface:rgba(39,39,39,.97);--srb-border:rgba(61,61,61,.9);--srb-label:#e6e6e6;--srb-muted:#a1a3a8;--srb-control-border:#3d3d3d;--srb-tab-selected:rgba(255,255,255,.09)}
+body[data-ds-dark-theme] .srb-dialog .srb-quiet-danger{color:#cc716b}
+.srb-dialog .srb-setting-row>button{border-color:var(--srb-control-border)}
 .srb-dialog{border:0;outline:1px solid var(--srb-border);outline-offset:-1px;border-radius:14px;background:var(--srb-surface);box-shadow:var(--srb-shadow);backdrop-filter:blur(12px)}
 .srb-dialog::backdrop{background:rgba(0,0,0,.18)}
 .srb-dialog>header{padding:20px 24px 0;border:0;height:30px;box-sizing:content-box;gap:12px}.srb-dialog h2{font-size:18px;font-weight:500;line-height:27px}
@@ -363,7 +368,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-dialog-body{padding:16px 24px 20px;gap:16px;max-height:calc(100vh - 142px)}
 .srb-dialog button{height:30px;min-height:30px;padding:0 10px;font-size:12px;line-height:18px;font-weight:400;border-radius:7px}
 .srb-dialog :is(input,select){height:38px;border:1px solid var(--srb-control-border);border-radius:7px;font-size:13px;line-height:20px;background:transparent;padding:0 10px}
-.srb-dialog input{background:var(--srb-input)}
+.srb-dialog input{background:var(--srb-input);border-radius:8px}
 .srb-dialog label{gap:6px;font-size:12px;line-height:18px;font-weight:400;color:var(--srb-muted)}
 .srb-dialog :is(input,select){color:var(--srb-label)}.srb-dialog p{line-height:18px}.srb-dialog .srb-primary{background:var(--srb-primary)!important;color:var(--srb-primary-text)!important}
 .srb-dialog .srb-description{font-size:12px!important;line-height:18px;color:var(--srb-muted)}
@@ -375,7 +380,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-invite-controls{align-items:center;gap:10px;min-height:32px}.srb-invite-controls label{display:flex;align-items:center;justify-content:space-between;width:100%;font-size:13px;line-height:20px;color:var(--srb-label)}.srb-invite-controls select{height:30px;width:100px;font-size:12px}.srb-invite-controls>button{min-width:100px}
 .srb-dialog-footer{padding-top:0;min-height:32px;align-items:center;gap:8px}.srb-dialog-footer .srb-primary{min-width:100px}
 .srb-management .srb-dialog-body{gap:12px;padding-top:12px}.srb-management .srb-board-name{font-size:13px;line-height:20px;color:var(--srb-muted)}
-.srb-management .srb-dialog-tabs{height:36px;gap:4px;border:0;align-items:flex-start}.srb-dialog-tabs button{height:30px;padding:0 10px;border-radius:7px;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]{background:var(--srb-row-hover);font-weight:400;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]:after{display:none}
+.srb-management .srb-dialog-tabs{height:36px;gap:4px;border:0;align-items:flex-start}.srb-dialog-tabs button{height:30px;padding:0 10px;border-radius:7px;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]{background:var(--srb-tab-selected);font-weight:400;color:var(--srb-label)}.srb-dialog-tabs button[aria-selected=true]:after{display:none}
 .srb-tab-panel{gap:12px}.srb-management .srb-invite-form{gap:12px}.srb-management .srb-invite-controls label{width:auto}.srb-management .srb-invite-controls select{width:88px;height:30px}
 .srb-dialog h3{font-size:14px;line-height:21px;font-weight:500;color:var(--srb-label);margin:0 0 4px}
 .srb-management h3{margin-bottom:12px}
