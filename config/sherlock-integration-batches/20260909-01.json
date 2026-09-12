@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "滚动条动效、模型菜单与协作生成模型继承",
+        "featureName": "模型菜单、任务模型继承及认证与协作恢复",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "88725fe9d882eefa7082ad253a9b800c0d231c6c",
-        "tipCommit": "5e6b382f6049f9b061ae93564a5e2b02034c3181",
+        "tipCommit": "da0076fee15c7e316a1d9316d7712e2bb2573264",
         "commits": [
           {
             "commit": "bd3d8ce544713020ddb5a20b258348c180023c54",
@@ -48,6 +48,41 @@
               "d04c1af81048757f5e77af161e14c4b289af4ae1"
             ],
             "subject": "补记第十三批原生复验与第十四批待包差异"
+          },
+          {
+            "commit": "3a8b8413906b72ac80b22c92c49a90442324e4c5",
+            "parents": [
+              "5e6b382f6049f9b061ae93564a5e2b02034c3181"
+            ],
+            "subject": "收窄识别账号退出时已确认的预览权限拒绝"
+          },
+          {
+            "commit": "39a42e129db7c78b31bcb7f1779db3ca82e40a85",
+            "parents": [
+              "3a8b8413906b72ac80b22c92c49a90442324e4c5"
+            ],
+            "subject": "补充预览错误判定工具的类型声明"
+          },
+          {
+            "commit": "a50cd08f532b94601da7e176dd53d7ff052e17f6",
+            "parents": [
+              "39a42e129db7c78b31bcb7f1779db3ca82e40a85"
+            ],
+            "subject": "修复重新登录后当前共享研究会话自动恢复"
+          },
+          {
+            "commit": "423f7028143018489959408ab918b3ef287d46b4",
+            "parents": [
+              "a50cd08f532b94601da7e176dd53d7ff052e17f6"
+            ],
+            "subject": "保留同一预览地址重新登录后的异常拒绝"
+          },
+          {
+            "commit": "da0076fee15c7e316a1d9316d7712e2bb2573264",
+            "parents": [
+              "423f7028143018489959408ab918b3ef287d46b4"
+            ],
+            "subject": "修正登录注册字段错误位置与双主题描边"
           }
         ],
         "files": [
@@ -68,12 +103,40 @@
             "path": "scripts/lib/figma-model-menu.mjs"
           },
           {
+            "status": "A",
+            "path": "scripts/lib/research-preview-console-check.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-preview-console-check.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-auth.css"
+          },
+          {
             "status": "M",
             "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
             "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-auth-errors.test.js"
           },
           {
             "status": "A",
@@ -86,6 +149,14 @@
           {
             "status": "A",
             "path": "test/figma-provider-colors.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-preview-console-check.test.ts"
           },
           {
             "status": "A",
@@ -111,12 +182,16 @@
               "test/figma-provider-menu.test.js",
               "test/figma-settings-layout.test.ts",
               "test/figma-model-empty-style.test.ts",
-              "test/figma-model-menu.test.ts"
+              "test/figma-model-menu.test.ts",
+              "test/research-board-client-adapter.test.js",
+              "test/research-preview-console-check.test.ts",
+              "test/figma-auth-errors.test.js",
+              "test/figma-auth-layout.test.ts"
             ],
             "outcome": "passed",
-            "summary": "173 focused checks in 12 directly affected files passed",
-            "verifiedCommit": "5e6b382f6049f9b061ae93564a5e2b02034c3181",
-            "completedAt": "2026-09-12 19:48:32 UTC",
+            "summary": "223 focused checks in 16 directly affected files passed",
+            "verifiedCommit": "da0076fee15c7e316a1d9316d7712e2bb2573264",
+            "completedAt": "2026-09-12 20:03:47 UTC",
             "timeoutMs": 120000
           },
           {
@@ -127,8 +202,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "5e6b382f6049f9b061ae93564a5e2b02034c3181",
-            "completedAt": "2026-09-12 19:48:32 UTC",
+            "verifiedCommit": "da0076fee15c7e316a1d9316d7712e2bb2573264",
+            "completedAt": "2026-09-12 20:03:47 UTC",
             "timeoutMs": 120000
           },
           {
@@ -140,28 +215,46 @@
             ],
             "outcome": "passed",
             "summary": "Pristine locked sources transformed twice and verified",
-            "verifiedCommit": "5e6b382f6049f9b061ae93564a5e2b02034c3181",
-            "completedAt": "2026-09-12 19:48:32 UTC",
+            "verifiedCommit": "da0076fee15c7e316a1d9316d7712e2bb2573264",
+            "completedAt": "2026-09-12 20:03:47 UTC",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "browser"
+            ],
+            "outcome": "passed",
+            "summary": "Production browser collaboration gate passed including login recovery without manual board activation and strict expected preview denial classification",
+            "verifiedCommit": "da0076fee15c7e316a1d9316d7712e2bb2573264",
+            "completedAt": "2026-09-12 20:03:47 UTC",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "13c真实签名包3bc317证据已入台账；D45–48须在14新包复验。298帧中100局部、198待逐帧、0整页通过。"
+          "summary": "13c包3bc317原生证据已记录；D45–50本批仍需新签名包复验。版本化台账100局部/198待逐帧/0整页通过，新增S09仅AUDIT备忘。"
         },
         "acceptanceCriteria": [
           "Scrollbar reveal is 100ms; hide 180ms and reduced-motion behavior remain intact",
           "Research generation and retries inherit the authoritative routable model snapshot selected for the source session, preserving existing native Agent request options",
           "Settings provider and model text colors follow each theme and the custom-provider add button has its specified width",
-          "Nonblank empty model search shows both specified hints and 320x159 geometry when there is one management footer; keyboard and model selection behavior remain intact"
+          "Nonblank empty model search shows both specified hints and 320x159 geometry when there is one management footer; keyboard and model selection behavior remain intact",
+          "Login and registration field errors appear below inputs with theme-specific strokes, retaining normal 344x44 geometry, field values, ARIA and scroll access in short windows",
+          "Signing in restores a still-selected shared research session automatically using fresh account authority, rejecting stale account/navigation responses without generating extra model requests",
+          "Only independently server-confirmed preview 403 denials during explicit signed-out teardown are expected; any same-URL denial outside teardown remains a browser gate failure"
         ],
         "risks": [
           "100帧局部证据、198待逐帧、0整页通过；D45–48仍需本批集成签名包原生复验",
           "模型选择reasoningEffort没有新增跨子任务继承承诺，保留现有原生request contribution行为",
           "当前隔离客户端不得执行公开检查更新，真实更新状态另有本地安全验收方案",
-          "认证字段错误描边和提示位置D49已查证，未包含本批"
+          "D49/D50尚待14b原生新包复验；13c S09八态有实际补证但尚未并入版本化台账",
+          "14初次merge因退出登录旧iframe的已确认403被测试误判而回滚；本批缩窄分类并移除登录恢复测试的人工激活，browser已通过",
+          "S01 regular导航和S09专用任务滚条新差异已查证，后续批次处理"
         ],
-        "generatedAt": "2026-09-12 19:48:32 UTC"
+        "generatedAt": "2026-09-12 20:03:47 UTC"
       }
     }
   ],
