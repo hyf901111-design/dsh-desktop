@@ -260,7 +260,7 @@ function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
   }
 }
 
-function configureAppIdentity(): void {
+function configureAppIdentity(): () => void {
   // Keep the historical lowercase directory stable across product-name and
   // branding changes. Harness stores workspaces, sessions, credentials, and
   // custom presets below userData, so deriving this path from app.getName()
@@ -273,52 +273,56 @@ function configureAppIdentity(): void {
   if (explicitAppDataPath) app.setPath('appData', appDataPath)
   const explicitUserDataPath = app.commandLine.getSwitchValue('sherlock-user-data-dir')
   const identity = resolveDesktopIdentity(appDataPath, desktopChannel, explicitUserDataPath)
-  if (
-    !explicitUserDataPath &&
-    (desktopChannel === 'legacy-bridge' || desktopChannel === 'notarized')
-  ) {
-    try {
-      migrateLegacyUserData(join(appDataPath, 'dsh-desktop'), identity.userData)
-    } catch (error) {
-      console.warn('[desktop] failed to migrate legacy EWork Odyssey user data', error)
-    }
-  }
   configureDesktopName(app, identity.name)
   app.setPath('userData', identity.userData)
-  if (app.isPackaged) {
-    try {
-      const agentsHome = resolve(
-        process.env.DSH_AGENTS_HOME?.trim() || join(homedir(), '.agents')
-      )
-      const result = synchronizeBundledESkillOverrides({
-        bundledSkillDirectory: join(process.resourcesPath, 'sherlock-skills'),
-        overrideSkillDirectories: [
-          join(identity.userData, 'harness', 'skills'),
-          join(agentsHome, 'skills')
-        ]
-      })
-      for (const upgrade of result.upgraded) {
-        console.info(
-          `[desktop] upgraded official skill ${upgrade.slug} from ${upgrade.fromVersion} to ${upgrade.toVersion}`
-        )
+  // Resolve the shared lock directory first. Only its owning instance may
+  // migrate data or replace plugins and skills used by a running renderer.
+  return () => {
+    if (
+      !explicitUserDataPath &&
+      (desktopChannel === 'legacy-bridge' || desktopChannel === 'notarized')
+    ) {
+      try {
+        migrateLegacyUserData(join(appDataPath, 'dsh-desktop'), identity.userData)
+      } catch (error) {
+        console.warn('[desktop] failed to migrate legacy EWork Odyssey user data', error)
       }
-    } catch (error) {
-      console.warn('[desktop] failed to synchronize bundled EWork Odyssey skills', error)
     }
-
-    const bundledProfilePath = join(process.resourcesPath, 'sherlock-plugin-profile')
-    try {
-      const result = installBundledPluginProfile({
-        userDataPath: identity.userData,
-        bundledProfilePath,
-        appVersion: app.getVersion()
-      })
-      if (result.installed) {
-        console.info('[desktop] installed bundled EWork Odyssey plugin profile', result.plugins)
+    if (app.isPackaged) {
+      try {
+        const agentsHome = resolve(
+          process.env.DSH_AGENTS_HOME?.trim() || join(homedir(), '.agents')
+        )
+        const result = synchronizeBundledESkillOverrides({
+          bundledSkillDirectory: join(process.resourcesPath, 'sherlock-skills'),
+          overrideSkillDirectories: [
+            join(identity.userData, 'harness', 'skills'),
+            join(agentsHome, 'skills')
+          ]
+        })
+        for (const upgrade of result.upgraded) {
+          console.info(
+            `[desktop] upgraded official skill ${upgrade.slug} from ${upgrade.fromVersion} to ${upgrade.toVersion}`
+          )
+        }
+      } catch (error) {
+        console.warn('[desktop] failed to synchronize bundled EWork Odyssey skills', error)
       }
-    } catch (error) {
-      console.error('[desktop] failed to install bundled EWork Odyssey plugin profile', error)
-      throw error
+
+      const bundledProfilePath = join(process.resourcesPath, 'sherlock-plugin-profile')
+      try {
+        const result = installBundledPluginProfile({
+          userDataPath: identity.userData,
+          bundledProfilePath,
+          appVersion: app.getVersion()
+        })
+        if (result.installed) {
+          console.info('[desktop] installed bundled EWork Odyssey plugin profile', result.plugins)
+        }
+      } catch (error) {
+        console.error('[desktop] failed to install bundled EWork Odyssey plugin profile', error)
+        throw error
+      }
     }
   }
 }
@@ -1259,7 +1263,7 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-configureAppIdentity()
+const initializeAppData = configureAppIdentity()
 configureApplicationLocale()
 const singleInstance = app.requestSingleInstanceLock()
 if (!singleInstance) {
@@ -1271,7 +1275,10 @@ if (!singleInstance) {
       void openHarness(snapshot.url).catch(showUnexpectedError)
     }
   })
-  app.whenReady().then(bootstrap).catch(async (error: unknown) => {
+  app.whenReady().then(() => {
+    initializeAppData()
+    return bootstrap()
+  }).catch(async (error: unknown) => {
     showUnexpectedError(error)
     await localSearchRuntime?.stop()
     disposeResearchContextHandlers?.()
