@@ -9,80 +9,80 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对齐子代理记录、文档、消息中心、窄窗口和协作菜单",
+        "featureName": "对齐子代理内容、协作菜单、任务短窗与正文排版",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "877f98817d158680fa25d0b81ce1f9496a1205d7",
-        "tipCommit": "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b",
+        "baseCommit": "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b",
+        "tipCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
         "commits": [
           {
-            "commit": "de45ab5456ee3e51bfcd56c126b06a7d8f0a8c3e",
+            "commit": "7e5f49c8316b71acd5162cfe2da67854742cfb7f",
             "parents": [
-              "877f98817d158680fa25d0b81ce1f9496a1205d7"
+              "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b"
             ],
-            "subject": "修正文档预览的字号层级与段落间距"
+            "subject": "对齐子代理标题与正文卡片布局并修复底栏扣高"
           },
           {
-            "commit": "86f26d9ff0ee6b5f2f87f414ff3bba505d57cff7",
+            "commit": "840b4c0a70ca2576c9d120e8cd452db95174d288",
             "parents": [
-              "de45ab5456ee3e51bfcd56c126b06a7d8f0a8c3e"
+              "7e5f49c8316b71acd5162cfe2da67854742cfb7f"
             ],
-            "subject": "修复子代理记录右栏目标与独立渲染上下文"
+            "subject": "隔离协作权限菜单级联并校正行尺寸与文字位置"
           },
           {
-            "commit": "3d7318a6dec4f923d9a462268f16a0193f24e278",
+            "commit": "03319b6036a14eaf3cf361171fedae32eae30e0b",
             "parents": [
-              "86f26d9ff0ee6b5f2f87f414ff3bba505d57cff7"
+              "840b4c0a70ca2576c9d120e8cd452db95174d288"
             ],
-            "subject": "对齐消息中心设计并区分未读与邀请处理状态"
+            "subject": "修正子代理布局测试正则捕获的类型声明"
           },
           {
-            "commit": "089c34e188d455df38983937690b5ec83403590e",
+            "commit": "a024a06cc8d65366a66eaf430a010a44ad233246",
             "parents": [
-              "3d7318a6dec4f923d9a462268f16a0193f24e278"
+              "03319b6036a14eaf3cf361171fedae32eae30e0b"
             ],
-            "subject": "修复窄窗口左栏覆盖展开并对齐响应式顶栏"
+            "subject": "记录第九批实机核对与长内容任务细节差异"
           },
           {
-            "commit": "3c246f9e6fe9377af814ab65a7a94931427852fa",
+            "commit": "5fe353221ba59ced330bec5e3bcc56516796998d",
             "parents": [
-              "089c34e188d455df38983937690b5ec83403590e"
+              "a024a06cc8d65366a66eaf430a010a44ad233246"
             ],
-            "subject": "记录第八批实机差异与后续修复验收状态"
+            "subject": "修正任务进度卡几何状态图标摘要与折叠动效"
           },
           {
-            "commit": "661bb3877d0de042a3abcf14a5d1349989b7b2aa",
+            "commit": "f398552cb938ebf25f4214dcc44363aef4872674",
             "parents": [
-              "3c246f9e6fe9377af814ab65a7a94931427852fa"
+              "5fe353221ba59ced330bec5e3bcc56516796998d"
             ],
-            "subject": "修复窄窗口菜单退出时误收起侧栏和焦点抢占"
+            "subject": "修正任务摘要为用户可见引用文本避免暴露内部路径"
           },
           {
-            "commit": "cacb75f2f058ddd922af7247dd26b0b34762360b",
+            "commit": "513f253db9d31cfefbd5d6bb677e3617f281db03",
             "parents": [
-              "661bb3877d0de042a3abcf14a5d1349989b7b2aa"
+              "f398552cb938ebf25f4214dcc44363aef4872674"
             ],
-            "subject": "对齐协作权限菜单设计并保留邀请与成员变更语义"
+            "subject": "修正消息中心底部基线偏高并覆盖侧栏定位回归"
           },
           {
-            "commit": "e9f9e8a8702aa71a5849f6f02a4f3b7318587298",
+            "commit": "738c228f30c554c812e93610cc445d49b5a4a9b2",
             "parents": [
-              "cacb75f2f058ddd922af7247dd26b0b34762360b"
+              "513f253db9d31cfefbd5d6bb677e3617f281db03"
             ],
-            "subject": "对齐协作弹窗明暗材质与控件边框"
+            "subject": "修复异步任务短窗挂接并按实际正文空间收起清单"
           },
           {
-            "commit": "ce5e7ef8a170e0cbdf972dcc7e169bc7fe04b907",
+            "commit": "7b6257553b51e405d0639bb5414bca7347923413",
             "parents": [
-              "e9f9e8a8702aa71a5849f6f02a4f3b7318587298"
+              "738c228f30c554c812e93610cc445d49b5a4a9b2"
             ],
-            "subject": "修正研究成员弹层材质与滚动条尺寸"
+            "subject": "按原稿修正主会话正文与列表排版"
           },
           {
-            "commit": "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b",
+            "commit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
             "parents": [
-              "ce5e7ef8a170e0cbdf972dcc7e169bc7fe04b907"
+              "7b6257553b51e405d0639bb5414bca7347923413"
             ],
-            "subject": "补充协作权限材质与十一人成员实机核对记录"
+            "subject": "补充任务短窗与正文通知差异及原生操作证据"
           }
         ],
         "files": [
@@ -95,32 +95,50 @@
             "path": "docs/design-audits/2026-09-12-figma-page-ledger.json"
           },
           {
-            "status": "A",
-            "path": "docs/figma-audit/2026-09-12-d25-escape-layer-review.md"
+            "status": "C073",
+            "path": "scripts/assets/task-progress/completed-dark.svg",
+            "previousPath": "build/brand/figma-check.svg"
+          },
+          {
+            "status": "C073",
+            "path": "scripts/assets/task-progress/completed-light.svg",
+            "previousPath": "build/brand/figma-check.svg"
           },
           {
             "status": "A",
-            "path": "docs/figma-audit/2026-09-12-d25-responsive-header-sidebar.md"
+            "path": "scripts/assets/task-progress/running-dark.svg"
+          },
+          {
+            "status": "A",
+            "path": "scripts/assets/task-progress/running-light.svg"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-reading-client.mjs"
           },
           {
             "status": "M",
             "path": "scripts/lib/figma-subagent-panel.mjs"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
+            "status": "A",
+            "path": "scripts/lib/figma-task-compact.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-task-progress.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/test-research-board-role-menu-css.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+            "path": "src/preload/figma-final-shell.css"
           },
           {
             "status": "M",
-            "path": "scripts/test-research-boards-browser.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-file-panel.css"
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
@@ -136,35 +154,31 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
+            "path": "test/figma-reading-layout.test.ts"
           },
           {
             "status": "A",
-            "path": "test/figma-sidebar-overlay.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-subagent-panel-destination.test.js"
+            "path": "test/figma-subagent-content-layout.test.ts"
           },
           {
             "status": "M",
-            "path": "test/research-board-navigation-final.test.ts"
+            "path": "test/figma-subagent-panel.test.js"
           },
           {
             "status": "A",
+            "path": "test/figma-task-compact.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-task-objective-projection.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-task-progress.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/research-board-notifications-center.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-role-picker.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-boards-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-notification-store.test.ts"
           }
         ],
         "checks": [
@@ -176,22 +190,22 @@
               "run",
               "test/figma-subagent-panel.test.js",
               "test/figma-subagent-panel-destination.test.js",
+              "test/figma-subagent-content-layout.test.ts",
               "test/figma-subagent-menu.test.js",
-              "test/figma-panel-tab-overflow.test.ts",
-              "test/figma-file-panel.test.ts",
-              "test/figma-sidebar-overlay.test.ts",
-              "test/figma-responsive-header.test.ts",
-              "test/figma-final-shell-patch.test.ts",
-              "test/research-board-notifications-center.test.ts",
-              "test/research-boards-ui.test.ts",
-              "test/update-notification-store.test.ts",
+              "test/figma-reading-layout.test.ts",
+              "test/figma-task-progress.test.ts",
+              "test/figma-task-objective-projection.test.ts",
+              "test/figma-task-compact.test.ts",
               "test/research-board-role-picker.test.ts",
-              "test/research-board-navigation-final.test.ts"
+              "test/research-board-notifications-center.test.ts",
+              "test/research-board-navigation-final.test.ts",
+              "test/figma-final-shell-patch.test.ts",
+              "test/figma-file-panel.test.ts"
             ],
             "outcome": "passed",
-            "summary": "64 focused checks in 13 directly affected files passed",
-            "verifiedCommit": "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b",
-            "completedAt": "2026-09-12T15:32:17.112Z",
+            "summary": "62 focused checks in 13 directly affected files passed",
+            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
+            "completedAt": "2026-09-12 16:25:16 UTC",
             "timeoutMs": 120000
           },
           {
@@ -202,8 +216,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b",
-            "completedAt": "2026-09-12T15:32:17.114Z",
+            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
+            "completedAt": "2026-09-12 16:25:16 UTC",
             "timeoutMs": 120000
           },
           {
@@ -214,101 +228,39 @@
               "sources"
             ],
             "outcome": "passed",
-            "summary": "Pristine locked runtime and renderer sources transformed twice and verified",
-            "verifiedCommit": "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b",
-            "completedAt": "2026-09-12T15:32:17.114Z",
+            "summary": "Pristine locked sources transformed twice and verified",
+            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
+            "completedAt": "2026-09-12 16:25:16 UTC",
             "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-board-role-menu-css.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Real production CSS in isolated Chromium passed both themes and constrained viewport",
+            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
+            "completedAt": "2026-09-12 16:25:16 UTC",
+            "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "dc26e8ed native differences captured and each fix independently reviewed. New package native acceptance pending; full-client audit remains in progress."
+          "summary": "50b9ae85 actual native evidence recorded; batch10 corrections independently reviewed; next package acceptance pending and full client audit unfinished."
         },
         "acceptanceCriteria": [
-          "Child records render in right tabs within the real parent context",
-          "Document typography follows Figma with original content preserved",
-          "Notification unread state stays distinct from invitation status",
-          "800/840 sidebar opens as overlay and nested Escape preserves it",
-          "Role pickers render inside native dialogs and emit one permission change",
-          "11-member popup preserves search and uses 3px scrollbar"
+          "Child right pane preserves height with bottom panel open",
+          "Role popup280x142 has268x64 rows without normal scroll",
+          "Task card216/40 with168 list and readable reference summary",
+          "Async tasks preserve240px reading budget in short windows",
+          "Notification center pins44px from bottom",
+          "Central paragraphs15/26 preserve file and child styles"
         ],
         "risks": [
-          "Native verification required after integration; no full-client acceptance yet"
+          "Native geometry and motion require next package verification; overall298-frame acceptance remains incomplete"
         ],
-        "generatedAt": "2026-09-12T15:32:17.114Z"
-      },
-      "merged": {
-        "mergeCommit": "1b0afc0d790cf0434be6d7c8d8e6fc5ca20777fd",
-        "verificationCommit": "1b0afc0d790cf0434be6d7c8d8e6fc5ca20777fd",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "1b0afc0d790cf0434be6d7c8d8e6fc5ca20777fd",
-            "completedAt": "2026-09-12T15:32:58.018Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1b0afc0d790cf0434be6d7c8d8e6fc5ca20777fd",
-            "completedAt": "2026-09-12T15:32:58.018Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "1b0afc0d790cf0434be6d7c8d8e6fc5ca20777fd",
-            "completedAt": "2026-09-12T15:32:58.018Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "1b0afc0d790cf0434be6d7c8d8e6fc5ca20777fd",
-            "completedAt": "2026-09-12T15:32:58.018Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "1b0afc0d790cf0434be6d7c8d8e6fc5ca20777fd",
-            "completedAt": "2026-09-12T15:32:58.018Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T15:32:58.018Z"
+        "generatedAt": "2026-09-12 16:25:16 UTC"
       }
     }
   ],
