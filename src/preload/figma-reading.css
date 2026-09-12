@@ -20,6 +20,16 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
 body .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_composerSeat { position:relative; bottom:auto; background:var(--odyssey-workspace); --dsh-composer-text-max-height:112px; }
 body .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody { flex:1 1 0; min-height:0; overflow-x:hidden; overflow-y:auto; scroll-padding-bottom:0; }
 body .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody::after { display:none!important; }
+/* Figma 749:27899/28129, 750:27915/28185: main reading and input share a column.
+   Reserve both scrollbar edges so the reading center matches the full-width
+   footer, and include the theme's gutter in its existing 16px side clearance. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not([data-odyssey-subagent-panel] *):not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody:not([data-research-center]) {
+  --dsh-chat-content-width:780px;
+  scrollbar-gutter:stable both-edges;
+}
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not([data-odyssey-subagent-panel] *):not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody:not([data-research-center]) .Md3f7G_scroll:not([data-odyssey-subagent-panel] *, .sRp_messages *) {
+  padding-inline:max(0px,calc(var(--dsh-composer-side-clearance) - var(--dsh-scrollbar-width)));
+}
 body .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_composerStack { gap:8px; }
 /* The center input owns 16px side clearance; its footer owns all bottom spacing. */
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .uV2eYG_root:not(:has([data-odyssey-continuable-composer])) { padding-bottom:0; }
@@ -83,6 +93,10 @@ body .odyssey-table-block table { min-width:100%; }
 body .odyssey-table-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--odyssey-muted); font:400 12px/20px var(--odyssey-font-ui); margin-top:8px; }
 body .odyssey-table-actions button { border:0; background:none; padding:2px 4px; border-radius:5px; color:inherit; font:inherit; cursor:pointer; }
 body .odyssey-table-actions button:hover { background:var(--odyssey-menu-row); color:var(--odyssey-text); }
+/* Figma 752:27866 / 753:27866: the main wide-table helper occupies one 24px line. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) { color:#2b2b2b; font:400 12px/24px var(--odyssey-font-ui); }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) { color:#e5e5e5; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) button { padding-block:0; }
 body .odyssey-table-dialog { box-sizing:border-box; max-width:calc(100vw - 48px); width:max-content; max-height:calc(100vh - 80px); overflow:auto; }
 body .odyssey-table-dialog>button { display:block; margin:0 0 12px auto; }
 body .odyssey-table-dialog table { width:max-content; }

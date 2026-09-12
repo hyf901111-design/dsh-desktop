@@ -71,7 +71,20 @@ function headerMarkup(view, crowded = false) {
 async function open({ view = 'research', dark = false, width = 740, closed = false, crowded = false } = {}) {
   page = await (await browser.newContext({ viewport: { width: 1380, height: 900 } })).newPage()
   const markup = headerMarkup(view, crowded)
-  await page.setContent(`<style>${baseCss}</style><style>body{margin:0;--dsw-alias-label-primary:#0f1115;--dsw-alias-label-secondary:#81858c}body[data-ds-dark-theme]{--dsw-alias-label-primary:#f9fafb;--dsw-alias-label-secondary:#adb2b8}</style><body ${dark ? 'data-ds-dark-theme' : ''}><div data-dsh-panel-host data-odyssey-panel-right="${closed ? 'closed' : 'open'}"></div><main class="pI_x6G_centerCol" style="width:${width}px;height:880px"><div class="wSkVaW_root" data-odyssey-page="${view === 'home' ? 'home' : view === 'research' ? 'research' : 'conversation'}">${markup}</div></main><section data-odyssey-subagent-panel><div class="wSkVaW_root" data-odyssey-page="conversation">${markup}</div></section></body>`)
+  // Native slots are layout-transparent but remain real CSS ancestors.
+  await page.setContent(`<style>${baseCss}</style><style>body{margin:0;--dsw-alias-label-primary:#0f1115;--dsw-alias-label-secondary:#81858c}body[data-ds-dark-theme]{--dsw-alias-label-primary:#f9fafb;--dsw-alias-label-secondary:#adb2b8}</style>
+    <body ${dark ? 'data-ds-dark-theme' : ''}>
+      <div data-dsh-panel-host data-odyssey-panel-right="${closed ? 'closed' : 'open'}"></div>
+      <div id="root"><div data-slot="root" style="display:contents"><div class="pI_x6G_frame" data-dsh-frame="true">
+        <main class="pI_x6G_centerCol" data-pane="conversation" style="width:${width}px;height:880px">
+          <div data-slot="conversation" style="display:contents"><div class="wSkVaW_root" data-odyssey-page="${view === 'home' ? 'home' : view === 'research' ? 'research' : 'conversation'}">
+            <div data-slot="conversation.session.header" style="display:contents">${markup}</div>
+          </div></div>
+        </main>
+      </div></div></div>
+      <section data-odyssey-subagent-panel><div class="wSkVaW_root" data-odyssey-page="conversation"><div data-slot="conversation.session.header" style="display:contents">${markup}</div></div></section>
+    </body>`)
+
   await page.addScriptTag({ content: script })
   await page.evaluate(() => window.startHeader())
   await expect.poll(() => page.locator('main header').getAttribute('data-odyssey-header-layout')).not.toBeNull()

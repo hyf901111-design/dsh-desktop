@@ -17,14 +17,15 @@ body .wSkVaW_header .wSkVaW_tab { width:56px; min-width:56px; height:28px; paddi
 body .wSkVaW_header .wSkVaW_tabActive { color:#17191c; background:#fff; }
 body[data-ds-dark-theme] .wSkVaW_header .wSkVaW_tabActive { color:#fff; background:#ffffff17; }
 /* Figma 737:27462/80 and A 688:27611/28227: only the regular title-to-nav
-   space is 24px. Keep the other flex gaps and 697 compact/narrow typography. */
-body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_crumb { line-height:20px; color:#252525; }
-body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) [data-srb-tabs] { margin-left:12px!important; }
-body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tab:not(.wSkVaW_tabActive) { color:#777; }
-body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tabActive { color:#000; background:rgb(255 255 255 / .8); }
-body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_crumb { color:#e5e5e5; }
-body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tab:not(.wSkVaW_tabActive) { color:#a0a0a0; }
-body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] > .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tabActive { color:#fff; background:rgb(255 255 255 / .085); }
+   space is 24px. The native header slot is a display:contents DOM wrapper;
+   keep the other flex gaps and 697 compact/narrow typography. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_crumb { line-height:20px; color:#252525; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) [data-srb-tabs] { margin-left:12px!important; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tab:not(.wSkVaW_tabActive) { color:#777; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tabActive { color:#000; background:rgb(255 255 255 / .8); }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_crumb { color:#e5e5e5; }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tab:not(.wSkVaW_tabActive) { color:#a0a0a0; }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=regular]:not([aria-hidden=true]):not([data-odyssey-subagent-panel] *) .wSkVaW_tabActive { color:#fff; background:rgb(255 255 255 / .085); }
 body .wSkVaW_header .wSkVaW_headerActions { order:3; display:flex; align-items:center; flex:none; gap:6px; margin:0; }
 body .wSkVaW_header [data-srb-utilities] { order:4; flex:none; height:28px!important; min-height:0; margin:0 0 0 auto!important; align-self:center!important; align-items:center; }
 body .wSkVaW_header .cubgiG_seat { width:auto; min-width:0; height:28px; min-height:28px; padding:0 8px; gap:6px; border-radius:7px; transform:none; font:400 13px/20px var(--odyssey-font-ui); }
@@ -72,6 +73,10 @@ body .cubgiG_item { width:100%; min-width:0; padding:8px 10px; border-radius:6px
 body .cubgiG_itemName { font:400 13px/20px var(--odyssey-font-ui); gap:8px; }
 body .cubgiG_itemName svg { width:16px; height:16px; flex:none; }
 body .cubgiG_itemDesc { display:block; padding-left:24px; white-space:normal; overflow:visible; text-overflow:clip; font:400 12px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+/* Figma 665:744/766: mode labels and descriptions have their own ink. */
+body [role=menu] .cubgiG_itemName { color:#292b2f; }
+body[data-ds-dark-theme] [role=menu] .cubgiG_itemName { color:#e7e7e9; }
+body[data-ds-dark-theme] [role=menu] .cubgiG_itemDesc { color:#a3a6ab; }
 /* Permission picker shared by the composer and Settings (665:828). */
 body [role=menu]:has(.odyssey-permission-item) { width:320px; min-width:0; padding:5px; }
 body [role=menu]:has(.odyssey-permission-item)>[role=presentation] { padding:0; gap:2px; }
@@ -84,6 +89,8 @@ body [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { backg
 body [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) .odyssey-permission-name { font-weight:500; }
 body[data-ds-dark-theme] [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { background:#373737; }
 body[data-ds-dark-theme] .odyssey-permission-description { color:#9c9c9c; }
+body [role=menu] .odyssey-permission-name { color:#242424; }
+body[data-ds-dark-theme] [role=menu] .odyssey-permission-name { color:#e6e6e6; }
 body [role=menu]:has(.odyssey-enter-item) { width:300px; }
 body:has(.hVGvvW_selector[aria-expanded=true]) [role=menu] { width:208px; min-width:0; padding:5px; }
 body:has(.hVGvvW_selector[aria-expanded=true]) [role=menu] [role=menuitem] { min-height:34px; height:34px; padding:7px 10px; }
@@ -198,6 +205,15 @@ body .odyssey-model-menu .odyssey-model-footer::before { content:''; position:ab
 body .odyssey-model-menu .odyssey-model-footer small { margin-left:auto; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
 body .odyssey-model-menu .odyssey-model-footer svg { width:12px; height:12px; flex:none; }
 body .odyssey-model-menu :is(button,input):focus-visible { outline:2px solid var(--odyssey-menu-border); outline-offset:-2px; }
+/* Figma 665:840/857: model-directory text and internal dividers. */
+body .odyssey-model-menu :is(.odyssey-model-search,._7KE1Ra_option[role]:not([aria-disabled=true]),._7KE1Ra_option:not([aria-disabled=true]) ._7KE1Ra_modelName,.odyssey-model-footer) { color:#242424; }
+body[data-ds-dark-theme] .odyssey-model-menu :is(.odyssey-model-search,._7KE1Ra_option[role]:not([aria-disabled=true]),._7KE1Ra_option:not([aria-disabled=true]) ._7KE1Ra_modelName,.odyssey-model-footer) { color:#e6e6e6; }
+body .odyssey-model-menu :is(._7KE1Ra_groupTitle,.odyssey-model-footer small) { color:#757575; }
+body[data-ds-dark-theme] .odyssey-model-menu :is(._7KE1Ra_groupTitle,.odyssey-model-footer small) { color:#9c9c9c; }
+body .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#f0f0f0; }
+body[data-ds-dark-theme] .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#373737; }
+body .odyssey-model-menu .odyssey-model-footer::before { background:#e3e3e3; }
+body[data-ds-dark-theme] .odyssey-model-menu .odyssey-model-footer::before { background:#424242; }
 /* 667:30199/30557: search-empty only; leave unconfigured/loading states alone. */
 body .odyssey-model-menu .odyssey-model-empty { box-sizing:border-box; height:64px; min-height:64px; padding:7px 10px; border-radius:6px; color:#a6a6a6; }
 body[data-ds-dark-theme] .odyssey-model-menu .odyssey-model-empty { color:#6b6b6b; }

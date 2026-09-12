@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { OFFICE_SPREADSHEET_THEME_MARKER, patchOfficeSpreadsheetTheme } from './office-spreadsheet-theme.mjs'
 
 const PATCH_MARKER = '/* sherlock:office-preview-service:v1 */'
-const PATCHED_CLIENT_SHA256 = 'be2bb640433d2e7a80f1beb7992bba871c2e2f8748fbc950ae3adcdc3977e143'
+const PRE_THEME_CLIENT_SHA256 = 'be2bb640433d2e7a80f1beb7992bba871c2e2f8748fbc950ae3adcdc3977e143'
+
+const PATCHED_CLIENT_SHA256 = '22d09a60f376ab1644d55d040346a5282d231e4253061783e20b3ab2feda9bd2'
 
 const PATCH_INTEGRITY_ANCHORS = Object.freeze([
   [PATCH_MARKER, 1],
@@ -18,7 +21,6 @@ const PATCH_INTEGRITY_ANCHORS = Object.freeze([
   ['const mount = createOfficePreviewMount(host);', 1],
   ['await renderAsync(buf, mount, void 0, {', 1],
   ['if (!lifecycle.attach({ dispose: () => mount.remove() })) return;', 1],
-  ['if (!lifecycle.attach(univer)) return;', 1],
   ['const viewer = await PptxViewer.open(bytes, mount, {', 1],
   ['...continuousPptxViewerOptions(lifecycle.signal, host),', 1],
   ['zipLimits: { ...RECOMMENDED_ZIP_LIMITS, maxEntryUncompressedBytes: 64 * 1024 * 1024 }', 1],
@@ -56,7 +58,12 @@ function occurrenceCount(source, value) {
   return source.split(value).length - 1
 }
 
-function assertOfficePreviewPatchIntegrity(source) {
+function assertOfficePreviewPatchIntegrity(source, expectedFingerprint = PATCHED_CLIENT_SHA256) {
+  const themed = expectedFingerprint !== PRE_THEME_CLIENT_SHA256
+  const themeAnchors = themed ? [[OFFICE_SPREADSHEET_THEME_MARKER, 1], ['if (!lifecycle.attach(spreadsheetTheme)) return;', 1], ['spreadsheetTheme.setEngine(univer);', 1], ['spreadsheetTheme.bind(univerAPI, workbook);', 1], ['if (!lifecycle.attach(univer)) return;', 0]] : [['if (!lifecycle.attach(univer)) return;', 1]]
+  for (const [anchor, count] of themeAnchors) {
+    if (occurrenceCount(source, anchor) !== count) throw new Error('Office preview spreadsheet theme integrity anchor failed')
+  }
   for (const [anchor, expected] of PATCH_INTEGRITY_ANCHORS) {
     const actual = occurrenceCount(source, anchor)
     if (actual !== expected) {
@@ -70,9 +77,9 @@ function assertOfficePreviewPatchIntegrity(source) {
     }
   }
   const fingerprint = createHash('sha256').update(source, 'utf8').digest('hex')
-  if (fingerprint !== PATCHED_CLIENT_SHA256) {
+  if (fingerprint !== expectedFingerprint) {
     throw new Error(
-      `Office preview patch integrity failed for fixed client fingerprint: expected ${PATCHED_CLIENT_SHA256}, found ${fingerprint}`
+      `Office preview patch integrity failed for fixed client fingerprint: expected ${expectedFingerprint}, found ${fingerprint}`
     )
   }
 }
@@ -132,6 +139,10 @@ export function patchSherlockOfficePreviewClient(source) {
         )
       : source
     migrated = alignPptxZipEntryLimit(migrated)
+    if (!migrated.includes(OFFICE_SPREADSHEET_THEME_MARKER)) {
+      assertOfficePreviewPatchIntegrity(migrated, PRE_THEME_CLIENT_SHA256)
+      migrated = patchOfficeSpreadsheetTheme(migrated)
+    }
     assertOfficePreviewPatchIntegrity(migrated)
     return migrated
   }
@@ -451,6 +462,8 @@ export function patchSherlockOfficePreviewClient(source) {
 \t\texports.officeViewers = officeViewers;`,
     'Cordis service publication'
   )
+  assertOfficePreviewPatchIntegrity(next, PRE_THEME_CLIENT_SHA256)
+  next = patchOfficeSpreadsheetTheme(next)
   assertOfficePreviewPatchIntegrity(next)
   return next
 }
