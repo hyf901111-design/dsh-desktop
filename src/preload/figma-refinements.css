@@ -276,3 +276,13 @@ body[data-ds-dark-theme] [role=menu]:has([data-odyssey-file-menu-label]) { backg
 body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] { padding:0 10px; gap:12px; font:400 14px/24px var(--odyssey-font-ui); }
 body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] svg { width:17px; height:17px; }
 body [role=menu]:has([data-odyssey-file-menu-label]) [class*=_itemWrap_]:first-child [role=menuitem] svg { width:16px; height:16px; }
+
+/* Blank canvas, component actions and format submenu (12C). */
+body .rScV5Q_contextMenu { box-sizing:border-box; width:240px; min-width:0; padding:5px; border:1px solid var(--odyssey-menu-border); border-radius:10px; background:var(--odyssey-menu); color:var(--odyssey-text); box-shadow:0 8px 24px -4px #00000024; backdrop-filter:blur(24px); font:400 13px/20px var(--odyssey-font-ui); }
+body .rScV5Q_contextMenu:has([data-research-context-paste]) { width:260px; }
+body .rScV5Q_contextMenu>button,body .rScV5Q_contextMenu .rScV5Q_contextDownloadGroup>button,body .rScV5Q_contextDownloadFormats>button { height:34px; min-height:34px; padding:7px 10px; font:400 13px/20px var(--odyssey-font-ui); }
+body .rScV5Q_contextMenu>*+*,body .rScV5Q_contextDownloadFormats>button+button { margin-top:2px; }
+body .rScV5Q_contextMenu [data-research-context-remove] { position:relative; margin-top:11px; }
+body .rScV5Q_contextMenu [data-research-context-remove]::before { content:''; position:absolute; left:6px; right:6px; top:-5px; height:1px; background:var(--odyssey-menu-border); }
+body .rScV5Q_contextMenuShortcut { margin-left:auto; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+body .rScV5Q_contextDownloadFormats[role=menu] { width:180px; padding:5px; }

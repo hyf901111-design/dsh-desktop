@@ -87,14 +87,16 @@ describe('selection actions at viewport edges', () => {
       m.workspace.setArtifacts([{ ...textNode(), x: 200, y: 235, width: 520, height: 300 }])
       m.workspace.updateSelection(['source'], 'replace')
     })
-    await m.event('click', m.query('button[aria-label="思维导图"]'))
+    m.canvas.getBoundingClientRect = () => ({ left: 50, top: 60, width: 400, height, right: 450, bottom: 60 + height })
+    const trigger = m.query('button[aria-label="思维导图"]')
+    trigger.getBoundingClientRect = () => ({ left: 70, top: 92, right: 160, bottom: 120, width: 90, height: 28 })
+    await m.event('click', trigger)
     const menu = m.query('[data-research-mind-map-menu]')
-    const bottom = Number.parseFloat(m.query('[data-research-selection-actions]').style.top)
     expect(Number(m.query('[data-research-selection-actions]').style.zIndex)).toBeGreaterThan(40)
-    const available = menu.style.top === 'auto' ? bottom - 56 : height - bottom - 14
+    const available = height - 60 - 8
     expect(Number.parseFloat(menu.style.maxHeight)).toBeLessThanOrEqual(available)
     expect(available).toBeGreaterThan(0)
-    expect(menu.style.overflowY).toBe('auto')
+    expect(m.win.getComputedStyle(menu).overflow).toBe('auto')
   })
   it('keeps the toolbar above the bottom boundary as the canvas resizes', async () => {
     const m = await mounted({}, undefined, { generate: async () => ({ ok: true }) })
