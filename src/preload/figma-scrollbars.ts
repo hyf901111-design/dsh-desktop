@@ -2,7 +2,7 @@
 export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => void {
   const win = doc.defaultView!
   if (!win?.ResizeObserver) return () => {}
-  type Bar = { port: HTMLElement; track: HTMLDivElement; thumb: HTMLDivElement; until: number; dragging: boolean; update: () => void; remove: () => void }
+  type Bar = { port: HTMLElement; track: HTMLDivElement; thumb: HTMLDivElement; until: number; dragging: boolean; show: () => void; update: () => void; remove: () => void }
   const bars = new Map<HTMLElement, Bar>()
   const scope = '[data-dsh-sidebar-root], .t8lSSG_panelBody'
   // The conversation has 16 px content padding; its thumb belongs to the
@@ -14,7 +14,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     const shellRect = shell?.getBoundingClientRect()
     return shellRect?.width ? shellRect.right : port.getBoundingClientRect().right
   }
-  let scheduled = 0, timer = 0, disposed = false
+  let scheduled = 0, disposed = false, keyboardMode = false
   const refresh = () => {
     scheduled = 0
     if (disposed) return
@@ -33,8 +33,8 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     track.className = 'odyssey-scroll-track'; track.setAttribute('aria-hidden', 'true')
     thumb.className = 'odyssey-scroll-thumb'; track.append(thumb); doc.body.append(track)
     port.dataset.odysseyScrollport = ''
-    let startY = 0, startScroll = 0, ratio = 1
-    const bar: Bar = { port, track, thumb, until: 0, dragging: false, update, remove }
+    let startY = 0, startScroll = 0, ratio = 1, timer = 0
+    const bar: Bar = { port, track, thumb, until: 0, dragging: false, show, update, remove }
     function update() {
       const r = port.getBoundingClientRect(), max = port.scrollHeight - port.clientHeight
       const visible = max > 1 && r.height > 0 && r.width > 0 && !port.closest('[aria-hidden=true],[inert]') && win.getComputedStyle(port).visibility !== 'hidden'
@@ -44,9 +44,9 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
       ratio = max / Math.max(1, r.height - height)
       track.style.left = `${rightEdge(port) - 12}px`; track.style.top = `${r.top}px`; track.style.height = `${r.height}px`
       thumb.style.height = `${height}px`; thumb.style.top = `${Math.max(0,Math.min(max,port.scrollTop)) / ratio}px`
-      track.dataset.visible = String(alwaysShow || bar.dragging || track.matches(':hover') || Date.now() < bar.until)
+      track.dataset.visible = String(alwaysShow || bar.dragging || track.matches(':hover') || (keyboardMode && port.contains(doc.activeElement)) || Date.now() < bar.until)
     }
-    function show() { bar.until = Date.now() + 700; update(); win.clearTimeout(timer); timer = win.setTimeout(schedule, 720) }
+    function show() { bar.until = Date.now() + 700; update(); win.clearTimeout(timer); timer = win.setTimeout(schedule, 700) }
     function down(e: PointerEvent) {
       if (e.button !== 0) return
       e.preventDefault(); e.stopPropagation(); bar.dragging = true; track.dataset.dragging = 'true'
@@ -55,10 +55,12 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     }
     function move(e: PointerEvent) { if (bar.dragging) { port.scrollTop = startScroll + (e.clientY - startY) * ratio; update() } }
     function end(e: PointerEvent) { if (!bar.dragging) return; bar.dragging = false; delete track.dataset.dragging; if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId); show() }
-    function remove() { port.removeEventListener('scroll', show); resize.unobserve(port); delete port.dataset.odysseyScrollport; track.remove() }
+    function remove() { win.clearTimeout(timer); port.removeEventListener('focusin', show); port.removeEventListener('focusout', show); port.removeEventListener('scroll', show); resize.unobserve(port); delete port.dataset.odysseyScrollport; track.remove() }
     track.addEventListener('pointerdown', down); track.addEventListener('pointermove', move)
     track.addEventListener('pointerup', end); track.addEventListener('pointercancel', end); track.addEventListener('lostpointercapture', end)
     track.addEventListener('pointerenter', show); track.addEventListener('pointerleave', show)
+    // Focus can stay within a reader/list longer than the scroll feedback timeout.
+    port.addEventListener('focusin', show); port.addEventListener('focusout', show)
     port.addEventListener('scroll', show, { passive: true }); resize.observe(port); bars.set(port, bar); update()
   }
   const scan = () => {
@@ -82,12 +84,16 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     for (const bar of bars.values()) {
       const r = bar.port.getBoundingClientRect()
       const edge = rightEdge(bar.port)
-      if (e.clientX >= edge-12 && e.clientX <= edge && e.clientY >= r.top && e.clientY <= r.bottom) { bar.until = Date.now()+700; bar.update(); win.clearTimeout(timer); timer = win.setTimeout(schedule,720) }
+      if (e.clientX >= edge-12 && e.clientX <= edge && e.clientY >= r.top && e.clientY <= r.bottom) bar.show()
     }
   }
+  // Pointer clicks may leave a link focused; only keyboard focus retains the thumb.
+  const keyboard = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey && !e.altKey) { keyboardMode = true; schedule() } }
+  const pointer = () => { keyboardMode = false; schedule() }
   const blur = () => { for(const bar of bars.values()) { bar.dragging=false; delete bar.track.dataset.dragging } schedule() }
   mutations.observe(doc.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['data-odyssey-panel-right','aria-hidden'] })
+  doc.addEventListener('keydown', keyboard, true); doc.addEventListener('pointerdown', pointer, true)
   doc.addEventListener('pointermove', edge, { passive:true }); win.addEventListener('resize', schedule); win.addEventListener('blur', blur); doc.addEventListener('transitionend', schedule)
   doc.addEventListener('scroll', schedule, { capture:true, passive:true }); scan()
-  return () => { disposed=true; mutations.disconnect(); resize.disconnect(); win.cancelAnimationFrame(scheduled); win.clearTimeout(timer); win.clearTimeout(scanTimer); doc.removeEventListener('pointermove',edge); doc.removeEventListener('scroll',schedule,true); win.removeEventListener('resize',schedule); win.removeEventListener('blur',blur); doc.removeEventListener('transitionend',schedule); for(const bar of bars.values())bar.remove(); bars.clear() }
+  return () => { disposed=true; mutations.disconnect(); resize.disconnect(); win.cancelAnimationFrame(scheduled); win.clearTimeout(scanTimer); doc.removeEventListener('keydown',keyboard,true); doc.removeEventListener('pointerdown',pointer,true); doc.removeEventListener('pointermove',edge); doc.removeEventListener('scroll',schedule,true); win.removeEventListener('resize',schedule); win.removeEventListener('blur',blur); doc.removeEventListener('transitionend',schedule); for(const bar of bars.values())bar.remove(); bars.clear() }
 }

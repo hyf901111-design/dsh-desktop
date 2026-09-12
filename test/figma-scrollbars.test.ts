@@ -61,3 +61,83 @@ it('places the message thumb at the panel edge outside the padded reading column
   expect(parseFloat(track.style.left)).toBeGreaterThan(port.getBoundingClientRect().right)
   dispose(); await win.happyDOM.close()
 })
+
+
+it('keeps a reader scrollbar visible while focus moves within its content, then fades after focus leaves', async () => {
+  const win = new Window(), doc = win.document
+  doc.body.innerHTML = '<aside class="t8lSSG_panel"><button id="header">页签</button><section class="t8lSSG_panelBody"><div id="reader" style="overflow-y:auto"><a href="#first">第一处引用</a><button>第二处引用</button></div><textarea id="composer"></textarea></section></aside><main style="overflow-y:auto"><button id="center">画布操作</button></main>'
+  const port = doc.querySelector('#reader')!
+  port.getBoundingClientRect = () => new DOMRect(300,50,340,500)
+  Object.defineProperties(port, { scrollHeight: { value: 1500 }, clientHeight: { value: 500 } })
+  Object.defineProperty(win, 'ResizeObserver', { value: class { observe() {} unobserve() {} disconnect() {} } })
+  const dispose = mountFigmaScrollbars(doc as unknown as Document)
+  try {
+    const track = doc.querySelector('.odyssey-scroll-track')!
+    expect(doc.querySelectorAll('.odyssey-scroll-track')).toHaveLength(1)
+    doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    ;(port.querySelector('a') as unknown as HTMLElement).focus()
+    await new Promise(resolve => setTimeout(resolve, 800))
+    expect(track.getAttribute('data-visible')).toBe('true')
+    ;(port.querySelector('button') as unknown as HTMLElement).focus()
+    await new Promise(resolve => setTimeout(resolve, 800))
+    expect(track.getAttribute('data-visible')).toBe('true')
+    ;(doc.querySelector('#composer') as unknown as HTMLElement).focus()
+    await new Promise(resolve => setTimeout(resolve, 800))
+    expect(track.getAttribute('data-visible')).toBe('false')
+    ;(doc.querySelector('#header') as unknown as HTMLElement).focus()
+    ;(doc.querySelector('#center') as unknown as HTMLElement).focus()
+    expect(track.getAttribute('data-visible')).toBe('false')
+  } finally {
+    dispose()
+    await win.happyDOM.close()
+  }
+})
+
+it('fades each sidebar independently while another scrollbar continues receiving activity', async () => {
+  const win = new Window(), doc = win.document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><div style="overflow-y:auto"></div></aside><section class="t8lSSG_panelBody" style="overflow-y:auto"></section>'
+  const ports = [doc.querySelector('aside div')!, doc.querySelector('section')!]
+  for (const port of ports) {
+    port.getBoundingClientRect = () => new DOMRect(0,50,280,500)
+    Object.defineProperties(port, { scrollHeight: { value: 1500 }, clientHeight: { value: 500 } })
+  }
+  Object.defineProperty(win, 'ResizeObserver', { value: class { observe() {} unobserve() {} disconnect() {} } })
+  const dispose = mountFigmaScrollbars(doc as unknown as Document)
+  try {
+    const tracks = doc.querySelectorAll('.odyssey-scroll-track')
+    ports[0]!.dispatchEvent(new win.Event('scroll'))
+    await new Promise(resolve => setTimeout(resolve, 400))
+    ports[1]!.dispatchEvent(new win.Event('scroll'))
+    await new Promise(resolve => setTimeout(resolve, 400))
+    expect(tracks[0]!.getAttribute('data-visible')).toBe('false')
+    expect(tracks[1]!.getAttribute('data-visible')).toBe('true')
+  } finally {
+    dispose()
+    await win.happyDOM.close()
+  }
+})
+
+
+it('releases keyboard retention on a pointer click even if the same link keeps DOM focus', async () => {
+  const win = new Window(), doc = win.document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><div style="overflow-y:auto"><a href="#reference">引用</a></div></aside>'
+  const port = doc.querySelector('aside div')!, link = port.querySelector('a')!
+  port.getBoundingClientRect = () => new DOMRect(0,50,280,500)
+  Object.defineProperties(port, { scrollHeight: { value: 1500 }, clientHeight: { value: 500 } })
+  Object.defineProperty(win, 'ResizeObserver', { value: class { observe() {} unobserve() {} disconnect() {} } })
+  const dispose = mountFigmaScrollbars(doc as unknown as Document)
+  try {
+    const track = doc.querySelector('.odyssey-scroll-track')!
+    doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    link.focus()
+    await new Promise(resolve => setTimeout(resolve, 800))
+    expect(track.getAttribute('data-visible')).toBe('true')
+    link.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, button: 0 }))
+    await new Promise(resolve => setTimeout(resolve, 800))
+    expect(doc.activeElement).toBe(link)
+    expect(track.getAttribute('data-visible')).toBe('false')
+  } finally {
+    dispose()
+    await win.happyDOM.close()
+  }
+})

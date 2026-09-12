@@ -107,7 +107,7 @@ function OdysseySubagentPanelHeader({sessionId,useSession,useSessions}) {
   const address=session.subagent?.address;
   return react_jsx_runtime.jsxs('header',{className:'odyssey-subagent-panel-header',children:[
     react_jsx_runtime.jsx('strong',{children:summary?.displayTitle??sessionId}),
-    react_jsx_runtime.jsxs('div',{children:[react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true}),address?.mode==='one-shot'?'一次性':'持续运行',' · ',session.running?'正在运行':'当前未运行']})
+    react_jsx_runtime.jsxs('div',{children:[react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true}),address?.mode==='one-shot'?'一次性':'可继续',' · ',session.running?'正在运行':'当前未运行']})
   ]});
 }
 `;
@@ -162,7 +162,7 @@ const subagentHeader=`function OdysseySubagentPanelHeader({sessionId,useSession,
   const metrics=[tokens===undefined?undefined:formatTokens(tokens)+' tok',seconds===undefined?undefined:(seconds>=60?Math.floor(seconds/60)+'分':'')+(seconds%60)+'秒'].filter(x=>x!==undefined).join(' · ');
   return react_jsx_runtime.jsxs('header',{className:'odyssey-subagent-panel-header',children:[
     react_jsx_runtime.jsx('strong',{children:title}),
-    react_jsx_runtime.jsxs('div',{className:'odyssey-subagent-panel-state',children:[react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true}),address?.mode==='one-shot'?'一次性':'持续运行',' · ',session.running?'正在运行':'当前未运行']}),
+    react_jsx_runtime.jsxs('div',{className:'odyssey-subagent-panel-state',children:[react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true}),address?.mode==='one-shot'?'一次性':'可继续',' · ',session.running?'正在运行':'当前未运行']}),
     metrics&&react_jsx_runtime.jsx('div',{className:'odyssey-subagent-panel-metrics',children:metrics})
   ]});
 }
@@ -179,7 +179,7 @@ function finishSubagentPanelScope(source) {
 
   source=exact(source, "slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel'},ConversationRoot);", "slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel',children:undefined},ConversationRoot);")
   source=exact(source, "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true},{sessionId:id}),", "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true,renderSlot,renderSlotChain},{sessionId:id}),")
-  return finishSubagentPanelPortal(source)
+  return patchSubagentContinuableComposer(finishSubagentPanelPortal(source))
 }
 function finishSubagentPanelPortal(source) {
   const marker='/* odyssey:subagent-parent-portals:v1 */'
@@ -217,4 +217,42 @@ export function patchSubagentPanelEntry(source, sidebar=false) {
           if(sessions.openSubagentPanel)sessions.openSubagentPanel(address);
           else {onOpenChild?.(address);sessions.openSubagent?.(address);}`)
   return exact(source,'sessions.openSubagent(address);','if(sessions.openSubagentPanel)sessions.openSubagentPanel(address);else sessions.openSubagent(address);')
+}
+
+// Preserve the native draft machine and every control callback. Only the child
+// panel changes the presentation; the parent retains its original row elements.
+const continuableComposerRow = `
+function OdysseySubagentComposerRow({compact,className,children}) {
+  const [open,setOpen]=react.useState(false);
+  const anchor=react.useRef(null),popup=react.useRef(null);
+  const id=react.useId();
+  react.useEffect(()=>{
+    if(!open)return;
+    const outside=event=>{if(!anchor.current?.contains(event.target)&&!popup.current?.contains(event.target)&&!event.target?.closest?.('[role=menu],[role=listbox],[role=dialog]'))setOpen(false);};
+    const escape=event=>{if(event.key==='Escape'&&!event.defaultPrevented){event.preventDefault();setOpen(false);anchor.current?.querySelector('button')?.focus();}};
+    document.addEventListener('pointerdown',outside);
+    document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
+  },[open]);
+  if(!compact)return react_jsx_runtime.jsxs('div',{className,children});
+  const [leading,trailing]=children;
+  const [extensions,model,context,stop,send]=trailing.props.children;
+  return react_jsx_runtime.jsxs('div',{className,children:[
+    react_jsx_runtime.jsxs('div',{className:'odyssey-subagent-composer-tools',ref:anchor,
+      onKeyDown:event=>{if(event.key==='Escape'&&open){event.preventDefault();event.stopPropagation();setOpen(false);anchor.current?.querySelector('button')?.focus();}},
+      children:[react_jsx_runtime.jsx('button',{type:'button',className:'odyssey-subagent-composer-hint','aria-expanded':open,'aria-controls':id,'aria-label':'可继续发送后续消息，消息工具',onClick:()=>setOpen(value=>!value),children:'可继续发送后续消息'}),
+        react_jsx_runtime.jsxs('div',{id,ref:popup,hidden:!open,role:'region','aria-label':'消息工具',className:'odyssey-subagent-composer-popover',children:[leading,extensions,context]})]
+    }),
+    react_jsx_runtime.jsxs('div',{className:trailing.props.className,children:[stop,send]})
+  ]});
+}
+`;
+export function patchSubagentContinuableComposer(source) {
+  const marker='/* odyssey:continuable-child-composer:v1 */';
+  if(source.includes(marker))return source;
+  source=exact(source,'function InputBar({ useSession,',marker+'\n'+continuableComposerRow+'\n\t\tfunction InputBar({ subagentPanel=false, useSession,');
+  source=exact(source,'const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n                subagentPanel,');
+  source=exact(source,'"data-composer-card": true,','"data-composer-card": true,\n                        "data-odyssey-continuable-composer": subagentPanel && continuable || void 0,');
+  source=exact(source,'(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\t\t\tclassName: InputBar_module_css_default.row,','(0, react_jsx_runtime.jsxs)(OdysseySubagentComposerRow, {\n                                compact: subagentPanel && continuable,\n\t\t\t\t\t\t\t\tclassName: InputBar_module_css_default.row,');
+  return source;
 }

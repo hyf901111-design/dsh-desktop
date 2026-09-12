@@ -35,3 +35,15 @@ it('keeps unavailable records disabled with their diagnostic reason', () => {
   expect(item.props['aria-label']).toBe('broken 会话记录损坏')
   expect(item.props.onClick).toBeUndefined()
 })
+
+
+it('announces the total before the running subset in a nested catalog', () => {
+  const source=patchFigmaRefinementSubagent(original)
+  const start=source.indexOf('"aria-label": [t(totalCountKey,')
+  expect(start).toBeGreaterThan(-1)
+  const expression=source.slice(start+'"aria-label": '.length,source.indexOf(',\n',start))
+  const label=new Function('t','totalCountKey','runningCountKey','descendantCount','descendants','return '+expression)
+  const t=(key,{count})=>key==='total'?count+'个子代理':count+'个子代理，正在运行'
+  expect(label(t,'total','running',2,{runningCount:1})).toBe('2个子代理，1个子代理，正在运行')
+  expect(label(t,'total','running',2,{runningCount:0})).toBe('2个子代理')
+})
