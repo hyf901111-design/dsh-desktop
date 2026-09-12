@@ -9,7 +9,7 @@ it('renders todo-owned status and uses real user content when no goal exists', (
  expect(patched.includes('OdysseyTaskStatus')).toBe(true)
  expect(patchFigmaReadingConversation(patched)).toBe(patched)
  const start=patched.indexOf('function odysseyTaskObjective('),end=patched.indexOf('function OdysseyTaskStatus(',start)
- const objective=runInNewContext(patched.slice(start,end)+';odysseyTaskObjective',{contentParts:(parts:any[])=>({text:parts.map(p=>p.text??'').join('')}),parseResearchPrompt:(text:string)=>({text})})
+ const objective=runInNewContext(patched.slice(start,end)+';odysseyTaskObjective',{contentParts:(parts:any[])=>({text:parts.map(p=>p.text??'').join('')}),odysseyTaskVisibleText:(text:string)=>text.replace(/\s+/g,' ').trim() || undefined})
  const chat={order:['assistant','user','next'],nodes:new Map([['assistant',{kind:'assistant',data:{content:[{text:'不要用助手输出'}]}}],['user',{kind:'user',data:{content:[{text:'  对比季度收入\n与成本  '}]}}],['next',{kind:'user',data:{content:[{text:'继续'}]}}]])}
  expect(objective({chat,hasMore:false})).toBe('对比季度收入 与成本')
  expect(objective({chat,hasMore:true})).toBeUndefined()

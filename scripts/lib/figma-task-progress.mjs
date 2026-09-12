@@ -7,7 +7,7 @@ function exact(source, before, after) {
 /** Figma 703:26986 / 703:26944. Assets are the exact exported light/dark SVGs. */
 export function patchFigmaTaskProgress(source) {
   const marker='/* odyssey:task-progress:20260913 */'
-  if(source.includes(marker)) return source
+  if(source.includes(marker)) return patchTaskObjectiveProjection(source)
   const helpers=`${marker}
 function odysseyTaskObjective(snapshot) {
   // Do not mistake the first loaded page for the original request.
@@ -38,5 +38,31 @@ function OdysseyTaskStatus({status}) {
   panel=exact(panel,'children: folded ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutline14, {})','children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})')
   source=source.slice(0,start)+helpers+panel+source.slice(end)
   source=exact(source,'function TodoDock({ useProjection, t }) {','function TodoDock({ useProjection, useSession, t }) {\n const requestObjective=useSession(odysseyTaskObjective);')
-  return exact(source,'objective: useProjection("goal")?.goal?.objective,','objective: useProjection("goal")?.goal?.objective?.trim() || requestObjective,')
+  return patchTaskObjectiveProjection(exact(source,'objective: useProjection("goal")?.goal?.objective,','objective: useProjection("goal")?.goal?.objective?.trim() || requestObjective,'))
+}
+
+/** Flatten the same reference projection as the user bubble, never its hidden metadata. */
+function patchTaskObjectiveProjection(source) {
+  const marker='/* odyssey:task-objective-visible:20260913 */'
+  if(source.includes(marker)) return source
+  const helper=`${marker}
+function odysseyTaskVisibleText(text) {
+  if(typeof text!=="string" || !text.trim()) return undefined;
+  const research=parseResearchPrompt(text);
+  // A malformed encoded envelope has no safe display projection.
+  if(text.startsWith(RESEARCH_PROMPT_PREFIX) && research.text===text) return undefined;
+  const visible=part=>{
+    if(typeof part==="string" || typeof part==="number") return String(part);
+    if(Array.isArray(part)) return part.map(visible).join("");
+    if(!part || !part.props) return "";
+    if(part.type===ResearchMessageFileChip) return researchPromptBasename(part.props.file.name);
+    if(part.type===ResearchMessageArtifactChip) return researchArtifactReferenceLabel(part.props.artifact);
+    return visible(part.props.children);
+  };
+  return visible(projectResearchUserText(research)).replace(/\\s+/g," ").trim() || undefined;
+}
+`;
+  source=exact(source,'function odysseyTaskObjective(',helper+'function odysseyTaskObjective(')
+  source=exact(source,'return parseResearchPrompt(text).text.replace(/\\s+/g," ").trim() || undefined;','return odysseyTaskVisibleText(text);')
+  return exact(source,'objective: useProjection("goal")?.goal?.objective?.trim() || requestObjective,','objective: odysseyTaskVisibleText(useProjection("goal")?.goal?.objective) || requestObjective,')
 }
