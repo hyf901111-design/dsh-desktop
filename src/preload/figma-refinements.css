@@ -73,6 +73,10 @@ body .cubgiG_item { width:100%; min-width:0; padding:8px 10px; border-radius:6px
 body .cubgiG_itemName { font:400 13px/20px var(--odyssey-font-ui); gap:8px; }
 body .cubgiG_itemName svg { width:16px; height:16px; flex:none; }
 body .cubgiG_itemDesc { display:block; padding-left:24px; white-space:normal; overflow:visible; text-overflow:clip; font:400 12px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+/* Figma 665:744/766: mode labels and descriptions have their own ink. */
+body [role=menu] .cubgiG_itemName { color:#292b2f; }
+body[data-ds-dark-theme] [role=menu] .cubgiG_itemName { color:#e7e7e9; }
+body[data-ds-dark-theme] [role=menu] .cubgiG_itemDesc { color:#a3a6ab; }
 /* Permission picker shared by the composer and Settings (665:828). */
 body [role=menu]:has(.odyssey-permission-item) { width:320px; min-width:0; padding:5px; }
 body [role=menu]:has(.odyssey-permission-item)>[role=presentation] { padding:0; gap:2px; }
