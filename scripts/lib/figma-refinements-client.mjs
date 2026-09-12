@@ -46,6 +46,12 @@ export function patchFigmaRefinementConversation(source) {
   return source
 }
 export function patchFigmaRefinementSubagent(source) {
+  source=exact(source,
+    '(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, { state: entry.activity === "running" ? "ongoing" : "done" })',
+    '(0, react_jsx_runtime.jsx)("span", { "data-odyssey-subagent-activity": entry.activity === "running" ? "running" : "idle", "aria-hidden": "true" })');
+  source=exact(source,
+    'const reserveDisclosure = catalog.entries.some((entry) => entry.kind === "child" && entry.hasChildren);',
+    'const reserveDisclosure = true; // Keep labels aligned with the tree disclosure column.');
   const marker='/* odyssey:subagent-tree:20260912 */'
   if(source.includes(marker))return source
   source=exact(source,'let react = require("react");','let react = require("react");\n\t\tlet odysseyReactDOM = require("react-dom");\n'+marker)

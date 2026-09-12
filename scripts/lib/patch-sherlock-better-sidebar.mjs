@@ -1,3 +1,4 @@
+import { patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
 import { readFile, writeFile } from 'node:fs/promises'
@@ -958,6 +959,7 @@ function patchFigmaCompactPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
+  source = patchSubagentPanelEntry(source, true)
   source = patchFigmaTaskTabIcon(patchFigmaNativeFileMenu(source))
   let next = patchFigmaPanelDefaultWidth(
     patchFigmaFilePanel(

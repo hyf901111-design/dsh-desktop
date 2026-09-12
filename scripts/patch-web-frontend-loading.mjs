@@ -1,3 +1,4 @@
+import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from './lib/figma-subagent-panel.mjs'
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
 import { patchFigmaModelMenu } from './lib/figma-model-menu.mjs'
@@ -140,3 +141,14 @@ for (const [name, patch] of [
   const clientPath = join(process.cwd(), 'node_modules', '@deepseek-ai', name, 'lib/client.js')
   writeFileSync(clientPath, patch(readFileSync(clientPath, 'utf8')))
 }
+
+for (const [relative, patch] of [
+  ['dsh-client-runtime/lib/client.js', patchSubagentPanelRuntime],
+  ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
+  ['dsh-client-ui-conversation/lib/client.js', patchSubagentPanelConversation],
+  ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]
+]) {
+  const path = join(process.cwd(), 'node_modules/@deepseek-ai', relative)
+  writeFileSync(path, patch(readFileSync(path, 'utf8')))
+}
+writeFileSync(asset('.js'), patchSubagentPanelRenderer(readFileSync(asset('.js'), 'utf8'), true))
