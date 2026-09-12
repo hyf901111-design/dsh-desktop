@@ -35,6 +35,7 @@ async function loadConversationBundle(styleTexts?: string[]): Promise<ClientBund
     : {
         querySelector: () => null,
         createElement: () => ({ dataset: {}, textContent: '', setAttribute() {} }),
+        documentElement: { appendChild(tag: {textContent?: string}) { styleTexts.push(tag.textContent ?? '') } },
         head: {
           appendChild(tag: { textContent?: string }) {
             styleTexts.push(tag.textContent ?? '')
@@ -409,7 +410,7 @@ describe('compact execution status', () => {
     expect(observed).toEqual([120, 280])
   })
 
-  it('follows a newly started turn even when the reader was scrolled upward', async () => {
+  it('preserves the reading position when a remote turn starts while reading history', async () => {
     const client = await loadConversationBundle()
     expect(client.shouldFollowConversationBottom).toBeTypeOf('function')
     if (typeof client.shouldFollowConversationBottom !== 'function') return
@@ -422,7 +423,7 @@ describe('compact execution status', () => {
         tipMoved: true,
         atBottom: false
       })
-    ).toBe(true)
+    ).toBe(false)
     expect(
       client.shouldFollowConversationBottom({
         appendedUser: false,
@@ -463,7 +464,7 @@ describe('compact execution status', () => {
       id: 'host',
       querySelector: () => ({ parentElement: innerScrollport })
     }
-    expect(client.composerScrollTargets({ closest: () => hostScrollport })).toEqual([
+    expect(client.composerScrollTargets({ closest: (selector: string) => selector === "[data-conversation-scroll]" ? hostScrollport : null })).toEqual([
       hostScrollport,
       innerScrollport
     ])

@@ -1,3 +1,4 @@
+import backArrow from './figma-settings-assets/back-arrow.svg?raw'
 import { publicIdLabel, installBoardUiStyles } from './research-board-dialogs'
 import type { ResearchBoardsBridge } from '../shared/research-boards'
 import sherlockLogo from '../../build/sherlock-logo.svg?raw'
@@ -609,10 +610,8 @@ export function mountAccountUi(
       trigger?.focus()
     })
     back.className = 'sherlock-settings-back'
-    const backIcon = new DOMParser().parseFromString(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3m4-4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-      'image/svg+xml'
-    ).documentElement
+    const backIcon = new DOMParser().parseFromString(backArrow, 'image/svg+xml').documentElement
+    backIcon.setAttribute('aria-hidden', 'true')
     back.prepend(document.importNode(backIcon, true))
     const brand = document.createElement('span')
     brand.className = 'sherlock-settings-logo'
