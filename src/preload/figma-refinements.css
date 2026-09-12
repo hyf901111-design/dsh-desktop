@@ -89,6 +89,8 @@ body [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { backg
 body [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) .odyssey-permission-name { font-weight:500; }
 body[data-ds-dark-theme] [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { background:#373737; }
 body[data-ds-dark-theme] .odyssey-permission-description { color:#9c9c9c; }
+body [role=menu] .odyssey-permission-name { color:#242424; }
+body[data-ds-dark-theme] [role=menu] .odyssey-permission-name { color:#e6e6e6; }
 body [role=menu]:has(.odyssey-enter-item) { width:300px; }
 body:has(.hVGvvW_selector[aria-expanded=true]) [role=menu] { width:208px; min-width:0; padding:5px; }
 body:has(.hVGvvW_selector[aria-expanded=true]) [role=menu] [role=menuitem] { min-height:34px; height:34px; padding:7px 10px; }
@@ -203,6 +205,15 @@ body .odyssey-model-menu .odyssey-model-footer::before { content:''; position:ab
 body .odyssey-model-menu .odyssey-model-footer small { margin-left:auto; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
 body .odyssey-model-menu .odyssey-model-footer svg { width:12px; height:12px; flex:none; }
 body .odyssey-model-menu :is(button,input):focus-visible { outline:2px solid var(--odyssey-menu-border); outline-offset:-2px; }
+/* Figma 665:840/857: model-directory text and internal dividers. */
+body .odyssey-model-menu :is(.odyssey-model-search,._7KE1Ra_option[role]:not([aria-disabled=true]),._7KE1Ra_option:not([aria-disabled=true]) ._7KE1Ra_modelName,.odyssey-model-footer) { color:#242424; }
+body[data-ds-dark-theme] .odyssey-model-menu :is(.odyssey-model-search,._7KE1Ra_option[role]:not([aria-disabled=true]),._7KE1Ra_option:not([aria-disabled=true]) ._7KE1Ra_modelName,.odyssey-model-footer) { color:#e6e6e6; }
+body .odyssey-model-menu :is(._7KE1Ra_groupTitle,.odyssey-model-footer small) { color:#757575; }
+body[data-ds-dark-theme] .odyssey-model-menu :is(._7KE1Ra_groupTitle,.odyssey-model-footer small) { color:#9c9c9c; }
+body .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#f0f0f0; }
+body[data-ds-dark-theme] .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#373737; }
+body .odyssey-model-menu .odyssey-model-footer::before { background:#e3e3e3; }
+body[data-ds-dark-theme] .odyssey-model-menu .odyssey-model-footer::before { background:#424242; }
 /* 667:30199/30557: search-empty only; leave unconfigured/loading states alone. */
 body .odyssey-model-menu .odyssey-model-empty { box-sizing:border-box; height:64px; min-height:64px; padding:7px 10px; border-radius:6px; color:#a6a6a6; }
 body[data-ds-dark-theme] .odyssey-model-menu .odyssey-model-empty { color:#6b6b6b; }
