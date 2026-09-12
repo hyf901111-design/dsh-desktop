@@ -35,7 +35,12 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source, 'const selectView = (0, react.useCallback)((viewId) => {\n\t\t\t\texplicitResearchViewSessions.add(sessionId);', 'const selectView = (0, react.useCallback)((viewId) => {\n\t\t\t\texplicitHomeViewSessions.delete(sessionId);\n\t\t\t\texplicitResearchViewSessions.add(sessionId);')
   source = exact(source, 'const activateChat = (event) => {\n\t\t\t\t\tif (event.detail?.sessionId !== sessionId) return;', 'const activateChat = (event) => {\n\t\t\t\t\tif (event.detail?.sessionId !== sessionId) return;\n\t\t\t\t\texplicitHomeViewSessions.add(sessionId);')
   const finalHideChrome = 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && (researchNavigation.current !== sessionId || explicitHomeViewSessions.has(sessionId));'
-  source = exact(source, source.includes('const hideChrome = blank && composerPhase === "blank" && active?.id === "chat";') ? 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat";' : 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;', finalHideChrome)
+  const residentHeader = 'const hideChrome = false; /* odyssey:resident-home-header:20260912 */\n\t\t\tconst homeHeader = blank && composerPhase === "blank" && active?.id === "chat";'
+  if (!source.includes(residentHeader)) {
+    source = exact(source, source.includes('const hideChrome = blank && composerPhase === "blank" && active?.id === "chat";') ? 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat";' : 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;', finalHideChrome)
+    source = exact(source, finalHideChrome, residentHeader)
+  }
+  source = exact(source, '"data-srb-session-header":"",', '"data-srb-session-header":"", "data-odyssey-home-header":homeHeader,')
   source = exact(source, 'children: summary.displayTitle', 'children: last && blankResearchTitle ? "新研究" : summary.displayTitle')
   // Keep workspace and permission-block placeholders ahead of the empty Research hint.
   source = exact(source, '} : hero ? { placeholder: t("placeholder.hero") } : {},', '} : hero ? { placeholder: t("placeholder.hero") } : researchEmpty ? { placeholder: "描述你想研究的问题…" } : {},')

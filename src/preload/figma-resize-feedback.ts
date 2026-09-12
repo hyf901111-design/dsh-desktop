@@ -6,6 +6,7 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
   if (!win) return () => {}
   let handle: HTMLElement | null = null
   let pointer: number | null = null
+  let pointerY = 0
   let frame = 0
   let overlay: HTMLDivElement | null = null
   let grip: HTMLDivElement | null = null
@@ -35,13 +36,14 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
       overlay.append(grip)
       doc.body.append(overlay)
     }
-    // Figma 194:360/1091: 536px at a 900px window, centered vertically.
+    // Keep the bright crest under the pointer, clipping its feathered ends
+    // at the panel edges instead of recentering the whole gesture.
     const height = Math.round(Math.min(rect.height, win.innerHeight) * 536 / 900)
-    const top = rect.top + (rect.height - height) / 2
+    const center = Math.max(0, Math.min(rect.height, pointerY - rect.top))
     overlay.style.left = `${sidebar ? rect.right : rect.left - 5}px`
-    overlay.style.top = `${top}px`
-    overlay.style.height = `${height}px`
-    grip!.style.top = '0px'
+    overlay.style.top = `${rect.top}px`
+    overlay.style.height = `${rect.height}px`
+    grip!.style.top = `${center - height / 2}px`
     grip!.style.height = `${height}px`
     if (pointer !== null) frame = win.requestAnimationFrame(draw)
   }
@@ -51,6 +53,7 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
     const next = match(event)
     if (!next) return
     handle = next
+    pointerY = event.clientY
     draw()
   }
   const down = (event: PointerEvent) => {
@@ -60,11 +63,13 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
     clear()
     handle = next
     pointer = event.pointerId
+    pointerY = event.clientY
     doc.body.dataset.odysseyResizing = ''
     frame = win.requestAnimationFrame(draw)
   }
   const move = (event: PointerEvent) => {
     if (pointer !== null && pointer !== event.pointerId) return
+    pointerY = event.clientY
     if (pointer === null && handle) draw()
   }
   const out = (event: PointerEvent) => {
