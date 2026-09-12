@@ -113,7 +113,7 @@ function OdysseySubagentPanelHeader({sessionId,useSession,useSessions}) {
 `;
 export function patchSubagentPanelConversation(source) {
   const marker='/* odyssey:subagent-conversation-tab:v1 */'
-  if(source.includes(marker))return source
+  if(source.includes(marker))return finishSubagentPanelScope(source)
   source=exact(source,'class ResearchSidebarCoordinator {',marker+'\n'+panelComponent+'\nclass ResearchSidebarCoordinator {\n sessions=null;')
   source=exact(source,'attach(service, t) {','attach(service, t, sessions) {\n this.sessions=sessions;')
   source=exact(source,'return () => {\n\t\t\t\t\tunregister?.();',`const unregisterSubagent=service.registerTab({id:'sherlock-subagent-conversation',title:()=> '子代理',hidden:true,single:false,component:props=>react_jsx_runtime.jsx(OdysseySubagentPanel,{...props,coordinator})});
@@ -144,7 +144,37 @@ export function patchSubagentPanelConversation(source) {
   source=source.slice(0,a)+`const odysseyConversationOptions=${options};
       slots.register({...odysseyConversationOptions,children:{...odysseyConversationOptions.children,'conversation.subagent.panel':{kind:'single',scope:'session'}}},ConversationRoot);
       slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel'},ConversationRoot);`+source.slice(b+'}, ConversationRoot);'.length)
-  return source
+  return finishSubagentPanelScope(source)
+}
+
+const subagentHeader=`function OdysseySubagentPanelHeader({sessionId,useSession,useSessions,useProjection}) {
+  const session=useSession(s=>s),summary=useSessions(s=>s.byId[sessionId]);
+  const usage=useProjection('tokenUsage'),timing=useProjection('subagentTiming');
+  const [now,setNow]=react.useState(Date.now);
+  react.useEffect(()=>{if(!session.running)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[session.running]);
+  const address=session.subagent?.address;
+  const buckets=usage?[usage.uncachedInputTokens,usage.outputTokens,usage.cacheReadTokens,usage.cacheWriteTokens]:[];
+  const tokens=buckets.length===4&&buckets.every(Number.isFinite)?buckets.reduce((a,b)=>a+b,0):undefined;
+  const duration=timing===undefined?undefined:timing.settledMs+(timing.active?Math.max(0,(session.running?now:timing.active.through)-timing.active.since):0);
+  const seconds=Number.isFinite(duration)?Math.floor(Math.max(0,duration)/1000):undefined;
+  const metrics=[tokens===undefined?undefined:formatTokens(tokens)+' tok',seconds===undefined?undefined:(seconds>=60?Math.floor(seconds/60)+'分':'')+(seconds%60)+'秒'].filter(x=>x!==undefined).join(' · ');
+  return react_jsx_runtime.jsxs('header',{className:'odyssey-subagent-panel-header',children:[
+    react_jsx_runtime.jsx('strong',{children:summary?.displayTitle??sessionId}),
+    react_jsx_runtime.jsxs('div',{className:'odyssey-subagent-panel-state',children:[react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true}),address?.mode==='one-shot'?'一次性':'持续运行',' · ',session.running?'正在运行':'当前未运行']}),
+    metrics&&react_jsx_runtime.jsx('div',{className:'odyssey-subagent-panel-metrics',children:metrics})
+  ]});
+}
+`;
+
+function finishSubagentPanelScope(source) {
+  source=exact(source,'function ConversationRoot({ subagentPanel=false, sessionId,','function ConversationRoot({ subagentPanel=false, useProjection, sessionId,')
+  source=exact(source,'OdysseySubagentPanelHeader,{sessionId,useSession,useSessions}', 'OdysseySubagentPanelHeader,{sessionId,useSession,useSessions,useProjection}')
+  const a=source.indexOf('function OdysseySubagentPanelHeader('),b=source.indexOf('\nclass ResearchSidebarCoordinator',a)
+  if(a<0||b<a)throw Error('Subagent header boundary missing')
+  source=source.slice(0,a)+subagentHeader+source.slice(b)
+
+  source=exact(source, "slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel'},ConversationRoot);", "slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel',children:undefined},ConversationRoot);")
+  return exact(source, "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true},{sessionId:id}),", "renderSubagent: id=>renderSlot('conversation.subagent.panel',{subagentPanel:true,renderSlot,renderSlotChain},{sessionId:id}),")
 }
 export function patchSubagentPanelEntry(source, sidebar=false) {
   if(sidebar)return exact(source,'onOpenChild?.(address);\n\t\t\t\ttry {\n\t\t\t\t\tsessions.openSubagent?.(address);',`try {
