@@ -9,31 +9,79 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Horizontal right sidebar slide",
+        "featureName": "Figma single-row header and menu refinements",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "cf3d03b39304d5471319bfe85d3af8c591f16eeb",
-        "tipCommit": "afe468dc52ec08223df5e6dc4be33d7af97fd466",
+        "baseCommit": "afe468dc52ec08223df5e6dc4be33d7af97fd466",
+        "tipCommit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
         "commits": [
           {
-            "commit": "afe468dc52ec08223df5e6dc4be33d7af97fd466",
+            "commit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
             "parents": [
-              "cf3d03b39304d5471319bfe85d3af8c591f16eeb"
+              "afe468dc52ec08223df5e6dc4be33d7af97fd466"
             ],
-            "subject": "将右侧栏展开收起改为保持完整尺寸的水平抽拉"
+            "subject": "界面：按最新 Figma 还原单行顶栏、菜单与输入区细节"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-refinements-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/verify-figma-panel-layout.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-motion.css"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "test/figma-motion-controller.test.ts"
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-responsive-header.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-scrollbars.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-responsive-header.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-scrollbars.test.ts"
           }
         ],
         "checks": [
@@ -42,101 +90,35 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-motion-controller.test.ts"
+              "test/figma-responsive-header.test.ts",
+              "test/figma-motion-controller.test.ts",
+              "test/figma-panel-default-width.test.ts",
+              "test/figma-panel-no-session.test.ts",
+              "test/research-boards-ui.test.ts",
+              "test/figma-scrollbars.test.ts"
             ],
             "outcome": "passed",
-            "summary": "5 focused tests passed; controlled Chromium sampled horizontal positions at 0/65/130/195/260 ms and passed full panel layout matrix.",
-            "verifiedCommit": "afe468dc52ec08223df5e6dc4be33d7af97fd466",
-            "completedAt": "2026-09-12T04:28:36.185809+00:00",
+            "summary": "22 focused tests; typecheck and patch idempotence passed. Chromium validated six header widths and existing independent-pane motion matrix.",
+            "verifiedCommit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
+            "completedAt": "2026-09-12T06:16:36.284765+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Production CSS verified in Chromium across page modes, themes and widths; native check follows packaged build."
+          "summary": "Controlled Chromium: one-row geometry, portal submenu, task collapse, scroll lifecycle, horizontal panel transitions. Native packaged acceptance follows integration."
         },
         "acceptanceCriteria": [
-          "Right sidebar slides horizontally without vertical motion, scaling, corner clipping or fading",
-          "Main pane follows the same easing and duration",
-          "Keep independent panes, reversible motion and reduced-motion behavior"
+          "56 px one-row header and responsive modes follow Figma A",
+          "Board and collaboration actions use 28 px icons with labels on hover/focus",
+          "Menus and composer context use consistent dimensions and Chinese labels",
+          "Compact desktop right panel temporarily overlays without resetting saved state",
+          "Task progress and overlay scroll feedback retain underlying runtime actions"
         ],
         "risks": [
-          "Local only; no release or push."
+          "Local only; no publication, push, version changes or main promotion."
         ],
-        "generatedAt": "2026-09-12T04:28:36.185809+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a412eec0caafbb5bb377d755ac88015492f779fd",
-        "verificationCommit": "a412eec0caafbb5bb377d755ac88015492f779fd",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "a412eec0caafbb5bb377d755ac88015492f779fd",
-            "completedAt": "2026-09-12T04:29:03.380Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a412eec0caafbb5bb377d755ac88015492f779fd",
-            "completedAt": "2026-09-12T04:29:03.380Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "a412eec0caafbb5bb377d755ac88015492f779fd",
-            "completedAt": "2026-09-12T04:29:03.380Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "a412eec0caafbb5bb377d755ac88015492f779fd",
-            "completedAt": "2026-09-12T04:29:03.380Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "a412eec0caafbb5bb377d755ac88015492f779fd",
-            "completedAt": "2026-09-12T04:29:03.380Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T04:29:03.380Z"
+        "generatedAt": "2026-09-12T06:16:36.284765+00:00"
       }
     }
   ],
