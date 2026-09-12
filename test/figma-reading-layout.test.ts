@@ -1,7 +1,7 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { patchFigmaReadingConversation, patchFigmaReadingTables } from '../scripts/lib/figma-reading-client.mjs'
+import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from '../scripts/lib/figma-reading-client.mjs'
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
 function fn(name: string) {
   const a=source.indexOf(`function ${name}(`), b=source.indexOf('\n\t\t}',a)
@@ -28,6 +28,11 @@ describe('Figma long-content reading contract',()=>{
     expect(patchFigmaReadingConversation(source)).toBe(source)
     const primitive=await readFile('node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js','utf8')
     expect(patchFigmaReadingTables(primitive)).toBe(primitive)
+    const dir='node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
+    const file=(await readdir(dir)).find(f=>/^index-.*\.js$/.test(f))!
+    const web=await readFile(dir+'/'+file,'utf8')
+    expect(web).toContain('return f.jsx(OdysseyReadingTable,{children:')
+    expect(patchFigmaReadingWeb(web,primitive)).toBe(web)
     expect(()=>patchFigmaReadingConversation('')).toThrow('anchor')
     expect(()=>patchFigmaReadingTables('')).toThrow('renderer')
   })

@@ -112,3 +112,19 @@ function renderTable(node,key,context) {
 `;
   return source.slice(0,a)+helper+source.slice(b);
 }
+
+/** The web shell bundles primitives; updating the package entry alone does not
+ * update the renderer that plugin slots receive at runtime. Reuse its component. */
+export function patchFigmaReadingWeb(source, primitives) {
+  const marker='/* odyssey:reading-web-table:20260912 */'
+  if(source.includes(marker))return source
+  const start=primitives.indexOf('function OdysseyReadingTable(')
+  const end=primitives.indexOf('function renderTable(node,key,context)',start)
+  if(start<0||end<start)throw Error('Missing shared table component')
+  const component=primitives.slice(start,end)
+    .replace(/\b(useRef|useState|useEffect)\(/g,'R.$1(')
+    .replace(/\b(jsx|jsxs)\(/g,'f.$1(')
+    .replaceAll('MarkdownText_module_css_default.tableScroll','S1.tableScroll')
+  const before='function kp(n,r,i){const s=n.align??null,[u,...c]=n.children;return f.jsx("div",{className:S1.tableScroll,children:'
+  return exact(source,before,marker+'\n'+component+'\nfunction kp(n,r,i){const s=n.align??null,[u,...c]=n.children;return f.jsx(OdysseyReadingTable,{children:')
+}
