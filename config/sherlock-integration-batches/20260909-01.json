@@ -12,7 +12,7 @@
         "featureName": "按 Figma 修复组件自动刷新子菜单、设置说明及实测间距",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
-        "tipCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
+        "tipCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
         "commits": [
           {
             "commit": "5fedee7a63c9e35ae0af7c7fbc25f3e8111ab455",
@@ -27,6 +27,13 @@
               "5fedee7a63c9e35ae0af7c7fbc25f3e8111ab455"
             ],
             "subject": "依据实机测量校准模式菜单内边距和选项间距"
+          },
+          {
+            "commit": "b5ef31ff43e968c1a8bc741b426823555069de37",
+            "parents": [
+              "a0e159e0e6e23681bd0888b89667eff950299aff"
+            ],
+            "subject": "更新工作区视图菜单幂等验证的最终样式契约"
           }
         ],
         "files": [
@@ -52,6 +59,10 @@
           },
           {
             "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/research-container-chrome.test.ts"
           }
         ],
@@ -63,12 +74,13 @@
               "vitest",
               "run",
               "test/research-container-chrome.test.ts",
-              "test/figma-menu-scope.test.ts"
+              "test/figma-menu-scope.test.ts",
+              "test/research-board-client-adapter.test.js"
             ],
             "outcome": "passed",
-            "summary": "27 focused menu behavior tests passed",
-            "verifiedCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
-            "completedAt": "2026-09-12T12:36:20.285257+00:00",
+            "summary": "58 focused tests passed including final workspace class contract",
+            "verifiedCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
+            "completedAt": "2026-09-12T12:39:55.384802+00:00",
             "timeoutMs": 120000
           },
           {
@@ -79,8 +91,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
-            "completedAt": "2026-09-12T12:36:20.285257+00:00",
+            "verifiedCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
+            "completedAt": "2026-09-12T12:39:55.384802+00:00",
             "timeoutMs": 120000
           },
           {
@@ -92,8 +104,8 @@
             ],
             "outcome": "passed",
             "summary": "Pristine dependencies patched twice and executed",
-            "verifiedCommit": "a0e159e0e6e23681bd0888b89667eff950299aff",
-            "completedAt": "2026-09-12T12:36:20.285257+00:00",
+            "verifiedCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
+            "completedAt": "2026-09-12T12:39:55.384802+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -109,7 +121,7 @@
         "risks": [
           "All-page visual audit remains in progress; no global acceptance claimed"
         ],
-        "generatedAt": "2026-09-12T12:36:20.285257+00:00"
+        "generatedAt": "2026-09-12T12:39:55.384802+00:00"
       }
     }
   ],
