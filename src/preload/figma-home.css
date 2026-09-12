@@ -101,6 +101,14 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
   margin:0;
   gap:8px;
 }
+/* A 683:27411/27418: 28px controls start 8px inside the card, 12px apart.
+   Top-align within the retained 32px row; its 4px stack gap then leaves 8px
+   below the controls without moving the welcome/input group. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero .wSkVaW_heroWorkspaceRow:not([data-odyssey-subagent-panel] *, .sRp_composer *) {
+  padding-left:8px;
+  gap:12px;
+  align-items:flex-start;
+}
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_workspace {
   box-sizing:border-box;
   height:24px;
@@ -123,8 +131,8 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
   transform:translateY(-2px);
 }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon { width:16px; height:16px; }
-/* Empty slot anchors are retained by the plugin system but must not consume a
-   flex gap. The target distance is 20 px from the project chevron to mode icon. */
+/* Empty slot anchors are retained by the plugin system but must not consume
+   a flex gap between the actual controls. */
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow>[data-slot="conversation.hero.workspace"]>span:empty { display:none; }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_root { padding:0; }
