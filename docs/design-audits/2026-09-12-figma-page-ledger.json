@@ -420,15 +420,28 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-8",
-      "status": "深色预览字号和段距实测通过；编辑与其他类型待验",
+      "status": "深色MD/CSV/PNG/PDF真实读取；XLSX到N44=132；DOCX100%左侧不可达D39，编辑与浅色待验",
       "differences": [
-        "D23"
+        "D23",
+        "D39"
       ],
       "evidence": [
         "v8-markdown-preview-dark",
-        "v9-markdown-preview-dark"
+        "v9-markdown-preview-dark",
+        "v11-files-md-top-dark",
+        "v11-files-md-bottom-dark",
+        "v11-files-csv-end-dark",
+        "v11-files-image-dark",
+        "v11-files-pdf-top-dark",
+        "v11-files-pdf-bottom-dark",
+        "v11-files-docx-top-dark",
+        "v11-files-docx-min-bottom-dark",
+        "v11-files-xlsx-top-dark",
+        "v11-files-xlsx-n44-dark"
       ],
-      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "02 对话与文件",
@@ -769,8 +782,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-695",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色真实生成/表格失败/图表停止/重试完成有逐态证据；完整动效与全部失败分支待验",
+      "differences": [],
+      "evidence": [
+        "v11-canvas-generating-failed-dark",
+        "v11-canvas-error-details-dark",
+        "v11-canvas-cancelled-dark",
+        "v11-canvas-completed-dark"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "03 研究与生成",
@@ -793,8 +815,15 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-1123",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色从所选文本原生派生导图，来源保留并出现第五类型；节点样式、全部工具栏行为待验",
+      "differences": [],
+      "evidence": [
+        "v11-canvas-mindmap-menu-dark",
+        "v11-canvas-five-types-dark"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "03 研究与生成",
@@ -1041,8 +1070,17 @@
         "height": 1280.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=484-661",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "隔离合成A/B深色邀请接受、viewer只读禁用与恢复已操作；完整权限确认/拒绝边界待验",
+      "differences": [],
+      "evidence": [
+        "v11-b-notification-unread-light",
+        "v11-b-shared-viewer-light",
+        "v11-b-shared-arranged-light"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "evidenceNotes": "v11-b-*-light为文件名误标；对应JSON theme=dark，仅计深色；未改名以保留引用。"
     },
     {
       "section": "04 协作与权限",
@@ -1113,8 +1151,16 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-1313",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "实际深色合成邀请toast与消息接受已操作；版本更新和提醒全状态待验",
+      "differences": [],
+      "evidence": [
+        "v11-b-invite-toast-light",
+        "v11-b-notification-unread-light"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "evidenceNotes": "v11-b-*-light为文件名误标；对应JSON theme=dark，仅计深色；未改名以保留引用。"
     },
     {
       "section": "05 消息与更新",
@@ -1281,8 +1327,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-909",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色五类真实内容已出现；四件内容与节点属性逐项比对发现D38，导图详细样式待验",
+      "differences": [
+        "D38"
+      ],
+      "evidence": [
+        "v11-canvas-completed-dark",
+        "v11-canvas-five-types-dark"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "06 组件与画布排版",
@@ -1305,8 +1360,16 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=353-1121",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色选中蓝色和两层glow参数相符；1+1描边须补outlineOffset，hover与键盘状态待验",
+      "differences": [
+        "D38"
+      ],
+      "evidence": [
+        "v11-canvas-completed-dark"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "06 组件与画布排版",
@@ -1353,8 +1416,16 @@
         "height": 1380.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=379-759",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色生成S320×220/M656×220/L656×456与16间距实测；正文颜色/标签字号等D38待修",
+      "differences": [
+        "D38"
+      ],
+      "evidence": [
+        "v11-canvas-completed-dark"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "06 组件与画布排版",
@@ -1377,8 +1448,16 @@
         "height": 1500.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=375-814",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色双端整理同步，SML尺寸和16间距有JSON；全视口布局、过渡和整理撤销待验",
+      "differences": [],
+      "evidence": [
+        "v11-a-shared-arranged-dark",
+        "v11-b-shared-arranged-light"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "evidenceNotes": "v11-b-*-light为文件名误标；对应JSON theme=dark，仅计深色；未改名以保留引用。"
     },
     {
       "section": "06 组件与画布排版",
@@ -1449,8 +1528,18 @@
         "height": 1380.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=493-694",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色双端drag3按各自zoom位移一致，undo两端还原；Option/Esc/吸附/缩放仍待验",
+      "differences": [],
+      "evidence": [
+        "v11-a-shared-drag3-dark",
+        "v11-b-shared-drag3-light",
+        "v11-a-shared-drag-undo-dark",
+        "v11-b-shared-drag-undo-light"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "evidenceNotes": "v11-b-*-light为文件名误标；对应JSON theme=dark，仅计深色；未改名以保留引用。"
     },
     {
       "section": "07 账户与设置",
@@ -2775,8 +2864,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-22138",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色导图深度菜单已打开并完成来源派生；完整菜单几何与全部选项待验",
+      "differences": [
+        "D14"
+      ],
+      "evidence": [
+        "v11-canvas-mindmap-menu-dark",
+        "v11-canvas-five-types-dark"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "12C 研究与组件 · 菜单展开",
@@ -3347,8 +3445,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-25833",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "真实浅色消息中心未读8、384×520、底距44；点击全部已读后0，其他消息行为待验",
+      "differences": [
+        "D24",
+        "D33"
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "evidence": [
+        "v11-b-actual-light-notifications"
+      ]
     },
     {
       "section": "13A 消息中心 · 铃铛展开窗口",
@@ -3359,8 +3466,19 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-26151",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "实际深色未读5邀请可接受，接受后未读6并可打开看板；文件名light为误标，更多通知状态待验",
+      "differences": [
+        "D24",
+        "D33"
+      ],
+      "evidence": [
+        "v11-b-notification-unread-light",
+        "v11-b-shared-arranged-light"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "evidenceNotes": "v11-b-*-light为文件名误标；对应JSON theme=dark，仅计深色；未改名以保留引用。"
     },
     {
       "section": "13A 消息中心 · 铃铛展开窗口",
@@ -3371,8 +3489,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-26470",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "真实浅色全部已读后未读0空态384×294、底距44；其他空态来源与短窗待验",
+      "differences": [
+        "D24",
+        "D33"
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "evidence": [
+        "v11-b-actual-light-unread-zero"
+      ]
     },
     {
       "section": "13A 消息中心 · 铃铛展开窗口",
@@ -3753,8 +3880,18 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-28520",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "深色续接、工具入口与运行排队已原生操作，输入308×120；footer额外32px列D35，bd3486f待包",
+      "differences": [
+        "D35"
+      ],
+      "evidence": [
+        "v11-child-idle-dark",
+        "v11-child-tools-dark",
+        "v11-child-running-queued-dark"
+      ],
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
@@ -3777,7 +3914,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-29359",
-      "status": "真实one-shot右栏打开与底部焦点路由通过；内部几何D29待新包",
+      "status": "深色一次性记录308×120、两种底栏组合底距12通过；整页与离线待验",
       "differences": [
         "D21",
         "D29"
@@ -3785,9 +3922,13 @@
       "evidence": [
         "v8-subagent-render-error-dark",
         "v9-subagent-oneshot-dark",
-        "v9-subagent-from-bottom-dark"
+        "v9-subagent-from-bottom-dark",
+        "v11-original-oneshot-dark",
+        "v11-original-oneshot-bottom-dark"
       ],
-      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
@@ -4018,16 +4159,20 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=750-28033",
-      "status": "真实展开216/40标题与连续展开帧通过；窄列对齐D37待新包",
+      "status": "已有展开216/40与连续帧；v11任务/输入/统计均708同宽；完整长文与折叠动效仍待验",
       "differences": [
         "D31",
         "D37"
       ],
       "evidence": [
         "v10-task-expanded-dark",
-        "v10-task-expand-motion-dark"
+        "v10-task-expand-motion-dark",
+        "v11-child-idle-dark",
+        "v11-child-running-queued-dark"
       ],
-      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
+      "packageCommit": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark"
     },
     {
       "section": "18 对话 · 长内容与底部固定区",
