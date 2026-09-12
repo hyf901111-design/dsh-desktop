@@ -1432,6 +1432,11 @@ export function ResearchBoardPresence({
     return null
   const users = boardMembers(v, s.account.user?.userId)
   return h('div', { className: 'srb-presence', 'aria-label': '协作成员' },
+    h('button', {
+      className: 'odyssey-members-compact', 'aria-label': `查看 ${users.length} 位协作成员`,
+      title: `${users.length} 位协作成员`, 'aria-haspopup': 'dialog',
+      onClick: (event: React.MouseEvent<HTMLButtonElement>) => showBoardMembers(page, sessionId, event.currentTarget)
+    }, boardIcon('people')),
     ...users.slice(0, 3).map(p => h('button', {
       className: 'srb-avatar', key: p.userId,
       style: { '--srb-avatar-background': boardAvatarBackground(p.userId, p.self) } as React.CSSProperties,
