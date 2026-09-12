@@ -71,7 +71,7 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
   const root = createRoot(host)
   await act(async () => { root.render(createElement(Harness)) })
   const click = async (selector: string) => {
-    const target = host.querySelector(selector)
+    const target = browserWindow.document.body.querySelector(selector)
     expect(target, selector).not.toBeNull()
     await act(async () => { target?.dispatchEvent(new browserWindow.MouseEvent('click', { bubbles: true, cancelable: true })) })
   }
@@ -79,7 +79,7 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
     await act(async () => { target.dispatchEvent(new browserWindow.KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true })) })
   }
   return {
-    browserWindow, host, workspace, submitted, activated, frameAction, click, key,
+    browserWindow, host: browserWindow.document.body, workspace, submitted, activated, frameAction, click, key,
     async cleanup() {
       await act(async () => { root.unmount() })
       await browserWindow.happyDOM.close()
@@ -115,12 +115,14 @@ describe('Research container chrome', () => {
       const { host, click } = mounted
       expect(host.querySelector('.rScV5Q_containerControls')).toBeNull()
       expect(host.querySelector('.rScV5Q_artifactMeta')).toBeNull()
-      expect(Array.from(host.querySelectorAll('[data-research-resize-handle]')).map((handle) => handle.getAttribute('data-research-resize-handle'))).toEqual(['se'])
+      expect(Array.from(host.querySelectorAll('[data-research-resize-handle]')).map((handle) => handle.getAttribute('data-research-resize-handle'))).toEqual(['nw', 'ne', 'sw', 'se'])
       expect(host.querySelector('[data-research-node-title] [data-research-container-more]')).not.toBeNull()
       expect(host.querySelector('[role="menu"]')).toBeNull()
       await click('[data-research-container-more]')
       expect(host.querySelector('[role="menu"] [data-research-container-edit]')?.textContent).toBe('编辑需求')
       expect(host.querySelector('[role="menu"] [data-research-container-refresh]')?.textContent).toBe('刷新')
+      expect(host.querySelectorAll('[role="menuitemradio"]')).toHaveLength(0)
+      await click('[data-research-container-refresh-submenu]')
       expect(host.querySelectorAll('[role="menuitemradio"]')).toHaveLength(5)
       expect(host.querySelector('[data-research-container-refresh-minutes="0"]')?.getAttribute('aria-checked')).toBe('true')
     } finally { await mounted.cleanup() }
@@ -173,7 +175,13 @@ describe('Research container chrome', () => {
       await key(browserWindow.document.activeElement, 'ArrowDown')
       expect(browserWindow.document.activeElement).toBe(host.querySelector('[data-research-container-refresh]'))
       await key(browserWindow.document.activeElement, 'End')
+      expect(browserWindow.document.activeElement).toBe(host.querySelector('[data-research-container-refresh-submenu]'))
+      await key(browserWindow.document.activeElement, 'ArrowRight')
+      expect(browserWindow.document.activeElement).toBe(host.querySelector('[data-research-container-refresh-minutes="0"]'))
+      await key(browserWindow.document.activeElement, 'End')
       expect(browserWindow.document.activeElement).toBe(host.querySelector('[data-research-container-refresh-minutes="30"]'))
+      await key(browserWindow.document.activeElement, 'Escape')
+      expect(browserWindow.document.activeElement).toBe(host.querySelector('[data-research-container-refresh-submenu]'))
       await key(browserWindow.document.activeElement, 'Escape')
       expect(host.querySelector('[role="menu"]')).toBeNull()
       expect(host.querySelector('.rScV5Q_containerMenuPopup[data-state="closed"]')?.hasAttribute('inert')).toBe(true)
@@ -193,6 +201,7 @@ describe('Research container chrome', () => {
       const { host, workspace, click, submitted } = mounted
       const iframe = host.querySelector('[data-research-html-artifact]')
       await click('[data-research-container-more]')
+      await click('[data-research-container-refresh-submenu]')
       await click('[data-research-container-refresh-minutes="5"]')
       expect(workspace.getSnapshot().artifacts[0].refreshMinutes).toBe(5)
       expect(host.querySelector('[role="menu"]')).toBeNull()
@@ -202,6 +211,7 @@ describe('Research container chrome', () => {
       expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ generationStatus: 'queued', width: 1200, height: 1600 })
       expect(host.querySelector('[data-research-html-artifact]')).toBe(iframe)
       await click('[data-research-container-more]')
+      await click('[data-research-container-refresh-submenu]')
       await click('[data-research-container-refresh-minutes="0"]')
       expect(workspace.getSnapshot().artifacts[0].refreshMinutes).toBe(0)
       expect(submitted).toHaveLength(1)
@@ -333,7 +343,7 @@ describe('shared canvas frames', () => {
     try {
       const { host, click, key, frameAction, browserWindow } = mounted
       const content = host.querySelector('[data-research-artifact-content]')
-      expect(host.querySelectorAll('[data-research-resize-handle]')).toHaveLength(1)
+      expect(host.querySelectorAll('[data-research-resize-handle]')).toHaveLength(4)
       await click('[data-research-container-expand]')
       expect(host.querySelector('dialog')?.hasAttribute('open')).toBe(true)
       expect(host.querySelector('[data-research-artifact-content]')).toBe(content)

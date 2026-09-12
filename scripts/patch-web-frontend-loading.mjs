@@ -1,8 +1,9 @@
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
 import { patchFigmaModelMenu } from './lib/figma-model-menu.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
-import { patchFigmaMenuScope, patchFigmaSettingsModeDescription } from './lib/figma-menu-scope.mjs'
+import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
+import { patchFigmaContainerMenu } from './lib/figma-container-menu.mjs'
 import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger, patchFigmaNavigationTitles, patchFigmaContextDirectory } from './lib/figma-refinements-client.mjs'
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
@@ -125,7 +126,7 @@ for (const [name, patch] of [
   ['dsh-client-ui-model-selection', patchFigmaModelMenu],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
   ['dsh-client-ui-workspace', source => patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source))],
-  ['dsh-client-ui-conversation', source => patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))],
+  ['dsh-client-ui-conversation', source => patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))))],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', patchFigmaSettingsModels],
   ['dsh-client-ui-theme', patchFigmaSettingsAppearance],
