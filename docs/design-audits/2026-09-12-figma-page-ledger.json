@@ -3148,8 +3148,15 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-27507",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "共享权限组件浅色几何和Esc通过；邀请流程仍待补验",
+      "differences": [
+        "D26",
+        "D30"
+      ],
+      "evidence": [
+        "v10-role-menu-light"
+      ],
+      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
     },
     {
       "section": "12F 协作与特殊状态 · 菜单展开",
@@ -3725,15 +3732,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-28101",
-      "status": "真实可续接运行面板已打开；标题正文几何D29待新包",
+      "status": "真实运行面板标题/正文起点和排版复验；简洁输入D35待新包",
       "differences": [
         "D21",
-        "D29"
+        "D29",
+        "D35"
       ],
       "evidence": [
-        "v9-subagent-continuable-running-light"
+        "v9-subagent-continuable-running-light",
+        "v10-child-running-light"
       ],
-      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
+      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
@@ -3957,8 +3966,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=749-27747",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "真实7/7完成收起40；完整页面仍待后续核验",
+      "differences": [
+        "D31"
+      ],
+      "evidence": [
+        "v10-task-completed-collapsed-light"
+      ],
+      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
     },
     {
       "section": "18 对话 · 长内容与底部固定区",
@@ -3981,16 +3996,18 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=750-27763",
-      "status": "七项真实任务216/168/40和阅读锚点通过；细节与动效D31修正中",
+      "status": "真实完成展开216及40标题；输入对齐D37待新包",
       "differences": [
-        "D31"
+        "D31",
+        "D37"
       ],
       "evidence": [
         "v9-long-tasks-wide-light",
         "v9-long-tasks-collapsed-light",
-        "v9-task-collapse-motion-light"
+        "v9-task-collapse-motion-light",
+        "v10-task-completed-expanded-light"
       ],
-      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
+      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
     },
     {
       "section": "18 对话 · 长内容与底部固定区",
@@ -4001,8 +4018,16 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=750-28033",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "真实展开216/40标题与连续展开帧通过；窄列对齐D37待新包",
+      "differences": [
+        "D31",
+        "D37"
+      ],
+      "evidence": [
+        "v10-task-expanded-dark",
+        "v10-task-expand-motion-dark"
+      ],
+      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
     },
     {
       "section": "18 对话 · 长内容与底部固定区",
@@ -4037,8 +4062,15 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=755-27859",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "1025×641近似尺寸长输入160/正文303/任务40通过；固定间距D37待新包",
+      "differences": [
+        "D32",
+        "D37"
+      ],
+      "evidence": [
+        "v10-short-long-input-light"
+      ],
+      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
     },
     {
       "section": "18 对话 · 长内容与底部固定区",
@@ -4049,8 +4081,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=755-28114",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "1025×641近似尺寸自动收起/正文337，长输入160/正文303及独立清单通过；D37待新包",
+      "differences": [
+        "D32",
+        "D37"
+      ],
+      "evidence": [
+        "v10-short-tasks-dark",
+        "v10-short-long-input-dark",
+        "v10-short-task-sheet-dark"
+      ],
+      "packageCommit": "4e41b680457a2a286ad8f1fbf3cedbbee4524507"
     },
     {
       "section": "18 对话 · 长内容与底部固定区",
