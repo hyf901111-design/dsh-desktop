@@ -297,7 +297,7 @@ body[data-ds-dark-theme] [data-odyssey-trajectory] {
 /* Figma 08: shared composer is a separate dock, outside the event ledger. */
 .wSkVaW_root:has([data-odyssey-trajectory]) { --dsh-composer-card-max-width:652px; }
 .wSkVaW_root:has([data-odyssey-trajectory]) [data-center-composer-host] {
-  position:relative; flex:0 0 auto; padding:10px 20px 30px; background:transparent;
+  position:relative; box-sizing:border-box; flex:0 0 auto; padding:10px 20px 30px; background:transparent;
 }
 .wSkVaW_root:has([data-odyssey-trajectory]) [data-center-composer-host] .uV2eYG_root { padding:0; }
 .wSkVaW_root:has([data-odyssey-trajectory]) .uV2eYG_card {
