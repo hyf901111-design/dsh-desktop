@@ -1197,6 +1197,39 @@ export async function patchBetterSidebarPackage(packageRoot) {
   const terminal = await readFile(terminalPath, 'utf8')
   const glassTerminal = patchFigmaTerminalSurface(terminal)
   if (glassTerminal !== terminal) await writeFile(terminalPath, glassTerminal, 'utf8')
+  const editorPath = path.join(packageRoot, 'lib', 'client-editor.js')
+  const editor = await readFile(editorPath, 'utf8')
+  const savedPreview = patchBetterSidebarEditor(editor)
+  if (savedPreview !== editor) await writeFile(editorPath, savedPreview, 'utf8')
+}
+
+/** Keep the retained CodeMirror document authoritative after fsWrite completes.
+ * EditorHost's content prop remains the initial fsRead snapshot until reopen. */
+export function patchBetterSidebarEditor(source) {
+  const marker = '/* sherlock:files-saved-preview:v1 */'
+  if (source.includes(marker)) return source
+  let next = replaceExact(source,
+    'api.fsWrite(scope, path, view.state.doc.toString()).then(() => {\n\t\t\t\tsavingRef.current = false;\n\t\t\t\tsetDraft(null);\n\t\t\t\tsetDirty(false);\n\t\t\t\tsetSaveState("saved");\n\t\t\t}).catch(() => {\n\t\t\t\tsavingRef.current = false;\n\t\t\t\tsetSaveState("failed");\n\t\t\t});',
+    `${marker}
+            const savedText = view.state.doc.toString();
+            api.fsWrite(scope, path, savedText).then(() => {
+                if (viewRef.current !== view) return;
+                savingRef.current = false;
+                const currentText = view.state.doc.toString();
+                setDraft(currentText);
+                setDirty(currentText !== savedText);
+                setSaveState(currentText === savedText ? "saved" : "idle");
+            }).catch(() => {
+                if (viewRef.current !== view) return;
+                savingRef.current = false;
+                setSaveState("failed");
+            });`,
+    'Files saved preview and in-flight edits')
+  next = replaceExact(next,
+    'view.destroy();\n\t\t\t\tviewRef.current = null;',
+    'view.destroy();\n\t\t\t\tsavingRef.current = false;\n\t\t\t\tviewRef.current = null;',
+    'Files replacement editor save lock')
+  return next
 }
 
 export function patchFigmaTerminalSurface(source) {
