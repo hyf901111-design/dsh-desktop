@@ -12,7 +12,7 @@ type Element = { type: string; props: Record<string, any> }
 function render() {
   const stateUpdates = vi.fn()
   const jsx = (type: string, props: Record<string, any>): Element => ({ type, props })
-  const component = renderTabBar({ useState: () => [false, stateUpdates], useRef: (current: unknown) => ({ current }), useEffect: () => {} }, { jsx, jsxs: jsx }, new Proxy({}, { get: (_, key) => 't8lSSG_' + String(key) }), { Menu: 'Menu', IconCloseFill14: 'Close', IconPlusOutline16: 'Plus' }, (...names: string[]) => names.filter(Boolean).join(' '), (key: string) => key, (callback: () => void) => { callback(); return 1 })
+  const component = renderTabBar({ useState: () => [false, stateUpdates], useRef: (current: unknown) => ({ current }), useEffect: () => {}, useLayoutEffect: () => {} }, { jsx, jsxs: jsx }, new Proxy({}, { get: (_, key) => 't8lSSG_' + String(key) }), { Menu: 'Menu', IconCloseFill14: 'Close', IconPlusOutline16: 'Plus' }, (...names: string[]) => names.filter(Boolean).join(' '), (key: string) => key, (callback: () => void) => { callback(); return 1 })
   const props = {
     paneId: 'research', active: 'conversation',
     tabs: [
@@ -28,8 +28,8 @@ function render() {
 describe('Final Research tab strip keeps the new-tab menu outside scrolling titles', () => {
   it('renders only tab items in the scroller and the original Menu as its sibling', () => {
     const { tree, props } = render()
-    const [list, , menu] = tree.props.children as [Element, false, Element]
-    const [tabItems, overflowTrigger] = list.props.children as [Element[], false]
+    const [list, overflowTrigger, , menu] = tree.props.children as [Element, false, false, Element]
+    const tabItems = list.props.children as Element[]
     expect(tree.props.className).toBe('t8lSSG_tabBar')
     expect(list.props.className).toBe('t8lSSG_tabList')
     expect(tabItems).toHaveLength(props.tabs.length)
@@ -43,7 +43,7 @@ describe('Final Research tab strip keeps the new-tab menu outside scrolling titl
 
   it('preserves opening, option selection/closing, tab activation, and pinned restrictions', () => {
     const { tree, props, stateUpdates } = render()
-    const [list, , menu] = tree.props.children as [Element, false, Element]
+    const [list, overflowTrigger, , menu] = tree.props.children as [Element, false, false, Element]
     menu.props.anchor.props.onClick()
     expect(stateUpdates).toHaveBeenCalledWith(expect.any(Function))
     expect(stateUpdates.mock.calls[0]![0](false)).toBe(true)
@@ -53,7 +53,7 @@ describe('Final Research tab strip keeps the new-tab menu outside scrolling titl
     expect(stateUpdates).toHaveBeenLastCalledWith(false)
     menu.props.onClose()
     expect(stateUpdates).toHaveBeenLastCalledWith(false)
-    const [tabItems] = list.props.children as [Element[], false]
+    const tabItems = list.props.children as Element[]
     const [pinned, file] = tabItems as [Element, Element, ...Element[]]
     expect(pinned.props.draggable).toBe(false)
     expect(pinned.props.children.at(-1)).toBeNull()

@@ -18,12 +18,13 @@ const { createRoot } = requireModule('react-dom/client') as {
   createRoot(container: Element): { render(node: unknown): void; unmount(): void }
 }
 
-async function mountStatefulSidebar() {
+async function mountStatefulSidebar(desktop = false) {
   const source = await readFile(new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
   const patched = patchBetterSidebarClient(source)
   const browserWindow = new Window({ url: 'https://sherlock.local/' })
   Object.defineProperty(browserWindow, 'innerWidth', { configurable: true, writable: true, value: 1380 })
   Object.defineProperty(browserWindow, 'innerHeight', { configurable: true, value: 900 })
+  if (desktop) Object.assign(browserWindow, { dshDesktop: {} })
   class ResizeObserverStub { observe() {} disconnect() {} }
   class WebSocketStub { static OPEN = 1; close() {} }
   let descriptor: { factory(require: (id: string) => unknown): Record<string, unknown> } | undefined
@@ -155,6 +156,43 @@ async function mountStatefulSidebar() {
 }
 
 describe('Figma panel production lifecycle', () => {
+  it('reserves an independent desktop pane when manually opened below 840 px and preserves stored state', async () => {
+    const mounted = await mountStatefulSidebar(true)
+    try {
+      const { browserWindow, host, store } = mounted
+      const before = structuredClone(store.getSnapshot().state)
+      const probe = host.querySelector('[data-motion-instance]')!
+      await act(async () => {
+        Object.defineProperty(browserWindow, 'innerWidth', { configurable:true, writable:true, value:801 })
+        browserWindow.dispatchEvent(new browserWindow.Event('resize'))
+        await new Promise(resolve => browserWindow.setTimeout(resolve, 24))
+      })
+      const panelHost = host.querySelector('[data-dsh-panel-host]')!
+      const right = host.querySelector('[data-odyssey-panel-entry="right"]') as unknown as HTMLButtonElement
+      expect(panelHost.getAttribute('data-odyssey-panel-right')).toBe('closed')
+      expect(browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('0px')
+      await act(async () => { right.click() })
+      expect(panelHost.getAttribute('data-odyssey-panel-right')).toBe('open')
+      expect(panelHost.hasAttribute('data-odyssey-panel-overlay')).toBe(false)
+      expect(browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('340px')
+      expect(host.querySelector('[data-motion-instance]')).toBe(probe)
+      expect(store.getSnapshot().state).toEqual(before)
+      await act(async () => { right.click() })
+      expect(browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('0px')
+      await act(async () => {
+        Object.defineProperty(browserWindow, 'innerWidth', { configurable:true, writable:true, value:1380 })
+        browserWindow.dispatchEvent(new browserWindow.Event('resize'))
+        await new Promise(resolve => browserWindow.setTimeout(resolve, 24))
+      })
+      expect(panelHost.getAttribute('data-odyssey-panel-right')).toBe('open')
+      expect(browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('340px')
+      expect(store.getSnapshot().state).toEqual(before)
+      expect(host.querySelector('[data-motion-instance]')).toBe(probe)
+    } finally {
+      await mounted.restore()
+    }
+  })
+
   it('keeps the same bottom view, draft and scroll through right-closed/bottom-open and rapid reversals', async () => {
     const mounted = await mountStatefulSidebar()
     try {
