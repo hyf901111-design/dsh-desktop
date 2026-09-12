@@ -915,13 +915,26 @@ function patchFigmaPanelDefaultWidth(source) {
 }
 
 
-// Desktop compact mode changes presentation only. Stored tabs, width and drafts survive.
+// A small desktop window may temporarily collapse the panel, but opening it
+// always creates an independent adjacent pane. Stored tabs, width and drafts survive.
 function patchFigmaCompactPanel(source) {
-  const marker = '/* odyssey:compact-panel:20260912 */'
+  const marker = '/* odyssey:compact-independent-panel:20260912 */'
+  const legacyMarker = '/* odyssey:compact-panel:20260912 */'
   if (source.includes(marker)) return source
   const start=source.indexOf('function Sidebar(props) {'), end=source.indexOf('\n\t\t//#endregion',start)
+  if (start < 0 || end < 0) throw new Error('Missing compact sidebar boundary')
   let part=source.slice(start,end)
-  part=replaceExact(part, 'const narrow = useNarrowViewport();', `const narrow = useNarrowViewport() && !window.dshDesktop;
+  const occupancy = 'const width = !narrow && (compactPanel ? compactPanelOpen : snapshot.state?.panelOpen === true) ? odysseyClampPanelWidth(snapshot.state?.width ?? 340) : 0;'
+  if (part.includes(legacyMarker)) {
+    part=replaceExact(part, legacyMarker, marker, 'independent compact migration')
+    part=replaceExact(part, 'const width = !narrow && !compactPanel && snapshot.state?.panelOpen === true ? odysseyClampPanelWidth(snapshot.state.width) : 0;', occupancy, 'restored compact occupancy')
+    part=replaceExact(part, 'narrow, compactPanel,', 'narrow, compactPanel, compactPanelOpen,', 'compact toggle occupancy dependency')
+    part=replaceExact(part, '"data-odyssey-panel-overlay": compactPanel ? "true" : "false",', '"data-odyssey-panel-compact": compactPanel ? "true" : "false",', 'independent compact semantics')
+    for (const value of ['committed.width', 'state.width']) {
+      part=part.replaceAll('(compactPanel ? Math.min('+value+',window.innerWidth-20) : odysseyClampPanelWidth('+value+'))', 'odysseyClampPanelWidth('+value+')')
+    }
+  } else {
+    part=replaceExact(part, 'const narrow = useNarrowViewport();', `const narrow = useNarrowViewport() && !window.dshDesktop;
       ${marker}
       const [compactPanel, setCompactPanel] = (0, react.useState)(() => !!window.dshDesktop && window.innerWidth < 840);
       const [compactPanelOpen, setCompactPanelOpen] = (0, react.useState)(false);
@@ -929,19 +942,16 @@ function patchFigmaCompactPanel(source) {
         const measure=()=>{ const compact=!!window.dshDesktop && window.innerWidth<840; setCompactPanel(compact); if(!compact)setCompactPanelOpen(false); };
         window.addEventListener('resize',measure); return ()=>window.removeEventListener('resize',measure);
       }, []);`, 'compact presentation hook')
-  part=replaceExact(part, 'const state = snapshot.state;', 'const state = snapshot.state && compactPanel ? {...snapshot.state, panelOpen:compactPanelOpen} : snapshot.state;', 'temporary panel visibility')
-  part=replaceExact(part, 'const sessionId = snapshot.sessionId;', `const sessionId = snapshot.sessionId;
+    part=replaceExact(part, 'const state = snapshot.state;', 'const state = snapshot.state && compactPanel ? {...snapshot.state, panelOpen:compactPanelOpen} : snapshot.state;', 'temporary panel visibility')
+    part=replaceExact(part, 'const sessionId = snapshot.sessionId;', `const sessionId = snapshot.sessionId;
       (0, react.useEffect)(()=>setCompactPanelOpen(false),[sessionId]);`, 'session compact reset')
-  part=replaceExact(part,'store.reduce(togglePanel);','if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);','compact toggle')
-  part=replaceExact(part, 'const width = !narrow && snapshot.state?.panelOpen === true ? odysseyClampPanelWidth(snapshot.state.width) : 0;', 'const width = !narrow && !compactPanel && snapshot.state?.panelOpen === true ? odysseyClampPanelWidth(snapshot.state.width) : 0;', 'compact occupancy')
-  // Include the breakpoint in the occupancy layout effect's dependency list.
-  const effect=part.indexOf('const width = !narrow && !compactPanel')
-  const next=part.indexOf('\n\t\t\t]);',effect)
-  let segment=part.slice(effect,next)
-  segment=segment.replace('narrow,','narrow, compactPanel,')
-  part=part.slice(0,effect)+segment+part.slice(next)
-  part=replaceExact(part,'"data-odyssey-panel-right": state.panelOpen ? "open" : "closed",','"data-odyssey-panel-right": state.panelOpen ? "open" : "closed", "data-odyssey-panel-overlay": compactPanel ? "true" : "false",','compact overlay semantics')
-  part=part.replaceAll('odysseyClampPanelWidth(committed.width)', '(compactPanel ? Math.min(committed.width,window.innerWidth-20) : odysseyClampPanelWidth(committed.width))').replaceAll('odysseyClampPanelWidth(state.width)', '(compactPanel ? Math.min(state.width,window.innerWidth-20) : odysseyClampPanelWidth(state.width))')
+    part=replaceExact(part,'store.reduce(togglePanel);','if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);','compact toggle')
+    part=replaceExact(part, 'const width = !narrow && snapshot.state?.panelOpen === true ? odysseyClampPanelWidth(snapshot.state.width) : 0;', occupancy, 'compact occupancy')
+    const effect=part.indexOf(occupancy), next=part.indexOf('\n\t\t\t]);',effect)
+    const segment=part.slice(effect,next).replace('narrow,','narrow, compactPanel, compactPanelOpen,')
+    part=part.slice(0,effect)+segment+part.slice(next)
+    part=replaceExact(part,'"data-odyssey-panel-right": state.panelOpen ? "open" : "closed",','"data-odyssey-panel-right": state.panelOpen ? "open" : "closed", "data-odyssey-panel-compact": compactPanel ? "true" : "false",','independent compact semantics')
+  }
   return source.slice(0,start)+part+source.slice(end)
 }
 
