@@ -98,6 +98,7 @@ export function patchFigmaSettingsAppearance(source) {
 }
 
 export function patchFigmaSettingsPreset(source) {
+  if (source.includes('/* odyssey:settings-mode-description:20260912 */')) return source
   source = exact(source, 'children: [label, (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: chevronClassName })]', 'children: [(0, react_jsx_runtime.jsx)(ModeIcon, { id: selectedId || "standard", size: 16 }), (0, react_jsx_runtime.jsx)("span", { children: label }), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: chevronClassName })]');
   return exact(source, 'label: option.trust === "user" ? `${name} · ${t("userTrust")}` : name', 'label: (0, react_jsx_runtime.jsxs)("span", { className: "sherlock-settings-preset-option", children: [(0, react_jsx_runtime.jsx)(ModeIcon, { id: option.id, size: 16 }), option.trust === "user" ? `${name} · ${t("userTrust")}` : name] })');
 }

@@ -29,7 +29,7 @@ it('opens the searchable model list, filters provider names, selects real IDs an
   const select=vi.fn(async()=>true)
   const host=win.document.createElement('div'); win.document.body.append(host)
   const root=createRoot(host)
-  const click=async(el:Element)=>react.act(async()=>el.dispatchEvent(new win.MouseEvent('click',{bubbles:true})))
+  const click=async(el:Element)=>react.act(async()=>{ (el as unknown as {focus():void}).focus(); el.dispatchEvent(new win.MouseEvent('click',{bubbles:true})) })
   try {
     await react.act(async()=>root.render(jsx.jsx(ModelSelect,{locked:false,available:true,directory,load:()=>{},select,t:(key:string)=>key})))
     const trigger=host.querySelector('button')!
@@ -47,6 +47,11 @@ it('opens the searchable model list, filters provider names, selects real IDs an
     expect(win.document.querySelector('[role=menu]')).toBeNull()
     expect(win.document.activeElement).toBe(trigger)
     await click(trigger)
+    await click(win.document.querySelector('[data-model-effort]')!)
+    expect(win.document.querySelector('[role=menu]')).not.toBeNull()
+    expect(win.document.activeElement?.textContent).toBe('effort.providerDefault')
+    await react.act(async()=>win.document.activeElement!.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})))
+    expect(win.document.activeElement).toBe(win.document.querySelector('[data-model-effort]'))
     const choices=win.document.querySelectorAll('[role=menuitemradio]')
     await click(choices[1]!)
     expect(select).toHaveBeenCalledWith({provider:'other',model:'second'})

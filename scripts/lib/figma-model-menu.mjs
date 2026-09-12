@@ -1,7 +1,7 @@
 /** 665:857 / 12A: searchable model directory; keep the Host-owned selection API. */
 export function patchFigmaModelMenu(source) {
   const marker = '/* odyssey:searchable-model-menu:20260912 */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchPaneFocus(source)
   const exact = (before, after) => {
     if (source.split(before).length !== 2) throw Error('Model menu anchor drifted: '+before.slice(0,80))
     source = source.replace(before,after)
@@ -74,5 +74,28 @@ export function patchFigmaModelMenu(source) {
   exact('open && (0, react_jsx_runtime.jsxs)("div", {','open && odysseyReactDOM.createPortal((0, react_jsx_runtime.jsxs)("div", {')
   exact('className: ModelSelect_module_css_default.menu,','className: ModelSelect_module_css_default.menu + " odyssey-model-menu",ref:menuRef,style:menuPosition,')
   exact('}),\n\t\t\t\t\ttoast !== null', '}), document.body),\n\t\t\t\t\ttoast !== null')
+  return patchPaneFocus(source)
+}
+
+function patchPaneFocus(source) {
+  const marker = '/* odyssey:model-pane-focus:20260912 */'
+  if (source.includes(marker)) return source
+  const replace = (before, after) => {
+    if (source.split(before).length !== 2) throw Error('Model pane focus anchor drifted')
+    source = source.replace(before, after)
+  }
+  replace('const searchRef = (0, react.useRef)(null);', `const searchRef = (0, react.useRef)(null);
+      const returnToEffortRef = (0, react.useRef)(false);
+      ${marker}
+      (0, react.useLayoutEffect)(() => {
+        if (!open) return;
+        if (pane === 'effort') menuRef.current?.querySelector('[role=menuitemradio]')?.focus();
+        else if (returnToEffortRef.current) {
+          returnToEffortRef.current = false;
+          menuRef.current?.querySelector('[data-model-effort]')?.focus();
+        }
+      }, [open, pane]);`)
+  replace('setPane("model"); queueMicrotask(() => menuRef.current?.querySelector("[data-model-effort]")?.focus());', 'returnToEffortRef.current = true; setPane("model");')
+  replace('setPane("effort");queueMicrotask(()=>itemRefs.current[0]?.focus());', 'setPane("effort");')
   return source
 }
