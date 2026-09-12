@@ -9,79 +9,58 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "画布与页签菜单实机差异修正",
+        "featureName": "文件原生菜单和任务页签图标设计对齐",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
-        "tipCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
+        "baseCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
+        "tipCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
         "commits": [
           {
-            "commit": "a1cfb7a8689cd5db033ba2c7590fcd8cc12e925e",
+            "commit": "a4b7ba0e01186bb94e96a17df3bee5734b4e0608",
             "parents": [
-              "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf"
+              "53196896d23dffb04e4a36bbee4a44c89fb1c970"
             ],
-            "subject": "补齐已安装菜单补丁的定位修正升级路径"
+            "subject": "按设计将文件和文件夹操作切换为系统原生菜单"
           },
           {
-            "commit": "57d1df492c5b89b6d3ac806c6ef4b9979e5d49ab",
+            "commit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
             "parents": [
-              "a1cfb7a8689cd5db033ba2c7590fcd8cc12e925e"
+              "a4b7ba0e01186bb94e96a17df3bee5734b4e0608"
             ],
-            "subject": "按实机差异修正思维导图与新建页签菜单尺寸"
-          },
-          {
-            "commit": "535dd17d4387d81b637acb3e27221e90636f2bc7",
-            "parents": [
-              "57d1df492c5b89b6d3ac806c6ef4b9979e5d49ab"
-            ],
-            "subject": "修复悬停后点击自动刷新误关子菜单的问题"
-          },
-          {
-            "commit": "6005c5d4213cb91eb1a478f0b254a982278d1b03",
-            "parents": [
-              "535dd17d4387d81b637acb3e27221e90636f2bc7"
-            ],
-            "subject": "按设计还原画布右键菜单并补齐可见区域避让"
-          },
-          {
-            "commit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
-            "parents": [
-              "6005c5d4213cb91eb1a478f0b254a982278d1b03"
-            ],
-            "subject": "修正页签溢出菜单几何并保证定位补丁重复构建一致"
+            "subject": "使用设计稿任务清单图标统一页签和新建菜单"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "scripts/lib/figma-canvas-context-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-container-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-derived-menu-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "path": "scripts/lib/figma-native-file-menu.mjs"
           },
           {
             "status": "A",
-            "path": "test/figma-canvas-context-menu.test.js"
+            "path": "scripts/lib/figma-task-tab-icon.mjs"
           },
           {
             "status": "M",
-            "path": "test/research-canvas-clipboard-ui.test.ts"
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
           },
           {
             "status": "M",
-            "path": "test/research-container-chrome.test.ts"
+            "path": "src/main/context-menu.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/native-file-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-native-file-menu.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/native-file-menu.test.ts"
           }
         ],
         "checks": [
@@ -91,16 +70,16 @@
               "exec",
               "vitest",
               "run",
-              "test/research-canvas-clipboard-ui.test.ts",
-              "test/figma-canvas-context-menu.test.js",
-              "test/research-container-chrome.test.ts",
-              "test/research-derived-menu-final.test.ts",
-              "test/figma-provider-menu.test.js"
+              "test/native-file-menu.test.ts",
+              "test/figma-native-file-menu.test.js",
+              "test/figma-file-panel.test.js",
+              "test/context-menu.test.ts",
+              "test/figma-panel-tab-overflow.test.js"
             ],
             "outcome": "passed",
-            "summary": "84 focused checks passed, including hover then click regression and canvas edge placement",
-            "verifiedCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
-            "completedAt": "2026-09-12T13:27:23.343901+00:00",
+            "summary": "20 focused checks passed: native validation, bridge lifecycle, file actions and tab transforms",
+            "verifiedCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
+            "completedAt": "2026-09-12T13:52:30.496694+00:00",
             "timeoutMs": 120000
           },
           {
@@ -111,8 +90,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
-            "completedAt": "2026-09-12T13:27:23.343901+00:00",
+            "verifiedCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
+            "completedAt": "2026-09-12T13:52:30.496694+00:00",
             "timeoutMs": 120000
           },
           {
@@ -124,99 +103,24 @@
             ],
             "outcome": "passed",
             "summary": "Pristine dependencies patched twice and executed",
-            "verifiedCommit": "53196896d23dffb04e4a36bbee4a44c89fb1c970",
-            "completedAt": "2026-09-12T13:27:23.343901+00:00",
+            "verifiedCommit": "4b82ff616e22dc625d040d84d95f5d7c49c7d666",
+            "completedAt": "2026-09-12T13:52:30.496694+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "21d40167 real package measurements recorded for mindmap, new-tab, canvas and component context menus, overflow, provider and refresh. This correction batch still requires rebuilt native UI verification."
+          "summary": "b49a476 real package revealed web file menu and atom task glyph. Native replacement and Figma vector require rebuilt package verification."
         },
         "acceptanceCriteria": [
-          "Mindmap 280x208 and neutral selected state",
-          "New-tab 238x250 with 42px rows; overflow dedicated material and 312px rows",
-          "Provider directory caps at 309px and remains constrained by available height",
-          "Context menus use 260/240 widths and remain inside visible canvas",
-          "Hover then clicking refresh keeps submenu open"
+          "File and folder context menus use platform-native presentation preserving existing actions",
+          "Task tabs and new-tab menu use original Figma task-list vector",
+          "Browser fallback and repeated patching remain functional"
         ],
         "risks": [
           "All-page audit in progress; no global visual acceptance claimed"
         ],
-        "generatedAt": "2026-09-12T13:27:23.343901+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0e9ced8fde0d57d5b55110130527c20d09abbadc",
-        "verificationCommit": "0e9ced8fde0d57d5b55110130527c20d09abbadc",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "0e9ced8fde0d57d5b55110130527c20d09abbadc",
-            "completedAt": "2026-09-12T13:28:30.075Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0e9ced8fde0d57d5b55110130527c20d09abbadc",
-            "completedAt": "2026-09-12T13:28:30.075Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "0e9ced8fde0d57d5b55110130527c20d09abbadc",
-            "completedAt": "2026-09-12T13:28:30.075Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "0e9ced8fde0d57d5b55110130527c20d09abbadc",
-            "completedAt": "2026-09-12T13:28:30.075Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "0e9ced8fde0d57d5b55110130527c20d09abbadc",
-            "completedAt": "2026-09-12T13:28:30.075Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T13:28:30.075Z"
+        "generatedAt": "2026-09-12T13:52:30.496694+00:00"
       }
     }
   ],
