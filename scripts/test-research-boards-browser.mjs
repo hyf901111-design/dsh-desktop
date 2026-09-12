@@ -539,6 +539,21 @@ const cssDir = packagePath('dsh-web-frontend', 'dist/assets'),
 assets.set('/base.css', await readFile(join(cssDir, css), 'utf8'))
 const html = `<!doctype html><html><head><meta charset="utf-8"><title>Sherlock Research Boards UI Fixture</title><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/fixture.css"><style>html,body,#app{height:100%;margin:0}body{--dsw-font-family:system-ui;--dsw-alias-label-primary:#232323;--dsw-alias-label-secondary:#727272;--dsw-alias-bg-base:#fdfdfd;--dsw-alias-bg-layer-2:#fff;--dsw-specific-sidebar-fill:#f5f5f5;--dsw-alias-border-l2:#dedede;--dsw-alias-interactive-bg-hover:#8882}body[data-ds-dark-theme]{--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#999;--dsw-alias-bg-base:#181818;--dsw-alias-bg-layer-2:#222;--dsw-specific-sidebar-fill:#202020;--dsw-alias-border-l2:#393939;background:#181818}.fixture-shell{display:flex;height:100%;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base)}.fixture-sidebar{flex:none;height:100%}.fixture-main{min-width:0;flex:1;display:flex;flex-direction:column;position:relative}.fixture-main>header{margin-right:330px}.fixture-workbench{display:flex;flex:1;min-height:0}.fixture-canvas{position:relative;flex:1;min-width:0}.fixture-canvas>[data-research-canvas]{height:100%;background-color:var(--dsw-alias-bg-base)}.fixture-discussion{position:relative;width:330px;min-width:0;border-left:1px solid var(--dsw-alias-border-l2)}.fixture-workspaces{display:flex;flex:1;min-height:0}.fixture-add{display:none;position:absolute;bottom:12px;left:20px;padding:7px 12px;border:1px solid #8883;border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:inherit}@media(max-width:850px){.fixture-discussion{width:280px}.fixture-main>header{margin-right:280px}}</style></head><body><div id="app"></div><script type="module" src="/fixture.js"></script></body></html>`
 const connections = new Set()
+// Diagnostic only: retain the original error gate while locating preview denials.
+const previewDiagnostics = []
+let previewDiagnosticPhase = 'startup'
+const markPreviewPhase = phase => {
+  previewDiagnosticPhase = phase
+  previewDiagnostics.push({ kind: 'phase', phase, at: Date.now() })
+}
+const previewDiagnosticState = user => {
+  const snapshot = user.service.getSnapshot()
+  return {
+    authenticated: user.account.authenticated,
+    current: snapshot.current ? { boardId: snapshot.current.boardId, connection: snapshot.current.connection, permissions: snapshot.current.permissions } : null,
+    boards: snapshot.boards.map(board => ({ boardId: board.boardId, sharingState: board.sharingState, role: board.role, localSessionId: board.localSessionId }))
+  }
+}
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost')
@@ -609,9 +624,11 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/preview') {
       const u = users[Number(url.searchParams.get('user'))],
         cap = url.searchParams.get('cap')
+      const requestDiagnostic = { kind: 'preview', at: Date.now(), phase: previewDiagnosticPhase, url: 'http://' + req.headers.host + req.url, user: Number(url.searchParams.get('user')), before: previewDiagnosticState(u) }
       const response = await u.registry.handle(
         new Request('sherlock-preview://' + cap + '/', { method: req.method })
       )
+      previewDiagnostics.push({ ...requestDiagnostic, completedAt: Date.now(), completedPhase: previewDiagnosticPhase, status: response.status, reason: response.status === 403 ? await response.clone().text() : undefined, after: previewDiagnosticState(u) })
       res.writeHead(response.status, Object.fromEntries(response.headers))
       res.end(Buffer.from(await response.arrayBuffer()))
       return
@@ -675,14 +692,17 @@ if (process.argv.includes('--serve')) {
     p.on('requestfailed', finishPreview)
     p.on('pageerror', (e) => errors.push(e.stack ?? e.message))
     p.on('console', (m) => {
-      if (m.type() === 'error')
+      if (m.type() === 'error') {
+        previewDiagnostics.push({ kind: 'console-error', at: Date.now(), phase: previewDiagnosticPhase, actor: p === peer ? 'peer' : 'owner', text: m.text(), location: m.location() })
         errors.push(m.text() + ' ' + JSON.stringify(m.location()))
+      }
     })
     p.on('requestfailed', (r) =>
       failedRequests.push({ url: r.url(), failure: r.failure() })
     )
   }
   try {
+    markPreviewPhase('browser-flow')
     focusedFlow: {
     await Promise.all([
       page.goto(url + '/?user=0'),
@@ -1642,6 +1662,7 @@ if (process.argv.includes('--serve')) {
     const selectedBeforeLogin = await peer.evaluate(() => window.fixture.sessions.list.getSnapshot().current)
     const lifecycleModelCalls = users.map(u => u.modelCalls())
     await settlePreviews()
+    markPreviewPhase('peer-account-reactivation-signout')
     users[1].signOut()
     await peer.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
     assert.equal(users[1].service.getSnapshot().current, null)
@@ -1663,6 +1684,7 @@ if (process.argv.includes('--serve')) {
       navigator.clipboard.writeText = async text => { window.recoveryCopies.push(text) }
     })
     await settlePreviews()
+    markPreviewPhase('owner-account-isolation-signout')
     users[0].signOut()
     await page.waitForFunction(() => window.fixture.page.getState().account.status === 'signedOut')
     await page.getByRole('button', { name: '查看我的恢复记录', exact: true }).click()
@@ -2011,6 +2033,7 @@ if (process.argv.includes('--serve')) {
     await page.getByRole('button',{name:'返回应用',exact:true}).click()
     assert.equal((await users[0].service.invoke('member.role', { boardId, userId: 'u1', role: 'editor' })).ok, true)
     await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit === true)
+    markPreviewPhase('peer-offline-before-cancel')
     networks[1].offline = true
     for (const socket of networks[1].sockets) socket.close(1000)
     await peer.evaluate(() => {
@@ -2021,6 +2044,7 @@ if (process.argv.includes('--serve')) {
     })
     await peer.locator('.fixture-discussion textarea').last().fill('本人未发送草稿。')
     await until(() => users[1].service.store.account('u1').pending.some(p => p.action === 'update'), 'offline own update persisted')
+    markPreviewPhase('board-cancel-request')
     const cancelled = await users[0].service.invoke('board.cancel', {
       boardId
     })
@@ -2040,8 +2064,10 @@ if (process.argv.includes('--serve')) {
         })
     )
     assert.equal(cancelled.ok, true, JSON.stringify(cancelled))
+    markPreviewPhase('board-cancel-succeeded-before-peer-refresh')
     networks[1].offline = false
     await users[1].service.invoke('boards.refresh', {})
+    markPreviewPhase('board-cancel-peer-refreshed')
     await until(() => users[1].service.store.account('u1').recoveries.some(r => JSON.stringify(r).includes('本人离线补充。')), 'own recovery after reconnect/cancel')
     const recovery = users[1].service.store.account('u1').recoveries.filter(r => r.boardId === boardId)
     const recoveryText = JSON.stringify(recovery)
@@ -2049,6 +2075,7 @@ if (process.argv.includes('--serve')) {
     assert.ok(recoveryText.includes('本人未发送草稿。'))
     assert.ok(!recoveryText.includes('同时文本证据。'), 'recovery excludes teammates accepted text')
     await peer.getByText('共享访问已结束', { exact: true }).first().waitFor()
+    markPreviewPhase('board-cancel-peer-ended-asserted')
     await peer.getByRole('button', { name: '查看我的恢复记录', exact: true }).click()
     const recoveryDialog = peer.locator('.srb-dialog')
     const recoveryRows = recoveryDialog.getByRole('button').filter({ hasText: /\d{4}/ })
@@ -2065,6 +2092,7 @@ if (process.argv.includes('--serve')) {
     await peer.waitForFunction(() => window.fixture?.ready)
     assert.equal((await users[1].service.invoke('board.open', { boardId })).ok, false)
     console.log('TASK5_OFFLINE_CANCEL_PASSED real-disconnect/own-edit-draft/reconnect/revoke/own-only-durable/reload-denied')
+    markPreviewPhase('board-cancel-reload-denied-asserted')
 
     await peer.waitForFunction(() => {
       const f = window.fixture
@@ -2264,6 +2292,7 @@ if (process.argv.includes('--serve')) {
       join(out, 'console.json'),
       JSON.stringify({ errors, failedRequests }, null, 2)
     )
+    await writeFile(join(out, 'preview-diagnostics.json'), JSON.stringify(previewDiagnostics, null, 2))
     await browser.close()
     await cleanup()
   }

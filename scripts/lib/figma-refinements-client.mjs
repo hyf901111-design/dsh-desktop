@@ -46,6 +46,12 @@ export function patchFigmaRefinementConversation(source) {
   return source
 }
 export function patchFigmaRefinementSubagent(source) {
+  for(const [before,after] of [
+    ['"count.running.one": "{count} 个子代理，正在运行",','"count.running.one": "{count} 个运行中",'],
+    ['"count.running.other": "{count} 个子代理，正在运行",','"count.running.other": "{count} 个运行中",'],
+    ['"count.running.one": "{count} subagent running",','"count.running.one": "{count} running",'],
+    ['"count.running.other": "{count} subagents running",','"count.running.other": "{count} running",']
+  ])source=exact(source,before,after);
   source=exact(source,
     '"aria-label": t(descendants.runningCount > 0 ? runningCountKey : totalCountKey, { count: descendants.runningCount > 0 ? descendants.runningCount : descendantCount }),',
     '"aria-label": [t(totalCountKey, { count: descendantCount }), descendants.runningCount > 0 ? t(runningCountKey, { count: descendants.runningCount }) : null].filter(Boolean).join("，"),');

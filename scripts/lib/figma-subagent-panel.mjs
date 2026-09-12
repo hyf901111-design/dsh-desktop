@@ -249,10 +249,25 @@ function OdysseySubagentComposerRow({compact,className,children}) {
 `;
 export function patchSubagentContinuableComposer(source) {
   const marker='/* odyssey:continuable-child-composer:v1 */';
-  if(source.includes(marker))return source;
+  if(source.includes(marker))return patchSubagentComposerFooter(source);
   source=exact(source,'function InputBar({ useSession,',marker+'\n'+continuableComposerRow+'\n\t\tfunction InputBar({ subagentPanel=false, useSession,');
   source=exact(source,'const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n                subagentPanel,');
   source=exact(source,'"data-composer-card": true,','"data-composer-card": true,\n                        "data-odyssey-continuable-composer": subagentPanel && continuable || void 0,');
   source=exact(source,'(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\t\t\tclassName: InputBar_module_css_default.row,','(0, react_jsx_runtime.jsxs)(OdysseySubagentComposerRow, {\n                                compact: subagentPanel && continuable,\n\t\t\t\t\t\t\t\tclassName: InputBar_module_css_default.row,');
-  return source;
+  return patchSubagentComposerFooter(source);
+}
+
+function patchSubagentComposerFooter(source) {
+  // The native dock owns live run details. Relocate its React element into the
+  // child tools disclosure instead of leaving a second footer below the card.
+  source=exact(source,'function OdysseySubagentComposerRow({compact,className,children}) {','function OdysseySubagentComposerRow({compact,className,children,footer}) {');
+  source=exact(source,'children:[leading,extensions,context]','children:[leading,extensions,context,footer]');
+  // Addressed children have no host or model command catalog; the remaining
+  // permission contribution is available only with a permissions projection.
+  source=exact(source,'disabled: locked || toggleCommandMenu === void 0,','disabled: locked || toggleCommandMenu === void 0 || subagentPanel && continuable && permissions === void 0,');
+  source=exact(source,'compact: subagentPanel && continuable,','compact: subagentPanel && continuable,\n                                footer: subagentPanel && continuable ? footer : void 0,');
+  const start=source.indexOf('function InputBar('),end=source.indexOf('\n\t\t//#endregion',start);
+  if(start<0||end<start)throw Error('Subagent composer footer boundary missing');
+  const input=exact(source.slice(start,end),'\t\t\t\t\tfooter\n\t\t\t\t]','\t\t\t\t\t(subagentPanel && continuable ? null : footer)\n\t\t\t\t]');
+  return source.slice(0,start)+input+source.slice(end);
 }

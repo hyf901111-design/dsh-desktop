@@ -352,3 +352,5 @@ body [data-odyssey-subagent-panel] .wSkVaW_root .uV2eYG_card[data-odyssey-contin
 .odyssey-subagent-composer-popover{position:absolute;z-index:20;bottom:calc(100% + 8px);left:0;box-sizing:border-box;width:270px;max-width:calc(100vw - 56px);padding:12px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;border:1px solid var(--odyssey-menu-border,#e6e6e6);border-radius:10px;background:var(--odyssey-menu,#f9f9f9);color:var(--odyssey-text,#212121);box-shadow:0 6px 20px #0002}
 .odyssey-subagent-composer-popover[hidden]{display:none}
 .odyssey-subagent-composer-popover .uV2eYG_tools{flex-wrap:wrap;gap:12px}
+
+body .odyssey-subagent-composer-popover .odyssey-run-info{flex:0 0 100%;width:100%;max-width:none;margin:0}

@@ -154,3 +154,41 @@ it('adapts manual native markdown without changing dimensions or source content'
     expect(f.host.querySelector('[data-component-summary=true]')).not.toBeNull()
   } finally {await f.cleanup()}
 })
+
+// Use the real native renderer and theme rules: parent-only colors previously
+// passed inspection while the final paragraph/table leaves remained #fafafa.
+it.each([
+  { type:'markdown', content:'最终正文', selector:'.rScV5Q_containerMarkdown [data-test-markdown]', color:'#ececed', lightColor:'#242529' },
+  { type:'table', columns:['日期','数值','说明'], rows:[['九月',120,'合成样本']], selector:'.rScV5Q_containerTableScroll td:last-child span', color:'#e7e7e9', lightColor:'#292b2f' }
+].flatMap(item=>['light','dark'].map(theme=>({...item,theme}))))('applies the generated $type $theme theme through to its final text leaves', async item => {
+  const {selector,color,lightColor,theme,...spec}=item
+  const f=await fixture({version:1,title:'内容样式',...spec})
+  try {
+    if(theme==='dark') f.browser.document.body.setAttribute('data-ds-dark-theme','')
+    const style=(selector:string)=>f.browser.getComputedStyle(f.host.querySelector(selector)!)
+    expect(style(selector).color).toBe(theme==='dark'?color:lightColor)
+    if(item.type==='table') {
+      expect(style('th').color).toBe(theme==='dark'?'#989aa0':'#81858c')
+      expect(style('td[data-numeric=true]').textAlign).toBe('right')
+      expect(style('td[data-numeric=true]+td').paddingLeft).toBe('18px')
+      expect(f.host.textContent).toContain('120')
+      expect(f.host.textContent).toContain('合成样本')
+    }
+  } finally {await f.cleanup()}
+})
+it('keeps S labels at 10/18 and L line plots on the card surface without recoloring data series',async()=>{
+  const f=await fixture({version:1,type:'kpi',title:'指标',items:[{label:'样本数',value:120}]})
+  try {
+    expect(f.browser.getComputedStyle(f.host.querySelector('.rScV5Q_containerKpis span')!).fontSize).toBe('10px')
+    expect(f.browser.getComputedStyle(f.host.querySelector('.rScV5Q_containerKpis span')!).lineHeight).toBe('18px')
+    expect(f.browser.getComputedStyle(f.host.querySelector('.rScV5Q_containerKpis strong')!).fontSize).toBe('24px')
+  } finally {await f.cleanup()}
+  const chart=await fixture({version:1,type:'chart',title:'月度样本',variant:'line',labels:['一月','二月'],series:[{name:'甲',values:[0,120]},{name:'乙',values:[1,72]}]})
+  try {
+    chart.browser.document.body.setAttribute('data-ds-dark-theme','')
+    const label=chart.browser.getComputedStyle(chart.host.querySelector('.rScV5Q_chartLabel')!)
+    expect(label.fontSize).toBe('10px');expect(label.lineHeight).toBe('18px')
+    expect(chart.browser.getComputedStyle(chart.host.querySelector('[data-research-container-chart=line]')!).backgroundColor).toBe('transparent')
+    expect([...chart.host.querySelectorAll('polyline')].map(line=>line.getAttribute('stroke'))).toEqual(['var(--sherlock-chart-1)','var(--sherlock-chart-2)'])
+  } finally {await chart.cleanup()}
+})
