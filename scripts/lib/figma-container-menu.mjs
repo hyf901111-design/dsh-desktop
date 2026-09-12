@@ -2,6 +2,9 @@
 export function patchFigmaContainerMenu(source) {
   const marker='/* odyssey:container-refresh-submenu:20260912 */'
   if(source.includes(marker))return source
+    .replace('const left=m.right+8+width>window.innerWidth-12?-width-8:m.width+8;', 'const left=(m.right+8+width>window.innerWidth-12?-width-8:m.width+8)-menuRef.current.clientLeft;')
+    .replace('))-m.top,width});', '))-m.top-menuRef.current.clientTop,width});')
+    .replace('focusSubmenuRef.current=true;setRefreshOpen(!refreshOpen);', "focusSubmenuRef.current=true;setRefreshOpen(true);if(refreshOpen){focusSubmenuRef.current=false;submenuRef.current?.querySelector('[aria-checked=true]')?.focus({preventScroll:true});}")
   const start=source.indexOf('function ResearchContainerMenu('),end=source.indexOf('\n\t\tfunction ResearchGeneratedContainer(',start)
   if(start<0||end<start)throw Error('Container menu boundary drifted')
   let part=source.slice(start,end)
@@ -56,7 +59,7 @@ export function patchFigmaContainerMenu(source) {
   if(a<0||b<a)throw Error('Refresh entries missing')
   part=part.slice(0,a)+`(0,react_jsx_runtime.jsxs)('div',{className:'odyssey-refresh-parent',onMouseEnter:()=>{if(!editingPrompt)setRefreshOpen(true);},children:[
     (0,react_jsx_runtime.jsxs)('button',{type:'button',role:'menuitem',ref:refreshTriggerRef,'data-research-container-refresh-submenu':'','aria-haspopup':'menu','aria-expanded':refreshOpen,disabled:editingPrompt,
-      onClick:()=>{focusSubmenuRef.current=true;setRefreshOpen(!refreshOpen);},children:[(0,react_jsx_runtime.jsx)('span',{children:'自动刷新'}),(0,react_jsx_runtime.jsx)('small',{children:node.refreshMinutes===0?'关闭':('每 '+node.refreshMinutes+' 分钟')}),(0,react_jsx_runtime.jsx)('span',{'aria-hidden':true,className:'odyssey-submenu-chevron'})]}),
+      onClick:()=>{focusSubmenuRef.current=true;setRefreshOpen(true);if(refreshOpen){focusSubmenuRef.current=false;submenuRef.current?.querySelector('[aria-checked=true]')?.focus({preventScroll:true});}},children:[(0,react_jsx_runtime.jsx)('span',{children:'自动刷新'}),(0,react_jsx_runtime.jsx)('small',{children:node.refreshMinutes===0?'关闭':('每 '+node.refreshMinutes+' 分钟')}),(0,react_jsx_runtime.jsx)('span',{'aria-hidden':true,className:'odyssey-submenu-chevron'})]}),
     refreshOpen && (0,react_jsx_runtime.jsx)('div',{ref:submenuRef,role:'menu','aria-label':'自动刷新频率','data-odyssey-refresh-options':'',style:submenuStyle,children:[0,1,5,15,30].map(minutes=>(0,react_jsx_runtime.jsxs)('button',{type:'button',role:'menuitemradio','aria-checked':node.refreshMinutes===minutes,'data-research-container-refresh-minutes':minutes,disabled:editingPrompt,onClick:()=>choose(()=>onSetRefresh?.(node,minutes)),children:[(0,react_jsx_runtime.jsx)('span',{children:minutes===0?'不自动刷新':('每 '+minutes+' 分钟')}),node.refreshMinutes===minutes&&(0,react_jsx_runtime.jsx)('span',{'aria-hidden':true,className:'odyssey-menu-check'})]},minutes))})
   ]})`+part.slice(b)
   exact('\n\t\t\t\t}) : null]','\n\t\t\t\t}),document.body) : null]')

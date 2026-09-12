@@ -254,7 +254,7 @@ body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; 
 /* 12E provider directory keeps long catalogs within the anchored menu. */
 body [role=menu]:has(.odyssey-provider-search) { width:320px; min-width:0; padding:5px; display:flex; flex-direction:column; max-height:min(309px,calc(100vh - 24px)); }
 body [role=menu]:has(.odyssey-provider-search)>[role=presentation] { padding:0; margin:0; border:0; }
-body [role=menu]:has(.odyssey-provider-search)>[role=presentation]:first-child { flex:1 1 auto; min-height:0; overflow:auto; }
+body [role=menu]:has(.odyssey-provider-search)>[role=presentation]:first-child { flex:1 1 auto; min-height:0; max-height:252px; overflow:auto; }
 body [role=menu]:has(.odyssey-provider-search)>[role=presentation]:last-child { flex:none; }
 body [role=menu]:has(.odyssey-provider-search)>[role=presentation]:last-child::before { content:''; display:block; height:1px; background:var(--odyssey-menu-border); margin:6px 6px 4px; }
 body [role=menu] [role=presentation]:has(>.odyssey-provider-search) { position:sticky; top:0; z-index:1; padding:0 0 2px; background:var(--odyssey-menu); }
@@ -267,3 +267,28 @@ body .odyssey-provider-option>span { overflow:hidden; text-overflow:ellipsis; }
 body .odyssey-provider-option small { margin-left:auto; flex:none; font:400 11px/18px var(--odyssey-font-ui); }
 body [role=menu]:has(.odyssey-provider-search) [role=menuitem]:disabled { color:#929292; opacity:1; background:transparent; cursor:default; }
 body[data-ds-dark-theme] [role=menu]:has(.odyssey-provider-search) [role=menuitem]:disabled { color:#686868; }
+
+/* 12C mind-map detail and 12D new-tab keep their dedicated Figma material. */
+body .rScV5Q_mindMapMenu.odyssey-derived-detail-menu { --odyssey-derived-surface:var(--odyssey-menu); --odyssey-derived-border:var(--odyssey-menu-border); --odyssey-derived-input:#f0f0f0; --odyssey-derived-muted:#757575; --odyssey-derived-shadow:0 8px 24px -4px #00000024; backdrop-filter:blur(24px); }
+body[data-ds-dark-theme] .rScV5Q_mindMapMenu.odyssey-derived-detail-menu { --odyssey-derived-input:#373737; --odyssey-derived-muted:#9c9c9c; }
+body [role=menu]:has([data-odyssey-file-menu-label]) { height:250px; padding:8px 10px 32px; border:0; outline:1px solid #ffffffa6; outline-offset:-1px; border-radius:14px; background:#ffffffe8; backdrop-filter:blur(16px); box-shadow:0 8px 24px #0000001f; }
+body[data-ds-dark-theme] [role=menu]:has([data-odyssey-file-menu-label]) { background:#333333e8; outline-color:#333333a6; }
+body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] { padding:0 10px; gap:12px; font:400 14px/24px var(--odyssey-font-ui); }
+body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] svg { width:17px; height:17px; }
+body [role=menu]:has([data-odyssey-file-menu-label]) [class*=_itemWrap_]:first-child [role=menuitem] svg { width:16px; height:16px; }
+
+/* Blank canvas, component actions and format submenu (12C). */
+body .rScV5Q_contextMenu { box-sizing:border-box; width:240px; min-width:0; padding:5px; border:1px solid var(--odyssey-menu-border); border-radius:10px; background:var(--odyssey-menu); color:var(--odyssey-text); box-shadow:0 8px 24px -4px #00000024; backdrop-filter:blur(24px); font:400 13px/20px var(--odyssey-font-ui); }
+body .rScV5Q_contextMenu:has([data-research-context-paste]) { width:260px; }
+body .rScV5Q_contextMenu>button,body .rScV5Q_contextMenu .rScV5Q_contextDownloadGroup>button,body .rScV5Q_contextDownloadFormats>button { height:34px; min-height:34px; padding:7px 10px; font:400 13px/20px var(--odyssey-font-ui); }
+body .rScV5Q_contextMenu>*+*,body .rScV5Q_contextDownloadFormats>button+button { margin-top:2px; }
+body .rScV5Q_contextMenu [data-research-context-remove] { position:relative; margin-top:11px; }
+body .rScV5Q_contextMenu [data-research-context-remove]::before { content:''; position:absolute; left:6px; right:6px; top:-5px; height:1px; background:var(--odyssey-menu-border); }
+body .rScV5Q_contextMenuShortcut { margin-left:auto; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+body .rScV5Q_contextDownloadFormats[role=menu] { width:180px; padding:5px; }
+
+/* 12D tab overflow: keep the content geometry independent of the outline. */
+body [data-odyssey-tab-overflow-menu][role=menu] { padding:8px 6px; border:0; outline:1px solid #00000012; outline-offset:-1px; border-radius:12px; background:#fafafaf5; backdrop-filter:blur(16px); box-shadow:0 8px 24px #00000029; }
+body[data-ds-dark-theme] [data-odyssey-tab-overflow-menu][role=menu] { outline-color:#ffffff1a; background:#282828f5; box-shadow:0 8px 24px #00000052; }
+body [data-odyssey-tab-overflow-heading] { font-size:11px; }
+body [data-odyssey-tab-overflow-option][role=menuitemradio] { padding:0 10px; gap:10px; border-radius:7px; font:400 12px/21px var(--odyssey-font-ui); }
