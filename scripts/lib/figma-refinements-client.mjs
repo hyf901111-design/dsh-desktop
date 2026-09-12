@@ -7,7 +7,12 @@ function exact(source, before, after) {
 export function patchFigmaRefinementPreset(source) {
   source = exact(source, '\t\t\t\t\t\tshownLabel,', '\t\t\t\t\t\t(0, react_jsx_runtime.jsx)("span", { className: "odyssey-mode-label", children: shownLabel }),')
   source = exact(source, '功能完整的编码 Agent，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。', '具备完整的编码 Agent 能力，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。')
-  return source
+  const start=source.indexOf('function AgentPresetSeat('), end=source.indexOf('\n\t\t//#endregion',start)
+  let seat=source.slice(start,end)
+  seat=exact(seat,'const [open, setOpen] = (0, react.useState)(false);','const [open, setOpen] = (0, react.useState)(false);\n\t\t\tconst [menuSide, setMenuSide] = (0, react.useState)("bottom");')
+  seat=exact(seat,'side: "bottom",','side: menuSide,')
+  seat=exact(seat,'onClick: () => {\n\t\t\t\t\t\tsetOpen((value) => !value);','onClick: (event) => {\n\t\t\t\t\t\tconst anchor = event.currentTarget.getBoundingClientRect();\n\t\t\t\t\t\tsetMenuSide(window.innerHeight - anchor.bottom < 220 ? "top" : "bottom");\n\t\t\t\t\t\tsetOpen((value) => !value);')
+  return source.slice(0,start)+seat+source.slice(end)
 }
 export function patchFigmaRefinementConversation(source) {
   const marker='/* odyssey:task-dock:20260912 */'
