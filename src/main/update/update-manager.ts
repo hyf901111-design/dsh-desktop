@@ -4,6 +4,7 @@ import { cancelUpdateRestartReceipt, consumeUpdateRestartReceipt, writeUpdateRes
 import { armMacRenameRecovery, repairRenamedMacDock } from './mac-update-recovery'
 import electronUpdater from 'electron-updater'
 import { validateLocalUpdateEnvironment, type LocalUpdateEnvironment } from './local-update-guard'
+import type { LocalDownloadUpdater } from './local-download-updater'
 import type { LocalCheckUpdater } from './local-check-updater'
 import type { UpdateStatus } from '../../shared/contracts'
 import {
@@ -23,9 +24,9 @@ import {
   type TrustedWindow
 } from '../ipc-trust'
 
-let autoUpdater: typeof electronUpdater.autoUpdater | LocalCheckUpdater = electronUpdater.autoUpdater
-let updateAccess: 'production' | 'blocked' | 'check-only' =
-  app.commandLine?.hasSwitch('sherlock-local-acceptance-origin') || app.commandLine?.hasSwitch('sherlock-local-update-feed') ? 'blocked' : 'production'
+let autoUpdater: typeof electronUpdater.autoUpdater | LocalCheckUpdater | LocalDownloadUpdater = electronUpdater.autoUpdater
+let updateAccess: 'production' | 'blocked' | 'check-only' | 'download-only' =
+  app.commandLine?.hasSwitch('sherlock-local-acceptance-origin') || app.commandLine?.hasSwitch('sherlock-local-update-feed') || app.commandLine?.hasSwitch('sherlock-local-update-download') ? 'blocked' : 'production'
 const TRANSIENT_STATUS_MS = 8_000
 
 let status = initialUpdateStatus(app.getVersion())
@@ -40,29 +41,38 @@ let installRequested = false
 let installing = false
 let started = false
 let handlersRegistered = false
+let localDownloadUpdater: LocalDownloadUpdater | undefined
 let prepareForRestart: (() => Promise<void>) | undefined
 
 /** Called before IPC/menu registration. An attempted local setup can never fall back to production. */
 export async function initializeLocalUpdateChecks(input: LocalUpdateEnvironment, temporaryDirectory: string): Promise<void> {
-  if (!input.acceptanceOrigin && !input.feedRequested && updateAccess === 'production') return
+  if (!input.acceptanceOrigin && !input.feedRequested && !input.downloadRequested && updateAccess === 'production') return
   updateAccess = 'blocked'
   if (started || checkPromise) throw Error('Local update setup must precede update actions.')
+  if (input.downloadRequested && !input.feedRequested) throw Error('Local download requires the explicit validated feed.')
   if (!input.feedRequested && input.acceptanceOrigin) return
   const paths = await validateLocalUpdateEnvironment(input, temporaryDirectory)
-  const { LocalCheckUpdater } = await import('./local-check-updater')
-  const local = new LocalCheckUpdater(paths, {
+  const application = {
     version: app.getVersion(), name: app.getName(), isPackaged: app.isPackaged,
     whenReady: async () => { await app.whenReady() }
-  })
-  autoUpdater = local
+  }
+  if (input.downloadRequested) {
+    const { LocalDownloadUpdater } = await import('./local-download-updater')
+    localDownloadUpdater = await LocalDownloadUpdater.create(paths, application)
+    autoUpdater = localDownloadUpdater
+  } else {
+    const { LocalCheckUpdater } = await import('./local-check-updater')
+    autoUpdater = new LocalCheckUpdater(paths, application)
+  }
   configureUpdater(true)
-  updateAccess = 'check-only'
-  console.info('[updater] isolated metadata checks only', paths.feed)
+  updateAccess = input.downloadRequested ? 'download-only' : 'check-only'
+  console.info('[updater] isolated local update mode', updateAccess, paths.feed)
 }
 
 function assertUpdateAccess(installation = false): void {
   if (updateAccess === 'blocked') throw Error('Local update checks are disabled until isolated initialization succeeds.')
   if (installation && updateAccess === 'check-only') throw Error('隔离更新验收仅允许检查，禁止下载或安装。')
+  if (installation && updateAccess !== 'production') throw Error('隔离更新验收禁止安装或退出应用。')
 }
 
 export function setUpdateRestartPreparation(prepare: () => Promise<void>): void {
@@ -161,7 +171,21 @@ export async function installDownloadedUpdate(): Promise<void> {
 }
 
 export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
-  assertUpdateAccess(true)
+  assertUpdateAccess()
+  if (updateAccess === 'check-only') throw Error('隔离更新验收仅允许检查，禁止下载或安装。')
+  if (updateAccess === 'download-only') {
+    if (downloading || status.phase !== 'available') return getUpdateStatus()
+    downloading = true
+    try {
+      // Never enter completeUpdate: even its catch touches the restart receipt.
+      const latest = await checkForUpdates(true)
+      if (latest.phase === 'available') await autoUpdater.downloadUpdate()
+    } catch {
+      // Actual AppUpdater download errors already drive the production event reducer.
+      // Shutdown cancellation intentionally creates no artificial renderer phase.
+    } finally { downloading = false }
+    return getUpdateStatus()
+  }
   if (status.phase !== 'available') return getUpdateStatus()
   await completeUpdate()
   return getUpdateStatus()
@@ -214,7 +238,7 @@ async function completeUpdate(): Promise<void> {
   }
 }
 
-export function stopUpdateManager(): void {
+export function stopUpdateManager(): Promise<void> {
   if (startupTimer) clearTimeout(startupTimer)
   if (intervalTimer) clearInterval(intervalTimer)
   if (resetTimer) clearTimeout(resetTimer)
@@ -222,6 +246,7 @@ export function stopUpdateManager(): void {
   intervalTimer = undefined
   resetTimer = undefined
   if (started && app.isReady()) powerMonitor.removeListener('resume', checkAfterResume)
+  return localDownloadUpdater?.dispose().catch(error => console.warn('[updater] isolated cache cleanup refused', error)) ?? Promise.resolve()
 }
 
 function configureUpdater(localCheckOnly = false): void {
