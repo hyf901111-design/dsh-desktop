@@ -12,7 +12,7 @@
         "featureName": "Figma single-row header and menu refinements",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "afe468dc52ec08223df5e6dc4be33d7af97fd466",
-        "tipCommit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
+        "tipCommit": "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1",
         "commits": [
           {
             "commit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
@@ -20,6 +20,13 @@
               "afe468dc52ec08223df5e6dc4be33d7af97fd466"
             ],
             "subject": "界面：按最新 Figma 还原单行顶栏、菜单与输入区细节"
+          },
+          {
+            "commit": "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1",
+            "parents": [
+              "3adf9422947931d8d781bac8b5a19aa3648ea9bc"
+            ],
+            "subject": "修复：补齐菜单集成验证依赖并兼容现有中文命令补丁"
           }
         ],
         "files": [
@@ -38,6 +45,10 @@
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-collaboration-e2e.mjs"
           },
           {
             "status": "M",
@@ -87,21 +98,16 @@
         "checks": [
           {
             "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/figma-responsive-header.test.ts",
-              "test/figma-motion-controller.test.ts",
-              "test/figma-panel-default-width.test.ts",
-              "test/figma-panel-no-session.test.ts",
-              "test/research-boards-ui.test.ts",
-              "test/figma-scrollbars.test.ts"
+              "node",
+              "scripts/test-research-collaboration-e2e.mjs",
+              "--stage",
+              "sources"
             ],
             "outcome": "passed",
-            "summary": "22 focused tests; typecheck and patch idempotence passed. Chromium validated six header widths and existing independent-pane motion matrix.",
-            "verifiedCommit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
-            "completedAt": "2026-09-12T06:16:36.284765+00:00",
-            "timeoutMs": 180000
+            "summary": "Clean locked package transforms and factory evaluation pass for feature/main baselines; repeated transforms are byte-identical. Existing Chinese command patch retained.",
+            "verifiedCommit": "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1",
+            "completedAt": "2026-09-12T06:21:06.793302+00:00",
+            "timeoutMs": 300000
           }
         ],
         "uiVerification": {
@@ -118,7 +124,7 @@
         "risks": [
           "Local only; no publication, push, version changes or main promotion."
         ],
-        "generatedAt": "2026-09-12T06:16:36.284765+00:00"
+        "generatedAt": "2026-09-12T06:21:06.793302+00:00"
       }
     }
   ],
