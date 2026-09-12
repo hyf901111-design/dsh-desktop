@@ -1,4 +1,5 @@
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
+import { patchFigmaModelMenu } from './lib/figma-model-menu.mjs'
 import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger, patchFigmaNavigationTitles, patchFigmaContextDirectory } from './lib/figma-refinements-client.mjs'
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
@@ -117,6 +118,7 @@ const layoutPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-
 writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')))
 
 for (const [name, patch] of [
+  ['dsh-client-ui-model-selection', patchFigmaModelMenu],
   ['dsh-client-ui-workspace', patchFigmaNavigationTitles],
   ['dsh-client-ui-conversation', source => patchFigmaReadingConversation(patchFigmaContextDirectory(source))],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],

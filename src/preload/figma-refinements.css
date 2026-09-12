@@ -1,7 +1,7 @@
 /* Figma 14–17, 2026-09-12. A is the accepted layout; B remains a design alternative.
    Supersedes the two/three-row header in the earlier 64/66 boards. */
 body { --odyssey-menu:#fffffff7; --odyssey-menu-border:#dfe0e3; --odyssey-menu-row:#f1f1f3; --odyssey-menu-muted:#7d828a; --odyssey-scroll-ink:0 0 0; }
-body[data-ds-dark-theme] { --odyssey-menu:#262626f7; --odyssey-menu-border:#3b3d40; --odyssey-menu-row:#353638; --odyssey-menu-muted:#979ba2; --odyssey-scroll-ink:255 255 255; }
+body[data-ds-dark-theme] { --odyssey-menu:#292a2df7; --odyssey-menu-border:#444549; --odyssey-menu-row:#333438; --odyssey-menu-muted:#979ba2; --odyssey-scroll-ink:255 255 255; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:56px!important; min-height:56px!important; flex:0 0 56px!important;
@@ -96,6 +96,23 @@ body .lXshSW_chevron { margin-left:auto; }
 body { --odyssey-board-add-icon:url("data:image/svg+xml,%3Csvg%20preserveAspectRatio%3D%22none%22%20overflow%3D%22visible%22%20style%3D%22display%3A%20block%3B%22%20width%3D%2213.6%22%20height%3D%2211.6%22%20viewBox%3D%220%200%2013.6%2011.6%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cg%20id%3D%22Group%22%3E%0A%3Cpath%20id%3D%22Vector%22%20d%3D%22M11%200.6H2.6C1.49543%200.6%200.6%201.49543%200.6%202.6V9C0.6%2010.1046%201.49543%2011%202.6%2011H11C12.1046%2011%2013%2010.1046%2013%209V2.6C13%201.49543%2012.1046%200.6%2011%200.6Z%22%20stroke%3D%22%23666B73%22%20stroke-width%3D%221.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3Cpath%20id%3D%22Vector_2%22%20d%3D%22M0.8%203.8H12.8M6.8%205.8V8.8M5.3%207.3H8.3%22%20stroke%3D%22%23666B73%22%20stroke-width%3D%221.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E%0A"); }
 
 /* Slash commands keep Chinese names and descriptions on a single line. */
+/* 665:857 / 12A: direct model directory, anchored to the trigger in viewport space. */
+body .odyssey-model-menu[role=menu] { position:fixed; z-index:3000; right:auto; width:320px; min-width:0; padding:5px; display:flex; flex-direction:column; overflow:auto; }
+body .odyssey-model-menu .odyssey-model-search { box-sizing:border-box; flex:none; width:100%; height:36px; border:0; border-radius:6px; padding:8px 10px; background:#f5f5f5; color:var(--odyssey-text); font:400 13px/20px var(--odyssey-font-ui); }
+body[data-ds-dark-theme] .odyssey-model-menu .odyssey-model-search { background:#1f1f1f; }
+body .odyssey-model-menu ._7KE1Ra_groups { min-height:0; flex:0 1 auto; overflow:auto; }
+body .odyssey-model-menu ._7KE1Ra_groupTitle { position:static; background:transparent; padding:6px 8px 4px; font:400 11px/18px var(--odyssey-font-ui); }
+body .odyssey-model-menu :is(._7KE1Ra_option,.odyssey-model-footer)[role] { flex:none; width:100%; min-height:34px; padding:7px 10px; border:0; border-radius:6px; gap:8px; color:var(--odyssey-text); background:transparent; font:400 13px/20px var(--odyssey-font-ui); text-align:left; display:flex; align-items:center; }
+body .odyssey-model-menu ._7KE1Ra_modelName { font:inherit; }
+body .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#f1f1f3; font-weight:500; }
+body[data-ds-dark-theme] .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#373737; }
+body .odyssey-model-menu ._7KE1Ra_check { flex:0 0 14px; }
+body .odyssey-model-menu ._7KE1Ra_check svg { width:14px; height:14px; }
+body .odyssey-model-menu .odyssey-model-footer { margin-top:6px; position:relative; cursor:pointer; }
+body .odyssey-model-menu .odyssey-model-footer::before { content:''; position:absolute; top:-4px; left:6px; right:6px; height:1px; background:var(--odyssey-menu-border); }
+body .odyssey-model-menu .odyssey-model-footer small { margin-left:auto; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+body .odyssey-model-menu .odyssey-model-footer svg { width:12px; height:12px; flex:none; }
+body .odyssey-model-menu :is(button,input):focus-visible { outline:2px solid var(--odyssey-menu-border); outline-offset:-2px; }
 body ._3e4SsG_menu { min-width:0; width:360px; max-width:calc(100vw - 32px); border-radius:10px; border:1px solid var(--odyssey-menu-border); padding:6px; background:var(--odyssey-menu); box-shadow:0 8px 24px -4px #00000024; }
 body ._3e4SsG_item { display:flex; align-items:center; min-height:32px; height:32px; gap:8px; padding:6px 8px; border-radius:6px; }
 body ._3e4SsG_itemName { flex:none; font:400 13px/20px var(--odyssey-font-ui); white-space:nowrap; }

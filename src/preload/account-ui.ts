@@ -528,6 +528,17 @@ export function mountAccountUi(
     root.querySelector('.VOzbGW_content')?.append(page)
     if (!user) page.querySelector('input')?.focus()
   }
+  let pendingModelSettings = false
+  function reconcileModelSettings() {
+    if (!pendingModelSettings) return
+    const root = panel()
+    const target = root?.querySelector<HTMLButtonElement>('[data-settings-section-id="models"]')
+    if (!root || !target) return
+    pendingModelSettings = false
+    showSettings(root)
+    target.click()
+    target.focus()
+  }
   function reconcile() {
     const original =
       document.querySelector<HTMLButtonElement>('.VOzbGW_trigger')
@@ -694,7 +705,13 @@ export function mountAccountUi(
   )
   const openFromBoards = () => open(true)
   document.defaultView?.addEventListener('sherlock:account-open', openFromBoards)
-  const observer = new MutationObserver(() => { settingsBackground.reconcile(); reconcile() })
+  const openModelSettings = () => {
+    pendingModelSettings = true
+    open(false)
+    reconcileModelSettings()
+  }
+  document.defaultView?.addEventListener('sherlock:model-settings-open', openModelSettings)
+  const observer = new MutationObserver(() => { settingsBackground.reconcile(); reconcile(); reconcileModelSettings() })
   observer.observe(document.documentElement, { childList: true, subtree: true })
   settingsBackground.reconcile()
   reconcile()
@@ -711,6 +728,7 @@ export function mountAccountUi(
     closeMenu()
     style.remove()
     document.defaultView?.removeEventListener('sherlock:account-open', openFromBoards)
+    document.defaultView?.removeEventListener('sherlock:model-settings-open', openModelSettings)
     trigger?.closest('.srb-account-controls')?.remove()
     trigger?.remove()
   }
