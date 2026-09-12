@@ -10,6 +10,15 @@
   min-height:0;
 }
 
+/* DOCX pages keep their original paper width. Give the centered page stack
+   its intrinsic width so overflow starts to the right of the scroll origin,
+   rather than hiding the left half of a wide page behind that origin. */
+[data-dsh-panel-host] [class*="_editorDocxViewport"] .docx-wrapper {
+  box-sizing:border-box;
+  width:max-content;
+  min-width:100%;
+}
+
 [data-odyssey-file-search] {
   position:relative;
   box-sizing:border-box;
