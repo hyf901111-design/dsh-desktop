@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { describe, it, expect, vi } from 'vitest'
 import { patchFigmaUpdateWorkspace } from '../scripts/lib/figma-updates-client.mjs'
+import { patchFigmaWorkspaceMenus } from '../scripts/lib/figma-workspace-menus.mjs'
 import {
   patchResearchBoardConversation,
   patchResearchBoardSidebar,
@@ -1247,12 +1248,12 @@ it('workspace section collapse survives reapplying the actual module patch', asy
     'node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js',
     'utf8'
   )
-  const patched = patchResearchBoardWorkspace(raw)
+  const patched = patchFigmaWorkspaceMenus(patchResearchBoardWorkspace(raw))
   expect(patchResearchBoardWorkspace(patched)).toBe(patched)
   expect(() => new Script(patched)).not.toThrow()
   const menu = patched.slice(patched.indexOf('function ViewOptionsMenu('), patched.indexOf('function workspaceGroupHalf('))
   expect(menu).toContain('const [open, setOpen]')
-  expect(menu).toContain('className: "srb-navigation-menu", open,')
+  expect(menu).toContain('className: "odyssey-view-menu", open,')
   expect(menu).toContain('"aria-expanded": open')
 
   expect(patched).toContain('"aria-expanded":!sectionCollapsed')
