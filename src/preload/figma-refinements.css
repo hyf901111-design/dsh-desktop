@@ -6,7 +6,7 @@ body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:56px!important; min-height:56px!important; flex:0 0 56px!important;
   padding:0 20px; grid-template-rows:none!important; overflow:visible;
-  background:var(--odyssey-glass); border:0; box-shadow:none;
+  background:transparent; backdrop-filter:blur(32px); border:0; box-shadow:none;
 }
 body .wSkVaW_header :is([data-srb-title-row],[data-srb-title-cluster]) { display:contents!important; }
 body .wSkVaW_header .wSkVaW_crumbs { order:1; flex:0 1 auto; min-width:0; max-width:200px; overflow:hidden; }
@@ -30,17 +30,17 @@ body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:4px!important; padd
 body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-odyssey-header-layout=narrow] { padding-right:44px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_crumbs { max-width:80px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_tab { min-width:48px; width:48px; }
-body .wSkVaW_header:not([data-odyssey-header-layout=regular]) .cubgiG_seat { font-size:0; gap:4px; padding:0 4px; }
-body .wSkVaW_header:not([data-odyssey-header-layout=regular]) .odyssey-mode-label { display:none; }
-body .wSkVaW_header:not([data-odyssey-header-layout=regular]) .h8S2Va_trigger { width:28px; padding:0; justify-content:center; font-size:0; }
-body .wSkVaW_header:not([data-odyssey-header-layout=regular]) .h8S2Va_trigger>* { display:none; }
-body .wSkVaW_header:not([data-odyssey-header-layout=regular]) .h8S2Va_trigger::before { content:'⋯'; font:18px/28px var(--odyssey-font-ui); }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .cubgiG_seat { font-size:0; gap:4px; padding:0 4px; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .odyssey-mode-label { display:none; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger { width:28px; padding:0; justify-content:center; font-size:0; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger>* { display:none; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .h8S2Va_trigger::before { content:'⋯'; font:18px/28px var(--odyssey-font-ui); }
 /* The composer context remains available on a blank home/research conversation.
    Once messages exist, the persistent header supplies the mode control. */
 .sRp_composer[data-odyssey-has-conversation=true] .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
 .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
-body .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat) { box-sizing:border-box; height:28px; min-height:28px; padding:0 8px; gap:6px; border-radius:7px; transform:none; }
-body .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat):hover { background:var(--odyssey-menu-row); }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat) { box-sizing:border-box; height:28px; min-height:28px; padding:0 8px; min-width:0; width:auto; gap:6px; border-radius:7px; transform:none; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat):hover { background:var(--odyssey-menu-row); }
 /* Shared menu material. Specialized menus retain their semantic rows and actions. */
 body [role=menu]:not(.rScV5Q_contextMenu), body .h8S2Va_menu {
   box-sizing:border-box; max-width:calc(100vw - 24px); border:1px solid var(--odyssey-menu-border);
@@ -51,8 +51,13 @@ body [role=menu]:not(.rScV5Q_contextMenu), body .h8S2Va_menu {
 body [role=menu] :is([role=menuitem],[role=menuitemradio],[role=menuitemcheckbox]) { box-sizing:border-box; min-height:32px; padding:6px 10px; border-radius:6px; gap:8px; font:inherit; }
 body [role=menu] :is([role=menuitem],[role=menuitemradio],[role=menuitemcheckbox]):is(:hover,:focus-visible,[data-active=true]) { background:var(--odyssey-menu-row); }
 body span.cubgiG_picker { width:auto; min-width:0!important; }
-body .cubgiG_picker[role=menu], body [role=menu]:has(.cubgiG_item) { width:392px; min-width:0!important; max-width:calc(100vw - 24px); }
-body .cubgiG_picker [role=menuitem] { padding:0!important; align-items:flex-start; }
+body .cubgiG_picker[role=menu], body [role=menu]:has(.cubgiG_item) { width:392px!important; min-width:0!important; max-width:calc(100vw - 24px); }
+body [role=menu]:has(.cubgiG_item) [role=menuitem] { position:relative; padding:0; margin:0; border-radius:6px; align-items:flex-start; gap:0; box-shadow:none; }
+body [role=menu]:has(.cubgiG_item)>[role=presentation] { padding:0; }
+body [role=menu]:has(.cubgiG_item) [role=menuitem]>span { width:100%; min-width:0; }
+body [role=menu]:has(.cubgiG_item) [role=menuitem]>svg { position:absolute; right:10px; top:10px; width:14px; height:14px; }
+body [role=menu]:has(.cubgiG_item) [role=menuitem]:has(.cubgiG_selectedItem),body [role=menu]:has(.cubgiG_item) [role=menuitem]:hover { background:var(--odyssey-menu-row); box-shadow:none; }
+body [role=menu]:has(.cubgiG_item) .cubgiG_itemName { padding-right:22px; }
 body .cubgiG_item { width:100%; min-width:0; padding:8px 10px; border-radius:6px; gap:4px; }
 body .cubgiG_itemName { font:400 13px/20px var(--odyssey-font-ui); gap:8px; }
 body .cubgiG_itemName svg { width:16px; height:16px; flex:none; }
@@ -105,3 +110,45 @@ body ._3e4SsG_groupTitle { padding:4px 8px; font:400 11px/18px var(--odyssey-fon
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration) { position:relative; display:flex; align-items:center; justify-content:center; }
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration):is(:hover,:focus-visible)::after { content:attr(aria-label); position:absolute; top:calc(100% + 8px); right:0; width:max-content; padding:5px 8px; border-radius:6px; background:var(--odyssey-menu); box-shadow:0 4px 12px #0002; color:var(--odyssey-text); font:400 12px/18px var(--odyssey-font-ui); pointer-events:none; z-index:100; }
 body .lXshSW_glyphCompleted { color:#299665; }
+
+/* The shared composer also lives in the central conversation dock. The older
+   side-panel-only selectors left that dock on the upstream 22 px grey card. */
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .uV2eYG_card {
+  box-sizing:border-box; border:0; border-radius:10.5px; box-shadow:none;
+  background:rgb(255 255 255 / .49); backdrop-filter:blur(12px);
+}
+body[data-ds-dark-theme] :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .uV2eYG_card { background:rgb(0 0 0 / .49); }
+body .wSkVaW_root[data-odyssey-page=conversation] .uV2eYG_card { min-height:126px; padding:0; gap:0; }
+body .wSkVaW_root[data-odyssey-page=conversation] .uV2eYG_scroll { min-height:78px; flex:1 1 auto; }
+body .wSkVaW_root[data-odyssey-page=conversation] :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) { padding:15px 17px 0; font:400 16px/24px "OdysseyChipCell",var(--odyssey-font-ui); }
+body .wSkVaW_root[data-odyssey-page=conversation] .uV2eYG_row { box-sizing:border-box; min-height:48px; padding:8px 11px 8px 8px; gap:12px; flex-wrap:nowrap; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .uV2eYG_primary { width:30px; height:30px; transform:none; }
+/* Use the control's box for hover, with balanced internal space. Never squeeze
+   the inset to make a narrow composer fit: its model label gives up width. */
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) :is(.Sh0Q9G_trigger,._7KE1Ra_trigger) {
+  box-sizing:border-box; min-height:28px; height:28px; padding:0 8px; gap:4px; border-radius:7px; align-items:center;
+}
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) :is(.Sh0Q9G_trigger,._7KE1Ra_trigger):hover { background:var(--odyssey-menu-row); }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) :is(.Sh0Q9G_triggerIcon,.Sh0Q9G_triggerIcon>svg,.dsh-paperclip>svg) { width:16px; height:16px; flex:none; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) :is(.Sh0Q9G_chevron,.Sh0Q9G_chevron>svg,._7KE1Ra_chevron) { width:12px; height:12px; flex:none; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) :is(.uV2eYG_add,.dsh-paperclip,.uV2eYG_primary) { display:grid; place-items:center; padding:0; flex-shrink:0; }
+body .wSkVaW_heroWorkspaceRow .pXSMma_chevron { margin:0; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .uV2eYG_tools { flex:0 0 auto; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .uV2eYG_trailing { flex:1 1 0; min-width:0; justify-content:flex-end; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .uV2eYG_trailing ._7KE1Ra_root { flex:0 1 auto; min-width:0; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) ._7KE1Ra_trigger { max-width:100%; }
+body .sRp_composer .wSkVaW_heroWorkspaceRow { height:28px; min-height:28px; }
+@container (max-width:320px) {
+  body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .Sh0Q9G_triggerLabel { display:none; }
+  body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .uV2eYG_row { gap:4px; }
+  body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) :is(.uV2eYG_tools,.uV2eYG_trailing) { gap:4px; }
+}
+/* A 12 px close glyph gets a 20 px target; it no longer paints hover edge to edge. */
+body :is(.t8lSSG_panel,.t8lSSG_bottomPanel) .t8lSSG_tabClose { box-sizing:border-box; flex:0 0 20px; width:20px; height:20px; padding:4px; margin:0; border-radius:5px; display:flex; align-items:center; justify-content:center; }
+body :is(.t8lSSG_panel,.t8lSSG_bottomPanel) .t8lSSG_tabClose>svg { flex:none; width:12px; height:12px; }
+body .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { flex-basis:20px; width:20px; }
+body :is(.t8lSSG_panel,.t8lSSG_bottomPanel) .t8lSSG_tabClose:hover { background:var(--odyssey-menu-row); }
+body .wSkVaW_header .odyssey-members-compact { display:none; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-actions:has(.srb-presence) { gap:4px; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-presence>:not(.odyssey-members-compact) { display:none!important; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .odyssey-members-compact { display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:6px; border-radius:7px; }
