@@ -86,9 +86,14 @@ it('adding a collaborator checks an ID and sends to the same board without creat
   expect(send.disabled).toBe(false)
   expect(dialog.textContent).toContain('林然')
   expect(dialog.querySelector('.srb-check-icon')).not.toBeNull()
+  const role = dialog.querySelector('[aria-label="邀请权限"]')! as unknown as HTMLButtonElement
+  role.click()
+  expect(f.page.call.mock.calls.some(([action]: [string]) => action === 'invitation.send')).toBe(false)
+  ;(dialog.querySelector('[role=menuitemradio][data-value=viewer]')! as unknown as HTMLButtonElement).click()
+  expect(f.page.call.mock.calls.some(([action]: [string]) => action === 'invitation.send')).toBe(false)
   send.click()
   await new Promise(resolve => setTimeout(resolve, 0))
-  expect(f.page.call).toHaveBeenCalledWith('invitation.send', { boardId: 'b', publicId: '1234567890', role: 'editor' })
+  expect(f.page.call).toHaveBeenCalledWith('invitation.send', { boardId: 'b', publicId: '1234567890', role: 'viewer' })
   expect(f.page.call.mock.calls.some(([action]: [string]) => action === 'board.create')).toBe(false)
   expect(f.page.openBoard).toHaveBeenCalledWith('b')
 })
@@ -100,7 +105,7 @@ it('does not expose invitation and member mutation controls to a viewer', async 
   await Promise.resolve()
   const dialog = f.w.document.querySelector('.srb-management')!
   expect(dialog.querySelector('.srb-invite-form')).toBeNull()
-  expect(dialog.querySelector('.srb-member select')).toBeNull()
+  expect(dialog.querySelector('.srb-member .srb-role-picker')).toBeNull()
   expect(dialog.textContent).toContain('退出协作')
 })
 
@@ -109,29 +114,31 @@ it('keeps the open member permission control and scroll position through live cu
   manageBoard(f.page, 'b')
   await Promise.resolve()
   const list = f.w.document.querySelector('.srb-member-list')!
-  const select = list.querySelector('select[aria-label="成员3权限"]')! as unknown as HTMLSelectElement
+  const select = list.querySelector('button[aria-label="成员3权限"]')! as unknown as HTMLButtonElement
   select.focus()
   list.scrollTop = 120
   f.view.presence = [...f.view.presence.map((member: any) => ({ ...member, cursor: { x: 80, y: 40 }, selectedIds: ['card'] }))]
   f.emit()
-  expect(list.querySelector('select[aria-label="成员3权限"]')).toBe(select)
+  expect(list.querySelector('button[aria-label="成员3权限"]')).toBe(select)
   expect(f.w.document.activeElement).toBe(select)
   expect(list.scrollTop).toBe(120)
   f.view.presence = f.view.presence.filter((member: any) => member.userId !== 'u3')
   f.emit()
-  expect(list.querySelector('select[aria-label="成员3权限"]')).toBe(select)
+  expect(list.querySelector('button[aria-label="成员3权限"]')).toBe(select)
   expect(select.closest('.srb-member')!.textContent).toContain('未在当前画板')
-  select.value = 'viewer'
-  select.dispatchEvent(new f.w.Event('change') as unknown as Event)
+  select.click()
+  expect(f.page.call.mock.calls.some(([action]: [string]) => action === 'member.role')).toBe(false)
+  ;(f.w.document.querySelector('[role=menuitemradio][data-value=viewer]')! as unknown as HTMLButtonElement).click()
   await Promise.resolve()
   expect(f.page.call).toHaveBeenCalledWith('member.role', { boardId: 'b', userId: 'u3', role: 'viewer' })
+  expect(f.page.call.mock.calls.filter(([action]: [string]) => action === 'member.role')).toHaveLength(1)
   f.view.members.find((member: any) => member.userId === 'u3').role = 'viewer'
   f.emit()
-  expect((list.querySelector('select[aria-label="成员3权限"]')! as unknown as HTMLSelectElement).value).toBe('viewer')
+  expect((list.querySelector('button[aria-label="成员3权限"]')! as unknown as HTMLButtonElement).value).toBe('viewer')
   f.view.permissions.read = false
   f.emit()
   expect(f.w.document.querySelector('.srb-management')!.textContent).toContain('共享访问已结束')
-  expect(f.w.document.querySelector('.srb-member select')).toBeNull()
+  expect(f.w.document.querySelector('.srb-member .srb-role-picker')).toBeNull()
 })
 
 it('keeps one live identity bubble, toggles it, dismisses it and preserves the separate +N list', () => {
@@ -175,4 +182,17 @@ it('keeps identity bubbles on screen, flips at the bottom and removes stale iden
   f.view.permissions.read = false; f.emit()
   expect(info.popover.isConnected).toBe(false)
   expect(f.listeners.size).toBe(0)
+})
+
+it('updates a pending invitation role only after choosing a different option', async () => {
+  const f = fixture()
+  f.view.pendingInvitations = [{ invitationId: 'i', role: 'editor', invitee: { userId: 'peer', publicId: '1234567890', username: '林然' } }]
+  manageBoard(f.page, 'b'); await Promise.resolve()
+  const picker = f.w.document.querySelector('[aria-label="林然待处理邀请权限"]')! as unknown as HTMLButtonElement
+  picker.click()
+  expect(f.page.call.mock.calls.some(([action]: [string]) => action === 'invitation.send')).toBe(false)
+  ;(f.w.document.querySelector('[role=menuitemradio][data-value=viewer]')! as unknown as HTMLButtonElement).click()
+  await Promise.resolve()
+  expect(f.page.call).toHaveBeenCalledWith('invitation.send', { boardId: 'b', publicId: '1234567890', role: 'viewer' })
+  expect(f.page.call.mock.calls.filter(([action]: [string]) => action === 'invitation.send')).toHaveLength(1)
 })

@@ -15,6 +15,7 @@ import type {
 } from '../shared/research-boards'
 import {
   boardButton,
+  boardRolePicker,
   boardDialog,
   showBoardError,
   boardRoleLabel,
@@ -1893,17 +1894,7 @@ function inviteForm(
       input.removeAttribute('aria-describedby')
     }
   }
-  const role = document.createElement('select')
-  role.setAttribute('aria-label', '邀请权限')
-  for (const [value, text] of [
-    ['editor', '可编辑'],
-    ['viewer', '仅查看']
-  ]) {
-    const o = document.createElement('option')
-    o.value = value!
-    o.textContent = text!
-    role.append(o)
-  }
+  const role = boardRolePicker(document, '邀请权限')
   const recipient = document.createElement('div')
   let user: { userId?: string; publicId: string; username: string } | undefined,
     boardId: string | undefined,
@@ -2114,7 +2105,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
         return
       }
       const users = boardMembers(current, page.getState().account.user?.userId)
-      // Cursor/selection heartbeats must not replace a native select while its
+      // Cursor/selection heartbeats must not replace a permission picker while its
       // menu is open. Presence labels can update without losing focus or scroll.
       const structure = JSON.stringify({
         manage: current.permissions.manage,
@@ -2161,15 +2152,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
         )
         row.append(avatar, identity)
         if (current.permissions.manage && member.role !== 'owner') {
-          const select = document.createElement('select')
-          select.setAttribute('aria-label', `${member.username}权限`)
-          for (const r of ['editor', 'viewer']) {
-            const o = document.createElement('option')
-            o.value = r
-            o.textContent = r === 'editor' ? '可编辑' : '仅查看'
-            o.selected = r === member.role
-            select.append(o)
-          }
+          const select = boardRolePicker(document, `${member.username}权限`, member.role)
           select.onchange = () =>
             void d.run(() =>
               page.call('member.role', {
@@ -2204,18 +2187,7 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
           uiText('strong', invite.invitee.username),
           uiText('small', `等待接受 · ID ${publicIdLabel(invite.invitee.publicId)}`)
         )
-        const select = document.createElement('select')
-        select.setAttribute(
-          'aria-label',
-          `${invite.invitee.username}待处理邀请权限`
-        )
-        for (const r of ['editor', 'viewer']) {
-          const o = document.createElement('option')
-          o.value = r
-          o.textContent = r === 'editor' ? '可编辑' : '仅查看'
-          o.selected = r === invite.role
-          select.append(o)
-        }
+        const select = boardRolePicker(document, `${invite.invitee.username}待处理邀请权限`, invite.role)
         select.onchange = () =>
           void d.run(() =>
             page.call('invitation.send', {

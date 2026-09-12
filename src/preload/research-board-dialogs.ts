@@ -65,6 +65,132 @@ export function boardButton(
   })
   return b
 }
+/** A dialog-owned top-layer permission menu; choosing a value only emits change. */
+export function boardRolePicker(doc: Document, label: string, value = 'editor') {
+  const win = doc.defaultView!
+  const picker = doc.createElement('button')
+  picker.type = 'button'
+  picker.className = 'srb-role-picker'
+  picker.value = value
+  picker.setAttribute('aria-label', label)
+  picker.setAttribute('aria-haspopup', 'menu')
+  picker.setAttribute('aria-expanded', 'false')
+  const title = doc.createElement('span'), chevron = doc.createElement('span')
+  title.id = 'srb-role-value-' + win.crypto.randomUUID()
+  picker.setAttribute('aria-describedby', title.id)
+  chevron.className = 'srb-chevron'
+  chevron.setAttribute('aria-hidden', 'true')
+  const update = () => { title.textContent = picker.value === 'editor' ? '可编辑' : '仅查看' }
+  picker.append(title, chevron)
+  picker.addEventListener('change', update)
+  update()
+  let dismiss: (() => void) | undefined
+  const open = () => {
+    if (picker.disabled || picker.closest('[inert]') || !picker.isConnected) return
+    if (dismiss) { dismiss(); return }
+    doc.querySelectorAll('.srb-role-menu').forEach(menu => menu.dispatchEvent(new win.Event('srb-close')))
+    const menu = doc.createElement('div')
+    menu.className = 'srb-role-menu'
+    menu.id = 'srb-role-menu-' + win.crypto.randomUUID()
+    menu.setAttribute('popover', 'manual')
+    menu.setAttribute('role', 'menu')
+    menu.setAttribute('aria-label', label + '选项')
+    picker.setAttribute('aria-controls', menu.id)
+    const dialog = picker.closest('dialog')
+    const options = [
+      ['editor', '可编辑', '查看并编辑画板中的内容。'],
+      ['viewer', '仅查看', '查看画板内容，不能进行编辑。']
+    ].map(([role, name, description]) => {
+      const option = doc.createElement('button')
+      option.type = 'button'
+      option.setAttribute('role', 'menuitemradio')
+      option.setAttribute('aria-checked', String(role === picker.value))
+      option.tabIndex = -1
+      option.dataset.value = role
+      const text = doc.createElement('span'), detail = doc.createElement('small'), check = doc.createElement('span')
+      text.textContent = name!
+      detail.textContent = description!
+      detail.id = menu.id + '-' + role
+      option.setAttribute('aria-label', name!)
+      option.setAttribute('aria-describedby', detail.id)
+      check.className = 'srb-role-check'
+      check.setAttribute('aria-hidden', 'true')
+      option.append(text, detail, check)
+      option.addEventListener('click', () => {
+        if (!picker.isConnected || picker.disabled || picker.closest('[inert]')) { close(); return }
+        close(true)
+        if (picker.value === role) return
+        picker.value = role!
+        picker.dispatchEvent(new win.Event('change', { bubbles: true }))
+      })
+      menu.append(option)
+      return option
+    })
+    const close = (focus = false) => {
+      if (!dismiss) return
+      dismiss = undefined
+      observer.disconnect()
+      menu.hidePopover?.(); menu.remove()
+      picker.setAttribute('aria-expanded', 'false')
+      picker.removeAttribute('aria-controls')
+      doc.removeEventListener('pointerdown', outside, true)
+      doc.removeEventListener('focusin', outside, true)
+      doc.removeEventListener('keydown', key, true)
+      doc.removeEventListener('scroll', position, true)
+      win.removeEventListener('resize', position)
+      dialog?.removeEventListener('close', onDialogClose)
+      if (focus && picker.isConnected && !picker.disabled) picker.focus({ preventScroll: true })
+    }
+    const position = () => {
+      if (!picker.isConnected || picker.disabled || picker.closest('[inert],[hidden]')) { close(); return }
+      const rect = picker.getBoundingClientRect()
+      const width = menu.getBoundingClientRect().width || 280, height = menu.getBoundingClientRect().height || 142
+      const above = rect.bottom + 8 + height > win.innerHeight - 12 && rect.top >= height + 20
+      menu.style.left = `${Math.max(12, Math.min(rect.right - width, win.innerWidth - width - 12))}px`
+      menu.style.top = `${Math.max(12, Math.min(above ? rect.top - height - 8 : rect.bottom + 8, win.innerHeight - height - 12))}px`
+    }
+    const outside = (event: Event) => {
+      const target = event.target as Node
+      if (!menu.contains(target) && !picker.contains(target)) close()
+    }
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true); return }
+      if (event.key === 'Tab') { close(true); return }
+      if (!menu.contains(doc.activeElement)) return
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault()
+        const index = options.indexOf(doc.activeElement as HTMLButtonElement)
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length
+        options[next]!.focus({ preventScroll: true })
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault(); (doc.activeElement as HTMLButtonElement).click()
+      }
+    }
+    const observer = new win.MutationObserver(position)
+    const onDialogClose = () => close()
+    dismiss = () => close(true)
+    menu.addEventListener('srb-close', () => close())
+    // Descendant ownership avoids the modal dialog's inert backdrop; popover
+    // promotion escapes its clipped scroll body and appears above the dialog.
+    ;(dialog ?? doc.body).append(menu)
+    menu.showPopover?.()
+    picker.setAttribute('aria-expanded', 'true')
+    position()
+    options.find(option => option.dataset.value === picker.value)?.focus({ preventScroll: true })
+    doc.addEventListener('pointerdown', outside, true)
+    doc.addEventListener('focusin', outside, true)
+    doc.addEventListener('keydown', key, true)
+    doc.addEventListener('scroll', position, true)
+    win.addEventListener('resize', position)
+    dialog?.addEventListener('close', onDialogClose)
+    observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'inert', 'hidden'] })
+  }
+  picker.addEventListener('click', open)
+  picker.addEventListener('keydown', event => {
+    if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !dismiss) { event.preventDefault(); open() }
+  })
+  return picker
+}
 export function boardDialog(doc: Document, title: string) {
   const dialog = doc.createElement('dialog')
   dialog.className = 'srb-dialog'
@@ -281,6 +407,18 @@ body[data-ds-dark-theme] .srb-canvas-presence{--srb-occupied-stroke:#74adc5;--sr
 .srb-create-collaboration-dialog .srb-recipient{padding:0 12px;border-radius:9px;background:var(--srb-info)}
 body[data-ds-dark-theme] .srb-create-collaboration-dialog .srb-recipient{background:rgba(255,255,255,.05)}
 .srb-create-collaboration-dialog .srb-recipient .srb-member-identity{height:40px;gap:0;align-content:start}
+
+
+/* Figma 667:27507 / 28002 / 28497 / 28992: shared permission picker. */
+.srb-dialog .srb-role-picker{display:flex;align-items:center;justify-content:space-between;flex:none;gap:8px;width:100px;height:30px;min-height:30px;padding:0 10px;border:1px solid var(--srb-control-border);border-radius:7px;background:transparent;color:var(--srb-label);font-size:12px;font-weight:400;line-height:20px}
+.srb-management .srb-role-picker,.srb-member .srb-role-picker{width:88px}.srb-role-picker>span{flex:none}.srb-role-picker .srb-chevron{width:12px;height:12px}
+.srb-role-menu{--role-bg:rgba(255,255,255,.97);--role-border:#dfe0e3;--role-selected:#f0f0f0;--role-label:#242424;--role-description:#757575;position:fixed;inset:auto;margin:0;box-sizing:border-box;width:280px;max-width:calc(100vw - 24px);height:142px;padding:5px;border:1px solid var(--role-border);border-radius:10px;background:var(--role-bg);box-shadow:0 8px 24px -4px rgba(0,0,0,.14);backdrop-filter:blur(12px);z-index:4200;font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui)}
+body[data-ds-dark-theme] .srb-role-menu{--role-bg:rgba(41,42,45,.97);--role-border:#444549;--role-selected:#373737;--role-label:#e6e6e6;--role-description:#9c9c9c}
+.srb-role-menu:popover-open{display:flex;flex-direction:column;gap:2px}
+.srb-role-menu button{position:relative;display:block;box-sizing:border-box;flex:none;width:100%;height:64px;min-height:64px;margin:0;padding:7px 10px;border:0;border-radius:5px;text-align:left;background:transparent;color:var(--role-label);font:400 13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui);cursor:pointer}
+.srb-role-menu button>span:first-child{display:block;font:inherit}.srb-role-menu button small{display:block;margin-top:3px;color:var(--role-description);font-size:11px;font-weight:400;line-height:18px;white-space:nowrap}
+.srb-role-menu button[aria-checked=true],.srb-role-menu button:hover,.srb-role-menu button:focus-visible{background:var(--role-selected)}.srb-role-menu button[aria-checked=true]>span:first-child{font-weight:500}.srb-role-menu button:focus-visible{outline:1px solid var(--srb-blue,#6099d3);outline-offset:-1px}
+.srb-role-check{display:none;position:absolute;right:12px;top:10px;width:14px;height:14px;background:currentColor;mask:url(/figma-check.svg) center/contain no-repeat}.srb-role-menu [aria-checked=true] .srb-role-check{display:block}
 
 @media(max-width:700px){.srb-actions{gap:4px}.srb-presence{gap:3px}.srb-avatar{width:25px;height:25px}}
 `
