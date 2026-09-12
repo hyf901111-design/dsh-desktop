@@ -210,8 +210,22 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-2",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实左栏280→240，右400不变，中央x240/宽720，草稿与两个终端保留；连续拖动与所有边界待验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-left-sidebar-240-right400-light"
+      ],
+      "evidencePackages": {
+        "v12-left-sidebar-240-right400-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -222,8 +236,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-368",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色保留左240状态后反向原生拖回280（中央x280）；草稿与两个终端保留；未冒充深色280→240正向过程",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-resized-panels-terminal-dark",
+        "v12-panels-restored-280-340-dark"
+      ],
+      "evidencePackages": {
+        "v12-resized-panels-terminal-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-restored-280-340-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -234,8 +264,22 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-734",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实右栏340→400，右栏x970/宽400；中央680、草稿与两个终端保留，拖动连续动效待验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-right-panel-400-light"
+      ],
+      "evidencePackages": {
+        "v12-right-panel-400-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -246,8 +290,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-1099",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色保留右400状态后反向原生拖回340（x1030）；草稿与两个终端保留；本证据为反向拖动，未冒充深色340→400正向过程",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-resized-panels-terminal-dark",
+        "v12-panels-restored-280-340-dark"
+      ],
+      "evidencePackages": {
+        "v12-resized-panels-terminal-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-restored-280-340-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "01 首页与导航",
@@ -343,8 +403,25 @@
         "height": 1380.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-588",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实关闭右侧与底部面板，草稿保留；重开后已选zsh与原pwd输出、草稿恢复，连续动画与键盘收放仍待验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-panels-closed-draft-retained-light",
+        "v12-panels-reopened-draft-terminal-light"
+      ],
+      "evidencePackages": {
+        "v12-panels-closed-draft-retained-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-reopened-draft-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "关闭采用移出视口保留实例：右栏x1390、底栏y900；display:flex不等于窗口内可见。只以原生关闭结果和重开保留证明局部行为，不顺带验原型示意各帧。"
     },
     {
       "section": "01 首页与导航",
@@ -415,8 +492,30 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-5",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色MD h1 23/39、首h2 17/29、x1046/宽308及#2B2B2B实测；保存后预览仍旧文，关页签重开才见marker，D42源码修复待下一包",
+      "differences": [
+        "D23",
+        "D42"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-files-md-top-light",
+        "v12-files-md-bottom-light",
+        "v12-files-md-reopened-saved-light"
+      ],
+      "evidencePackages": {
+        "v12-files-md-top-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-md-bottom-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-md-reopened-saved-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "FIGMA_EDIT_PERSIST_20260913已由主线程磁盘确认；重开截图可见，不能把保存成功当预览同步成功。efb28b82acc19746a384b99766834a789adc3fa9/10项聚焦与类型检查仅源码通过。"
     },
     {
       "section": "02 对话与文件",
@@ -427,10 +526,11 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-8",
-      "status": "12b深色DOCX100%左上、键盘右端552及左侧底端1503可达，D39局部复验通过；MD/CSV/PNG/PDF/XLSX保留旧包证据，PPTX、编辑与浅色待验",
+      "status": "12b深色DOCX100%左右及底端可达；PPTX三页含图片/表格49/末页marker实际可见；MD保存已落盘但随后预览未刷新列D42，更多格式/编辑与浅色分别验",
       "differences": [
         "D23",
-        "D39"
+        "D39",
+        "D42"
       ],
       "evidence": [
         "v8-markdown-preview-dark",
@@ -447,7 +547,9 @@
         "v11-files-xlsx-n44-dark",
         "v12-files-docx-left-top-dark",
         "v12-files-docx-right-keyboard-dark",
-        "v12-files-docx-left-bottom-dark"
+        "v12-files-docx-left-bottom-dark",
+        "v12-files-pptx-top-dark",
+        "v12-files-md-edited-saved-dark"
       ],
       "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
       "verificationLevel": "partial",
@@ -470,6 +572,27 @@
             "v11-files-xlsx-top-dark",
             "v11-files-xlsx-n44-dark"
           ]
+        },
+        {
+          "status": "12b深色DOCX100%左上、键盘右端552及左侧底端1503可达，D39局部复验通过；MD/CSV/PNG/PDF/XLSX保留旧包证据，PPTX、编辑与浅色待验",
+          "evidence": [
+            "v8-markdown-preview-dark",
+            "v9-markdown-preview-dark",
+            "v11-files-md-top-dark",
+            "v11-files-md-bottom-dark",
+            "v11-files-csv-end-dark",
+            "v11-files-image-dark",
+            "v11-files-pdf-top-dark",
+            "v11-files-pdf-bottom-dark",
+            "v11-files-docx-top-dark",
+            "v11-files-docx-min-bottom-dark",
+            "v11-files-xlsx-top-dark",
+            "v11-files-xlsx-n44-dark",
+            "v12-files-docx-left-top-dark",
+            "v12-files-docx-right-keyboard-dark",
+            "v12-files-docx-left-bottom-dark"
+          ],
+          "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765"
         }
       ],
       "evidencePackages": {
@@ -487,9 +610,11 @@
         "v11-files-xlsx-n44-dark": "e540a778e4a2bbffdb38c1a0c50f5de06cee6678",
         "v12-files-docx-left-top-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
         "v12-files-docx-right-keyboard-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
-        "v12-files-docx-left-bottom-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+        "v12-files-docx-left-bottom-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-pptx-top-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-files-md-edited-saved-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
       },
-      "evidenceNotes": "右端552=892−340；底端1503=2234−731。right-top/scroll-right的CUA方向操作实际dx=0/dy=0，不计滚动通过，也不作为产品失败。"
+      "evidenceNotes": "PPTX仅实际文件预览能力，无专属Figma帧；保存成功与预览刷新缺陷分开。其他文件保留逐项旧包证据，跨主题失败过程见161:5。"
     },
     {
       "section": "02 对话与文件",
@@ -524,8 +649,27 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=179-2",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实底部zsh执行pwd；左栏收起80/中央940，底部x92/y674/916×204；输入780未宣称匹配旧稿652，仍仅终端功能与高度局部核验",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-side-terminal-light",
+        "v12-bottom-terminal-collapsed-sidebar-light",
+        "v12-panels-reopened-draft-terminal-light"
+      ],
+      "evidencePackages": {
+        "v12-side-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-bottom-terminal-collapsed-sidebar-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-reopened-draft-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "右侧与底部是两个真实终端；所选zsh、已有pwd输出和未发送草稿在收放重开后保留。普通对话780与旧179的652存在场景差异，见d44-d45-design-review.md，不新增D44。"
     },
     {
       "section": "02 对话与文件",
@@ -536,8 +680,24 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=179-218",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b切深色后底部/右侧zsh原输出、草稿和调宽状态保留；底部高204；两面板恢复280/340后仍可见，未宣称旧稿整页几何通过",
+      "differences": [],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-resized-panels-terminal-dark",
+        "v12-panels-restored-280-340-dark"
+      ],
+      "evidencePackages": {
+        "v12-resized-panels-terminal-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-panels-restored-280-340-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "02 对话与文件",
@@ -548,8 +708,26 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-2",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b浅色真实Files @引用进入输入和发送气泡均为普通文字，未成为原生文件标签；D43已复现待修，不能计引用发送成功",
+      "differences": [
+        "D43"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-file-reference-plain-text-light",
+        "v12-file-reference-sent-plain-text-light"
+      ],
+      "evidencePackages": {
+        "v12-file-reference-plain-text-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-file-reference-sent-plain-text-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "02 对话与文件",
@@ -2784,8 +2962,25 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-9704",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色工作区文件夹菜单实际218×110/行204×32、padding6/gap0、有16px图标，与260×127/248×34/无图标设计不符；D44待源码及新包复验",
+      "differences": [
+        "D44"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-workspace-folder-menu-dark"
+      ],
+      "evidencePackages": {
+        "v12-workspace-folder-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "主线程精读667:9704/665:1046：行x5/y5,41,86，分隔x11/y81/236×1；13/20，正文#E6E6E6/危险#FA827A，无图标。实际危险#F25A5A。此D44为文件夹菜单，与此前未立项的普通对话652/780宽度候选不同。"
     },
     {
       "section": "12B 侧栏与看板 · 菜单展开",
@@ -3189,10 +3384,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-22499",
-      "status": "238×250及行间距已实测；任务图标第六批待复验",
-      "differences": [],
+      "status": "12b浅色新建页签菜单238×250、五行218×42实测；实际选择终端并进入zsh，pwd返回验收工作区；其他四项动作待验",
+      "differences": [
+        "D15"
+      ],
       "evidence": [
-        "actual/v4-newtab-light.json"
+        "actual/v4-newtab-light.json",
+        "v12-new-tab-menu-light",
+        "v12-side-terminal-light"
       ],
       "runtimeEvidence": [
         {
@@ -3200,7 +3399,22 @@
           "image": "actual/v5-newtab-light.png",
           "measurement": "actual/v5-newtab-light.json"
         }
-      ]
+      ],
+      "verificationHistory": [
+        {
+          "status": "238×250及行间距已实测；任务图标第六批待复验",
+          "evidence": [
+            "actual/v4-newtab-light.json"
+          ]
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "light",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidencePackages": {
+        "v12-new-tab-menu-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-side-terminal-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "12D 文件与页签 · 菜单展开",
@@ -3268,8 +3482,25 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-24235",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色真实原生文件菜单六项及点击Finder后定位MD由主线程CUA核验；CDP图不捕获系统外层，其他菜单动作与全部键盘规则待验",
+      "differences": [
+        "D18"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-file-context-menu-dark"
+      ],
+      "evidencePackages": {
+        "v12-file-context-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "Figma667:24565明确系统菜单由平台原生渲染，240×46为示意。六项/访达单选1/7与正文来自主线程CUA记录，见native-batch12-late-evidence.md；此CDP截图只作包和页面状态来源，不能冒充菜单可见截图。"
     },
     {
       "section": "12D 文件与页签 · 菜单展开",
