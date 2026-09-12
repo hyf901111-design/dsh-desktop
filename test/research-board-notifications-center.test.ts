@@ -72,3 +72,38 @@ it('supports keyboard navigation, Escape, and outside dismissal with focus retur
   expect(f.w.document.activeElement).toBe(f.bell())
   expect(f.bell().getAttribute('aria-expanded')).toBe('false')
 })
+
+it.each([
+  { mode: 'expanded', left: 0, sidebarWidth: 280, footerTop: 844 },
+  { mode: 'collapsed', left: 0, sidebarWidth: 64, footerTop: 810 },
+  { mode: 'settings', left: 12, sidebarWidth: 240, footerTop: 844 }
+])('anchors the $mode message center to the footer baseline instead of the account hit area', async ({ mode, left, sidebarWidth, footerTop }) => {
+  const f = fixture()
+  Object.defineProperty(f.w, 'innerWidth', { configurable: true, value: 1380 })
+  Object.defineProperty(f.w, 'innerHeight', { configurable: true, value: 900 })
+  const sidebar = f.w.document.querySelector('[data-dsh-sidebar-root]')!
+  if (mode === 'collapsed') sidebar.setAttribute('data-sidebar-collapsed', 'true')
+  const bounds = new f.w.DOMRect(left, 0, sidebarWidth, 900)
+  vi.spyOn(sidebar, 'getBoundingClientRect').mockReturnValue(bounds)
+  if (mode === 'settings') {
+    const nav = f.w.document.createElement('nav')
+    nav.className = 'VOzbGW_nav'
+    sidebar.append(nav)
+    vi.spyOn(nav, 'getBoundingClientRect').mockReturnValue(bounds)
+  }
+  const footer = f.w.document.querySelector('[data-dsh-sidebar-footer]')!
+  vi.spyOn(footer, 'getBoundingClientRect').mockReturnValue(new f.w.DOMRect(left, footerTop, sidebarWidth, 900 - footerTop))
+  await tick(); f.bell().click()
+  const panel = f.w.document.querySelector('.srb-notifications')! as import('happy-dom').HTMLElement
+  expect(panel.style.left).toBe(`${left + 16}px`)
+  expect(panel.style.bottom).toBe('44px')
+  expect(panel.style.maxHeight).toBe('min(520px, calc(100vh - 56px))')
+
+  // A smaller viewport must still reserve 12px at both horizontal edges and above the panel.
+  Object.defineProperty(f.w, 'innerWidth', { configurable: true, value: 320 })
+  Object.defineProperty(f.w, 'innerHeight', { configurable: true, value: 120 })
+  f.w.dispatchEvent(new f.w.Event('resize'))
+  expect(panel.style.left).toBe('12px')
+  expect(panel.style.bottom).toBe('28px')
+  expect(panel.style.maxHeight).toBe('min(520px, calc(100vh - 40px))')
+})
