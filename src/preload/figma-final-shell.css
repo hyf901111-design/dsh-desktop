@@ -156,6 +156,20 @@ body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlo
 body[data-ds-dark-theme] .sRp_messages .gdEzaW_bubble { background:rgb(44.72 44.72 44.72); color:rgb(229.15 229.15 229.15); }
 .sRp_messages .gdEzaW_bubble p { margin:0; font:inherit; }
 .sRp_messages [class^="_markdown_"] { font:400 14px/24px var(--odyssey-font-ui) !important; letter-spacing:0; }
+/* Figma 750:27915 / 28185: main conversation prose is 15/26. Style only
+   paragraph/list blocks so headings, code and tables retain their own fonts;
+   the separate Research and retained child conversations keep 14/24. */
+.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="conversation"] > .wSkVaW_scrollBody [class*="_markdown_"]:not(.sRp_messages *, [data-odyssey-subagent-panel] *) > :is(p,ul,ol) {
+  font:400 15px/26px var(--odyssey-font-ui);
+  color:#2b2b2b;
+}
+[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="conversation"] > .wSkVaW_scrollBody [class*="_markdown_"]:not(.sRp_messages *, [data-odyssey-subagent-panel] *) > :is(p,ul,ol) {
+  color:#e5e5e5;
+}
+.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="conversation"] > .wSkVaW_scrollBody [class*="_markdown_"]:not(.sRp_messages *, [data-odyssey-subagent-panel] *) > :is(ul,ol) li::marker {
+  line-height:26px;
+  color:inherit;
+}
 .t8lSSG_panel .t8lSSG_tabBarPlus>svg { width:16px; height:16px; }
 
 /* Figma 44 / 361:6013, 6018, 6307, 6312: only the two panel toggle glyphs. */

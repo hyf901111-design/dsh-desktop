@@ -59,12 +59,10 @@ export function mountResearchBoardNotifications(
     if (el.classList.contains('ework-sidebar-notice')) { positionSidebarNotice(doc, el); return }
     const sidebar = doc.querySelector<HTMLElement>('[data-dsh-sidebar-root]')
     const bounds = (doc.querySelector<HTMLElement>('.VOzbGW_nav') ?? sidebar)?.getBoundingClientRect()
-    const accountRow = sidebar?.querySelector<HTMLElement>('.srb-account-controls')
-      ?? sidebar?.querySelector<HTMLElement>('[data-dsh-sidebar-footer], [data-slot="sidebar.settings"]')
-    const r = (accountRow ?? bell)?.getBoundingClientRect()
     const width = Math.min(384, win.innerWidth - 24)
     el.style.left = `${Math.max(12, Math.min((bounds?.left ?? 0) + 16, win.innerWidth - width - 12))}px`
-    const bottom = Math.min(Math.max(44, r?.height ? win.innerHeight - r.top + 8 : 44), Math.max(12, win.innerHeight - 92))
+    // Figma pins the center to the 44px footer baseline, independent of the account hit area.
+    const bottom = Math.min(44, Math.max(12, win.innerHeight - 92))
     el.style.bottom = `${bottom}px`
     el.style.maxHeight = `min(520px, calc(100vh - ${bottom + 12}px))`
   }

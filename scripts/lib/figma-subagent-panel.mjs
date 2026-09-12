@@ -149,17 +149,19 @@ export function patchSubagentPanelConversation(source) {
 
 const subagentHeader=`function OdysseySubagentPanelHeader({sessionId,useSession,useSessions,useProjection}) {
   const session=useSession(s=>s),summary=useSessions(s=>s.byId[sessionId]);
+  const address=session.subagent?.address;
+  const child=useSessions(s=>s.subagentsByParent?.[address?.parentSessionId]?.entries?.find(entry=>entry.kind==='child'&&entry.id===sessionId&&entry.mode===address?.mode));
+  const title=child?.label?.trim()||summary?.displayTitle||sessionId;
   const usage=useProjection('tokenUsage'),timing=useProjection('subagentTiming');
   const [now,setNow]=react.useState(Date.now);
   react.useEffect(()=>{if(!session.running)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[session.running]);
-  const address=session.subagent?.address;
   const buckets=usage?[usage.uncachedInputTokens,usage.outputTokens,usage.cacheReadTokens,usage.cacheWriteTokens]:[];
   const tokens=buckets.length===4&&buckets.every(Number.isFinite)?buckets.reduce((a,b)=>a+b,0):undefined;
   const duration=timing===undefined?undefined:timing.settledMs+(timing.active?Math.max(0,(session.running?now:timing.active.through)-timing.active.since):0);
   const seconds=Number.isFinite(duration)?Math.floor(Math.max(0,duration)/1000):undefined;
   const metrics=[tokens===undefined?undefined:formatTokens(tokens)+' tok',seconds===undefined?undefined:(seconds>=60?Math.floor(seconds/60)+'分':'')+(seconds%60)+'秒'].filter(x=>x!==undefined).join(' · ');
   return react_jsx_runtime.jsxs('header',{className:'odyssey-subagent-panel-header',children:[
-    react_jsx_runtime.jsx('strong',{children:summary?.displayTitle??sessionId}),
+    react_jsx_runtime.jsx('strong',{children:title}),
     react_jsx_runtime.jsxs('div',{className:'odyssey-subagent-panel-state',children:[react_jsx_runtime.jsx('span',{'data-odyssey-subagent-activity':session.running?'running':'idle','aria-hidden':true}),address?.mode==='one-shot'?'一次性':'持续运行',' · ',session.running?'正在运行':'当前未运行']}),
     metrics&&react_jsx_runtime.jsx('div',{className:'odyssey-subagent-panel-metrics',children:metrics})
   ]});
