@@ -7,23 +7,26 @@ import { inject as runtimeDependencies } from '../packages/dsh-research-task-run
 import { Session } from '@deepseek-ai/dsh-session'
 import { BoardDirectories } from '../packages/dsh-research-task-runtime/board-directories.js'
 function fixture() {
-  const root = mkdtempSync(join(tmpdir(), 'board-directories-')), sessions = new Map(), workspaces = new Map()
+  const root = mkdtempSync(join(tmpdir(), 'board-directories-')), sessions = new Map(), persisted = new Map(), workspaces = new Map()
   let observe
   const ctx = {
     on: (_name, fn) => { observe = fn; return () => {} },
     agents: { get: () => undefined },
-    sessions: { get: id => sessions.get(id), flush: async () => true,
-      create: (id, options) => { const s = Session.create(id, options.seed, { version: 0, id, createdAt: Date.now(), ...options.meta }); sessions.set(id, s); return s } },
-    sessionPersistence: { inspect: async id => { const s = sessions.get(id); if (!s) throw Error('MISSING'); return { meta: s.header, events: s.events } } },
+    sessions: { get: id => sessions.get(id), flush: async session => { persisted.set(session.id, session); return true },
+      prepare: (id, options) => Session.create(id, options.seed, { version: 0, id, createdAt: Date.now(), ...options.meta }),
+      enter: session => { sessions.set(session.id, session); return () => sessions.delete(session.id) },
+      announce: () => {},
+      create: (id, options) => { const session=ctx.sessions.prepare(id, options);ctx.sessions.enter(session);return session } },
+    sessionPersistence: { inspect: async id => { const s = sessions.get(id) ?? persisted.get(id); if (!s) throw Error('MISSING'); return { meta: s.header, events: s.events } } },
     workspaceRegistry: { resolveByPath: async p => workspaces.get(p), create: async p => {
       const workspace = { id: 'workspace-' + workspaces.size, path: p, title: '', sessionIds: [], setTitle: async title => { workspace.title = title }, attachSession: async id => {
-        if (sessions.get(id).header.cwd !== p || !existsSync(p)) throw Error('INVALID_CWD')
+        if ((sessions.get(id) ?? persisted.get(id)).header.cwd !== p || !existsSync(p)) throw Error('INVALID_CWD')
         if (!workspace.sessionIds.includes(id)) workspace.sessionIds.push(id)
       } }; workspaces.set(p, workspace); return workspace
     } }
   }
   const directories = new BoardDirectories(ctx, root)
-  return { root, sessions, directories, workspaces, ctx, observe: (...args) => observe(...args), close: () => { directories.dispose(); rmSync(root, { recursive: true, force: true }) } }
+  return { root, sessions, persisted, directories, workspaces, ctx, observe: (...args) => observe(...args), close: () => { directories.dispose(); rmSync(root, { recursive: true, force: true }) } }
 }
 describe('research board directories', () => {
   it('can return a board through the real scoped Host service container', async () => {
@@ -79,8 +82,8 @@ describe('research board directories', () => {
       const input = { mode: 'workspace', sessionId: original.id, basePath: f.root, title: '新工作区' }
       const moved = await f.directories.run(input)
       expect(moved.localSessionId).not.toBe(original.id)
-      expect(f.sessions.get(moved.localSessionId).events.slice(0, original.events.length)).toEqual(original.events)
-      expect(f.sessions.get(moved.localSessionId).events.at(-1).type).toBe('session/end-seed')
+      expect(f.persisted.get(moved.localSessionId).events.slice(0, original.events.length)).toEqual(original.events)
+      expect(f.persisted.get(moved.localSessionId).events.at(-1).type).toBe('session/end-seed')
       expect(original.header.cwd).toBe(f.root)
       expect((await f.directories.run(input)).localSessionId).toBe(moved.localSessionId)
       f.ctx.agents.get = () => ({ status: 'running' })

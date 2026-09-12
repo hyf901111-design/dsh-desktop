@@ -77,17 +77,27 @@ export class BoardDirectories {
       }
       localSessionId = row.sessionId
       mkdirSync(row.path, { recursive: true })
-      let target = this.ctx.sessions.get(localSessionId)
-      if (!target) {
-        const persisted = await this.ctx.sessionPersistence.inspect(localSessionId).catch(() => null)
-        if (!persisted) {
-          target = this.ctx.sessions.create(localSessionId, { seed: source.events, meta: {
-            cwd: row.path, parentSession: input.sessionId, seedLength: source.events.length,
-            ...(source.meta.agentPreset ? { agentPreset: source.meta.agentPreset } : {})
-          } })
+      let releaseTarget
+      try {
+        let target = this.ctx.sessions.get(localSessionId)
+        if (!target) {
+          const persisted = await this.ctx.sessionPersistence.inspect(localSessionId).catch(() => null)
+          if (!persisted) {
+            target = this.ctx.sessions.prepare(localSessionId, { seed: source.events, meta: {
+              cwd: row.path, parentSession: input.sessionId, seedLength: source.events.length,
+              ...(source.meta.agentPreset ? { agentPreset: source.meta.agentPreset } : {})
+            } })
+            // Persist the copied history under a temporary attachment. Leaving a
+            // Session without an Agent live would block the normal cold resume.
+            releaseTarget = this.ctx.sessions.enter(target)
+            this.ctx.sessions.announce(target)
+          }
         }
+        if (target && !(await this.ctx.sessions.flush(target))) throw Error('HISTORY_UNSAVED')
+      } finally {
+        // Only release the attachment owned here, never a pre-existing Agent's.
+        releaseTarget?.()
       }
-      if (target && !(await this.ctx.sessions.flush(target))) throw Error('HISTORY_UNSAVED')
     }
     mkdirSync(row.path, { recursive: true })
     const workspace = await this.ctx.workspaceRegistry.resolveByPath(row.path) ?? await this.ctx.workspaceRegistry.create(row.path)
