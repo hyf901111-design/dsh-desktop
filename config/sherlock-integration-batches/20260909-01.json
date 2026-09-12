@@ -9,30 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Sidebar title preview, bounded canvas context menu and settings navigation state",
+        "featureName": "按最新 Figma 还原实色输入框和长内容布局",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "cea168c013dab9cd3362625f2f975a213c160e9c",
-        "tipCommit": "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd",
+        "baseCommit": "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd",
+        "tipCommit": "7c0a1e5dd29d355b25c04ae8af2cdad325c234a8",
         "commits": [
           {
-            "commit": "6888f30f23bba58133a885ca9a7630dbab73d707",
+            "commit": "7c0a1e5dd29d355b25c04ae8af2cdad325c234a8",
             "parents": [
-              "cea168c013dab9cd3362625f2f975a213c160e9c"
+              "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd"
             ],
-            "subject": "统一长标题悬停预览并修复引用菜单溢出与设置目录状态"
-          },
-          {
-            "commit": "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd",
-            "parents": [
-              "6888f30f23bba58133a885ca9a7630dbab73d707"
-            ],
-            "subject": "同步返回应用按钮的无障碍名称验收定位"
+            "subject": "按最新设计统一实色输入区并分离长回复与底部布局"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "scripts/lib/figma-reading-client.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-reading-client.mjs"
+          },
+          {
             "status": "M",
-            "path": "scripts/lib/figma-refinements-client.mjs"
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
           },
           {
             "status": "M",
@@ -40,15 +41,15 @@
           },
           {
             "status": "M",
-            "path": "scripts/test-research-boards-browser.mjs"
-          },
-          {
-            "status": "M",
             "path": "src/preload/account-ui.ts"
           },
           {
-            "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "status": "A",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-settings-assets/back-arrow.svg"
           },
           {
             "status": "M",
@@ -56,15 +57,15 @@
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/navigation-title-preview.ts"
+            "path": "src/preload/shell-style.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
+            "path": "test/compact-execution-status.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-reading-layout.test.ts"
           }
         ],
         "checks": [
@@ -73,104 +74,34 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-final-shell-patch.test.ts",
+              "test/figma-reading-layout.test.ts",
+              "test/compact-execution-status.test.ts",
+              "test/research-conversation-follow.test.ts",
               "test/figma-settings-layout.test.ts",
               "test/figma-settings-dismiss.test.ts"
             ],
             "outcome": "passed",
-            "summary": "13 focused tests and node typecheck passed.",
-            "verifiedCommit": "bc29fe424e387b38b84b9d7486e0fcb0feeeb1bd",
-            "completedAt": "2026-09-12T10:09:01.894Z",
+            "summary": "42 focused tests plus node typecheck passed.",
+            "verifiedCommit": "7c0a1e5dd29d355b25c04ae8af2cdad325c234a8",
+            "completedAt": "2026-09-12T10:44:41.217917+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Controlled Chromium verifies board/conversation real hover preview, fade and reset, stable controls, keyboard and reduced motion; 16 context menu geometry combinations; 12 settings state/theme combinations. Packaged native acceptance follows integration."
+          "summary": "10 controlled rendered scenarios cover light/dark, completed/expanded tasks, long input at 640 px (278 px reading viewport), 340 px right panel, wide table dialog, task sheet, status and runtime detail popovers. Native package acceptance follows integration."
         },
         "acceptanceCriteria": [
-          "Long navigation titles fade without ellipsis and scroll only on hover/focus",
-          "Canvas context directory fits composer width including narrow independent right panel",
-          "Settings account selection clears prior native section color and weight",
-          "Return button 14px text, 16px arrow, aligned padding"
+          "Central, right and subagent input use opaque near-white or #292929 with no backdrop filter",
+          "Reading viewport, status, task, composer and stats have separate layout space",
+          "Task list max 168 px, compact task sheet, input max 160 px",
+          "History is preserved on remote execution or new messages; table scroll is local",
+          "Return button 12 px and actual Figma 16 px arrow"
         ],
         "risks": [
-          "Local only; no release, version change, push or main promotion."
+          "Local integration only; no main promotion, upload, release, version increment or push."
         ],
-        "generatedAt": "2026-09-12T10:09:01.894Z"
-      },
-      "merged": {
-        "mergeCommit": "db4162d343533d9c52b2b963289de9d1691390c9",
-        "verificationCommit": "db4162d343533d9c52b2b963289de9d1691390c9",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "db4162d343533d9c52b2b963289de9d1691390c9",
-            "completedAt": "2026-09-12T10:10:38.980Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "db4162d343533d9c52b2b963289de9d1691390c9",
-            "completedAt": "2026-09-12T10:10:38.980Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "db4162d343533d9c52b2b963289de9d1691390c9",
-            "completedAt": "2026-09-12T10:10:38.980Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "db4162d343533d9c52b2b963289de9d1691390c9",
-            "completedAt": "2026-09-12T10:10:38.980Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "db4162d343533d9c52b2b963289de9d1691390c9",
-            "completedAt": "2026-09-12T10:10:38.980Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T10:10:38.980Z"
+        "generatedAt": "2026-09-12T10:44:41.218386+00:00"
       }
     }
   ],
