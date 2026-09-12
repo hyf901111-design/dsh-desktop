@@ -14,8 +14,46 @@ await page.setContent(`<style>
 html,body,#root,.pI_x6G_frame{width:100%;height:100%;margin:0;overflow:hidden}body{--dsh-sidebar-width:340px;--dsh-sidebar-height:0px}.pI_x6G_frame{display:grid;grid-template-columns:80px minmax(0,1fr) 0}.wSkVaW_root{height:100%;display:flex;flex-direction:column}.rScV5Q_root{position:relative;flex:1;min-height:0}.toolbar{position:absolute;left:50%;bottom:24px;width:272px;height:48px;transform:translateX(-50%)}[data-dsh-panel-host]{position:fixed;inset:0;pointer-events:none}.t8lSSG_panel{position:absolute;pointer-events:auto;width:340px;display:flex;flex-direction:column}.t8lSSG_panelResize{position:absolute;top:16px;bottom:16px}.t8lSSG_panelBody{flex:1;min-height:0}.t8lSSG_toggleCluster{position:absolute;right:18px;display:flex;gap:4px;pointer-events:auto}.t8lSSG_tabBar{display:flex;align-items:center}.t8lSSG_tabList{flex:1;min-width:0;display:flex}.t8lSSG_tabBarPlus{width:28px;height:28px}.sRp_conversation{height:100%;display:flex}.sRp_messages{flex:1}.uV2eYG_card{height:120px}.scroll{height:150px;overflow:auto}button{border:0}
 </style><style>${css.join('\n')}</style><div id="root"><main class="pI_x6G_frame" data-dsh-frame><aside class="pI_x6G_sidebarCol"></aside><section class="pI_x6G_centerCol" data-pane="conversation"><div class="wSkVaW_root" data-odyssey-page="research"><header class="wSkVaW_header"></header><div class="rScV5Q_root"><div class="toolbar"></div></div></div></section></main></div><div data-dsh-panel-host data-odyssey-panel-right="open"><aside class="t8lSSG_panel"><div class="t8lSSG_panelResize"></div><div class="t8lSSG_tabBar"><div class="t8lSSG_tabList"><div role="tab" class="t8lSSG_tab" data-odyssey-panel-tab-id="sherlock-research-conversation"><span class="t8lSSG_tabTitle">对话</span></div></div><span><button class="t8lSSG_tabBarPlus">+</button></span></div><div class="t8lSSG_panelBody"><div class="sRp_conversation"><div class="sRp_messages"><div class="scroll"><div style="height:600px">已打开的消息</div></div></div><div class="sRp_composer"><textarea class="uV2eYG_card">未发送的草稿</textarea></div></div></div></aside><div class="t8lSSG_toggleCluster"><button data-odyssey-panel-entry="bottom">底</button><button data-odyssey-panel-entry="right">侧</button></div></div>`)
 await page.addScriptTag({content:runtime.join('\n')+`;window.disposeMotion=mountFigmaMotionController(document);window.disposeResize=mountFigmaResizeFeedback(document);document.querySelector('[data-odyssey-panel-entry="right"]').onclick=()=>{const host=document.querySelector('[data-dsh-panel-host]');const closed=host.dataset.odysseyPanelRight==='open';host.dataset.odysseyPanelRight=closed?'closed':'open';document.querySelector('.t8lSSG_panel').classList.toggle('t8lSSG_panelHidden',closed)};`})
-const settle=async()=>{await page.waitForTimeout(260);await page.evaluate(()=>new Promise(r=>requestAnimationFrame(r)))}
+const settle=async()=>{await page.waitForTimeout(320);await page.evaluate(()=>new Promise(r=>requestAnimationFrame(r)))}
 const measure=()=>page.evaluate(()=>{const get=s=>document.querySelector(s).getBoundingClientRect().toJSON();const p=document.querySelector('.t8lSSG_panel');return {main:get('.pI_x6G_centerCol'),panel:get('.t8lSSG_panel'),header:get('.wSkVaW_header'),toolbar:get('.toolbar'),canvas:get('.rScV5Q_root'),control:get('[data-odyssey-panel-entry="right"]'),plus:get('.t8lSSG_tabBarPlus'),tab:get('.t8lSSG_tab'),tint:getComputedStyle(p,'::after').backgroundColor,round:getComputedStyle(p).borderRadius,inert:p.inert}})
+// Sample the actual CSS transition at deterministic frames. A diagonal
+// clip/shrink can have correct endpoints, so endpoint checks alone miss it.
+await settle()
+const slideFrames = await page.evaluate(() => {
+  const host = document.querySelector('[data-dsh-panel-host]')
+  const panel = document.querySelector('.t8lSSG_panel')
+  const main = document.querySelector('.pI_x6G_centerCol')
+  const frames = []
+  for (const open of [false, true]) {
+    void panel.getBoundingClientRect()
+    host.dataset.odysseyPanelRight = open ? 'open' : 'closed'
+    panel.classList.toggle('t8lSSG_panelHidden', !open)
+    void panel.getBoundingClientRect()
+    const animations = [...panel.getAnimations(), ...main.getAnimations()]
+    for (const animation of animations) animation.pause()
+    for (const time of [0, 65, 130, 195, 260]) {
+      for (const animation of animations) animation.currentTime = time
+      const rect = panel.getBoundingClientRect()
+      const style = getComputedStyle(panel)
+      frames.push({ open, time, x:rect.x, y:rect.y, width:rect.width, height:rect.height,
+        clip:style.clipPath, opacity:getComputedStyle(panel.querySelector('.t8lSSG_panelBody')).opacity })
+    }
+    for (const animation of animations) animation.finish()
+  }
+  return frames
+})
+for (const open of [false,true]) {
+  const frames = slideFrames.filter(frame=>frame.open===open)
+  for (const frame of frames) {
+    near(frame.y,10,'horizontal slide top')
+    near(frame.height,880,'horizontal slide height')
+    near(frame.width,340,'horizontal slide width')
+    assert.equal(frame.clip,'none','panel must not collapse into a corner')
+    assert.equal(frame.opacity,'1','panel content must remain visible in motion')
+  }
+  assert(Math.abs(frames.at(-1).x-frames[0].x)>340,'slide must travel beyond right edge')
+  for(let i=1;i<frames.length;i++) assert(open ? frames[i].x < frames[i-1].x : frames[i].x > frames[i-1].x,'slide direction')
+}
 for(const viewport of [{width:1380,height:900},{width:900,height:640}]) for(const left of [80,280]) for(const dark of [false,true]) {
 await page.setViewportSize(viewport)
 await page.evaluate(({left,dark})=>{document.querySelector('.pI_x6G_frame').style.gridTemplateColumns=`${left}px minmax(0,1fr) 0`;document.body.toggleAttribute('data-ds-dark-theme',dark)},{left,dark})
