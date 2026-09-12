@@ -1,4 +1,6 @@
-import { clipboard, Menu, shell, type BrowserWindow } from 'electron'
+import { buildNativeFileMenu } from './native-file-menu'
+import { registerTrustedMainWindowHandler } from './ipc-trust'
+import { clipboard, ipcMain, Menu, shell, type BrowserWindow } from 'electron'
 import { existsSync } from 'node:fs'
 import { buildContextMenuTemplate, resolveFinderPath } from './context-menu-template'
 
@@ -34,6 +36,13 @@ export function installContextMenu(
   window: BrowserWindow,
   locale: () => 'en' | 'zh'
 ): void {
+  ipcMain.removeHandler('ui:file-context-menu')
+  registerTrustedMainWindowHandler(ipcMain, 'ui:file-context-menu', () => window,
+    (_event, items: unknown) => new Promise<string | null>((resolve) => {
+      const template = buildNativeFileMenu(items, resolve)
+      if (template.length === 0 || window.isDestroyed()) { resolve(null); return }
+      Menu.buildFromTemplate(template).popup({ window, callback: () => resolve(null) })
+    }))
   window.webContents.on('context-menu', async (_event, params) => {
     const elementCandidates = await clickedElementPathCandidates(window, params.x, params.y)
     if (window.isDestroyed()) return

@@ -187,6 +187,8 @@ contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
     researchBoards: createResearchBoardsBridge(ipcRenderer),
+    showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
+      ipcRenderer.invoke('ui:file-context-menu', items),
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
     showItemInFolder: (path: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('filesystem:show-item-in-folder', path),
