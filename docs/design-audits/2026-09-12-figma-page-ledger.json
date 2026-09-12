@@ -420,14 +420,15 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-8",
-      "status": "已记录字号与层级差异；修复待实机",
+      "status": "深色预览字号和段距实测通过；编辑与其他类型待验",
       "differences": [
         "D23"
       ],
       "evidence": [
-        "v8-markdown-preview-dark"
+        "v8-markdown-preview-dark",
+        "v9-markdown-preview-dark"
       ],
-      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
+      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
     },
     {
       "section": "02 对话与文件",
@@ -1009,14 +1010,15 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=304-980",
-      "status": "已核对真实11人溢出、滚动和搜索；材质待新包",
+      "status": "11人列表几何、3px滚动条、blur12通过；双端状态待验",
       "differences": [
         "D28"
       ],
       "evidence": [
-        "v8-isolated-members-overflow-dark"
+        "v8-isolated-members-overflow-dark",
+        "v9-members-overflow-dark"
       ],
-      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
+      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
     },
     {
       "section": "04 协作与权限",
@@ -3374,14 +3376,15 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-26753",
-      "status": "已记录位置、宽度、筛选与空态差异；修复待实机",
+      "status": "空态尺寸与Esc通过；纵向锚点20px差异待核查",
       "differences": [
         "D24"
       ],
       "evidence": [
-        "v8-notifications-empty-dark"
+        "v8-notifications-empty-dark",
+        "v9-notifications-empty-dark"
       ],
-      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
+      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
     },
     {
       "section": "13B 对话首页 · 顶部导航优化对比",
@@ -3686,8 +3689,14 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-27281",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "真实运行中单条菜单440×110已截图；嵌套和多条待验",
+      "differences": [
+        "D20"
+      ],
+      "evidence": [
+        "v9-subagent-running-menu-light"
+      ],
+      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
@@ -3716,8 +3725,15 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-28101",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "真实可续接运行面板已打开；标题正文几何D29待新包",
+      "differences": [
+        "D21",
+        "D29"
+      ],
+      "evidence": [
+        "v9-subagent-continuable-running-light"
+      ],
+      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
@@ -3752,14 +3768,17 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-29359",
-      "status": "真实子页签渲染报错；修复待下一包",
+      "status": "真实one-shot右栏打开与底部焦点路由通过；内部几何D29待新包",
       "differences": [
-        "D21"
+        "D21",
+        "D29"
       ],
       "evidence": [
-        "v8-subagent-render-error-dark"
+        "v8-subagent-render-error-dark",
+        "v9-subagent-oneshot-dark",
+        "v9-subagent-from-bottom-dark"
       ],
-      "packageCommit": "dc26e8ed5738e7837bbaab5339f0dab1cc042872"
+      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
     },
     {
       "section": "16 子代理 · 菜单与右侧会话",
@@ -3962,8 +3981,16 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=750-27763",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "七项真实任务216/168/40和阅读锚点通过；细节与动效D31修正中",
+      "differences": [
+        "D31"
+      ],
+      "evidence": [
+        "v9-long-tasks-wide-light",
+        "v9-long-tasks-collapsed-light",
+        "v9-task-collapse-motion-light"
+      ],
+      "packageCommit": "50b9ae853c27d7ed9f1d5a1781161b1ad92a76e1"
     },
     {
       "section": "18 对话 · 长内容与底部固定区",
