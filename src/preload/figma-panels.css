@@ -10,15 +10,6 @@ body {
   --odyssey-right-surface:#eee;
 }
 
-/* Narrow-window adaptation retains every action and its font/target size. */
-.wSkVaW_header[data-odyssey-header-layout]:not([data-odyssey-header-layout="regular"])[data-srb-session-header]:has(.srb-actions) [data-srb-title-cluster] { grid-column:1 / -1; }
-.wSkVaW_header[data-odyssey-header-layout="stacked"][data-srb-session-header]:has(.srb-actions) [data-srb-utilities] { grid-row:2; height:30px; margin-top:0; align-self:center; }
-.wSkVaW_header[data-odyssey-header-layout="narrow"][data-srb-session-header]:has(.srb-actions) {
-  height:114px; min-height:114px; flex-basis:114px; grid-template-rows:30px 30px 32px; row-gap:2px;
-}
-.wSkVaW_header[data-odyssey-header-layout="narrow"][data-srb-session-header]:has(.srb-actions) [data-srb-utilities] { grid-column:1 / -1; grid-row:3; height:30px; margin-top:0; justify-self:end; }
-.wSkVaW_header[data-odyssey-header-layout="narrow"] [data-srb-tabs] { grid-column:1 / -1; margin-top:0; }
-
 body[data-ds-dark-theme] { --odyssey-right-surface:#242424; }
 
 body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {

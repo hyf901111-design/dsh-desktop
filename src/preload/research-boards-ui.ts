@@ -1387,15 +1387,17 @@ export function ResearchBoardHeader({
       : h(
           'button',
           {
-            'aria-label': pinned ? '取消常用' : '设为常用',
+            'aria-label': pinned ? '已添加至研究看板' : '添加至研究看板',
+            title: pinned ? '已添加至研究看板' : '添加至研究看板',
             'aria-pressed': pinned,
             className: 'srb-favorite-button',
-            onClick: safely(page, () => dedicatedBoard
-              ? page.call(pinned ? 'board.unpin' : 'board.pin', { boardId: v.boardId })
-              : page.favorite(sessionId))
+            onClick: safely(page, async () => {
+              if (pinned) return
+              if (dedicatedBoard) await page.call('board.pin', { boardId: v.boardId })
+              else await page.favorite(sessionId)
+            })
           },
-          h('span', { className: 'srb-favorite-icon', 'aria-hidden': true }),
-          pinned ? '已设为常用' : '设为常用'
+          h('span', { className: 'srb-board-add-icon', 'aria-hidden': true })
         ),
     v?.board.sharingState === 'shared'
       ? v.permissions.read && h('button', {
@@ -1404,12 +1406,13 @@ export function ResearchBoardHeader({
         }, '管理')
       : h('button', {
           className: 'srb-create-collaboration',
+          'aria-label': '创建协作', title: '创建协作',
           disabled: !!v && (!v.permissions.manage || v.board.lifecycle !== 'active'),
           onClick: safely(page, async () => {
             if (v) addBoardCollaborator(page, v.boardId, sessionId)
             else shareFavorite(page, await page.collaborationSource(sessionId))
           })
-        }, boardIcon('people'), '创建协作')
+        }, boardIcon('people'))
   )
 }
 export function ResearchBoardPresence({

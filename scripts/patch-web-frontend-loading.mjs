@@ -1,3 +1,4 @@
+import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger } from './lib/figma-refinements-client.mjs'
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
@@ -104,7 +105,7 @@ patchStyles(asset('.css'))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(conversationPath, patchFigmaCanvasGestures(patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8')))))
+writeFileSync(conversationPath, patchFigmaRefinementConversation(patchFigmaCanvasGestures(patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8'))))))
 
 const trajectoryPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-trajectory/lib/client.js')
 writeFileSync(trajectoryPath, patchFigmaTrajectory(readFileSync(trajectoryPath, 'utf8')))
@@ -116,7 +117,9 @@ for (const [name, patch] of [
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', patchFigmaSettingsModels],
   ['dsh-client-ui-theme', patchFigmaSettingsAppearance],
-  ['dsh-client-ui-agent-preset', patchFigmaSettingsPreset]
+  ['dsh-client-ui-agent-preset', source => patchFigmaRefinementPreset(patchFigmaSettingsPreset(source))],
+  ['dsh-client-ui-subagent', patchFigmaRefinementSubagent],
+  ['dsh-client-ui-input-trigger', patchFigmaRefinementInputTrigger]
 ]) {
   const clientPath = join(process.cwd(), 'node_modules', '@deepseek-ai', name, 'lib/client.js')
   writeFileSync(clientPath, patch(readFileSync(clientPath, 'utf8')))

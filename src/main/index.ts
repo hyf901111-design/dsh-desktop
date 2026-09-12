@@ -25,6 +25,7 @@ import {
   ipcMain,
   Menu,
   nativeTheme,
+  systemPreferences,
   net,
   protocol,
   session,
@@ -685,6 +686,12 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     }
     await executeDesktopMenuCommand(command)
     return { ok: true }
+  })
+
+  ipcMain.removeHandler('desktop-scrollbars:always-show')
+  ipcMain.handle('desktop-scrollbars:always-show', event => {
+    assertTrustedMainWindowEvent(event, mainWindow)
+    return process.platform === 'darwin' && systemPreferences.getUserDefault('AppleShowScrollBars', 'string') === 'Always'
   })
 
   ipcMain.removeHandler('desktop-titlebar:set-theme')

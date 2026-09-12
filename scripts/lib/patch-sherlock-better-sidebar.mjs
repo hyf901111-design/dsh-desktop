@@ -914,6 +914,37 @@ function patchFigmaPanelDefaultWidth(source) {
   return source
 }
 
+
+// Desktop compact mode changes presentation only. Stored tabs, width and drafts survive.
+function patchFigmaCompactPanel(source) {
+  const marker = '/* odyssey:compact-panel:20260912 */'
+  if (source.includes(marker)) return source
+  const start=source.indexOf('function Sidebar(props) {'), end=source.indexOf('\n\t\t//#endregion',start)
+  let part=source.slice(start,end)
+  part=replaceExact(part, 'const narrow = useNarrowViewport();', `const narrow = useNarrowViewport() && !window.dshDesktop;
+      ${marker}
+      const [compactPanel, setCompactPanel] = (0, react.useState)(() => !!window.dshDesktop && window.innerWidth < 840);
+      const [compactPanelOpen, setCompactPanelOpen] = (0, react.useState)(false);
+      (0, react.useEffect)(() => {
+        const measure=()=>{ const compact=!!window.dshDesktop && window.innerWidth<840; setCompactPanel(compact); if(!compact)setCompactPanelOpen(false); };
+        window.addEventListener('resize',measure); return ()=>window.removeEventListener('resize',measure);
+      }, []);`, 'compact presentation hook')
+  part=replaceExact(part, 'const state = snapshot.state;', 'const state = snapshot.state && compactPanel ? {...snapshot.state, panelOpen:compactPanelOpen} : snapshot.state;', 'temporary panel visibility')
+  part=replaceExact(part, 'const sessionId = snapshot.sessionId;', `const sessionId = snapshot.sessionId;
+      (0, react.useEffect)(()=>setCompactPanelOpen(false),[sessionId]);`, 'session compact reset')
+  part=replaceExact(part,'store.reduce(togglePanel);','if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);','compact toggle')
+  part=replaceExact(part, 'const width = !narrow && snapshot.state?.panelOpen === true ? odysseyClampPanelWidth(snapshot.state.width) : 0;', 'const width = !narrow && !compactPanel && snapshot.state?.panelOpen === true ? odysseyClampPanelWidth(snapshot.state.width) : 0;', 'compact occupancy')
+  // Include the breakpoint in the occupancy layout effect's dependency list.
+  const effect=part.indexOf('const width = !narrow && !compactPanel')
+  const next=part.indexOf('\n\t\t\t]);',effect)
+  let segment=part.slice(effect,next)
+  segment=segment.replace('narrow,','narrow, compactPanel,')
+  part=part.slice(0,effect)+segment+part.slice(next)
+  part=replaceExact(part,'"data-odyssey-panel-right": state.panelOpen ? "open" : "closed",','"data-odyssey-panel-right": state.panelOpen ? "open" : "closed", "data-odyssey-panel-overlay": compactPanel ? "true" : "false",','compact overlay semantics')
+  part=part.replaceAll('odysseyClampPanelWidth(committed.width)', '(compactPanel ? Math.min(committed.width,window.innerWidth-20) : odysseyClampPanelWidth(committed.width))').replaceAll('odysseyClampPanelWidth(state.width)', '(compactPanel ? Math.min(state.width,window.innerWidth-20) : odysseyClampPanelWidth(state.width))')
+  return source.slice(0,start)+part+source.slice(end)
+}
+
 export function patchBetterSidebarClient(source) {
   let next = patchFigmaPanelDefaultWidth(
     patchFigmaFilePanel(
@@ -1060,7 +1091,7 @@ export function patchBetterSidebarClient(source) {
     'committed panel surface dimensions'
   )
 
-  if (source.includes(PATCH_MARKER)) return patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))
+  if (source.includes(PATCH_MARKER)) return patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))))
 
   const moveBefore = `\t\t\t\t\tconst insertAt = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
   const moveAfter = `\t\t\t\t\tconst requestedIndex = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tconst pinnedCount = leaf.tabs.filter((tab) => tab.meta?.sherlockPinned === true).length;\n\t\t\t\t\tconst insertAt = moved.meta?.sherlockPinned === true ? 0 : Math.max(pinnedCount, requestedIndex);\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
@@ -1125,7 +1156,7 @@ export function patchBetterSidebarClient(source) {
     'tab render closure'
   )
 
-  return patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))
+  return patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))))
 }
 
 export async function patchBetterSidebarPackage(packageRoot) {
