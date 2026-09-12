@@ -1,0 +1,3960 @@
+{
+  "date": "2026-09-12",
+  "fileKey": "Jkyr5rMvgM8GNH6E68xnqd",
+  "sections": [
+    {
+      "id": "547:652",
+      "name": "01 首页与导航",
+      "frames": 20
+    },
+    {
+      "id": "547:655",
+      "name": "02 对话与文件",
+      "frames": 20
+    },
+    {
+      "id": "547:658",
+      "name": "03 研究与生成",
+      "frames": 18
+    },
+    {
+      "id": "547:661",
+      "name": "04 协作与权限",
+      "frames": 16
+    },
+    {
+      "id": "547:664",
+      "name": "05 消息与更新",
+      "frames": 16
+    },
+    {
+      "id": "547:667",
+      "name": "06 组件与画布排版",
+      "frames": 16
+    },
+    {
+      "id": "547:670",
+      "name": "07 账户与设置",
+      "frames": 12
+    },
+    {
+      "id": "547:673",
+      "name": "08 状态与动效",
+      "frames": 14
+    },
+    {
+      "id": "547:676",
+      "name": "09 开发交付",
+      "frames": 3
+    },
+    {
+      "id": "548:652",
+      "name": "10 原型连接 · 后台状态",
+      "frames": 18
+    },
+    {
+      "id": "663:686",
+      "name": "12A 输入与模式 · 菜单展开",
+      "frames": 18
+    },
+    {
+      "id": "663:687",
+      "name": "12B 侧栏与看板 · 菜单展开",
+      "frames": 12
+    },
+    {
+      "id": "663:688",
+      "name": "12C 研究与组件 · 菜单展开",
+      "frames": 22
+    },
+    {
+      "id": "663:689",
+      "name": "12D 文件与页签 · 菜单展开",
+      "frames": 10
+    },
+    {
+      "id": "663:690",
+      "name": "12E 设置 · 菜单展开",
+      "frames": 10
+    },
+    {
+      "id": "663:691",
+      "name": "12F 协作与特殊状态 · 菜单展开",
+      "frames": 10
+    },
+    {
+      "id": "663:692",
+      "name": "12G 菜单复用源 · 页面背景与浮层",
+      "frames": 0
+    },
+    {
+      "id": "669:25179",
+      "name": "12 菜单展开态 · 总览与页面索引",
+      "frames": 6
+    },
+    {
+      "id": "680:25833",
+      "name": "13A 消息中心 · 铃铛展开窗口",
+      "frames": 4
+    },
+    {
+      "id": "680:25836",
+      "name": "13B 对话首页 · 顶部导航优化对比",
+      "frames": 8
+    },
+    {
+      "id": "696:26735",
+      "name": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "frames": 8
+    },
+    {
+      "id": "702:26903",
+      "name": "15 对话 · 目标与任务进度",
+      "frames": 8
+    },
+    {
+      "id": "710:27273",
+      "name": "16 子代理 · 菜单与右侧会话",
+      "frames": 12
+    },
+    {
+      "id": "724:27363",
+      "name": "17 左右侧栏 · 轻量悬浮滚动条",
+      "frames": 8
+    },
+    {
+      "id": "748:27747",
+      "name": "18 对话 · 长内容与底部固定区",
+      "frames": 9
+    }
+  ],
+  "cases": [
+    {
+      "section": "01 首页与导航",
+      "id": "136:11",
+      "name": "毛玻璃首页 · 浅色 / 右侧栏展开",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=136-11",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "136:221",
+      "name": "毛玻璃首页 · 深色 / 右侧栏展开",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=136-221",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "171:4",
+      "name": "06 对话 · 左侧菜单收起 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=171-4",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "171:284",
+      "name": "06 对话 · 左侧菜单收起 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=171-284",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "171:564",
+      "name": "07 研究 · 左侧菜单收起 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=171-564",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "171:860",
+      "name": "07 研究 · 左侧菜单收起 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=171-860",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "194:2",
+      "name": "14 左侧菜单 · 拖动调宽 280 → 240 px / 浅色 · 交互示意",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-2",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "194:368",
+      "name": "14 左侧菜单 · 拖动调宽 280 → 240 px / 深色 · 交互示意",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-368",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "194:734",
+      "name": "15 右侧屏并列 · 拖动调宽 340 → 400 px / 浅色 · 交互示意",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-734",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "194:1099",
+      "name": "15 右侧屏并列 · 拖动调宽 340 → 400 px / 深色 · 交互示意",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=194-1099",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "214:2",
+      "name": "17 对话 · 页签溢出与下拉切换 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=214-2",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "214:302",
+      "name": "17 对话 · 页签溢出与下拉切换 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=214-302",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "284:397",
+      "name": "22 研究看板 · 单列表与专用研究 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=284-397",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "284:764",
+      "name": "22 研究看板 · 单列表与专用研究 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=284-764",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "287:432",
+      "name": "24 侧栏菜单 · 分组、搜索、排序与状态 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=287-432",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "287:932",
+      "name": "24 侧栏菜单 · 分组、搜索、排序与状态 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=287-932",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "495:588",
+      "name": "60 右侧屏收放 · 归拢到右上角按钮 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1380.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "495:1005",
+      "name": "60 右侧屏收放 · 归拢到右上角按钮 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1380.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-1005",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "557:902",
+      "name": "62 首页 · 右侧栏收起 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=557-902",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "01 首页与导航",
+      "id": "557:1122",
+      "name": "62 首页 · 右侧栏收起 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=557-1122",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "160:4",
+      "name": "01 对话 · Files / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=160-4",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "161:2",
+      "name": "01 对话 · Files / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-2",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "161:5",
+      "name": "02 对话 · 文档预览 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-5",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "161:8",
+      "name": "02 对话 · 文档预览 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-8",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "161:11",
+      "name": "03 对话 · 表格与新建面板 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-11",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "161:14",
+      "name": "03 对话 · 表格与新建面板 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-14",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "179:2",
+      "name": "13 对话 · 底部终端展开 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=179-2",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "179:218",
+      "name": "13 对话 · 底部终端展开 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=179-218",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "252:2",
+      "name": "20 行内标签 · 输入中与发送后 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-2",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "252:298",
+      "name": "20 行内标签 · 输入中与发送后 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-298",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "252:297",
+      "name": "21 行内标签 · 交互细节 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 760.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-297",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "252:594",
+      "name": "21 行内标签 · 交互细节 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 760.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-594",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "414:588",
+      "name": "48 文件与网页 · 摘要入口与放大阅读 / 浅色 / 2026-09-10",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=414-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "414:591",
+      "name": "48 文件与网页 · 摘要入口与放大阅读 / 深色 / 2026-09-10",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=414-591",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "480:588",
+      "name": "50 输入与编辑 · 从空态到提交反馈 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=480-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "480:689",
+      "name": "50 输入与编辑 · 从空态到提交反馈 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=480-689",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "556:653",
+      "name": "63 对话 · 右侧栏收起 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=556-653",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "557:670",
+      "name": "63 对话 · 右侧栏收起 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=557-670",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "575:686",
+      "name": "64 对话首页 · A 单行顶栏 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=575-686",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "02 对话与文件",
+      "id": "575:936",
+      "name": "64 对话首页 · A 单行顶栏 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=575-936",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "361:5791",
+      "name": "44 新建研究 · 空白画布 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=361-5791",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "361:6084",
+      "name": "44 新建研究 · 空白画布 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=361-6084",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "161:17",
+      "name": "04 研究 · 行情画布与共享对话 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-17",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "161:20",
+      "name": "04 研究 · 行情画布与共享对话 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-20",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "161:23",
+      "name": "05 研究 · 组件选中与引用 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-23",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "161:26",
+      "name": "05 研究 · 组件选中与引用 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-26",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "176:8",
+      "name": "08 轨迹 · 执行时间轴 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=176-8",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "176:331",
+      "name": "08 轨迹 · 执行时间轴 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=176-331",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "345:588",
+      "name": "38 组件生成中 · 画布与任务同步 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=345-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "345:881",
+      "name": "38 组件生成中 · 画布与任务同步 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=345-881",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "347:588",
+      "name": "39 组件生成 · 过程与结果 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "347:695",
+      "name": "39 组件生成 · 过程与结果 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-695",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "347:1016",
+      "name": "41 组件工具栏 · 点击与反馈 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-1016",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "347:1123",
+      "name": "41 组件工具栏 · 点击与反馈 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-1123",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "580:686",
+      "name": "65 研究 · 底部面板展开 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=580-686",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "581:686",
+      "name": "65 研究 · 底部面板展开 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=581-686",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "589:686",
+      "name": "66 右侧屏统一规范 · 独立圆角并列 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=589-686",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "03 研究与生成",
+      "id": "590:686",
+      "name": "66 右侧屏统一规范 · 独立圆角并列 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=590-686",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "286:515",
+      "name": "23 协作研究 · 分组目录与实时状态 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=286-515",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "286:1174",
+      "name": "23 协作研究 · 分组目录与实时状态 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=286-1174",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "288:432",
+      "name": "25 创建协作 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=288-432",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "288:871",
+      "name": "25 创建协作 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=288-871",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "289:444",
+      "name": "26 管理协作 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=289-444",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "289:928",
+      "name": "26 管理协作 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=289-928",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "290:468",
+      "name": "27 画板设置 · 名称、副本与共享状态 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=290-468",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "290:947",
+      "name": "27 画板设置 · 名称、副本与共享状态 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=290-947",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "294:516",
+      "name": "29 添加协作者 · 从顶栏加号进入 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=294-516",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "294:971",
+      "name": "29 添加协作者 · 从顶栏加号进入 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=294-971",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "304:564",
+      "name": "30 多人协作 · 顶栏溢出与成员列表 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=304-564",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "304:980",
+      "name": "30 多人协作 · 顶栏溢出与成员列表 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=304-980",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "484:588",
+      "name": "54 协作边界 · 权限、邀请与确认 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=484-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "484:661",
+      "name": "54 协作边界 · 权限、邀请与确认 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=484-661",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "541:588",
+      "name": "61 协作头像 · 间距与点击信息 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 980.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=541-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "04 协作与权限",
+      "id": "541:605",
+      "name": "61 协作头像 · 间距与点击信息 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 980.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=541-605",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "291:492",
+      "name": "28 升级推送 · 左侧栏底部提醒 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=291-492",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "291:950",
+      "name": "28 升级推送 · 左侧栏底部提醒 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=291-950",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "323:564",
+      "name": "31 消息提醒 · 邀请与版本更新 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-564",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "323:1313",
+      "name": "31 消息提醒 · 邀请与版本更新 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-1313",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "323:711",
+      "name": "32 版本更新 · 从发现到完成 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-711",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "323:1460",
+      "name": "32 版本更新 · 从发现到完成 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-1460",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "323:858",
+      "name": "33 下载更新 · 左侧栏底部进度 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-858",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "323:1607",
+      "name": "33 下载更新 · 左侧栏底部进度 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=323-1607",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:588",
+      "name": "34 关于 · 检查更新中 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:986",
+      "name": "34 关于 · 检查更新中 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-986",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:680",
+      "name": "35 关于 · 收到升级推送 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-680",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:1078",
+      "name": "35 关于 · 收到升级推送 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-1078",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:783",
+      "name": "36 关于 · 点击更新后下载 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-783",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:1181",
+      "name": "36 关于 · 点击更新后下载 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-1181",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:883",
+      "name": "37 关于 · 校验更新 · 自动重启 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-883",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "05 消息与更新",
+      "id": "337:1281",
+      "name": "37 关于 · 校验更新 · 自动重启 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-1281",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "347:802",
+      "name": "40 生成内容 · 常用样式规范 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-802",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "347:909",
+      "name": "40 生成内容 · 常用样式规范 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=347-909",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "353:896",
+      "name": "42 组件外框 · 默认、悬停与选中 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=353-896",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "353:1121",
+      "name": "42 组件外框 · 默认、悬停与选中 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=353-1121",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "365:588",
+      "name": "43 组件内容适配 · 不同宽高 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1580.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=365-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "365:592",
+      "name": "43 组件内容适配 · 不同宽高 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1580.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=365-592",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "379:644",
+      "name": "46 默认生成规格 · 小中大与密排规则 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1380.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=379-644",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "379:759",
+      "name": "46 默认生成规格 · 小中大与密排规则 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1380.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=379-759",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "375:588",
+      "name": "45 整理画布 · 规则与整理结果 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1500.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=375-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "375:814",
+      "name": "45 整理画布 · 规则与整理结果 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1500.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=375-814",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "198:2",
+      "name": "16 研究 · 组件四角拖动缩放 / 浅色 · 交互示意",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=198-2",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "198:383",
+      "name": "16 研究 · 组件四角拖动缩放 / 深色 · 交互示意",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=198-383",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "485:588",
+      "name": "55 画布与组件 · 操作边界与内容适配 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=485-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "485:668",
+      "name": "55 画布与组件 · 操作边界与内容适配 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=485-668",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "493:588",
+      "name": "59 拖动、缩放与吸附 · 全局统一规则 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1380.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=493-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "06 组件与画布排版",
+      "id": "493:694",
+      "name": "59 拖动、缩放与吸附 · 全局统一规则 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1380.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=493-694",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "219:2",
+      "name": "18 登录 · 古港归航与居中玻璃表单 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=219-2",
+      "status": "已核对主体与交互；短窗仍待复验",
+      "differences": [],
+      "evidence": [
+        "v6-isolated-login-light"
+      ],
+      "verifiedPackage": "1d03bd24d3941aeca25c4d10622be980d7f0db51",
+      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。"
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "219:44",
+      "name": "18 登录 · 古港归航与居中玻璃表单 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=219-44",
+      "status": "已核对主体与交互；短窗仍待复验",
+      "differences": [],
+      "evidence": [
+        "v6-isolated-login-dark"
+      ],
+      "verifiedPackage": "1d03bd24d3941aeca25c4d10622be980d7f0db51",
+      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。"
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "219:86",
+      "name": "19 注册 · 古港归航与居中玻璃表单 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=219-86",
+      "status": "已核对主体与交互；短窗仍待复验",
+      "differences": [],
+      "evidence": [
+        "v6-isolated-register-light"
+      ],
+      "verifiedPackage": "1d03bd24d3941aeca25c4d10622be980d7f0db51",
+      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。"
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "219:136",
+      "name": "19 注册 · 古港归航与居中玻璃表单 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=219-136",
+      "status": "已核对主体与交互；短窗仍待复验",
+      "differences": [],
+      "evidence": [
+        "v6-isolated-register-dark"
+      ],
+      "verifiedPackage": "1d03bd24d3941aeca25c4d10622be980d7f0db51",
+      "notes": "隔离本地账户服务；卡片、字段、字号、颜色、切换、登录退出与非法值错误检查。颜色依据原始节点，非导出代码舍入值。"
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "177:2",
+      "name": "09 设置 · 通用设置 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=177-2",
+      "status": "主体几何已比对；菜单状态仍在修正",
+      "differences": [],
+      "evidence": [
+        "actual/v2-settings-general-light.png",
+        "actual/v2-settings-general-light.json"
+      ],
+      "measurements": {
+        "content": [
+          424,
+          58,
+          760,
+          695
+        ],
+        "sessionGroup": [
+          424,
+          150,
+          760,
+          232
+        ],
+        "interfaceGroup": [
+          424,
+          412,
+          760,
+          341
+        ]
+      }
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "177:361",
+      "name": "09 设置 · 通用设置 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=177-361",
+      "status": "已实测整页布局；各设置展开态继续核验",
+      "differences": [],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-general-dark.png",
+          "measurement": "actual/v5-general-dark.json"
+        }
+      ]
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "178:2",
+      "name": "10 设置 · 模型 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=178-2",
+      "status": "主体几何与添加提供方流程已实测；保存异常待核对",
+      "differences": [
+        "D13"
+      ],
+      "evidence": [
+        "actual/v2-settings-models-light.png"
+      ],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-provider-light.png",
+          "measurement": "actual/v5-provider-light.json"
+        }
+      ]
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "178:340",
+      "name": "10 设置 · 模型 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=178-340",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "178:1352",
+      "name": "11 设置 · 账户信息 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=178-1352",
+      "status": "已实测首屏几何；账户修改状态待核对",
+      "differences": [],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-account-light.png",
+          "measurement": "actual/v5-account-light.json"
+        }
+      ]
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "178:1677",
+      "name": "11 设置 · 账户信息 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=178-1677",
+      "status": "已实测首屏几何和深色材质；账户修改状态待核对",
+      "differences": [],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-account-dark.png",
+          "measurement": "actual/v5-account-dark.json"
+        }
+      ]
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "178:678",
+      "name": "12 设置 · 关于 / 浅色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=178-678",
+      "status": "已实测首屏几何；实际日志长度保留",
+      "differences": [],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-about-light.png",
+          "measurement": "actual/v5-about-light.json"
+        }
+      ]
+    },
+    {
+      "section": "07 账户与设置",
+      "id": "178:1015",
+      "name": "12 设置 · 关于 / 深色 · 原方案材质",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=178-1015",
+      "status": "已实测首屏与长日志独立滚动",
+      "differences": [],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-about-dark.png",
+          "measurement": "actual/v5-about-dark.json"
+        }
+      ]
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "479:588",
+      "name": "49 按钮 · 完整状态矩阵 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=479-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "479:806",
+      "name": "49 按钮 · 完整状态矩阵 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=479-806",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "481:588",
+      "name": "51 选择与浮层 · 菜单、标签和提示 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=481-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "481:705",
+      "name": "51 选择与浮层 · 菜单、标签和提示 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=481-705",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "404:588",
+      "name": "47 补充交互 · 字体加载失败与重试 / 浅色 / 2026-09-10",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=404-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "404:627",
+      "name": "47 补充交互 · 字体加载失败与重试 / 深色 / 2026-09-10",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=404-627",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "482:588",
+      "name": "52 面板动效 · 触发、过渡与退出 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=482-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "482:714",
+      "name": "52 面板动效 · 触发、过渡与退出 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=482-714",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "483:588",
+      "name": "53 反馈与恢复 · 加载、空态和异常 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=483-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "483:676",
+      "name": "53 反馈与恢复 · 加载、空态和异常 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=483-676",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "486:588",
+      "name": "56 窗口与层级 · 缩放、遮挡和键盘操作 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=486-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "486:886",
+      "name": "56 窗口与层级 · 缩放、遮挡和键盘操作 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=486-886",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "488:588",
+      "name": "58 可播放动效预览 · 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=488-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "08 状态与动效",
+      "id": "488:834",
+      "name": "58 可播放动效预览 · 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=488-834",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "09 开发交付",
+      "id": "487:588",
+      "name": "57 开发交付索引 · 查找、规格与验收 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=487-588",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "09 开发交付",
+      "id": "487:645",
+      "name": "57 开发交付索引 · 查找、规格与验收 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1280.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=487-645",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "09 开发交付",
+      "id": "253:2",
+      "name": "行内标签 · 可复用组件与主题",
+      "dimensions": {
+        "width": 680.0,
+        "height": 380.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=253-2",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "495:845",
+      "name": "右侧屏原型 · 浅色 / 展开",
+      "dimensions": {
+        "width": 520.0,
+        "height": 900.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-845",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "495:924",
+      "name": "右侧屏原型 · 浅色 / 收起",
+      "dimensions": {
+        "width": 520.0,
+        "height": 900.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-924",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "495:1265",
+      "name": "右侧屏原型 · 深色 / 展开",
+      "dimensions": {
+        "width": 520.0,
+        "height": 900.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-1265",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "495:1345",
+      "name": "右侧屏原型 · 深色 / 收起",
+      "dimensions": {
+        "width": 520.0,
+        "height": 900.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=495-1345",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:686",
+      "name": "成员气泡 · 点击示意 / Light / 2人顶栏 / hyf90 · 你",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-686",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:690",
+      "name": "成员气泡 · 点击示意 / Light / 2人顶栏 / 林然",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-690",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:694",
+      "name": "成员气泡 · 点击示意 / Light / 3人顶栏 / hyf90 · 你",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-694",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:698",
+      "name": "成员气泡 · 点击示意 / Light / 3人顶栏 / 林然",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-698",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:702",
+      "name": "成员气泡 · 点击示意 / Light / 3人顶栏 / 周宁",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-702",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:706",
+      "name": "成员气泡 · 点击示意 / Dark / 2人顶栏 / hyf90 · 你",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-706",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:710",
+      "name": "成员气泡 · 点击示意 / Dark / 2人顶栏 / 林然",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-710",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:714",
+      "name": "成员气泡 · 点击示意 / Dark / 3人顶栏 / hyf90 · 你",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-714",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:718",
+      "name": "成员气泡 · 点击示意 / Dark / 3人顶栏 / 林然",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-718",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "563:722",
+      "name": "成员气泡 · 点击示意 / Dark / 3人顶栏 / 周宁",
+      "dimensions": {
+        "width": 540.0,
+        "height": 278.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=563-722",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "564:686",
+      "name": "工作区 · 文件预览 / 浅色",
+      "dimensions": {
+        "width": 380.0,
+        "height": 998.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=564-686",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "564:690",
+      "name": "首页 · 文件预览 / 浅色",
+      "dimensions": {
+        "width": 380.0,
+        "height": 998.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=564-690",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "564:694",
+      "name": "工作区 · 文件预览 / 深色",
+      "dimensions": {
+        "width": 380.0,
+        "height": 998.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=564-694",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "10 原型连接 · 后台状态",
+      "id": "564:698",
+      "name": "首页 · 文件预览 / 深色",
+      "dimensions": {
+        "width": 380.0,
+        "height": 998.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=564-698",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:1406",
+      "name": "12A / 首页 · 模式选择 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-1406",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:1693",
+      "name": "12A / 首页 · 模式选择 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-1693",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:1981",
+      "name": "12A / 首页 · 工作区选择 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-1981",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:2262",
+      "name": "12A / 首页 · 工作区选择 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-2262",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D06"
+      ],
+      "evidence": [
+        "actual/v2-workspace-filtered-confirmed.png",
+        "actual/v2-workspace-filtered-confirmed.json"
+      ]
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:2544",
+      "name": "12A / 首页 · 执行权限 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-2544",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:2823",
+      "name": "12A / 首页 · 执行权限 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-2823",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D03"
+      ],
+      "evidence": [
+        "actual/v2-permission-dark.png",
+        "actual/v2-permission-dark.json"
+      ]
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:3103",
+      "name": "12A / 首页 · 模型选择 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-3103",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:3387",
+      "name": "12A / 首页 · 模型选择 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-3387",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D01",
+        "D02",
+        "V01"
+      ],
+      "evidence": [
+        "actual/model-menu-dark.png",
+        "actual/model-menu-dark.json"
+      ]
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:3672",
+      "name": "12A / 首页 · 斜杠命令 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-3672",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:3954",
+      "name": "12A / 首页 · 斜杠命令 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-3954",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:4237",
+      "name": "12A / 右侧对话 · 工作区选择 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-4237",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:4600",
+      "name": "12A / 右侧对话 · 工作区选择 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-4600",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:4963",
+      "name": "12A / 右侧对话 · 模式选择 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-4963",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:5332",
+      "name": "12A / 右侧对话 · 模式选择 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-5332",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:5701",
+      "name": "12A / 右侧对话 · 执行权限 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-5701",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:6062",
+      "name": "12A / 右侧对话 · 执行权限 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-6062",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:6423",
+      "name": "12A / 右侧对话 · 模型与推理强度 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-6423",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12A 输入与模式 · 菜单展开",
+      "id": "667:6795",
+      "name": "12A / 右侧对话 · 模型与推理强度 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-6795",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:7167",
+      "name": "12B / 研究看板 · 显示与排序 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-7167",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:7450",
+      "name": "12B / 研究看板 · 显示与排序 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-7450",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D07"
+      ],
+      "evidence": [
+        "actual/v2-board-view-dark.png",
+        "actual/v2-board-view-dark.json"
+      ]
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:7734",
+      "name": "12B / 工作区 · 显示与排序 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-7734",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:8017",
+      "name": "12B / 工作区 · 显示与排序 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-8017",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:8301",
+      "name": "12B / 专用看板 · 条目菜单 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-8301",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:8585",
+      "name": "12B / 专用看板 · 条目菜单 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-8585",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D08"
+      ],
+      "evidence": [
+        "actual/private-board-menu-dark.png",
+        "actual/private-board-menu-dark.json"
+      ]
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:8870",
+      "name": "12B / 协作看板 · 条目菜单 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-8870",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:9149",
+      "name": "12B / 协作看板 · 条目菜单 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-9149",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:9429",
+      "name": "12B / 工作区文件夹 · 条目菜单 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-9429",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:9704",
+      "name": "12B / 工作区文件夹 · 条目菜单 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-9704",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:9980",
+      "name": "12B / 会话 · 条目菜单 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-9980",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12B 侧栏与看板 · 菜单展开",
+      "id": "667:10255",
+      "name": "12B / 会话 · 条目菜单 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-10255",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:15971",
+      "name": "12C / 研究顶栏 · 模式选择 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-15971",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:16340",
+      "name": "12C / 研究顶栏 · 模式选择 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-16340",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:16709",
+      "name": "12C / 研究顶栏 · 子代理列表 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-16709",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:17069",
+      "name": "12C / 研究顶栏 · 子代理列表 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-17069",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:17429",
+      "name": "12C / 组件 · 更多操作 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-17429",
+      "status": "几何与操作已实机核对；剩余样式进入第四批",
+      "differences": [
+        "D09"
+      ],
+      "evidence": [
+        "actual/v3-component-more-light.png",
+        "actual/v3-component-more-light.json"
+      ]
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:17788",
+      "name": "12C / 组件 · 更多操作 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-17788",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D09"
+      ],
+      "evidence": [
+        "actual/component-more-dark.png",
+        "actual/component-more-dark.json"
+      ]
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:18147",
+      "name": "12C / 组件 · 自动刷新二级菜单 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-18147",
+      "status": "已修复并实测220×190、8px间距、顶部对齐和键盘展开",
+      "differences": [
+        "D09"
+      ],
+      "evidence": [
+        "actual/v3-component-refresh-light.png",
+        "actual/v3-component-refresh-light.json"
+      ],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-refresh-keyboard-light.png",
+          "measurement": "actual/v5-refresh-keyboard-light.json"
+        }
+      ]
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:18519",
+      "name": "12C / 组件 · 自动刷新二级菜单 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-18519",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D09"
+      ],
+      "evidence": [
+        "actual/component-more-dark.png",
+        "actual/component-more-dark.json"
+      ]
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:18891",
+      "name": "12C / 基于所选生成 · 创建来源 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-18891",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:19253",
+      "name": "12C / 基于所选生成 · 创建来源 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-19253",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:19615",
+      "name": "12C / 组件 · 右键与下载格式 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-19615",
+      "status": "已修复并实测240×163、分隔线与行高；动作另行核验",
+      "differences": [],
+      "evidence": [
+        "actual/v4-component-context-light.json"
+      ],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-component-context-light.png",
+          "measurement": "actual/v5-component-context-light.json"
+        }
+      ]
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:19984",
+      "name": "12C / 组件 · 右键与下载格式 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-19984",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:20353",
+      "name": "12C / 研究画布 · 空白处右键 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-20353",
+      "status": "已修复并实测260×118与画布边缘避让",
+      "differences": [],
+      "evidence": [
+        "actual/v4-canvas-context-light.json"
+      ],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-canvas-context-light.png",
+          "measurement": "actual/v5-canvas-context-light.json"
+        }
+      ]
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:20709",
+      "name": "12C / 研究画布 · 空白处右键 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-20709",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:21065",
+      "name": "12C / 空研究画布 · 禁用状态 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-21065",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:21421",
+      "name": "12C / 空研究画布 · 禁用状态 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-21421",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:21777",
+      "name": "12C / 思维导图 · 内容深度 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-21777",
+      "status": "已修复并实测280×208、中性勾选",
+      "differences": [],
+      "evidence": [
+        "actual/v4-mindmap-light.json"
+      ],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-mindmap-light.png",
+          "measurement": "actual/v5-mindmap-light.json"
+        }
+      ]
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:22138",
+      "name": "12C / 思维导图 · 内容深度 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-22138",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:31603",
+      "name": "12C / 基于所选创建 · 输入浮层 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-31603",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "667:31966",
+      "name": "12C / 基于所选创建 · 输入浮层 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-31966",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "671:25191",
+      "name": "12C / 文字与摘要 · 编辑内容菜单 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=671-25191",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12C 研究与组件 · 菜单展开",
+      "id": "671:25551",
+      "name": "12C / 文字与摘要 · 编辑内容菜单 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=671-25551",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:22499",
+      "name": "12D / 右侧屏 · 新建页签 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-22499",
+      "status": "238×250及行间距已实测；任务图标第六批待复验",
+      "differences": [],
+      "evidence": [
+        "actual/v4-newtab-light.json"
+      ],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-newtab-light.png",
+          "measurement": "actual/v5-newtab-light.json"
+        }
+      ]
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:22861",
+      "name": "12D / 右侧屏 · 新建页签 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-22861",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:23223",
+      "name": "12D / 右侧屏 · 页签溢出 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-23223",
+      "status": "差异已记录并修正；待新包验收",
+      "differences": [],
+      "evidence": [
+        "actual/v4-tab-overflow-light.json"
+      ]
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:23563",
+      "name": "12D / 右侧屏 · 页签溢出 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-23563",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:23903",
+      "name": "12D / 文件条目 · 系统上下文操作 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-23903",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:24235",
+      "name": "12D / 文件条目 · 系统上下文操作 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-24235",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:24567",
+      "name": "12D / 文件夹条目 · 系统上下文操作 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-24567",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:24899",
+      "name": "12D / 文件夹条目 · 系统上下文操作 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-24899",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:25231",
+      "name": "12D / 输入区 · 编辑上下文菜单 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-25231",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12D 文件与页签 · 菜单展开",
+      "id": "667:25580",
+      "name": "12D / 输入区 · 编辑上下文菜单 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-25580",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:25929",
+      "name": "12E / 通用设置 · Agent 预设 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-25929",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:26108",
+      "name": "12E / 通用设置 · Agent 预设 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-26108",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D05"
+      ],
+      "evidence": [
+        "actual/v2-settings-mode-dark.png",
+        "actual/v2-settings-mode-dark.json"
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:26287",
+      "name": "12E / 通用设置 · 默认权限 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-26287",
+      "status": "已实机记录差异；待修复浅色选中态",
+      "differences": [
+        "D12"
+      ],
+      "evidence": [
+        "actual/v2-settings-permission-light.png"
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:26458",
+      "name": "12E / 通用设置 · 默认权限 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-26458",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D04"
+      ],
+      "evidence": [
+        "actual/v2-settings-permission-dark.png",
+        "actual/v2-settings-permission-dark.json"
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:26629",
+      "name": "12E / 通用设置 · 繁忙时 Enter / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-26629",
+      "status": "几何与操作已实机核对；剩余样式进入第四批",
+      "differences": [
+        "D10",
+        "D12"
+      ],
+      "evidence": [
+        "actual/v3-settings-enter-light.png",
+        "actual/v3-settings-enter-light.json"
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:26797",
+      "name": "12E / 通用设置 · 繁忙时 Enter / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-26797",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D10"
+      ],
+      "evidence": [
+        "actual/settings-general-dark.png",
+        "actual/settings-general-dark.json"
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:26965",
+      "name": "12E / 通用设置 · 语言 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-26965",
+      "status": "几何与操作已实机核对；剩余样式进入第四批",
+      "differences": [
+        "D11"
+      ],
+      "evidence": [
+        "actual/v3-settings-language-light.png",
+        "actual/v3-settings-language-light.json"
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:27131",
+      "name": "12E / 通用设置 · 语言 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-27131",
+      "status": "已记录差异；局部实机复验中",
+      "differences": [
+        "D11"
+      ],
+      "evidence": [
+        "actual/settings-general-dark.png",
+        "actual/settings-general-dark.json"
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:27297",
+      "name": "12E / 模型设置 · 添加提供方 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-27297",
+      "status": "已修复并实测320×309、搜索、已添加禁用及进入配置表单",
+      "differences": [
+        "D13"
+      ],
+      "evidence": [
+        "actual/v2-settings-provider-light.png"
+      ],
+      "runtimeEvidence": [
+        {
+          "packageCommit": "b49a476fd895440c58ab9a3ce745d75d0a4fea75",
+          "image": "actual/v5-provider-light.png",
+          "measurement": "actual/v5-provider-light.json"
+        }
+      ]
+    },
+    {
+      "section": "12E 设置 · 菜单展开",
+      "id": "667:27402",
+      "name": "12E / 模型设置 · 添加提供方 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-27402",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:27507",
+      "name": "12F / 管理协作 · 邀请权限 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-27507",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:28002",
+      "name": "12F / 管理协作 · 邀请权限 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-28002",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:28497",
+      "name": "12F / 管理协作 · 修改成员权限 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-28497",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:28992",
+      "name": "12F / 管理协作 · 修改成员权限 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-28992",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:29487",
+      "name": "12F / 子代理 · 加载失败 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-29487",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:29843",
+      "name": "12F / 子代理 · 加载失败 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-29843",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:30199",
+      "name": "12F / 模型搜索 · 无匹配结果 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-30199",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:30557",
+      "name": "12F / 模型搜索 · 无匹配结果 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-30557",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:30915",
+      "name": "12F / 轨迹页面 · 模式选择 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-30915",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12F 协作与特殊状态 · 菜单展开",
+      "id": "667:31245",
+      "name": "12F / 轨迹页面 · 模式选择 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-31245",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12 菜单展开态 · 总览与页面索引",
+      "id": "669:25182",
+      "name": "首页与右侧输入区 · 项目、模式、权限、模型和命令",
+      "dimensions": {
+        "width": 2140.0,
+        "height": 660.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=669-25182",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12 菜单展开态 · 总览与页面索引",
+      "id": "669:25211",
+      "name": "研究看板与工作区 · 排序、专用看板、协作看板、文件夹和会话",
+      "dimensions": {
+        "width": 2140.0,
+        "height": 660.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=669-25211",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12 菜单展开态 · 总览与页面索引",
+      "id": "669:25231",
+      "name": "研究顶栏与画布 · 子代理、组件操作、生成、下载和空态",
+      "dimensions": {
+        "width": 2140.0,
+        "height": 660.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=669-25231",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12 菜单展开态 · 总览与页面索引",
+      "id": "669:25263",
+      "name": "文件与页签 · 新建、溢出、文件定位和文本编辑",
+      "dimensions": {
+        "width": 2140.0,
+        "height": 660.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=669-25263",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12 菜单展开态 · 总览与页面索引",
+      "id": "669:25280",
+      "name": "设置 · Agent 预设、默认权限、发送方式、语言和提供方",
+      "dimensions": {
+        "width": 2140.0,
+        "height": 660.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=669-25280",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "12 菜单展开态 · 总览与页面索引",
+      "id": "669:25297",
+      "name": "协作及特殊状态 · 邀请、成员权限、失败、搜索空态和轨迹",
+      "dimensions": {
+        "width": 2140.0,
+        "height": 660.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=669-25297",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13A 消息中心 · 铃铛展开窗口",
+      "id": "682:25833",
+      "name": "13A / 消息中心 · 全部消息 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-25833",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13A 消息中心 · 铃铛展开窗口",
+      "id": "682:26151",
+      "name": "13A / 消息中心 · 全部消息 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-26151",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13A 消息中心 · 铃铛展开窗口",
+      "id": "682:26470",
+      "name": "13A / 消息中心 · 暂无消息 / Light",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-26470",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13A 消息中心 · 铃铛展开窗口",
+      "id": "682:26753",
+      "name": "13A / 消息中心 · 暂无消息 / Dark",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=682-26753",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "683:27005",
+      "name": "首页优化 A / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=683-27005",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "683:27254",
+      "name": "首页优化 A / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=683-27254",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "683:27504",
+      "name": "首页优化 B / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=683-27504",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "683:27752",
+      "name": "首页优化 B / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=683-27752",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "688:27005",
+      "name": "A 方案延展 · 研究 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=688-27005",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "688:27620",
+      "name": "A 方案延展 · 研究 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=688-27620",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "688:28236",
+      "name": "A 方案延展 · 轨迹 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=688-28236",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "13B 对话首页 · 顶部导航优化对比",
+      "id": "688:28790",
+      "name": "A 方案延展 · 轨迹 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=688-28790",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "697:26733",
+      "name": "窄窗口 / 1024 px / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=697-26733",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "697:27401",
+      "name": "窄窗口 / 1024 px / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=697-27401",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "697:28069",
+      "name": "窄窗口 / 840 px / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=697-28069",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "697:28737",
+      "name": "窄窗口 / 840 px / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=697-28737",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "698:26757",
+      "name": "窄窗口 · 更多展开 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=698-26757",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "698:27081",
+      "name": "窄窗口 · 更多展开 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=698-27081",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "699:26789",
+      "name": "顶栏与模式入口 · 交互规范 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=699-26789",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "14 顶栏统一 · 模式入口 / 图标按钮 / 窄窗口",
+      "id": "699:26854",
+      "name": "顶栏与模式入口 · 交互规范 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=699-26854",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:28133",
+      "name": "目标对话 · 执行中 · 展开 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-28133",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:28421",
+      "name": "目标对话 · 执行中 · 展开 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-28421",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:28709",
+      "name": "目标对话 · 全部完成 · 展开 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-28709",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:28996",
+      "name": "目标对话 · 全部完成 · 展开 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-28996",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:29283",
+      "name": "目标对话 · 执行中 · 收起 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-29283",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:29540",
+      "name": "目标对话 · 执行中 · 收起 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-29540",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:29797",
+      "name": "目标对话 · 全部完成 · 收起 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-29797",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "15 对话 · 目标与任务进度",
+      "id": "708:30053",
+      "name": "目标对话 · 全部完成 · 收起 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=708-30053",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:27281",
+      "name": "子代理 / menu / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-27281",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:27691",
+      "name": "子代理 / menu / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-27691",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:28101",
+      "name": "子代理 / running / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-28101",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:28520",
+      "name": "子代理 / running / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-28520",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:28939",
+      "name": "子代理 / oneshot / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-28939",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:29359",
+      "name": "子代理 / oneshot / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-29359",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:29779",
+      "name": "子代理 / offline / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-29779",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "711:30199",
+      "name": "子代理 / offline / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=711-30199",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "713:27341",
+      "name": "子代理 · 异常、交互与权限规则 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=713-27341",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "713:27362",
+      "name": "840 px · 右侧子代理 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=713-27362",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "713:27729",
+      "name": "子代理 · 异常、交互与权限规则 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=713-27729",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "16 子代理 · 菜单与右侧会话",
+      "id": "713:27750",
+      "name": "840 px · 右侧子代理 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=713-27750",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "725:27359",
+      "name": "侧栏滚动条 · 滚动时轻量显示 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=725-27359",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "725:27750",
+      "name": "侧栏滚动条 · 滚动时轻量显示 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=725-27750",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "726:27413",
+      "name": "侧栏滚动条 · 边缘悬停与拖动 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=726-27413",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "726:27804",
+      "name": "侧栏滚动条 · 边缘悬停与拖动 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=726-27804",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "727:27427",
+      "name": "左右侧栏 · 默认隐藏 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=727-27427",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "727:27818",
+      "name": "滚动条 · 交互与视觉规范 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=727-27818",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "727:27858",
+      "name": "左右侧栏 · 默认隐藏 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=727-27858",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "17 左右侧栏 · 轻量悬浮滚动条",
+      "id": "727:28249",
+      "name": "滚动条 · 交互与视觉规范 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=727-28249",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "749:27747",
+      "name": "18.1 长回复 · 已完成任务收起 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=749-27747",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "749:27977",
+      "name": "18.1 长回复 · 已完成任务收起 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=749-27977",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "750:27763",
+      "name": "18.2 任务展开 · 独立滚动 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=750-27763",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "750:28033",
+      "name": "18.2 任务展开 · 独立滚动 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=750-28033",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "751:27843",
+      "name": "18.3 宽表格 · 局部横向滚动 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=751-27843",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "751:28073",
+      "name": "18.3 宽表格 · 局部横向滚动 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=751-28073",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "755:27859",
+      "name": "18.4 矮窗口与长输入 · 优先阅读 / 浅色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=755-27859",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "755:28114",
+      "name": "18.4 矮窗口与长输入 · 优先阅读 / 深色",
+      "dimensions": {
+        "width": 1580.0,
+        "height": 1100.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=755-28114",
+      "status": "待逐项核对",
+      "differences": []
+    },
+    {
+      "section": "18 对话 · 长内容与底部固定区",
+      "id": "760:27895",
+      "name": "长内容与输入区 · 布局和交互规范",
+      "dimensions": {
+        "width": 6556.0,
+        "height": 500.0
+      },
+      "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=760-27895",
+      "status": "待逐项核对",
+      "differences": []
+    }
+  ]
+}
