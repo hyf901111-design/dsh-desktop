@@ -96,7 +96,7 @@ body .lXshSW_chevron { margin-left:auto; }
 body { --odyssey-board-add-icon:url("data:image/svg+xml,%3Csvg%20preserveAspectRatio%3D%22none%22%20overflow%3D%22visible%22%20style%3D%22display%3A%20block%3B%22%20width%3D%2213.6%22%20height%3D%2211.6%22%20viewBox%3D%220%200%2013.6%2011.6%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cg%20id%3D%22Group%22%3E%0A%3Cpath%20id%3D%22Vector%22%20d%3D%22M11%200.6H2.6C1.49543%200.6%200.6%201.49543%200.6%202.6V9C0.6%2010.1046%201.49543%2011%202.6%2011H11C12.1046%2011%2013%2010.1046%2013%209V2.6C13%201.49543%2012.1046%200.6%2011%200.6Z%22%20stroke%3D%22%23666B73%22%20stroke-width%3D%221.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3Cpath%20id%3D%22Vector_2%22%20d%3D%22M0.8%203.8H12.8M6.8%205.8V8.8M5.3%207.3H8.3%22%20stroke%3D%22%23666B73%22%20stroke-width%3D%221.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E%0A"); }
 
 /* Under 840 px, a manually opened right pane overlays the unchanged main canvas. */
-body:has([data-odyssey-panel-overlay=true]) { --odyssey-right-occupancy:0px; }
+body:has([data-dsh-panel-host][data-odyssey-panel-overlay=true]) { --odyssey-right-occupancy:0px; }
 body:has([data-odyssey-panel-overlay=true]) .t8lSSG_panel { max-width:calc(100vw - 20px); }
 [data-odyssey-panel-overlay=true] :is(.t8lSSG_panelResize,.t8lSSG_cornerHandle) { display:none; }
 
@@ -152,3 +152,8 @@ body .wSkVaW_header .odyssey-members-compact { display:none; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-actions:has(.srb-presence) { gap:4px; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-presence>:not(.odyssey-members-compact) { display:none!important; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .odyssey-members-compact { display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:6px; border-radius:7px; }
+
+/* The detached panel entry remains at the window corner when the pane is closed.
+   Reserve its 28 px target plus 8 px gap, including compact-overlay windows. */
+body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) { padding-right:56px; }
+body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=narrow]:not([aria-hidden=true]) { padding-right:44px!important; }
