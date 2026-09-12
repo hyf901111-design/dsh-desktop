@@ -163,6 +163,7 @@ body[data-ds-dark-theme] :is(.h8S2Va_summary,.h8S2Va_metrics,.odyssey-subagent-m
 [data-odyssey-scrollport]::-webkit-scrollbar { display:none!important; }
 .odyssey-scroll-track { position:fixed; z-index:80; width:12px; opacity:0; transition:opacity 180ms; pointer-events:none; background:transparent; }
 .odyssey-scroll-track[data-visible=true] { opacity:1; pointer-events:auto; }
+@media(prefers-reduced-motion:no-preference) { .odyssey-scroll-track[data-visible=true] { transition-duration:100ms; } }
 .odyssey-scroll-thumb { position:absolute; right:4px; width:4px; min-height:32px; border-radius:4px; background:rgb(var(--odyssey-scroll-ink) / .24); transition:width 100ms,background 100ms; touch-action:none; }
 .odyssey-scroll-track:is(:hover,[data-dragging=true]) .odyssey-scroll-thumb { width:6px; background:rgb(var(--odyssey-scroll-ink) / .4); }
 .odyssey-scroll-track[data-dragging=true] .odyssey-scroll-thumb { background:rgb(var(--odyssey-scroll-ink) / .56); }
