@@ -93,6 +93,10 @@ body .odyssey-table-block table { min-width:100%; }
 body .odyssey-table-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--odyssey-muted); font:400 12px/20px var(--odyssey-font-ui); margin-top:8px; }
 body .odyssey-table-actions button { border:0; background:none; padding:2px 4px; border-radius:5px; color:inherit; font:inherit; cursor:pointer; }
 body .odyssey-table-actions button:hover { background:var(--odyssey-menu-row); color:var(--odyssey-text); }
+/* Figma 752:27866 / 753:27866: the main wide-table helper occupies one 24px line. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) { color:#2b2b2b; font:400 12px/24px var(--odyssey-font-ui); }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) { color:#e5e5e5; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) button { padding-block:0; }
 body .odyssey-table-dialog { box-sizing:border-box; max-width:calc(100vw - 48px); width:max-content; max-height:calc(100vh - 80px); overflow:auto; }
 body .odyssey-table-dialog>button { display:block; margin:0 0 12px auto; }
 body .odyssey-table-dialog table { width:max-content; }
