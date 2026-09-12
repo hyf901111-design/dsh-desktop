@@ -57,6 +57,8 @@ export function patchFigmaRefinementSubagent(source) {
 }
 
 export function patchFigmaRefinementInputTrigger(source) {
+  // The integrated locale patch already owns these labels and dispatch identities.
+  if (source.includes('function commandMenuText(')) return source
   const marker='/* odyssey:command-menu:20260912 */'
   if(source.includes(marker))return source
   const names={compact:'压缩历史',export:'导出会话',feedback:'反馈',goal:'任务目标',permission:'权限',plan:'计划模式',model:'模型'}

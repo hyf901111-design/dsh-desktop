@@ -104,4 +104,4 @@ body ._3e4SsG_item:is(:hover,._3e4SsG_active) { background:var(--odyssey-menu-ro
 body ._3e4SsG_groupTitle { padding:4px 8px; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration) { position:relative; display:flex; align-items:center; justify-content:center; }
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration):is(:hover,:focus-visible)::after { content:attr(aria-label); position:absolute; top:calc(100% + 8px); right:0; width:max-content; padding:5px 8px; border-radius:6px; background:var(--odyssey-menu); box-shadow:0 4px 12px #0002; color:var(--odyssey-text); font:400 12px/18px var(--odyssey-font-ui); pointer-events:none; z-index:100; }
-body .lXshSW_completedGlyph { color:#299665; }
+body .lXshSW_glyphCompleted { color:#299665; }
