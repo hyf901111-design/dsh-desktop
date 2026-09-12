@@ -708,7 +708,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=252-2",
-      "status": "12b浅色真实Files @引用进入输入和发送气泡均为普通文字，未成为原生文件标签；D43已复现待修，不能计引用发送成功",
+      "status": "12b浅色Files @引用输入与发送均普通文字的D43已复现；fdfe762源码修复及聚焦检查通过，待下一包真实文件标签与发送复验",
       "differences": [
         "D43"
       ],
@@ -727,6 +727,13 @@
       "evidencePackages": {
         "v12-file-reference-plain-text-light": "7c1ffc906ad1301798fb9306f00770e1e937b765",
         "v12-file-reference-sent-plain-text-light": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "sourceFix": {
+        "difference": "D43",
+        "commit": "fdfe762d9c9c7952adb94be1cba49f2504f2b971",
+        "nativeVerified": false,
+        "validation": "主线程报告37项主聚焦+2项原引用、typecheck及pristine通过；误跑旧文件157通过/89失败，仅4项关联对照已验证无D43同样失败，其他项为分类诊断，未声称89项全有基线证明。",
+        "evidence": "d43-legacy-failure-classification.md"
       }
     },
     {
@@ -2860,8 +2867,26 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-8017",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b深色工作区显示菜单260×219、选项248×34；实际切单列表取消分组并保留选中会话/草稿；其他排序动作、拖动与全部主题待验",
+      "differences": [
+        "D07"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-workspace-view-menu-dark",
+        "v12-workspace-single-list-dark"
+      ],
+      "evidencePackages": {
+        "v12-workspace-view-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-workspace-single-list-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      }
     },
     {
       "section": "12B 侧栏与看板 · 菜单展开",
@@ -2962,25 +2987,43 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-9704",
-      "status": "12b深色工作区文件夹菜单实际218×110/行204×32、padding6/gap0、有16px图标，与260×127/248×34/无图标设计不符；D44待源码及新包复验",
+      "status": "12b工作区文件夹菜单218×110/204×32的D44已复现；空白重命名禁提交，成功改名/重开保持/还原有原生证据；几何源码修复待下一包",
       "differences": [
         "D44"
       ],
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "12b深色工作区文件夹菜单实际218×110/行204×32、padding6/gap0、有16px图标，与260×127/248×34/无图标设计不符；D44待源码及新包复验",
+          "evidence": [
+            "v12-workspace-folder-menu-dark"
+          ],
+          "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765"
         }
       ],
       "verificationLevel": "partial",
       "verifiedTheme": "dark",
       "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
       "evidence": [
-        "v12-workspace-folder-menu-dark"
+        "v12-workspace-folder-menu-dark",
+        "v12-workspace-rename-blank-dark",
+        "v12-workspace-renamed-dark"
       ],
       "evidencePackages": {
-        "v12-workspace-folder-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+        "v12-workspace-folder-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-workspace-rename-blank-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-workspace-renamed-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
       },
-      "evidenceNotes": "主线程精读667:9704/665:1046：行x5/y5,41,86，分隔x11/y81/236×1；13/20，正文#E6E6E6/危险#FA827A，无图标。实际危险#F25A5A。此D44为文件夹菜单，与此前未立项的普通对话652/780宽度候选不同。"
+      "evidenceNotes": "主线程精读667:9704/665:1046：行x5/y5,41,86，分隔x11/y81/236×1；13/20，正文#E6E6E6/危险#FA827A，无图标。实际危险#F25A5A。此D44为文件夹菜单，与此前未立项的普通对话652/780宽度候选不同。；重开保持新名及还原原名来自主线程连续CUA记录，不虚构独立截图。",
+      "sourceFix": {
+        "difference": "D44",
+        "commit": "3aabba9b1971d5d924bf9a03c93f96dc4f387c3f",
+        "nativeVerified": false,
+        "scope": "workspace-folder与session-entry两种菜单，当前实际仍7c1ffc旧包；原生几何/颜色/动作待下一包。",
+        "validation": "责任agent报告4项聚焦、typecheck及两主题精确几何验证通过；workspace模块定向刷新，不是原生包复验。"
+      }
     },
     {
       "section": "12B 侧栏与看板 · 菜单展开",
@@ -3003,8 +3046,36 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-10255",
-      "status": "待逐项核对",
-      "differences": []
+      "status": "12b会话条目菜单实际218×110/204×32与设计260×127/248×34不符列D44；重命名后分叉保留两消息，副本草稿空，返回原会话草稿与两终端仍在；归档动作未验",
+      "differences": [
+        "D44"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对"
+        }
+      ],
+      "verificationLevel": "partial",
+      "verifiedTheme": "dark",
+      "packageCommit": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+      "evidence": [
+        "v12-session-row-menu-dark",
+        "v12-session-fork-history-dark",
+        "v12-session-fork-original-draft-retained-dark"
+      ],
+      "evidencePackages": {
+        "v12-session-row-menu-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-session-fork-history-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765",
+        "v12-session-fork-original-draft-retained-dark": "7c1ffc906ad1301798fb9306f00770e1e937b765"
+      },
+      "evidenceNotes": "Figma667:10255/665:1062及Light665:1054：三行与分隔同260×127规范，归档保持普通文字色，不是危险红。源码修复不代表当前7c1ffc原生菜单已符合；分叉回原会话图只证明草稿/终端存在，不冒称原pwd输出仍可见。",
+      "sourceFix": {
+        "difference": "D44",
+        "commit": "3aabba9b1971d5d924bf9a03c93f96dc4f387c3f",
+        "nativeVerified": false,
+        "scope": "workspace-folder与session-entry两种菜单，当前实际仍7c1ffc旧包；原生几何/颜色/动作待下一包。",
+        "validation": "责任agent报告4项聚焦、typecheck及两主题精确几何验证通过；workspace模块定向刷新，不是原生包复验。"
+      }
     },
     {
       "section": "12C 研究与组件 · 菜单展开",
