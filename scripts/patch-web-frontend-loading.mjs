@@ -1,4 +1,4 @@
-import { patchFigmaReadingConversation, patchFigmaReadingTables } from './lib/figma-reading-client.mjs'
+import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
 import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger, patchFigmaNavigationTitles, patchFigmaContextDirectory } from './lib/figma-refinements-client.mjs'
 import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
@@ -102,6 +102,7 @@ function patchStyles(path) {
 patchPrimitives(primitivesPath)
 writeFileSync(primitivesPath, patchFigmaReadingTables(readFileSync(primitivesPath, 'utf8')))
 patchJavaScript(asset('.js'))
+writeFileSync(asset('.js'), patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')))
 patchStyles(asset('.css'))
 
 await installResearchBoardClientPatches()
