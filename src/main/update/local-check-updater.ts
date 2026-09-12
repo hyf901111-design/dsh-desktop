@@ -1,7 +1,7 @@
 import { request as httpRequest, type RequestOptions, type ClientRequest } from 'node:http'
 import { CancellationToken, HttpExecutor } from 'builder-util-runtime'
-import { AppUpdater } from 'electron-updater/out/AppUpdater'
-import type { AppAdapter } from 'electron-updater/out/AppAdapter'
+import { AppUpdater } from 'electron-updater/out/AppUpdater.js'
+import type { AppAdapter } from 'electron-updater/out/AppAdapter.js'
 import { parse } from 'yaml'
 import type { LocalUpdatePaths } from './local-update-guard'
 
