@@ -213,6 +213,16 @@ body ._3e4SsG_itemName { flex:none; font:400 13px/20px var(--odyssey-font-ui); w
 body ._3e4SsG_itemDescription { flex:1; min-width:0; margin:0; font:400 12px/20px var(--odyssey-font-ui); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--odyssey-menu-muted); }
 body ._3e4SsG_item:is(:hover,._3e4SsG_active) { background:var(--odyssey-menu-row); }
 body ._3e4SsG_groupTitle { padding:4px 8px; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
+/* Figma 667:3937/4220: the main command catalog has its own 4px inset.
+   Inset stroke preserves the 360px outer width and 352px rows. Menus without
+   a command group, Research sidebar and child composers retain their skin. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] ._3e4SsG_menu:not([data-odyssey-subagent-panel] *):has(._3e4SsG_groupTitle[data-source=command]) { --odyssey-command-text:#242424; --odyssey-command-muted:#7a7a7a; --odyssey-command-active:#f0f0f0; box-sizing:border-box; border:0; border-radius:12px; padding:4px; box-shadow:inset 0 0 0 1px var(--odyssey-menu-border),0 8px 24px -4px #00000024; }
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] ._3e4SsG_menu:not([data-odyssey-subagent-panel] *):has(._3e4SsG_groupTitle[data-source=command]) { --odyssey-command-text:#e6e6e6; --odyssey-command-muted:#999; --odyssey-command-active:#373737; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] ._3e4SsG_menu:not([data-odyssey-subagent-panel] *):has(._3e4SsG_groupTitle[data-source=command]) ._3e4SsG_groupTitle { box-sizing:border-box; flex:none; height:32px; padding:8px 10px; font:400 12px/16px var(--odyssey-font-ui); color:var(--odyssey-command-muted); }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] ._3e4SsG_menu:not([data-odyssey-subagent-panel] *):has(._3e4SsG_groupTitle[data-source=command]) ._3e4SsG_item { box-sizing:border-box; min-height:40px; height:40px; padding:9px 10px; border-radius:10px; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] ._3e4SsG_menu:not([data-odyssey-subagent-panel] *):has(._3e4SsG_groupTitle[data-source=command]) ._3e4SsG_itemName { font:400 14px/22px var(--odyssey-font-ui); color:var(--odyssey-command-text); }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] ._3e4SsG_menu:not([data-odyssey-subagent-panel] *):has(._3e4SsG_groupTitle[data-source=command]) ._3e4SsG_itemDescription { font:400 14px/22px var(--odyssey-font-ui); color:var(--odyssey-command-muted); }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page] ._3e4SsG_menu:not([data-odyssey-subagent-panel] *):has(._3e4SsG_groupTitle[data-source=command]) ._3e4SsG_item:is(:hover,._3e4SsG_active) { background:var(--odyssey-command-active); }
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration) { position:relative; display:flex; align-items:center; justify-content:center; }
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration):is(:hover,:focus-visible)::after { content:attr(aria-label); position:absolute; top:calc(100% + 8px); right:0; width:max-content; padding:5px 8px; border-radius:6px; background:var(--odyssey-menu); box-shadow:0 4px 12px #0002; color:var(--odyssey-text); font:400 12px/18px var(--odyssey-font-ui); pointer-events:none; z-index:100; }
 
