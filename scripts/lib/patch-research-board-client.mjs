@@ -776,7 +776,7 @@ function patchWorkspaceSidebarSkin(source) {
     const end = source.indexOf('function workspaceGroupHalf(', start)
     if (start < 0 || end < 0) throw Error('Workspace view menu anchors drifted')
     const menu = source.slice(start, end)
-      .replace('open,', 'className: "srb-navigation-menu", open,')
+      .replace('\n\t\t\t\topen,', '\n\t\t\t\tclassName: "srb-navigation-menu", open,')
       .replace('"aria-label": t("viewOptions.label"),', '"aria-label": t("viewOptions.label"), "aria-expanded": open,')
     source = source.slice(0, start) + menu + source.slice(end) + '\n/* SHERLOCK_WORKSPACE_MENU_SKIN_V1 */'
   }
