@@ -12,7 +12,7 @@
         "featureName": "Figma header tint, hover insets and shared composer",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "40177cada352dbf402312da83b480233c00cc835",
-        "tipCommit": "ae91f277cd287a9764c56ed3db7476594a5862d4",
+        "tipCommit": "5e2b0400d870c03b000837bace79a68c2e509413",
         "commits": [
           {
             "commit": "ae91f277cd287a9764c56ed3db7476594a5862d4",
@@ -20,6 +20,13 @@
               "40177cada352dbf402312da83b480233c00cc835"
             ],
             "subject": "修复顶栏底色和对话输入框样式，统一按钮悬停留白"
+          },
+          {
+            "commit": "5e2b0400d870c03b000837bace79a68c2e509413",
+            "parents": [
+              "ae91f277cd287a9764c56ed3db7476594a5862d4"
+            ],
+            "subject": "修复模式菜单旧样式覆盖和紧凑顶栏的成员入口条件"
           }
         ],
         "files": [
@@ -48,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "8 focused checks passed; typecheck and controlled Chromium shared input and hover geometry passed in light/dark.",
-            "verifiedCommit": "ae91f277cd287a9764c56ed3db7476594a5862d4",
-            "completedAt": "2026-09-12T06:47:10.757894+00:00",
+            "verifiedCommit": "5e2b0400d870c03b000837bace79a68c2e509413",
+            "completedAt": "2026-09-12T06:54:16.043974+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -67,7 +74,7 @@
         "risks": [
           "Local only; no publication, push, version changes or main promotion."
         ],
-        "generatedAt": "2026-09-12T06:47:10.757894+00:00"
+        "generatedAt": "2026-09-12T06:54:16.043974+00:00"
       }
     }
   ],
