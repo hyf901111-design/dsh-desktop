@@ -134,7 +134,7 @@ body:has([data-research-empty-state]):not(:has([data-research-node-id])) .wSkVaW
 body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlock-settings-panel]:not([hidden])) [data-dsh-panel-host] { display:none !important; }
 
 /* Figma 374:588–603 and 361:5991–6008: intrinsic controls within a fixed 24 px context row. */
-.sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_workspace { box-sizing:border-box; height:24px; min-height:24px; padding:0 6px 0 4px; gap:6px; border-radius:0; font:400 12px/14px var(--odyssey-font-ui); }
+.sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_workspace { box-sizing:border-box; height:24px; min-height:24px; padding:0 6px 0 4px; gap:6px; border-radius:7px; font:400 12px/14px var(--odyssey-font-ui); }
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seat { box-sizing:border-box; height:24px; min-height:24px; min-width:112px; padding:0 0 0 7px; gap:6px; border-radius:7px; font:400 13px/20px var(--odyssey-font-ui); }
 .sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_chevron { width:10px; height:10px; }
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon { width:16px; height:16px; }
@@ -181,3 +181,25 @@ body[data-ds-dark-theme] .sRp_messages .gdEzaW_bubble { background:rgb(44.72 44.
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_header { position:absolute; top:0; left:0; right:0; border-radius:16px 16px 0 0; }
 
 /* Header right padding is owned by figma-panels.css for both panel states. */
+
+/* Both context pickers share the same 24px hover surface. */
+.sRp_composer .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat):hover {
+  background:var(--srb-row-hover); color:var(--odyssey-text);
+}
+/* Reserve the leading controls; only the model name gives up width. */
+.sRp_composer .uV2eYG_tools { flex:0 0 auto; }
+.sRp_composer .uV2eYG_tools > * { flex-shrink:0; }
+.sRp_composer .uV2eYG_trailing { flex:1 1 0; min-width:0; justify-content:flex-end; gap:6px; }
+.sRp_composer .uV2eYG_trailing > * { flex-shrink:0; }
+.sRp_composer .uV2eYG_trailing > ._7KE1Ra_root { flex:0 1 auto; min-width:0; }
+.sRp_composer ._7KE1Ra_trigger { width:100%; max-width:100%; padding:0 2px; font-size:12px; }
+.sRp_composer ._7KE1Ra_triggerEffort { white-space:nowrap; }
+@container (max-width:320px) {
+  .sRp_composer .Sh0Q9G_triggerLabel { display:none; }
+  .sRp_composer .Sh0Q9G_trigger { padding:0 2px; gap:2px; }
+  .sRp_composer .uV2eYG_tools { gap:4px; }
+  .sRp_composer .uV2eYG_trailing { gap:4px; }
+}
+@container (max-width:265px) {
+  .sRp_composer ._7KE1Ra_triggerEffort { display:none; }
+}

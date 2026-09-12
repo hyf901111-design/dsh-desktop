@@ -65,7 +65,7 @@ function patchTabBarMenuLayout(source) {
 
 function patchTabBarOverflow(source) {
   const marker = '/* sherlock:figma-tab-overflow:v1 */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchTabOverflowGutter(source)
   source = replaceExact(source, 'newTab: "新建标签页",', 'newTab: "新建标签页",\n\t\t\topenTabs: "已打开的页签",', 'overflow zh locale')
   source = replaceExact(source, 'newTab: "New tab",', 'newTab: "New tab",\n\t\t\topenTabs: "Open tabs",', 'overflow en locale')
   const start = source.indexOf('\t\tfunction TabBar(props) {')
@@ -213,6 +213,38 @@ function patchTabBarOverflow(source) {
 \t\t\t\t\t})]
 \t\t\t\t}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {`,
     'overflow trigger and menu')
+  return patchTabOverflowGutter(source.slice(0, start) + tabBar + source.slice(end))
+}
+
+function patchTabOverflowGutter(source) {
+  const marker = '/* sherlock:figma-tab-overflow-gutter:v2 */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('function TabBar(props) {')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  let tabBar = source.slice(start, end)
+  tabBar = replaceExact(tabBar, 'children: [tabs.map((tab) => {', 'children: tabs.map((tab) => {', 'overflow scroller children')
+  tabBar = replaceExact(tabBar, '}, tab.id); }), hasOverflow &&', '}, tab.id); })\n\t\t\t\t}), hasOverflow &&', 'overflow reserved sibling')
+  tabBar = replaceExact(tabBar, '\t\t\t\t\t})]\n\t\t\t\t}), overflowOpen &&', '\t\t\t\t\t}), overflowOpen &&', 'overflow sibling closure')
+  tabBar = replaceExact(tabBar, 'setHasOverflow(tabsWidth > el.clientWidth + 1);',
+    'const reserved = overflowTriggerRef.current ? 32 : 0;\n' +
+    '                    setHasOverflow(tabsWidth + Math.max(0, tabs.length - 1) * 4 > el.clientWidth + reserved + 1);', 'overflow stable measurement')
+  // Keep the active title and independent close inside the newly available viewport.
+  tabBar = tabBar.replace('function TabBar(props) {', 'function TabBar(props) {\n' + marker)
+  tabBar = tabBar.replace('const closeOverflowMenu = () => {', `(0, react.useLayoutEffect)(() => {
+    const el = listRef.current;
+    const node = tabNodes.current.get(active);
+    if (!el || !node) return;
+    const reveal = () => {
+      const left = node.offsetLeft, right = left + node.offsetWidth;
+      if (left < el.scrollLeft) el.scrollLeft = left;
+      else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth;
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [active, tabs, hasOverflow]);
+  const closeOverflowMenu = () => {`)
   return source.slice(0, start) + tabBar + source.slice(end)
 }
 

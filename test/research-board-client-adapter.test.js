@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { runInNewContext } from 'node:vm'
+import { runInNewContext, Script } from 'node:vm'
 import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { describe, it, expect, vi } from 'vitest'
@@ -1249,6 +1249,12 @@ it('workspace section collapse survives reapplying the actual module patch', asy
   )
   const patched = patchResearchBoardWorkspace(raw)
   expect(patchResearchBoardWorkspace(patched)).toBe(patched)
+  expect(() => new Script(patched)).not.toThrow()
+  const menu = patched.slice(patched.indexOf('function ViewOptionsMenu('), patched.indexOf('function workspaceGroupHalf('))
+  expect(menu).toContain('const [open, setOpen]')
+  expect(menu).toContain('className: "srb-navigation-menu", open,')
+  expect(menu).toContain('"aria-expanded": open')
+
   expect(patched).toContain('"aria-expanded":!sectionCollapsed')
   expect(patched).toContain(
     'hidden:wide && sectionCollapsed && !searchExpanded'

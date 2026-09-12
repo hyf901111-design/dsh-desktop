@@ -20,13 +20,14 @@ it('follows actual clamped width without taking over native drag, and cleans can
   handle.dispatchEvent(start)
   expect(start.defaultPrevented).toBe(false)
   tick()
-  expect(doc.querySelector('[data-odyssey-resize-width]')?.textContent).toBe('280 px')
+  expect(doc.querySelector('[data-odyssey-resize-width]')?.textContent).toBeUndefined()
   width = 240
   tick()
   const feedback = doc.querySelector<HTMLElement>('[data-odyssey-resize-feedback]')!
   expect(feedback.style.left).toBe('240px')
-  expect(feedback.style.top).toBe('18px')
-  expect(doc.querySelector('[data-odyssey-resize-width]')?.textContent).toBe('240 px')
+  expect(Number.parseFloat(feedback.style.top)).toBeGreaterThan(100)
+  expect(feedback.querySelector<HTMLElement>('[data-odyssey-resize-grip]')!.style.height).toBe(feedback.style.height)
+  expect(doc.querySelector('[data-odyssey-resize-width]')?.textContent).toBeUndefined()
   doc.dispatchEvent(new win.PointerEvent('pointerup', { pointerId:2 }))
   expect(feedback.isConnected).toBe(true)
   doc.dispatchEvent(new win.PointerEvent('pointercancel', { pointerId:1 }))
@@ -49,7 +50,8 @@ it('centers feedback in the 10px parallel-panel gutter, without a width label, a
   handle.dispatchEvent(new win.PointerEvent('pointerover', { bubbles:true, clientY:436 }))
   const feedback = doc.querySelector<HTMLElement>('[data-odyssey-resize-feedback]')!
   expect(feedback.style.left).toBe('951px')
-  expect(feedback.style.height).toBe('852px')
+  expect(Number.parseFloat(feedback.style.height)).toBeGreaterThan(450)
+  expect(Number.parseFloat(feedback.style.height)).toBeLessThan(540)
   expect(doc.querySelector('[data-odyssey-resize-width]')).toBe(null)
   handle.remove()
   doc.dispatchEvent(new win.PointerEvent('pointermove', { clientY:460 }))

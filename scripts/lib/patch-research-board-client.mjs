@@ -771,6 +771,16 @@ function patchWorkspaceBoardVisibility(source) {
 
 function patchWorkspaceSidebarSkin(source) {
   source = patchWorkspaceRailSearch(source)
+  if (!source.includes('/* SHERLOCK_WORKSPACE_MENU_SKIN_V1 */')) {
+    const start = source.indexOf('function ViewOptionsMenu(')
+    const end = source.indexOf('function workspaceGroupHalf(', start)
+    if (start < 0 || end < 0) throw Error('Workspace view menu anchors drifted')
+    const menu = source.slice(start, end)
+      .replace('\n\t\t\t\topen,', '\n\t\t\t\tclassName: "srb-navigation-menu", open,')
+      .replace('"aria-label": t("viewOptions.label"),', '"aria-label": t("viewOptions.label"), "aria-expanded": open,')
+    source = source.slice(0, start) + menu + source.slice(end) + '\n/* SHERLOCK_WORKSPACE_MENU_SKIN_V1 */'
+  }
+
   if (!source.includes('"data-srb-section-header"')) source = replace(source,
     'className: WorkspaceBrowser_module_css_default.sectionHeader,',
     'className: WorkspaceBrowser_module_css_default.sectionHeader, "data-srb-section-header":"",')
