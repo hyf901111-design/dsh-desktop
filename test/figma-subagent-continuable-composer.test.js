@@ -19,7 +19,8 @@ it('keeps native send, stop and attachment callbacks reachable, with Escape and 
   const send = jsx('button', { onClick: vi.fn(), children: '发送' }), stop = jsx('button', { onClick: vi.fn(), children: '停止' })
   const leading = jsx('div', { children: ['命令', jsx('button', { onClick: vi.fn(), children: '文件' }), '权限'] })
   const trailing = jsx('div', { className: 'uV2eYG_trailing', children: ['扩展', '所属会话管理的模型', '上下文', stop, send] })
-  const props = { className: 'uV2eYG_row', children: [leading, trailing] }
+  const footer = jsx('div', { className: 'odyssey-run-info', children: jsx('button', { onClick: vi.fn(), children: '运行详情' }) })
+  const props = { className: 'uV2eYG_row', children: [leading, trailing], footer }
   expect(Row(props).props.children).toBe(props.children) // parent stays byte-for-byte the same elements
   let row = Row({ ...props, compact: true })
   const trigger = row.props.children[0].props.children[0]
@@ -29,7 +30,9 @@ it('keeps native send, stop and attachment callbacks reachable, with Escape and 
   row = Row({ ...props, compact: true })
   const tools = row.props.children[0], popup = tools.props.children[1]
   expect(popup.props.hidden).toBe(false)
-  expect(popup.props.children).toEqual([leading, '扩展', '上下文'])
+  expect(popup.props.children).toEqual([leading, '扩展', '上下文', footer])
+  popup.props.children[3].props.children.props.onClick()
+  expect(footer.props.children.props.onClick).toHaveBeenCalledOnce()
   expect(row.props.children[1].props.children).toEqual([stop, send])
   popup.props.children[0].props.children[1].props.onClick()
   row.props.children[1].props.children.forEach(button => button.props.onClick())
@@ -50,6 +53,8 @@ it('keeps native send, stop and attachment callbacks reachable, with Escape and 
   expect(patched).toContain('compact: subagentPanel && continuable')
   expect(patched).toContain('const primaryStops = running && subagent === null;')
   expect(patched).toContain('const interruptible = running && continuable;')
+  expect(patched).toContain('footer: subagentPanel && continuable ? footer : void 0,')
+  expect(patched).toContain('(subagentPanel && continuable ? null : footer)')
 })
 
 it('overrides later main reading styles only for the 120px child input and keeps dark material', async () => {
@@ -75,4 +80,16 @@ it('overrides later main reading styles only for the 120px child input and keeps
     doc.body.setAttribute('data-ds-dark-theme', '')
     expect(style('section .uV2eYG_card').backgroundColor).toBe('#292929')
   } finally { await win.happyDOM.close() }
+})
+
+
+it('disables the child command launcher when its only optional command capability is absent', () => {
+  const start=patched.indexOf('disabled: locked || toggleCommandMenu === void 0 || subagentPanel')
+  expect(start).toBeGreaterThan(-1)
+  const expression=patched.slice(start+'disabled: '.length,patched.indexOf(',\n',start))
+  const disabled=new Function('locked','toggleCommandMenu','subagentPanel','continuable','permissions','return '+expression)
+  expect(disabled(false,()=>{},true,true,undefined)).toBe(true)
+  expect(disabled(false,()=>{},true,true,{options:[]})).toBe(false)
+  expect(disabled(false,()=>{},false,true,undefined)).toBe(false)
+  expect(disabled(true,()=>{},true,true,{options:[]})).toBe(true)
 })
