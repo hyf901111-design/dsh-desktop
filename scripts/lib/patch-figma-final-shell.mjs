@@ -106,6 +106,35 @@ export function patchFigmaFinalLayout(source) {
     source = exact(source, '\t\t\t\t\t\t\twidth: cols.sidebar', '\t\t\t\t\t\t\twidth: sidebarWidth')
     source = exact(source, '!sidebarCollapsed && (0, react_jsx_runtime.jsx)(DragHandle,', '!sidebarCollapsed && !sidebarOverlay && (0, react_jsx_runtime.jsx)(DragHandle,')
   }
+  // Menu and Modal close on document keydown without preventing default, and
+  // focus may still be on their trigger. Remember the layer before it unmounts.
+  if (!source.includes('/* ODYSSEY_SIDEBAR_ESCAPE_LAYER */')) source = exact(source,
+    `const escape = event => {
+          if (event.key !== "Escape" || event.defaultPrevented || event.target?.closest?.('[role="menu"],[role="dialog"]')) return;
+          event.preventDefault();
+          restoreSidebarFocus.current = true;
+          actions.toggleSidebar();
+        };
+        window.addEventListener("keydown", escape);
+        return () => window.removeEventListener("keydown", escape);`,
+    `const layerEscapes = new WeakSet(); /* ODYSSEY_SIDEBAR_ESCAPE_LAYER */
+        const captureEscape = event => {
+          if (event.key !== "Escape") return;
+          const layers = window.document.querySelectorAll('[role="menu"],[role="dialog"]');
+          if (Array.from(layers).some(layer => !layer.closest('[hidden],[aria-hidden="true"]') && window.getComputedStyle(layer).display !== "none")) layerEscapes.add(event);
+        };
+        const escape = event => {
+          if (event.key !== "Escape" || layerEscapes.has(event) || event.defaultPrevented || event.target?.closest?.('[role="menu"],[role="dialog"]')) return;
+          event.preventDefault();
+          restoreSidebarFocus.current = true;
+          actions.toggleSidebar();
+        };
+        window.addEventListener("keydown", captureEscape, true);
+        window.addEventListener("keydown", escape);
+        return () => {
+          window.removeEventListener("keydown", captureEscape, true);
+          window.removeEventListener("keydown", escape);
+        };`)
   // A coalesced/quick drag may deliver the final position only on pointerup.
   // Commit that coordinate before releasing capture and flushing the rAF.
   if (!source.includes('/* ODYSSEY_RESIZE_POINTER_LIFETIME */')) source = exact(source,

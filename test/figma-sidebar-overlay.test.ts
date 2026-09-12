@@ -5,12 +5,14 @@ import { DOMRect, Window, type HTMLButtonElement, type HTMLElement, type HTMLInp
 import { expect, it } from 'vitest'
 import { patchFigmaFinalLayout } from '../scripts/lib/patch-figma-final-shell.mjs'
 
+import { placeFigmaMenu } from '../scripts/lib/figma-menu-placement.mjs'
 import { odysseyClampPanelWidth } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
 
 const require = createRequire(import.meta.url)
 const React = require('react')
 const { createRoot } = require('react-dom/client')
 const { act, createElement: h, useSyncExternalStore } = React
+const primitives = await readFile('node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js', 'utf8')
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8')
 function extract(source: string, name: string) {
   const start = source.indexOf(`\t\tfunction ${name}(`)
@@ -33,6 +35,27 @@ it.each([800, 840, 841])('uses an overlay through 840 px and preserves wider sid
       AppFrame_module_css_default: { frame: 'frame', sidebarCol: 'pI_x6G_sidebarCol', centerCol: 'center', detailsCol: 'details', handle: 'handle' },
       _deepseek_ai_dsh_client_runtime_client: { defineStore: (spec: unknown) => spec }
     })
+  const primitiveBindings = {
+    ...React, ...require('react/jsx-runtime'), createPortal: require('react-dom').createPortal,
+    window: win, document: win.document, Node: win.Node, placeFigmaMenu,
+    clsx: (...values: unknown[]) => values.filter(Boolean).join(' '), Menu_module_css_default: {}, Modal_module_css_default: {}, MEASURE_STYLE: {},
+    usePointerGrace: () => ({ arm() {}, cancel() {} }), isSeparator: () => false, isLabel: () => false
+  }
+  const primitive = (name: string) => {
+    const start = primitives.indexOf(`function ${name}(`)
+    return runInNewContext(primitives.slice(start, primitives.indexOf('\n//#endregion', start)) + `\n${name}`, primitiveBindings)
+  }
+  const Menu = primitive('Menu'), Modal = primitive('Modal')
+  function SidebarLayers() {
+    const [layer, setLayer] = React.useState('')
+    // Unmount before the event reaches window, so checking only current DOM fails.
+    const close = () => require('react-dom').flushSync(() => setLayer(''))
+    return h(React.Fragment, null,
+      h(Menu, { open: layer === 'menu', portal: true, items: [], onSelect() {}, onClose: close,
+        anchor: h('button', { 'data-layer-trigger': 'menu', onClick: () => setLayer('menu') }, 'menu') }),
+      h('button', { 'data-layer-trigger': 'dialog', onClick: () => setLayer('dialog') }, 'dialog'),
+      h(Modal, { open: layer === 'dialog', headless: true, title: 'Sidebar dialog', onClose: close }, 'dialog content'))
+  }
   let state = store.init()
   const listeners = new Set<() => void>()
   const actions = Object.fromEntries(Object.entries(store.actions).map(([name, fn]: any) => [name, (...args: unknown[]) => {
@@ -44,7 +67,7 @@ it.each([800, 840, 841])('uses an overlay through 840 px and preserves wider sid
       actions, useStore: () => useSyncExternalStore((fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, () => state),
       useSessions: (select: (s: unknown) => unknown) => select({ byId: {} }),
       renderSlot: (slot: string, props: any) => slot === 'sidebar'
-        ? h('div', { 'data-slot-width': props.width }, h('button', { className: 'hHd-Xa_toggle', onClick: actions.toggleSidebar }, props.collapsed ? 'open' : 'close'), !props.collapsed && h('input', { 'aria-label': 'sidebar search' }))
+        ? h('div', { 'data-slot-width': props.width }, h('button', { className: 'hHd-Xa_toggle', onClick: actions.toggleSidebar }, props.collapsed ? 'open' : 'close'), !props.collapsed && h('input', { 'aria-label': 'sidebar search' }), !props.collapsed && h(SidebarLayers))
         : slot === 'conversation' ? h('input', { 'aria-label': 'canvas input', defaultValue: 'keep me' }) : null
     })
   }
@@ -73,14 +96,25 @@ it.each([800, 840, 841])('uses an overlay through 840 px and preserves wider sid
     expect(host.querySelector('[data-side="sidebar"]')).toBeNull()
     expect(host.querySelector('[aria-label="canvas input"]')).toBe(canvas)
     expect(canvas.value).toBe('keep me')
-    const menu = win.document.createElement('div'); menu.setAttribute('role', 'menu')
-    frame.append(menu)
-    await act(async () => {
-      menu.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true }))
-      menu.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-    })
-    expect(frame.dataset.odysseySidebarOverlay).toBe('true')
-    menu.remove()
+    // The real Menu/Modal register document listeners without preventDefault.
+    // Opening them leaves focus on the sidebar trigger, outside menu/dialog DOM.
+    for (const layer of ['menu', 'dialog']) {
+      const trigger = host.querySelector<HTMLButtonElement>(`[data-layer-trigger="${layer}"]`)!
+      trigger.focus()
+      await act(async () => { trigger.click() })
+      expect(win.document.querySelector(`[role="${layer}"]`)).not.toBeNull()
+      expect(win.document.activeElement).toBe(trigger)
+      const escape = new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      await act(async () => { trigger.dispatchEvent(escape) })
+      expect(win.document.querySelector(`[role="${layer}"]`)).toBeNull()
+      expect(frame.dataset.odysseySidebarOverlay).toBe('true')
+      expect(win.document.activeElement).toBe(trigger)
+      expect(escape.defaultPrevented).toBe(false)
+      await act(async () => { trigger.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })) })
+      expect(frame.dataset.sidebarCollapsed).toBe('true')
+      expect(win.document.activeElement).toBe(toggle())
+      await click()
+    }
     await act(async () => { canvas.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true })) })
     expect(frame.dataset.sidebarCollapsed).toBe('true')
     await click()
