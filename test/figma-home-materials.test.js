@@ -26,7 +26,7 @@ for (const dark of [false, true]) {
     const page = await browser.newPage()
     try {
       await page.route('**/*', route => route.abort())
-      await page.setContent(`<style>${css}</style><body ${dark ? 'data-ds-dark-theme' : ''}><div data-odyssey-panel-right="closed"><main class="pI_x6G_centerCol"><section class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header"></header><div class="uV2eYG_card"></div></section></main><aside class="sRp_composer"><div class="uV2eYG_card"></div></aside></div></body>`)
+      await page.setContent(`<style>${css}</style><body ${dark ? 'data-ds-dark-theme' : ''}><div data-odyssey-panel-right="closed"><main class="pI_x6G_centerCol"><section class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header" data-srb-session-header data-odyssey-home-header="true" data-odyssey-header-layout="regular"></header><div class="uV2eYG_card"></div></section></main><aside class="sRp_composer"><div class="uV2eYG_card"></div></aside></div></body>`)
       const results = await page.evaluate(() => {
         const main = document.querySelector('main'), root = document.querySelector('section'), card = root.querySelector('.uV2eYG_card'), header = root.querySelector('header')
         const measure = () => ({ color: getComputedStyle(card).backgroundColor, blur: getComputedStyle(card).backdropFilter, headerBlur: getComputedStyle(header).backdropFilter, radius: getComputedStyle(main).borderRadius })
