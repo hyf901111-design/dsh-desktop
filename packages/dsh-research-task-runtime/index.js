@@ -14,7 +14,7 @@ import { selectedResearchExcerpt } from './context-index.js'
 import { MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR } from './html-artifact.js'
 
 export const name = 'sherlock-research-task-runtime'
-export const inject = ['agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry']
+export const inject = ['agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy']
 
 export const MAX_ACTIVE_PER_PARENT = 10
 export const MAX_SOURCES = 24
@@ -1241,6 +1241,19 @@ export function createSubagentAdapter(ctx) {
   return {
     async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress, synthesisOnly = false, onWorkbenchPlan }) {
       const parent = await resolveParent(parentSessionId)
+      // Web model switches live in the native API's session selection, not in
+      // Agent.options. Read that authority once for this execution/attempt;
+      // spawn copies this pair while retaining the parent's other native options.
+      let agentOptions
+      if (ctx.apiProxy) {
+        const response = await abortable(() => ctx.apiProxy.sessions.models({
+          rpcId: randomUUID(), payload: { sessionId: parent.id }
+        }), signal)
+        if (!response.result.ok) throw new ResearchTaskError('MODEL_UNAVAILABLE', response.result.error.message)
+        const { current, routable } = response.result.value
+        if (!current || !routable) throw new ResearchTaskError('MODEL_UNAVAILABLE', '当前会话选择的模型不可用，请重新选择模型后重试。')
+        agentOptions = { provider: current.provider, model: current.model }
+      }
       const permitsTools = !synthesisOnly && (['qa', 'board'].includes(kind) || kind === 'container' && containerAllowsWebSearch(query ?? ''))
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
       const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && !financialSubject && containerNeedsWebData(query ?? '')
@@ -1275,6 +1288,7 @@ export function createSubagentAdapter(ctx) {
       if (signal.aborted) throw signal.reason
       const run = await ctx.subagents.start('spawn', {
         label: '画布生成任务',
+        ...(agentOptions ? { agentOptions } : {}),
         parent,
         signal,
         prompt: [{ type: 'text', text: effectivePrompt }],
