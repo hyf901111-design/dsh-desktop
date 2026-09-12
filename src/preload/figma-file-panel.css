@@ -192,8 +192,15 @@
 }
 
 [data-odyssey-file-editor="document"] {
+  --odyssey-document-text:#2b2b2b;
+  --odyssey-document-muted:#6f6f6f;
   min-width:0;
   min-height:0;
+}
+
+[data-ds-dark-theme] [data-odyssey-file-editor="document"] {
+  --odyssey-document-text:#e5e5e5;
+  --odyssey-document-muted:#b3b3b3;
 }
 
 [data-odyssey-file-editor-header] {
@@ -249,6 +256,11 @@
   font-weight:500;
 }
 
+[data-odyssey-file-editor="document"] [data-odyssey-file-editor-header] [class*="_editorModeButton"] {
+  font-size:11px;
+  line-height:19px;
+}
+
 [data-odyssey-file-editor="document"] [class*="_editorBody"],
 [data-odyssey-file-editor="document"] [class*="_editorMain"] {
   min-width:0;
@@ -257,28 +269,58 @@
 
 [data-odyssey-file-editor="document"] [class*="_editorMd"] {
   box-sizing:border-box;
-  padding:8px 16px 24px;
+  /* Header bottom padding contributes the other 6px of the 20px content gap. */
+  padding:14px 16px 24px;
   overflow:auto;
+}
+
+/* The renderer sets its own font shorthand; styling only the scrollport leaves
+   the conversation's 16/28 typography active inside this document preview. */
+[data-odyssey-file-editor="document"] [class*="_editorMd"] > [class*="_markdown_"] {
+  color:var(--odyssey-document-text);
+  font-size:14px;
+  font-weight:400;
+  line-height:24px;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] h1 {
+  margin:0 0 20px;
+  font-size:23px;
+  font-weight:700;
+  line-height:39px;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] h2 {
+  margin:20px 0;
+  font-size:19px;
+  font-weight:500;
+  line-height:32px;
+}
+
+/* A heading immediately after the opening title is the document subtitle.
+   Identify that structure without inspecting or replacing the source text. */
+[data-odyssey-file-editor="document"] [class*="_editorMd"] > [class*="_markdown_"] > h1:first-child + h2 {
+  font-size:17px;
+  line-height:29px;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] > [class*="_markdown_"] > h1:first-child + h2 + p {
+  color:var(--odyssey-document-muted);
   font-size:13px;
   line-height:22px;
 }
 
-[data-odyssey-file-editor="document"] [class*="_editorMd"] h1 {
-  margin:0 0 19px;
-  font-size:24px;
-  font-weight:600;
-  line-height:32px;
-}
-
-[data-odyssey-file-editor="document"] [class*="_editorMd"] h2 {
-  margin:28px 0 16px;
-  font-size:18px;
-  font-weight:600;
-  line-height:26px;
-}
-
 [data-odyssey-file-editor="document"] [class*="_editorMd"] p {
-  margin:0 0 16px;
+  margin:0 0 20px;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] > [class*="_markdown_"] > :is(ul,ol,hr) {
+  margin:20px 0;
+}
+
+[data-odyssey-file-editor="document"] [class*="_editorMd"] li::marker {
+  color:var(--odyssey-document-muted);
+  line-height:24px;
 }
 
 /* The marked label travels with the portaled list, unlike the anchor wrapper. */
