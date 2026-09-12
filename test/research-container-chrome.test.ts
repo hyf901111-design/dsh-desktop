@@ -195,6 +195,20 @@ describe('Research container chrome', () => {
     } finally { await mounted.cleanup() }
   })
 
+  it('keeps the refresh submenu open when a pointer hover is followed by clicking its trigger', async () => {
+    const mounted = await mountContainer()
+    try {
+      const { host, browserWindow, click } = mounted
+      await click('[data-research-container-more]')
+      const trigger = host.querySelector('[data-research-container-refresh-submenu]')!
+      await act(async () => { trigger.dispatchEvent(new browserWindow.MouseEvent('mouseover', { bubbles: true })) })
+      expect(host.querySelector('[data-odyssey-refresh-options]')).not.toBeNull()
+      await click('[data-research-container-refresh-submenu]')
+      expect(host.querySelector('[data-odyssey-refresh-options]')).not.toBeNull()
+      expect(browserWindow.document.activeElement).toBe(host.querySelector('[data-research-container-refresh-minutes="0"]'))
+    } finally { await mounted.cleanup() }
+  })
+
   it('persists automatic refresh from the menu and refreshes using the original prompt while retaining the iframe', async () => {
     const mounted = await mountContainer()
     try {
