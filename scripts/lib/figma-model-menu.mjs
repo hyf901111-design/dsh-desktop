@@ -1,7 +1,7 @@
 /** 665:857 / 12A: searchable model directory; keep the Host-owned selection API. */
 export function patchFigmaModelMenu(source) {
   const marker = '/* odyssey:searchable-model-menu:20260912 */'
-  if (source.includes(marker)) return patchPaneFocus(source)
+  if (source.includes(marker)) return patchSearchEmpty(patchPaneFocus(source))
   const exact = (before, after) => {
     if (source.split(before).length !== 2) throw Error('Model menu anchor drifted: '+before.slice(0,80))
     source = source.replace(before,after)
@@ -74,7 +74,20 @@ export function patchFigmaModelMenu(source) {
   exact('open && (0, react_jsx_runtime.jsxs)("div", {','open && odysseyReactDOM.createPortal((0, react_jsx_runtime.jsxs)("div", {')
   exact('className: ModelSelect_module_css_default.menu,','className: ModelSelect_module_css_default.menu + " odyssey-model-menu",ref:menuRef,style:menuPosition,')
   exact('}),\n\t\t\t\t\ttoast !== null', '}), document.body),\n\t\t\t\t\ttoast !== null')
-  return patchPaneFocus(source)
+  return patchSearchEmpty(patchPaneFocus(source))
+}
+
+function patchSearchEmpty(source) {
+  const marker = '/* odyssey:model-search-empty:20260913 */'
+  if (source.includes(marker)) return source
+  const before = 'className: ModelSelect_module_css_default.empty,\n\t\t\t\t\t\t\t\t\tchildren: needle ? menuText("没有匹配的模型","No matching models") : t("empty.models")'
+  if (source.split(before).length !== 2) throw Error('Model search empty anchor drifted')
+  return source.replace(before, `className: ModelSelect_module_css_default.empty + (needle ? " odyssey-model-empty" : ""),
+          ${marker}
+          children: needle ? (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, {children:[
+            (0, react_jsx_runtime.jsx)("div", {className:"odyssey-model-empty-title",children:menuText("未找到匹配的模型","No matching models")}),
+            (0, react_jsx_runtime.jsx)("div", {className:"odyssey-model-empty-description",children:menuText("尝试其他关键词，或前往模型设置。","Try another keyword, or go to model settings.")})
+          ]}) : t("empty.models")`)
 }
 
 function patchPaneFocus(source) {

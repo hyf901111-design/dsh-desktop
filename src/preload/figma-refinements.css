@@ -189,6 +189,15 @@ body .odyssey-model-menu .odyssey-model-footer::before { content:''; position:ab
 body .odyssey-model-menu .odyssey-model-footer small { margin-left:auto; font:400 11px/18px var(--odyssey-font-ui); color:var(--odyssey-menu-muted); }
 body .odyssey-model-menu .odyssey-model-footer svg { width:12px; height:12px; flex:none; }
 body .odyssey-model-menu :is(button,input):focus-visible { outline:2px solid var(--odyssey-menu-border); outline-offset:-2px; }
+/* 667:30199/30557: search-empty only; leave unconfigured/loading states alone. */
+body .odyssey-model-menu .odyssey-model-empty { box-sizing:border-box; height:64px; min-height:64px; padding:7px 10px; border-radius:6px; color:#a6a6a6; }
+body[data-ds-dark-theme] .odyssey-model-menu .odyssey-model-empty { color:#6b6b6b; }
+body .odyssey-model-empty-title { height:20px; font:400 13px/20px var(--odyssey-font-ui); }
+body .odyssey-model-empty-description { height:20px; margin-top:3px; font:400 11px/18px var(--odyssey-font-ui); }
+body .odyssey-model-menu:has(.odyssey-model-empty) ._7KE1Ra_groups { margin-top:2px; }
+body .odyssey-model-menu:has(.odyssey-model-empty) .odyssey-model-footer { margin-top:11px; }
+body .odyssey-model-menu:has(.odyssey-model-empty) :is(.odyssey-model-search,.odyssey-model-footer) { color:#242424; }
+body[data-ds-dark-theme] .odyssey-model-menu:has(.odyssey-model-empty) :is(.odyssey-model-search,.odyssey-model-footer) { color:#e6e6e6; }
 body ._3e4SsG_menu { min-width:0; width:360px; max-width:calc(100vw - 32px); border-radius:10px; border:1px solid var(--odyssey-menu-border); padding:6px; background:var(--odyssey-menu); box-shadow:0 8px 24px -4px #00000024; }
 body ._3e4SsG_item { display:flex; align-items:center; min-height:32px; height:32px; gap:8px; padding:6px 8px; border-radius:6px; }
 body ._3e4SsG_itemName { flex:none; font:400 13px/20px var(--odyssey-font-ui); white-space:nowrap; }
