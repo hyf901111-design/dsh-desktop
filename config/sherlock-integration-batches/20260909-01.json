@@ -9,45 +9,42 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "按 Figma 修复组件自动刷新子菜单、设置说明及实测间距",
+        "featureName": "提供方选择目录、浅色菜单选中态和真实包刷新菜单修复",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "10a50f3a3355f58ca01dc7bab0f84237a30b84e5",
-        "tipCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
+        "baseCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
+        "tipCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
         "commits": [
           {
-            "commit": "5fedee7a63c9e35ae0af7c7fbc25f3e8111ab455",
+            "commit": "1a43804058f1adcda844cc490d8150094bae2e2b",
             "parents": [
-              "10a50f3a3355f58ca01dc7bab0f84237a30b84e5"
+              "b5ef31ff43e968c1a8bc741b426823555069de37"
             ],
-            "subject": "按设计还原组件刷新二级菜单和设置选项说明"
+            "subject": "按设计新增提供方搜索菜单并修复浅色选中态和弹层避让"
           },
           {
-            "commit": "a0e159e0e6e23681bd0888b89667eff950299aff",
+            "commit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
             "parents": [
-              "5fedee7a63c9e35ae0af7c7fbc25f3e8111ab455"
+              "1a43804058f1adcda844cc490d8150094bae2e2b"
             ],
-            "subject": "依据实机测量校准模式菜单内边距和选项间距"
-          },
-          {
-            "commit": "b5ef31ff43e968c1a8bc741b426823555069de37",
-            "parents": [
-              "a0e159e0e6e23681bd0888b89667eff950299aff"
-            ],
-            "subject": "更新工作区视图菜单幂等验证的最终样式契约"
+            "subject": "修复实机刷新子菜单文字被旧图标宽度压缩的问题"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/figma-container-menu.mjs"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/figma-menu-scope.d.mts"
+            "status": "A",
+            "path": "scripts/lib/figma-menu-placement.d.mts"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/figma-menu-scope.mjs"
+            "status": "A",
+            "path": "scripts/lib/figma-menu-placement.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-provider-menu.mjs"
           },
           {
             "status": "M",
@@ -58,12 +55,16 @@
             "path": "src/preload/figma-refinements.css"
           },
           {
-            "status": "M",
-            "path": "test/research-board-client-adapter.test.js"
+            "status": "A",
+            "path": "test/figma-menu-placement.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-container-chrome.test.ts"
+            "path": "test/figma-menu-scope.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-provider-menu.test.js"
           }
         ],
         "checks": [
@@ -74,13 +75,14 @@
               "vitest",
               "run",
               "test/research-container-chrome.test.ts",
-              "test/figma-menu-scope.test.ts",
-              "test/research-board-client-adapter.test.js"
+              "test/figma-menu-placement.test.js",
+              "test/figma-provider-menu.test.js",
+              "test/figma-menu-scope.test.ts"
             ],
             "outcome": "passed",
-            "summary": "58 focused tests passed including final workspace class contract",
-            "verifiedCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
-            "completedAt": "2026-09-12T12:39:55.384802+00:00",
+            "summary": "Focused component, placement, provider flow and modal scope checks passed",
+            "verifiedCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
+            "completedAt": "2026-09-12T12:57:53.280565+00:00",
             "timeoutMs": 120000
           },
           {
@@ -91,8 +93,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
-            "completedAt": "2026-09-12T12:39:55.384802+00:00",
+            "verifiedCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
+            "completedAt": "2026-09-12T12:57:53.280565+00:00",
             "timeoutMs": 120000
           },
           {
@@ -104,97 +106,25 @@
             ],
             "outcome": "passed",
             "summary": "Pristine dependencies patched twice and executed",
-            "verifiedCommit": "b5ef31ff43e968c1a8bc741b426823555069de37",
-            "completedAt": "2026-09-12T12:39:55.384802+00:00",
+            "verifiedCommit": "cbc7b34a0d5c76f59e87b2cbc3224203a99612cf",
+            "completedAt": "2026-09-12T12:57:53.280565+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Current d2741e2 package measured permissions 320x208 and view menus 260x219; new submenu and spacing require rebuilt runtime verification."
+          "summary": "003cfb21 real package menu dimensions 248x118 and 220x190 verified; rendering exposed legacy 12px label width, now fixed in this handoff. Rebuilt UI verification still required."
         },
         "acceptanceCriteria": [
-          "Three-row component menu and nested refresh options preserve callbacks and keyboard focus",
-          "Settings Enter descriptions and language sizes match design",
-          "Measured workspace separator and mode row gaps match design"
+          "Provider menu lists real data, disables configured providers and opens existing editor after selection",
+          "Menu flips with 8px anchor gap and 12px viewport boundary",
+          "Refresh labels remain horizontal; exact nested menu spacing",
+          "Light permission selection matches Figma #f0f0f0"
         ],
         "risks": [
           "All-page visual audit remains in progress; no global acceptance claimed"
         ],
-        "generatedAt": "2026-09-12T12:39:55.384802+00:00"
-      },
-      "merged": {
-        "mergeCommit": "062c352c5f506ebbc3291281e72dca83aa5ca12a",
-        "verificationCommit": "062c352c5f506ebbc3291281e72dca83aa5ca12a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "062c352c5f506ebbc3291281e72dca83aa5ca12a",
-            "completedAt": "2026-09-12T12:41:03.713Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "062c352c5f506ebbc3291281e72dca83aa5ca12a",
-            "completedAt": "2026-09-12T12:41:03.713Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "062c352c5f506ebbc3291281e72dca83aa5ca12a",
-            "completedAt": "2026-09-12T12:41:03.713Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "062c352c5f506ebbc3291281e72dca83aa5ca12a",
-            "completedAt": "2026-09-12T12:41:03.713Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "062c352c5f506ebbc3291281e72dca83aa5ca12a",
-            "completedAt": "2026-09-12T12:41:03.713Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T12:41:03.713Z"
+        "generatedAt": "2026-09-12T12:57:53.280565+00:00"
       }
     }
   ],
