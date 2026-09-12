@@ -138,11 +138,12 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=136-11",
-      "status": "13c正常高度首页局部几何/标题导航及顶栏材质已对照，D52/D53差异仍未完成；15闭栏原生失败、D58待16；不代表整页通过",
+      "status": "16首页D52/D53/D58/D59局部原生复验符合；15失败保留，整页未通过",
       "differences": [
         "D52",
         "D53",
-        "D58"
+        "D58",
+        "D59"
       ],
       "verificationHistory": [
         {
@@ -173,39 +174,92 @@
               ]
             }
           ]
+        },
+        {
+          "status": "13c正常高度首页局部几何/标题导航及顶栏材质已对照，D52/D53差异仍未完成；15闭栏原生失败、D58待16；不代表整页通过",
+          "differences": [
+            "D52",
+            "D53",
+            "D58"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v13-home-clean-normal-right-open-light"
+          ],
+          "evidencePackages": {
+            "v13-home-clean-normal-right-open-light": "3bc317174cf0299eef3e1f50e68b004847530ce3"
+          },
+          "packageCommit": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+          "verifiedTheme": "light",
+          "evidenceNotes": "实际1380×900、header56、输入126/r10.5，右栏开center740/input640。标题14/21/间隔12与常规稿14/20/24有差值；颜色及选中底见D52。空态header实际blur32形成独立带；闭栏实际r16对557及A稿r12，展开136仍r16。683:27243/27493空态顶栏连续、内容经过才blur；480:637/738和760:27898最新规则要求输入不透明/none，实际F9F9F9/292929不是透明度差异。A与对应首页仅明确重合属性局部比对，不声明全帧覆盖或全部控件动作通过。",
+          "sourceFix": {
+            "difference": "D52",
+            "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
+            "nativeVerified": false,
+            "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D53",
+              "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
+              "nativeVerified": false,
+              "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+              "supportingCommits": [
+                "0c5977131e71ac080479927e87e428432a073ba2"
+              ]
+            },
+            {
+              "difference": "D58",
+              "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
+              "nativeVerified": false,
+              "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v13-home-clean-normal-right-open-light"
+        "v13-home-clean-normal-right-open-light",
+        "v16-home-right-open-light"
       ],
       "evidencePackages": {
-        "v13-home-clean-normal-right-open-light": "3bc317174cf0299eef3e1f50e68b004847530ce3"
+        "v13-home-clean-normal-right-open-light": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+        "v16-home-right-open-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "实际1380×900、header56、输入126/r10.5，右栏开center740/input640。标题14/21/间隔12与常规稿14/20/24有差值；颜色及选中底见D52。空态header实际blur32形成独立带；闭栏实际r16对557及A稿r12，展开136仍r16。683:27243/27493空态顶栏连续、内容经过才blur；480:637/738和760:27898最新规则要求输入不透明/none，实际F9F9F9/292929不是透明度差异。A与对应首页仅明确重合属性局部比对，不声明全帧覆盖或全部控件动作通过。",
+      "evidenceNotes": "16实测1380×900，header56/透明/none，regular标题14/20/500、浅252525深E5E5E5、标题到导航24；tabs56×28/r7/gap4、主题文字及选中底相符。首页header模式控件隐藏，输入上方入口保留。输入126/r10.5、浅F9F9F9深292929实色none；入口row左内距8、工作区→模式12、控件下沿→输入8。旧15的14/21/gap12、blur32/r16失败保留在历史；不代验窄窗/hover/研究与轨迹导航/连续动画。本帧开右栏center740×880/r16，输入x330/w640。",
       "sourceFix": {
         "difference": "D52",
         "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
-        "nativeVerified": false,
-        "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+        "nativeVerified": true,
+        "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D53",
           "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
-          "nativeVerified": false,
-          "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
           "supportingCommits": [
             "0c5977131e71ac080479927e87e428432a073ba2"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D58",
           "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
-          "nativeVerified": false,
-          "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
+        },
+        {
+          "difference": "D59",
+          "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
@@ -218,11 +272,12 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=136-221",
-      "status": "13c正常高度首页局部几何/标题导航及顶栏材质已对照，D52/D53差异仍未完成；15闭栏原生失败、D58待16；不代表整页通过",
+      "status": "16首页D52/D53/D58/D59局部原生复验符合；15失败保留，整页未通过",
       "differences": [
         "D52",
         "D53",
-        "D58"
+        "D58",
+        "D59"
       ],
       "verificationHistory": [
         {
@@ -253,39 +308,92 @@
               ]
             }
           ]
+        },
+        {
+          "status": "13c正常高度首页局部几何/标题导航及顶栏材质已对照，D52/D53差异仍未完成；15闭栏原生失败、D58待16；不代表整页通过",
+          "differences": [
+            "D52",
+            "D53",
+            "D58"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v13-home-clean-normal-right-open-dark"
+          ],
+          "evidencePackages": {
+            "v13-home-clean-normal-right-open-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3"
+          },
+          "packageCommit": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "实际1380×900、header56、输入126/r10.5，右栏开center740/input640。标题14/21/间隔12与常规稿14/20/24有差值；颜色及选中底见D52。空态header实际blur32形成独立带；闭栏实际r16对557及A稿r12，展开136仍r16。683:27243/27493空态顶栏连续、内容经过才blur；480:637/738和760:27898最新规则要求输入不透明/none，实际F9F9F9/292929不是透明度差异。A与对应首页仅明确重合属性局部比对，不声明全帧覆盖或全部控件动作通过。",
+          "sourceFix": {
+            "difference": "D52",
+            "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
+            "nativeVerified": false,
+            "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D53",
+              "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
+              "nativeVerified": false,
+              "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+              "supportingCommits": [
+                "0c5977131e71ac080479927e87e428432a073ba2"
+              ]
+            },
+            {
+              "difference": "D58",
+              "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
+              "nativeVerified": false,
+              "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v13-home-clean-normal-right-open-dark"
+        "v13-home-clean-normal-right-open-dark",
+        "v16-home-right-open-dark"
       ],
       "evidencePackages": {
-        "v13-home-clean-normal-right-open-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3"
+        "v13-home-clean-normal-right-open-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+        "v16-home-right-open-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "实际1380×900、header56、输入126/r10.5，右栏开center740/input640。标题14/21/间隔12与常规稿14/20/24有差值；颜色及选中底见D52。空态header实际blur32形成独立带；闭栏实际r16对557及A稿r12，展开136仍r16。683:27243/27493空态顶栏连续、内容经过才blur；480:637/738和760:27898最新规则要求输入不透明/none，实际F9F9F9/292929不是透明度差异。A与对应首页仅明确重合属性局部比对，不声明全帧覆盖或全部控件动作通过。",
+      "evidenceNotes": "16实测1380×900，header56/透明/none，regular标题14/20/500、浅252525深E5E5E5、标题到导航24；tabs56×28/r7/gap4、主题文字及选中底相符。首页header模式控件隐藏，输入上方入口保留。输入126/r10.5、浅F9F9F9深292929实色none；入口row左内距8、工作区→模式12、控件下沿→输入8。旧15的14/21/gap12、blur32/r16失败保留在历史；不代验窄窗/hover/研究与轨迹导航/连续动画。本帧开右栏center740×880/r16，输入x330/w640。",
       "sourceFix": {
         "difference": "D52",
         "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
-        "nativeVerified": false,
-        "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+        "nativeVerified": true,
+        "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D53",
           "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
-          "nativeVerified": false,
-          "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
           "supportingCommits": [
             "0c5977131e71ac080479927e87e428432a073ba2"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D58",
           "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
-          "nativeVerified": false,
-          "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
+        },
+        {
+          "difference": "D59",
+          "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
@@ -580,7 +688,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=557-902",
-      "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+      "status": "16首页D52/D53/D58/D59局部原生复验符合；15失败保留，整页未通过",
       "differences": [
         "D52",
         "D53",
@@ -616,47 +724,103 @@
               ]
             }
           ]
+        },
+        {
+          "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+          "differences": [
+            "D52",
+            "D53",
+            "D58",
+            "D59"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v13-home-clean-normal-right-closed-light",
+            "v15-home-closed-light"
+          ],
+          "evidencePackages": {
+            "v13-home-clean-normal-right-closed-light": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+            "v15-home-closed-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "light",
+          "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+          "sourceFix": {
+            "difference": "D52",
+            "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
+            "nativeVerified": false,
+            "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D53",
+              "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
+              "nativeVerified": false,
+              "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+              "supportingCommits": [
+                "0c5977131e71ac080479927e87e428432a073ba2"
+              ]
+            },
+            {
+              "difference": "D58",
+              "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
+              "nativeVerified": false,
+              "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+            },
+            {
+              "difference": "D59",
+              "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
+              "nativeVerified": false,
+              "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
         "v13-home-clean-normal-right-closed-light",
-        "v15-home-closed-light"
+        "v15-home-closed-light",
+        "v16-home-closed-light"
       ],
       "evidencePackages": {
         "v13-home-clean-normal-right-closed-light": "3bc317174cf0299eef3e1f50e68b004847530ce3",
-        "v15-home-closed-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-closed-light": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-closed-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+      "evidenceNotes": "16实测1380×900，header56/透明/none，regular标题14/20/500、浅252525深E5E5E5、标题到导航24；tabs56×28/r7/gap4、主题文字及选中底相符。首页header模式控件隐藏，输入上方入口保留。输入126/r10.5、浅F9F9F9深292929实色none；入口row左内距8、工作区→模式12、控件下沿→输入8。旧15的14/21/gap12、blur32/r16失败保留在历史；不代验窄窗/hover/研究与轨迹导航/连续动画。本帧闭右栏center1090×880/r12，输入x435/w780。",
       "sourceFix": {
         "difference": "D52",
         "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
-        "nativeVerified": false,
-        "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+        "nativeVerified": true,
+        "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D53",
           "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
-          "nativeVerified": false,
-          "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
           "supportingCommits": [
             "0c5977131e71ac080479927e87e428432a073ba2"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D58",
           "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
-          "nativeVerified": false,
-          "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D59",
           "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
-          "nativeVerified": false,
-          "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
@@ -669,7 +833,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=557-1122",
-      "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+      "status": "16首页D52/D53/D58/D59局部原生复验符合；15失败保留，整页未通过",
       "differences": [
         "D52",
         "D53",
@@ -705,47 +869,103 @@
               ]
             }
           ]
+        },
+        {
+          "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+          "differences": [
+            "D52",
+            "D53",
+            "D58",
+            "D59"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v13-home-clean-normal-right-closed-dark",
+            "v15-home-closed-dark"
+          ],
+          "evidencePackages": {
+            "v13-home-clean-normal-right-closed-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+            "v15-home-closed-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+          "sourceFix": {
+            "difference": "D52",
+            "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
+            "nativeVerified": false,
+            "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D53",
+              "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
+              "nativeVerified": false,
+              "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+              "supportingCommits": [
+                "0c5977131e71ac080479927e87e428432a073ba2"
+              ]
+            },
+            {
+              "difference": "D58",
+              "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
+              "nativeVerified": false,
+              "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+            },
+            {
+              "difference": "D59",
+              "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
+              "nativeVerified": false,
+              "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
         "v13-home-clean-normal-right-closed-dark",
-        "v15-home-closed-dark"
+        "v15-home-closed-dark",
+        "v16-home-closed-dark"
       ],
       "evidencePackages": {
         "v13-home-clean-normal-right-closed-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3",
-        "v15-home-closed-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-closed-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-closed-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+      "evidenceNotes": "16实测1380×900，header56/透明/none，regular标题14/20/500、浅252525深E5E5E5、标题到导航24；tabs56×28/r7/gap4、主题文字及选中底相符。首页header模式控件隐藏，输入上方入口保留。输入126/r10.5、浅F9F9F9深292929实色none；入口row左内距8、工作区→模式12、控件下沿→输入8。旧15的14/21/gap12、blur32/r16失败保留在历史；不代验窄窗/hover/研究与轨迹导航/连续动画。本帧闭右栏center1090×880/r12，输入x435/w780。",
       "sourceFix": {
         "difference": "D52",
         "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
-        "nativeVerified": false,
-        "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+        "nativeVerified": true,
+        "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D53",
           "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
-          "nativeVerified": false,
-          "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
           "supportingCommits": [
             "0c5977131e71ac080479927e87e428432a073ba2"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D58",
           "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
-          "nativeVerified": false,
-          "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D59",
           "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
-          "nativeVerified": false,
-          "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
@@ -987,30 +1207,57 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-11",
-      "status": "14b原工作区XLSX真实可见；深色白网格D55待16，非整帧通过",
+      "status": "16 XLSX默认网格主题/D4跨主题保留及深色重开已局部原生验证；周边未验，非整页通过",
       "differences": [
         "D55"
       ],
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "14b原工作区XLSX真实可见；深色白网格D55待16，非整帧通过",
+          "differences": [
+            "D55"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v14-xlsx-original-workspace-light"
+          ],
+          "evidencePackages": {
+            "v14-xlsx-original-workspace-light": "525b5b565e109d5f16da7332a71e9475b1727e75"
+          },
+          "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+          "verifiedTheme": "light",
+          "evidenceNotes": "仅文件表格预览子区域，与原方案材质及新建面板动作不互代。真实06样本A–C/1–28附近及100%；深色外壳深、网格/底栏仍白；浅色白网格可比。v14-xlsx-reader-light为新workspace外路径403，不能当主题样本。冻结行列不保留属导入能力边界。",
+          "sourceFix": {
+            "difference": "D55",
+            "commit": "cb6de2d38fc5e314a271681ff4b8328ad326bc26",
+            "nativeVerified": false,
+            "scope": "cb6de2d固定vendor旧SHA→新SHA及重复应用、独立13+1检查/显式文字像素通过，无增量阻塞；registry Office原始输入父/当前均PPTX anchor6vs7失败，sources不含Office，不称全链pristine；待16真实XLSX明暗。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v14-xlsx-original-workspace-light"
+        "v14-xlsx-original-workspace-light",
+        "v16-xlsx-light-initial",
+        "v16-xlsx-light-d4-return"
       ],
       "evidencePackages": {
-        "v14-xlsx-original-workspace-light": "525b5b565e109d5f16da7332a71e9475b1727e75"
+        "v14-xlsx-original-workspace-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+        "v16-xlsx-light-initial": "e050620994cc58b0d54f2642a571668076288ea4",
+        "v16-xlsx-light-d4-return": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "仅文件表格预览子区域，与原方案材质及新建面板动作不互代。真实06样本A–C/1–28附近及100%；深色外壳深、网格/底栏仍白；浅色白网格可比。v14-xlsx-reader-light为新workspace外路径403，不能当主题样本。冻结行列不保留属导入能力边界。",
+      "evidenceNotes": "16原工作簿默认网格已随主题改变，原14b深色整表白底问题消失。v16-xlsx-light-initial→dark-d4→light-d4-return显示D4选区与值“2 月数量”跨主题保留，dark-reopen验证深色重开；跨主题过程由这四图及主线程实际操作记录共同支持。显式白/橙背景及黑/#123456文字仍仅D55真实引擎隔离像素和13+1检查，不冒称本四图全格式实测。公式黑底、冻结拖柄共用gray.300连带改色、Univer Canvas滚动条周边尚未验收，见d55-native16-review.md；冻结导入也不由L形拖柄证明。原方案材质/新建面板及整个XLSX未通过。",
       "sourceFix": {
         "difference": "D55",
         "commit": "cb6de2d38fc5e314a271681ff4b8328ad326bc26",
-        "nativeVerified": false,
-        "scope": "cb6de2d固定vendor旧SHA→新SHA及重复应用、独立13+1检查/显式文字像素通过，无增量阻塞；registry Office原始输入父/当前均PPTX anchor6vs7失败，sources不含Office，不称全链pristine；待16真实XLSX明暗。"
+        "nativeVerified": true,
+        "scope": "16仅默认网格主题、D4选区跨主题保留与深色重开原生已验证；公式黑底/冻结拖柄/Canvas条仍周边未验，显式文件色为既有隔离引擎证据，非全部XLSX通过。旧vendor SHA迁移可重复通过；registry原始Office父/当前anchor6vs7既有失败边界保留。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -1022,30 +1269,57 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=161-14",
-      "status": "14b原工作区XLSX真实可见；深色白网格D55待16，非整帧通过",
+      "status": "16 XLSX默认网格主题/D4跨主题保留及深色重开已局部原生验证；周边未验，非整页通过",
       "differences": [
         "D55"
       ],
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "14b原工作区XLSX真实可见；深色白网格D55待16，非整帧通过",
+          "differences": [
+            "D55"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v14-xlsx-original-workspace-dark"
+          ],
+          "evidencePackages": {
+            "v14-xlsx-original-workspace-dark": "525b5b565e109d5f16da7332a71e9475b1727e75"
+          },
+          "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "仅文件表格预览子区域，与原方案材质及新建面板动作不互代。真实06样本A–C/1–28附近及100%；深色外壳深、网格/底栏仍白；浅色白网格可比。v14-xlsx-reader-light为新workspace外路径403，不能当主题样本。冻结行列不保留属导入能力边界。",
+          "sourceFix": {
+            "difference": "D55",
+            "commit": "cb6de2d38fc5e314a271681ff4b8328ad326bc26",
+            "nativeVerified": false,
+            "scope": "cb6de2d固定vendor旧SHA→新SHA及重复应用、独立13+1检查/显式文字像素通过，无增量阻塞；registry Office原始输入父/当前均PPTX anchor6vs7失败，sources不含Office，不称全链pristine；待16真实XLSX明暗。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v14-xlsx-original-workspace-dark"
+        "v14-xlsx-original-workspace-dark",
+        "v16-xlsx-dark-d4",
+        "v16-xlsx-dark-reopen"
       ],
       "evidencePackages": {
-        "v14-xlsx-original-workspace-dark": "525b5b565e109d5f16da7332a71e9475b1727e75"
+        "v14-xlsx-original-workspace-dark": "525b5b565e109d5f16da7332a71e9475b1727e75",
+        "v16-xlsx-dark-d4": "e050620994cc58b0d54f2642a571668076288ea4",
+        "v16-xlsx-dark-reopen": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "仅文件表格预览子区域，与原方案材质及新建面板动作不互代。真实06样本A–C/1–28附近及100%；深色外壳深、网格/底栏仍白；浅色白网格可比。v14-xlsx-reader-light为新workspace外路径403，不能当主题样本。冻结行列不保留属导入能力边界。",
+      "evidenceNotes": "16原工作簿默认网格已随主题改变，原14b深色整表白底问题消失。v16-xlsx-light-initial→dark-d4→light-d4-return显示D4选区与值“2 月数量”跨主题保留，dark-reopen验证深色重开；跨主题过程由这四图及主线程实际操作记录共同支持。显式白/橙背景及黑/#123456文字仍仅D55真实引擎隔离像素和13+1检查，不冒称本四图全格式实测。公式黑底、冻结拖柄共用gray.300连带改色、Univer Canvas滚动条周边尚未验收，见d55-native16-review.md；冻结导入也不由L形拖柄证明。原方案材质/新建面板及整个XLSX未通过。",
       "sourceFix": {
         "difference": "D55",
         "commit": "cb6de2d38fc5e314a271681ff4b8328ad326bc26",
-        "nativeVerified": false,
-        "scope": "cb6de2d固定vendor旧SHA→新SHA及重复应用、独立13+1检查/显式文字像素通过，无增量阻塞；registry Office原始输入父/当前均PPTX anchor6vs7失败，sources不含Office，不称全链pristine；待16真实XLSX明暗。"
+        "nativeVerified": true,
+        "scope": "16仅默认网格主题、D4选区跨主题保留与深色重开原生已验证；公式黑底/冻结拖柄/Canvas条仍周边未验，显式文件色为既有隔离引擎证据，非全部XLSX通过。旧vendor SHA迁移可重复通过；registry原始Office父/当前anchor6vs7既有失败边界保留。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -2066,17 +2340,42 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-588",
       "status": "待逐项核对",
-      "differences": [],
-      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+      "differences": [
+        "D63"
+      ],
+      "acceptanceBoundary": "16包仅隔离local feed启动失败记录，不是checking/available等UI证据。生产A/B公开更新入口仍不点击；后续只在已验证本地隔离通路检查metadata，下载/安装/完成更新拒绝。",
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "待逐项核对",
+          "differences": [],
+          "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+          "acceptancePreparation": {
+            "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
+            "nativeVerified": false,
+            "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+          }
         }
       ],
       "acceptancePreparation": {
         "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
         "nativeVerified": false,
-        "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+        "scope": "16隔离local feed入口启动真实报ERR_MODULE_NOT_FOUND electron-updater/out/AppUpdater，未进入可验UI。D63补齐外部ESM .js，待17 checking/up-to-date/available/error/retry；保持精确127同源、tmp隔离、failclosed及拒绝download/install/completeUpdate。S14无新增partial。"
+      },
+      "acceptanceAttempt": {
+        "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
+        "result": "ERR_MODULE_NOT_FOUND",
+        "module": "electron-updater/out/AppUpdater",
+        "nativeStateVerified": false,
+        "report": "d63-local-updater-esm-result.md"
+      },
+      "sourceFix": {
+        "difference": "D63",
+        "commit": "94209f61fff458d93d0e5f20608717b464eee816",
+        "nativeVerified": false,
+        "scope": "94209f6修正外部AppUpdater.js/AppAdapter.js路径；真实Vite外置ESM红转绿、43项聚焦及typecheck通过。待17原生，不回填16成功或给S14 partial。"
       }
     },
     {
@@ -2089,17 +2388,42 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-986",
       "status": "待逐项核对",
-      "differences": [],
-      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+      "differences": [
+        "D63"
+      ],
+      "acceptanceBoundary": "16包仅隔离local feed启动失败记录，不是checking/available等UI证据。生产A/B公开更新入口仍不点击；后续只在已验证本地隔离通路检查metadata，下载/安装/完成更新拒绝。",
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "待逐项核对",
+          "differences": [],
+          "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+          "acceptancePreparation": {
+            "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
+            "nativeVerified": false,
+            "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+          }
         }
       ],
       "acceptancePreparation": {
         "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
         "nativeVerified": false,
-        "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+        "scope": "16隔离local feed入口启动真实报ERR_MODULE_NOT_FOUND electron-updater/out/AppUpdater，未进入可验UI。D63补齐外部ESM .js，待17 checking/up-to-date/available/error/retry；保持精确127同源、tmp隔离、failclosed及拒绝download/install/completeUpdate。S14无新增partial。"
+      },
+      "acceptanceAttempt": {
+        "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
+        "result": "ERR_MODULE_NOT_FOUND",
+        "module": "electron-updater/out/AppUpdater",
+        "nativeStateVerified": false,
+        "report": "d63-local-updater-esm-result.md"
+      },
+      "sourceFix": {
+        "difference": "D63",
+        "commit": "94209f61fff458d93d0e5f20608717b464eee816",
+        "nativeVerified": false,
+        "scope": "94209f6修正外部AppUpdater.js/AppAdapter.js路径；真实Vite外置ESM红转绿、43项聚焦及typecheck通过。待17原生，不回填16成功或给S14 partial。"
       }
     },
     {
@@ -2112,17 +2436,42 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-680",
       "status": "待逐项核对",
-      "differences": [],
-      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+      "differences": [
+        "D63"
+      ],
+      "acceptanceBoundary": "16包仅隔离local feed启动失败记录，不是checking/available等UI证据。生产A/B公开更新入口仍不点击；后续只在已验证本地隔离通路检查metadata，下载/安装/完成更新拒绝。",
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "待逐项核对",
+          "differences": [],
+          "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+          "acceptancePreparation": {
+            "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
+            "nativeVerified": false,
+            "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+          }
         }
       ],
       "acceptancePreparation": {
         "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
         "nativeVerified": false,
-        "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+        "scope": "16隔离local feed入口启动真实报ERR_MODULE_NOT_FOUND electron-updater/out/AppUpdater，未进入可验UI。D63补齐外部ESM .js，待17 checking/up-to-date/available/error/retry；保持精确127同源、tmp隔离、failclosed及拒绝download/install/completeUpdate。S14无新增partial。"
+      },
+      "acceptanceAttempt": {
+        "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
+        "result": "ERR_MODULE_NOT_FOUND",
+        "module": "electron-updater/out/AppUpdater",
+        "nativeStateVerified": false,
+        "report": "d63-local-updater-esm-result.md"
+      },
+      "sourceFix": {
+        "difference": "D63",
+        "commit": "94209f61fff458d93d0e5f20608717b464eee816",
+        "nativeVerified": false,
+        "scope": "94209f6修正外部AppUpdater.js/AppAdapter.js路径；真实Vite外置ESM红转绿、43项聚焦及typecheck通过。待17原生，不回填16成功或给S14 partial。"
       }
     },
     {
@@ -2135,17 +2484,42 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=337-1078",
       "status": "待逐项核对",
-      "differences": [],
-      "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+      "differences": [
+        "D63"
+      ],
+      "acceptanceBoundary": "16包仅隔离local feed启动失败记录，不是checking/available等UI证据。生产A/B公开更新入口仍不点击；后续只在已验证本地隔离通路检查metadata，下载/安装/完成更新拒绝。",
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "待逐项核对",
+          "differences": [],
+          "acceptanceBoundary": "S14仅只读准备，未发网络或执行更新。A/B验收模式跳过更新器配置但手动IPC仍可能读取公开feed，默认自动下载/安装及共享缓存未隔离；不得点击检查更新。真实原生更新全链待独立安全通路。",
+          "acceptancePreparation": {
+            "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
+            "nativeVerified": false,
+            "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+          }
         }
       ],
       "acceptancePreparation": {
         "commit": "ab00395e5c34ed4fab7562f3f8cd3049a286eb19",
         "nativeVerified": false,
-        "scope": "仅validated本地隔离实例真实AppUpdater metadata检查链；checking/up-to-date/available/check-error/retry待16。精确127同源逐跳、tmp realpath隔离、failclosed；所有download/install/completeUpdate拒绝，不碰公开feed。无UI证据，不增加partial。"
+        "scope": "16隔离local feed入口启动真实报ERR_MODULE_NOT_FOUND electron-updater/out/AppUpdater，未进入可验UI。D63补齐外部ESM .js，待17 checking/up-to-date/available/error/retry；保持精确127同源、tmp隔离、failclosed及拒绝download/install/completeUpdate。S14无新增partial。"
+      },
+      "acceptanceAttempt": {
+        "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
+        "result": "ERR_MODULE_NOT_FOUND",
+        "module": "electron-updater/out/AppUpdater",
+        "nativeStateVerified": false,
+        "report": "d63-local-updater-esm-result.md"
+      },
+      "sourceFix": {
+        "difference": "D63",
+        "commit": "94209f61fff458d93d0e5f20608717b464eee816",
+        "nativeVerified": false,
+        "scope": "94209f6修正外部AppUpdater.js/AppAdapter.js路径；真实Vite外置ESM红转绿、43项聚焦及typecheck通过。待17原生，不回填16成功或给S14 partial。"
       }
     },
     {
@@ -3406,32 +3780,59 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-1406",
-      "status": "15首页模式菜单可见与局部几何已核，D60文字色差源码待16",
+      "status": "16模式名称/说明颜色与可见布局已局部原生复验；其余交互待验",
       "differences": [
         "D60"
       ],
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "15首页模式菜单可见与局部几何已核，D60文字色差源码待16",
+          "differences": [
+            "D60"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v15-home-mode-menu-light",
+            "v15-home-build-mode-selected-light"
+          ],
+          "evidencePackages": {
+            "v15-home-mode-menu-light": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+            "v15-home-build-mode-selected-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "light",
+          "evidenceNotes": "外392×166/r10，两行380×76/gap2，标题13/20、说明12/18且完整两行。浅构建勾选与入口图标/文字改变可见；不证明真实生成。标题实际浅0F1115/深F9FAFB对稿292B2F/E7E7E9，深说明979BA2对A3A6AB；浅说明7D828A符合。",
+          "sourceFix": {
+            "difference": "D60",
+            "commit": "488089352cd2e482c94ca530c2c9cde4f530de3e",
+            "nativeVerified": false,
+            "scope": "4880893仅模式标题双主题及深说明颜色；synthetic未含bundled base不作几何证明，待16原生。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
         "v15-home-mode-menu-light",
-        "v15-home-build-mode-selected-light"
+        "v15-home-build-mode-selected-light",
+        "v16-home-mode-menu-light"
       ],
       "evidencePackages": {
         "v15-home-mode-menu-light": "c694465a3b83716e49f79b3c8c468f3cdf850066",
-        "v15-home-build-mode-selected-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-build-mode-selected-light": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-mode-menu-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "外392×166/r10，两行380×76/gap2，标题13/20、说明12/18且完整两行。浅构建勾选与入口图标/文字改变可见；不证明真实生成。标题实际浅0F1115/深F9FAFB对稿292B2F/E7E7E9，深说明979BA2对A3A6AB；浅说明7D828A符合。",
+      "evidenceNotes": "392×166/r10，名称13/20浅292B2F深E7E7E9、说明12/18浅7D828A深A3A6AB；标准勾选及完整两行说明可见。保留15旧色失败及浅构建选择历史；本批不代验构建路由/键盘返回。",
       "sourceFix": {
         "difference": "D60",
         "commit": "488089352cd2e482c94ca530c2c9cde4f530de3e",
-        "nativeVerified": false,
-        "scope": "4880893仅模式标题双主题及深说明颜色；synthetic未含bundled base不作几何证明，待16原生。"
+        "nativeVerified": true,
+        "scope": "16普通模式菜单名称及说明双主题颜色已原生局部复验；非完整模式切换/执行验收。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -3443,30 +3844,55 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-1693",
-      "status": "15首页模式菜单可见与局部几何已核，D60文字色差源码待16",
+      "status": "16模式名称/说明颜色与可见布局已局部原生复验；其余交互待验",
       "differences": [
         "D60"
       ],
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "15首页模式菜单可见与局部几何已核，D60文字色差源码待16",
+          "differences": [
+            "D60"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v15-home-mode-menu-dark"
+          ],
+          "evidencePackages": {
+            "v15-home-mode-menu-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "外392×166/r10，两行380×76/gap2，标题13/20、说明12/18且完整两行。浅构建勾选与入口图标/文字改变可见；不证明真实生成。标题实际浅0F1115/深F9FAFB对稿292B2F/E7E7E9，深说明979BA2对A3A6AB；浅说明7D828A符合。",
+          "sourceFix": {
+            "difference": "D60",
+            "commit": "488089352cd2e482c94ca530c2c9cde4f530de3e",
+            "nativeVerified": false,
+            "scope": "4880893仅模式标题双主题及深说明颜色；synthetic未含bundled base不作几何证明，待16原生。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v15-home-mode-menu-dark"
+        "v15-home-mode-menu-dark",
+        "v16-home-mode-menu-dark"
       ],
       "evidencePackages": {
-        "v15-home-mode-menu-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-mode-menu-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-mode-menu-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "外392×166/r10，两行380×76/gap2，标题13/20、说明12/18且完整两行。浅构建勾选与入口图标/文字改变可见；不证明真实生成。标题实际浅0F1115/深F9FAFB对稿292B2F/E7E7E9，深说明979BA2对A3A6AB；浅说明7D828A符合。",
+      "evidenceNotes": "392×166/r10，名称13/20浅292B2F深E7E7E9、说明12/18浅7D828A深A3A6AB；标准勾选及完整两行说明可见。保留15旧色失败及浅构建选择历史；本批不代验构建路由/键盘返回。",
       "sourceFix": {
         "difference": "D60",
         "commit": "488089352cd2e482c94ca530c2c9cde4f530de3e",
-        "nativeVerified": false,
-        "scope": "4880893仅模式标题双主题及深说明颜色；synthetic未含bundled base不作几何证明，待16原生。"
+        "nativeVerified": true,
+        "scope": "16普通模式菜单名称及说明双主题颜色已原生局部复验；非完整模式切换/执行验收。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -3479,7 +3905,21 @@
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-1981",
       "status": "待逐项核对",
-      "differences": []
+      "differences": [
+        "D62"
+      ],
+      "verificationHistory": [
+        {
+          "status": "待逐项核对",
+          "differences": []
+        }
+      ],
+      "sourceFix": {
+        "difference": "D62",
+        "commit": "d5532c73010df05a0b8c2e7b04e981d11367da82",
+        "nativeVerified": false,
+        "scope": "d5532c7工作区搜索菜单201高、footer分隔/添加行及局部文字/勾选修复，真实Menu隔离7项通过；待17原生。保持原帧核验状态，不以源码增加partial。"
+      }
     },
     {
       "section": "12A 输入与模式 · 菜单展开",
@@ -3492,12 +3932,31 @@
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-2262",
       "status": "已记录差异；局部实机复验中",
       "differences": [
-        "D06"
+        "D06",
+        "D62"
       ],
       "evidence": [
         "actual/v2-workspace-filtered-confirmed.png",
         "actual/v2-workspace-filtered-confirmed.json"
-      ]
+      ],
+      "verificationHistory": [
+        {
+          "status": "已记录差异；局部实机复验中",
+          "differences": [
+            "D06"
+          ],
+          "evidence": [
+            "actual/v2-workspace-filtered-confirmed.png",
+            "actual/v2-workspace-filtered-confirmed.json"
+          ]
+        }
+      ],
+      "sourceFix": {
+        "difference": "D62",
+        "commit": "d5532c73010df05a0b8c2e7b04e981d11367da82",
+        "nativeVerified": false,
+        "scope": "d5532c7工作区搜索菜单201高、footer分隔/添加行及局部文字/勾选修复，真实Menu隔离7项通过；待17原生。保持原帧核验状态，不以源码增加partial。"
+      }
     },
     {
       "section": "12A 输入与模式 · 菜单展开",
@@ -3508,30 +3967,55 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-2544",
-      "status": "15首页执行权限菜单几何/说明与名称色差已核；D61源码待16",
+      "status": "16权限名称/说明主题色与菜单几何已局部原生复验；未扩大权限",
       "differences": [
         "D61"
       ],
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "15首页执行权限菜单几何/说明与名称色差已核；D61源码待16",
+          "differences": [
+            "D61"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v15-home-permission-light"
+          ],
+          "evidencePackages": {
+            "v15-home-permission-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "light",
+          "evidenceNotes": "外320×208、三行308×64；工作区写入勾选、三段说明完整；直接permission-name浅0F1115/深F9FAFB对稿242424/E6E6E6，说明757575/9C9C9C符合。深色完全访问仅打开风险确认后取消，未勾选或授权扩大。",
+          "sourceFix": {
+            "difference": "D61",
+            "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
+            "nativeVerified": false,
+            "scope": "79f0846权限直接名称色修正；d61-focused.log实际3文件5测试通过，Chromium颜色检查通过，待16原生。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v15-home-permission-light"
+        "v15-home-permission-light",
+        "v16-home-permission-light"
       ],
       "evidencePackages": {
-        "v15-home-permission-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-permission-light": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-permission-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "外320×208、三行308×64；工作区写入勾选、三段说明完整；直接permission-name浅0F1115/深F9FAFB对稿242424/E6E6E6，说明757575/9C9C9C符合。深色完全访问仅打开风险确认后取消，未勾选或授权扩大。",
+      "evidenceNotes": "320×208/r10；名称13/20浅242424深E6E6E6，说明11/18浅757575深9C9C9C。15旧名称色失败保留；本批截图不证明完全访问确认或权限提升。",
       "sourceFix": {
         "difference": "D61",
         "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
-        "nativeVerified": false,
-        "scope": "79f0846权限直接名称色修正；d61-focused.log实际3文件5测试通过，Chromium颜色检查通过，待16原生。"
+        "nativeVerified": true,
+        "scope": "16权限普通菜单直接名称/说明两主题色已局部原生复验；确认流程与权限业务不代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -3543,7 +4027,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-2823",
-      "status": "15首页执行权限菜单几何/说明与名称色差已核；D61源码待16",
+      "status": "16权限名称/说明主题色与菜单几何已局部原生复验；未扩大权限",
       "differences": [
         "D03",
         "D61"
@@ -3552,7 +4036,8 @@
         "actual/v2-permission-dark.png",
         "actual/v2-permission-dark.json",
         "v15-home-permission-dark",
-        "v15-full-access-confirm-dark"
+        "v15-full-access-confirm-dark",
+        "v16-home-permission-dark"
       ],
       "verificationHistory": [
         {
@@ -3561,21 +4046,50 @@
             "actual/v2-permission-dark.png",
             "actual/v2-permission-dark.json"
           ]
+        },
+        {
+          "status": "15首页执行权限菜单几何/说明与名称色差已核；D61源码待16",
+          "differences": [
+            "D03",
+            "D61"
+          ],
+          "evidence": [
+            "actual/v2-permission-dark.png",
+            "actual/v2-permission-dark.json",
+            "v15-home-permission-dark",
+            "v15-full-access-confirm-dark"
+          ],
+          "verificationLevel": "partial",
+          "evidencePackages": {
+            "v15-home-permission-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+            "v15-full-access-confirm-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "外320×208、三行308×64；工作区写入勾选、三段说明完整；直接permission-name浅0F1115/深F9FAFB对稿242424/E6E6E6，说明757575/9C9C9C符合。深色完全访问仅打开风险确认后取消，未勾选或授权扩大。",
+          "sourceFix": {
+            "difference": "D61",
+            "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
+            "nativeVerified": false,
+            "scope": "79f0846权限直接名称色修正；d61-focused.log实际3文件5测试通过，Chromium颜色检查通过，待16原生。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidencePackages": {
         "v15-home-permission-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066",
-        "v15-full-access-confirm-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-full-access-confirm-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-permission-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "外320×208、三行308×64；工作区写入勾选、三段说明完整；直接permission-name浅0F1115/深F9FAFB对稿242424/E6E6E6，说明757575/9C9C9C符合。深色完全访问仅打开风险确认后取消，未勾选或授权扩大。",
+      "evidenceNotes": "320×208/r10；名称13/20浅242424深E6E6E6，说明11/18浅757575深9C9C9C。15旧名称色失败保留；本批截图不证明完全访问确认或权限提升。",
       "sourceFix": {
         "difference": "D61",
         "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
-        "nativeVerified": false,
-        "scope": "79f0846权限直接名称色修正；d61-focused.log实际3文件5测试通过，Chromium颜色检查通过，待16原生。"
+        "nativeVerified": true,
+        "scope": "16权限普通菜单直接名称/说明两主题色已局部原生复验；确认流程与权限业务不代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -3587,30 +4101,55 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-3103",
-      "status": "15首页普通模型目录/选中已可见并核实局部色差；D61源码待16",
+      "status": "16普通有结果模型目录的D61颜色已局部原生复验；空态/其他操作待验",
       "differences": [
         "D61"
       ],
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "15首页普通模型目录/选中已可见并核实局部色差；D61源码待16",
+          "differences": [
+            "D61"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v15-home-model-selected-light"
+          ],
+          "evidencePackages": {
+            "v15-home-model-selected-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "light",
+          "evidenceNotes": "一个本地模型菜单320×150，搜索/提供方/当前勾/管理入口可见；模型无推理等级不强套320×202示例。直接名称浅252525/深E5E5E5对242424/E6E6E6，groupTitle81858C/ADB2B8对757575/9C9C9C；浅选中F1F1F3对F0，footer分隔DFE0E3/444549对E3/424242。外边框原DFE0E3/444549符合，不能误套footer颜色。未验另模型选择、推理或管理操作。",
+          "sourceFix": {
+            "difference": "D61",
+            "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
+            "nativeVerified": false,
+            "scope": "79f0846普通模型名称、分组、浅选中与footer分隔局部色修正；3文件5测试及Chromium颜色通过，待16。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v15-home-model-selected-light"
+        "v15-home-model-selected-light",
+        "v16-home-model-selected-light"
       ],
       "evidencePackages": {
-        "v15-home-model-selected-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-model-selected-light": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-model-selected-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "一个本地模型菜单320×150，搜索/提供方/当前勾/管理入口可见；模型无推理等级不强套320×202示例。直接名称浅252525/深E5E5E5对242424/E6E6E6，groupTitle81858C/ADB2B8对757575/9C9C9C；浅选中F1F1F3对F0，footer分隔DFE0E3/444549对E3/424242。外边框原DFE0E3/444549符合，不能误套footer颜色。未验另模型选择、推理或管理操作。",
+      "evidenceNotes": "单一本地模型320×150/r10；名称13/20浅242424深E6E6E6；分组11/18浅757575深9C9C9C；选中308×34浅F0F0F0深373737；管理入口13/20同名色，footer分隔E3E3E3/424242。15旧色失败保留；项目数不强套示例高度，空目录/搜索无结果仍仅代码或隔离证据。",
       "sourceFix": {
         "difference": "D61",
         "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
-        "nativeVerified": false,
-        "scope": "79f0846普通模型名称、分组、浅选中与footer分隔局部色修正；3文件5测试及Chromium颜色通过，待16。"
+        "nativeVerified": true,
+        "scope": "16普通有结果目录的名称、分组、选中、footer局部两主题原生复验；空态/推理/管理动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -3622,7 +4161,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=667-3387",
-      "status": "15首页普通模型目录/选中已可见并核实局部色差；D61源码待16",
+      "status": "16普通有结果模型目录的D61颜色已局部原生复验；空态/其他操作待验",
       "differences": [
         "D01",
         "D02",
@@ -3632,7 +4171,8 @@
       "evidence": [
         "actual/model-menu-dark.png",
         "actual/model-menu-dark.json",
-        "v15-home-model-selected-dark"
+        "v15-home-model-selected-dark",
+        "v16-home-model-selected-dark"
       ],
       "verificationHistory": [
         {
@@ -3641,20 +4181,49 @@
             "actual/model-menu-dark.png",
             "actual/model-menu-dark.json"
           ]
+        },
+        {
+          "status": "15首页普通模型目录/选中已可见并核实局部色差；D61源码待16",
+          "differences": [
+            "D01",
+            "D02",
+            "V01",
+            "D61"
+          ],
+          "evidence": [
+            "actual/model-menu-dark.png",
+            "actual/model-menu-dark.json",
+            "v15-home-model-selected-dark"
+          ],
+          "verificationLevel": "partial",
+          "evidencePackages": {
+            "v15-home-model-selected-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "一个本地模型菜单320×150，搜索/提供方/当前勾/管理入口可见；模型无推理等级不强套320×202示例。直接名称浅252525/深E5E5E5对242424/E6E6E6，groupTitle81858C/ADB2B8对757575/9C9C9C；浅选中F1F1F3对F0，footer分隔DFE0E3/444549对E3/424242。外边框原DFE0E3/444549符合，不能误套footer颜色。未验另模型选择、推理或管理操作。",
+          "sourceFix": {
+            "difference": "D61",
+            "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
+            "nativeVerified": false,
+            "scope": "79f0846普通模型名称、分组、浅选中与footer分隔局部色修正；3文件5测试及Chromium颜色通过，待16。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidencePackages": {
-        "v15-home-model-selected-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-model-selected-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-model-selected-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "一个本地模型菜单320×150，搜索/提供方/当前勾/管理入口可见；模型无推理等级不强套320×202示例。直接名称浅252525/深E5E5E5对242424/E6E6E6，groupTitle81858C/ADB2B8对757575/9C9C9C；浅选中F1F1F3对F0，footer分隔DFE0E3/444549对E3/424242。外边框原DFE0E3/444549符合，不能误套footer颜色。未验另模型选择、推理或管理操作。",
+      "evidenceNotes": "单一本地模型320×150/r10；名称13/20浅242424深E6E6E6；分组11/18浅757575深9C9C9C；选中308×34浅F0F0F0深373737；管理入口13/20同名色，footer分隔E3E3E3/424242。15旧色失败保留；项目数不强套示例高度，空目录/搜索无结果仍仅代码或隔离证据。",
       "sourceFix": {
         "difference": "D61",
         "commit": "79f0846bfc1400a12f8261904b1482bd3ad4ebf1",
-        "nativeVerified": false,
-        "scope": "79f0846普通模型名称、分组、浅选中与footer分隔局部色修正；3文件5测试及Chromium颜色通过，待16。"
+        "nativeVerified": true,
+        "scope": "16普通有结果目录的名称、分组、选中、footer局部两主题原生复验；空态/推理/管理动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -5414,7 +5983,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=683-27005",
-      "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+      "status": "16首页D52/D53/D58/D59局部原生复验符合；15失败保留，整页未通过",
       "differences": [
         "D52",
         "D53",
@@ -5450,47 +6019,103 @@
               ]
             }
           ]
+        },
+        {
+          "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+          "differences": [
+            "D52",
+            "D53",
+            "D58",
+            "D59"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v13-home-clean-normal-right-closed-light",
+            "v15-home-closed-light"
+          ],
+          "evidencePackages": {
+            "v13-home-clean-normal-right-closed-light": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+            "v15-home-closed-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "light",
+          "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+          "sourceFix": {
+            "difference": "D52",
+            "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
+            "nativeVerified": false,
+            "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D53",
+              "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
+              "nativeVerified": false,
+              "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+              "supportingCommits": [
+                "0c5977131e71ac080479927e87e428432a073ba2"
+              ]
+            },
+            {
+              "difference": "D58",
+              "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
+              "nativeVerified": false,
+              "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+            },
+            {
+              "difference": "D59",
+              "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
+              "nativeVerified": false,
+              "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
         "v13-home-clean-normal-right-closed-light",
-        "v15-home-closed-light"
+        "v15-home-closed-light",
+        "v16-home-closed-light"
       ],
       "evidencePackages": {
         "v13-home-clean-normal-right-closed-light": "3bc317174cf0299eef3e1f50e68b004847530ce3",
-        "v15-home-closed-light": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-closed-light": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-closed-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+      "evidenceNotes": "16实测1380×900，header56/透明/none，regular标题14/20/500、浅252525深E5E5E5、标题到导航24；tabs56×28/r7/gap4、主题文字及选中底相符。首页header模式控件隐藏，输入上方入口保留。输入126/r10.5、浅F9F9F9深292929实色none；入口row左内距8、工作区→模式12、控件下沿→输入8。旧15的14/21/gap12、blur32/r16失败保留在历史；不代验窄窗/hover/研究与轨迹导航/连续动画。本帧闭右栏center1090×880/r12，输入x435/w780。A稿仅采用重合局部属性，不宣称全部备选采用。",
       "sourceFix": {
         "difference": "D52",
         "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
-        "nativeVerified": false,
-        "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+        "nativeVerified": true,
+        "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D53",
           "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
-          "nativeVerified": false,
-          "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
           "supportingCommits": [
             "0c5977131e71ac080479927e87e428432a073ba2"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D58",
           "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
-          "nativeVerified": false,
-          "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D59",
           "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
-          "nativeVerified": false,
-          "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
@@ -5503,7 +6128,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=683-27254",
-      "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+      "status": "16首页D52/D53/D58/D59局部原生复验符合；15失败保留，整页未通过",
       "differences": [
         "D52",
         "D53",
@@ -5539,47 +6164,103 @@
               ]
             }
           ]
+        },
+        {
+          "status": "15闭栏首页原生仍复现D52/D53；D58/D59源码待16，不代表整页通过",
+          "differences": [
+            "D52",
+            "D53",
+            "D58",
+            "D59"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v13-home-clean-normal-right-closed-dark",
+            "v15-home-closed-dark"
+          ],
+          "evidencePackages": {
+            "v13-home-clean-normal-right-closed-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+            "v15-home-closed-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+          },
+          "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+          "sourceFix": {
+            "difference": "D52",
+            "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
+            "nativeVerified": false,
+            "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D53",
+              "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
+              "nativeVerified": false,
+              "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+              "supportingCommits": [
+                "0c5977131e71ac080479927e87e428432a073ba2"
+              ]
+            },
+            {
+              "difference": "D58",
+              "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
+              "nativeVerified": false,
+              "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+            },
+            {
+              "difference": "D59",
+              "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
+              "nativeVerified": false,
+              "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
         "v13-home-clean-normal-right-closed-dark",
-        "v15-home-closed-dark"
+        "v15-home-closed-dark",
+        "v16-home-closed-dark"
       ],
       "evidencePackages": {
         "v13-home-clean-normal-right-closed-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3",
-        "v15-home-closed-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066"
+        "v15-home-closed-dark": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+        "v16-home-closed-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "c694465a3b83716e49f79b3c8c468f3cdf850066",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "实际1380×900，闭栏center1090×880/r16、header56/blur32；regular标题14/21、标题到导航12、颜色旧值。与常规14/20/24、闭栏r12、空态连续背景不符。d53-native15-ancestors实测header有匿名父DIV致直接子选择器失配；matchedstyles证实#root后置r16覆盖home r12。输入780×126/r10.5实色none符合采用规则。首页工作区/模式8/12/8间距另D59源码待16；保留v15失败。",
+      "evidenceNotes": "16实测1380×900，header56/透明/none，regular标题14/20/500、浅252525深E5E5E5、标题到导航24；tabs56×28/r7/gap4、主题文字及选中底相符。首页header模式控件隐藏，输入上方入口保留。输入126/r10.5、浅F9F9F9深292929实色none；入口row左内距8、工作区→模式12、控件下沿→输入8。旧15的14/21/gap12、blur32/r16失败保留在历史；不代验窄窗/hover/研究与轨迹导航/连续动画。本帧闭右栏center1090×880/r12，输入x435/w780。A稿仅采用重合局部属性，不宣称全部备选采用。",
       "sourceFix": {
         "difference": "D52",
         "commit": "719941787de38c95fbc1e381dfd4332d99905ec9",
-        "nativeVerified": false,
-        "scope": "常规宽导航标题14/20、标题到tabs24及局部两主题颜色，窄版14/21/12保留；7199417待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。"
+        "nativeVerified": true,
+        "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D53",
           "commit": "1c72a71a95eb39cb04b43b1a7f67ca2866a7127a",
-          "nativeVerified": false,
-          "scope": "首页顶栏连续背景/关闭侧栏主区12圆角；展开16和126实色输入保留；0c59771及优先级1c72a71待包15原生复验；第15包闭栏真实regular仍14/21/gap12、header blur32/r16，不能声明原生已修；D58后待16对应状态复验。",
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
           "supportingCommits": [
             "0c5977131e71ac080479927e87e428432a073ba2"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D58",
           "commit": "28b30a9e59ac0e5ed26f69e5144685b9e9f24da6",
-          "nativeVerified": false,
-          "scope": "适配真实header匿名插槽与display:contents、局部级联修正D52/D53；28b30a9源码通过，待16对应状态原生，未借闭栏证据代验开栏。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         },
         {
           "difference": "D59",
           "commit": "608b7bd131dd5e37e49d39dee9cf669840e59455",
-          "nativeVerified": false,
-          "scope": "首页工作区与模式入口间距8/12/8及输入居中，608b7bd源码；当前15截图为修复前，待16。"
+          "nativeVerified": true,
+          "scope": "16对应首页开/闭栏及本主题局部原生复验；14/20/24、连续header、相应12或16圆角及8/12/8入口均符合。旧15失败保留；窄窗、动画、其余导航与动作未代验。",
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
@@ -6549,7 +7230,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=749-27747",
-      "status": "14b屏内普通正文748对输入780的D56已证；源码待16",
+      "status": "16普通会话可见正文与输入同列已局部原生复验；14b失败保留",
       "differences": [
         "D31",
         "D56"
@@ -6557,9 +7238,11 @@
       "evidence": [
         "v10-task-completed-expanded-light",
         "v13-task-completed-collapsed-light",
-        "v14-long-reading-visible-column-light"
+        "v14-long-reading-visible-column-light",
+        "v16-conversation-right-open-light",
+        "v16-conversation-closed-light"
       ],
-      "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verificationHistory": [
         {
           "evidence": [
@@ -6584,20 +7267,49 @@
           "packageCommit": "3bc317174cf0299eef3e1f50e68b004847530ce3",
           "evidenceNotes": "同列780，收起40或展开216/清单168；浅色列表到底scrollTop28看到第7项。仅任务固定区，普通正文屏外computed不能作为整段可见宽度通过。旧v10 expanded/collapsed浅色文件名相反的更正保留在历史；turn/start清空投影不是重启丢任务。",
           "verifiedTheme": "light"
+        },
+        {
+          "status": "14b屏内普通正文748对输入780的D56已证；源码待16",
+          "differences": [
+            "D31",
+            "D56"
+          ],
+          "evidence": [
+            "v10-task-completed-expanded-light",
+            "v13-task-completed-collapsed-light",
+            "v14-long-reading-visible-column-light"
+          ],
+          "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+          "evidenceNotes": "屏内段落x447/w748，固定区x435/w780，font15/26、浅2B/深E5符合；列宽少32，不能用旧652要求改当前780。引用/代码/表格自身padding不混同。",
+          "verificationLevel": "partial",
+          "evidencePackages": {
+            "v13-task-completed-collapsed-light": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+            "v14-long-reading-visible-column-light": "525b5b565e109d5f16da7332a71e9475b1727e75"
+          },
+          "verifiedTheme": "light",
+          "sourceFix": {
+            "difference": "D56",
+            "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
+            "nativeVerified": false,
+            "scope": "d7505de统一普通会话正文与输入列宽；14b真实内缩失败保留，待16可见正文复验。"
+          }
         }
       ],
-      "evidenceNotes": "屏内段落x447/w748，固定区x435/w780，font15/26、浅2B/深E5符合；列宽少32，不能用旧652要求改当前780。引用/代码/表格自身padding不混同。",
+      "evidenceNotes": "16闭栏浅色可见p/代码/表/helper/input同x435/w780；开栏本主题table/helper/input同x296/w708，li自身缩进18至x314/w690。正文/列表15/26浅2B2B2B深E5E5E5；父Markdown/table的16/28为独立样式，不当失败。普通会话header14/20/24/56亦核对；14b内缩748失败保留。两条左缘QueryRail对应真实两条查询，不是正文外溢。未代验窄窗及本批表格滚动/打开关闭/阅读锚点。",
       "verificationLevel": "partial",
       "evidencePackages": {
         "v13-task-completed-collapsed-light": "3bc317174cf0299eef3e1f50e68b004847530ce3",
-        "v14-long-reading-visible-column-light": "525b5b565e109d5f16da7332a71e9475b1727e75"
+        "v14-long-reading-visible-column-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+        "v16-conversation-right-open-light": "e050620994cc58b0d54f2642a571668076288ea4",
+        "v16-conversation-closed-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "verifiedTheme": "light",
       "sourceFix": {
         "difference": "D56",
         "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
-        "nativeVerified": false,
-        "scope": "d7505de统一普通会话正文与输入列宽；14b真实内缩失败保留，待16可见正文复验。"
+        "nativeVerified": true,
+        "scope": "16闭栏浅色780列及开栏本主题708列局部原生复验，列表自身18缩进保留；不代验内容全部状态。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -6609,7 +7321,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=749-27977",
-      "status": "14b屏内普通正文748对输入780的D56已证；源码待16",
+      "status": "16普通会话可见正文与输入同列已局部原生复验；14b失败保留",
       "differences": [
         "D56"
       ],
@@ -6625,25 +7337,52 @@
           "packageCommit": "3bc317174cf0299eef3e1f50e68b004847530ce3",
           "verifiedTheme": "dark",
           "evidenceNotes": "同列780，收起40或展开216/清单168；浅色列表到底scrollTop28看到第7项。仅任务固定区，普通正文屏外computed不能作为整段可见宽度通过。旧v10 expanded/collapsed浅色文件名相反的更正保留在历史；turn/start清空投影不是重启丢任务。"
+        },
+        {
+          "status": "14b屏内普通正文748对输入780的D56已证；源码待16",
+          "differences": [
+            "D56"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v13-task-completed-collapsed-dark",
+            "v14-long-reading-visible-column-dark"
+          ],
+          "evidencePackages": {
+            "v13-task-completed-collapsed-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3",
+            "v14-long-reading-visible-column-dark": "525b5b565e109d5f16da7332a71e9475b1727e75"
+          },
+          "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "屏内段落x447/w748，固定区x435/w780，font15/26、浅2B/深E5符合；列宽少32，不能用旧652要求改当前780。引用/代码/表格自身padding不混同。",
+          "sourceFix": {
+            "difference": "D56",
+            "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
+            "nativeVerified": false,
+            "scope": "d7505de统一普通会话正文与输入列宽；14b真实内缩失败保留，待16可见正文复验。"
+          }
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
         "v13-task-completed-collapsed-dark",
-        "v14-long-reading-visible-column-dark"
+        "v14-long-reading-visible-column-dark",
+        "v16-conversation-right-open-dark"
       ],
       "evidencePackages": {
         "v13-task-completed-collapsed-dark": "3bc317174cf0299eef3e1f50e68b004847530ce3",
-        "v14-long-reading-visible-column-dark": "525b5b565e109d5f16da7332a71e9475b1727e75"
+        "v14-long-reading-visible-column-dark": "525b5b565e109d5f16da7332a71e9475b1727e75",
+        "v16-conversation-right-open-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "屏内段落x447/w748，固定区x435/w780，font15/26、浅2B/深E5符合；列宽少32，不能用旧652要求改当前780。引用/代码/表格自身padding不混同。",
+      "evidenceNotes": "16闭栏浅色可见p/代码/表/helper/input同x435/w780；开栏本主题table/helper/input同x296/w708，li自身缩进18至x314/w690。正文/列表15/26浅2B2B2B深E5E5E5；父Markdown/table的16/28为独立样式，不当失败。普通会话header14/20/24/56亦核对；14b内缩748失败保留。两条左缘QueryRail对应真实两条查询，不是正文外溢。未代验窄窗及本批表格滚动/打开关闭/阅读锚点。",
       "sourceFix": {
         "difference": "D56",
         "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
-        "nativeVerified": false,
-        "scope": "d7505de统一普通会话正文与输入列宽；14b真实内缩失败保留，待16可见正文复验。"
+        "nativeVerified": true,
+        "scope": "16闭栏浅色780列及开栏本主题708列局部原生复验，列表自身18缩进保留；不代验内容全部状态。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       }
     },
     {
@@ -6813,7 +7552,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=751-27843",
-      "status": "14b宽表helper局部色/行高差异及浅色滚动锚点已核；D56/D57待16",
+      "status": "16宽表helper的12/24与主题色、同列宽已局部原生复验；滚动往返待验",
       "differences": [
         "D56",
         "D57"
@@ -6821,6 +7560,50 @@
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "14b宽表helper局部色/行高差异及浅色滚动锚点已核；D56/D57待16",
+          "differences": [
+            "D56",
+            "D57"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v14-long-table-footer-light",
+            "v14-inline-table-horizontal-light",
+            "v14-long-table-full-horizontal-light",
+            "v14-table-coordinate-before-light",
+            "v14-table-coordinate-open-light",
+            "v14-table-coordinate-close-light"
+          ],
+          "evidencePackages": {
+            "v14-long-table-footer-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+            "v14-inline-table-horizontal-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+            "v14-long-table-full-horizontal-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+            "v14-table-coordinate-before-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+            "v14-table-coordinate-open-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+            "v14-table-coordinate-close-light": "525b5b565e109d5f16da7332a71e9475b1727e75"
+          },
+          "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+          "verifiedTheme": "light",
+          "evidenceNotes": "helper屏内框748×24、字12/20、浅777/深A0；Figma752/753:27866为12/24、浅2B/深E5，框高24本就符合。宽748归D56。浅内表left200/pageLeft0，完整弹窗left200/dialogTop304，非最右列全可达。AXclick自动定位7689→7969不可当产品锚点bug；独立坐标before/open/close均7699且Esc回入口，保持本次锚点。原深宽表白底/E5文字冲突不作为刷白产品依据。",
+          "sourceFix": {
+            "difference": "D56",
+            "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
+            "nativeVerified": false,
+            "scope": "普通内容列748→780源码；不改变表格自身padding，待16。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D57",
+              "commit": "e039935a7a875a08f4062d32b6736dc925fa9d63",
+              "nativeVerified": false,
+              "scope": "主对话宽表helper颜色及12/24，synthetic已核且排除轨迹/侧栏，待16真实helper。",
+              "supportingCommits": [
+                "e492bd2b7a39ed8d21e39e3ff050e9c2106db4af"
+              ]
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
@@ -6830,7 +7613,10 @@
         "v14-long-table-full-horizontal-light",
         "v14-table-coordinate-before-light",
         "v14-table-coordinate-open-light",
-        "v14-table-coordinate-close-light"
+        "v14-table-coordinate-close-light",
+        "v16-table-helper-visible-light",
+        "v16-conversation-right-open-light",
+        "v16-conversation-closed-light"
       ],
       "evidencePackages": {
         "v14-long-table-footer-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
@@ -6838,26 +7624,31 @@
         "v14-long-table-full-horizontal-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
         "v14-table-coordinate-before-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
         "v14-table-coordinate-open-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
-        "v14-table-coordinate-close-light": "525b5b565e109d5f16da7332a71e9475b1727e75"
+        "v14-table-coordinate-close-light": "525b5b565e109d5f16da7332a71e9475b1727e75",
+        "v16-table-helper-visible-light": "e050620994cc58b0d54f2642a571668076288ea4",
+        "v16-conversation-right-open-light": "e050620994cc58b0d54f2642a571668076288ea4",
+        "v16-conversation-closed-light": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "light",
-      "evidenceNotes": "helper屏内框748×24、字12/20、浅777/深A0；Figma752/753:27866为12/24、浅2B/深E5，框高24本就符合。宽748归D56。浅内表left200/pageLeft0，完整弹窗left200/dialogTop304，非最右列全可达。AXclick自动定位7689→7969不可当产品锚点bug；独立坐标before/open/close均7699且Esc回入口，保持本次锚点。原深宽表白底/E5文字冲突不作为刷白产品依据。",
+      "evidenceNotes": "16闭栏浅色可见p/代码/表/helper/input同x435/w780；开栏本主题table/helper/input同x296/w708，li自身缩进18至x314/w690。正文/列表15/26浅2B2B2B深E5E5E5；父Markdown/table的16/28为独立样式，不当失败。普通会话header14/20/24/56亦核对；14b内缩748失败保留。两条左缘QueryRail对应真实两条查询，不是正文外溢。未代验窄窗及本批表格滚动/打开关闭/阅读锚点。helper闭栏x435/y404/w780/h24、12/24浅2B2B2B深E5E5E5；提示/打开完整表格入口均清晰，无裁断。14b框高原已24但字12/20/旧色的失败历史保留；浅色旧锚点证据不当本批重验。",
       "sourceFix": {
         "difference": "D56",
         "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
-        "nativeVerified": false,
-        "scope": "普通内容列748→780源码；不改变表格自身padding，待16。"
+        "nativeVerified": true,
+        "scope": "16宽表/helper闭栏780、开栏708与输入同列局部原生复验；表内padding和滚动行为不外推。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D57",
           "commit": "e039935a7a875a08f4062d32b6736dc925fa9d63",
-          "nativeVerified": false,
-          "scope": "主对话宽表helper颜色及12/24，synthetic已核且排除轨迹/侧栏，待16真实helper。",
+          "nativeVerified": true,
+          "scope": "16真实可见helper两主题12/24及2B2B2B/E5E5E5局部原生复验；本批未重验横滚末端、完整表格开闭和阅读位置恢复。",
           "supportingCommits": [
             "e492bd2b7a39ed8d21e39e3ff050e9c2106db4af"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
@@ -6870,7 +7661,7 @@
         "height": 1100.0
       },
       "figmaUrl": "https://www.figma.com/design/Jkyr5rMvgM8GNH6E68xnqd?node-id=751-28073",
-      "status": "14b宽表helper局部色/行高差异及浅色滚动锚点已核；D56/D57待16",
+      "status": "16宽表helper的12/24与主题色、同列宽已局部原生复验；滚动往返待验",
       "differences": [
         "D56",
         "D57"
@@ -6878,33 +7669,73 @@
       "verificationHistory": [
         {
           "status": "待逐项核对"
+        },
+        {
+          "status": "14b宽表helper局部色/行高差异及浅色滚动锚点已核；D56/D57待16",
+          "differences": [
+            "D56",
+            "D57"
+          ],
+          "verificationLevel": "partial",
+          "evidence": [
+            "v14-long-table-footer-dark"
+          ],
+          "evidencePackages": {
+            "v14-long-table-footer-dark": "525b5b565e109d5f16da7332a71e9475b1727e75"
+          },
+          "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+          "verifiedTheme": "dark",
+          "evidenceNotes": "helper屏内框748×24、字12/20、浅777/深A0；Figma752/753:27866为12/24、浅2B/深E5，框高24本就符合。宽748归D56。深色完整弹窗/横滚尚未原生覆盖。原深宽表白底/E5文字冲突不作为刷白产品依据。",
+          "sourceFix": {
+            "difference": "D56",
+            "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
+            "nativeVerified": false,
+            "scope": "普通内容列748→780源码；不改变表格自身padding，待16。"
+          },
+          "sourceFixes": [
+            {
+              "difference": "D57",
+              "commit": "e039935a7a875a08f4062d32b6736dc925fa9d63",
+              "nativeVerified": false,
+              "scope": "主对话宽表helper颜色及12/24，synthetic已核且排除轨迹/侧栏，待16真实helper。",
+              "supportingCommits": [
+                "e492bd2b7a39ed8d21e39e3ff050e9c2106db4af"
+              ]
+            }
+          ]
         }
       ],
       "verificationLevel": "partial",
       "evidence": [
-        "v14-long-table-footer-dark"
+        "v14-long-table-footer-dark",
+        "v16-table-helper-visible-dark",
+        "v16-conversation-right-open-dark"
       ],
       "evidencePackages": {
-        "v14-long-table-footer-dark": "525b5b565e109d5f16da7332a71e9475b1727e75"
+        "v14-long-table-footer-dark": "525b5b565e109d5f16da7332a71e9475b1727e75",
+        "v16-table-helper-visible-dark": "e050620994cc58b0d54f2642a571668076288ea4",
+        "v16-conversation-right-open-dark": "e050620994cc58b0d54f2642a571668076288ea4"
       },
-      "packageCommit": "525b5b565e109d5f16da7332a71e9475b1727e75",
+      "packageCommit": "e050620994cc58b0d54f2642a571668076288ea4",
       "verifiedTheme": "dark",
-      "evidenceNotes": "helper屏内框748×24、字12/20、浅777/深A0；Figma752/753:27866为12/24、浅2B/深E5，框高24本就符合。宽748归D56。深色完整弹窗/横滚尚未原生覆盖。原深宽表白底/E5文字冲突不作为刷白产品依据。",
+      "evidenceNotes": "16闭栏浅色可见p/代码/表/helper/input同x435/w780；开栏本主题table/helper/input同x296/w708，li自身缩进18至x314/w690。正文/列表15/26浅2B2B2B深E5E5E5；父Markdown/table的16/28为独立样式，不当失败。普通会话header14/20/24/56亦核对；14b内缩748失败保留。两条左缘QueryRail对应真实两条查询，不是正文外溢。未代验窄窗及本批表格滚动/打开关闭/阅读锚点。helper闭栏x435/y404/w780/h24、12/24浅2B2B2B深E5E5E5；提示/打开完整表格入口均清晰，无裁断。14b框高原已24但字12/20/旧色的失败历史保留；浅色旧锚点证据不当本批重验。",
       "sourceFix": {
         "difference": "D56",
         "commit": "d7505dec8de242c09c3b7639642f836c14fcab32",
-        "nativeVerified": false,
-        "scope": "普通内容列748→780源码；不改变表格自身padding，待16。"
+        "nativeVerified": true,
+        "scope": "16宽表/helper闭栏780、开栏708与输入同列局部原生复验；表内padding和滚动行为不外推。",
+        "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
       },
       "sourceFixes": [
         {
           "difference": "D57",
           "commit": "e039935a7a875a08f4062d32b6736dc925fa9d63",
-          "nativeVerified": false,
-          "scope": "主对话宽表helper颜色及12/24，synthetic已核且排除轨迹/侧栏，待16真实helper。",
+          "nativeVerified": true,
+          "scope": "16真实可见helper两主题12/24及2B2B2B/E5E5E5局部原生复验；本批未重验横滚末端、完整表格开闭和阅读位置恢复。",
           "supportingCommits": [
             "e492bd2b7a39ed8d21e39e3ff050e9c2106db4af"
-          ]
+          ],
+          "nativePackageCommit": "e050620994cc58b0d54f2642a571668076288ea4"
         }
       ]
     },
