@@ -1,6 +1,6 @@
 import type { UpdateStatus } from '../shared/contracts'
 import { installSidebarNoticeStyles, noticeIcon, positionSidebarNotice } from './sidebar-notice'
-import { updateMessage } from './update-view'
+import { updateErrorCopy, updateErrorStage, updateMessage } from './update-view'
 import { normalizeUpdateNotification, readUpdateNotification, saveUpdateNotification, updateNotificationVersionInstalled } from './update-notification-store'
 import { boardEditTime } from './research-board-presentation'
 import type {
@@ -256,7 +256,7 @@ export function mountResearchBoardNotifications(
       closePanel()
       doc.dispatchEvent(new win.Event('ework-open-about'))
     }))
-    if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : '重新下载', () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
+    if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
     row.append(actions)
     return row
   }
@@ -592,7 +592,8 @@ export function mountResearchBoardNotifications(
     try {
       const update = JSON.parse(doc.documentElement.dataset.eworkUpdateStatus ?? 'null') as UpdateStatus | null
       liveUpdatePhase = update?.phase
-      const next = normalizeUpdateNotification(update) ?? (['error', 'up-to-date'].includes(update?.phase ?? '') && latestUpdate ? normalizeUpdateNotification({ ...update, availableVersion: latestUpdate.availableVersion }) : undefined)
+      // A historical version supplies the record identity, not the failed operation.
+      const next = normalizeUpdateNotification(update) ?? (['error', 'up-to-date'].includes(update?.phase ?? '') && latestUpdate ? normalizeUpdateNotification({ ...update, availableVersion: latestUpdate.availableVersion, errorStage: update?.phase === 'error' ? updateErrorStage(update) : undefined }) : undefined)
       if (next) { latestUpdate = next; saveUpdateNotification(win.localStorage, next) }
       else if (latestUpdate?.availableVersion && update?.currentVersion && updateNotificationVersionInstalled(update.currentVersion, latestUpdate.availableVersion)) {
         latestUpdate = { currentVersion: update.currentVersion, availableVersion: latestUpdate.availableVersion, phase: 'up-to-date', manual: false }
