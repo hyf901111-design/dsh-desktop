@@ -11,82 +11,36 @@
         "schemaVersion": 1,
         "featureName": "Figma trajectory sidebar and composer detail parity",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b",
-        "tipCommit": "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1",
+        "baseCommit": "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1",
+        "tipCommit": "96373b979fcf2adae5973c87d87309d88be908e4",
         "commits": [
           {
-            "commit": "40f6b85e635b43cf5258c57a23662f0ffef3cb51",
+            "commit": "96373b979fcf2adae5973c87d87309d88be908e4",
             "parents": [
-              "94a2b55ff64c2dd9f8e1cde078b293c62c7bfd2b"
+              "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1"
             ],
-            "subject": "还原轨迹页面并统一侧栏页签菜单和拖拽反馈"
-          },
-          {
-            "commit": "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1",
-            "parents": [
-              "40f6b85e635b43cf5258c57a23662f0ffef3cb51"
-            ],
-            "subject": "收紧工作区菜单补丁锚点并验证模块语法"
+            "subject": "修正轨迹页底部输入区边距导致的居中偏移"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-trajectory-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-canvas-gestures.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-resize-feedback.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/figma-trajectory.css"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-panel-tab-overflow.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-resize-feedback.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-client-adapter.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
+              "npx",
+              "vitest",
+              "run",
+              "test/figma-trajectory-client.test.ts",
+              "test/figma-final-shell-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "Source E2E passed; generated workspace module compilation and idempotency passed; previous 31 focused tests and width fixtures passed",
-            "verifiedCommit": "8acb9217bbeea8db19d1072b1c6a86378bf2d3d1",
-            "completedAt": "2026-09-12T01:40:21.547368+00:00",
+            "summary": "13 focused tests passed; native geometry identified and fixed border-box overflow",
+            "verifiedCommit": "96373b979fcf2adae5973c87d87309d88be908e4",
+            "completedAt": "2026-09-12T01:51:36.336102+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -104,80 +58,7 @@
         "risks": [
           "Local only; no push or release. Native verification pending build."
         ],
-        "generatedAt": "2026-09-12T01:40:21.547368+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b5516f61e815d51a5dc026b2c239a607e7d75b53",
-        "verificationCommit": "b5516f61e815d51a5dc026b2c239a607e7d75b53",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "b5516f61e815d51a5dc026b2c239a607e7d75b53",
-            "completedAt": "2026-09-12T01:40:58.631Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b5516f61e815d51a5dc026b2c239a607e7d75b53",
-            "completedAt": "2026-09-12T01:40:58.631Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "b5516f61e815d51a5dc026b2c239a607e7d75b53",
-            "completedAt": "2026-09-12T01:40:58.631Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "b5516f61e815d51a5dc026b2c239a607e7d75b53",
-            "completedAt": "2026-09-12T01:40:58.631Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "b5516f61e815d51a5dc026b2c239a607e7d75b53",
-            "completedAt": "2026-09-12T01:40:58.631Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T01:40:58.631Z"
+        "generatedAt": "2026-09-12T01:51:36.336555+00:00"
       }
     }
   ],
