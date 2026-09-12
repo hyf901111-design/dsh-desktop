@@ -5,6 +5,7 @@ import figmaFilePanelStyles from './figma-file-panel.css?raw'
 import figmaTrajectoryStyles from './figma-trajectory.css?raw'
 import figmaInlineStyles from './figma-inline-references.css?raw'
 import figmaMotionStyles from './figma-motion.css?raw'
+import figmaRefinementStyles from './figma-refinements.css?raw'
 const DESKTOP_SHELL_STYLE_ID = 'sherlock-desktop-shell-style'
 
 const desktopShellStyles = `
@@ -23,7 +24,7 @@ export function mountDesktopShellStyles(document: Document): void {
 
   const style = document.createElement('style')
   style.id = DESKTOP_SHELL_STYLE_ID
-  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles
+  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles
   document.documentElement.appendChild(style)
   document.getElementById('odyssey-figma-final-shell')?.remove()
 }

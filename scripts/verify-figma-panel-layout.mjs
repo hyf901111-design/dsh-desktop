@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { transform } from 'esbuild'
 import pw from '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
-const css=await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-motion'].map(f=>readFile(`src/preload/${f}.css`,'utf8')))
+const css=await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-motion','figma-refinements'].map(f=>readFile(`src/preload/${f}.css`,'utf8')))
 const runtime=await Promise.all(['figma-motion-controller','figma-resize-feedback'].map(async f=>(await transform(await readFile(`src/preload/${f}.ts`,'utf8'),{loader:'ts',format:'esm'})).code.replace(/export \{[^}]*\};/g,'')))
 const browser=await pw.chromium.launch({executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 const near=(a,b,label)=>assert(Math.abs(a-b)<.2,`${label}: ${a} != ${b}`)
