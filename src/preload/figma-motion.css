@@ -12,34 +12,26 @@
 
 /* The controller adds readiness after the first stable panel layout. This
    prevents a persisted open panel from animating on application boot. */
-/* Group 60/66: reveal a fixed-size panel from the stable top-right entry.
-   The content never scales; rapid reversals continue from the current clip. */
+/* The sidebar slides horizontally at its full size. Its vertical bounds,
+   content opacity and corner radius stay fixed during both directions. */
 :root[data-odyssey-motion-ready="true"] .t8lSSG_panel {
   visibility:visible;
-  transform:none;
-  clip-path:inset(0 0 0 -10px round 16px);
-  transition:clip-path 220ms var(--odyssey-motion-panel-ease), visibility 0s;
+  transform:translateX(0);
+  clip-path:none;
+  transition:
+    transform var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    visibility 0s;
 }
 :root[data-odyssey-motion-ready="true"] .t8lSSG_panel.t8lSSG_panelHidden {
-  transform:none;
-  clip-path:inset(7px 8px calc(100% - 35px) calc(100% - 36px) round 7px);
+  transform:translateX(calc(100% + var(--odyssey-panel-edge) + 10px));
   visibility:hidden;
   pointer-events:none;
-  transition:clip-path 180ms var(--odyssey-motion-panel-ease), visibility 0s 180ms;
-}
-:root[data-odyssey-motion-ready="true"] .t8lSSG_panel>:is(.t8lSSG_tabBar,.t8lSSG_panelBody) {
-  opacity:1;
-  transition:opacity 100ms 100ms ease-out;
-}
-:root[data-odyssey-motion-ready="true"] .t8lSSG_panelHidden>:is(.t8lSSG_tabBar,.t8lSSG_panelBody) {
-  opacity:0;
-  transition:opacity 70ms ease-out;
+  transition:
+    transform var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease),
+    visibility 0s var(--odyssey-motion-panel-duration);
 }
 :root[data-odyssey-motion-ready="true"] #root [data-dsh-frame]>[data-pane="conversation"] {
-  transition:margin-right 180ms var(--odyssey-motion-panel-ease);
-}
-:root[data-odyssey-motion-ready="true"] body:has([data-odyssey-panel-right="open"]) #root [data-dsh-frame]>[data-pane="conversation"] {
-  transition-duration:220ms;
+  transition:margin-right var(--odyssey-motion-panel-duration) var(--odyssey-motion-panel-ease);
 }
 :root[data-odyssey-motion-ready="true"] body[data-odyssey-resizing] #root [data-dsh-frame]>[data-pane="conversation"] { transition:none; }
 

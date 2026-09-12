@@ -71,7 +71,8 @@ describe('Figma panel motion supplement', () => {
   it('scopes reversible panel, hover and press motion and disables it for drag and reduced motion', () => {
     const css = readFileSync(new URL('../src/preload/figma-motion.css', import.meta.url), 'utf8')
     expect(css).toContain('.t8lSSG_panel.t8lSSG_panelHidden')
-    expect(css).toContain('clip-path:inset(7px 8px calc(100% - 35px) calc(100% - 36px) round 7px)')
+    expect(css).toContain('transform:translateX(calc(100% + var(--odyssey-panel-edge) + 10px))')
+    expect(css).not.toContain('clip-path:inset(')
     expect(css).toContain('width var(--odyssey-motion-panel-duration)')
     expect(css).toContain('.wSkVaW_root[data-odyssey-page="conversation"]')
     expect(css).toContain('.wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host]')
