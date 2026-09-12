@@ -9,80 +9,45 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对齐子代理内容、协作菜单、任务短窗与正文排版",
+        "featureName": "精简子代理输入并修正滚动条焦点与对话固定区",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b",
-        "tipCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
+        "baseCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
+        "tipCommit": "4c518a840252df3d9cf2810f0095d3e3a3efc994",
         "commits": [
           {
-            "commit": "7e5f49c8316b71acd5162cfe2da67854742cfb7f",
+            "commit": "e328ed14e80e61bf31caa2ce55014712c7dd7dd8",
             "parents": [
-              "6d202daadffe6efea7bf68a7aeb1bb5ffa824a5b"
+              "a37e93bc6230524b7c49f1d3bf07dab7d956c05e"
             ],
-            "subject": "对齐子代理标题与正文卡片布局并修复底栏扣高"
+            "subject": "修复侧栏滚动条键盘焦点保留与独立淡出计时"
           },
           {
-            "commit": "840b4c0a70ca2576c9d120e8cd452db95174d288",
+            "commit": "4b70611e0afd6c988433cdbda451ae475b2f7842",
             "parents": [
-              "7e5f49c8316b71acd5162cfe2da67854742cfb7f"
+              "e328ed14e80e61bf31caa2ce55014712c7dd7dd8"
             ],
-            "subject": "隔离协作权限菜单级联并校正行尺寸与文字位置"
+            "subject": "按原稿精简可继续子代理输入区并保留运行操作"
           },
           {
-            "commit": "03319b6036a14eaf3cf361171fedae32eae30e0b",
+            "commit": "41eab3e43149f619070c4915ad7e4370e56c283d",
             "parents": [
-              "840b4c0a70ca2576c9d120e8cd452db95174d288"
+              "4b70611e0afd6c988433cdbda451ae475b2f7842"
             ],
-            "subject": "修正子代理布局测试正则捕获的类型声明"
+            "subject": "按设计将侧栏滚动条淡出等待精确为700毫秒"
           },
           {
-            "commit": "a024a06cc8d65366a66eaf430a010a44ad233246",
+            "commit": "573f2fa6aa8fb4e04dfc7a39e7c10134115db064",
             "parents": [
-              "03319b6036a14eaf3cf361171fedae32eae30e0b"
+              "41eab3e43149f619070c4915ad7e4370e56c283d"
             ],
-            "subject": "记录第九批实机核对与长内容任务细节差异"
+            "subject": "修正对话底部任务与输入区对齐及短窗间距"
           },
           {
-            "commit": "5fe353221ba59ced330bec5e3bcc56516796998d",
+            "commit": "4c518a840252df3d9cf2810f0095d3e3a3efc994",
             "parents": [
-              "a024a06cc8d65366a66eaf430a010a44ad233246"
+              "573f2fa6aa8fb4e04dfc7a39e7c10134115db064"
             ],
-            "subject": "修正任务进度卡几何状态图标摘要与折叠动效"
-          },
-          {
-            "commit": "f398552cb938ebf25f4214dcc44363aef4872674",
-            "parents": [
-              "5fe353221ba59ced330bec5e3bcc56516796998d"
-            ],
-            "subject": "修正任务摘要为用户可见引用文本避免暴露内部路径"
-          },
-          {
-            "commit": "513f253db9d31cfefbd5d6bb677e3617f281db03",
-            "parents": [
-              "f398552cb938ebf25f4214dcc44363aef4872674"
-            ],
-            "subject": "修正消息中心底部基线偏高并覆盖侧栏定位回归"
-          },
-          {
-            "commit": "738c228f30c554c812e93610cc445d49b5a4a9b2",
-            "parents": [
-              "513f253db9d31cfefbd5d6bb677e3617f281db03"
-            ],
-            "subject": "修复异步任务短窗挂接并按实际正文空间收起清单"
-          },
-          {
-            "commit": "7b6257553b51e405d0639bb5414bca7347923413",
-            "parents": [
-              "738c228f30c554c812e93610cc445d49b5a4a9b2"
-            ],
-            "subject": "按原稿修正主会话正文与列表排版"
-          },
-          {
-            "commit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
-            "parents": [
-              "7b6257553b51e405d0639bb5414bca7347923413"
-            ],
-            "subject": "补充任务短窗与正文通知差异及原生操作证据"
+            "subject": "记录第十批原生复验及子代理输入和固定区待修项"
           }
         ],
         "files": [
@@ -95,46 +60,12 @@
             "path": "docs/design-audits/2026-09-12-figma-page-ledger.json"
           },
           {
-            "status": "C073",
-            "path": "scripts/assets/task-progress/completed-dark.svg",
-            "previousPath": "build/brand/figma-check.svg"
-          },
-          {
-            "status": "C073",
-            "path": "scripts/assets/task-progress/completed-light.svg",
-            "previousPath": "build/brand/figma-check.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/assets/task-progress/running-dark.svg"
-          },
-          {
-            "status": "A",
-            "path": "scripts/assets/task-progress/running-light.svg"
-          },
-          {
             "status": "M",
-            "path": "scripts/lib/figma-reading-client.mjs"
+            "path": "scripts/lib/figma-refinements-client.mjs"
           },
           {
             "status": "M",
             "path": "scripts/lib/figma-subagent-panel.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-task-compact.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-task-progress.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/test-research-board-role-menu-css.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-final-shell.css"
           },
           {
             "status": "M",
@@ -146,39 +77,23 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
+            "path": "src/preload/figma-scrollbars.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-notifications-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-reading-layout.test.ts"
+            "path": "test/figma-scrollbars.test.ts"
           },
           {
             "status": "A",
-            "path": "test/figma-subagent-content-layout.test.ts"
+            "path": "test/figma-subagent-continuable-composer.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-subagent-menu.test.js"
           },
           {
             "status": "M",
             "path": "test/figma-subagent-panel.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-task-compact.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-task-objective-projection.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-task-progress.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-notifications-center.test.ts"
           }
         ],
         "checks": [
@@ -192,20 +107,16 @@
               "test/figma-subagent-panel-destination.test.js",
               "test/figma-subagent-content-layout.test.ts",
               "test/figma-subagent-menu.test.js",
+              "test/figma-subagent-continuable-composer.test.js",
+              "test/figma-scrollbars.test.ts",
               "test/figma-reading-layout.test.ts",
               "test/figma-task-progress.test.ts",
-              "test/figma-task-objective-projection.test.ts",
-              "test/figma-task-compact.test.ts",
-              "test/research-board-role-picker.test.ts",
-              "test/research-board-notifications-center.test.ts",
-              "test/research-board-navigation-final.test.ts",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-file-panel.test.ts"
+              "test/figma-task-compact.test.ts"
             ],
             "outcome": "passed",
-            "summary": "62 focused checks in 13 directly affected files passed",
-            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
-            "completedAt": "2026-09-12 16:25:16 UTC",
+            "summary": "33 focused checks in9 directly affected files passed",
+            "verifiedCommit": "4c518a840252df3d9cf2810f0095d3e3a3efc994",
+            "completedAt": "2026-09-12 16:52:18 UTC",
             "timeoutMs": 120000
           },
           {
@@ -216,8 +127,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
-            "completedAt": "2026-09-12 16:25:16 UTC",
+            "verifiedCommit": "4c518a840252df3d9cf2810f0095d3e3a3efc994",
+            "completedAt": "2026-09-12 16:52:18 UTC",
             "timeoutMs": 120000
           },
           {
@@ -229,111 +140,26 @@
             ],
             "outcome": "passed",
             "summary": "Pristine locked sources transformed twice and verified",
-            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
-            "completedAt": "2026-09-12 16:25:16 UTC",
+            "verifiedCommit": "4c518a840252df3d9cf2810f0095d3e3a3efc994",
+            "completedAt": "2026-09-12 16:52:18 UTC",
             "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-board-role-menu-css.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "Real production CSS in isolated Chromium passed both themes and constrained viewport",
-            "verifiedCommit": "a37e93bc6230524b7c49f1d3bf07dab7d956c05e",
-            "completedAt": "2026-09-12 16:25:16 UTC",
-            "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "50b9ae85 actual native evidence recorded; batch10 corrections independently reviewed; next package acceptance pending and full client audit unfinished."
+          "summary": "Batch10 package4e41b680 native evidence recorded; D35-D37 independently reviewed, next package native verification pending. 298frame full-client acceptance unfinished."
         },
         "acceptanceCriteria": [
-          "Child right pane preserves height with bottom panel open",
-          "Role popup280x142 has268x64 rows without normal scroll",
-          "Task card216/40 with168 list and readable reference summary",
-          "Async tasks preserve240px reading budget in short windows",
-          "Notification center pins44px from bottom",
-          "Central paragraphs15/26 preserve file and child styles"
+          "Continuable child input120px preserves visible send/stop and native tools",
+          "Sidebar keyboard focus holds thumb; mouse releases; independent700ms fade timers",
+          "Central task/input/runtime align, footer12px/gap8 and input15/24",
+          "Short window still preserves240px reading and160px input max"
         ],
         "risks": [
-          "Native geometry and motion require next package verification; overall298-frame acceptance remains incomplete"
+          "New popup geometry and real running followup need signed package verification",
+          "Overall54frames have partial evidence;244 lack individual verification; not whole-page acceptance"
         ],
-        "generatedAt": "2026-09-12 16:25:16 UTC"
-      },
-      "merged": {
-        "mergeCommit": "e911f6a68f5bdc8361e061131b7f29da04e2b37d",
-        "verificationCommit": "e911f6a68f5bdc8361e061131b7f29da04e2b37d",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "e911f6a68f5bdc8361e061131b7f29da04e2b37d",
-            "completedAt": "2026-09-12T16:26:24.920Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e911f6a68f5bdc8361e061131b7f29da04e2b37d",
-            "completedAt": "2026-09-12T16:26:24.920Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "e911f6a68f5bdc8361e061131b7f29da04e2b37d",
-            "completedAt": "2026-09-12T16:26:24.920Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "e911f6a68f5bdc8361e061131b7f29da04e2b37d",
-            "completedAt": "2026-09-12T16:26:24.920Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "e911f6a68f5bdc8361e061131b7f29da04e2b37d",
-            "completedAt": "2026-09-12T16:26:24.920Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T16:26:24.920Z"
+        "generatedAt": "2026-09-12 16:52:18 UTC"
       }
     }
   ],
