@@ -1,4 +1,4 @@
-import { patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
+import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
 import { readFile, writeFile } from 'node:fs/promises'
@@ -1004,6 +1004,7 @@ export function patchBetterSidebarClient(source) {
     `\t\t\t\tconst existing = leaf.tabs.find((candidate) => candidate.id === tab.id);\n\t\t\t\t${RECONCILE_PATCH_MARKER}\n\t\t\t\tif (existing !== void 0) {\n\t\t\t\t\tif (!pinned) return activateTab(state, leaf.id, existing.id);\n\t\t\t\t\tconst reconciled = { ...existing, ...tab, meta: { ...existing.meta, ...tab.meta } };\n\t\t\t\t\treturn openTabInActivePane(closeTab(state, leaf.id, existing.id), reconciled);\n\t\t\t\t}`,
     'persisted pinned tab reconciliation'
   )
+  next = patchSubagentPanelDestination(next)
 
   if (!next.includes(EDGE_PATCH_MARKER)) next = replaceExact(
     next,
