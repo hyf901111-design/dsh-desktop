@@ -9,217 +9,65 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Figma single-row header and menu refinements",
+        "featureName": "Figma header tint, hover insets and shared composer",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "afe468dc52ec08223df5e6dc4be33d7af97fd466",
-        "tipCommit": "40177cada352dbf402312da83b480233c00cc835",
+        "baseCommit": "40177cada352dbf402312da83b480233c00cc835",
+        "tipCommit": "ae91f277cd287a9764c56ed3db7476594a5862d4",
         "commits": [
           {
-            "commit": "3adf9422947931d8d781bac8b5a19aa3648ea9bc",
+            "commit": "ae91f277cd287a9764c56ed3db7476594a5862d4",
             "parents": [
-              "afe468dc52ec08223df5e6dc4be33d7af97fd466"
+              "40177cada352dbf402312da83b480233c00cc835"
             ],
-            "subject": "界面：按最新 Figma 还原单行顶栏、菜单与输入区细节"
-          },
-          {
-            "commit": "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1",
-            "parents": [
-              "3adf9422947931d8d781bac8b5a19aa3648ea9bc"
-            ],
-            "subject": "修复：补齐菜单集成验证依赖并兼容现有中文命令补丁"
-          },
-          {
-            "commit": "ad545fa51906d634b8983029f7250ee71280a2c4",
-            "parents": [
-              "e1a035a9dc2f05a9330da419f3b3dcc32a435aa1"
-            ],
-            "subject": "测试：按新版顶栏校验画板添加和重复点击行为"
-          },
-          {
-            "commit": "40177cada352dbf402312da83b480233c00cc835",
-            "parents": [
-              "ad545fa51906d634b8983029f7250ee71280a2c4"
-            ],
-            "subject": "测试：更新单行顶栏的高度与成员居中验收"
+            "subject": "修复顶栏底色和对话输入框样式，统一按钮悬停留白"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "scripts/lib/figma-refinements-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-boards-browser.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-collaboration-e2e.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-figma-panel-layout.mjs"
-          },
           {
             "status": "M",
             "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "A",
             "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-responsive-header.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/figma-scrollbars.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/shell-style.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-responsive-header.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/figma-scrollbars.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-presence-final.test.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
+              "npx",
+              "vitest",
+              "run",
+              "test/figma-responsive-header.test.ts",
+              "test/research-board-presence-final.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
             ],
             "outcome": "passed",
-            "summary": "Real browser research flow passed with Figma A 56 px header, centered membership, icon-only board action and repeated-add preservation. Focused presence tests 6 passed. Clean source baselines verified.",
-            "verifiedCommit": "40177cada352dbf402312da83b480233c00cc835",
-            "completedAt": "2026-09-12T06:28:37.375231+00:00",
+            "summary": "8 focused checks passed; typecheck and controlled Chromium shared input and hover geometry passed in light/dark.",
+            "verifiedCommit": "ae91f277cd287a9764c56ed3db7476594a5862d4",
+            "completedAt": "2026-09-12T06:47:10.757894+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Controlled Chromium: one-row geometry, portal submenu, task collapse, scroll lifecycle, horizontal panel transitions. Native packaged acceptance follows integration."
+          "summary": "Read-only native comparison identified old header tint, center composer and asymmetric inset overrides; controlled Chromium using native DOM/CSS verifies transparent header, paired hover insets, and shared 126 px conversation card. Rebuilt native acceptance follows integration."
         },
         "acceptanceCriteria": [
-          "56 px one-row header and responsive modes follow Figma A",
-          "Board and collaboration actions use 28 px icons with labels on hover/focus",
-          "Menus and composer context use consistent dimensions and Chinese labels",
-          "Compact desktop right panel temporarily overlays without resetting saved state",
-          "Task progress and overlay scroll feedback retain underlying runtime actions"
+          "Transparent background-blur header follows current Figma A",
+          "Central conversation composer uses 10.5 px corner, 126 px height and no border",
+          "Balanced hover inset in workspace, mode, model, permission and tab close controls",
+          "Window min width 800 enables temporary right-pane overlay below 840",
+          "Compact shared header preserves member list and management access"
         ],
         "risks": [
           "Local only; no publication, push, version changes or main promotion."
         ],
-        "generatedAt": "2026-09-12T06:28:37.375231+00:00"
-      },
-      "merged": {
-        "mergeCommit": "aa74ffdcf414d21ded1fb451a3808e6df5031d2f",
-        "verificationCommit": "aa74ffdcf414d21ded1fb451a3808e6df5031d2f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "aa74ffdcf414d21ded1fb451a3808e6df5031d2f",
-            "completedAt": "2026-09-12T06:29:23.596Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "aa74ffdcf414d21ded1fb451a3808e6df5031d2f",
-            "completedAt": "2026-09-12T06:29:23.596Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/research-boards-service.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-boards-ui.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/slash-menu-locale.test.ts",
-              "test/standard-agent-preset.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "aa74ffdcf414d21ded1fb451a3808e6df5031d2f",
-            "completedAt": "2026-09-12T06:29:23.596Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "aa74ffdcf414d21ded1fb451a3808e6df5031d2f",
-            "completedAt": "2026-09-12T06:29:23.596Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "aa74ffdcf414d21ded1fb451a3808e6df5031d2f",
-            "completedAt": "2026-09-12T06:29:23.596Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-12T06:29:23.596Z"
+        "generatedAt": "2026-09-12T06:47:10.757894+00:00"
       }
     }
   ],
