@@ -12,7 +12,7 @@
         "featureName": "修正子代理底距、生成组件内容及文档窄面板阅读",
         "branch": "codex/feat/research-board-collaboration-20260909",
         "baseCommit": "4c518a840252df3d9cf2810f0095d3e3a3efc994",
-        "tipCommit": "415b92fa12f27f045eeeb8716c680dfdedde32f3",
+        "tipCommit": "9924578f9285284af665c1fd5289f5cfb9e1892e",
         "commits": [
           {
             "commit": "bd3486fa9710a4e1cc5344db77f9140e327634c0",
@@ -55,6 +55,20 @@
               "6319f4e7d7293aeabfd26a59897e287aa53472ad"
             ],
             "subject": "记录第十一批组件协作与文件原生验收及主题勘误"
+          },
+          {
+            "commit": "c72d1d368d08895889f3a29209254ba965eb7558",
+            "parents": [
+              "415b92fa12f27f045eeeb8716c680dfdedde32f3"
+            ],
+            "subject": "记录协作预览拒绝时序以定位间歇验收失败"
+          },
+          {
+            "commit": "9924578f9285284af665c1fd5289f5cfb9e1892e",
+            "parents": [
+              "c72d1d368d08895889f3a29209254ba965eb7558"
+            ],
+            "subject": "补记私有看板成员离板与滚动条原生局部核验"
           }
         ],
         "files": [
@@ -77,6 +91,10 @@
           {
             "status": "M",
             "path": "scripts/lib/figma-subagent-panel.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
           },
           {
             "status": "A",
@@ -125,8 +143,8 @@
             ],
             "outcome": "passed",
             "summary": "77 focused checks in 8 directly affected files passed",
-            "verifiedCommit": "415b92fa12f27f045eeeb8716c680dfdedde32f3",
-            "completedAt": "2026-09-12 17:41:42 UTC",
+            "verifiedCommit": "9924578f9285284af665c1fd5289f5cfb9e1892e",
+            "completedAt": "2026-09-12 18:00:13 UTC",
             "timeoutMs": 120000
           },
           {
@@ -137,8 +155,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript passed",
-            "verifiedCommit": "415b92fa12f27f045eeeb8716c680dfdedde32f3",
-            "completedAt": "2026-09-12 17:41:42 UTC",
+            "verifiedCommit": "9924578f9285284af665c1fd5289f5cfb9e1892e",
+            "completedAt": "2026-09-12 18:00:13 UTC",
             "timeoutMs": 120000
           },
           {
@@ -148,8 +166,8 @@
             ],
             "outcome": "passed",
             "summary": "4 DOCX layout scenarios passed",
-            "verifiedCommit": "415b92fa12f27f045eeeb8716c680dfdedde32f3",
-            "completedAt": "2026-09-12 17:41:42 UTC",
+            "verifiedCommit": "9924578f9285284af665c1fd5289f5cfb9e1892e",
+            "completedAt": "2026-09-12 18:00:13 UTC",
             "timeoutMs": 120000
           },
           {
@@ -161,8 +179,8 @@
             ],
             "outcome": "passed",
             "summary": "Pristine locked sources transformed twice and verified",
-            "verifiedCommit": "415b92fa12f27f045eeeb8716c680dfdedde32f3",
-            "completedAt": "2026-09-12 17:41:42 UTC",
+            "verifiedCommit": "9924578f9285284af665c1fd5289f5cfb9e1892e",
+            "completedAt": "2026-09-12 18:00:13 UTC",
             "timeoutMs": 300000
           }
         ],
@@ -177,10 +195,11 @@
         ],
         "risks": [
           "All new repairs require signed package native verification",
-          "68 frames partial evidence;230 lack individual verification; no full-page acceptance",
-          "v11-b filenames ending light initially contained dark theme; actual JSON theme is authoritative and true-light captures explicitly named actual-light"
+          "73 frames partial evidence;225 lack individual verification; no full-page acceptance",
+          "v11-b filenames ending light initially contained dark theme; actual JSON theme is authoritative and true-light captures explicitly named actual-light",
+          "Prior integration browser gate had intermittent preview403; diagnostics retained without weakening gate; one diagnostic run passed but root cause unconfirmed"
         ],
-        "generatedAt": "2026-09-12 17:41:42 UTC"
+        "generatedAt": "2026-09-12 18:00:13 UTC"
       }
     }
   ],
