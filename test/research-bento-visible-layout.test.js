@@ -19,6 +19,19 @@ describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
     expect(fit(snapshot,snapshot.canvasSize)).toBe(snapshot.viewport);
     expect(source).toContain("querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)')");
   });
+  it('opens an empty container as S without resizing existing content',async()=>{
+    const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+    let descriptor;runInNewContext(source,{window:{__ModuleLoader__:{load:value=>descriptor=value}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
+    let fallback;fallback=new Proxy(function(){},{get:()=>fallback,apply:()=>fallback});const client=descriptor.factory(()=>fallback);
+    const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
+    const workspace=client.createResearchWorkspaceSession(storage,'small-draft');workspace.setCanvasSize({width:1088,availableWidth:728,height:800});
+    const first=workspace.createContainerDraft();
+    expect(first).toMatchObject({width:320,height:220,containerSizePreset:'small',generationStatus:'draft'});
+    workspace.updateNodeGeometry(first.id,{width:656,height:456,sizeMode:'manual'});
+    const before=JSON.stringify(workspace.getSnapshot().artifacts[0]);
+    expect(workspace.createContainerDraft()).toMatchObject({width:320,height:220,containerSizePreset:'small'});
+    expect(JSON.stringify(workspace.getSnapshot().artifacts[0])).toBe(before);
+  });
   it('packs two L and three S into two visible columns when the right panel covers the third',()=>{
     const result=researchBentoLayout(nodes,{width:1088,availableWidth:728,height:800});
     expect(result.width).toBe(656);

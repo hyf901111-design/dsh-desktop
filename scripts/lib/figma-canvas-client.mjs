@@ -65,6 +65,9 @@ function patchCanvasGraphicPrimitives(source) {
 
 export function patchFigmaFinalCanvas(source) {
   source=patchCanvasGraphicPrimitives(source);
+  // Empty creation cards use S; generated content still chooses its own size.
+  source=source.replace('containerPrompt: "", containerSizePreset: "medium"', 'containerPrompt: "", containerSizePreset: "small"');
+  source=source.replace('kind === "generated-container" ? { width: 656, height: 220 }', 'kind === "generated-container" ? { width: 320, height: 220 }');
   // JSON table values commonly arrive as formatted strings. Preserve their
   // text while aligning entire numeric columns, including their headings.
   const tableColumnSource=`function researchTableNumericColumn(spec,index){
@@ -289,7 +292,7 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
   source = block(source, '                    // Normalize component row sizes first,', '\n\t\t\t\t\tcommitUpdate(organized, true);', `                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
                     if (organized === null) return false;`)
   source = source.replaceAll('width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)]', 'width: RESEARCH_BENTO_SIZES[researchComponentSize(current)].width, height: RESEARCH_BENTO_SIZES[researchComponentSize(current)].height')
-  source = source.replace('kind === "generated-container" ? { width: 520, height: 300 }', 'kind === "generated-container" ? { width: 656, height: 220 }')
+  source = source.replace('kind === "generated-container" ? { width: 520, height: 300 }', 'kind === "generated-container" ? { width: 320, height: 220 }')
   source = source.replace('const width = 520;\n\t\t\tconst height = 300;', 'const width = kind === "summary" ? 320 : 656;\n\t\t\tconst height = kind === "summary" ? 220 : 456;')
   source = block(source, 'function researchContainerFinalGeometry(', 'function researchContainerRefreshDue(', `function researchContainerFinalGeometry(node, spec) {
   if(node?.sizeMode==='manual'||spec===null)return null;
@@ -379,7 +382,7 @@ function researchContainerPlannedGeometry(snapshot,node,prompt) {
   return {containerSizePreset:preset,width:placed.width,height:placed.height,x:placed.x,y:placed.y};
 }
 function researchCanvasViewportPlacement(snapshot, kind, cascadeIndex = 0) {
-  const dimensions=kind==='web-link'?{width:656,height:456}:kind==='generated-container'?{width:656,height:220}:null;
+  const dimensions=kind==='web-link'?{width:656,height:456}:kind==='generated-container'?{width:320,height:220}:null;
   if(!dimensions)return null;
   const viewport=snapshot?.viewport??{scale:1,x:0,y:0},area=researchCanvasVisibleArea(snapshot),scale=viewport.scale>0?viewport.scale:1;
   const center=researchCanvasWorldPoint(viewport,{x:(area.width>0?area.width:1200)/2,y:(area.height>0?area.height:712)/2});
