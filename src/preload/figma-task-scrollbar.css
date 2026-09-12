@@ -1,0 +1,11 @@
+/* S09 task-list geometry is independent of the S18 sidebar scrollbar states. */
+body [data-odyssey-task-scroll-seat] { position:relative; }
+body [data-odyssey-task-scrollport] { scrollbar-width:none!important; }
+body [data-odyssey-task-scrollport]::-webkit-scrollbar { display:none!important; }
+body [data-odyssey-task-scrollbar] { position:absolute; right:4px; width:12px; z-index:1; touch-action:none; }
+body [data-odyssey-task-scrollbar][hidden],
+body [inert] [data-odyssey-task-scrollbar],
+body [aria-hidden="true"] [data-odyssey-task-scrollbar],
+body [data-odyssey-task-collapsed="true"] [data-odyssey-task-scrollbar] { display:none!important; }
+body [data-odyssey-task-scrollbar] > div { position:absolute; right:4px; width:4px; border-radius:2px; background:rgba(0,0,0,0.14); }
+body[data-ds-dark-theme] [data-odyssey-task-scrollbar] > div { background:rgba(255,255,255,0.14); }
