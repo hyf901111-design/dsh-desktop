@@ -1,3 +1,4 @@
+import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
 import { readFileSync } from 'node:fs'
 import { patchFigmaDerivedMenu, derivedMenuCss } from './figma-derived-menu-client.mjs'
 const iconData = Object.fromEntries(['branch','chevron','summary','plus','check','more','expand','global-link-light','global-container-light','global-voice-light','global-link-dark','global-container-dark','global-voice-dark'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/'+name+'.svg',import.meta.url)).toString('base64')]));
@@ -64,6 +65,9 @@ function patchCanvasGraphicPrimitives(source) {
 }
 
 export function patchFigmaFinalCanvas(source) {
+  return patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source));
+}
+function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);
   // Empty creation cards use S; generated content still chooses its own size.
   source=source.replace('containerPrompt: "", containerSizePreset: "medium"', 'containerPrompt: "", containerSizePreset: "small"');
@@ -588,7 +592,12 @@ body[data-ds-dark-theme] .rScV5Q_globalToolbar[data-research-global-toolbar]{bac
 
 [data-research-compact-chrome]{--odyssey-card:#fff;--odyssey-card-border:#e1e1e1;--odyssey-card-text:#292b2f;--odyssey-card-muted:#81858c;--odyssey-select:#a2c4ff;border-radius:12px!important;box-shadow:none!important;container-type:size}
 body[data-ds-dark-theme] [data-research-compact-chrome]{--odyssey-card:#292a2d;--odyssey-card-border:#424242;--odyssey-card-text:#ececed;--odyssey-card-muted:#98999f;--odyssey-select:#1b77ff}
-[data-research-compact-chrome][data-selected=true]{border-color:var(--odyssey-select)!important;outline:1.5px solid var(--odyssey-select)!important;outline-offset:-1px!important;box-shadow:0 0 7px rgba(82,140,255,.28),0 0 26px 2px rgba(64,128,255,.14)!important}
+[data-research-compact-chrome][data-selected=true]{border-color:transparent!important;outline:none!important;box-shadow:0 0 7px rgba(82,140,255,.28),0 0 26px 2px rgba(64,128,255,.14)!important}
+/* CSS border/outline widths snap to device pixels. Paint the 1.5px INSIDE
+   selection on an overlay so full-bleed content cannot hide its half pixel.
+   Keep the native 1px border's layout space (derived cards have no border). */
+[data-research-compact-chrome][data-selected=true]::after{content:'';position:absolute;inset:-1px;border-radius:inherit;box-shadow:inset 0 0 0 1.5px var(--odyssey-select);pointer-events:none;z-index:5}
+[data-research-compact-chrome][data-research-derived][data-selected=true]::after{inset:0}
 body[data-ds-dark-theme] [data-research-compact-chrome][data-selected=true]{box-shadow:0 0 7px rgba(82,140,255,.48),0 0 26px 2px rgba(64,128,255,.24)!important}
 [data-research-compact-chrome]>.rScV5Q_nodeTitle{height:48px;min-height:48px;flex-basis:48px;padding:15px 18px 10px!important;border-radius:11px 11px 0 0;border-bottom:0!important;align-items:flex-start}
 [data-research-compact-chrome] .rScV5Q_nodeTitleText{font-size:15px!important;font-weight:500;line-height:23px;flex:1}
