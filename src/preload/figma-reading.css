@@ -1,6 +1,6 @@
 /* Figma 748:27747 — long replies, fixed footer, tables and compact windows. */
-body { --odyssey-composer-solid:#f9f9f9; --odyssey-reading-border:rgba(0,0,0,.1); }
-body[data-ds-dark-theme] { --odyssey-composer-solid:#292929; --odyssey-reading-border:rgba(255,255,255,.12); }
+body { --odyssey-composer-solid:#f9f9f9; --odyssey-reading-border:rgba(0,0,0,.1); --odyssey-reading-glass:rgba(242,242,242,.65); }
+body[data-ds-dark-theme] { --odyssey-composer-solid:#292929; --odyssey-reading-border:rgba(255,255,255,.12); --odyssey-reading-glass:rgba(31,31,31,.65); }
 body .uV2eYG_card, body[data-ds-dark-theme] .uV2eYG_card {
   background:var(--odyssey-composer-solid)!important;
   backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
@@ -37,13 +37,12 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
 body .sRp_messages { overflow-x:hidden; overscroll-behavior-y:contain; }
 body .sRp_composer { background:var(--odyssey-right-surface); }
 body .sRp_composer .wSkVaW_composerSeat { --dsh-composer-text-max-height:112px; }
-body [data-odyssey-reading-status] { flex:0 0 44px; height:44px; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:0 16px 12px; background:var(--odyssey-workspace); }
+body [data-odyssey-reading-status] { position:relative; z-index:2; flex:0 0 0; height:0; min-height:0; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:0; transform:translateY(-44px); background:transparent; pointer-events:none; }
 body [data-odyssey-reading-status]:empty { display:none; }
-body .sRp_root [data-odyssey-reading-status] { padding:0 0 12px; background:var(--odyssey-right-surface); }
-body [data-odyssey-reading-status] button { display:flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; box-sizing:border-box; padding:0; border:1px solid var(--odyssey-reading-border); border-radius:50%; background:var(--odyssey-workspace); color:var(--odyssey-text); cursor:pointer; }
-body .sRp_root [data-odyssey-reading-status] button { background:var(--odyssey-right-surface); }
+/* The zero-height overlay leaves the reader visible and scrollable beneath it. */
+body [data-odyssey-reading-status] button { display:flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; box-sizing:border-box; padding:0; border:1px solid var(--odyssey-reading-border); border-radius:50%; background:var(--odyssey-reading-glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); color:var(--odyssey-text); cursor:pointer; pointer-events:auto; }
 body [data-odyssey-reading-status] button svg { display:block; width:20px; height:20px; flex:none; pointer-events:none; }
-body [data-odyssey-reading-status] button:hover { background:var(--odyssey-composer-solid); }
+body [data-odyssey-reading-status] button:hover { background:color-mix(in srgb,var(--odyssey-reading-glass),var(--odyssey-composer-solid) 20%); }
 body [data-odyssey-reading-status] button:focus-visible { outline:2px solid var(--odyssey-text); outline-offset:3px; }
 body .wSkVaW_root[data-odyssey-page=research] > [data-odyssey-reading-status],body .wSkVaW_root[data-odyssey-page=home] > [data-odyssey-reading-status] { display:none; }
 /* Task card: inset border does not consume the 40 + 168 + 8 px layout. */
