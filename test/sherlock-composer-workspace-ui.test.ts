@@ -12579,7 +12579,7 @@ describe('Sherlock workspace and composer controls', () => {
       })
 
       expect(mounted.detailsPortalHost.querySelector('[data-research-empty-state]')).toBeNull()
-      expect(mounted.detailsPortalHost.querySelector('.wSkVaW_heroWorkspaceRow')).not.toBeNull()
+      expect(mounted.detailsPortalHost.querySelector('.wSkVaW_heroWorkspaceRow')).toBeNull()
       expect(composer?.getAttribute('data-test-composer-has-accessory')).toBe('false')
     } finally {
       await mounted.cleanup()

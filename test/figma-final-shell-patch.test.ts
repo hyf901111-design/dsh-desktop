@@ -12,6 +12,31 @@ function clientFunction(bundle: string, name: string) {
 }
 
 describe('Figma shell patch installation', () => {
+  it('shows project controls only before the first message in either conversation surface', () => {
+    const installed = patchFigmaFinalConversation(source)
+    const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
+    const ComposerSurface = runInNewContext(clientFunction(installed, 'ComposerSurface') + '\nComposerSurface', {
+      react_jsx_runtime: { jsx: element, jsxs: element },
+      clsx: (...names: unknown[]) => names.filter(Boolean).join(' '),
+      ConversationRoot_module_css_default: {}, HeroGlow: 'glow', HeroShell: 'headline'
+    })
+    const row = element('button', { children: '选择工作区' })
+    const input = element('textarea', {})
+    for (const state of [
+      { hero: true, research: false, researchEmpty: false, visible: true },
+      { hero: false, research: true, researchEmpty: true, visible: true },
+      { hero: false, research: true, researchEmpty: false, visible: false },
+      { hero: false, research: false, researchEmpty: false, visible: false }
+    ]) {
+      const tree = ComposerSurface({ ...state, heroWorkspaceRow: row, inputBar: input,
+        renderSlotChain: (_name: string, _context: unknown, options: { fallback: unknown }) => options.fallback })
+      const children = tree.props.children.props.children
+      expect(children.includes(row)).toBe(state.visible)
+      expect(children.includes(input)).toBe(true)
+    }
+    expect(patchFigmaFinalConversation(installed)).toBe(installed)
+  })
+
   it('commits the pointer-up position when a quick sidebar drag has no delivered move event', async () => {
     const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
     const moves: number[] = [], lifecycle: string[] = []

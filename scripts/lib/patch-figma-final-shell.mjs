@@ -24,7 +24,7 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source, '"data-phase": phase,\n\t\t\t\tonClickCapture:', '"data-phase": phase,\n\t\t\t\t"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",\n\t\t\t\tonClickCapture:')
   source = exact(source, 'this.researchWidths.get(sessionId) ?? 420', 'this.researchWidths.get(sessionId) ?? 340')
   source = exact(source, 'function ComposerSurface({ zone, hero, researchEmpty,', 'function ComposerSurface({ zone, hero, research = false, researchEmpty,')
-  source = exact(source, '(hero || researchEmpty) && heroWorkspaceRow', '(hero || research || researchEmpty) && heroWorkspaceRow')
+  source = exact(source, '(hero || research || researchEmpty) && heroWorkspaceRow', '(hero || researchEmpty) && heroWorkspaceRow')
   source = exact(source, 'const composerSurface = (0, react_jsx_runtime.jsx)(ComposerSurface, {\n\t\t\t\tzone,', 'const composerSurface = (0, react_jsx_runtime.jsx)(ComposerSurface, {\n\t\t\t\tresearch,\n\t\t\t\tzone,')
   // 370:607 / 620: final Research copy has no terminal punctuation.
   source = source.replace('"data-research-empty-state": "",\n\t\t\t\tchildren: "探索更远，洞见更深。"', '"data-research-empty-state": "",\n\t\t\t\tchildren: "探索更远，洞见更深"')
