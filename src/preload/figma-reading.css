@@ -77,7 +77,7 @@ body .odyssey-run-info { box-sizing:border-box; width:calc(100% - 64px); max-wid
 /* The Research sidebar composer ends at the input card. */
 body .sRp_composer .odyssey-run-info { display:none; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .odyssey-run-info { width:100%; }
-body .odyssey-run-summary { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+body .odyssey-run-summary { flex:1; text-align:center; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body .odyssey-run-info button { flex:none; padding:2px 4px; border:0; border-radius:5px; background:none; color:inherit; font:inherit; cursor:pointer; }
 body .odyssey-run-info button:hover { background:var(--odyssey-menu-row); color:var(--odyssey-text); }
 body .odyssey-run-details { position:fixed; inset:auto; bottom:48px; right:24px; margin:0; width:min(360px,calc(100vw - 48px)); max-height:calc(100vh - 112px); box-sizing:border-box; overflow:auto; padding:16px; border:1px solid var(--odyssey-menu-border); border-radius:12px; background:var(--odyssey-composer-solid); color:var(--odyssey-text); font:400 12px/24px var(--odyssey-font-ui); box-shadow:0 8px 24px #0002; }
