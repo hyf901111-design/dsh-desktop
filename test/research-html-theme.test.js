@@ -210,6 +210,21 @@ describe('offline HTML component theme runtime', () => {
     expect(inner.window.document.querySelector('button')).toBe(button)
   })
 
+  it('keeps accent button labels readable in both themes without rebuilding interactive state', () => {
+    const html='<style>button{background:var(--sherlock-accent);color:#fff}#brand{background:#225599;color:white}</style><button id="counter" onclick="this.textContent=Number(this.textContent)+1">0</button><button id="brand">品牌</button>'
+    const inner=runtime(runtime(buildResearchHtmlPreview(html,'计数器','dark')).childHtml())
+    inner.parsed()
+    const button=inner.window.document.getElementById('counter'),brand=inner.window.document.getElementById('brand')
+    expect(inner.window.getComputedStyle(button).color).toBe('rgb(0, 0, 0)')
+    expect(brand.style.color).toBe('')
+    button.textContent='2'
+    inner.send(themeMessage('light'))
+    expect(inner.window.getComputedStyle(button).color).toBe('#fff')
+    expect(button.style.color).toBe('')
+    expect(button.textContent).toBe('2')
+    expect(inner.window.document.getElementById('counter')).toBe(button)
+  })
+
   it('honors an explicit fixed meta theme while letting custom CSS override non-important defaults', () => {
     const html = '<!doctype html><html><head><meta content="light" name="sherlock-theme"><style>:root{--sherlock-accent:#dd2233}body{background:pink}</style></head><body>自定义<script>window.firstTheme=document.documentElement.getAttribute("data-sherlock-theme")</script></body></html>'
     const outer = runtime(buildResearchHtmlPreview(html, '自定义', 'dark'))
