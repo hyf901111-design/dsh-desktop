@@ -347,11 +347,13 @@ body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-pane
 
 /* Overflow is a sibling of the scroller, never painted over a tab close button. */
 .t8lSSG_panel .t8lSSG_tabList { flex:1 1 0; min-width:0; gap:4px; }
-.t8lSSG_panel [data-odyssey-panel-tab] { flex-shrink:0; min-width:0; max-width:100%; box-sizing:border-box; }
+.t8lSSG_panel [data-odyssey-panel-tab] { flex:0 0 auto; min-width:46px; max-width:160px; box-sizing:border-box; overflow:hidden; }
+.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 0 16px; width:16px; height:16px; }
+.t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabTitle { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { flex:0 0 12px; width:12px; }
-.t8lSSG_panel .t8lSSG_tabList:has(+ [data-odyssey-tab-overflow-trigger]) [data-odyssey-panel-tab] {
-  max-width:max(48px, calc(100% - 62px));
-}
+.t8lSSG_panel .t8lSSG_tabList { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+.t8lSSG_panel .t8lSSG_tabList::-webkit-scrollbar { display:none; }
+.t8lSSG_panel [data-odyssey-tab-clipped=true] .t8lSSG_tabClose { visibility:hidden; pointer-events:none; }
 
 /* A non-closable conversation tab has no trailing close affordance to balance. */
 .t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { justify-content:center; padding-inline:8px; gap:0; }

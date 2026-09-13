@@ -1637,7 +1637,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   if (!wide || !skin) return null
   const B = skin.header
   const classes = (...names: Array<string | false>) => names.filter(Boolean).join(' ')
-  return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'aria-label': '研究看板' },
+  return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'data-section-collapsed': collapsed && !search, 'aria-label': '研究看板' },
     h('div', { className: B.sectionHeader, 'data-srb-section-header': '' },
       h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开研究看板' : '折叠研究看板', 'aria-expanded': !collapsed,
         onClick: () => { setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed)) } },
