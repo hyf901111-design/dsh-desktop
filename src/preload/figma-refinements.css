@@ -230,7 +230,7 @@ body .odyssey-model-menu:has(.odyssey-model-empty) ._7KE1Ra_groups { margin-top:
 body .odyssey-model-menu:has(.odyssey-model-empty) .odyssey-model-footer { margin-top:11px; }
 body .odyssey-model-menu:has(.odyssey-model-empty) :is(.odyssey-model-search,.odyssey-model-footer) { color:#242424; }
 body[data-ds-dark-theme] .odyssey-model-menu:has(.odyssey-model-empty) :is(.odyssey-model-search,.odyssey-model-footer) { color:#e6e6e6; }
-body ._3e4SsG_menu { min-width:0; width:360px; max-width:calc(100vw - 32px); border-radius:10px; border:1px solid var(--odyssey-menu-border); padding:6px; background:var(--odyssey-menu); box-shadow:0 8px 24px -4px #00000024; }
+body ._3e4SsG_menu { min-width:0; box-sizing:border-box; width:360px; max-width:min(100%,calc(100vw - 32px)); border-radius:10px; border:1px solid var(--odyssey-menu-border); padding:6px; background:var(--odyssey-menu); box-shadow:0 8px 24px -4px #00000024; }
 body ._3e4SsG_item { display:flex; align-items:center; min-height:32px; height:32px; gap:8px; padding:6px 8px; border-radius:6px; }
 body ._3e4SsG_itemName { flex:none; font:400 13px/20px var(--odyssey-font-ui); white-space:nowrap; }
 body ._3e4SsG_itemDescription { flex:1; min-width:0; margin:0; font:400 12px/20px var(--odyssey-font-ui); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--odyssey-menu-muted); }
@@ -349,7 +349,7 @@ body[data-ds-dark-theme] [role=menu]:has(.odyssey-provider-search) [role=menuite
 /* 12C mind-map detail and 12D new-tab keep their dedicated Figma material. */
 body .rScV5Q_mindMapMenu.odyssey-derived-detail-menu { --odyssey-derived-surface:var(--odyssey-menu); --odyssey-derived-border:var(--odyssey-menu-border); --odyssey-derived-input:#f0f0f0; --odyssey-derived-muted:#757575; --odyssey-derived-shadow:0 8px 24px -4px #00000024; backdrop-filter:blur(24px); }
 body[data-ds-dark-theme] .rScV5Q_mindMapMenu.odyssey-derived-detail-menu { --odyssey-derived-input:#373737; --odyssey-derived-muted:#9c9c9c; }
-body [role=menu]:has([data-odyssey-file-menu-label]) { height:250px; padding:8px 10px 32px; border:0; outline:1px solid #ffffffa6; outline-offset:-1px; border-radius:14px; background:#ffffffe8; backdrop-filter:blur(16px); box-shadow:0 8px 24px #0000001f; }
+body [role=menu]:has([data-odyssey-file-menu-label]) { height:auto; padding:8px 10px; border:0; outline:1px solid #ffffffa6; outline-offset:-1px; border-radius:14px; background:#ffffffe8; backdrop-filter:blur(16px); box-shadow:0 8px 24px #0000001f; }
 body[data-ds-dark-theme] [role=menu]:has([data-odyssey-file-menu-label]) { background:#333333e8; outline-color:#333333a6; }
 body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] { padding:0 10px; gap:12px; font:400 14px/24px var(--odyssey-font-ui); }
 body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] svg { width:17px; height:17px; }
@@ -425,3 +425,29 @@ body [data-odyssey-subagent-panel] .wSkVaW_root .uV2eYG_card[data-odyssey-contin
 .odyssey-subagent-composer-popover .uV2eYG_tools{flex-wrap:wrap;gap:12px}
 
 body .odyssey-subagent-composer-popover .odyssey-run-info{flex:0 0 100%;width:100%;max-width:none;margin:0}
+
+/* Preserve the original model / reasoning directory and native option states. */
+body .odyssey-restored-model-menu { z-index:3000; box-sizing:border-box; overflow:auto; }
+body .odyssey-restored-model-menu :is(button,[role=menuitemradio]):hover { background:var(--odyssey-menu-row); }
+body .odyssey-restored-model-menu :is(button,[role=menuitemradio]):focus-visible { outline:2px solid var(--odyssey-active); outline-offset:-2px; }
+body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { transition:background-color 120ms ease,box-shadow 120ms ease; }
+body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:hover:not(:disabled) { background:#e4e4e4; }
+body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:active:not(:disabled) { background:#d6d6d6; box-shadow:inset 0 1px 2px #0002; }
+body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:hover:not(:disabled) { background:#373737; }
+body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:active:not(:disabled) { background:#444; box-shadow:inset 0 1px 2px #0004; }
+body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:focus-visible { outline:2px solid var(--odyssey-text); outline-offset:2px; }
+body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:disabled { opacity:.4; cursor:default; }
+
+/* Empty Research uses the same live preset selector as the conversation home. */
+.sRp_composer .wSkVaW_heroWorkspaceRow[data-research-empty-workspace-row] .cubgiG_seat { display:flex; }
+/* One rounded outline: the previous SVG mask retained its old 22px radius. */
+body .uV2eYG_cardWorkspaceTrigger::after {
+  inset:0; box-sizing:border-box; border-radius:inherit; border:1px dashed var(--dsw-alias-border-l4);
+  background:none; mask:none; -webkit-mask:none; transition:border-color .1s;
+}
+body .uV2eYG_cardWorkspaceTrigger:hover::after { background:none; border-color:var(--dsw-alias-state-business-primary); }
+/* An expanded dropdown stays active when the pointer leaves its trigger. */
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat)[aria-expanded=true],
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat)[aria-expanded=true]:hover {
+  background:var(--odyssey-menu-row); color:var(--odyssey-text); box-shadow:none; transform:none;
+}

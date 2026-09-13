@@ -16,7 +16,7 @@ const translations = runInNewContext(source.slice(source.indexOf('const zh = {')
 function menuHtml({ group = 'command', count = 7, active = 0, maxHeight = 320, groups, highlight } = {}) {
   const names = ['compact', 'export', 'feedback', 'goal', 'permission', 'plan', 'model']
   const state = { open: true, groups: groups ?? [{ source: group, status: 'ready', items: names.slice(0, count).map(name => ({ name, description: 'Description' })) }], highlight: highlight ?? { source: group, index: active } }
-  const MenuView = runInNewContext(fn('optionId') + '\n' + fn('MenuView') + '\nMenuView', {
+  const MenuView = runInNewContext(fn('optionId') + '\n' + fn('commandMenuText') + '\n' + fn('MenuView') + '\nMenuView', {
     react: { Fragment, useSyncExternalStore: (_subscribe, snapshot) => snapshot(), useRef: () => ({ current: null }), useEffect() {} },
     react_jsx_runtime: jsxRuntime, MAX_HEIGHT: 320,
     _deepseek_ai_dsh_client_ui_primitives: { useAnchoredMaxHeight: () => maxHeight },

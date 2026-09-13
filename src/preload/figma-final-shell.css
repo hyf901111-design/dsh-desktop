@@ -137,11 +137,11 @@ body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlo
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
 .sRp_composer .FJxK0a_root { display:none; }
 /* 164:805/940: live canvas scope, inside the input at x17/y12. */
-.sRp_composer div:has(>[data-research-context-badge]) { margin:0 17px !important; max-width:calc(100% - 34px) !important; }
+.sRp_composer div:has(>[data-research-context-badge]) { margin:12px 17px 0 !important; max-width:calc(100% - 34px) !important; }
 .sRp_composer [data-research-context-badge] {
   padding:0 !important; border:0 !important; border-radius:4px !important;
   background:transparent !important; color:#5e5e5e !important;
-  font:400 11px/19px var(--odyssey-font-ui) !important;
+  font:400 13px/20px var(--odyssey-font-ui) !important;
 }
 [data-ds-dark-theme] .sRp_composer [data-research-context-badge] { color:#d0d0d0 !important; }
 .sRp_composer [data-research-context-badge]:hover { color:var(--odyssey-text) !important; }

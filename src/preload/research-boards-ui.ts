@@ -1714,7 +1714,7 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
   const firstMarker = !grouped && drag?.over?.key === visible[0]?.key && drag?.over?.half === 'before'
   return h('div', { className: B.listArea }, h('div', { className: B.treeBody },
     h('div', { className: ['srb-board-list', B.list, !grouped && B.flatList].filter(Boolean).join(' '), 'data-group-by': preferences.groupBy },
-      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '新建研究看板，或从研究中创建协作'),
+      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '暂无看板'),
       ...(grouped ? groups.map(({ group, rows }) => h(ResearchBoardGroup, { key: group, skin, group,
         expanded: !!query || !preferences.collapsedGroups.includes(group),
         onToggle: () => { if (!query) save({ ...preferences, collapsedGroups: preferences.collapsedGroups.includes(group) ? preferences.collapsedGroups.filter((g: string) => g !== group) : [...preferences.collapsedGroups, group] }) }

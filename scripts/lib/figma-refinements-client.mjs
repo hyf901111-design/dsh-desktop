@@ -91,6 +91,14 @@ export function patchFigmaRefinementSubagent(source) {
 }
 
 export function patchFigmaRefinementInputTrigger(source) {
+  source = source.replace('document.getElementById(optionId(highlight.source, highlight.index))?.scrollIntoView({ block: "nearest" });', `const item = document.getElementById(optionId(highlight.source, highlight.index));
+        const viewport = listRef.current?.firstElementChild;
+        if (item && viewport) {
+          const row = item.getBoundingClientRect(), box = viewport.getBoundingClientRect();
+          if (row.top < box.top) viewport.scrollTop -= box.top-row.top;
+          else if (row.bottom > box.bottom) viewport.scrollTop += row.bottom-box.bottom;
+        }`);
+
   // The integrated locale patch already owns these labels and dispatch identities.
   if (source.includes('function commandMenuText(')) return source
   const marker='/* odyssey:command-menu:20260912 */'

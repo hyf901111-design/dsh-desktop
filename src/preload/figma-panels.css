@@ -57,7 +57,7 @@ body:has([data-odyssey-page]) .t8lSSG_panelBody { border-radius:0 0 16px 16px; }
 body:has([data-odyssey-page]) .wSkVaW_header { padding-right:20px; }
 body:has([data-odyssey-panel-right="closed"]) .wSkVaW_header { padding-right:56px; }
 /* Figma 66: welcome baseline at 325px inside the 880px pane. */
-.sRp_emptyState { padding-bottom:97px; }
+.sRp_emptyState { padding-bottom:0; }
 .t8lSSG_panel .t8lSSG_tab { box-sizing:border-box; padding-inline:8px; }
 .t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { width:46px; }
 .t8lSSG_panel .t8lSSG_tabTitle { flex:0 1 auto; width:auto; }
@@ -352,3 +352,7 @@ body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-pane
 .t8lSSG_panel .t8lSSG_tabList:has(+ [data-odyssey-tab-overflow-trigger]) [data-odyssey-panel-tab] {
   max-width:max(48px, calc(100% - 62px));
 }
+
+/* A non-closable conversation tab has no trailing close affordance to balance. */
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { justify-content:center; padding-inline:8px; gap:0; }
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] .t8lSSG_tabTitle { flex:none; text-align:center; }
