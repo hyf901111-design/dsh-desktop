@@ -1,3 +1,4 @@
+import { mountFloatingSurfaces } from './floating-surfaces'
 import { mountResearchBoardNotifications } from './research-board-notifications-ui'
 import { mountAccountUi } from './account-ui'
 import { createResearchBoardsBridge } from './research-boards'
@@ -132,6 +133,7 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
 })
 
 function initializeUi(): void {
+  mountFloatingSurfaces(document)
   const boards = createResearchBoardsBridge(ipcRenderer)
   mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards)
   mountResearchBoardNotifications(document, boards)
