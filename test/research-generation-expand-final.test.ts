@@ -42,7 +42,9 @@ it('does not attempt a stale resize after the target is deleted',()=>{const f=fi
 it('opens and closes real process details in a manually sized card without mutating task data or dimensions',async()=>{
   const w=new Window({url:'http://localhost/'});vi.stubGlobal('document',w.document);vi.stubGlobal('window',w);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
   const start=source.indexOf('function researchGenerationPresentation('),end=source.indexOf('function isResearchWechatArticleUrl(',start)
-  const Process=new Function('react','react_jsx_runtime',source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,requireModule('react/jsx-runtime'))
+  const derivedStart=source.indexOf('function researchIsDerivedNode('),derivedEnd=source.indexOf('function researchDerivedTitle(',derivedStart)
+  expect(derivedStart).toBeGreaterThan(-1);expect(derivedEnd).toBeGreaterThan(derivedStart)
+  const Process=new Function('react','react_jsx_runtime',source.slice(derivedStart,derivedEnd)+source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,requireModule('react/jsx-runtime'))
   const f=fixture(),before=JSON.stringify(f.workspace.getSnapshot()),host=w.document.createElement('div');w.document.body.append(host);const root=createRoot(host)
   cleanups.push(async()=>{await React.act(async()=>root.unmount());await w.happyDOM.abort()})
   await React.act(async()=>root.render(React.createElement(Process,{node:f.node,onExpand:f.expand})))
