@@ -1,4 +1,5 @@
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
+import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
 import { readFileSync } from 'node:fs'
 import { patchFigmaDerivedMenu, derivedMenuCss } from './figma-derived-menu-client.mjs'
 const iconData = Object.fromEntries(['branch','chevron','summary','plus','check','more','expand','global-link-light','global-container-light','global-voice-light','global-link-dark','global-container-dark','global-voice-dark'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/'+name+'.svg',import.meta.url)).toString('base64')]));
@@ -65,7 +66,7 @@ function patchCanvasGraphicPrimitives(source) {
 }
 
 export function patchFigmaFinalCanvas(source) {
-  return patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source));
+  return patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)));
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);
