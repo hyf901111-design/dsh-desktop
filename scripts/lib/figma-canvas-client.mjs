@@ -357,6 +357,15 @@ function researchCanvasViewportForAreaChange(snapshot,next) {
 }
 function researchCanvasContainedAutoNode(snapshot,node) {
   if(!snapshot||node.sizeMode==='manual'||node.workbenchId||!['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result','web-link'].includes(node.kind))return node;
+  const sources=[...snapshot.files,...snapshot.artifacts].filter(n=>n.id!==node.id&&node.sourceNodeIds?.includes(n.id));
+  if(sources.length){
+    const peers=[...snapshot.files,...snapshot.artifacts].filter(n=>n.id!==node.id);
+    const overlaps=(a,b)=>Math.abs(a.x-b.x)<(a.width+b.width)/2+16&&Math.abs(a.y-b.y)<(a.height+b.height)/2+16;
+    if(!peers.some(n=>overlaps(n,node)))return node;
+    const placed={...node,x:Math.max(...sources.map(n=>n.x+n.width/2))+16+node.width/2,y:Math.min(...sources.map(n=>n.y-n.height/2))+node.height/2};
+    if(peers.some(n=>overlaps(n,placed)))placed.y=Math.max(...peers.map(n=>n.y+n.height/2))+16+node.height/2;
+    return placed;
+  }
   const area=researchCanvasVisibleArea(snapshot),view=snapshot.viewport??{x:0,y:0,scale:1},scale=view.scale>0?view.scale:1;
   if(!(area.width>64&&area.height>64)||node.width*scale>area.width-64+1e-6||node.height*scale>area.height-64+1e-6)return node;
   const clamp=(center,size,offset,extent)=>{const min=(32-offset)/scale+size/2,max=(extent-32-offset)/scale-size/2;return max>=min?Math.max(min,Math.min(max,center)):(extent/2-offset)/scale;};
@@ -373,7 +382,13 @@ function researchCanvasFitAutomaticUpdate(snapshot,patch) {
   if(!patch.artifacts)return patch;
   const changed=patch.artifacts.filter(node=>{const prior=snapshot.artifacts.find(old=>old.id===node.id);return node.sizeMode!=='manual'&&prior?.sizeMode!=='manual'&&!node.workbenchId&&['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result','web-link'].includes(node.kind)&&(!prior||node.kind!=='web-link'&&(prior.width!==node.width||prior.height!==node.height));});
   let viewport=patch.viewport??snapshot.viewport;
-  for(const node of changed){const fitted=researchCanvasFittedViewport({...snapshot,viewport},node);if(fitted)viewport=fitted;}
+  const placed=new Map(changed.map(node=>[node.id,researchCanvasContainedAutoNode(snapshot,node)]));
+  patch={...patch,artifacts:patch.artifacts.map(node=>placed.get(node.id)??node)};
+  for(const node of placed.values()){
+    const sources=[...snapshot.files,...snapshot.artifacts].filter(n=>n.id!==node.id&&node.sourceNodeIds?.includes(n.id));
+    const fitted=sources.length?researchWorkbenchViewport([...sources,node],viewport,researchCanvasVisibleArea(snapshot)):researchCanvasFittedViewport({...snapshot,viewport},node);
+    if(fitted)viewport=fitted;
+  }
   if(viewport===(patch.viewport??snapshot.viewport))return patch;
   const changedIds=new Set(changed.map(node=>node.id));
   return {...patch,viewport,artifacts:patch.artifacts.map(node=>changedIds.has(node.id)?researchCanvasContainedAutoNode({...snapshot,viewport},node):node)};
