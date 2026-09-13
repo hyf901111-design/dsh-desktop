@@ -1407,8 +1407,8 @@ export function ResearchBoardHeader({
       : h(
           'button',
           {
-            'aria-label': pinned ? '已添加至研究看板' : '添加至研究看板',
-            title: pinned ? '已添加至研究看板' : '添加至研究看板',
+            'aria-label': pinned ? '已创建至看板区' : '创建至看板区',
+            title: pinned ? '已创建至看板区' : '创建至看板区',
             'aria-pressed': pinned,
             className: 'srb-favorite-button',
             onClick: safely(page, async () => {
@@ -1637,11 +1637,11 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   if (!wide || !skin) return null
   const B = skin.header
   const classes = (...names: Array<string | false>) => names.filter(Boolean).join(' ')
-  return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'data-section-collapsed': collapsed && !search, 'aria-label': '研究看板' },
+  return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'data-section-collapsed': collapsed && !search, 'aria-label': '看板区' },
     h('div', { className: B.sectionHeader, 'data-srb-section-header': '' },
-      h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开研究看板' : '折叠研究看板', 'aria-expanded': !collapsed,
+      h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开看板区' : '折叠看板区', 'aria-expanded': !collapsed,
         onClick: () => { setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed)) } },
-        '研究看板', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
+        '看板区', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
       h('div', { className: classes(B.searchSlot, search && B.searchSlotExpanded) },
         h('div', { ref: searchRoot, className: classes(B.search, search && B.searchExpanded), onClick: () => { setSearch(true); searchInput.current?.focus() } },
           h('button', { className: B.searchButton, 'aria-label': '搜索研究看板', 'aria-expanded': search, title: '搜索研究看板', onClick: () => setSearch(true) }, h(IconSearchOutline16, { size: search ? 11 : 16 })),

@@ -74,7 +74,8 @@ body [data-odyssey-task-status=in_progress] { animation:odyssey-task-ring 900ms 
 @keyframes odyssey-task-ring { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { body .odyssey-task-reveal,body .lXshSW_chevron { transition:none!important; } body [data-odyssey-task-status=in_progress] { animation:none; } }
 body .odyssey-run-info { box-sizing:border-box; width:calc(100% - 64px); max-width:780px; height:24px; margin:8px auto 0; padding:0; display:flex; align-items:center; gap:8px; color:var(--odyssey-muted); font:400 12px/17px var(--odyssey-font-ui); }
-body .sRp_composer .odyssey-run-info { width:100%; margin-top:4px; }
+/* The Research sidebar composer ends at the input card. */
+body .sRp_composer .odyssey-run-info { display:none; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .odyssey-run-info { width:100%; }
 body .odyssey-run-summary { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body .odyssey-run-info button { flex:none; padding:2px 4px; border:0; border-radius:5px; background:none; color:inherit; font:inherit; cursor:pointer; }
