@@ -16,7 +16,12 @@ function OdysseyReadingStatus({ listRef, visible, onClick }) {
   });
   if (!host || !visible) return null;
   return react_dom.createPortal(react_jsx_runtime.jsx('button', {
-    type:'button', onClick, children:'回到最新', 'aria-label':'回到最新'
+    type:'button', onClick, 'aria-label':'回到最新', title:'回到最新',
+    children:react_jsx_runtime.jsx('svg', {
+      width:20, height:20, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor',
+      strokeWidth:1.5, strokeLinecap:'round', strokeLinejoin:'round', 'aria-hidden':true,
+      children:react_jsx_runtime.jsx('path', {d:'M12 4v16m-7-7 7 7 7-7'})
+    })
   }), host);
 }
 function OdysseyRunInfo({ groups }) {
@@ -48,9 +53,9 @@ function OdysseyTaskSheet({children,onClose}) {
 export function patchFigmaReadingConversation(source) {
   const marker='/* odyssey:reading-layout:20260912 */';
   if(source.includes(marker)) {
-    const a=source.indexOf('function OdysseyRunInfo('), b=source.indexOf('function useOdysseyCompactTasks(',a);
-    const h=helpers.indexOf('function OdysseyRunInfo('), e=helpers.indexOf('function useOdysseyCompactTasks(',h);
-    if(a<0||b<a)throw Error('Run info boundary drifted');
+    const a=source.indexOf('function OdysseyReadingStatus('), b=source.indexOf('function useOdysseyCompactTasks(',a);
+    const h=helpers.indexOf('function OdysseyReadingStatus('), e=helpers.indexOf('function useOdysseyCompactTasks(',h);
+    if(a<0||b<a)throw Error('Reading status/run info boundary drifted');
     source=source.slice(0,a)+helpers.slice(h,e)+source.slice(b);
     return patchFigmaCompactTasks(patchFigmaTaskProgress(source));
   }

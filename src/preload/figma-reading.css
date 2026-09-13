@@ -1,6 +1,6 @@
 /* Figma 748:27747 — long replies, fixed footer, tables and compact windows. */
-body { --odyssey-composer-solid:#f9f9f9; }
-body[data-ds-dark-theme] { --odyssey-composer-solid:#292929; }
+body { --odyssey-composer-solid:#f9f9f9; --odyssey-reading-border:rgba(0,0,0,.1); }
+body[data-ds-dark-theme] { --odyssey-composer-solid:#292929; --odyssey-reading-border:rgba(255,255,255,.12); }
 body .uV2eYG_card, body[data-ds-dark-theme] .uV2eYG_card {
   background:var(--odyssey-composer-solid)!important;
   backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
@@ -37,10 +37,14 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
 body .sRp_messages { overflow-x:hidden; overscroll-behavior-y:contain; }
 body .sRp_composer { background:var(--odyssey-right-surface); }
 body .sRp_composer .wSkVaW_composerSeat { --dsh-composer-text-max-height:112px; }
-body [data-odyssey-reading-status] { flex:0 0 32px; height:32px; box-sizing:border-box; display:flex; align-items:center; justify-content:flex-end; padding:2px max(16px,calc((100% - 780px)/2)); background:var(--odyssey-workspace); }
+body [data-odyssey-reading-status] { flex:0 0 44px; height:44px; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:0 16px 12px; background:var(--odyssey-workspace); }
 body [data-odyssey-reading-status]:empty { display:none; }
-body .sRp_root [data-odyssey-reading-status] { padding:2px 0; background:var(--odyssey-right-surface); }
-body [data-odyssey-reading-status] button { height:28px; padding:0 12px; border:0; border-radius:7px; background:var(--odyssey-composer-solid); color:var(--odyssey-text); font:400 12px/20px var(--odyssey-font-ui); cursor:pointer; }
+body .sRp_root [data-odyssey-reading-status] { padding:0 0 12px; background:var(--odyssey-right-surface); }
+body [data-odyssey-reading-status] button { display:flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; box-sizing:border-box; padding:0; border:1px solid var(--odyssey-reading-border); border-radius:50%; background:var(--odyssey-workspace); color:var(--odyssey-text); cursor:pointer; }
+body .sRp_root [data-odyssey-reading-status] button { background:var(--odyssey-right-surface); }
+body [data-odyssey-reading-status] button svg { display:block; width:20px; height:20px; flex:none; pointer-events:none; }
+body [data-odyssey-reading-status] button:hover { background:var(--odyssey-composer-solid); }
+body [data-odyssey-reading-status] button:focus-visible { outline:2px solid var(--odyssey-text); outline-offset:3px; }
 body .wSkVaW_root[data-odyssey-page=research] > [data-odyssey-reading-status],body .wSkVaW_root[data-odyssey-page=home] > [data-odyssey-reading-status] { display:none; }
 /* Task card: inset border does not consume the 40 + 168 + 8 px layout. */
 body :is(.lXshSW_root,.odyssey-task-sheet) { --odyssey-task-text:#333; --odyssey-task-muted:#757575; --odyssey-task-active:rgba(0,0,0,.04); }
