@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { patchFigmaFinalConversation, patchFigmaFinalLayout } from '../scripts/lib/patch-figma-final-shell.mjs'
 
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
@@ -12,6 +13,42 @@ function clientFunction(bundle: string, name: string) {
 }
 
 describe('Figma shell patch installation', () => {
+  it('initializes the controller before slot render and replaces it on reload with proper disposal', async () => {
+    const installed = patchFigmaFinalConversation(source)
+    const apply = clientFunction(installed, 'apply')
+    const begin = apply.indexOf('const inputHub = new InputHub(')
+    const end = apply.indexOf('blocks: composerBlocks });', begin) + 'blocks: composerBlocks });'.length
+    expect(end).toBeLessThan(apply.indexOf('sessions.provide('))
+    expect(apply).not.toContain('concreteConversation(ctx)')
+    expect(apply.match(/const conversation = conversationController;/g)).toHaveLength(3)
+    const constructorStart = installed.indexOf('constructor(ctx, config)', installed.indexOf('var ConversationController = class'))
+    const constructorEnd = installed.indexOf('\n\t\t\t}', constructorStart) + '\n\t\t\t}'.length
+    const Controller = runInNewContext('class Controller extends Service { createdImageUrls = new Set(); draftAttachments = new Map(); imageUrls = new Map(); imageGenerations = new Map(); ' + installed.slice(constructorStart, constructorEnd) + ' }; Controller', { Service, revokePreview() {} })
+    const initialize = runInNewContext('(ctx) => { const t = () => {}; const researchWorkspaces = {}; ' + apply.slice(begin, end) + ' return conversationController; }', {
+      ConversationController: Controller, InputHub: class {}, ComposerBlockRegistry: class {}
+    })
+    const root = new Context()
+    let previous: { disposed: boolean; draftAttachments: Map<string, unknown> } | undefined
+    for (let generation = 0; generation < 2; generation++) {
+      let controller: typeof previous
+      const fiber = root.plugin((ctx: Context) => {
+        controller = initialize(ctx)
+        // Simulate the immediate slot injection before the owning fiber is active.
+        expect(controller).toBeDefined()
+        expect(controller).not.toBe(previous)
+        controller!.draftAttachments.set('draft', {})
+      })
+      await fiber.await()
+      expect(root.get('conversation')).toBeDefined()
+      await fiber.dispose()
+      expect(root.get('conversation')).toBeUndefined()
+      expect(controller!.disposed).toBe(true)
+      expect(controller!.draftAttachments.size).toBe(0)
+      previous = controller
+    }
+    expect(patchFigmaFinalConversation(installed)).toBe(installed)
+  })
+
   it('shows project controls only before the first message in either conversation surface', () => {
     const installed = patchFigmaFinalConversation(source)
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })

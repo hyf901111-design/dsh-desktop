@@ -16,6 +16,17 @@ function exact(source, from, to) {
   return source.replace(from, to)
 }
 export function patchFigmaFinalConversation(source) {
+  // Own the controller in the same fiber as its slots. Slot subscribers can
+  // render during registration on HMR, before Cordis publishes that fiber's
+  // services; use this generation's initialized instance in those factories.
+  const ready = 'const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
+  if (!source.includes(ready)) {
+    source = exact(source, '\t\t\tctx.plugin(ConversationController, {\n\t\t\t\tinput: inputHub,\n\t\t\t\tblocks: composerBlocks\n\t\t\t});', '\t\t\t/* Controller lifetime is owned by the conversation apply fiber. */')
+    source = exact(source, 'const composerBlocks = new ComposerBlockRegistry();', 'const composerBlocks = new ComposerBlockRegistry();\n\t\t\t' + ready)
+    const lookup = 'const conversation = concreteConversation(ctx);'
+    if (source.split(lookup).length !== 4) throw Error('Conversation service lookup anchors drifted')
+    source = source.replaceAll(lookup, 'const conversation = conversationController;')
+  }
   // The visible Chinese headline is outlined artwork in the final Figma frame;
   // retain the localized accessible sentence and use text for other locales.
   source = exact(source, 'className: HeroShell_module_css_default.headlineText,\n\t\t\t\t\t\t\t\tchildren: t("hero.headline")', 'className: HeroShell_module_css_default.headlineText,\n\t\t\t\t\t\t\t\t"data-odyssey-home-title-art": t("hero.headline") === "探索更远，洞见更深。" ? "" : void 0,\n\t\t\t\t\t\t\t\t"aria-label": t("hero.headline"),\n\t\t\t\t\t\t\t\tchildren: t("hero.headline")')
