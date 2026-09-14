@@ -12,7 +12,7 @@
         "featureName": "已验收研究工作台与客户端交互优化",
         "branch": "codex/feat/composer-menu-fixes-20260913",
         "baseCommit": "bcb9ad26f0303b105392ed7336e7a46bef8a6850",
-        "tipCommit": "6946281500e4d50abf82fa4f13bd916223f10830",
+        "tipCommit": "374e70c503399e5cf4ae351b339353c690c0696b",
         "commits": [
           {
             "commit": "b541cbffb495ad2011b83abe33bdfb2989abd242",
@@ -322,6 +322,13 @@
               "3adb22527a53859766708ee4a92d7848d3db0b2e"
             ],
             "subject": "修复全新安装时组件菜单补丁锚点不兼容"
+          },
+          {
+            "commit": "374e70c503399e5cf4ae351b339353c690c0696b",
+            "parents": [
+              "6946281500e4d50abf82fa4f13bd916223f10830"
+            ],
+            "subject": "补齐研究交互模块声明并修正标题测试节点类型"
           }
         ],
         "boundaryParents": [
@@ -370,6 +377,10 @@
           },
           {
             "status": "A",
+            "path": "scripts/lib/board-directory-picker.d.mts"
+          },
+          {
+            "status": "A",
             "path": "scripts/lib/board-directory-picker.mjs"
           },
           {
@@ -401,8 +412,16 @@
             "path": "scripts/lib/figma-reading-client.mjs"
           },
           {
+            "status": "A",
+            "path": "scripts/lib/figma-refinements-client.d.mts"
+          },
+          {
             "status": "M",
             "path": "scripts/lib/figma-refinements-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-session-title.d.mts"
           },
           {
             "status": "A",
@@ -431,6 +450,10 @@
           {
             "status": "M",
             "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-resident-conversation.d.mts"
           },
           {
             "status": "A",
@@ -652,14 +675,14 @@
         "checks": [
           {
             "argv": [
-              "git",
-              "diff",
-              "--check"
+              "npm",
+              "run",
+              "typecheck"
             ],
             "outcome": "passed",
-            "summary": "全新安装菜单补丁及幂等性检查通过，git diff --check通过",
-            "verifiedCommit": "6946281500e4d50abf82fa4f13bd916223f10830",
-            "completedAt": "2026-09-14T05:35:16.068265+00:00",
+            "summary": "类型检查与11项标题、常驻对话检查通过",
+            "verifiedCommit": "374e70c503399e5cf4ae351b339353c690c0696b",
+            "completedAt": "2026-09-14T05:37:26.186427+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -674,7 +697,7 @@
         "risks": [
           "联网组件仍依赖数据源可用性"
         ],
-        "generatedAt": "2026-09-14T05:35:16.068265+00:00"
+        "generatedAt": "2026-09-14T05:37:26.186427+00:00"
       }
     }
   ],
