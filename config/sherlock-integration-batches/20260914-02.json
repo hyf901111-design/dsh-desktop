@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-02",
+  "branch": "codex/integration/20260914-02",
+  "baseMainCommit": "cbdb2c8bfda97e8d1ae033969e62d5ba57f63cd0",
+  "expectedMainCommit": "cbdb2c8bfda97e8d1ae033969e62d5ba57f63cd0",
+  "createdAt": "2026-09-14T06:38:31.815Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "新版登录注册界面还原",
+        "branch": "codex/feat/auth-figma-refresh-20260914",
+        "baseCommit": "cbdb2c8bfda97e8d1ae033969e62d5ba57f63cd0",
+        "tipCommit": "df6a0ebf9720b08426238eb7e507f7b234f8cb79",
+        "commits": [
+          {
+            "commit": "df6a0ebf9720b08426238eb7e507f7b234f8cb79",
+            "parents": [
+              "cbdb2c8bfda97e8d1ae033969e62d5ba57f63cd0"
+            ],
+            "subject": "按新版设计稿还原登录注册毛玻璃外框和切换底栏"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-auth.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-settings-assets/auth-scene-mask.svg"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-errors.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/figma-auth-errors.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "10项聚焦检查及类型检查通过",
+            "verifiedCommit": "df6a0ebf9720b08426238eb7e507f7b234f8cb79",
+            "completedAt": "2026-09-14T06:38:20.924983+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "10项聚焦检查及类型检查通过",
+            "verifiedCommit": "df6a0ebf9720b08426238eb7e507f7b234f8cb79",
+            "completedAt": "2026-09-14T06:38:20.925619+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "四种主题与表单状态已浏览器截图验证；用户要求替换启动"
+        },
+        "acceptanceCriteria": [
+          "还原Figma登录注册外框、底栏及间距",
+          "保留验证与小窗口滚动"
+        ],
+        "risks": [
+          "原生窗口效果在替换启动后核验"
+        ],
+        "generatedAt": "2026-09-14T06:38:31.374723+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/figma-auth-layout.test.ts",
+        "test/figma-auth-errors.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
