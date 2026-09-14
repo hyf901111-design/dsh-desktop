@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { build } from 'esbuild'
+import { PNG } from 'pngjs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -100,6 +101,28 @@ describe('auth field errors in the real form and browser layout', () => {
     expect(corrected.fields[0]).toMatchObject({ value: '验收_local', invalid: null, error: '', errorVisible: false, labelHeight: 70 })
     expect(corrected.fields.slice(1).every(field => field.invalid === 'true' && field.errorVisible)).toBe(true)
     expect(await page.evaluate(() => window.accountCalls.filter(call => call.action !== 'me'))).toEqual([])
+  })
+  it.each([
+    [760, 640, 1], [2400, 1200, 1], [1100, 800, 0.75], [1100, 800, 1.5]
+  ])('keeps the native button cutout fixed at %d×%d with zoom %s', async (width, height, zoom) => {
+    await open()
+    await page.setViewportSize({ width, height })
+    // Isolate the actual mask pixels from the sea image and glass colors.
+    // CSS zoom plus inverse viewport dimensions models Electron content zoom.
+    await page.evaluate(({ width, height, zoom }) => {
+      document.documentElement.style.setProperty('--auth-native-scale', String(1 / zoom))
+      Object.assign(document.querySelector('dialog').style, {
+        zoom: String(zoom), width: `${width / zoom}px`, height: `${height / zoom}px`,
+        background: 'white', backdropFilter: 'none'
+      })
+    }, { width, height, zoom })
+    await page.addStyleTag({ content: '.sherlock-auth-scenery{background:rgb(255,0,0)}.sherlock-auth-backdrop,.sherlock-auth-scenery:after{display:none}' })
+    const shot = PNG.sync.read(await page.screenshot())
+    const pixel = (x, y) => [...shot.data.subarray((y * shot.width + x) * 4, (y * shot.width + x) * 4 + 3)]
+    expect(pixel(70, 16)).toEqual([255, 255, 255]) // third native button stays clear
+    expect(pixel(100, 16)).toEqual([255, 0, 0]) // no oversized empty notch
+    expect(pixel(25, 38)).toEqual([255, 0, 0]) // image resumes below the buttons
+    expect(pixel(width - 30, 30)).toEqual([255, 0, 0]) // wide windows stay filled
   })
   it('retains entered credentials across validation and service errors, clearing only the edited field', async () => {
     await open()

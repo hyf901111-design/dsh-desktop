@@ -179,7 +179,7 @@ export function mountAccountUi(
       scene.className = 'sherlock-auth-scene'
       const scenery = document.createElement('div')
       scenery.className = 'sherlock-auth-scenery'
-      scenery.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(authSceneMask)}")`
+      scenery.style.setProperty('--auth-scene-mask', `url("data:image/svg+xml,${encodeURIComponent(authSceneMask)}")`)
       scenery.append(backdrop)
       scene.append(scenery, frame)
       const signature = document.createElement('footer')

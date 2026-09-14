@@ -2,7 +2,7 @@ import { mountFloatingSurfaces } from './floating-surfaces'
 import { mountResearchBoardNotifications } from './research-board-notifications-ui'
 import { mountAccountUi } from './account-ui'
 import { createResearchBoardsBridge } from './research-boards'
-import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron'
 import type { UpdateStatus } from '../shared/contracts'
 import { developerModeEnabledFromArguments } from '../shared/developer-mode'
 import { appVersionFromArguments } from '../shared/app-info'
@@ -133,6 +133,12 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
 })
 
 function initializeUi(): void {
+  // Native window controls do not scale with the web content zoom level.
+  const syncAuthNativeScale = (): void => {
+    document.documentElement.style.setProperty('--auth-native-scale', String(1 / webFrame.getZoomFactor()))
+  }
+  syncAuthNativeScale()
+  window.addEventListener('resize', syncAuthNativeScale)
   mountFloatingSurfaces(document)
   const boards = createResearchBoardsBridge(ipcRenderer)
   mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards)
