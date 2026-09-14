@@ -71,6 +71,19 @@ describe('auth field errors in the real form and browser layout', () => {
     ['dark registration', true, true, 612, 'rgb(239, 147, 139)']
   ])('%s preserves normal geometry, then puts errors below unchanged inputs', async (_name, dark, register, normalHeight, stroke) => {
     await open({ dark, register })
+    const shell = await page.evaluate(() => {
+      const scene = document.querySelector('.sherlock-auth-scene').getBoundingClientRect()
+      const footer = document.querySelector('.sherlock-auth-signature').getBoundingClientRect()
+      const switcher = document.querySelector('.sherlock-auth-switch').getBoundingClientRect()
+      const card = document.querySelector('.sherlock-auth-frame').getBoundingClientRect()
+      return { sceneX: scene.x, sceneY: scene.y, sceneBottom: scene.bottom,
+        footerTop: footer.top, footerHeight: footer.height, footerBottom: footer.bottom,
+        switchBottom: switcher.bottom, cardBottom: card.bottom, switchHeight: switcher.height }
+    })
+    expect(shell).toMatchObject({ sceneX: 10, sceneY: 10, footerHeight: 50, footerBottom: 890, switchHeight: 58 })
+    expect(shell.sceneBottom).toBe(shell.footerTop)
+    expect(shell.switchBottom).toBe(shell.cardBottom)
+    if (process.env.AUTH_SCREENSHOTS) await page.screenshot({ path: `${process.env.AUTH_SCREENSHOTS}/${dark ? 'dark' : 'light'}-${register ? 'register' : 'login'}.png` })
     const before = await measurements()
     expect(before.cardHeight).toBe(normalHeight)
     expect(before.fields).toHaveLength(register ? 4 : 2)
@@ -104,7 +117,7 @@ describe('auth field errors in the real form and browser layout', () => {
   it('allows the expanded registration errors to scroll to submit, switch and close at 840×640', async () => {
     await open({ dark: true, register: true, short: true })
     await page.locator('button[type=submit]').click()
-    const sizes = await page.locator('dialog').evaluate(el => ({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }))
+    const sizes = await page.locator('.sherlock-auth-scene').evaluate(el => ({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }))
     expect(sizes.scrollHeight).toBeGreaterThan(sizes.clientHeight)
     expect(sizes.scrollWidth).toBe(sizes.clientWidth)
     for (const selector of ['button[type=submit]', '.sherlock-auth-switch', '.sherlock-auth-close']) {
