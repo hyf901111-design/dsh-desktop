@@ -1,3 +1,4 @@
+import { installBootBranding } from './lib/boot-branding.mjs'
 import { copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -53,6 +54,8 @@ function replaceRequiredAny(contents, searches, replacement, file) {
   }
   return contents.replace(search, replacement)
 }
+
+await installBootBranding(projectRoot)
 
 await mkdir(destinationDirectory, { recursive: true })
 await mkdir(path.join(destinationDirectory, 'fonts'), { recursive: true })
