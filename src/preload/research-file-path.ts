@@ -6,6 +6,7 @@ export type ResearchPreviewIdentity = {
 }
 
 export type ResearchPreviewDescriptor = {
+  previewEligible?: false
   authorizationId: string
   capabilityToken: string
   url: string

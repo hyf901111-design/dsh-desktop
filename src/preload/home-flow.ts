@@ -161,7 +161,7 @@ export function mountHomeFlow(doc: Document = document): () => void {
   }
   const observer = new win.ResizeObserver(resize)
   const sync = () => {
-    const next = doc.querySelector('.pI_x6G_centerCol:has([data-odyssey-page="home"])')
+    const next = doc.querySelector('.sherlock-auth-dialog[open] .sherlock-auth-scenery') ?? doc.querySelector('.pI_x6G_centerCol:has([data-odyssey-page="home"])')
     const nextDark = doc.body.hasAttribute('data-ds-dark-theme')
     if (next === host && (!host || canvas?.isConnected)) {
       if (dark !== nextDark) { dark = nextDark; draw() }

@@ -11,7 +11,6 @@ import themeLight from './figma-settings-assets/theme-light.svg?raw'
 import themeDark from './figma-settings-assets/theme-dark.svg?raw'
 import modeStandard from './figma-settings-assets/mode-standard.svg?raw'
 import authCss from './figma-auth.css?raw'
-import authBackground from './figma-settings-assets/ancient-harbor.png?url&inline'
 import authClose from './figma-settings-assets/auth-close.svg?raw'
 import authSceneMask from './figma-settings-assets/auth-scene-mask.svg?raw'
 import { createSettingsBackgroundController } from './settings-background'
@@ -166,7 +165,7 @@ export function mountAccountUi(
       backdrop.alt = ''
       backdrop.setAttribute('aria-hidden', 'true')
       backdrop.draggable = false
-      backdrop.src = authBackground
+      backdrop.hidden = true
       const close = button('', () => dialog.close(), 'sherlock-auth-close')
       const closeIcon = new DOMParser().parseFromString(authClose, 'image/svg+xml').documentElement
       closeIcon.setAttribute('aria-hidden', 'true')

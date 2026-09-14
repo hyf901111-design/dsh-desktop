@@ -48,3 +48,5 @@ body[data-ds-dark-theme] .sherlock-auth-signature{color:#a8a8a8}
 body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-auth-switch{background:rgba(255,255,255,.03);border-top-color:rgba(255,255,255,.1)}
 @media(max-height:700px){.sherlock-auth-scene{align-items:safe center;padding-top:24px;padding-bottom:24px}}
 @media(max-width:460px){.sherlock-auth-scene{padding-left:12px;padding-right:12px}.sherlock-auth-dialog .sherlock-account-page{padding-inline:24px}.sherlock-auth-dialog .sherlock-auth-switch{width:calc(100% + 48px);margin-inline:-24px}.sherlock-auth-signature{font-size:11px}}
+
+.sherlock-auth-scenery{background:#f2f2f2}.sherlock-auth-scenery:after{display:none}.sherlock-auth-scenery [data-odyssey-home-flow]{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}body[data-ds-dark-theme] .sherlock-auth-scenery{background:#1f1f1f}
