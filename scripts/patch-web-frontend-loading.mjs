@@ -1,3 +1,6 @@
+import { patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
+import { patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
+import { patchDesktopLocaleBridge, patchDesktopResearchDefaults } from './lib/desktop-locale-bridge.mjs'
 import { patchResearchResidentConversation } from './lib/research-resident-conversation.mjs'
 import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from './lib/figma-subagent-panel.mjs'
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
@@ -129,10 +132,11 @@ const layoutPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-
 writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')))
 
 for (const [name, patch] of [
+  ['dsh-client-locale', patchDesktopLocaleBridge],
   ['dsh-client-ui-model-selection', patchFigmaModelMenu],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
   ['dsh-client-ui-workspace', source => patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source))],
-  ['dsh-client-ui-conversation', source => patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaCanvasContextMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source))))))],
+  ['dsh-client-ui-conversation', source => patchDesktopResearchDefaults(patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaCanvasContextMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))))))],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', source => patchFigmaProviderMenu(patchFigmaSettingsModels(source))],
   ['dsh-client-ui-theme', patchFigmaSettingsAppearance],
@@ -154,3 +158,10 @@ for (const [relative, patch] of [
   writeFileSync(path, patch(readFileSync(path, 'utf8')))
 }
 writeFileSync(asset('.js'), patchSubagentPanelRenderer(readFileSync(asset('.js'), 'utf8'), true))
+
+writeFileSync(conversationPath, patchInspectConversation(readFileSync(conversationPath, 'utf8')))
+writeFileSync(layoutPath, patchInspectLayout(readFileSync(layoutPath, 'utf8')))
+
+writeFileSync(conversationPath, patchGeneratedFilePreview(readFileSync(conversationPath, 'utf8')))
+const deliverablesPath=join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js')
+writeFileSync(deliverablesPath, patchGeneratedFileMentions(readFileSync(deliverablesPath, 'utf8')))

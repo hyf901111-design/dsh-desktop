@@ -8,9 +8,9 @@ import { pathToFileURL } from 'node:url'
 let browser, page, script
 beforeAll(async () => {
   const result = await build({
-    stdin: { contents: `import { mountAccountUi } from './src/preload/account-ui'; import {mountHomeFlow} from './src/preload/home-flow';
+    stdin: { contents: `import { mountAccountUi } from './src/preload/account-ui'; import {mountHomeFlow} from './src/preload/home-flow';import {mountUiLocalization} from './src/preload/ui-localization';
       window.startAuth = (user = null) => {
-        window.accountCalls = []; mountHomeFlow(document);
+        window.accountCalls = []; mountHomeFlow(document);mountUiLocalization(document);
         return mountAccountUi(document, async (action, input) => {
           window.accountCalls.push({action, input});
           return action === 'me' ? {user} : action === 'usage' ? {usage:[]} : {error:{code:'INVALID_CREDENTIALS'}};
@@ -160,4 +160,16 @@ describe('auth field errors in the real form and browser layout', () => {
     expect(fields).toHaveLength(3)
     for (const field of fields) expect(field).toMatchObject({ errorInHeading: true, afterInput: false, invalid: 'true' })
   })
+})
+
+it('fully covers the underlying client and localizes login and registration live',async()=>{
+ await open()
+ await page.evaluate(()=>{document.documentElement.dataset.odysseyLocale='en'})
+ await expect.poll(()=>page.locator('h1').textContent()).toBe('Welcome back')
+ expect(await page.locator('.sherlock-auth-dialog').evaluate(e=>getComputedStyle(e).backgroundColor)).toBe('rgb(229, 229, 229)')
+ await page.locator('.sherlock-auth-switch').click()
+ await expect.poll(()=>page.locator('h1').textContent()).toBe('Create an account')
+ expect(await page.locator('input[name=invite]').getAttribute('placeholder')).toBe('Enter your invitation code')
+ await page.evaluate(()=>{document.documentElement.dataset.odysseyLocale='zh'})
+ await expect.poll(()=>page.locator('h1').textContent()).toBe('创建账户')
 })
