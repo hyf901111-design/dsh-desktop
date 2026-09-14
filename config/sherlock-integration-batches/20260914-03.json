@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-03",
+  "branch": "codex/integration/20260914-03",
+  "baseMainCommit": "c7eba8cfbf950c962ff43ef9ab0cdf7404f379f1",
+  "expectedMainCommit": "c7eba8cfbf950c962ff43ef9ab0cdf7404f379f1",
+  "createdAt": "2026-09-14T07:04:56.883Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "登录注册窗口按钮适配",
+        "branch": "codex/feat/auth-window-adaptation-20260914",
+        "baseCommit": "c7eba8cfbf950c962ff43ef9ab0cdf7404f379f1",
+        "tipCommit": "4787ed19a13fb249832b1a0f194d8d3169fbc70b",
+        "commits": [
+          {
+            "commit": "4787ed19a13fb249832b1a0f194d8d3169fbc70b",
+            "parents": [
+              "c7eba8cfbf950c962ff43ef9ab0cdf7404f379f1"
+            ],
+            "subject": "修复登录注册海景缺口随窗口尺寸缩放遮挡原生按钮"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-auth.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-errors.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/figma-auth-errors.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "14项聚焦检查及类型检查通过",
+            "verifiedCommit": "4787ed19a13fb249832b1a0f194d8d3169fbc70b",
+            "completedAt": "2026-09-14T07:04:56.245173+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "14项聚焦检查及类型检查通过",
+            "verifiedCommit": "4787ed19a13fb249832b1a0f194d8d3169fbc70b",
+            "completedAt": "2026-09-14T07:04:56.245173+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "14项浏览器检查通过，覆盖760与2400宽度和75%及150%内容缩放的实际蒙版像素"
+        },
+        "acceptanceCriteria": [
+          "窗口按钮缺口固定原生尺寸",
+          "保留原稿圆角和表单布局"
+        ],
+        "risks": [
+          "原生客户端重建后复核"
+        ],
+        "generatedAt": "2026-09-14T07:04:56.245173+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/figma-auth-layout.test.ts",
+        "test/figma-auth-errors.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
