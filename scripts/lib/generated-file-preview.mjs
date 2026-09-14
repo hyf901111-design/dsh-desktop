@@ -11,6 +11,11 @@ export function patchGeneratedFileMentions(source){
                 }};`)
 }
 export function patchGeneratedFilePreview(source){
+ const absoluteMarker='/* sherlock:resolved-preview-path:v1 */'
+ if(!source.includes(absoluteMarker)) source=exact(source,'researchSidebar.service.openFile({ sessionId }, path);',`${absoluteMarker}
+                                const fileCwd=sessions.list.getSnapshot().byId[sessionId]?.cwd;
+                                researchSidebar.service.openFile({ sessionId, cwd:fileCwd }, (0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(fileCwd,path));`)
+
  const marker='/* sherlock:generated-file-preview:v1 */'
  if(source.includes(marker))return source
  source=exact(source,'class ResearchSidebarCoordinator {',`${marker}
