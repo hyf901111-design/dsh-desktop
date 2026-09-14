@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-09",
+  "branch": "codex/integration/20260914-09",
+  "baseMainCommit": "cb73a94db797153cb64c3c53fdbd864cae4589b9",
+  "expectedMainCommit": "cb73a94db797153cb64c3c53fdbd864cae4589b9",
+  "createdAt": "2026-09-14T11:42:45.004Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "画板资料自动归档和目录锁定",
+        "branch": "codex/feat/english-ui-20260914",
+        "baseCommit": "cb73a94db797153cb64c3c53fdbd864cae4589b9",
+        "tipCommit": "cb60dc8c5004c4780454329c4f5903570c369b2d",
+        "commits": [
+          {
+            "commit": "cb60dc8c5004c4780454329c4f5903570c369b2d",
+            "parents": [
+              "cb73a94db797153cb64c3c53fdbd864cae4589b9"
+            ],
+            "subject": "修复：拖入画板资料自动复制并锁定目录，统一页签语言和顶栏间距"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/board-directory-picker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-file-preview-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/sidebar-system-titles.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-file-preview.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/research-owned-files.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-file-path.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/board-ownership-ui.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-owned-files.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-owned-files.test.ts",
+              "test/board-ownership-ui.test.js",
+              "test/ui-localization.test.ts",
+              "test/markdown-file-links.test.js",
+              "test/inspect-sidebar.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "12 项聚焦检查及类型检查通过",
+            "verifiedCommit": "cb60dc8c5004c4780454329c4f5903570c369b2d",
+            "completedAt": "2026-09-14T11:42:28.870821+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "12 项聚焦检查及类型检查通过",
+            "verifiedCommit": "cb60dc8c5004c4780454329c4f5903570c369b2d",
+            "completedAt": "2026-09-14T11:42:28.870821+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际组件补丁解析及重复应用检查通过；包后验证实际界面。"
+        },
+        "acceptanceCriteria": [
+          "拖入文件复制到画板或项目目录",
+          "研究选择器隐藏且对话目录禁用",
+          "系统页签语言实时切换",
+          "组件顶栏上下留白一致"
+        ],
+        "risks": [
+          "已有画板原引用保留；复制产生同名文件时自动改名，不覆盖原文件"
+        ],
+        "generatedAt": "2026-09-14T11:42:28.870821+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-owned-files.test.ts",
+        "test/board-ownership-ui.test.js",
+        "test/ui-localization.test.ts",
+        "test/markdown-file-links.test.js",
+        "test/inspect-sidebar.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
