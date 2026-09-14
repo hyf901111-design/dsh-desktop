@@ -9,7 +9,7 @@ function fixture(tabs:any[]=[],panelOpen=true) {
 it('restores the conversation after sidebar hydration drops all tabs',()=>{
  const c=fixture([],false);reconcileResearchConversation(c)
  expect(c.service.openTab).toHaveBeenCalledWith(expect.objectContaining({id:'sherlock-research-conversation',meta:{sherlockPinned:true,sherlockClosable:false}}),{sessionId:'board'})
- expect(c.service.setPanelState).toHaveBeenCalledWith({open:true},{sessionId:'board'})
+ expect(c.service.setPanelState).toHaveBeenCalledWith({open:false},{sessionId:'board'})
 })
 it('keeps active file and child tabs without opening or activating the existing conversation',()=>{
  const c=fixture([{id:'child'},{id:'sherlock-research-conversation',meta:{sherlockPinned:true,sherlockClosable:false}}]);reconcileResearchConversation(c)
@@ -41,4 +41,12 @@ it('recovers active Research when lifecycle bookkeeping was cleared, preserving 
 it('does not restore Research for an explicitly inactive current binding',()=>{
  const c:any=fixture();c.stores=new Map([['board',{getSnapshot:()=>({binding:{active:false}})}]])
  reconcileResearchConversation(c);expect(c.service.openTab).not.toHaveBeenCalled()
+})
+
+it('keeps a manually collapsed research sidebar closed during repeated tab reconciliation',()=>{
+ const c=fixture([{id:'sherlock-research-conversation',meta:{sherlockPinned:true,sherlockClosable:false}}],false)
+ for(let i=0;i<3;i++)reconcileResearchConversation(c)
+ expect(c.service.openTab).not.toHaveBeenCalled()
+ expect(c.service.setPanelState).not.toHaveBeenCalled()
+ expect(c.service.getSnapshot().state.panelOpen).toBe(false)
 })

@@ -16,10 +16,11 @@ export function reconcileResearchConversation(coordinator) {
     service.openTab({ id: 'sherlock-research-conversation', type: 'sherlock-research-conversation',
       title: coordinator.title, path: 'sherlock://research/conversation', meta }, scope);
     if (active) service.activateTab?.(active, scope);
+    // Restoring a resident tab must preserve an explicitly collapsed panel.
+    if (snapshot.state?.panelOpen === false) service.setPanelState?.({ open: false }, scope);
   } else if (tab.meta?.sherlockPinned !== true || tab.meta?.sherlockClosable !== false) {
     service.updateTab(tab.id, { meta: { ...tab.meta, ...meta } }, scope);
   }
-  if (snapshot.state?.panelOpen !== true) service.setPanelState?.({ open: true }, scope);
 }
 export function patchResearchResidentConversation(source) {
   const marker = '/* sherlock:resident-research-conversation:v1 */';
