@@ -1,3 +1,4 @@
+import { patchResearchResidentConversation } from './lib/research-resident-conversation.mjs'
 import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from './lib/figma-subagent-panel.mjs'
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
@@ -146,7 +147,7 @@ for (const [name, patch] of [
 for (const [relative, patch] of [
   ['dsh-client-runtime/lib/client.js', patchSubagentPanelRuntime],
   ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
-  ['dsh-client-ui-conversation/lib/client.js', patchSubagentPanelConversation],
+  ['dsh-client-ui-conversation/lib/client.js', source => patchResearchResidentConversation(patchSubagentPanelConversation(source))],
   ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]
 ]) {
   const path = join(process.cwd(), 'node_modules/@deepseek-ai', relative)
