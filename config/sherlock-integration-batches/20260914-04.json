@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-04",
+  "branch": "codex/integration/20260914-04",
+  "baseMainCommit": "eed013bfaf10cb39d36e36b35c6d91d0c61ba654",
+  "expectedMainCommit": "eed013bfaf10cb39d36e36b35c6d91d0c61ba654",
+  "createdAt": "2026-09-14T08:13:15.649Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "右侧栏按钮原生点击区域修复",
+        "branch": "codex/feat/panel-toggle-click-20260914",
+        "baseCommit": "eed013bfaf10cb39d36e36b35c6d91d0c61ba654",
+        "tipCommit": "f329c07b2e3d8510c769c32e45d240521d4cfa1c",
+        "commits": [
+          {
+            "commit": "f329c07b2e3d8510c769c32e45d240521d4cfa1c",
+            "parents": [
+              "eed013bfaf10cb39d36e36b35c6d91d0c61ba654"
+            ],
+            "subject": "修复右侧栏展开按钮被顶栏原生拖动区域拦截"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "A",
+            "path": "test/panel-toggle-drag-region.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/panel-toggle-drag-region.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "两项聚焦浏览器检查及类型检查通过",
+            "verifiedCommit": "f329c07b2e3d8510c769c32e45d240521d4cfa1c",
+            "completedAt": "2026-09-14T08:13:14.938169+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "两项聚焦浏览器检查及类型检查通过",
+            "verifiedCommit": "f329c07b2e3d8510c769c32e45d240521d4cfa1c",
+            "completedAt": "2026-09-14T08:13:14.938169+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端读取确认浮层按钮与拖动顶栏重叠且未配置no-drag；浏览器验证修复后计算样式"
+        },
+        "acceptanceCriteria": [
+          "浮层按钮排除原生拖动区域",
+          "保留顶栏空白区域拖动"
+        ],
+        "risks": [
+          "旧顶栏测试含已失效组件引用；使用独立当前样式测试覆盖修复"
+        ],
+        "generatedAt": "2026-09-14T08:13:14.938169+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/panel-toggle-drag-region.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
