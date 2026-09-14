@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-10",
+  "branch": "codex/integration/20260914-10",
+  "baseMainCommit": "dce4a45291c7e144c4fdefea8536a4257622be99",
+  "expectedMainCommit": "dce4a45291c7e144c4fdefea8536a4257622be99",
+  "createdAt": "2026-09-14T12:08:38.165Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "真实文件预览路径修复",
+        "branch": "codex/feat/english-ui-20260914",
+        "baseCommit": "dce4a45291c7e144c4fdefea8536a4257622be99",
+        "tipCommit": "40081d5155254bdf695936476c32d00f3e6a0c6a",
+        "commits": [
+          {
+            "commit": "40081d5155254bdf695936476c32d00f3e6a0c6a",
+            "parents": [
+              "dce4a45291c7e144c4fdefea8536a4257622be99"
+            ],
+            "subject": "修复：生成文件预览解析绝对路径并同步页签提示语言"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/generated-file-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-system-titles.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/generated-file-preview.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/generated-file-preview.test.js",
+              "test/board-ownership-ui.test.js",
+              "test/markdown-file-links.test.js",
+              "test/inspect-sidebar.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "11 项聚焦检查及类型检查通过",
+            "verifiedCommit": "40081d5155254bdf695936476c32d00f3e6a0c6a",
+            "completedAt": "2026-09-14T12:08:19.974080+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "11 项聚焦检查及类型检查通过",
+            "verifiedCommit": "40081d5155254bdf695936476c32d00f3e6a0c6a",
+            "completedAt": "2026-09-14T12:08:19.974080+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际客户端中英文页签和全局 Inspect 输入输出已验证；已定位预览 HTTP 400 的相对路径原因，修复后包内复验。"
+        },
+        "acceptanceCriteria": [
+          "相对文件链接解析当前工作目录",
+          "文件路径保持原文件名和子目录",
+          "页签标题与提示同步语言"
+        ],
+        "risks": [
+          "保留既有工作目录访问边界"
+        ],
+        "generatedAt": "2026-09-14T12:08:19.974080+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/generated-file-preview.test.js",
+        "test/board-ownership-ui.test.js",
+        "test/markdown-file-links.test.js",
+        "test/inspect-sidebar.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
