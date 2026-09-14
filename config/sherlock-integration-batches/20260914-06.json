@@ -154,6 +154,45 @@
           "同名文件显示路径供用户选择；不翻译用户自定义内容"
         ],
         "generatedAt": "2026-09-14T09:55:06.426778+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c59f8c5c01e02d15d8a5545917d88569af7c6d20",
+        "verificationCommit": "c59f8c5c01e02d15d8a5545917d88569af7c6d20",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/generated-file-preview.test.js",
+              "test/sidebar-live-files.test.js",
+              "test/figma-file-panel.test.ts",
+              "test/sidebar-file-reference.test.ts",
+              "test/inspect-sidebar.test.js",
+              "test/ui-localization.test.ts",
+              "test/english-ui-layout.test.js",
+              "test/figma-auth-errors.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/generated-file-preview.test.js test/sidebar-live-files.test.js test/figma-file-panel.test.ts test/sidebar-file-reference.test.ts test/inspect-sidebar.test.js test/ui-localization.test.ts test/english-ui-layout.test.js test/figma-auth-errors.test.js",
+            "verifiedCommit": "c59f8c5c01e02d15d8a5545917d88569af7c6d20",
+            "completedAt": "2026-09-14T09:55:59.766Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c59f8c5c01e02d15d8a5545917d88569af7c6d20",
+            "completedAt": "2026-09-14T09:55:59.766Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-14T09:55:59.766Z"
       }
     }
   ],
