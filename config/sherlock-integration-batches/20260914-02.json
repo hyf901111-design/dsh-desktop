@@ -80,6 +80,39 @@
           "原生窗口效果在替换启动后核验"
         ],
         "generatedAt": "2026-09-14T06:38:31.374723+00:00"
+      },
+      "merged": {
+        "mergeCommit": "0e848fbdacf18972f7c1db21ba786287e74feffb",
+        "verificationCommit": "0e848fbdacf18972f7c1db21ba786287e74feffb",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/figma-auth-errors.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/figma-auth-layout.test.ts test/figma-auth-errors.test.js",
+            "verifiedCommit": "0e848fbdacf18972f7c1db21ba786287e74feffb",
+            "completedAt": "2026-09-14T06:38:42.462Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0e848fbdacf18972f7c1db21ba786287e74feffb",
+            "completedAt": "2026-09-14T06:38:42.462Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-14T06:38:42.462Z"
       }
     }
   ],
