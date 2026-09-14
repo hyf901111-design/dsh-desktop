@@ -65,6 +65,19 @@ export function patchFigmaFilePreview(source) {
     source=source.slice(0,start)+part+source.slice(end);
   }
 
+  // Source state must exist before portal effects evaluate their dependency arrays.
+  {
+    const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);
+    let part=source.slice(start,end);
+    const declaration='const [showSources,setShowSources]=(0,react.useState)(false);';
+    const anchor='const menuId = (0, react.useId)();';
+    if(part.indexOf(declaration)>part.indexOf(anchor)) {
+      part=replaceOnce(part,declaration,'');
+      part=replaceOnce(part,anchor,declaration+'\n      '+anchor);
+      source=source.slice(0,start)+part+source.slice(end);
+    }
+  }
+
   if(!source.includes('/* ODYSSEY_CURRENT_LINK_PAGE */')) {
     const start=source.indexOf('function ResearchCanvasStandardWebFrame('),end=source.indexOf('function ResearchCanvasWebFrame(',start);
     let part=source.slice(start,end);
