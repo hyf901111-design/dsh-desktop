@@ -44,10 +44,11 @@ it('opens above when the actual 192px menu cannot fit below and scrolls in a sho
   const small=researchDerivedFloatingPlacement({trigger:{left:40,top:90,right:130,bottom:118},popup:{width:270,height:192},bounds:{left:0,top:0,right:230,bottom:210},parent:{left:0,top:0}})
   expect(small.maxWidth).toBe(214);expect(small.maxHeight).toBe(76);expect(small.left).toBe(8)
 })
-it('keeps the default standard selection neutral and sends each real detail value before closing',async()=>{
+it('has no default selection and sends only the explicitly chosen detail value',async()=>{
   const f=await mount('menu'),buttons=[...f.host.querySelectorAll('[data-research-mind-map-detail]')]
-  expect(buttons.map(x=>x.getAttribute('aria-checked'))).toEqual(['false','true','false'])
-  expect(f.host.querySelectorAll('svg path[stroke-linecap="round"]')).toHaveLength(1)
+  expect(f.host.querySelector('.odyssey-derived-detail-check')).toBeNull()
+  expect(buttons.map(x=>x.getAttribute('aria-checked'))).toEqual([null,null,null])
+  expect(f.host.querySelectorAll('svg path[stroke-linecap="round"]')).toHaveLength(0)
   for(const button of buttons)await React.act(async()=>button.dispatchEvent(new f.w.MouseEvent('click',{bubbles:true})))
   expect(f.props.onSelect.mock.calls.map((x:any[])=>x[0])).toEqual(['brief','standard','detailed']);expect(f.props.onClose).toHaveBeenCalledTimes(3)
 })
