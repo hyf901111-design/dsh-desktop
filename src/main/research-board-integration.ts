@@ -170,7 +170,7 @@ export class ResearchBoardIntegration {
   }
   async directory(input: any, signal: AbortSignal) {
     const result = await this.runtime('directory', input, signal)
-    if (input.mode === 'workspace' && result.localSessionId !== input.sessionId && !this.options.service().isSharedSession(input.sessionId)) {
+    if (['workspace', 'associate'].includes(input.mode) && result.localSessionId !== input.sessionId && !this.options.service().isSharedSession(input.sessionId)) {
       const canvas = structuredClone(this.readOriginal(input.sessionId))
       await this.snapshots.cloneLocalImport(input.sessionId, result.localSessionId)
       const files = new FrozenBoardFiles(join(result.path, '资料'))

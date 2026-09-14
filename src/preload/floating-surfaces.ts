@@ -14,7 +14,7 @@ export function placeFloatingSurface(anchor: DOMRect, width: number, height: num
 
 export function mountFloatingSurfaces(doc: Document) {
   const win = doc.defaultView!
-  const customTriggers = '.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand,.srb-favorite-button,.srb-create-collaboration'
+  const customTriggers = '.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand,.srb-favorite-button,.srb-create-collaboration,[data-odyssey-board-directory]'
   const tracked = new Map<HTMLElement, HTMLElement | null>()
   let active: HTMLElement | null = null, frame = 0
   const style = doc.createElement('style')
@@ -23,7 +23,7 @@ export function mountFloatingSurfaces(doc: Document) {
 [data-odyssey-floating-surface]::backdrop{background:transparent;pointer-events:none}
 .JObwrW_panel[data-odyssey-floating-surface]{right:auto!important;bottom:auto!important;overflow:auto}
 [role=tooltip][data-odyssey-floating-surface]{right:auto!important;bottom:auto!important;pointer-events:none;border:0!important;outline:none!important}
-[data-odyssey-floating-tooltip]{width:max-content;max-width:calc(100vw - 24px);padding:5px 8px;border:0;border-radius:6px;background:var(--odyssey-menu,#fff);color:var(--odyssey-text,#292b2f);font:400 12px/18px var(--odyssey-font-ui,sans-serif);overflow-wrap:anywhere;box-shadow:0 4px 12px #0002;transform:none!important}
+[data-odyssey-floating-tooltip]{width:max-content;max-width:calc(100vw - 24px);padding:5px 8px;border:0;border-radius:6px;background:var(--odyssey-menu,#fff);color:var(--odyssey-text,#292b2f);font:400 12px/18px var(--odyssey-font-ui,sans-serif);white-space:pre-line;overflow-wrap:anywhere;box-shadow:0 4px 12px #0002;transform:none!important}
 ${customTriggers.split(',').map(s => s + '[data-odyssey-floating-anchor]::after').join(',')}{content:none!important}
 `
   doc.head.append(style)
@@ -69,7 +69,7 @@ ${customTriggers.split(',').map(s => s + '[data-odyssey-floating-anchor]::after'
     const el = target instanceof win.Element ? target.closest<HTMLElement>(customTriggers) : null
     if (!el || el.getAttribute('aria-expanded') === 'true' || el.matches(':disabled')) { hide(); return }
     if (active === el) return
-    hide(); active = el; bubble.textContent = el.getAttribute('aria-label') ?? el.title
+    hide(); active = el; bubble.textContent = el.hasAttribute('data-odyssey-board-directory') ? '此看板当前的文件目录\n' + el.getAttribute('data-odyssey-board-directory') : el.getAttribute('aria-label') ?? el.title
     if (!bubble.textContent) { hide(); return }
     bubble.showPopover(); position(bubble, el, true)
   }

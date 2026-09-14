@@ -1222,6 +1222,29 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.sessions.open(id)
       await activate(id, true)
     },
+    directoryChoice(id: string) {
+      const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
+      return f ? { path: f.directoryPath ?? f.cwd, workspaceId: f.workspaceId, label: f.workspaceTitle ?? '新建看板目录' } : null
+    },
+    async associateProject(id: string, workspaceId: string) {
+      const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
+      if (!f) return null
+      const workspace = workspaceId === '::board-directory' ? null : deps.workspaces.list.getSnapshot().items.find((w: { workspaceId: string; path: string; title: string }) => w.workspaceId === workspaceId)
+      if (workspaceId !== '::board-directory' && !workspace) throw Error('项目暂不可用')
+      const cwd = workspace?.path ?? f.directoryPath ?? f.cwd
+      if (!cwd) throw Error('看板目录暂不可用')
+      if (identity(id)?.cwd === cwd) return id
+      deps.researchWorkspaces.for(id).persist?.()
+      const nextId = await deps.sessions.create({ cwd })
+      await deps.sessions.binding(nextId)?.session.rename(f.title)
+      try {
+        await call('local.directory', { mode: 'associate', sessionId: id, targetSessionId: nextId, ...(workspace ? { workspaceId: workspace.workspaceId, workspaceTitle: workspace.title } : {}) })
+      } catch (error) { await deps.workspaces.archiveSession(nextId); throw error }
+      prime(nextId)
+      await activate(nextId, true)
+      selectBoardSession(nextId)
+      return nextId
+    },
     async createPrivateBoard() {
       const id = await freshBoard('新研究看板')
       const i = identity(id)

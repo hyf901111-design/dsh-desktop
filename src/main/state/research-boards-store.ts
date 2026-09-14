@@ -183,6 +183,13 @@ export class ResearchBoardsStore {
     })
     return clone(value)
   }
+  associateFavorite(sessionId: string, next: { sessionId: string; cwd: string; directoryPath: string; workspaceId?: string; workspaceTitle?: string }) {
+    this.transaction(s => {
+      const f = s.favorites.find(f => f.sessionId === sessionId && f.dedicated)
+      if (!f) throw new ResearchBoardsError('BINDING_CONFLICT')
+      Object.assign(f, next)
+    })
+  }
   touchFavorite(sessionId: string) {
     if (!this.state.favorites.some((f) => f.sessionId === sessionId))
       return false
