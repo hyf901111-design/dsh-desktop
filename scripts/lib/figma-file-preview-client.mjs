@@ -10,6 +10,21 @@ function replaceOnce(source, anchor, replacement) {
 }
 
 export function patchFigmaFilePreview(source) {
+  if(!source.includes('/* ODYSSEY_FRAME_SOURCE_MENU */')) {
+    const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);
+    if(start<0||end<start)throw Error('Frame sources menu boundary drifted');
+    let part=source.slice(start,end);
+    part=replaceOnce(part,'const menuId = (0, react.useId)();',`const menuId = (0, react.useId)();
+      /* ODYSSEY_FRAME_SOURCE_MENU */
+      const [showSources,setShowSources]=(0,react.useState)(false);`);
+    part=replaceOnce(part,'setOpen(false); if (focus)', 'setOpen(false); setShowSources(false); if (focus)');
+    part=replaceOnce(part,'children: actions.map(([action, label])', 'children: [actions.map(([action, label])');
+    part=replaceOnce(part,'}, action))',`}, action)),(node.sourceNodeIds?.length>0) && (0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-research-frame-sources':'','aria-expanded':showSources,onClick:event=>{event.stopPropagation();setShowSources(!showSources);},children:'来源信息'}),showSources && (0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node,embedded:true})]`);
+    part=part.replace('[open,present]);','[open,present,showSources]);');
+    source=source.slice(0,start)+part+source.slice(end);
+  }
+
+  source=source.replace('},[open,present]);','},[open,present,showSources]);');
   if(!source.includes('/* ODYSSEY_FRAME_MENU_PORTAL */')) {
     const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);
     if(start<0||end<start)throw Error('Frame menu boundary drifted');
@@ -26,7 +41,7 @@ export function patchFigmaFilePreview(source) {
           setMenuStyle({position:'fixed',left:Math.max(12,Math.min(r.right-width,window.innerWidth-width-12)),width,top:up?'auto':r.bottom+8,bottom:up?window.innerHeight-r.top+8:'auto',maxHeight:Math.max(0,up?above:below)});
         };place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);
         return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true);};
-      },[open,present]);`);
+      },[open,present,showSources]);`);
     part=part.replaceAll(`rootRef.current?.querySelector('[role="menuitem"]')`,`menuRef.current?.querySelector('[role="menuitem"]')`).replaceAll(`rootRef.current.querySelectorAll('[role="menuitem"]')`,`menuRef.current.querySelectorAll('[role="menuitem"]')`);
     part=replaceOnce(part,'if (!rootRef.current?.contains(event.target)) close();','if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) close();');
     part=replaceOnce(part,'present ? (0, react_jsx_runtime.jsx)("div", {','present ? react_dom.createPortal((0, react_jsx_runtime.jsx)("div", {');
