@@ -275,7 +275,7 @@ body[data-ds-dark-theme] [data-research-file-presentation]{--odyssey-card-text:#
 [data-research-file-presentation][data-research-generated-container] .rScV5Q_containerContent{flex:1;min-height:0;padding:0!important}
 .odyssey-file-reader>.rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important}.odyssey-file-reader>.rScV5Q_artifactBody:has(.rScV5Q_webFrameShell){display:flex;flex-direction:column}.odyssey-file-reader .rScV5Q_webFrameShell{flex:1;min-height:0}
 [data-research-file-presentation]:not([open])>.rScV5Q_previewBody{overflow:hidden!important}
-[data-research-file-presentation]:not([open])>.rScV5Q_nodeTitle{height:54px!important;min-height:54px!important;flex-basis:54px!important;padding:15px 17px 0!important;align-items:flex-start!important}
+[data-research-file-presentation]:not([open])>.rScV5Q_nodeTitle{height:54px!important;min-height:54px!important;flex-basis:54px!important;padding:15px 17px!important;align-items:center!important}
 [data-research-file-presentation]:not([open])>.rScV5Q_previewBody{height:calc(100% - 54px)}
 [data-research-file-presentation] .rScV5Q_nodeTitleText{font:500 15px/23px "Noto Sans SC",sans-serif!important}
 [data-research-file-presentation=web]:not([open]) .rScV5Q_pageIndicator{display:none}

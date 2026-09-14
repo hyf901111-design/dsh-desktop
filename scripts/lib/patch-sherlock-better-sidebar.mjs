@@ -1,3 +1,4 @@
+import { patchSidebarSystemTitles } from './sidebar-system-titles.mjs'
 import { patchSidebarFileRefresh } from './sidebar-file-refresh.mjs'
 import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
@@ -1160,7 +1161,7 @@ export function patchBetterSidebarClient(source) {
     'committed panel surface dimensions'
   )
 
-  if (source.includes(PATCH_MARKER)) return patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))))
+  if (source.includes(PATCH_MARKER)) return patchSidebarSystemTitles(patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))))
 
   const moveBefore = `\t\t\t\t\tconst insertAt = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
   const moveAfter = `\t\t\t\t\tconst requestedIndex = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tconst pinnedCount = leaf.tabs.filter((tab) => tab.meta?.sherlockPinned === true).length;\n\t\t\t\t\tconst insertAt = moved.meta?.sherlockPinned === true ? 0 : Math.max(pinnedCount, requestedIndex);\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
@@ -1225,7 +1226,7 @@ export function patchBetterSidebarClient(source) {
     'tab render closure'
   )
 
-  return patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))))
+  return patchSidebarSystemTitles(patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))))
 }
 
 export async function patchBetterSidebarPackage(packageRoot) {

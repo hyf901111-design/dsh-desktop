@@ -1,4 +1,4 @@
-import { patchBoardDirectoryConversation, patchBoardDirectoryWorkspace } from './board-directory-picker.mjs'
+import { patchBoardDirectoryConversation, patchBoardDirectoryWorkspace, patchBoardFileOwnership } from './board-directory-picker.mjs'
 import { patchFigmaFinalConversation } from './patch-figma-final-shell.mjs'
 import { researchNotoFontCss } from '../../packages/dsh-research-task-runtime/component-noto-font.js'
 import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
@@ -494,7 +494,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
-  return patchBoardDirectoryConversation(patchFigmaFinalConversation(polishBoardPatch(source)))
+  return patchBoardFileOwnership(patchBoardDirectoryConversation(patchFigmaFinalConversation(polishBoardPatch(source))))
 }
 function polishBoardPatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return entryPatch(chromePatch(source))

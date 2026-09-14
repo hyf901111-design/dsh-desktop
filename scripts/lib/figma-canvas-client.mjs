@@ -593,7 +593,7 @@ body[data-ds-dark-theme] [data-research-compact-chrome]{--odyssey-card:#292a2d;-
 [data-research-compact-chrome][data-selected=true]::after{content:'';position:absolute;inset:-1px;border-radius:inherit;box-shadow:inset 0 0 0 1.5px var(--odyssey-select);pointer-events:none;z-index:5}
 [data-research-compact-chrome][data-research-derived][data-selected=true]::after{inset:0}
 body[data-ds-dark-theme] [data-research-compact-chrome][data-selected=true]{box-shadow:0 0 7px rgba(82,140,255,.48),0 0 26px 2px rgba(64,128,255,.24)!important}
-[data-research-compact-chrome]>.rScV5Q_nodeTitle{height:48px;min-height:48px;flex-basis:48px;padding:12px 18px!important;border-radius:11px 11px 0 0;border-bottom:0!important;align-items:flex-start}
+[data-research-compact-chrome]>.rScV5Q_nodeTitle{height:47px;min-height:47px;flex-basis:47px;padding:12px 18px!important;border-radius:11px 11px 0 0;border-bottom:0!important;align-items:flex-start}
 [data-research-compact-chrome] .rScV5Q_nodeTitleText{font-size:15px!important;font-weight:500;line-height:23px;flex:1}
 [data-research-compact-chrome] .rScV5Q_nodeTitleActions{top:11px;right:12px;gap:6px;padding:3px;border-radius:7px;background:var(--odyssey-card)}
 [data-research-compact-chrome] :is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand){width:24px;height:24px;border:1px solid #0000001f;border-radius:6px;background:#ffffff99;color:var(--odyssey-card-muted)}
@@ -666,7 +666,7 @@ body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_mindMapNode[data
 [data-research-compact-chrome]:not([open]):has(.rScV5Q_mindMap,.odyssey-derived-summary)>.rScV5Q_previewBody{overflow:hidden!important}
 [data-research-compact-chrome][data-research-derived]{border-width:0!important}
 [data-research-compact-chrome][data-research-derived]:not([data-selected=true]){outline:none!important}
-[data-research-compact-chrome][data-research-derived]>.rScV5Q_nodeTitle{height:48px;min-height:48px;flex-basis:48px;padding:12px 18px!important}
+[data-research-compact-chrome][data-research-derived]>.rScV5Q_nodeTitle{height:47px;min-height:47px;flex-basis:47px;padding:12px 18px!important}
 [data-research-compact-chrome][data-research-derived]>.rScV5Q_previewBody{height:calc(100% - 48px)}
 [data-research-compact-chrome][data-research-derived] .rScV5Q_artifactBody{height:100%;min-height:0;padding:0!important;gap:6px}
 [data-research-derived-title]{display:flex;align-items:center;gap:8px;width:100%;min-width:0;font:500 15px/23px DINPro,'Noto Sans SC',sans-serif}

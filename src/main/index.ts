@@ -1,3 +1,4 @@
+import { copyResearchFile } from './state/research-owned-files'
 import {randomUUID} from 'node:crypto'
 import { ResearchBoardIntegration } from './research-board-integration'
 import { finishQuitCleanup } from './quit-cleanup'
@@ -769,7 +770,19 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
   registerResearchFilePreviewHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,
-    registry: researchFilePreviewRegistry
+    registry: researchFilePreviewRegistry,
+    importFinder: async (value) => {
+      const input = value as { path?: unknown; sessionId?: unknown; nodeId?: unknown }
+      if (!input || typeof input.path !== 'string' || typeof input.sessionId !== 'string' || typeof input.nodeId !== 'string') return null
+      if (researchBoardsService?.isSharedSession(input.sessionId)) return researchFilePreviewRegistry!.admitFinder(value, true)
+      const favorite = researchBoardsService?.getSnapshot().favorites.find(f => f.sessionId === input.sessionId)
+      const directory = favorite?.cwd ?? await new HarnessWorkspaceFileResolver(join(app.getPath('userData'), 'harness')).resolveRoot(input.sessionId)
+      if (!directory) throw Error('画板目录尚未就绪，请稍后重试')
+      const path = await copyResearchFile(input.path, directory)
+      const descriptor = await researchFilePreviewRegistry!.admitFinder({ ...input, path }, true)
+      if (!descriptor) throw Error('文件已复制，但暂时无法添加到画板，请重试')
+      return { ...descriptor, path }
+    }
   })
   registerResearchClipboardHandlers({
     ipcMain,

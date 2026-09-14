@@ -500,3 +500,5 @@ html[data-odyssey-locale=en] .hHd-Xa_newSessionLabel{white-space:nowrap;line-hei
 html[data-odyssey-locale=en] .rScV5Q_globalToolbar{width:max-content;max-width:calc(100% - 24px);gap:4px}
 html[data-odyssey-locale=en] .rScV5Q_globalToolbar>.rScV5Q_globalToolSlot>button{width:auto;min-width:84px;padding-inline:12px;gap:8px;white-space:nowrap}
 html[data-odyssey-locale=en] .rScV5Q_globalToolSlot{flex:0 0 auto;width:auto}
+
+[data-odyssey-directory-locked]{opacity:.4!important;cursor:not-allowed!important;background:transparent!important}
