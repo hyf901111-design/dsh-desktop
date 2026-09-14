@@ -1,3 +1,4 @@
+import { mountUiLocalization } from './ui-localization'
 import { mountFloatingSurfaces } from './floating-surfaces'
 import { mountResearchBoardNotifications } from './research-board-notifications-ui'
 import { mountAccountUi } from './account-ui'
@@ -139,6 +140,7 @@ function initializeUi(): void {
   }
   syncAuthNativeScale()
   window.addEventListener('resize', syncAuthNativeScale)
+  mountUiLocalization(document)
   mountFloatingSurfaces(document)
   const boards = createResearchBoardsBridge(ipcRenderer)
   mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards)

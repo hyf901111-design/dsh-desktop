@@ -1,3 +1,4 @@
+import { patchSidebarFileRefresh } from './sidebar-file-refresh.mjs'
 import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
@@ -1009,6 +1010,7 @@ function patchFigmaCompactPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
+  source = patchSidebarFileRefresh(source)
   source = patchSidebarFileReference(source)
   source = patchSubagentPanelEntry(source, true)
   source = patchFigmaTaskTabIcon(patchFigmaNativeFileMenu(source))

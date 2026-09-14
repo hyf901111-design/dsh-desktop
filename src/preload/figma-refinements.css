@@ -80,7 +80,7 @@ body[data-ds-dark-theme] [role=menu] .cubgiG_itemDesc { color:#a3a6ab; }
 /* Permission picker shared by the composer and Settings (665:828). */
 body [role=menu]:has(.odyssey-permission-item) { width:320px; min-width:0; padding:5px; }
 body [role=menu]:has(.odyssey-permission-item)>[role=presentation] { padding:0; gap:2px; }
-body [role=menu]:has(.odyssey-permission-item) [role=menuitem] { position:relative; min-height:64px; padding:7px 10px; align-items:flex-start; }
+body [role=menu]:has(.odyssey-permission-item) [role=menuitem] { position:relative; min-height:0; height:auto; padding:10px; align-items:flex-start; }
 body [role=menu]:has(.odyssey-permission-item) [role=menuitem]>svg { width:14px; height:14px; flex:none; margin-top:2px; }
 body .odyssey-permission-item { display:flex; min-width:0; flex-direction:column; gap:3px; white-space:normal; }
 body .odyssey-permission-name { font:400 13px/20px var(--odyssey-font-ui); }
@@ -468,3 +468,29 @@ body [data-odyssey-container-menu] .odyssey-source-links{max-height:240px;overfl
 /* All menu selections share the mode picker's selected-row surface. */
 body [role=menu] :is([role=menuitem],[role=menuitemradio],[role=menuitemcheckbox]):is([aria-checked=true],[aria-selected=true],[data-active=true],[class*=_selected],[class*=_active]):not(:disabled) { background:var(--odyssey-menu-row)!important; }
 body [role=menu] [role=menuitem]:has(.cubgiG_selectedItem) { background:var(--odyssey-menu-row)!important; }
+
+/* English controls grow with their labels; icons retain their own space. */
+html[data-odyssey-locale=en] body .wSkVaW_header .wSkVaW_tab{width:auto!important;min-width:56px!important;padding-inline:10px;white-space:nowrap}
+html[data-odyssey-locale=en] .VOzbGW_overlay .sherlock-settings-item :is(._5QVD0a_selector,.oY77xG_selector,.T1PP_q_selector,.hVGvvW_selector){width:auto;min-width:108px;gap:8px;padding-inline:12px}
+html[data-odyssey-locale=en] .srb-dialog :is(button,.srb-role-picker){width:auto;min-width:max-content;white-space:nowrap}
+html[data-odyssey-locale=en] .srb-dialog .srb-role-picker{min-width:108px}
+html[data-odyssey-locale=en] .hHd-Xa_newSession{min-width:0;gap:6px;padding-inline:10px;white-space:nowrap}
+html[data-odyssey-locale=en] .sRp_emptyState{white-space:normal;text-align:center;padding-inline:16px;text-wrap:balance}
+html[data-odyssey-locale=en] .rScV5Q_containerDraft textarea{line-height:1.5}
+html[data-odyssey-locale=en] .hHd-Xa_newSessionGroup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+html[data-odyssey-locale=en] .hHd-Xa_newSession{height:auto;min-height:38px;padding:8px;align-items:center}
+html[data-odyssey-locale=en] .hHd-Xa_newSessionLabel{min-width:0;white-space:normal;line-height:16px;text-align:left}
+
+/* Running sessions retain their preset; disabled controls must look inactive. */
+body .cubgiG_seat:disabled,
+body .cubgiG_seat:disabled:hover {
+  opacity: .35;
+  cursor: not-allowed;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Progress prose shares the same left and right edges as the conversation. */
+body .Md3f7G_executionProgress { padding-inline: 0; }
+.odyssey-generated-file-results{padding:16px;overflow:auto}
+.odyssey-generated-file-results button{display:block;max-width:100%;margin-block:8px;padding:8px 12px;border-radius:8px;overflow-wrap:anywhere;text-align:left;color:inherit;background:var(--dsw-alias-markdown-code-block)}

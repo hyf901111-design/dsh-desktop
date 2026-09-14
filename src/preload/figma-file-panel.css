@@ -69,8 +69,8 @@
   right:18px;
   width:28px;
   height:28px;
-  opacity:0;
-  pointer-events:none;
+  opacity:.6;
+  pointer-events:auto;
 }
 
 [data-odyssey-file-search]:hover [data-odyssey-file-refresh],
