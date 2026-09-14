@@ -557,6 +557,8 @@ const responsiveSource = `function ResearchContainerContent(props) {
 }`
 
 export const canvasCss = `
+body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerMarkdown,.rScV5Q_containerTableScroll,.rScV5Q_mindMap,.odyssey-generation-records,textarea){scrollbar-width:none!important}
+body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) ::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
 .rScV5Q_root[data-space-pressed=true]:after{content:none;border:0}
 [data-research-empty-viewport]{box-sizing:border-box;white-space:nowrap}
 .rScV5Q_root{--sherlock-research-dot:rgba(139,139,139,.4)!important;background-image:none!important}body[data-ds-dark-theme] .rScV5Q_root{--sherlock-research-dot:rgba(184,184,184,.46)!important}

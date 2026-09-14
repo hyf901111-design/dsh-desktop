@@ -234,7 +234,9 @@ describe('offline HTML component theme runtime', () => {
     inner.parsed()
     inner.send(themeMessage('dark'))
     expect(inner.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('light')
-    // Canvas-owned scrollbar rules are important; the page surface remains customizable.
+    // Generated HTML hides scrollbar chrome while retaining native scrolling.
+    expect(outer.childHtml()).toContain('scrollbar-width:none!important')
+    expect(outer.childHtml()).toContain('::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}')
     expect(inner.window.getComputedStyle(inner.window.document.body).backgroundColor).toBe('pink')
     expect(outer.childHtml()).toContain('--sherlock-accent:#dd2233')
   })

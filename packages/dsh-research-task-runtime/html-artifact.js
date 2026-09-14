@@ -89,7 +89,7 @@ const RESEARCH_COMPONENT_BASE_CSS = `:where(html,body){background:var(--sherlock
 // The first important layer keeps authored page scrollbar rules from diverging.
 function researchComponentScrollbarCss(scope, darkScope) {
   const scrollports = `:is(${scope},${scope} *)`
-  return `@layer sherlock-component-scrollbars{${scope}{--odyssey-scrollbar-thumb:#b0b0b0;--odyssey-scrollbar-hover:#8a8a8a}${darkScope}{--odyssey-scrollbar-thumb:#5e5e5e;--odyssey-scrollbar-hover:#8a8a8a}${scrollports}{scrollbar-width:auto!important;scrollbar-color:auto!important}${scrollports}::-webkit-scrollbar{display:block!important;width:8px!important;height:8px!important;background:transparent!important}${scrollports}::-webkit-scrollbar-track,${scrollports}::-webkit-scrollbar-track-piece,${scrollports}::-webkit-scrollbar-corner{background:transparent!important;border:0!important;box-shadow:none!important}${scrollports}::-webkit-scrollbar-thumb{background:var(--odyssey-scrollbar-thumb)!important;background-clip:padding-box!important;border:2px solid transparent!important;border-radius:999px!important;box-shadow:none!important;min-height:28px!important;min-width:28px!important}${scrollports}::-webkit-scrollbar-thumb:hover{background-color:var(--odyssey-scrollbar-hover)!important}${scrollports}::-webkit-scrollbar-button{display:none!important;width:0!important;height:0!important}}`
+  return `@layer sherlock-component-scrollbars{${scrollports}{scrollbar-width:none!important}${scrollports}::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}}`
 }
 
 // First-paint hint only: literal meta attributes outside inert/raw-text content.
