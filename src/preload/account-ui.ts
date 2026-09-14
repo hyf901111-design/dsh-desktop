@@ -13,6 +13,7 @@ import modeStandard from './figma-settings-assets/mode-standard.svg?raw'
 import authCss from './figma-auth.css?raw'
 import authBackground from './figma-settings-assets/ancient-harbor.png?url&inline'
 import authClose from './figma-settings-assets/auth-close.svg?raw'
+import authSceneMask from './figma-settings-assets/auth-scene-mask.svg?raw'
 import { createSettingsBackgroundController } from './settings-background'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
@@ -174,7 +175,17 @@ export function mountAccountUi(
       const frame = document.createElement('div')
       frame.className = 'sherlock-auth-frame'
       frame.append(close, content)
-      dialog.append(backdrop, frame)
+      const scene = document.createElement('div')
+      scene.className = 'sherlock-auth-scene'
+      const scenery = document.createElement('div')
+      scenery.className = 'sherlock-auth-scenery'
+      scenery.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(authSceneMask)}")`
+      scenery.append(backdrop)
+      scene.append(scenery, frame)
+      const signature = document.createElement('footer')
+      signature.className = 'sherlock-auth-signature'
+      signature.textContent = 'EWork Odyssey 易方达金融科技出品'
+      dialog.append(scene, signature)
       dialog.addEventListener('close', () => {
         dialog.remove()
         if (authDialog === dialog) authDialog = undefined

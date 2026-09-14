@@ -1,18 +1,23 @@
 /* Figma 219:4/46/88/138. Original image SHA-1 7b32aae14c2a2d5bc3c99271d77284c57f315b6a.
    The exported image is the original fill, not a flattened page. */
-.sherlock-auth-dialog{--auth-field-error-stroke:#c65850;box-sizing:border-box;position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;padding:24px 20px 48px;border:0;border-radius:16px;background:transparent;color:#252525;overflow:auto;isolation:isolate;font-family:'Noto Sans SC',sans-serif}
-.sherlock-auth-dialog[open]{display:flex;align-items:center;justify-content:center}
+/* Updated Figma 862:27569/27572 and 863:27569/27572: the native window
+   is the glass shell; the surrounding Figma canvas is not part of the app. */
+.sherlock-auth-dialog{--auth-field-error-stroke:#c65850;box-sizing:border-box;position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;padding:10px;border:0;border-radius:12px;background:rgba(229,229,229,.67);backdrop-filter:blur(16px);color:#252525;overflow:hidden;isolation:isolate;font-family:'Noto Sans SC',sans-serif;-webkit-app-region:drag}
+.sherlock-auth-dialog[open]{display:flex;flex-direction:column}
 .sherlock-auth-dialog::backdrop{background:transparent}
-.sherlock-auth-backdrop{position:fixed;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;filter:contrast(.92) saturate(.74)}
-.sherlock-auth-dialog:after{content:'';position:fixed;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(255,255,255,.1)}
-.sherlock-auth-frame{--auth-glass-fill:rgba(250,250,250,.87);--auth-glass-stroke:rgba(255,255,255,.65);--auth-shadow-fill:rgba(0,0,0,.2);box-sizing:border-box;position:relative;isolation:isolate;flex:none;width:408px;max-width:100%;border-radius:20px;background:transparent}
+.sherlock-auth-scene{box-sizing:border-box;position:relative;isolation:isolate;display:flex;align-items:center;justify-content:safe center;flex:1;min-height:0;width:100%;padding:24px 20px 48px;overflow:auto;border-radius:16px}
+.sherlock-auth-scenery{position:absolute;z-index:-1;inset:0;pointer-events:none;mask-size:100% 100%;mask-repeat:no-repeat}
+.sherlock-auth-backdrop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;filter:contrast(.92) saturate(.74)}
+.sherlock-auth-scenery:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(255,255,255,.1)}
+.sherlock-auth-signature{display:flex;align-items:center;justify-content:center;flex:0 0 50px;box-sizing:border-box;width:100%;color:#666;font:400 13px/20px 'Noto Sans SC',sans-serif;text-align:center}
+.sherlock-auth-frame{--auth-glass-fill:rgba(250,250,250,.87);--auth-glass-stroke:rgba(255,255,255,.65);--auth-shadow-fill:rgba(0,0,0,.2);box-sizing:border-box;position:relative;isolation:isolate;flex:none;-webkit-app-region:no-drag;width:408px;max-width:100%;border-radius:20px;background:transparent}
 /* Figma sets showShadowBehindNode=true. A CSS outer box-shadow is clipped
    beneath the translucent fill, so render the full shadow before the glass.
    The 42px shadow blur uses a 21px Gaussian radius; the final offset is 16px. */
 .sherlock-auth-frame:before{content:'';position:absolute;inset:0;z-index:-2;border-radius:inherit;background:var(--auth-shadow-fill);filter:blur(21px);transform:translateY(16px);pointer-events:none}
 .sherlock-auth-frame:after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--auth-glass-fill);backdrop-filter:blur(18px);box-shadow:inset 0 0 0 1px var(--auth-glass-stroke);pointer-events:none}
 .sherlock-auth-dialog .VOzbGW_content{padding:0;background:transparent}
-.sherlock-auth-dialog .sherlock-account-page{box-sizing:border-box;padding:36px 32px 32px;overflow:visible;display:flex;flex-direction:column;gap:0;color:inherit;font:400 13px/22px 'Noto Sans SC',sans-serif}
+.sherlock-auth-dialog .sherlock-account-page{box-sizing:border-box;padding:36px 32px 0;overflow:visible;display:flex;flex-direction:column;gap:0;color:inherit;font:400 13px/22px 'Noto Sans SC',sans-serif}
 .sherlock-auth-dialog .sherlock-auth-logo{display:block;width:88px;height:29px;margin:0 auto}
 .sherlock-auth-dialog .sherlock-account-page h1{font:500 22px/34px 'Noto Sans SC',sans-serif;text-align:center;margin:15px 0 0}
 .sherlock-auth-dialog .sherlock-account-page form{display:flex;flex-direction:column;gap:16px;width:100%;max-width:none;margin:24px 0 0}
@@ -20,10 +25,10 @@
 .sherlock-auth-dialog .sherlock-field-heading{font:400 12px/18px 'Noto Sans SC',sans-serif;min-height:18px;color:#737373}
 .sherlock-auth-dialog .sherlock-field-error:empty{display:none}
 .sherlock-auth-dialog .sherlock-field-error{font:400 11px/18px 'Noto Sans SC',sans-serif;color:#bc574f}
-.sherlock-auth-dialog .sherlock-account-page input{box-sizing:border-box;height:44px;width:100%;border:0;border-radius:9px;padding:0 14px;background:rgba(0,0,0,.045);font:400 13px/22px 'Noto Sans SC',sans-serif;color:#252525}
+.sherlock-auth-dialog .sherlock-account-page input{box-sizing:border-box;height:44px;width:100%;border:0;border-radius:9px;padding:0 14px;background:rgba(0,0,0,.05);font:400 13px/22px 'Noto Sans SC',sans-serif;color:#252525}
 .sherlock-auth-dialog .sherlock-account-page input::placeholder{color:#737373}
 .sherlock-auth-dialog .sherlock-account-page button[type=submit]{box-sizing:border-box;height:44px;margin-top:8px;padding:0 14px;border:0;border-radius:10px;background:#272727;color:#fff;font:500 14px/22px 'Noto Sans SC',sans-serif}
-.sherlock-auth-dialog .sherlock-auth-switch{display:flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;height:22px;min-height:22px;width:100%;margin:24px 0 0;padding:0;border:0;border-radius:0;background:transparent;color:#737373;font:400 12px/20px 'Noto Sans SC',sans-serif;text-align:center}
+.sherlock-auth-dialog .sherlock-auth-switch{display:flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;flex:none;height:58px;min-height:58px;width:calc(100% + 64px);margin:20px -32px 0;padding:0 16px;border:0;border-top:1px solid rgba(0,0,0,.1);border-radius:0 0 20px 20px;background:rgba(0,0,0,.03);color:#737373;font:400 12px/20px 'Noto Sans SC',sans-serif;text-align:center}
 .sherlock-auth-switch strong{font-weight:500;color:#252525}
 .sherlock-auth-dialog .sherlock-auth-close{position:absolute;right:12px;top:12px;display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:#737373;cursor:pointer}
 .sherlock-auth-close svg{display:block;width:7.66667px;height:7.66667px}.sherlock-auth-close svg path{stroke:currentColor}
@@ -31,10 +36,13 @@
 .sherlock-auth-dialog .sherlock-account-page [role=status]:not(:empty){min-height:0;font:400 12px/20px 'Noto Sans SC',sans-serif;color:#bc574f}
 .sherlock-auth-dialog input[aria-invalid=true]{box-shadow:inset 0 0 0 1px var(--auth-field-error-stroke)}
 .sherlock-auth-dialog button:focus-visible,.sherlock-auth-dialog input:focus-visible{outline:1.5px solid #6b96d9;outline-offset:2px}
-body[data-ds-dark-theme] .sherlock-auth-dialog{--auth-field-error-stroke:#ef938b;color:#efefef}body[data-ds-dark-theme] .sherlock-auth-dialog:after{background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(0,0,0,.3)}
+body[data-ds-dark-theme] .sherlock-auth-dialog{--auth-field-error-stroke:#ef938b;background:rgba(9,9,9,.78);color:#efefef}body[data-ds-dark-theme] .sherlock-auth-scenery:after{background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(0,0,0,.3)}
 body[data-ds-dark-theme] .sherlock-auth-frame{--auth-glass-fill:rgba(23,23,23,.86);--auth-glass-stroke:rgba(255,255,255,.1);--auth-shadow-fill:rgba(0,0,0,.3)}
-body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page input{background:rgba(255,255,255,.065);color:#efefef}
+body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page input{background:rgba(255,255,255,.06);color:#efefef}
 body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page button[type=submit]{background:#f0f0f0;color:#222}
 body[data-ds-dark-theme] .sherlock-auth-dialog :is(.sherlock-auth-switch,.sherlock-field-heading,.sherlock-auth-close),body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-account-page input::placeholder{color:#a9a9a9}
 body[data-ds-dark-theme] .sherlock-auth-switch strong{color:#efefef}
-@media(max-height:700px){.sherlock-auth-dialog[open]{align-items:safe center}.sherlock-auth-dialog{padding-top:24px;padding-bottom:24px}}
+body[data-ds-dark-theme] .sherlock-auth-signature{color:#a8a8a8}
+body[data-ds-dark-theme] .sherlock-auth-dialog .sherlock-auth-switch{background:rgba(255,255,255,.03);border-top-color:rgba(255,255,255,.1)}
+@media(max-height:700px){.sherlock-auth-scene{align-items:safe center;padding-top:24px;padding-bottom:24px}}
+@media(max-width:460px){.sherlock-auth-scene{padding-left:12px;padding-right:12px}.sherlock-auth-dialog .sherlock-account-page{padding-inline:24px}.sherlock-auth-dialog .sherlock-auth-switch{width:calc(100% + 48px);margin-inline:-24px}.sherlock-auth-signature{font-size:11px}}
