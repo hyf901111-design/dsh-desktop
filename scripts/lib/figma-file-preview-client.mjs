@@ -10,6 +10,31 @@ function replaceOnce(source, anchor, replacement) {
 }
 
 export function patchFigmaFilePreview(source) {
+  if(!source.includes('/* ODYSSEY_FRAME_MENU_PORTAL */')) {
+    const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);
+    if(start<0||end<start)throw Error('Frame menu boundary drifted');
+    let part=source.slice(start,end);
+    part=replaceOnce(part,'const menuId = (0, react.useId)();',`const menuId = (0, react.useId)();
+      /* ODYSSEY_FRAME_MENU_PORTAL */
+      const menuRef=(0,react.useRef)(null);
+      const [menuStyle,setMenuStyle]=(0,react.useState)({visibility:'hidden'});
+      (0,react.useLayoutEffect)(()=>{
+        if(!open||!present)return;
+        const place=()=>{const r=rootRef.current?.querySelector('button')?.getBoundingClientRect();if(!r)return;
+          const width=Math.min(248,window.innerWidth-24),height=menuRef.current?.offsetHeight||118;
+          const below=window.innerHeight-r.bottom-20,above=r.top-20,up=below<height&&above>below;
+          setMenuStyle({position:'fixed',left:Math.max(12,Math.min(r.right-width,window.innerWidth-width-12)),width,top:up?'auto':r.bottom+8,bottom:up?window.innerHeight-r.top+8:'auto',maxHeight:Math.max(0,up?above:below)});
+        };place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);
+        return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true);};
+      },[open,present]);`);
+    part=part.replaceAll(`rootRef.current?.querySelector('[role="menuitem"]')`,`menuRef.current?.querySelector('[role="menuitem"]')`).replaceAll(`rootRef.current.querySelectorAll('[role="menuitem"]')`,`menuRef.current.querySelectorAll('[role="menuitem"]')`);
+    part=replaceOnce(part,'if (!rootRef.current?.contains(event.target)) close();','if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) close();');
+    part=replaceOnce(part,'present ? (0, react_jsx_runtime.jsx)("div", {','present ? react_dom.createPortal((0, react_jsx_runtime.jsx)("div", {');
+    part=replaceOnce(part,'id: menuId, role: "menu",','ref:menuRef,style:menuStyle,"data-odyssey-container-menu":"",id: menuId, role: "menu",');
+    part=replaceOnce(part,'}) : null]','}),document.body) : null]');
+    source=source.slice(0,start)+part+source.slice(end);
+  }
+
   if(!source.includes('/* ODYSSEY_CURRENT_LINK_PAGE */')) {
     const start=source.indexOf('function ResearchCanvasStandardWebFrame('),end=source.indexOf('function ResearchCanvasWebFrame(',start);
     let part=source.slice(start,end);

@@ -451,3 +451,7 @@ body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat)[aria-expanded=true]:hover {
   background:var(--odyssey-menu-row); color:var(--odyssey-text); box-shadow:none; transform:none;
 }
+
+body [data-odyssey-container-menu]{box-sizing:border-box;font:400 13px/20px var(--odyssey-font-ui)}
+body [data-odyssey-container-menu][aria-hidden=true]{opacity:0;transform:translateY(-4px);pointer-events:none}
+body [data-odyssey-container-menu] [role=menuitem]:focus-visible{outline:none;background:var(--odyssey-menu-row)}
