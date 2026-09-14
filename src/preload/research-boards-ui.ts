@@ -1255,7 +1255,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return id
     },
     async renamePersonal(id: string, title: string) {
-      await deps.sessions.binding(id)?.session.rename(title)
+      const binding = deps.sessions.binding(id)
+      if (!binding) throw Error('会话尚未就绪')
+      await binding.session.rename(title)
+      for (const favorite of state.favorites.filter(f => f.sessionId === id)) {
+        await call('favorite.rename', { favoriteId: favorite.favoriteId, title })
+      }
     },
     async collaborationSource(id: string) {
       const existing = state.favorites.find(f => f.sessionId === id)
@@ -1803,7 +1808,6 @@ function renameBoardEntry(page: ResearchBoardsPage, entry: Favorite | BoardSumma
     if ('boardId' in entry) await page.call('board.rename', { boardId: entry.boardId, title })
     else {
       await page.renamePersonal(entry.sessionId, title)
-      await page.call('favorite.rename', { favoriteId: entry.favoriteId, title })
     }
     d.close()
   }))

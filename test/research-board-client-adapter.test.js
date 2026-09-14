@@ -196,7 +196,7 @@ describe('real research board module adapter', () => {
   })
 })
 
-async function pageFixture() {
+async function pageFixture(favorites = []) {
   const fixture = await load()
   const { createResearchBoardsPage } = await import(
     '../src/preload/research-boards-ui.ts'
@@ -244,7 +244,7 @@ async function pageFixture() {
       generation: 1,
       user: { userId: 'u', publicId: '0000000001', username: 'Me' }
     },
-    favorites: [],
+    favorites,
     boards: [{ ...view.board, pinned: true, localSessionId: 'shared' }],
     current: view,
     notifications: {
@@ -1365,4 +1365,10 @@ it.each(['personal', 'conversation'])('does not reactivate an old board when log
     expect(f.bridge.invoke.mock.calls.filter(([action]) => action === 'board.activate' || action === 'request.submit')).toEqual([])
     expect(f.page.getView('shared')).toBeNull()
   } finally { f.dispose() }
+})
+
+it('renaming a board session also persists its favorite title',async()=>{
+ const f=await pageFixture([{favoriteId:'favorite',sessionId:'shared',title:'旧名'}])
+ const rename=vi.fn(async()=>{});f.sessions.binding=()=>({session:{rename}})
+ try{await f.page.renamePersonal('shared','新研究标题');expect(rename).toHaveBeenCalledWith('新研究标题');expect(f.bridge.invoke).toHaveBeenCalledWith('favorite.rename',{favoriteId:'favorite',title:'新研究标题'})}finally{f.dispose()}
 })
