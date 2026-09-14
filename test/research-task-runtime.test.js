@@ -377,9 +377,29 @@ describe('Research task contract and prompt', () => {
       await runtime.start(containerRequest('failure'))
       await deferred.waitForStarts(1)
       deferred.complete('task-1', JSON.stringify({ version: 1, type: 'error', message: '所需活动页超过资源上限，请精简内容。' }))
+      await deferred.waitForStarts(2)
+      deferred.complete('task-1', JSON.stringify({ version: 1, type: 'error', message: '所需活动页超过资源上限，请精简内容。' }))
       await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' })).toMatchObject({ state: 'failed', error: '所需活动页超过资源上限，请精简内容。' }))
       expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' }).finalOutput).toBeUndefined()
     } finally { await runtime.dispose() }
+  })
+
+  it('recovers an unsearched data failure with a tool-enabled attempt in the same task', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const calls = []
+    const output = {version:1,type:'markdown',title:'政策动态',content:'已核验的政策内容和发布日期，保留来源链接及覆盖范围。'}
+    const runtime = new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request)
+      return {childSessionId:'child-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(calls.length===1?{version:1,type:'error',message:'当前无法检索并核验官方政策原文'}:output)}]})}
+    },dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try {
+      await runtime.start(containerRequest('policy'))
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe('completed'))
+      expect(calls).toHaveLength(2)
+      expect(calls[1].synthesisOnly).toBe(false)
+      expect(calls[1].prompt).toContain('请先实际检索缺失资料')
+      expect(JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput)).toEqual(output)
+    } finally {await runtime.dispose()}
   })
 
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {

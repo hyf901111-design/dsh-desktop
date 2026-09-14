@@ -688,7 +688,7 @@ body[data-ds-dark-theme] .rScV5Q_selectionActions button[aria-expanded=true]{bac
 .odyssey-create-heading{display:flex;justify-content:space-between;align-items:center;font:15px/23px 'Noto Sans SC',sans-serif}.odyssey-create-heading strong{font-weight:500}.odyssey-create-heading button{border:0;background:transparent;color:var(--dsw-alias-label-tertiary);font-size:12px}
 .odyssey-create-count{margin:12px 0;color:var(--dsw-alias-label-tertiary);font-size:12px}
 [data-research-create-popover] textarea{resize:none!important;height:98px!important;font:13px/21px 'Noto Sans SC',sans-serif!important}
-[data-research-compact-chrome] .rScV5Q_generationProcess{box-sizing:border-box;min-height:0;height:100%;padding:8px 18px 16px!important;gap:12px;display:flex;flex-direction:column}
+[data-research-compact-chrome] .rScV5Q_generationProcess{box-sizing:border-box;min-height:0;height:100%;padding:20px!important;gap:12px;display:flex;flex-direction:column}
 .odyssey-generation-step{display:flex;align-items:center;gap:10px;min-height:23px;font:13px/21px 'Noto Sans SC',sans-serif}
 .odyssey-generation-step [data-research-generation-description]{display:block;overflow:visible;margin:0;line-height:21px}
 .rScV5Q_generationSpinner{width:16px;height:16px;border:1.7px solid color-mix(in srgb,currentColor 16%,transparent);border-top-color:currentColor;border-radius:50%;animation:odyssey-ring .9s linear infinite}
@@ -703,7 +703,7 @@ body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 .rScV5Q_generationFooter button{height:28px;padding:0 8px;font:12px/20px 'Noto Sans SC',sans-serif;border:0;border-radius:6px;background:transparent;color:var(--odyssey-card-text)}
 [data-research-generation-process][data-process-expanded=true] .odyssey-generation-records{font-size:11px;line-height:17px;gap:4px;padding:6px 10px}
 [data-research-derived] [data-research-generation-process][data-process-expanded=true] .odyssey-generation-records{font-size:12px;line-height:20px;gap:8px;padding:10px 12px}
-[data-research-compact-chrome] .rScV5Q_generationFailure{min-height:0;padding:8px 18px 18px;align-items:flex-start;justify-content:flex-start;text-align:left;gap:12px;font:13px/21px 'Noto Sans SC',sans-serif}
+[data-research-compact-chrome] .rScV5Q_generationFailure{min-height:0;padding:20px!important;align-items:flex-start;justify-content:flex-start;text-align:left;gap:12px;font:13px/21px 'Noto Sans SC',sans-serif}
 .rScV5Q_generationFailure>strong{font-size:16px;font-weight:500}.rScV5Q_generationFailure>span{color:var(--odyssey-card-muted)}.rScV5Q_generationFailure details{font-size:12px;line-height:20px}.rScV5Q_generationFailure details p{margin:8px 0}.rScV5Q_generationFailure button{margin-left:auto}
 @keyframes odyssey-ring{to{transform:rotate(360deg)}}@keyframes odyssey-skeleton{50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.rScV5Q_generationSpinner,.odyssey-generation-skeleton i,.odyssey-derived-skeleton>i{animation:none}}

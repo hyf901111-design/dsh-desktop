@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { describe, it, expect, vi } from 'vitest';
 import { validateWorkbench, layoutWorkbench, registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js';
+import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
 import { publicEventFromSessionEvent } from '../packages/dsh-research-task-runtime/index.js';
-import { patchResearchWorkbenchGrowth } from '../scripts/lib/research-workbench-growth.mjs';
+import { settleWorkbenchLayout, patchResearchWorkbenchGrowth } from '../scripts/lib/research-workbench-growth.mjs';
 const panel = (n) => ({ title: `面板${n}`, prompt: `研究独立维度${n}`, type: n % 2 ? 'table' : 'markdown', height: 480 + n * 40 });
 function toolPanel(n) { const {height, ...p} = panel(n); return {...p, size: height <= 600 ? 'medium' : 'large'}; }
 function fake() { const f = new Proxy(function () { }, { get: () => f, apply: () => f }); return f; }
@@ -24,9 +25,9 @@ describe('研究工作台', () => {
     it('packs large cards first and fills the remaining cells without changing same-size order', () => {
         const panels = layoutWorkbench(['small','large','medium','small','small'].map((size,i)=>({...panel(i),size})));
         expect(panels.map(({x,y,width,height})=>({x,y,width,height}))).toEqual([
-            {x:672,y:0,width:320,height:220}, {x:0,y:0,width:656,height:456},
-            {x:0,y:472,width:656,height:220}, {x:672,y:236,width:320,height:220},
-            {x:672,y:472,width:320,height:220}
+            {x:672,y:236,width:320,height:220}, {x:0,y:0,width:656,height:456},
+            {x:672,y:0,width:656,height:220}, {x:1008,y:236,width:320,height:220},
+            {x:0,y:472,width:320,height:220}
         ]);
         expect(panels.map(p=>p.title)).toEqual(Array.from({length:5},(_,i)=>`面板${i}`));
         for(let i=0;i<panels.length;i++)for(const b of panels.slice(i+1)) {
@@ -224,4 +225,19 @@ it('preserves manually positioned neighbors and puts an expanding card in free s
     const [grown,manual]=workspace.getSnapshot().artifacts;
     expect(manual).toMatchObject({x:496,y:142,width:320,height:220,sizeMode:'manual'});
     expect(Math.abs(grown.x-manual.x)>=(grown.width+manual.width)/2||Math.abs(grown.y-manual.y)>=(grown.height+manual.height)/2).toBe(true);
+});
+
+it('settles a workbench once after the last active component finishes, including failures', () => {
+  const nodes=Array.from({length:6},(_,i)=>({id:String(i),workbenchId:'w',workbenchIndex:i,generationStatus:i===5?'running':'completed',x:328,y:i*472+228,width:656,height:456,size:'large'}));
+  const before={artifacts:nodes,canvasSize:{width:1000,height:800}};
+  const after={...before,artifacts:nodes.map(n=>({...n,generationStatus:n.id==='5'?'failed':'completed'}))};
+  const pack=vi.fn(researchBentoLayout);
+  const settled=settleWorkbenchLayout(before,after,pack);
+  expect(pack).toHaveBeenCalledTimes(1);
+  expect(settled.viewport.scale).toBeLessThan(1);
+  expect(new Set(settled.artifacts.map(n=>n.x)).size).toBeGreaterThan(1);
+  expect(new Set(settled.artifacts.map(n=>n.y)).size).toBeGreaterThan(1);
+  expect(settleWorkbenchLayout(settled,settled,pack)).toBe(settled);
+  expect(pack).toHaveBeenCalledTimes(1);
+  expect(settleWorkbenchLayout(before,before,pack)).toBe(before);
 });

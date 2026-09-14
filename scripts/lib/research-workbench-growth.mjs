@@ -1,3 +1,22 @@
+// Arrange once on the active-to-terminal transition; later renders and edits
+// cannot trigger another arrange. Keep user-positioned cards untouched.
+export function settleWorkbenchLayout(before, next, pack) {
+  const active = n => ['queued','running','pending'].includes(n.generationStatus);
+  const terminal = n => ['completed','failed','cancelled','interrupted'].includes(n.generationStatus);
+  const ids = new Set(before.artifacts.filter(n => n.workbenchId && active(n)).map(n => n.workbenchId));
+  for (const id of ids) {
+    const nodes = next.artifacts.filter(n => n.workbenchId === id);
+    if (!nodes.length || !nodes.every(terminal) || nodes.some(n => n.sizeMode === 'manual')) continue;
+    const packed = pack([...nodes].sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0)), next.canvasSize, new Map(), {fitColumns:true});
+    const left = Math.min(...nodes.map(n=>n.x-n.width/2));
+    const top = Math.min(...nodes.map(n=>n.y-n.height/2));
+    const positions = new Map(packed.nodes.map(n=>[n.id,{...n,x:left+n.x+n.width/2,y:top+n.y+n.height/2}]));
+    next = {...next,artifacts:next.artifacts.map(n=>positions.get(n.id)??n),
+      ...(packed.viewport ? {viewport:{...packed.viewport,x:packed.viewport.x-left*packed.viewport.scale,y:packed.viewport.y-top*packed.viewport.scale}} : {})};
+  }
+  return next;
+}
+
 export function patchResearchWorkbenchGrowth(source) {
   const start = source.indexOf('function researchCanvasReflowGrowth(')
   const end = source.indexOf('function researchGenerationSizedNode(', start)
@@ -27,7 +46,9 @@ export function patchResearchWorkbenchGrowth(source) {
     }
     return shifted;
   }
+${settleWorkbenchLayout.toString()}
 function researchWorkbenchGrowthViewport(before,next) {
+    next=settleWorkbenchLayout(before,next,researchBentoLayout);
     const size=next.canvasSize, width=Math.min(size?.width??0,size?.availableWidth??Infinity),height=size?.height??0;
     if(width<100||height<100||JSON.stringify(before.viewport)!==JSON.stringify(next.viewport))return next;
     const ids=new Set(next.artifacts.filter(n=>n.workbenchId&&n.sizeMode!=='manual'&&before.artifacts.some(old=>old.id===n.id&&(old.width!==n.width||old.height!==n.height))).map(n=>n.workbenchId));
