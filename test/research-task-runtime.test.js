@@ -1438,6 +1438,8 @@ describe('Research task Subagent adapter', () => {
       })]
     }))
     const effectivePrompt = ctx.subagents.start.mock.calls[0][1].prompt[0].text
+    expect(effectivePrompt).toContain('只有网站介绍、页面标题或网址时，必须继续调用 web_search')
+    expect(effectivePrompt).not.toContain('以上资料足以回答')
     expect(effectivePrompt).toContain('今开 3960.10')
     expect(effectivePrompt).toContain('https://example.com/csi300')
     await handle.dispose()
@@ -1960,7 +1962,7 @@ it('shared current request controls retrieval independently from offline instruc
   } finally { await executor.dispose() }
 })
 
-it('shared empty-body recovery preserves host evidence and renders it when synthesis returns no body twice', async () => {
+it('shared empty-body recovery does not publish search snippets as a monitoring panel when synthesis returns no body twice', async () => {
   const { createSharedBoardExecutor } = await runtimeModule()
   const parent = { id: 'shared-parent', session: { events: [] } }
   const child = { id: 'child', session: { id: 'child', events: [] } }
@@ -1970,11 +1972,7 @@ it('shared empty-body recovery preserves host evidence and renders it when synth
   ctx.web = { search: vi.fn(async () => ({ content: 'Bitcoin 比特币价格 100，测试数据时点 2026-09-10。', sources: [{ title: 'Bitcoin 比特币价格', url: 'https://example.com/btc', snippet: '比特币价格 100，测试资料。' }] })) }
   const executor = createSharedBoardExecutor(ctx)
   try {
-    const result = JSON.parse(await executor.execute({ sessionId: parent.id, kind: 'container', query: '比特币实时监控面板', prompt: '创建比特币实时监控面板', files: [] }, new AbortController().signal))
-    expect(result).toMatchObject({ type: 'markdown' })
-    expect(result.content).toContain('比特币价格 100')
-    expect(result.content).toContain('https://example.com/btc')
-    expect(result.content).not.toContain('private reasoning')
+    await expect(executor.execute({ sessionId: parent.id, kind: 'container', query: '比特币实时监控面板', prompt: '创建比特币实时监控面板', files: [] }, new AbortController().signal)).rejects.toThrow()
     expect(ctx.web.search).toHaveBeenCalledTimes(1)
     expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
     expect(ctx.subagents.start.mock.calls[1][1].toolFilter.allow).toEqual([])
