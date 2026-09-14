@@ -25,7 +25,20 @@ it('does not resurrect the conversation after leaving Research or switching to a
 })
 it('installs an idempotent subscription with disposal',()=>{
  const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- expect(patchResearchResidentConversation(source)).toBe(source)
+ const once=patchResearchResidentConversation(source)
+ expect(patchResearchResidentConversation(once)).toBe(once)
  expect(source).toContain('service.subscribeState?.(reconcile)')
  expect(source).toContain('disposed=true;unsubscribeResident?.()')
+})
+it('recovers active Research when lifecycle bookkeeping was cleared, preserving child focus',()=>{
+ const c:any=fixture([{id:'child'}]);c.previous.clear()
+ c.service.getSnapshot().state.splits.id='pane';c.service.getSnapshot().state.activePane='pane'
+ c.stores=new Map([['board',{getSnapshot:()=>({binding:{active:true}})}]])
+ reconcileResearchConversation(c)
+ expect(c.service.openTab).toHaveBeenCalledOnce()
+ expect(c.service.activateTab).toHaveBeenCalledWith('child',{sessionId:'board'})
+})
+it('does not restore Research for an explicitly inactive current binding',()=>{
+ const c:any=fixture();c.stores=new Map([['board',{getSnapshot:()=>({binding:{active:false}})}]])
+ reconcileResearchConversation(c);expect(c.service.openTab).not.toHaveBeenCalled()
 })
