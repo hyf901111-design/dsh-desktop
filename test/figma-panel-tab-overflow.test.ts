@@ -143,7 +143,7 @@ describe('Figma panel tab overflow', () => {
       expect(onClose).toHaveBeenCalledWith('gold-pdf')
       expect(browserWindow.document.activeElement?.getAttribute('data-odyssey-panel-tab-id')).toBe('gold-md')
 
-      // Expanding the pane to exactly fit all tabs must remove the switcher.
+      // The full-name switcher stays available even when all compressed tabs fit.
       // Its 28 px target also consumes the actual 6 px toolbar gap while mounted.
       list.style.columnGap = '4px'
       list.parentElement!.style.columnGap = '6px'
@@ -151,9 +151,9 @@ describe('Figma panel tab overflow', () => {
       Object.defineProperty(list, 'clientWidth', { configurable: true, get: () =>
         host.querySelector('[data-odyssey-tab-overflow-trigger]') ? 840 : 874 })
       await act(async () => { observers.forEach(observer => observer.trigger()) })
-      expect(host.querySelector('[data-odyssey-tab-overflow-trigger]')).toBeNull()
+      expect(host.querySelector('[data-odyssey-tab-overflow-trigger]')).not.toBeNull()
       await act(async () => { observers.forEach(observer => observer.trigger()) })
-      expect(host.querySelector('[data-odyssey-tab-overflow-trigger]')).toBeNull()
+      expect(host.querySelector('[data-odyssey-tab-overflow-trigger]')).not.toBeNull()
     } finally {
       await act(async () => { root.unmount() })
       for (const [key, value] of Object.entries(previous)) {
