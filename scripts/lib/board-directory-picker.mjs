@@ -23,12 +23,13 @@ export function patchBoardDirectoryConversation(source) {
   return source + '\n/* BOARD_DIRECTORY_PICKER_V1 */'
 }
 export function patchBoardDirectoryWorkspace(source) {
+  source = source.replace("items.unshift({id:'::board-directory'", "items.splice(items.findIndex(item=>item.id==='workspace-search')+1,0,{id:'::board-directory'")
   source = source.replaceAll("'当前看板目录'", "'新建看板目录'")
   if (source.includes('/* BOARD_DIRECTORY_WORKSPACE_V1 */')) return source
   source = change(source, 'function WorkspacePickFlow({ t, open,', 'function WorkspacePickFlow({ boardDirectoryPath, t, open,')
   source = change(source, 'function WorkspacePicker({ open,', 'function WorkspacePicker({ boardDirectoryPath, open,')
   source = change(source, 'return (0, react_jsx_runtime.jsx)(WorkspacePickFlow, {', 'return (0, react_jsx_runtime.jsx)(WorkspacePickFlow, { boardDirectoryPath,')
-  source = change(source, 'const menuIsEmpty = items.length === 0;', `if (boardDirectoryPath) items.unshift({id:'::board-directory',label:chinese ? '新建看板目录' : 'Current board directory',disabled:flowBusy});
+  source = change(source, 'const menuIsEmpty = items.length === 0;', `if (boardDirectoryPath) items.splice(items.findIndex(item=>item.id==='workspace-search')+1,0,{id:'::board-directory',label:chinese ? '新建看板目录' : 'Current board directory',disabled:flowBusy});
       const menuIsEmpty = items.length === 0;`)
   source = change(source, 'const addIsTheOnlyEntry = !pinAdd &&', 'const addIsTheOnlyEntry = !boardDirectoryPath && !pinAdd &&')
   return source + '\n/* BOARD_DIRECTORY_WORKSPACE_V1 */'

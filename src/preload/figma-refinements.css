@@ -87,7 +87,7 @@ body .odyssey-permission-name { font:400 13px/20px var(--odyssey-font-ui); }
 body .odyssey-permission-description { font:400 11px/18px var(--odyssey-font-ui); color:#757575; }
 body [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { background:#f0f0f0; }
 body [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) .odyssey-permission-name { font-weight:500; }
-body[data-ds-dark-theme] [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { background:#373737; }
+body[data-ds-dark-theme] [role=menu]:has(.odyssey-permission-item) [role=menuitem]:has(>svg) { background:var(--odyssey-menu-row); }
 body[data-ds-dark-theme] .odyssey-permission-description { color:#9c9c9c; }
 body [role=menu] .odyssey-permission-name { color:#242424; }
 body[data-ds-dark-theme] [role=menu] .odyssey-permission-name { color:#e6e6e6; }
@@ -104,7 +104,7 @@ body:has(.odyssey-view-menu button[aria-expanded=true])>[role=menu] [class*=_ite
 body:has(.odyssey-view-menu button[aria-expanded=true])>[role=menu] [role=separator] { flex:none; height:1px; margin:6px 6px 4px; background:var(--odyssey-menu-border); }
 body:has(.odyssey-view-menu button[aria-expanded=true])>[role=menu] [role=menuitem]:has(>svg) { background:var(--odyssey-menu-row); font-weight:500; }
 body:has(.odyssey-view-menu button[aria-expanded=true])>[role=menu] [role=menuitem]>svg { width:14px; height:14px; }
-body[data-ds-dark-theme]:has(.odyssey-view-menu button[aria-expanded=true])>[role=menu] [role=menuitem]:has(>svg) { background:#373737; }
+body[data-ds-dark-theme]:has(.odyssey-view-menu button[aria-expanded=true])>[role=menu] [role=menuitem]:has(>svg) { background:var(--odyssey-menu-row); }
 body [role=menu]:has(.odyssey-workspace-search) { width:280px; min-width:0; padding:5px; --odyssey-workspace-ink:#242424; --odyssey-workspace-divider:#e3e3e3; --odyssey-workspace-check:#292b2f; }
 body [role=menu]:has(.odyssey-workspace-search)>[role=presentation] { padding:0; }
 body [role=menu] [role=presentation]:has(>.odyssey-workspace-search) { padding:0 0 2px; }
@@ -116,7 +116,7 @@ body [role=menu]:has(.odyssey-workspace-search) [role=menuitem] { height:34px; m
 body [role=menu]:has(.odyssey-workspace-search) [class*=_itemWrap_]+[class*=_itemWrap_] { margin-top:2px; }
 body [role=menu]:has(.odyssey-workspace-search) [role=menuitem]>svg { width:14px; height:14px; margin-right:2px; color:var(--odyssey-workspace-check); }
 body [role=menu]:has(.odyssey-workspace-search) [role=menuitem]:has(>svg) { background:#f0f0f0; font-weight:500; }
-body[data-ds-dark-theme] [role=menu]:has(.odyssey-workspace-search) [role=menuitem]:has(>svg) { background:#373737; }
+body[data-ds-dark-theme] [role=menu]:has(.odyssey-workspace-search) [role=menuitem]:has(>svg) { background:var(--odyssey-menu-row); }
 /* Native Menu pins add-workspace in a footer slot with a border, not a separator entry.
    Figma 665:788/802: divider at (12,156), add row at (6,161); filtered lists stay intrinsic. */
 body [role=menu]:has(.odyssey-workspace-search) [role=menuitem]>[class*=_itemLabel_] { color:var(--odyssey-workspace-ink); font-weight:inherit; }
@@ -150,7 +150,7 @@ body [data-odyssey-refresh-options] button[role=menuitemradio]>span:first-child 
 body [data-odyssey-refresh-options] button[role=menuitemradio]>.odyssey-menu-check { width:14px; flex:none; }
 body [data-odyssey-refresh-options]::before { content:''; position:absolute; top:0; bottom:0; left:-10px; right:-10px; z-index:-1; }
 body [data-odyssey-refresh-options] [aria-checked=true],body [data-odyssey-container-menu] [aria-expanded=true] { background:var(--odyssey-menu-row); }
-body[data-ds-dark-theme] [data-odyssey-refresh-options] [aria-checked=true],body[data-ds-dark-theme] [data-odyssey-container-menu] [aria-expanded=true] { background:#373737; }
+body[data-ds-dark-theme] [data-odyssey-refresh-options] [aria-checked=true],body[data-ds-dark-theme] [data-odyssey-container-menu] [aria-expanded=true] { background:var(--odyssey-menu-row); }
 body .odyssey-menu-check { margin-left:auto; width:14px; height:14px; flex:none; background:currentColor; mask:url(/figma-check.svg) center/contain no-repeat; }
 body .h8S2Va_trigger { height:28px; min-height:28px; border-radius:7px; padding:0 8px; gap:5px; background:#00000008; }
 body .h8S2Va_trigger .h8S2Va_activitySlot:empty { display:none; }
@@ -206,7 +206,7 @@ body .odyssey-model-menu ._7KE1Ra_groupTitle { position:static; background:trans
 body .odyssey-model-menu :is(._7KE1Ra_option,.odyssey-model-footer)[role] { flex:none; width:100%; min-height:34px; padding:7px 10px; border:0; border-radius:6px; gap:8px; color:var(--odyssey-text); background:transparent; font:400 13px/20px var(--odyssey-font-ui); text-align:left; display:flex; align-items:center; }
 body .odyssey-model-menu ._7KE1Ra_modelName { font:inherit; }
 body .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#f1f1f3; font-weight:500; }
-body[data-ds-dark-theme] .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#373737; }
+body[data-ds-dark-theme] .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:var(--odyssey-menu-row); }
 body .odyssey-model-menu ._7KE1Ra_check { flex:0 0 14px; }
 body .odyssey-model-menu ._7KE1Ra_check svg { width:14px; height:14px; }
 body .odyssey-model-menu .odyssey-model-footer { margin-top:6px; position:relative; cursor:pointer; }
@@ -220,7 +220,7 @@ body[data-ds-dark-theme] .odyssey-model-menu :is(.odyssey-model-search,._7KE1Ra_
 body .odyssey-model-menu :is(._7KE1Ra_groupTitle,.odyssey-model-footer small) { color:#757575; }
 body[data-ds-dark-theme] .odyssey-model-menu :is(._7KE1Ra_groupTitle,.odyssey-model-footer small) { color:#9c9c9c; }
 body .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#f0f0f0; }
-body[data-ds-dark-theme] .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:#373737; }
+body[data-ds-dark-theme] .odyssey-model-menu ._7KE1Ra_option[aria-checked=true] { background:var(--odyssey-menu-row); }
 body .odyssey-model-menu .odyssey-model-footer::before { background:#e3e3e3; }
 body[data-ds-dark-theme] .odyssey-model-menu .odyssey-model-footer::before { background:#424242; }
 /* 667:30199/30557: search-empty only; leave unconfigured/loading states alone. */
@@ -435,7 +435,7 @@ body .odyssey-restored-model-menu :is(button,[role=menuitemradio]):focus-visible
 body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { transition:background-color 120ms ease,box-shadow 120ms ease; }
 body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:hover:not(:disabled) { background:#e4e4e4; }
 body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:active:not(:disabled) { background:#d6d6d6; box-shadow:inset 0 1px 2px #0002; }
-body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:hover:not(:disabled) { background:#373737; }
+body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:hover:not(:disabled) { background:var(--odyssey-menu-row); }
 body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:active:not(:disabled) { background:#444; box-shadow:inset 0 1px 2px #0004; }
 body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:focus-visible { outline:2px solid var(--odyssey-text); outline-offset:2px; }
 body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:disabled { opacity:.4; cursor:default; }
@@ -464,3 +464,7 @@ body [data-odyssey-container-menu] [role=menuitem]:focus-visible{outline:none;ba
 /* Component chrome ends at the content; provenance stays in More. */
 body [data-research-artifact-card] .rScV5Q_artifactMeta{display:none!important}
 body [data-odyssey-container-menu] .odyssey-source-links{max-height:240px;overflow:auto;border-top:1px solid var(--odyssey-menu-border);padding-top:4px}
+
+/* All menu selections share the mode picker's selected-row surface. */
+body [role=menu] :is([role=menuitem],[role=menuitemradio],[role=menuitemcheckbox]):is([aria-checked=true],[aria-selected=true],[data-active=true],[class*=_selected],[class*=_active]):not(:disabled) { background:var(--odyssey-menu-row)!important; }
+body [role=menu] [role=menuitem]:has(.cubgiG_selectedItem) { background:var(--odyssey-menu-row)!important; }

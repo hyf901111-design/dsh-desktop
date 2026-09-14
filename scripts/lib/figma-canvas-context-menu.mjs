@@ -12,6 +12,14 @@ export function positionFigmaCanvasContextMenu(element, point, canvas) {
   element.style.top = Math.max(inset, Math.min(point.top, height - element.offsetHeight - inset)) + 'px';
 }
 export function patchFigmaCanvasContextMenu(source) {
+  const downloadGroup='className: "rScV5Q_contextDownloadGroup",';
+  if(!source.includes('/* odyssey:download-hover:v1 */')) {
+    if(source.split(downloadGroup).length!==2)throw Error('Context download group missing');
+    source=source.replace(downloadGroup,downloadGroup+`
+      /* odyssey:download-hover:v1 */
+      onMouseEnter:()=>{if(downloadBusyNodeId===null&&researchCanvasExportDescriptor(contextNode,sessionId)?.kind==='mind-map')setDownloadMenuNodeId(contextNode.id);},
+      onMouseLeave:()=>setDownloadMenuNodeId(null),`);
+  }
   const marker = '/* odyssey:canvas-context-menu:20260912 */';
   if (source.includes(marker)) return source;
   const anchor = 'function ResearchCanvas(';
