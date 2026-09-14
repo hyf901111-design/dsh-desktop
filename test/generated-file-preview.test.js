@@ -22,3 +22,16 @@ it('opens a scope-bound lookup tab and retains separate file choices',()=>{
  expect(out).toContain("coordinator.service.closeTab?.(tab.id,scope)")
  new Function(out)
 })
+
+it('keeps filenames clickable when restored history has no deliverables projection',async()=>{
+ const {patchRestoredFileMentions}=await import('../scripts/lib/generated-file-preview.mjs')
+ const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const out=patchRestoredFileMentions(source)
+ const start=out.indexOf('const resolvedMentions='),end=out.indexOf('\n\t\t\tconst imageLoader',start)
+ const calls=[]
+ const resolver=runInNewContext('(function(){'+out.slice(start,end)+';return resolvedMentions;})()', {react:{useMemo:f=>f()},mentions:undefined,openFile:p=>calls.push(p)})
+ resolver.resolve('人类命运共同体介绍.pptx').open()
+ expect(calls).toEqual(['人类命运共同体介绍.pptx'])
+ expect(resolver.resolve('function()')).toBeUndefined()
+ new Function(out)
+})

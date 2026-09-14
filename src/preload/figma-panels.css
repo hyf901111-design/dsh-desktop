@@ -184,7 +184,7 @@ body[data-odyssey-resizing] * { cursor:ew-resize !important; }
   border: 0;
   border-radius: 7px;
   color: var(--dsw-alias-label-secondary);
-  background: var(--dsw-alias-bg-layer-1);
+  background: transparent;
   cursor: pointer;
 }
 
@@ -377,3 +377,5 @@ body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region
 
 /* A native drag region swallows outside pointer events while a preset menu is open. */
 body:has(.cubgiG_seat[aria-expanded="true"]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}
+
+[data-odyssey-tab-overflow-trigger]:hover{background:color-mix(in srgb,currentColor 8%,transparent)}
