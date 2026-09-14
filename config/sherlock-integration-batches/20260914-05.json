@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-05",
+  "branch": "codex/integration/20260914-05",
+  "baseMainCommit": "5e26072cea83729c828b4777d12baf45c511d5dd",
+  "expectedMainCommit": "5e26072cea83729c828b4777d12baf45c511d5dd",
+  "createdAt": "2026-09-14T08:59:29.494Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "画板编辑层级与附件协作及登录背景修复",
+        "branch": "codex/feat/research-auth-followups-20260914",
+        "baseCommit": "5e26072cea83729c828b4777d12baf45c511d5dd",
+        "tipCommit": "ffe40250885a16944f84049da17d8ccc057ac660",
+        "commits": [
+          {
+            "commit": "ffe40250885a16944f84049da17d8ccc057ac660",
+            "parents": [
+              "5e26072cea83729c828b4777d12baf45c511d5dd"
+            ],
+            "subject": "修复研究画板编辑与菜单交互并统一登录背景及附件授权"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-file-preview-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-file-preview.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-auth.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-flow.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-file-path.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-errors.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-file-preview.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/panel-toggle-drag-region.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-expanded-edit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-preview.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-new-node-stacking.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-file-preview.test.ts",
+              "test/figma-file-preview.test.ts",
+              "test/research-frame-menu-mount.test.js",
+              "test/research-new-node-stacking.test.ts",
+              "test/research-expanded-edit.test.js",
+              "test/figma-auth-layout.test.ts",
+              "test/figma-auth-errors.test.js",
+              "test/home-flow.test.ts",
+              "test/panel-toggle-drag-region.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "125 项针对性检查及类型检查通过",
+            "verifiedCommit": "ffe40250885a16944f84049da17d8ccc057ac660",
+            "completedAt": "2026-09-14T08:59:28.845394+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "125 项针对性检查及类型检查通过",
+            "verifiedCommit": "ffe40250885a16944f84049da17d8ccc057ac660",
+            "completedAt": "2026-09-14T08:59:28.845394+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实组件函数与样式在 Chromium 验证全屏菜单点击、编辑框高度、登录注册背景与窗口适配；构建后继续验证客户端"
+        },
+        "acceptanceCriteria": [
+          "编辑框填满内容区域并保留边距",
+          "新组件置顶且撤销重做保留顺序",
+          "全屏菜单可见可点",
+          "附件预览与共享授权分离",
+          "登录注册使用首页背景",
+          "菜单打开时顶栏接收外部点击"
+        ],
+        "risks": [
+          "此前未保存授权的旧附件需重新拖入一次"
+        ],
+        "generatedAt": "2026-09-14T08:59:28.845394+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-file-preview.test.ts",
+        "test/figma-file-preview.test.ts",
+        "test/research-frame-menu-mount.test.js",
+        "test/research-new-node-stacking.test.ts",
+        "test/research-expanded-edit.test.js",
+        "test/figma-auth-layout.test.ts",
+        "test/figma-auth-errors.test.js",
+        "test/home-flow.test.ts",
+        "test/panel-toggle-drag-region.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
