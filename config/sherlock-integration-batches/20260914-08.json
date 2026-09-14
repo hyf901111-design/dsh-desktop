@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-08",
+  "branch": "codex/integration/20260914-08",
+  "baseMainCommit": "55f16a5f8932f405ffcb39eeed1c87071c8a09f2",
+  "expectedMainCommit": "55f16a5f8932f405ffcb39eeed1c87071c8a09f2",
+  "createdAt": "2026-09-14T10:44:50.576Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复真实文件链接与详情页签挂载",
+        "branch": "codex/feat/english-ui-20260914",
+        "baseCommit": "55f16a5f8932f405ffcb39eeed1c87071c8a09f2",
+        "tipCommit": "61fa022285c13afa1505b6bf2dc54753bc6e0e7f",
+        "commits": [
+          {
+            "commit": "61fa022285c13afa1505b6bf2dc54753bc6e0e7f",
+            "parents": [
+              "55f16a5f8932f405ffcb39eeed1c87071c8a09f2"
+            ],
+            "subject": "打通相对文件链接预览并修复详情页签的会话作用域"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/inspect-sidebar.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/markdown-file-links.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-localization.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/inspect-sidebar.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/markdown-file-links.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/generated-file-preview.test.js",
+              "test/sidebar-live-files.test.js",
+              "test/figma-file-panel.test.ts",
+              "test/sidebar-file-reference.test.ts",
+              "test/inspect-sidebar.test.js",
+              "test/ui-localization.test.ts",
+              "test/english-ui-layout.test.js",
+              "test/figma-auth-errors.test.js",
+              "test/markdown-file-links.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "46 项聚焦检查及类型检查通过",
+            "verifiedCommit": "61fa022285c13afa1505b6bf2dc54753bc6e0e7f",
+            "completedAt": "2026-09-14T10:44:31.558705+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "46 项聚焦检查及类型检查通过",
+            "verifiedCommit": "61fa022285c13afa1505b6bf2dc54753bc6e0e7f",
+            "completedAt": "2026-09-14T10:44:31.558705+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际客户端复现定位相对 Markdown 链接禁用和详情作用域问题；真实 Markdown 渲染与门户作用域聚焦检查通过，包后继续验证。"
+        },
+        "acceptanceCriteria": [
+          "相对文件链接直接进入右栏预览",
+          "网页链接行为不变",
+          "Inspect 保持当前页面并使用全局右栏",
+          "详情内容在原会话作用域渲染"
+        ],
+        "risks": [
+          "同名文件显示路径供用户选择；不翻译用户自定义内容"
+        ],
+        "generatedAt": "2026-09-14T10:44:31.558705+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/generated-file-preview.test.js",
+        "test/sidebar-live-files.test.js",
+        "test/figma-file-panel.test.ts",
+        "test/sidebar-file-reference.test.ts",
+        "test/inspect-sidebar.test.js",
+        "test/ui-localization.test.ts",
+        "test/english-ui-layout.test.js",
+        "test/figma-auth-errors.test.js",
+        "test/markdown-file-links.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
