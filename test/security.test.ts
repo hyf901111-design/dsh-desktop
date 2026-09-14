@@ -19,7 +19,7 @@ type NavigationEvent = {
   frame?: { url: string; parent?: { processId: number; routingId: number } | null }
 }
 
-function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false) {
+function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false, ownsResearchFrame?: (frame: any) => boolean) {
   const listeners = new Map<string, (event: NavigationEvent, url?: string) => void>()
   const permissionCheck = vi.fn()
   const permissionRequest = vi.fn()
@@ -35,11 +35,30 @@ function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = 
       setPermissionRequestHandler: permissionRequest
     }
   }
-  secureWindow({ webContents } as never, { allowsResearchFrameUrl })
+  secureWindow({ webContents } as never, { allowsResearchFrameUrl, ownsResearchFrame })
   return { listeners, mainFrame, webContents }
 }
 
 describe('main-window navigation security', () => {
+  it('routes a research popup to its source frame instead of the external browser',()=>{
+    const {webContents}=secureWindowFixture(()=>false,frame=>frame?.name==='owned');
+    const executeJavaScript=vi.fn(async()=>{});
+    Object.assign(webContents.mainFrame,{framesInSubtree:[{name:'owned',url:'https://ui.shadcn.com/',executeJavaScript}]});
+    const handler=webContents.setWindowOpenHandler.mock.calls[0]![0];
+    expect(handler({url:'https://ui.shadcn.com/charts/line',referrer:{url:'https://ui.shadcn.com/'}})).toEqual({action:'deny'});
+    expect(executeJavaScript).toHaveBeenCalledOnce();expect(shellOpenExternal).not.toHaveBeenCalled();
+  });
+  it('keeps remote navigation inside owned link frames while blocking shell and local document routes',()=>{
+    const {listeners}=secureWindowFixture(()=>false,frame=>frame?.name==='owned');
+    const navigate=listeners.get('will-frame-navigate')!;
+    for(const url of ['https://ui.shadcn.com/view/chart','https://other.example/page']) {
+      const preventDefault=vi.fn();navigate({url,isMainFrame:false,frame:{name:'owned',url:'https://ui.shadcn.com'} as any,preventDefault});expect(preventDefault).not.toHaveBeenCalled();
+    }
+    for(const url of ['http://127.0.0.1:4310/','file:///tmp/private','sherlock-preview://secret']) {
+      const preventDefault=vi.fn();navigate({url,isMainFrame:false,frame:{name:'owned',url:'https://ui.shadcn.com'} as any,preventDefault});expect(preventDefault).toHaveBeenCalledOnce();
+    }
+    expect(shellOpenExternal).not.toHaveBeenCalled();
+  });
   it('loads shell-created sidebar HTML frames without granting child documents the same access', () => {
     const { listeners, mainFrame } = secureWindowFixture()
     const navigate = listeners.get('will-frame-navigate')!

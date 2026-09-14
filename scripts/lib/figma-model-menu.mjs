@@ -1,114 +1,40 @@
-/** 665:857 / 12A: searchable model directory; keep the Host-owned selection API. */
+import { readFileSync } from 'node:fs'
+
+// Restore the shipped ModelSelect UI. Directory and Host retain selection ownership.
+const original = readFileSync(new URL('./model-select-restored.txt', import.meta.url), 'utf8')
 export function patchFigmaModelMenu(source) {
-  const marker = '/* odyssey:searchable-model-menu:20260912 */'
-  if (source.includes(marker)) return patchSearchEmpty(patchPaneFocus(source))
-  const exact = (before, after) => {
-    if (source.split(before).length !== 2) throw Error('Model menu anchor drifted: '+before.slice(0,80))
-    source = source.replace(before,after)
-  }
-  exact('let react = require("react");', 'let react = require("react");\n\t\tlet odysseyReactDOM = require("react-dom");\n'+marker)
-  exact('const [pane, setPane] = (0, react.useState)("root");', `const [pane, setPane] = (0, react.useState)("model");
-      const [query, setQuery] = (0, react.useState)("");
-      const [menuPosition, setMenuPosition] = (0, react.useState)({});
+  const start = source.indexOf('function ModelSelect(')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  if (start < 0 || end < start) throw Error('ModelSelect boundary drifted')
+  let restored = original
+    .replace('const id = (0, react.useId)();', `const id = (0, react.useId)();
       const menuRef = (0, react.useRef)(null);
-      const searchRef = (0, react.useRef)(null);
-      const chinese = t("menu.model") === "模型";
-      const menuText = (zh, en) => chinese ? zh : en;
-      const needle = query.trim().toLocaleLowerCase();
-      const visibleGroups = state.groups.map(group => ({...group, models: group.models.filter(model =>
-        [group.id,group.name,model.id,model.name,model.description].some(value => String(value ?? "").toLocaleLowerCase().includes(needle))
-      )})).filter(group => group.models.length > 0);`)
-  exact('if (!rootRef.current?.contains(event.target)) setOpen(false);', 'if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);')
-  exact('if (!available) return null;', `(0, react.useLayoutEffect)(() => {
-        if (!open) return;
-        const place = () => {
-          const anchor = triggerRef.current?.getBoundingClientRect();
-          if (!anchor) return;
-          const width = Math.min(320,window.innerWidth-24);
-          const height = Math.min(menuRef.current?.scrollHeight || 240,480);
-          const below = window.innerHeight-anchor.bottom-20;
-          const above = anchor.top-20;
-          const upwards = below < height && above > below;
-          setMenuPosition({left:Math.max(12,Math.min(anchor.right-width,window.innerWidth-width-12)),
-            width, top:upwards ? 'auto' : anchor.bottom+8,
-            bottom:upwards ? window.innerHeight-anchor.top+8 : 'auto',
-            maxHeight:Math.max(0,upwards ? above : below)});
-        };
-        place();
-        window.addEventListener('resize',place);
-        return () => window.removeEventListener('resize',place);
-      },[open,pane,query,state.groups]);
-      if (!available) return null;`)
-  exact('setPane("root");\n\t\t\t\tsetOpen(true);', 'setPane("model");\n\t\t\t\tsetQuery("");\n\t\t\t\tsetOpen(true);')
-  exact('setPane("root");\n\t\t\t\tif (restoreFocus)', 'setPane("model");\n\t\t\t\tif (restoreFocus)')
-  exact('items[(Math.max(active, 0) + offset + items.length) % items.length]?.focus();', 'items[(active < 0 ? (offset > 0 ? 0 : items.length-1) : (active+offset+items.length)%items.length)]?.focus();')
-  exact('if (pane !== "root") setPane("root");\n\t\t\t\t\telse close(true);', 'event.stopPropagation();\n\t\t\t\t\tif (pane === "effort") { setPane("model"); queueMicrotask(() => menuRef.current?.querySelector("[data-model-effort]")?.focus()); }\n\t\t\t\t\telse close(true);')
-  exact('if (event.relatedTarget instanceof Node && rootRef.current?.contains(event.relatedTarget)) return;', 'if (event.relatedTarget instanceof Node && (rootRef.current?.contains(event.relatedTarget) || menuRef.current?.contains(event.relatedTarget))) return;')
-  exact('const onBlur = (event) => {\n\t\t\t\tif (event.relatedTarget instanceof Node && (rootRef.current?.contains(event.relatedTarget) || menuRef.current?.contains(event.relatedTarget))) return;\n\t\t\t\tclose();\n\t\t\t};', `const onBlur = () => {
-        // Portal children autofocus before the portal parent ref is attached.
-        queueMicrotask(() => {
-          if (!rootRef.current?.contains(document.activeElement) && !menuRef.current?.contains(document.activeElement)) close();
-        });
-      };`)
-  const rootStart = source.indexOf('pane === "root" &&')
-  const modelsStart = source.indexOf('pane === "model" &&',rootStart)
-  if (rootStart < 0 || modelsStart < rootStart) throw Error('Model root pane missing')
-  source = source.slice(0,rootStart)+source.slice(modelsStart)
-  exact('pane === "model" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [', `pane === "model" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-        (0, react_jsx_runtime.jsx)("input", {type:"search",ref:searchRef,className:"odyssey-model-search",value:query,
-          "aria-label":menuText("搜索模型","Search models"),placeholder:menuText("搜索模型…","Search models…"),
-          onInput:event=>setQuery(event.currentTarget.value),autoFocus:true}),`)
-  exact('children: state.groups.map((group) => {','children: visibleGroups.map((group) => {')
-  exact('state.status === "ready" && choices.length === 0', 'state.status === "ready" && visibleGroups.length === 0')
-  exact('children: t("empty.models")','children: needle ? menuText("没有匹配的模型","No matching models") : t("empty.models")')
-  exact('pane === "effort" && (0, react_jsx_runtime.jsxs)', `(pane === "model") && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, {children:[
-        reasoning !== void 0 && (0, react_jsx_runtime.jsxs)("button", {type:"button",role:"menuitem",ref:itemRef(),"data-model-effort":"",className:"odyssey-model-footer",
-          onClick:()=>{setPane("effort");queueMicrotask(()=>itemRefs.current[0]?.focus());},
-          children:[(0, react_jsx_runtime.jsx)("span",{children:menuText("推理强度","Reasoning effort")}),
-            (0, react_jsx_runtime.jsx)("small",{children:effortLabel}),
-            (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutline14,{})]}),
-        (0, react_jsx_runtime.jsx)("button", {type:"button",role:"menuitem",ref:itemRef(),className:"odyssey-model-footer",onClick:()=>{
-          close();window.dispatchEvent(new CustomEvent("sherlock:model-settings-open"));
-        },children:menuText("管理模型…","Manage models…")})]}),
-      pane === "effort" && (0, react_jsx_runtime.jsxs)`)
-  exact('open && (0, react_jsx_runtime.jsxs)("div", {','open && odysseyReactDOM.createPortal((0, react_jsx_runtime.jsxs)("div", {')
-  exact('className: ModelSelect_module_css_default.menu,','className: ModelSelect_module_css_default.menu + " odyssey-model-menu",ref:menuRef,style:menuPosition,')
-  exact('}),\n\t\t\t\t\ttoast !== null', '}), document.body),\n\t\t\t\t\ttoast !== null')
-  return patchSearchEmpty(patchPaneFocus(source))
-}
-
-function patchSearchEmpty(source) {
-  const marker = '/* odyssey:model-search-empty:20260913 */'
-  if (source.includes(marker)) return source
-  const before = 'className: ModelSelect_module_css_default.empty,\n\t\t\t\t\t\t\t\t\tchildren: needle ? menuText("没有匹配的模型","No matching models") : t("empty.models")'
-  if (source.split(before).length !== 2) throw Error('Model search empty anchor drifted')
-  return source.replace(before, `className: ModelSelect_module_css_default.empty + (needle ? " odyssey-model-empty" : ""),
-          ${marker}
-          children: needle ? (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, {children:[
-            (0, react_jsx_runtime.jsx)("div", {className:"odyssey-model-empty-title",children:menuText("未找到匹配的模型","No matching models")}),
-            (0, react_jsx_runtime.jsx)("div", {className:"odyssey-model-empty-description",children:menuText("尝试其他关键词，或前往模型设置。","Try another keyword, or go to model settings.")})
-          ]}) : t("empty.models")`)
-}
-
-function patchPaneFocus(source) {
-  const marker = '/* odyssey:model-pane-focus:20260912 */'
-  if (source.includes(marker)) return source
-  const replace = (before, after) => {
-    if (source.split(before).length !== 2) throw Error('Model pane focus anchor drifted')
-    source = source.replace(before, after)
-  }
-  replace('const searchRef = (0, react.useRef)(null);', `const searchRef = (0, react.useRef)(null);
-      const returnToEffortRef = (0, react.useRef)(false);
-      ${marker}
+      const [position, setPosition] = (0, react.useState)({});
       (0, react.useLayoutEffect)(() => {
         if (!open) return;
-        if (pane === 'effort') menuRef.current?.querySelector('[role=menuitemradio]')?.focus();
-        else if (returnToEffortRef.current) {
-          returnToEffortRef.current = false;
-          menuRef.current?.querySelector('[data-model-effort]')?.focus();
-        }
-      }, [open, pane]);`)
-  replace('setPane("model"); queueMicrotask(() => menuRef.current?.querySelector("[data-model-effort]")?.focus());', 'returnToEffortRef.current = true; setPane("model");')
-  replace('setPane("effort");queueMicrotask(()=>itemRefs.current[0]?.focus());', 'setPane("effort");')
-  return source
+        const place = () => {
+          const a = triggerRef.current?.getBoundingClientRect();
+          if (!a) return;
+          const width = Math.min(320, window.innerWidth - 24);
+          const above = a.top - 20, below = window.innerHeight - a.bottom - 20;
+          const up = above >= below;
+          setPosition({position:'fixed', width, left:Math.max(12,Math.min(a.right-width,window.innerWidth-width-12)),right:'auto',
+            top:up?'auto':a.bottom+8,bottom:up?window.innerHeight-a.top+8:'auto',maxHeight:Math.min(480,Math.max(0,up?above:below))});
+        };
+        place(); window.addEventListener('resize',place);
+        return () => window.removeEventListener('resize',place);
+      }, [open,pane]);`)
+    .replace('if (!rootRef.current?.contains(event.target)) setOpen(false);', 'if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);')
+    .replace('if (event.relatedTarget instanceof Node && rootRef.current?.contains(event.relatedTarget)) return;',
+      'if (!(event.relatedTarget instanceof Node) || rootRef.current?.contains(event.relatedTarget) || menuRef.current?.contains(event.relatedTarget)) return;')
+    .replace('open && (0, react_jsx_runtime.jsxs)("div", {', 'open && odysseyReactDOM.createPortal((0, react_jsx_runtime.jsxs)("div", {')
+    .replace('className: ModelSelect_module_css_default.menu,', `className: ModelSelect_module_css_default.menu + ' odyssey-restored-model-menu', ref:menuRef, style:position,
+      onMouseDown:event=>event.preventDefault(),`)
+    .replace('}),\n\t\t\t\t\ttoast !== null', '}), document.body),\n\t\t\t\t\ttoast !== null')
+    .replace('items[(Math.max(active, 0) + offset + items.length) % items.length]?.focus();', 'items[(active < 0 ? (offset > 0 ? 0 : items.length-1) : (active+offset+items.length)%items.length)]?.focus({preventScroll:true});')
+    .replace('if (pane !== "root") setPane("root");', 'event.stopPropagation(); if (pane !== "root") setPane("root");')
+    .replaceAll('triggerRef.current?.focus();', 'triggerRef.current?.focus({preventScroll:true});')
+  if (!source.includes('let odysseyReactDOM = require("react-dom");')) source = source.replace('let react = require("react");', 'let react = require("react");\nlet odysseyReactDOM = require("react-dom");')
+  const freshStart = source.indexOf('function ModelSelect('), freshEnd = source.indexOf('\n\t\t//#endregion',freshStart)
+  return source.slice(0,freshStart)+restored+source.slice(freshEnd)
 }

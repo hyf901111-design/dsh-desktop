@@ -91,3 +91,23 @@ describe('research board directories', () => {
     } finally { f.close() }
   })
 })
+
+it('associates a blank board without creating a workspace and retains its unique directory across switches', async () => {
+  const f = fixture()
+  try {
+    const a = f.directories.reserve(f.root, '同名看板'), b = f.directories.reserve(f.root, '同名看板')
+    expect(a.path).not.toBe(b.path)
+    f.ctx.sessions.create('board', { meta: { cwd: a.path } })
+    await f.directories.run({ mode: 'bind', sessionId: 'board', directoryId: a.directoryId })
+    const project = join(f.root, 'project')
+    f.ctx.sessions.create('associated', { meta: { cwd: project } })
+    const changed = await f.directories.run({ mode: 'associate', sessionId: 'board', targetSessionId: 'associated' })
+    expect(changed).toEqual({ localSessionId: 'associated', path: project, directoryPath: a.path })
+    expect(f.workspaces.size).toBe(0)
+    f.directories.dispose(); f.directories = new BoardDirectories(f.ctx, f.root)
+    f.ctx.sessions.create('returned', { meta: { cwd: a.path } })
+    expect((await f.directories.run({ mode: 'associate', sessionId: 'associated', targetSessionId: 'returned' })).directoryPath).toBe(a.path)
+    f.ctx.sessions.get('returned').append('user/message', { content: [] }, { surfaceOp: 'append' })
+    await expect(f.directories.run({ mode: 'associate', sessionId: 'returned', targetSessionId: 'associated' })).rejects.toThrow('BOARD_HAS_CONVERSATION')
+  } finally { f.close() }
+})

@@ -8,6 +8,19 @@ function fn(name: string) {
   return source.slice(a,b+5)
 }
 describe('Figma long-content reading contract',()=>{
+  it('detaches the composer when Research has no connected sidebar and reuses it on reopening',()=>{
+    const start=source.indexOf('const destination = research ? researchSidebarSnapshot.composerHost');
+    const end=source.indexOf('const active = document.activeElement;',start);
+    const place=runInNewContext('(function(research,researchSidebarSnapshot,centerComposerHostRef,composerPortalHost,publishComposerHeight){'+source.slice(start,end)+'destination.appendChild(composerPortalHost);})');
+    const draft={value:'保留的草稿',parentElement:null,remove(){this.parentElement=null}};
+    const host={isConnected:true,appendChild(node:any){node.parentElement=this}};
+    const center={...host};
+    place(false,{}, {current:center},draft,()=>{}); expect(draft.parentElement).toBe(center);
+    place(true,{composerHost:null},{current:center},draft,()=>{}); expect(draft.parentElement).toBeNull();
+    place(true,{composerHost:host},{current:center},draft,()=>{}); expect(draft.parentElement).toBe(host);
+    place(true,{composerHost:{isConnected:false}},{current:center},draft,()=>{}); expect(draft.parentElement).toBeNull();
+    expect(draft.value).toBe('保留的草稿');
+  });
   it('keeps the reader in history for remote changes and follows only the tail or an explicit submission',()=>{
     const follow=runInNewContext(fn('shouldFollowConversationBottom')+'\nshouldFollowConversationBottom')
     for(const key of ['runningStarted','appendedSteering','tipMoved']) {

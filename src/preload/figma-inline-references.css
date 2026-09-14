@@ -57,3 +57,12 @@ body[data-ds-dark-theme] .sherlock-inline-reference-remove { color:#d8e5f8!impor
 .uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipInvalid .uV2eYG_chipLabel {
   background:#d8616133!important; text-decoration:line-through!important;
 }
+
+/* User reference bubbles: 24px content with 14px vertical breathing room. */
+body .gdEzaW_bubble {
+  padding:14px 16px; border-radius:18px; background:#eaeaea;
+  font:400 14px/24px var(--odyssey-font-ui); letter-spacing:0;
+}
+body[data-ds-dark-theme] .gdEzaW_bubble { background:#2d2d2d; color:#e5e5e5; }
+body .gdEzaW_bubble p { margin:0; font:inherit; }
+body .gdEzaW_bubble .gdEzaW_refChip { margin-inline-end:4px!important; }

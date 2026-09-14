@@ -39,14 +39,17 @@ it.each([[320,220],[656,220]])('keeps automatic preset growth %s x %s to L and d
   expect(JSON.stringify(f.workspace.getSnapshot().viewport)).toBe(before)
 })
 it('does not attempt a stale resize after the target is deleted',()=>{const f=fixture('auto',320,220);f.replace(null);f.expand();expect(f.workspace.updateNodeGeometry).not.toHaveBeenCalled()})
-it('opens and closes real process details in a manually sized card without mutating task data or dimensions',async()=>{
+it.each(['manual','auto'])('opens and closes process details without changing %s card dimensions',async(sizeMode)=>{
   const w=new Window({url:'http://localhost/'});vi.stubGlobal('document',w.document);vi.stubGlobal('window',w);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
   const start=source.indexOf('function researchGenerationPresentation('),end=source.indexOf('function isResearchWechatArticleUrl(',start)
-  const Process=new Function('react','react_jsx_runtime',source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,requireModule('react/jsx-runtime'))
-  const f=fixture(),before=JSON.stringify(f.workspace.getSnapshot()),host=w.document.createElement('div');w.document.body.append(host);const root=createRoot(host)
+  const derivedStart=source.indexOf('function researchIsDerivedNode('),derivedEnd=source.indexOf('function researchDerivedTitle(',derivedStart)
+  expect(derivedStart).toBeGreaterThan(-1);expect(derivedEnd).toBeGreaterThan(derivedStart)
+  const Process=new Function('react','react_jsx_runtime',source.slice(derivedStart,derivedEnd)+source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,requireModule('react/jsx-runtime'))
+  const f=fixture(sizeMode,400,300),before=JSON.stringify(f.workspace.getSnapshot()),host=w.document.createElement('div');w.document.body.append(host);const root=createRoot(host)
   cleanups.push(async()=>{await React.act(async()=>root.unmount());await w.happyDOM.abort()})
   await React.act(async()=>root.render(React.createElement(Process,{node:f.node,onExpand:f.expand})))
   const button=host.querySelector('[data-research-generation-toggle]')!
+  expect(host.querySelectorAll('.odyssey-generation-skeleton i')).toHaveLength(6)
   expect(button.textContent).toBe('查看过程')
   await React.act(async()=>button.dispatchEvent(new w.MouseEvent('click',{bubbles:true})))
   expect(button.textContent).toBe('收起过程');expect(button.getAttribute('aria-expanded')).toBe('true')

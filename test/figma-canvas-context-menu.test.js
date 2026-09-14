@@ -18,7 +18,7 @@ describe('Figma canvas context placement', () => {
     expect(place({ left: 100, top: 500 }, 240, 500)).toMatchObject({ top: '304px', maxHeight: '410px' })
   })
   it('adds positioning once without altering business action contents', () => {
-    const source = 'function ResearchCanvas(){return {className: "rScV5Q_contextMenu",children:action}}'
+    const source = 'function ResearchCanvas(){return {className: "rScV5Q_contextMenu",children:action};return {className: "rScV5Q_contextDownloadGroup",children:action}}'
     const once = patchFigmaCanvasContextMenu(source)
     expect(patchFigmaCanvasContextMenu(once)).toBe(once)
     expect(once).toContain('children:action')

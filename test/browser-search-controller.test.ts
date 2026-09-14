@@ -81,7 +81,7 @@ describe('BrowserSearchController', () => {
   it('requests a hidden sandboxed window in a non-persistent partition', () => {
     expect(browserSearchWindowOptions()).toMatchObject({
       show: false,
-      title: 'Sherlock Web Search',
+      title: 'EWork Odyssey Web Search',
       webPreferences: {
         partition: 'sherlock-web-search',
         nodeIntegration: false,
@@ -318,7 +318,7 @@ describe('BrowserSearchController', () => {
     await expect(controller.search('恢复', 5)).resolves.toMatchObject({ sources: [{ url: 'https://example.cn/recovered' }] })
   })
 
-  it('shows the isolated window only while human verification is required', async () => {
+  it('skips a challenged engine without showing a window and uses the next provider', async () => {
     const window = new FakeSearchWindow()
     window.pageStates = [
       {
@@ -332,7 +332,7 @@ describe('BrowserSearchController', () => {
         text: 'ordinary results'
       }
     ]
-    window.results.set('bing', [
+    window.results.set('duckduckgo', [
       { title: 'Result', url: 'https://example.cn/result', snippet: 'summary' }
     ])
     const visibility: boolean[] = []
@@ -345,8 +345,8 @@ describe('BrowserSearchController', () => {
 
     await controller.search('苹果', 5)
 
-    expect(visibility).toEqual([true])
-    expect(window.title).toBe('完成搜索验证')
+    expect(visibility).toEqual([])
+    expect(window.loaded.some(url => url.includes('duckduckgo'))).toBe(true)
     expect(window.visible).toBe(false)
   })
 

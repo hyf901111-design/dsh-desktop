@@ -4,13 +4,15 @@ import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { describe, it, expect, vi } from 'vitest';
 import { validateWorkbench, layoutWorkbench, registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js';
+import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
 import { publicEventFromSessionEvent } from '../packages/dsh-research-task-runtime/index.js';
+import { settleWorkbenchLayout, patchResearchWorkbenchGrowth } from '../scripts/lib/research-workbench-growth.mjs';
 const panel = (n) => ({ title: `面板${n}`, prompt: `研究独立维度${n}`, type: n % 2 ? 'table' : 'markdown', height: 480 + n * 40 });
 function toolPanel(n) { const {height, ...p} = panel(n); return {...p, size: height <= 600 ? 'medium' : 'large'}; }
 function fake() { const f = new Proxy(function () { }, { get: () => f, apply: () => f }); return f; }
 async function bundle() {
     let descriptor;
-    runInNewContext(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'), { window: { __ModuleLoader__: { load: (d) => descriptor = d } }, URL, TextEncoder, TextDecoder, AbortController, setTimeout, clearTimeout });
+    runInNewContext(patchResearchWorkbenchGrowth(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')), { window: { __ModuleLoader__: { load: (d) => descriptor = d } }, URL, TextEncoder, TextDecoder, AbortController, setTimeout, clearTimeout });
     return descriptor.factory(() => fake());
 }
 function store() { const map = new Map(); return { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => { map.set(k, v); return true; } }; }
@@ -23,9 +25,9 @@ describe('研究工作台', () => {
     it('packs large cards first and fills the remaining cells without changing same-size order', () => {
         const panels = layoutWorkbench(['small','large','medium','small','small'].map((size,i)=>({...panel(i),size})));
         expect(panels.map(({x,y,width,height})=>({x,y,width,height}))).toEqual([
-            {x:672,y:0,width:320,height:220}, {x:0,y:0,width:656,height:456},
-            {x:0,y:472,width:656,height:220}, {x:672,y:236,width:320,height:220},
-            {x:672,y:472,width:320,height:220}
+            {x:672,y:236,width:320,height:220}, {x:0,y:0,width:656,height:456},
+            {x:672,y:0,width:656,height:220}, {x:1008,y:236,width:320,height:220},
+            {x:0,y:472,width:320,height:220}
         ]);
         expect(panels.map(p=>p.title)).toEqual(Array.from({length:5},(_,i)=>`面板${i}`));
         for(let i=0;i<panels.length;i++)for(const b of panels.slice(i+1)) {
@@ -182,4 +184,60 @@ it('arranges links, text and many generated panels together without an empty ver
     expect(arranged.find(n=>n.id==='link').url).toBe('https://example.org/');
     workspace.organizeCanvas();
     expect(workspace.getSnapshot().artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height}))).toEqual(arranged.map(({id,x,y,width,height})=>({id,x,y,width,height})));
+});
+
+it('keeps mixed workbench cards apart when several completed panels grow in both dimensions', async () => {
+    const client = await bundle(), workspace = client.createResearchWorkspaceSession(store(), 'growth');
+    workspace.setCanvasSize({width:740,height:820});
+    workspace.applyWorkbench({id:'growth',panels:layoutWorkbench([
+        {title:'指标',type:'kpi',size:'small'}, {title:'表格',type:'table',size:'small'},
+        {title:'图表',type:'chart',size:'medium'}, {title:'计数器',type:'html',size:'small'}
+    ]).map((p,i)=>({...p,prompt:'演示内容',nodeId:`grow${i}`,taskId:`task${i}`}))});
+    workspace.setViewport(client.researchWorkbenchViewport(workspace.getSnapshot().artifacts,workspace.getSnapshot().viewport,workspace.getSnapshot().canvasSize));
+    for (const [id,width,height] of [['grow0',656,220],['grow1',656,456],['grow3',656,456]]) {
+        workspace.updateNodeGeometry(id,{width,height,sizeMode:'auto'});
+        const {artifacts,viewport}=workspace.getSnapshot();
+        for(let i=0;i<artifacts.length;i++)for(const b of artifacts.slice(i+1)) {
+            const a=artifacts[i];expect(Math.abs(a.x-b.x)>=(a.width+b.width)/2 || Math.abs(a.y-b.y)>=(a.height+b.height)/2,`${a.id} overlaps ${b.id}`).toBe(true);
+        }
+        if(id==='grow3') for(const n of artifacts) {
+            expect((n.x-n.width/2)*viewport.scale+viewport.x).toBeGreaterThanOrEqual(30);
+            expect((n.x+n.width/2)*viewport.scale+viewport.x).toBeLessThanOrEqual(710);
+        }
+    }
+});
+
+it('does not pull the user back to a growing workbench after they pan away', async () => {
+    const client=await bundle(),workspace=client.createResearchWorkspaceSession(store(),'panned');
+    workspace.setCanvasSize({width:740,height:820});
+    workspace.applyWorkbench({id:'panned',panels:layoutWorkbench([panel(0),panel(1)]).map((p,i)=>({...p,nodeId:`pan${i}`,taskId:`t${i}`}))});
+    workspace.setViewport({x:-4000,y:-3000,scale:.7});
+    workspace.updateNodeGeometry('pan0',{width:656,height:456,sizeMode:'auto'});
+    expect(workspace.getSnapshot().viewport).toEqual({x:-4000,y:-3000,scale:.7});
+});
+
+it('preserves manually positioned neighbors and puts an expanding card in free space', async () => {
+    const client=await bundle(),storage=store();
+    const nodes=[0,1].map(i=>({id:`manual${i}`,kind:'generated-container',messageId:`m${i}`,title:'面板',excerpt:'内容',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'演示',refreshMinutes:0,width:320,height:220,x:160+i*336,y:142,sizeMode:i?'manual':'auto',containerSizePreset:'small',workbenchId:'manual',containerSpec:{version:1,type:'markdown',title:'面板',content:'内容'}}));
+    storage.setItem('sherlock.research.canvas.artifacts.v1:manual',JSON.stringify(nodes));
+    const workspace=client.createResearchWorkspaceSession(storage,'manual');
+    workspace.updateNodeGeometry('manual0',{width:656,height:456,sizeMode:'auto'});
+    const [grown,manual]=workspace.getSnapshot().artifacts;
+    expect(manual).toMatchObject({x:496,y:142,width:320,height:220,sizeMode:'manual'});
+    expect(Math.abs(grown.x-manual.x)>=(grown.width+manual.width)/2||Math.abs(grown.y-manual.y)>=(grown.height+manual.height)/2).toBe(true);
+});
+
+it('settles a workbench once after the last active component finishes, including failures', () => {
+  const nodes=Array.from({length:6},(_,i)=>({id:String(i),workbenchId:'w',workbenchIndex:i,generationStatus:i===5?'running':'completed',x:328,y:i*472+228,width:656,height:456,size:'large'}));
+  const before={artifacts:nodes,canvasSize:{width:1000,height:800}};
+  const after={...before,artifacts:nodes.map(n=>({...n,generationStatus:n.id==='5'?'failed':'completed'}))};
+  const pack=vi.fn(researchBentoLayout);
+  const settled=settleWorkbenchLayout(before,after,pack);
+  expect(pack).toHaveBeenCalledTimes(1);
+  expect(settled.viewport.scale).toBeLessThan(1);
+  expect(new Set(settled.artifacts.map(n=>n.x)).size).toBeGreaterThan(1);
+  expect(new Set(settled.artifacts.map(n=>n.y)).size).toBeGreaterThan(1);
+  expect(settleWorkbenchLayout(settled,settled,pack)).toBe(settled);
+  expect(pack).toHaveBeenCalledTimes(1);
+  expect(settleWorkbenchLayout(before,before,pack)).toBe(before);
 });

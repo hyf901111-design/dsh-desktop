@@ -16,7 +16,7 @@ export function validateWorkbench(value) {
     return { requestId: value.requestId.trim(), title: value.title.trim(), panels };
 }
 export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 }) {
-    return researchBentoLayout(panels.map(p => ({ ...p, size: panelSize(p) })), canvasSize).nodes;
+    return researchBentoLayout(panels.map(p => ({ ...p, size: panelSize(p) })), canvasSize, new Map(), { fitColumns: true }).nodes;
 }
 
 export function workbenchPanelPrompt(input, p) {

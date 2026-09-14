@@ -15,6 +15,10 @@ export function patchFigmaRefinementPreset(source) {
   return source.slice(0,start)+seat+source.slice(end)
 }
 export function patchFigmaNavigationTitles(source) {
+  source = exact(source, 'if (session.title && researchSessionEngaged(session.id)) return session.title;', 'if (session.title?.trim()) return session.title;')
+  source = exact(source, 'title: sessionTitle(s),', 'title: sessionTitle(s), explicitTitle: s.title?.trim(),')
+  source = exact(source, 'return node.research && node.title === "New Research"', 'if(node.explicitTitle)return node.explicitTitle; return node.research && node.title === "New Research"')
+
   return exact(source,
     'className: Rows_module_css_default.title,\n\t\t\t\t\t\t\tchildren: title',
     'className: Rows_module_css_default.title + " odyssey-nav-title",\n\t\t\t\t\t\t\tchildren: (0, react_jsx_runtime.jsx)("span", { className: "odyssey-nav-title-text", children: title })')
@@ -91,6 +95,14 @@ export function patchFigmaRefinementSubagent(source) {
 }
 
 export function patchFigmaRefinementInputTrigger(source) {
+  source = source.replace('document.getElementById(optionId(highlight.source, highlight.index))?.scrollIntoView({ block: "nearest" });', `const item = document.getElementById(optionId(highlight.source, highlight.index));
+        const viewport = listRef.current?.firstElementChild;
+        if (item && viewport) {
+          const row = item.getBoundingClientRect(), box = viewport.getBoundingClientRect();
+          if (row.top < box.top) viewport.scrollTop -= box.top-row.top;
+          else if (row.bottom > box.bottom) viewport.scrollTop += row.bottom-box.bottom;
+        }`);
+
   // The integrated locale patch already owns these labels and dispatch identities.
   if (source.includes('function commandMenuText(')) return source
   const marker='/* odyssey:command-menu:20260912 */'

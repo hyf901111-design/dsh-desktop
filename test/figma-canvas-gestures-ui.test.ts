@@ -71,15 +71,15 @@ async function mounted(desktop: any = {}, configure?: (win: Window) => void, sel
 
 
 describe('Figma canvas pointer transactions', () => {
-  it('pans over selected component content while an expanded reader keeps its own wheel', async () => {
+  it('keeps wheel input inside selected interactive content and expanded readers', async () => {
     const m = await mounted()
     await act(async () => { m.workspace.setArtifacts([textNode()]); m.workspace.updateSelection(['source'], 'replace') })
     const body = m.query('[data-research-preview-interactive]')
     const before = { ...m.workspace.getSnapshot().viewport }
     const wheel = {deltaX:10,deltaY:40,clientX:350,clientY:350,metaKey:false,ctrlKey:false}
     const event = await m.event('wheel', body, wheel)
-    expect(event.defaultPrevented).toBe(true)
-    expect(m.workspace.getSnapshot().viewport).toMatchObject({x:before.x-10,y:before.y-40,scale:before.scale})
+    expect(event.defaultPrevented).toBe(false)
+    expect(m.workspace.getSnapshot().viewport).toEqual(before)
     m.query('[data-research-compact-chrome]').setAttribute('open', '')
     const panned = { ...m.workspace.getSnapshot().viewport }
     const readerWheel = await m.event('wheel', body, wheel)

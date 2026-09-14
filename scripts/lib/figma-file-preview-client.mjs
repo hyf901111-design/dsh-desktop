@@ -10,6 +10,100 @@ function replaceOnce(source, anchor, replacement) {
 }
 
 export function patchFigmaFilePreview(source) {
+  source=source.replace('"data-research-link-input": "",\n\t\t\t\t\t\t\t\t\ttype: "url",', '"data-research-link-input": "",\n\t\t\t\t\t\t\t\t\ttype: "text", inputMode: "url",');
+  source=source.replace('placeholder: "https://example.com",','placeholder: "example.com 或完整网址",');
+  if(!source.includes('/* ODYSSEY_WEB_ADDRESS_COMPLETION */')) {
+    source=replaceOnce(source,'const url = new Url(source);',`/* ODYSSEY_WEB_ADDRESS_COMPLETION */
+        let address=source;
+        if(address.startsWith('//'))address='https:'+address;
+        else if(!/^[a-z][a-z0-9+.-]*:/i.test(address) || /^(?:localhost|[^/:]+\\.[^/:]+):[0-9]+(?:[/?#]|$)/i.test(address)) {
+          const host=address.split(/[/?#]/)[0];
+          if(!host.includes('.')&&!/^localhost(?::[0-9]+)?$/i.test(host))return null;
+          address='https://'+address;
+        }
+        const url = new Url(address);`);
+    source=source.replace('请输入有效的 http 或 https 地址','请输入有效的网站地址，例如 baidu.com');
+  }
+
+  if(!source.includes('/* ODYSSEY_FRAME_SOURCE_MENU */')) {
+    const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);
+    if(start<0||end<start)throw Error('Frame sources menu boundary drifted');
+    let part=source.slice(start,end);
+    part=replaceOnce(part,'const menuId = (0, react.useId)();',`const menuId = (0, react.useId)();
+      /* ODYSSEY_FRAME_SOURCE_MENU */
+      const [showSources,setShowSources]=(0,react.useState)(false);`);
+    part=replaceOnce(part,'setOpen(false); if (focus)', 'setOpen(false); setShowSources(false); if (focus)');
+    part=replaceOnce(part,'children: actions.map(([action, label])', 'children: [actions.map(([action, label])');
+    part=replaceOnce(part,'}, action))',`}, action)),(node.sourceNodeIds?.length>0) && (0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-research-frame-sources':'','aria-expanded':showSources,onClick:event=>{event.stopPropagation();setShowSources(!showSources);},children:'来源信息'}),showSources && (0,react_jsx_runtime.jsx)(ResearchDerivedSources,{node,embedded:true})]`);
+    part=part.replace('[open,present]);','[open,present,showSources]);');
+    source=source.slice(0,start)+part+source.slice(end);
+  }
+
+  source=source.replace('},[open,present]);','},[open,present,showSources]);');
+  if(!source.includes('/* ODYSSEY_FRAME_MENU_PORTAL */')) {
+    const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);
+    if(start<0||end<start)throw Error('Frame menu boundary drifted');
+    let part=source.slice(start,end);
+    part=replaceOnce(part,'const menuId = (0, react.useId)();',`const menuId = (0, react.useId)();
+      /* ODYSSEY_FRAME_MENU_PORTAL */
+      const menuRef=(0,react.useRef)(null);
+      const [menuStyle,setMenuStyle]=(0,react.useState)({visibility:'hidden'});
+      (0,react.useLayoutEffect)(()=>{
+        if(!open||!present)return;
+        const place=()=>{const r=rootRef.current?.querySelector('button')?.getBoundingClientRect();if(!r)return;
+          const width=Math.min(248,window.innerWidth-24),height=menuRef.current?.offsetHeight||118;
+          const below=window.innerHeight-r.bottom-20,above=r.top-20,up=below<height&&above>below;
+          setMenuStyle({position:'fixed',left:Math.max(12,Math.min(r.right-width,window.innerWidth-width-12)),width,top:up?'auto':r.bottom+8,bottom:up?window.innerHeight-r.top+8:'auto',maxHeight:Math.max(0,up?above:below)});
+        };place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);
+        return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true);};
+      },[open,present,showSources]);`);
+    part=part.replaceAll(`rootRef.current?.querySelector('[role="menuitem"]')`,`menuRef.current?.querySelector('[role="menuitem"]')`).replaceAll(`rootRef.current.querySelectorAll('[role="menuitem"]')`,`menuRef.current.querySelectorAll('[role="menuitem"]')`);
+    part=replaceOnce(part,'if (!rootRef.current?.contains(event.target)) close();','if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) close();');
+    part=replaceOnce(part,'present ? (0, react_jsx_runtime.jsx)("div", {','present ? react_dom.createPortal((0, react_jsx_runtime.jsx)("div", {');
+    part=replaceOnce(part,'id: menuId, role: "menu",','ref:menuRef,style:menuStyle,"data-odyssey-container-menu":"",id: menuId, role: "menu",');
+    part=replaceOnce(part,'}) : null]','}),document.body) : null]');
+    source=source.slice(0,start)+part+source.slice(end);
+  }
+
+  if(!source.includes('/* ODYSSEY_CURRENT_LINK_PAGE */')) {
+    const start=source.indexOf('function ResearchCanvasStandardWebFrame('),end=source.indexOf('function ResearchCanvasWebFrame(',start);
+    let part=source.slice(start,end);
+    part=replaceOnce(part,'const [attempt, setAttempt]',`/* ODYSSEY_CURRENT_LINK_PAGE */
+      const navigationUrlRef=(0,react.useRef)(node.url);
+      (0,react.useEffect)(()=>{navigationUrlRef.current=node.url;},[node.url]);
+      const [attempt, setAttempt]`);
+    part=part.replace('url: node.url }).then','url: navigationUrlRef.current }).then');
+    part=part.replace('if (inspection === null) return;', 'if (inspection === null) return; navigationUrlRef.current=normalizeResearchWebUrl(inspection.url)||navigationUrlRef.current;');
+    source=source.slice(0,start)+part+source.slice(end);
+  }
+
+  source=source.replace('return hostname === "feishu.cn" || hostname.endsWith(".feishu.cn") ? `${RESEARCH_WEB_FRAME_SANDBOX} allow-same-origin` : RESEARCH_WEB_FRAME_SANDBOX;', 'return new Url(url).protocol === "https:" && !["localhost","127.0.0.1","[::1]"].includes(hostname) ? `${RESEARCH_WEB_FRAME_SANDBOX} allow-same-origin` : RESEARCH_WEB_FRAME_SANDBOX;');
+
+  if(!source.includes('/* ODYSSEY_LINK_BASE_ACTIONS */')) {
+    source=replaceOnce(source,'function ResearchContainerMenu({ node, editingPrompt, onEdit, onRefresh, onSetRefresh })','function ResearchContainerMenu({ node, editingPrompt, onEdit, onRefresh, onSetRefresh, onFrameAction })');
+    // Keep the menu role during exit so shared styling remains stable until unmount.
+    source=source.replace('role: open ? "menu" : void 0','role: "menu"');
+  }
+  if(!source.includes('/* ODYSSEY_INLINE_LINK_MENU */')) {
+    source=replaceOnce(source,'children: selectionCreated ? [',`/* ODYSSEY_INLINE_LINK_MENU */
+      children: node.kind==='web-link' ? [
+        (0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-research-link-refresh':'',onClick:()=>choose(()=>onRefresh?.(node)),children:'刷新'}),
+        (0,react_jsx_runtime.jsx)('a',{role:'menuitem',href:node.url,target:'_blank',rel:'noreferrer noopener',onClick:()=>close(),children:'浏览器打开'})
+      ] : selectionCreated ? [`);
+    source=replaceOnce(source,'titleActions: node.kind === "generated-container"',`titleActions: node.kind==='web-link' ? (0,react_jsx_runtime.jsx)(ResearchContainerMenu,{node,onRefresh:()=>contentRef.current?.querySelector('.rScV5Q_webFrameControls button')?.click()}) : node.kind === "generated-container"`);
+  }
+
+  if(!source.includes('/* ODYSSEY_LINK_BASE_ACTIONS */')) {
+    source=replaceOnce(source,"children: node.kind==='web-link' ? [",`children: node.kind==='web-link' ? [
+      /* ODYSSEY_LINK_BASE_ACTIONS */
+      ...[['rename','修改名称'],...(researchCanvasArtifactContentEditable(node)?[['edit','编辑内容']]:[]),['remove','从画布移除']].map(([action,label])=>(0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-research-frame-action':action,onClick:()=>choose(()=>onFrameAction?.(node,action)),children:label},action)),`);
+    source=replaceOnce(source,'ResearchContainerMenu,{node,onRefresh:()=>contentRef', 'ResearchContainerMenu,{node,onFrameAction,onRefresh:()=>contentRef');
+  }
+  if(!source.includes('/* ODYSSEY_CURRENT_BROWSER_ACTION */')) {
+    source=replaceOnce(source,'onSetRefresh, onFrameAction })','onSetRefresh, onFrameAction, onOpenBrowser })');
+    source=replaceOnce(source,"onClick:()=>close(),children:'浏览器打开'","onClick:event=>{close();if(onOpenBrowser){event.preventDefault();onOpenBrowser();}},children:'浏览器打开'");
+    source=replaceOnce(source,'ResearchContainerMenu,{node,onFrameAction,onRefresh:',`ResearchContainerMenu,{node,onFrameAction,/* ODYSSEY_CURRENT_BROWSER_ACTION */onOpenBrowser:async()=>{let url=node.url;try{url=(await window.dshDesktop?.researchLinkFrame?.inspect?.({sessionId,nodeId:node.id}))?.url||url;}catch{}window.open(url,'_blank');},onRefresh:`);
+  }
   if (!source.includes('/* ODYSSEY_PDF_HIDDEN_READER_SIZE */')) source = replaceOnce(source,
     'const width = Math.floor(body.clientWidth);\n\t\t\t\t\tconst height = Math.floor(body.clientHeight);',
     '/* ODYSSEY_PDF_HIDDEN_READER_SIZE */\n                    if(body.closest("[data-research-original-reader]")?.hidden)return;\n                    const width = Math.floor(body.clientWidth);\n\t\t\t\t\tconst height = Math.floor(body.clientHeight);')
@@ -85,7 +179,7 @@ function researchFigmaFitEntryText(text,width,rows,context) {
 function ResearchFilePreviewPresentation({node,expanded:explicitExpanded,children}) {
   const [containerExpanded,setContainerExpanded]=(0,react.useState)(false);
   const expanded=typeof explicitExpanded==='boolean'?explicitExpanded:containerExpanded;
-  const inlinePreview=researchFigmaFilePreviewKind(node)!=='web',readerVisible=expanded||inlinePreview;
+  const inlinePreview=true,readerVisible=true;
   const ref=(0,react.useRef)(null),readerRef=(0,react.useRef)(null),entryRef=(0,react.useRef)(null);
   (0,react.useLayoutEffect)(()=>{if(typeof explicitExpanded==='boolean')return;const frame=ref.current?.closest('[data-research-node-id]');if(!frame)return;const update=()=>setContainerExpanded(frame.open===true);update();const Observer=frame.ownerDocument.defaultView?.MutationObserver,observer=Observer?new Observer(update):null;observer?.observe(frame,{attributes:true,attributeFilter:['open']});return()=>observer?.disconnect();},[node.id,explicitExpanded]);
   const [visited,setVisited]=(0,react.useState)(readerVisible),[copy,setCopy]=(0,react.useState)(()=>researchFigmaFileEntryCopy(node,null));
@@ -148,7 +242,7 @@ body[data-ds-dark-theme] [data-research-file-presentation]{--odyssey-card-text:#
   [data-research-file-presentation=docx]:not([open]) [class*=editorDocxViewport]{box-sizing:border-box;padding:0;border:0;overflow:hidden}
 }
 
-.odyssey-file-entry[hidden],.odyssey-file-reader[hidden]{display:none!important}
+.rScV5Q_webFrameControls{display:none!important}\n.rScV5Q_containerMenuPopup a[role=menuitem]{display:flex;align-items:center;min-height:30px;padding:6px 9px;box-sizing:border-box;color:inherit;font:inherit;text-decoration:none;border-radius:6px}.rScV5Q_containerMenuPopup a[role=menuitem]:hover{background:var(--dsw-alias-interactive-bg-hover)}\n.odyssey-file-entry[hidden],.odyssey-file-reader[hidden]{display:none!important}
 .odyssey-file-reader[hidden][data-research-retained-viewport]{display:block!important;position:absolute;top:0;left:0;flex:none;width:0!important;height:0!important;min-width:0!important;min-height:0!important;overflow:hidden!important;visibility:hidden;pointer-events:none}
 .odyssey-file-reader[hidden][data-research-retained-viewport]>*{flex:none!important;width:var(--odyssey-reader-width)!important;height:var(--odyssey-reader-height)!important;min-height:var(--odyssey-reader-height)!important;max-width:none!important;max-height:none!important}
 /* Expanded RichNodeFrame readers own interaction even when the background canvas retains a gesture modifier. */

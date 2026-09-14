@@ -2784,8 +2784,8 @@ describe('Research canvas file drops', () => {
     const original = JSON.stringify(nodes)
     const place = client.researchCanvasGeneratedPlacement as any
     const result = place(nodes, ['a'], kind)
-    // Figma defaults: a short summary is S; a derived map or component starts at L.
-    const dimensions = kind === 'summary' ? { width: 320, height: 220 } : { width: 656, height: 456 }
+    // Generating cards stay compact; completed content can choose its own size.
+    const dimensions = kind === 'summary' ? { width: 320, height: 220 } : { width: 400, height: 300 }
     expect(result).toMatchObject({ x: 360 + 32 + dimensions.width / 2, y: 100, ...dimensions })
     expect(JSON.stringify(nodes)).toBe(original)
   })
@@ -2810,10 +2810,9 @@ describe('Research canvas file drops', () => {
     const nodes = [{ id: 'a', kind: 'assistant-result', x: -1000, y: -1000, width: 520, height: 300 }, { id: 'b', kind: 'assistant-result', x: 3000, y: 3000, width: 520, height: 300 }]
     const context = { viewport: { x: 0, y: 0, scale: 1 }, canvasSize: { width: 600, height: 400 } }
     const result = client.researchCanvasGeneratedPlacement(nodes, ['a', 'b'], 'create', 'standard', context)
-    // L cannot fit at 1x in 600×400. Keep 656×456 world dimensions and fit the
-    // canvas view; neither squeezing content nor allowing right/bottom clipping is valid.
-    expect(result).toMatchObject({ width: 656, height: 456 })
-    expect(result.viewport.scale).toBeCloseTo((400 - 88 - 64) / 456)
+    // Keep the compact loading dimensions and fit within the usable canvas.
+    expect(result).toMatchObject({ width: 400, height: 300 })
+    expect(result.viewport.scale).toBeCloseTo((400 - 88 - 64) / 300)
     const rect = client.researchNodeViewportRect({ ...result, kind: 'generated-container' }, result.viewport)
     expect(rect.left).toBeGreaterThanOrEqual(32 - 1e-6)
     expect(rect.right).toBeLessThanOrEqual(568 + 1e-6)
@@ -2982,6 +2981,13 @@ describe('Research canvas file drops', () => {
     expect(client.normalizeResearchWebUrl).toBeTypeOf('function')
     if (typeof client.normalizeResearchWebUrl !== 'function') return
 
+    for(const [input,expected] of [
+      ['www.baidu.com','https://www.baidu.com/'],
+      ['baidu.com','https://baidu.com/'],
+      [' ui.shadcn.com/charts/bar#charts ','https://ui.shadcn.com/charts/bar#charts'],
+      ['//example.com/path?q=1','https://example.com/path?q=1'],
+      ['example.com:8443/path','https://example.com:8443/path']
+    ])expect(client.normalizeResearchWebUrl(input)).toBe(expected)
     expect(client.normalizeResearchWebUrl(' HTTPS://Example.com:443/dashboard '))
       .toBe('https://example.com/dashboard')
     expect(client.normalizeResearchWebUrl('http://Example.com:80/path'))
@@ -3075,6 +3081,7 @@ describe('Research canvas file drops', () => {
     expect(client.researchCanvasViewportPlacement).toBeTypeOf('function')
     if (typeof client.researchCanvasViewportPlacement !== 'function') return
     const snapshot = {
+      files: [], artifacts: [],
       viewport: { scale: 0.5, x: -100, y: -50 },
       canvasSize: { width: 800, height: 600 }
     }
@@ -3082,7 +3089,7 @@ describe('Research canvas file drops', () => {
     expect(client.researchCanvasViewportPlacement(snapshot, 'web-link', 0))
       .toEqual({ x: 1_000, y: 612, width: 656, height: 456, sizeMode: 'auto' })
     expect(client.researchCanvasViewportPlacement(snapshot, 'generated-container', 8))
-      .toEqual({ x: 1_144, y: 756, width: 320, height: 220, sizeMode: 'auto' })
+      .toEqual({ x: 1_144, y: 756, width: 400, height: 280, sizeMode: 'auto' })
     expect(client.researchCanvasViewportPlacement(snapshot, 'unknown', 0)).toBeNull()
   })
 

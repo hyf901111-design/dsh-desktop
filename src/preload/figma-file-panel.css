@@ -359,3 +359,10 @@ body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"] svg {
   width:18px;
   height:18px;
 }
+
+/* Errors are content, so long filesystem paths must wrap within the panel. */
+[data-odyssey-file-panel] .t8lSSG_explorerError {
+  box-sizing:border-box; min-width:0; max-width:100%; width:100%; height:auto;
+  min-height:34px; padding-block:8px; white-space:normal; overflow-wrap:anywhere;
+  word-break:break-word; line-height:20px; flex-wrap:wrap; align-items:flex-start;
+}

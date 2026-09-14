@@ -1,7 +1,7 @@
 import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { patchSidebarPdfPreview } from './sidebar-pdf-preview.mjs'
 import { patchSidebarFileReference } from './sidebar-file-reference.mjs'
@@ -222,7 +222,7 @@ function patchTabBarOverflow(source) {
 
 function patchTabOverflowGutter(source) {
   const marker = '/* sherlock:figma-tab-overflow-gutter:v2 */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchTabOverflowMeasurement(source)
   const start = source.indexOf('function TabBar(props) {')
   const end = source.indexOf('\n\t\t//#endregion', start)
   let tabBar = source.slice(start, end)
@@ -249,7 +249,54 @@ function patchTabOverflowGutter(source) {
     return () => observer.disconnect();
   }, [active, tabs, hasOverflow]);
   const closeOverflowMenu = () => {`)
-  return source.slice(0, start) + tabBar + source.slice(end)
+  return patchTabOverflowMeasurement(source.slice(0, start) + tabBar + source.slice(end))
+}
+
+function patchTabOverflowMeasurement(source) {
+  const marker = '/* sherlock:figma-tab-overflow-measurement:v3 */'
+  if (source.includes(marker)) return patchTabClippedControls(source)
+  return patchTabClippedControls(replaceExact(source,
+    'const reserved = overflowTriggerRef.current ? 32 : 0;\n' +
+    '                    setHasOverflow(tabsWidth + Math.max(0, tabs.length - 1) * 4 > el.clientWidth + reserved + 1);',
+    `${marker}
+                    const gap = parseFloat(window.getComputedStyle(el).columnGap) || 0;
+                    const trigger = overflowTriggerRef.current;
+                    const reserved = trigger ? trigger.offsetWidth + (parseFloat(window.getComputedStyle(el.parentElement).columnGap) || 0) : 0;
+                    setHasOverflow(tabsWidth + Math.max(0, tabs.length - 1) * gap > el.clientWidth + reserved + 1);`,
+    'overflow measurement independent of trigger visibility'))
+}
+
+function patchTabClippedControls(source) {
+  source = source.replace("setHasOverflow(tabsWidth + Math.max(0, tabs.length - 1) * gap > el.clientWidth + reserved + 1);", "setHasOverflow(tabs.length > 1);");
+  if (!source.includes('el.style.setProperty("--odyssey-tab-count"')) source = source.replace("setHasOverflow(tabs.length > 1);", "el.style.setProperty(\"--odyssey-tab-count\", String(tabs.length)); setHasOverflow(tabs.length > 1);");
+  const marker = '/* sherlock:figma-tab-clipped-controls:v1 */'
+  if (source.includes(marker)) return source
+  return replaceExact(source, `    const reveal = () => {
+      const left = node.offsetLeft, right = left + node.offsetWidth;
+      if (left < el.scrollLeft) el.scrollLeft = left;
+      else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth;
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(el);
+    return () => observer.disconnect();`, `    ${marker}
+    const updateClipping = () => {
+      for (const tab of tabNodes.current.values()) {
+        const clipped = tab.offsetLeft < el.scrollLeft - 1 || tab.offsetLeft + tab.offsetWidth > el.scrollLeft + el.clientWidth + 1;
+        tab.setAttribute("data-odyssey-tab-clipped", String(clipped));
+      }
+    };
+    const reveal = () => {
+      const left = node.offsetLeft, right = left + node.offsetWidth;
+      if (left < el.scrollLeft) el.scrollLeft = left;
+      else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth;
+      updateClipping();
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(el);
+    el.addEventListener("scroll", updateClipping, { passive:true });
+    return () => { observer.disconnect(); el.removeEventListener("scroll", updateClipping); };`, 'hide close controls of partially clipped tabs')
 }
 
 /**
@@ -1258,7 +1305,31 @@ export function sherlockSessionHasChatFile(session, targetPath) {
   return false
 }
 
+// A reserved board is deliberately virtual until its first file-producing tool.
+// Only that exact session/root pair may be projected as an empty directory.
+export async function sherlockVirtualBoardDirectory(sessionId, cwd, target, root = process.env.DSH_HOME) {
+  if (!root || target !== cwd) return false
+  let records
+  try { records = JSON.parse(await readFile(path.join(root, 'research-board-directories.json'), 'utf8')) }
+  catch { return false }
+  if (!records || typeof records !== 'object' || !Object.values(records).some(row => row?.sessionId === sessionId && row?.path === cwd)) return false
+  try { await stat(target); return false }
+  catch (error) { return error?.code === 'ENOENT' }
+}
+
+function patchVirtualBoardListing(source) {
+  const marker = '/* sherlock:virtual-board-listing:v1 */'
+  if (source.includes(marker) || !source.includes('"fs.tree": async (payload) => {')) return source
+  const before = 'const { cwd } = cwdOf(payload);\n\t\t\treturn listDirectory(payload.path === void 0 ? cwd : requireAbsolute(requireString(payload, "path")), resolved.listLimit);'
+  const after = `const { sessionId, cwd } = cwdOf(payload);
+      const target = payload.path === void 0 ? cwd : requireAbsolute(requireString(payload, "path"));
+      if (await sherlockVirtualBoardDirectory(sessionId, cwd, target)) return { path:target, entries:[], truncated:false };
+      return listDirectory(target, resolved.listLimit);`
+  return marker+'\n'+sherlockVirtualBoardDirectory.toString().replace('path.join(', 'join(')+'\n'+replaceExact(source,before,after,'virtual board file listing')
+}
+
 export function patchBetterSidebarServer(source) {
+  source = patchVirtualBoardListing(source)
   const marker = '/* sherlock:session-attached-media:v1 */'
   const defaultWidthMarker = '/* sherlock:figma-panel-default-width-schema:v1 */'
   let next = source

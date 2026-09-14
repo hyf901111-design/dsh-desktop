@@ -57,7 +57,7 @@ body:has([data-odyssey-page]) .t8lSSG_panelBody { border-radius:0 0 16px 16px; }
 body:has([data-odyssey-page]) .wSkVaW_header { padding-right:20px; }
 body:has([data-odyssey-panel-right="closed"]) .wSkVaW_header { padding-right:56px; }
 /* Figma 66: welcome baseline at 325px inside the 880px pane. */
-.sRp_emptyState { padding-bottom:97px; }
+.sRp_emptyState { padding-bottom:0; }
 .t8lSSG_panel .t8lSSG_tab { box-sizing:border-box; padding-inline:8px; }
 .t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { width:46px; }
 .t8lSSG_panel .t8lSSG_tabTitle { flex:0 1 auto; width:auto; }
@@ -347,8 +347,27 @@ body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-pane
 
 /* Overflow is a sibling of the scroller, never painted over a tab close button. */
 .t8lSSG_panel .t8lSSG_tabList { flex:1 1 0; min-width:0; gap:4px; }
-.t8lSSG_panel [data-odyssey-panel-tab] { flex-shrink:0; min-width:0; max-width:100%; box-sizing:border-box; }
+.t8lSSG_panel [data-odyssey-panel-tab] { flex:0 0 auto; min-width:46px; max-width:160px; box-sizing:border-box; overflow:hidden; }
+.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 0 16px; width:16px; height:16px; }
+.t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabTitle { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { flex:0 0 12px; width:12px; }
-.t8lSSG_panel .t8lSSG_tabList:has(+ [data-odyssey-tab-overflow-trigger]) [data-odyssey-panel-tab] {
-  max-width:max(48px, calc(100% - 62px));
-}
+.t8lSSG_panel .t8lSSG_tabList { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+.t8lSSG_panel .t8lSSG_tabList::-webkit-scrollbar { display:none; }
+.t8lSSG_panel [data-odyssey-tab-clipped=true] .t8lSSG_tabClose { visibility:hidden; pointer-events:none; }
+
+/* A non-closable conversation tab has no trailing close affordance to balance. */
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { justify-content:center; padding-inline:8px; gap:0; }
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] .t8lSSG_tabTitle { flex:none; text-align:center; }
+
+body .wSkVaW_header, body .wSkVaW_titleRow { -webkit-app-region:drag; }
+body .wSkVaW_header :is(button,input,select,textarea,a,[role=button],[role=tab],[contenteditable=true]),
+body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag; }
+
+/* Compress every tab in place; never slide tabs underneath the parent chat. */
+.t8lSSG_panel .t8lSSG_tabList { overflow:hidden; gap:2px; flex:0 1 auto; }
+.t8lSSG_panel [data-odyssey-panel-tab] { flex:0 1 auto; min-width:0; padding-inline:min(8px, calc(80px / var(--odyssey-tab-count, 4)))!important; gap:min(6px, calc(60px / var(--odyssey-tab-count, 4))); position:relative; }
+.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 1 16px; min-width:0; }
+.t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose { display:none!important; }
+.t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] { min-width:28px; }
+.t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] .t8lSSG_tabClose { visibility:visible; pointer-events:auto; }
+.t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"] { order:-1; position:relative; left:auto; flex:0 0 46px; }

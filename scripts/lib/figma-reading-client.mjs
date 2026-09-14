@@ -16,18 +16,18 @@ function OdysseyReadingStatus({ listRef, visible, onClick }) {
   });
   if (!host || !visible) return null;
   return react_dom.createPortal(react_jsx_runtime.jsx('button', {
-    type:'button', onClick, children:'回到最新', 'aria-label':'回到最新'
+    type:'button', onClick, 'aria-label':'回到最新', title:'回到最新',
+    children:react_jsx_runtime.jsx('svg', {
+      width:20, height:20, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor',
+      strokeWidth:1.5, strokeLinecap:'round', strokeLinejoin:'round', 'aria-hidden':true,
+      children:react_jsx_runtime.jsx('path', {d:'M12 4v16m-7-7 7 7 7-7'})
+    })
   }), host);
 }
-function OdysseyRunInfo({ groups, running }) {
-  const popup = react.useRef(null);
-  return react_jsx_runtime.jsxs('div', { className:'odyssey-run-info', children:[
-    react_jsx_runtime.jsx('span', { className:'odyssey-run-summary', children:[groups[0], running ? ' · 执行中' : ' · 已完成'] }),
-    react_jsx_runtime.jsx('button', { type:'button', 'aria-haspopup':'dialog', onClick:()=>popup.current?.togglePopover(), children:'运行详情⌄' }),
-    react_jsx_runtime.jsxs('div', { ref:popup, popover:'auto', role:'dialog', 'aria-label':'运行详情', className:'odyssey-run-details', children:[
-      react_jsx_runtime.jsx('strong', {children:'运行详情'}), ...groups.map((text,i)=>react_jsx_runtime.jsx('div',{children:text},i))
-    ] })
-  ] });
+function OdysseyRunInfo({ groups }) {
+  const text = groups.join('   |   ');
+  return react_jsx_runtime.jsx('div', { className:'odyssey-run-info', title:text,
+    children:react_jsx_runtime.jsx('span',{className:'odyssey-run-summary',children:text}) });
 }
 function useOdysseyCompactTasks(ref) {
   const [compact,setCompact] = react.useState(false);
@@ -51,8 +51,17 @@ function OdysseyTaskSheet({children,onClose}) {
 }
 `;
 export function patchFigmaReadingConversation(source) {
+  source=exact(source,
+    'if (destination === null || composerPortalHost.parentElement === destination) return;',
+    'if (destination === null || !destination.isConnected) { composerPortalHost.remove(); publishComposerHeight(0); return; }\n\t\t\t\tif (composerPortalHost.parentElement === destination) return;');
   const marker='/* odyssey:reading-layout:20260912 */';
-  if(source.includes(marker))return patchFigmaCompactTasks(patchFigmaTaskProgress(source));
+  if(source.includes(marker)) {
+    const a=source.indexOf('function OdysseyReadingStatus('), b=source.indexOf('function useOdysseyCompactTasks(',a);
+    const h=helpers.indexOf('function OdysseyReadingStatus('), e=helpers.indexOf('function useOdysseyCompactTasks(',h);
+    if(a<0||b<a)throw Error('Reading status/run info boundary drifted');
+    source=source.slice(0,a)+helpers.slice(h,e)+source.slice(b);
+    return patchFigmaCompactTasks(patchFigmaTaskProgress(source));
+  }
   source=exact(source,'function scrollerOf(from) {\n\t\t\treturn from.closest("[data-conversation-scroll]") ?? from;', 'function scrollerOf(from) {\n\t\t\treturn from.closest(".sRp_messages,[data-conversation-scroll]") ?? from;');
   source=exact(source,'return appendedUser || appendedSteering || runningStarted || tipMoved && atBottom;', 'return appendedUser || (appendedSteering || runningStarted || tipMoved) && atBottom;');
   source=exact(source,'if (saved === null || runningStarted) toBottom(el);','if (saved === null) toBottom(el);');

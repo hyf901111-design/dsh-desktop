@@ -89,12 +89,13 @@ export function patchFigmaSettingsModels(source) {
 
 // Figma 177:696 / 177:337: cards change the presentation, not persisted theme state.
 export function patchFigmaSettingsAppearance(source) {
+  source = source.replaceAll("雅典娜白", "伊萨卡晨雾").replaceAll("阿伽门农黑", "伊萨卡午夜");
   source = exact(source, 'children: CUBES.map(({ id, labelKey, Icon }) =>', 'children: [...CUBES].sort((a, b) => ["system", "light", "dark"].indexOf(a.id) - ["system", "light", "dark"].indexOf(b.id)).map(({ id, labelKey, Icon }) =>');
   source = exact(source, '"aria-pressed": preference === id,', '"aria-pressed": preference === id,\n\t\t\t\t\t\t"data-theme-preference": id,');
   source = exact(source, 'children: [(0, react_jsx_runtime.jsx)(Icon, {}), t(labelKey)]', 'children: [(0, react_jsx_runtime.jsx)("span", { className: "sherlock-theme-preview", "aria-hidden": true }), (0, react_jsx_runtime.jsx)("span", { className: "sherlock-theme-label", children: t(labelKey) })]');
   source = exact(source, '"appearance.title": "外观"', '"appearance.title": "主题"');
-  source = exact(source, '"appearance.light": "浅色"', '"appearance.light": "雅典娜白"');
-  return exact(source, '"appearance.dark": "深色"', '"appearance.dark": "阿伽门农黑"');
+  source = exact(source, '"appearance.light": "浅色"', '"appearance.light": "伊萨卡晨雾"');
+  return exact(source, '"appearance.dark": "深色"', '"appearance.dark": "伊萨卡午夜"');
 }
 
 export function patchFigmaSettingsPreset(source) {

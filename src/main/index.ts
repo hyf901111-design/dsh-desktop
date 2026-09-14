@@ -570,7 +570,8 @@ function createWindow(): BrowserWindow {
   })
   installPluginRecoveryNavigation(window)
   secureWindow(window, {
-    allowsResearchFrameUrl: (url) => researchLinkFrameRegistry.allows(url)
+    allowsResearchFrameUrl: (url) => researchLinkFrameRegistry.allows(url),
+    ownsResearchFrame: (frame) => researchLinkFrameRegistry.ownsFrame(frame)
   })
   const canvasWheelRouter = installResearchCanvasWheelRouter(window)
   researchCanvasWheelRouter = canvasWheelRouter

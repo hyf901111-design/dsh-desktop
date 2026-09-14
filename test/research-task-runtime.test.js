@@ -377,9 +377,29 @@ describe('Research task contract and prompt', () => {
       await runtime.start(containerRequest('failure'))
       await deferred.waitForStarts(1)
       deferred.complete('task-1', JSON.stringify({ version: 1, type: 'error', message: '所需活动页超过资源上限，请精简内容。' }))
+      await deferred.waitForStarts(2)
+      deferred.complete('task-1', JSON.stringify({ version: 1, type: 'error', message: '所需活动页超过资源上限，请精简内容。' }))
       await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' })).toMatchObject({ state: 'failed', error: '所需活动页超过资源上限，请精简内容。' }))
       expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'task-1' }).finalOutput).toBeUndefined()
     } finally { await runtime.dispose() }
+  })
+
+  it('recovers an unsearched data failure with a tool-enabled attempt in the same task', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const calls = []
+    const output = {version:1,type:'markdown',title:'政策动态',content:'已核验的政策内容和发布日期，保留来源链接及覆盖范围。'}
+    const runtime = new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request)
+      return {childSessionId:'child-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(calls.length===1?{version:1,type:'error',message:'当前无法检索并核验官方政策原文'}:output)}]})}
+    },dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try {
+      await runtime.start(containerRequest('policy'))
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe('completed'))
+      expect(calls).toHaveLength(2)
+      expect(calls[1].synthesisOnly).toBe(false)
+      expect(calls[1].prompt).toContain('请先实际检索缺失资料')
+      expect(JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput)).toEqual(output)
+    } finally {await runtime.dispose()}
   })
 
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {
@@ -1438,6 +1458,8 @@ describe('Research task Subagent adapter', () => {
       })]
     }))
     const effectivePrompt = ctx.subagents.start.mock.calls[0][1].prompt[0].text
+    expect(effectivePrompt).toContain('只有网站介绍、页面标题或网址时，必须继续调用 web_search')
+    expect(effectivePrompt).not.toContain('以上资料足以回答')
     expect(effectivePrompt).toContain('今开 3960.10')
     expect(effectivePrompt).toContain('https://example.com/csi300')
     await handle.dispose()
@@ -1960,7 +1982,7 @@ it('shared current request controls retrieval independently from offline instruc
   } finally { await executor.dispose() }
 })
 
-it('shared empty-body recovery preserves host evidence and renders it when synthesis returns no body twice', async () => {
+it('shared empty-body recovery does not publish search snippets as a monitoring panel when synthesis returns no body twice', async () => {
   const { createSharedBoardExecutor } = await runtimeModule()
   const parent = { id: 'shared-parent', session: { events: [] } }
   const child = { id: 'child', session: { id: 'child', events: [] } }
@@ -1970,11 +1992,7 @@ it('shared empty-body recovery preserves host evidence and renders it when synth
   ctx.web = { search: vi.fn(async () => ({ content: 'Bitcoin 比特币价格 100，测试数据时点 2026-09-10。', sources: [{ title: 'Bitcoin 比特币价格', url: 'https://example.com/btc', snippet: '比特币价格 100，测试资料。' }] })) }
   const executor = createSharedBoardExecutor(ctx)
   try {
-    const result = JSON.parse(await executor.execute({ sessionId: parent.id, kind: 'container', query: '比特币实时监控面板', prompt: '创建比特币实时监控面板', files: [] }, new AbortController().signal))
-    expect(result).toMatchObject({ type: 'markdown' })
-    expect(result.content).toContain('比特币价格 100')
-    expect(result.content).toContain('https://example.com/btc')
-    expect(result.content).not.toContain('private reasoning')
+    await expect(executor.execute({ sessionId: parent.id, kind: 'container', query: '比特币实时监控面板', prompt: '创建比特币实时监控面板', files: [] }, new AbortController().signal)).rejects.toThrow()
     expect(ctx.web.search).toHaveBeenCalledTimes(1)
     expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
     expect(ctx.subagents.start.mock.calls[1][1].toolFilter.allow).toEqual([])

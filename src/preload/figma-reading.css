@@ -1,6 +1,6 @@
 /* Figma 748:27747 — long replies, fixed footer, tables and compact windows. */
-body { --odyssey-composer-solid:#f9f9f9; }
-body[data-ds-dark-theme] { --odyssey-composer-solid:#292929; }
+body { --odyssey-composer-solid:#f9f9f9; --odyssey-reading-border:rgba(0,0,0,.1); --odyssey-reading-glass:rgba(242,242,242,.65); }
+body[data-ds-dark-theme] { --odyssey-composer-solid:#292929; --odyssey-reading-border:rgba(255,255,255,.12); --odyssey-reading-glass:rgba(31,31,31,.65); }
 body .uV2eYG_card, body[data-ds-dark-theme] .uV2eYG_card {
   background:var(--odyssey-composer-solid)!important;
   backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
@@ -37,10 +37,13 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
 body .sRp_messages { overflow-x:hidden; overscroll-behavior-y:contain; }
 body .sRp_composer { background:var(--odyssey-right-surface); }
 body .sRp_composer .wSkVaW_composerSeat { --dsh-composer-text-max-height:112px; }
-body [data-odyssey-reading-status] { flex:0 0 32px; height:32px; box-sizing:border-box; display:flex; align-items:center; justify-content:flex-end; padding:2px max(16px,calc((100% - 780px)/2)); background:var(--odyssey-workspace); }
+body [data-odyssey-reading-status] { position:relative; z-index:2; flex:0 0 0; height:0; min-height:0; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:0; transform:translateY(-44px); background:transparent; pointer-events:none; }
 body [data-odyssey-reading-status]:empty { display:none; }
-body .sRp_root [data-odyssey-reading-status] { padding:2px 0; background:var(--odyssey-right-surface); }
-body [data-odyssey-reading-status] button { height:28px; padding:0 12px; border:0; border-radius:7px; background:var(--odyssey-composer-solid); color:var(--odyssey-text); font:400 12px/20px var(--odyssey-font-ui); cursor:pointer; }
+/* The zero-height overlay leaves the reader visible and scrollable beneath it. */
+body [data-odyssey-reading-status] button { display:flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; box-sizing:border-box; padding:0; border:1px solid var(--odyssey-reading-border); border-radius:50%; background:var(--odyssey-reading-glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); color:var(--odyssey-text); cursor:pointer; pointer-events:auto; }
+body [data-odyssey-reading-status] button svg { display:block; width:20px; height:20px; flex:none; pointer-events:none; }
+body [data-odyssey-reading-status] button:hover { background:color-mix(in srgb,var(--odyssey-reading-glass),var(--odyssey-composer-solid) 20%); }
+body [data-odyssey-reading-status] button:focus-visible { outline:2px solid var(--odyssey-text); outline-offset:3px; }
 body .wSkVaW_root[data-odyssey-page=research] > [data-odyssey-reading-status],body .wSkVaW_root[data-odyssey-page=home] > [data-odyssey-reading-status] { display:none; }
 /* Task card: inset border does not consume the 40 + 168 + 8 px layout. */
 body :is(.lXshSW_root,.odyssey-task-sheet) { --odyssey-task-text:#333; --odyssey-task-muted:#757575; --odyssey-task-active:rgba(0,0,0,.04); }
@@ -73,10 +76,11 @@ body[data-ds-dark-theme] [data-odyssey-task-status] .odyssey-task-glyph-dark { d
 body [data-odyssey-task-status=in_progress] { animation:odyssey-task-ring 900ms linear infinite; }
 @keyframes odyssey-task-ring { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { body .odyssey-task-reveal,body .lXshSW_chevron { transition:none!important; } body [data-odyssey-task-status=in_progress] { animation:none; } }
-body .odyssey-run-info { box-sizing:border-box; width:calc(100% - 64px); max-width:780px; height:24px; margin:8px auto 0; padding:0; display:flex; align-items:center; gap:8px; color:var(--odyssey-muted); font:400 11px/20px var(--odyssey-font-ui); }
-body .sRp_composer .odyssey-run-info { width:100%; margin-top:4px; }
+body .odyssey-run-info { box-sizing:border-box; width:calc(100% - 64px); max-width:780px; height:24px; margin:8px auto 0; padding:0; display:flex; align-items:center; gap:8px; color:var(--odyssey-muted); font:400 12px/17px var(--odyssey-font-ui); }
+/* The Research sidebar composer ends at the input card. */
+body .sRp_composer .odyssey-run-info { display:none; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .odyssey-run-info { width:100%; }
-body .odyssey-run-summary { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+body .odyssey-run-summary { flex:1; text-align:center; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body .odyssey-run-info button { flex:none; padding:2px 4px; border:0; border-radius:5px; background:none; color:inherit; font:inherit; cursor:pointer; }
 body .odyssey-run-info button:hover { background:var(--odyssey-menu-row); color:var(--odyssey-text); }
 body .odyssey-run-details { position:fixed; inset:auto; bottom:48px; right:24px; margin:0; width:min(360px,calc(100vw - 48px)); max-height:calc(100vh - 112px); box-sizing:border-box; overflow:auto; padding:16px; border:1px solid var(--odyssey-menu-border); border-radius:12px; background:var(--odyssey-composer-solid); color:var(--odyssey-text); font:400 12px/24px var(--odyssey-font-ui); box-shadow:0 8px 24px #0002; }

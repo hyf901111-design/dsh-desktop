@@ -1,3 +1,4 @@
+import { patchBoardDirectoryConversation, patchBoardDirectoryWorkspace } from './board-directory-picker.mjs'
 import { patchFigmaFinalConversation } from './patch-figma-final-shell.mjs'
 import { researchNotoFontCss } from '../../packages/dsh-research-task-runtime/component-noto-font.js'
 import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
@@ -493,7 +494,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
-  return patchFigmaFinalConversation(polishBoardPatch(source))
+  return patchBoardDirectoryConversation(patchFigmaFinalConversation(polishBoardPatch(source)))
 }
 function polishBoardPatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return entryPatch(chromePatch(source))
@@ -692,6 +693,7 @@ function chromePatch(source) {
   return source + '\n/* SHERLOCK_BOARD_CHROME_V1 */'
 }
 export function patchResearchBoardWorkspace(source) {
+  source = patchBoardDirectoryWorkspace(source)
   // Figma 22/44: idle search and the collapsed add-project glyph remain 16 px.
   source = source.replace('size: searchExpanded ? 11 : 14', 'size: searchExpanded ? 11 : 16')
     .replace('size: wide ? 16 : 18', 'size: 16')

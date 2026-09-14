@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { patchFigmaFinalConversation, patchFigmaFinalLayout } from '../scripts/lib/patch-figma-final-shell.mjs'
 
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
@@ -12,6 +13,68 @@ function clientFunction(bundle: string, name: string) {
 }
 
 describe('Figma shell patch installation', () => {
+  it('initializes the controller before slot render and replaces it on reload with proper disposal', async () => {
+    const installed = patchFigmaFinalConversation(source)
+    const apply = clientFunction(installed, 'apply')
+    const begin = apply.indexOf('const inputHub = new InputHub(')
+    const end = apply.indexOf('blocks: composerBlocks });', begin) + 'blocks: composerBlocks });'.length
+    expect(end).toBeLessThan(apply.indexOf('sessions.provide('))
+    expect(apply).not.toContain('concreteConversation(ctx)')
+    expect(apply.match(/const conversation = conversationController;/g)).toHaveLength(3)
+    const constructorStart = installed.indexOf('constructor(ctx, config)', installed.indexOf('var ConversationController = class'))
+    const constructorEnd = installed.indexOf('\n\t\t\t}', constructorStart) + '\n\t\t\t}'.length
+    const Controller = runInNewContext('class Controller extends Service { createdImageUrls = new Set(); draftAttachments = new Map(); imageUrls = new Map(); imageGenerations = new Map(); ' + installed.slice(constructorStart, constructorEnd) + ' }; Controller', { Service, revokePreview() {} })
+    const initialize = runInNewContext('(ctx) => { const t = () => {}; const researchWorkspaces = {}; ' + apply.slice(begin, end) + ' return conversationController; }', {
+      ConversationController: Controller, InputHub: class {}, ComposerBlockRegistry: class {}
+    })
+    const root = new Context()
+    let previous: { disposed: boolean; draftAttachments: Map<string, unknown> } | undefined
+    for (let generation = 0; generation < 2; generation++) {
+      let controller: typeof previous
+      const fiber = root.plugin((ctx: Context) => {
+        controller = initialize(ctx)
+        // Simulate the immediate slot injection before the owning fiber is active.
+        expect(controller).toBeDefined()
+        expect(controller).not.toBe(previous)
+        controller!.draftAttachments.set('draft', {})
+      })
+      await fiber.await()
+      expect(root.get('conversation')).toBeDefined()
+      await fiber.dispose()
+      expect(root.get('conversation')).toBeUndefined()
+      expect(controller!.disposed).toBe(true)
+      expect(controller!.draftAttachments.size).toBe(0)
+      previous = controller
+    }
+    expect(patchFigmaFinalConversation(installed)).toBe(installed)
+  })
+
+  it('shows project controls only before the first message in either conversation surface', () => {
+    const installed = patchFigmaFinalConversation(source)
+    const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
+    const ComposerSurface = runInNewContext(clientFunction(installed, 'ComposerSurface') + '\nComposerSurface', {
+      EditableSessionTitle: "button",
+      react_jsx_runtime: { jsx: element, jsxs: element },
+      clsx: (...names: unknown[]) => names.filter(Boolean).join(' '),
+      ConversationRoot_module_css_default: {}, HeroGlow: 'glow', HeroShell: 'headline'
+    })
+    const row = element('button', { children: '选择工作区' })
+    const input = element('textarea', {})
+    for (const state of [
+      { hero: true, research: false, researchEmpty: false, visible: true },
+      { hero: false, research: true, researchEmpty: true, visible: true },
+      { hero: false, research: true, researchEmpty: false, visible: false },
+      { hero: false, research: false, researchEmpty: false, visible: false }
+    ]) {
+      const tree = ComposerSurface({ ...state, heroWorkspaceRow: row, inputBar: input,
+        renderSlotChain: (_name: string, _context: unknown, options: { fallback: unknown }) => options.fallback })
+      const children = tree.props.children.props.children
+      expect(children.includes(row)).toBe(state.visible)
+      expect(children.includes(input)).toBe(true)
+    }
+    expect(patchFigmaFinalConversation(installed)).toBe(installed)
+  })
+
   it('commits the pointer-up position when a quick sidebar drag has no delivered move event', async () => {
     const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
     const moves: number[] = [], lifecycle: string[] = []
@@ -86,7 +149,7 @@ describe('Figma shell patch installation', () => {
     expect(() => patchFigmaFinalConversation(installed + '\n/* ODYSSEY_FIGMA_FINAL_SHELL_START */')).toThrow('marker')
   })
 
-  it('uses the Figma empty Research title without replacing explicit titles or chat titles', async () => {
+  it('uses view-specific empty titles while preserving existing session titles', async () => {
     const installed = patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
     const extract = (name: string) => {
       const start = installed.indexOf(`\t\tfunction ${name}(`)
@@ -96,6 +159,7 @@ describe('Figma shell patch installation', () => {
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const header = runInNewContext(`${extract('deriveAncestry')}\n${extract('equalBreadcrumbs')}\n${extract('conversationViewTabProps')}\n${extract('ConversationSessionHeader')}\nConversationSessionHeader`, {
       react: { useSyncExternalStore() {}, useCallback: (fn: unknown) => fn, useRef: () => ({ current: 'current' }), Fragment: 'fragment' },
+      EditableSessionTitle: "button",
       react_jsx_runtime: { jsx: element, jsxs: element },
       ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => key }),
       clsx: (...values: unknown[]) => values.filter(Boolean).join(' '),
@@ -111,8 +175,8 @@ describe('Figma shell patch installation', () => {
       ['research', false, 'active', undefined, '已有研究', '已有研究'],
       ['research', true, 'sending', undefined, '正在研究', '正在研究'],
       ['chat', false, 'active', undefined, '原对话标题', '原对话标题'],
-      ['chat', true, 'blank', undefined, '测试集', '测试集'],
-      ['trajectory', true, 'blank', undefined, '测试集', '测试集']
+      ['chat', true, 'blank', undefined, '测试集', '新会话'],
+      ['trajectory', true, 'blank', undefined, '测试集', '新轨迹']
     ] as const) {
       const tree = header({
         sessionId: 'current',
@@ -165,6 +229,7 @@ describe('Figma shell patch installation', () => {
       contentParts: () => ({ text: 'opaque research prompt', images: [], rest: [] }),
       parseResearchPrompt: () => research,
       projectResearchUserText: (value: typeof research) => { projected.push(value); return value.text },
+      EditableSessionTitle: "button",
       react_jsx_runtime: { jsx: element, jsxs: element },
       MessageItem_module_css_default: { userRow: 'userRow', userStack: 'userStack', bubble: 'bubble' },
       _deepseek_ai_dsh_client_ui_attachment: { ImageGallery: 'images' },

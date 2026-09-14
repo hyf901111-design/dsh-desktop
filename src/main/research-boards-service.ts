@@ -2074,10 +2074,14 @@ export class ResearchBoardsService {
     if (this.stopped) throw new ResearchBoardsError('SESSION_CHANGED')
     switch (action) {
       case 'local.directory': {
-        const p = exact(input, ['mode'], ['basePath', 'title', 'sessionId', 'directoryId'])
-        if (!['reserve', 'bind', 'workspace'].includes(String(p.mode))) throw new ResearchBoardsError('INVALID_REQUEST')
+        const p = exact(input, ['mode'], ['basePath', 'title', 'sessionId', 'directoryId', 'targetSessionId', 'workspaceId', 'workspaceTitle'])
+        if (!['reserve', 'bind', 'workspace', 'associate'].includes(String(p.mode))) throw new ResearchBoardsError('INVALID_REQUEST')
         if (p.sessionId !== undefined) safeId(p.sessionId)
         if (p.directoryId !== undefined) safeId(p.directoryId)
+        if (p.targetSessionId !== undefined) safeId(p.targetSessionId)
+        if (p.workspaceId !== undefined) safeId(p.workspaceId)
+        if (p.workspaceTitle !== undefined) text(p.workspaceTitle)
+        if (p.mode === 'associate' && !this.store.snapshot().favorites.some(f => f.sessionId === p.sessionId && f.dedicated)) throw new ResearchBoardsError('BINDING_CONFLICT')
         if (p.title !== undefined) text(p.title)
         if (p.basePath !== undefined) text(p.basePath, 4096)
         if (!this.options.hooks?.directory) throw new ResearchBoardsError('CAPTURE_UNAVAILABLE')
@@ -2087,6 +2091,10 @@ export class ResearchBoardsService {
         if (binding) this.requireBoard(binding.boardId)
         const result = await this.options.hooks.directory(p, this.generationAbort.signal)
         if (ctx) this.check(ctx)
+        if (p.mode === 'associate') {
+          this.store.associateFavorite(String(p.sessionId), { sessionId: result.localSessionId, cwd: result.path, directoryPath: result.directoryPath, workspaceId: p.workspaceId as string | undefined, workspaceTitle: p.workspaceTitle as string | undefined })
+          this.emitState()
+        }
         if (binding && p.mode === 'workspace' && result.localSessionId !== p.sessionId) {
           this.store.rebind(binding.accountId, binding.boardId, binding.localSessionId, result.localSessionId)
           const runtime = this.boards.get(binding.boardId)

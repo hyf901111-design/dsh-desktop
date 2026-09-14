@@ -56,8 +56,8 @@ function ResearchDerivedDetailMenu({ rootRef, anchorRef, canvasSize, onSelect, o
     return () => { doc.removeEventListener('pointerdown', outside, true); doc.removeEventListener('keydown', escape, true); };
   }, [anchorRef, onClose]);
   return (0, react_jsx_runtime.jsx)('div', { ref: popupRef, className: 'rScV5Q_mindMapMenu odyssey-derived-detail-menu', 'data-research-mind-map-menu': '', role: 'menu', 'aria-label': '思维导图详细度', style,
-    children: options.map(option => (0, react_jsx_runtime.jsxs)('button', { type: 'button', role: 'menuitemradio', 'aria-checked': option.value === 'standard', 'data-research-mind-map-detail': option.value,
-      onClick: () => { onClose(); onSelect(option.value); }, children: [(0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-derived-detail-copy', children: [(0, react_jsx_runtime.jsx)('strong', { children: option.label }), (0, react_jsx_runtime.jsx)('span', { children: option.description })] }), option.value === 'standard' ? (0, react_jsx_runtime.jsx)('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true, className: 'odyssey-derived-detail-check', children: (0, react_jsx_runtime.jsx)('path', { d: 'M3.25 8.2 6.4 11.25 12.75 4.75', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }) }) : null] }, option.value)) });
+    children: options.map(option => (0, react_jsx_runtime.jsxs)('button', { type: 'button', role: 'menuitem', 'data-research-mind-map-detail': option.value,
+      onClick: () => { onClose(); onSelect(option.value); }, children: [(0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-derived-detail-copy', children: [(0, react_jsx_runtime.jsx)('strong', { children: option.label }), (0, react_jsx_runtime.jsx)('span', { children: option.description })] })] }, option.value)) });
 }
 function ResearchDerivedCreatePopover({ popoverRef, inputRef, triggerRef, rootRef, canvasSize, selection, prompt, error, preparing, disabled, maxPrompt, maxSources, onPrompt, onClose, onSubmit }) {
   const style = useResearchDerivedFloating({ popupRef: popoverRef, rootRef, triggerRef, canvasSize });
@@ -84,7 +84,10 @@ function requireUnique(source, anchor) {
 }
 export function patchFigmaDerivedMenu(source) {
   if (source.includes(startMarker)) {
-    requireUnique(source, startMarker + '\n' + definitions + '\n' + endMarker);
+    const start = requireUnique(source, startMarker), end = requireUnique(source, endMarker);
+    requireUnique(source, "className: 'rScV5Q_mindMapMenu odyssey-derived-detail-menu'");
+    if (end <= start) throw Error('Figma derived menu marker order changed');
+    source = source.slice(0, start) + startMarker + '\n' + definitions + '\n' + endMarker + source.slice(end + endMarker.length);
     for (const call of [menuCall, createCall, guardedEscape]) requireUnique(source, call);
     return source;
   }

@@ -52,10 +52,28 @@ export class BoardDirectories {
       }
       return row
     }
+    if (input.mode === 'associate') {
+      const row = Object.values(this.records).find(r => r.sessionId === input.sessionId || r.previousSessionId === input.sessionId)
+      if (!row || typeof input.targetSessionId !== 'string') throw Error('DIRECTORY_BINDING_CONFLICT')
+      if (this.ctx.agents?.get(input.sessionId)?.status === 'running') throw Error('BOARD_BUSY')
+      const source = await this.inspect(input.sessionId)
+      const target = await this.inspect(input.targetSessionId)
+      if (source.events.some(e => ['user/message', 'assistant/message', 'tool/call'].includes(e.type)) || target.events.some(e => ['user/message', 'assistant/message', 'tool/call'].includes(e.type))) throw Error('BOARD_HAS_CONVERSATION')
+      if (!isAbsolute(target.meta.cwd)) throw Error('INVALID_REQUEST')
+      row.previousSessionId = input.sessionId
+      row.sessionId = input.targetSessionId
+      this.save()
+      return { localSessionId: input.targetSessionId, path: target.meta.cwd, directoryPath: row.path }
+    }
     if (input.mode !== 'workspace') throw Error('INVALID_REQUEST')
     const source = await this.inspect(input.sessionId)
     if (this.ctx.agents?.get(input.sessionId)?.status === 'running') throw Error('BOARD_BUSY')
     let row = Object.values(this.records).find(r => r.sessionId === input.sessionId)
+    if (row && row.path !== source.meta.cwd) {
+      const workspace = await this.ctx.workspaceRegistry.resolveByPath(source.meta.cwd) ?? await this.ctx.workspaceRegistry.create(source.meta.cwd)
+      await workspace.attachSession(input.sessionId)
+      return { localSessionId: input.sessionId, workspaceId: workspace.id, path: source.meta.cwd }
+    }
     let localSessionId = input.sessionId
     if (!row) {
       // Immutable session cwd requires a new session for legacy board entries.

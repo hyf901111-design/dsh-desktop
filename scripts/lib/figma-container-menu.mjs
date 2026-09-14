@@ -54,7 +54,7 @@ export function patchFigmaContainerMenu(source) {
     if (event.key === "Escape") { event.preventDefault(); close(); return; }`)
   exact('const available = items();\n\t\t\t\t\tconst index', 'const available = items(event.target);\n\t\t\t\t\tconst index')
   exact('}), present ? (0, react_jsx_runtime.jsxs)("div", {','}), present ? react_dom.createPortal((0, react_jsx_runtime.jsxs)("div", {')
-  exact('id: menuId, role: open ?', 'ref:menuRef,style:menuStyle,onMouseLeave:()=>setRefreshOpen(false),"data-odyssey-container-menu":"",id: menuId, role: open ?')
+  exact('id: menuId,', 'ref:menuRef,style:menuStyle,onMouseLeave:()=>setRefreshOpen(false),"data-odyssey-container-menu":"",id: menuId,')
   const a=part.indexOf('(0, react_jsx_runtime.jsx)("div", { role: "separator" }),'),b=part.indexOf('\n\t\t\t\t\t]\n',a)
   if(a<0||b<a)throw Error('Refresh entries missing')
   part=part.slice(0,a)+`(0,react_jsx_runtime.jsxs)('div',{className:'odyssey-refresh-parent',onMouseEnter:()=>{if(!editingPrompt)setRefreshOpen(true);},children:[

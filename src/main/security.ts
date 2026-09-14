@@ -1,11 +1,20 @@
-import { shell, type BrowserWindow } from 'electron'
+import { shell, type BrowserWindow, type WebFrameMain } from 'electron'
 import { canGrantWindowPermission, isTrustedAppUrl } from './security-policy'
 
 export function secureWindow(
   window: BrowserWindow,
-  options: { allowsResearchFrameUrl?(url: string): boolean } = {}
+  options: { allowsResearchFrameUrl?(url: string): boolean; ownsResearchFrame?(frame: WebFrameMain | null | undefined): boolean } = {}
 ): void {
-  window.webContents.setWindowOpenHandler(({ url }) => {
+  window.webContents.setWindowOpenHandler(({ url, referrer }) => {
+    const sources = referrer?.url ? window.webContents.mainFrame.framesInSubtree?.filter(frame => (
+      frame.url === referrer.url && options.ownsResearchFrame?.(frame)
+    )) ?? [] : []
+    if (sources.length) {
+      if (sources.length === 1 && isExternalUrl(url) && !isTrustedAppUrl(url)) {
+        void sources[0]!.executeJavaScript(`location.assign(${JSON.stringify(url)})`).catch(() => undefined)
+      }
+      return { action: 'deny' }
+    }
     if (isTrustedAppUrl(url)) return { action: 'allow' }
     if (isExternalUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
@@ -36,6 +45,11 @@ export function secureWindow(
       }
       return
     }
+    if (options.ownsResearchFrame?.(event.frame)) {
+      if (isExternalUrl(event.url) && !isTrustedAppUrl(event.url)) return
+      event.preventDefault()
+      return
+    }
     if (isPreviewUrl(event.url)) return
     // Sidebar documents are direct child frames created by the trusted shell.
     // Keep this separate from document-initiated navigation: an embedded page
@@ -49,6 +63,14 @@ export function secureWindow(
       // Fail closed when the authorization registry cannot decide.
     }
     event.preventDefault()
+  })
+
+  window.webContents.on('frame-created', (_event, { frame }) => {
+    if (!frame) return
+    frame.on('dom-ready', () => {
+      if (!options.ownsResearchFrame?.(frame) || !isExternalUrl(frame.url) || isTrustedAppUrl(frame.url)) return
+      void frame.executeJavaScript(RESEARCH_IN_FRAME_NAVIGATION).catch(() => undefined)
+    })
   })
 
   window.webContents.on('will-attach-webview', (event) => event.preventDefault())
@@ -106,3 +128,16 @@ function isExternalUrl(rawUrl: string): boolean {
     return false
   }
 }
+
+const RESEARCH_IN_FRAME_NAVIGATION = `(() => {
+  if (window.__sherlockInlineNavigation) return;
+  window.__sherlockInlineNavigation = true;
+  const navigate = value => { try { const url = new URL(String(value), location.href); if (!['http:', 'https:'].includes(url.protocol)) return; location.assign(url.href); } catch {} };
+  document.addEventListener('click', event => {
+    const link = event.target?.closest?.('a[href]');
+    if (!link || event.button !== 0) return;
+    if (link.target && link.target !== '_self' || event.ctrlKey || event.metaKey || event.shiftKey) { event.preventDefault(); event.stopImmediatePropagation(); navigate(link.href); }
+  }, true);
+  document.addEventListener('submit', event => { if(event.target?.tagName === 'FORM') event.target.target = '_self'; }, true);
+  window.open = value => { if(value)navigate(value); return window; };
+})()`

@@ -1222,6 +1222,29 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.sessions.open(id)
       await activate(id, true)
     },
+    directoryChoice(id: string) {
+      const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
+      return f ? { path: f.directoryPath ?? f.cwd, workspaceId: f.workspaceId, label: f.workspaceTitle ?? '新建看板目录' } : null
+    },
+    async associateProject(id: string, workspaceId: string) {
+      const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
+      if (!f) return null
+      const workspace = workspaceId === '::board-directory' ? null : deps.workspaces.list.getSnapshot().items.find((w: { workspaceId: string; path: string; title: string }) => w.workspaceId === workspaceId)
+      if (workspaceId !== '::board-directory' && !workspace) throw Error('项目暂不可用')
+      const cwd = workspace?.path ?? f.directoryPath ?? f.cwd
+      if (!cwd) throw Error('看板目录暂不可用')
+      if (identity(id)?.cwd === cwd) return id
+      deps.researchWorkspaces.for(id).persist?.()
+      const nextId = await deps.sessions.create({ cwd })
+      await deps.sessions.binding(nextId)?.session.rename(f.title)
+      try {
+        await call('local.directory', { mode: 'associate', sessionId: id, targetSessionId: nextId, ...(workspace ? { workspaceId: workspace.workspaceId, workspaceTitle: workspace.title } : {}) })
+      } catch (error) { await deps.workspaces.archiveSession(nextId); throw error }
+      prime(nextId)
+      await activate(nextId, true)
+      selectBoardSession(nextId)
+      return nextId
+    },
     async createPrivateBoard() {
       const id = await freshBoard('新研究看板')
       const i = identity(id)
@@ -1232,7 +1255,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return id
     },
     async renamePersonal(id: string, title: string) {
-      await deps.sessions.binding(id)?.session.rename(title)
+      const binding = deps.sessions.binding(id)
+      if (!binding) throw Error('会话尚未就绪')
+      await binding.session.rename(title)
+      for (const favorite of state.favorites.filter(f => f.sessionId === id)) {
+        await call('favorite.rename', { favoriteId: favorite.favoriteId, title })
+      }
     },
     async collaborationSource(id: string) {
       const existing = state.favorites.find(f => f.sessionId === id)
@@ -1407,8 +1435,8 @@ export function ResearchBoardHeader({
       : h(
           'button',
           {
-            'aria-label': pinned ? '已添加至研究看板' : '添加至研究看板',
-            title: pinned ? '已添加至研究看板' : '添加至研究看板',
+            'aria-label': pinned ? '已创建至看板区' : '创建至看板区',
+            title: pinned ? '已创建至看板区' : '创建至看板区',
             'aria-pressed': pinned,
             className: 'srb-favorite-button',
             onClick: safely(page, async () => {
@@ -1637,11 +1665,11 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   if (!wide || !skin) return null
   const B = skin.header
   const classes = (...names: Array<string | false>) => names.filter(Boolean).join(' ')
-  return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'aria-label': '研究看板' },
+  return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'data-section-collapsed': collapsed && !search, 'aria-label': '看板区' },
     h('div', { className: B.sectionHeader, 'data-srb-section-header': '' },
-      h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开研究看板' : '折叠研究看板', 'aria-expanded': !collapsed,
+      h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开看板区' : '折叠看板区', 'aria-expanded': !collapsed,
         onClick: () => { setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed)) } },
-        '研究看板', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
+        '看板区', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
       h('div', { className: classes(B.searchSlot, search && B.searchSlotExpanded) },
         h('div', { ref: searchRoot, className: classes(B.search, search && B.searchExpanded), onClick: () => { setSearch(true); searchInput.current?.focus() } },
           h('button', { className: B.searchButton, 'aria-label': '搜索研究看板', 'aria-expanded': search, title: '搜索研究看板', onClick: () => setSearch(true) }, h(IconSearchOutline16, { size: search ? 11 : 16 })),
@@ -1714,7 +1742,7 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
   const firstMarker = !grouped && drag?.over?.key === visible[0]?.key && drag?.over?.half === 'before'
   return h('div', { className: B.listArea }, h('div', { className: B.treeBody },
     h('div', { className: ['srb-board-list', B.list, !grouped && B.flatList].filter(Boolean).join(' '), 'data-group-by': preferences.groupBy },
-      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '新建研究看板，或从研究中创建协作'),
+      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '暂无看板'),
       ...(grouped ? groups.map(({ group, rows }) => h(ResearchBoardGroup, { key: group, skin, group,
         expanded: !!query || !preferences.collapsedGroups.includes(group),
         onToggle: () => { if (!query) save({ ...preferences, collapsedGroups: preferences.collapsedGroups.includes(group) ? preferences.collapsedGroups.filter((g: string) => g !== group) : [...preferences.collapsedGroups, group] }) }
@@ -1780,7 +1808,6 @@ function renameBoardEntry(page: ResearchBoardsPage, entry: Favorite | BoardSumma
     if ('boardId' in entry) await page.call('board.rename', { boardId: entry.boardId, title })
     else {
       await page.renamePersonal(entry.sessionId, title)
-      await page.call('favorite.rename', { favoriteId: entry.favoriteId, title })
     }
     d.close()
   }))

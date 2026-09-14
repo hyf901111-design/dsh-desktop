@@ -41,7 +41,7 @@ export function researchComponentTypographyCss(scope, options = {}) {
 export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
   light: Object.freeze({
     bg: '#ffffff', surface: '#ffffff', 'surface-muted': '#f5f5f5', text: '#0a0b0c', muted: '#737373',
-    border: '#e5e5e5', link: '#2563eb', accent: '#0a0b0c', 'accent-soft': '#7373730f',
+    border: '#e5e5e5', link: '#2563eb', accent: '#0a0b0c', 'accent-foreground': '#ffffff', 'accent-soft': '#7373730f',
     'chart-1': '#3b82f6', 'chart-2': '#14b8a6',
     'chart-3': '#8b5cf6', 'chart-4': '#f59e0b', 'chart-5': '#ec4899', 'chart-6': '#64748b',
     'chart-background': '#ffffff', 'chart-foreground': 'oklch(.145 .004 285)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
@@ -54,7 +54,7 @@ export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
   }),
   dark: Object.freeze({
     bg: '#171717', surface: '#171717', 'surface-muted': '#262626', text: '#fafafa', muted: '#a3a3a3',
-    border: '#303030', link: '#60a5fa', accent: '#fafafa', 'accent-soft': '#ffffff0f',
+    border: '#303030', link: '#60a5fa', accent: '#fafafa', 'accent-foreground': '#171717', 'accent-soft': '#ffffff0f',
     'chart-1': '#93c5fd', 'chart-2': '#5eead4',
     'chart-3': '#c4b5fd', 'chart-4': '#fcd34d', 'chart-5': '#f9a8d4', 'chart-6': '#94a3b8',
     'chart-background': '#171717', 'chart-foreground': 'oklch(.45 0 0)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
@@ -89,7 +89,7 @@ const RESEARCH_COMPONENT_BASE_CSS = `:where(html,body){background:var(--sherlock
 // The first important layer keeps authored page scrollbar rules from diverging.
 function researchComponentScrollbarCss(scope, darkScope) {
   const scrollports = `:is(${scope},${scope} *)`
-  return `@layer sherlock-component-scrollbars{${scope}{--odyssey-scrollbar-thumb:#b0b0b0;--odyssey-scrollbar-hover:#8a8a8a}${darkScope}{--odyssey-scrollbar-thumb:#5e5e5e;--odyssey-scrollbar-hover:#8a8a8a}${scrollports}{scrollbar-width:auto!important;scrollbar-color:auto!important}${scrollports}::-webkit-scrollbar{display:block!important;width:8px!important;height:8px!important;background:transparent!important}${scrollports}::-webkit-scrollbar-track,${scrollports}::-webkit-scrollbar-track-piece,${scrollports}::-webkit-scrollbar-corner{background:transparent!important;border:0!important;box-shadow:none!important}${scrollports}::-webkit-scrollbar-thumb{background:var(--odyssey-scrollbar-thumb)!important;background-clip:padding-box!important;border:2px solid transparent!important;border-radius:999px!important;box-shadow:none!important;min-height:28px!important;min-width:28px!important}${scrollports}::-webkit-scrollbar-thumb:hover{background-color:var(--odyssey-scrollbar-hover)!important}${scrollports}::-webkit-scrollbar-button{display:none!important;width:0!important;height:0!important}}`
+  return `@layer sherlock-component-scrollbars{${scrollports}{scrollbar-width:none!important}${scrollports}::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}}`
 }
 
 // First-paint hint only: literal meta attributes outside inert/raw-text content.
@@ -187,6 +187,30 @@ const RESEARCH_HTML_INNER_FONT_RUNTIME = String.raw`function researchHtmlInnerFo
 const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerThemeRuntime(fixedTheme) {
   let hostTheme = document.documentElement.getAttribute('data-sherlock-theme') === 'dark' ? 'dark' : 'light'
   let activeTheme
+  const correctedControls = new Map()
+  const rgb = value => {
+    const hex=value.trim().match(/^#([\da-f]{3}|[\da-f]{6})$/i)
+    if(hex){const s=hex[1].length===3?hex[1].split('').map(c=>c+c).join(''):hex[1];return [0,2,4].map(i=>parseInt(s.slice(i,i+2),16))}
+    const parts=value.match(/^rgba?\(\s*([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i)
+    return parts&&(!parts[4]||Number(parts[4])===1)?parts.slice(1,4).map(Number):null
+  }
+  const luminance = color => color.map(n=>{const v=n/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((sum,n,i)=>sum+n*[.2126,.7152,.0722][i],0)
+  const repairAccentControls = () => {
+    const accent=rgb(getComputedStyle(document.documentElement).getPropertyValue('--sherlock-accent'))
+    if(!accent)return
+    for(const element of correctedControls.keys())if(!element.isConnected)correctedControls.delete(element)
+    for(const element of document.querySelectorAll('button,input[type="button"],input[type="submit"],[role="button"]')){
+      const previous=correctedControls.get(element)
+      if(previous){if(element.style.getPropertyValue('color')===previous.applied){element.style.removeProperty('color');if(previous.value)element.style.setProperty('color',previous.value,previous.priority)}correctedControls.delete(element)}
+      const style=getComputedStyle(element),bg=rgb(style.backgroundColor),fg=rgb(style.color)
+      if(!bg||!fg||bg.some((n,i)=>n!==accent[i]))continue
+      const a=luminance(bg),b=luminance(fg)
+      if((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5)continue
+      const applied=(a+.05)/.05>=1.05/(a+.05)?'rgb(0, 0, 0)':'rgb(255, 255, 255)'
+      correctedControls.set(element,{value:element.style.getPropertyValue('color'),priority:element.style.getPropertyPriority('color'),applied})
+      element.style.setProperty('color',applied,'important')
+    }
+  }
   const apply = () => {
     const colorScheme = fixedTheme || hostTheme
     if (activeTheme === colorScheme) return
@@ -194,6 +218,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     document.documentElement.setAttribute('data-sherlock-theme', colorScheme)
     document.documentElement.style.colorScheme = colorScheme
     window.dispatchEvent(new CustomEvent('sherlock-theme-change', { detail: { colorScheme } }))
+    repairAccentControls()
   }
   const receive = (event) => {
     const data = event.data
@@ -204,6 +229,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     apply()
   }
   addEventListener('message', receive)
+  document.addEventListener('DOMContentLoaded', repairAccentControls)
   const startContentMeasurement = () => {
     if (typeof parent.postMessage !== 'function') return
     let stopped = false

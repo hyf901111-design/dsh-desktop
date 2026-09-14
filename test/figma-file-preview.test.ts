@@ -129,7 +129,7 @@ describe('Figma file entries and complete readers', () => {
       const shield = mounted.host.querySelector('[data-research-preview-shield]')!
       expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('auto')
       await mounted.toggle(); await mounted.settle()
-      expect(mounted.host.querySelector('dialog')?.open).toBe(true)
+      expect((mounted.host.querySelector('dialog') as any).open).toBe(true)
       expect(mounted.host.textContent).toContain('原始完整总结正文')
       expect(mounted.window.getComputedStyle(shield).display).toBe('none')
       expect(mounted.window.getComputedStyle(shield).pointerEvents).toBe('none')
@@ -167,14 +167,15 @@ describe('Figma file entries and complete readers', () => {
     } finally { await mounted.cleanup() }
   })
 
-  it.each(['web-link', 'generated-container'])('shows source instead of a closed %s iframe and retains unscaled reading', async kind => {
+  it.each(['web-link', 'generated-container'])('loads a closed %s inline and retains the same unscaled reader across expansion', async kind => {
     const url = 'https://example.com/source'
     const node = { id: kind, kind, messageId: kind, title: '原始网页', excerpt: '已有的真实来源摘要', url, x: 350, y: 200, width: 656, height: 220, generationStatus: 'completed', refreshMinutes: 0, containerSpec: { version: 1, type: 'web', title: '原始网页', url } }
     const mounted = await mount(node)
     try {
-      expect(mounted.host.querySelector('iframe')).toBeNull()
-      expect(mounted.authorize).not.toHaveBeenCalled()
-      expect(mounted.host.querySelector('[data-research-file-entry]')?.textContent).toContain(url)
+      expect(mounted.host.querySelector('[data-research-web-frame]')?.getAttribute('src')).toBe(url)
+      expect(mounted.client.researchWebFrameSandbox('https://ui.shadcn.com/charts/bar')).toContain('allow-same-origin')
+      expect(mounted.client.researchWebFrameSandbox('http://127.0.0.1:4310/')).not.toContain('allow-same-origin')
+      expect(mounted.authorize).toHaveBeenCalledTimes(1)
       await mounted.toggle(); await mounted.settle()
       const frame = mounted.host.querySelector('[data-research-web-frame]')!
       expect(frame.getAttribute('src')).toBe(url)
@@ -185,14 +186,28 @@ describe('Figma file entries and complete readers', () => {
     } finally { await mounted.cleanup() }
   })
 
+  it('refreshes a live link from its more menu and exposes its browser action there',async()=>{
+    const node={id:'link-menu',kind:'web-link',messageId:'link-menu',title:'网页',url:'https://example.com/source',x:0,y:0,width:656,height:456};
+    const mounted=await mount(node);
+    try {
+      await act(async()=>mounted.host.querySelector('[data-research-container-more]')?.dispatchEvent(new mounted.window.MouseEvent('click',{bubbles:true})));
+      const menu=mounted.window.document.querySelector('[role=menu]')!;
+      expect(menu.querySelector('a')?.getAttribute('href')).toBe(node.url);
+      expect([...menu.querySelectorAll('[data-research-frame-action]')].map(e=>e.getAttribute('data-research-frame-action'))).toEqual(['rename','remove']);
+      expect(menu.querySelector('a')?.textContent).toBe('浏览器打开');
+      await act(async()=>menu.querySelector('[data-research-link-refresh]')?.dispatchEvent(new mounted.window.MouseEvent('click',{bubbles:true})));
+      await mounted.settle();expect(mounted.authorize).toHaveBeenCalledTimes(2);
+    }finally{await mounted.cleanup()}
+  });
+
   it.each(['cancel', 'submit'])('keeps generated-web editing visible and preserves the original %s action', async action => {
     const node = { id: 'editable-web', kind: 'generated-container', messageId: 'editable-web', title: '网页概览', excerpt: '已有摘要', x: 350, y: 220, width: 656, height: 456, generationStatus: 'completed', refreshMinutes: 0, containerPrompt: '原始需求', containerSpec: { version: 1, type: 'web', title: '网页概览', url: 'https://example.com/source' } }
     const submit = vi.fn(), mounted = await mount(node, { props: { onSubmitContainer: submit } })
-    const click = async (selector: string) => { await act(async () => mounted.host.querySelector(selector)?.dispatchEvent(new mounted.window.MouseEvent('click', { bubbles: true }))) }
+    const click = async (selector: string) => { await act(async () => mounted.window.document.querySelector(selector)?.dispatchEvent(new mounted.window.MouseEvent('click', { bubbles: true }))) }
     try {
-      expect(mounted.authorize).not.toHaveBeenCalled()
+      expect(mounted.authorize).toHaveBeenCalledTimes(1)
       await click('[data-research-container-more]'); await click('[data-research-container-edit]'); await mounted.settle()
-      expect(mounted.host.querySelector('dialog')?.open).toBe(true)
+      expect(mounted.host.querySelector('[data-research-original-reader]')?.getAttribute('hidden')).toBeNull()
       const prompt = mounted.host.querySelector('[data-research-container-prompt]') as any
       expect(prompt.value).toBe('原始需求'); expect(prompt.closest('[hidden]')).toBeNull()
       const frame = mounted.host.querySelector('[data-research-web-frame]')
@@ -212,7 +227,7 @@ describe('Figma file entries and complete readers', () => {
     const node = { id: 'scheduled-web', kind: 'generated-container', messageId: 'scheduled-web', title: '自动刷新网页', excerpt: '已有摘要', x: 350, y: 220, width: 656, height: 456, generationStatus: 'completed', refreshMinutes: 1, lastSuccessfulAt: Date.now() - 120000, containerPrompt: '原始需求', containerSpec: { version: 1, type: 'web', title: '自动刷新网页', url: 'https://example.com/source' } }
     const submit = vi.fn(), mounted = await mount(node, { props: { onSubmitContainer: submit } })
     try {
-      expect(mounted.authorize).not.toHaveBeenCalled(); expect(submit).toHaveBeenCalledExactlyOnceWith(node, '原始需求')
+      expect(mounted.authorize).toHaveBeenCalledTimes(1); expect(submit).toHaveBeenCalledExactlyOnceWith(node, '原始需求')
       await mounted.toggle(); await mounted.settle(); await mounted.toggle(); await mounted.settle()
       await mounted.update({ ...node, lastSuccessfulAt: node.lastSuccessfulAt + 1 })
       expect(submit).toHaveBeenCalledTimes(2)
@@ -227,7 +242,7 @@ describe('Figma file entries and complete readers', () => {
       const notice = mounted.host.querySelector('.rScV5Q_containerNotice')!
       expect(notice.textContent).toBe(state.expected)
       expect(mounted.host.querySelector('[data-research-file-entry]')?.textContent).toContain(state.expected)
-      expect(mounted.authorize).not.toHaveBeenCalled()
+      expect(mounted.authorize).toHaveBeenCalledTimes(1)
     } finally { await mounted.cleanup() }
   })
 
