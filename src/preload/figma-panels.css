@@ -371,3 +371,6 @@ body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag
 .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] { min-width:28px; }
 .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] .t8lSSG_tabClose { visibility:visible; pointer-events:auto; }
 .t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"] { order:-1; position:relative; left:auto; flex:0 0 46px; }
+
+/* Panel entries are portaled outside the header DOM but overlap its native drag region. */
+body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region:no-drag; }
