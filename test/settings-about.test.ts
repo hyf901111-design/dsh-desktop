@@ -177,9 +177,9 @@ describe('EWork Odyssey About settings', () => {
     const zh = aboutModule.buildSherlockAboutInfo('9.8.7', 'zh')
     const en = aboutModule.buildSherlockAboutInfo('9.8.7', 'en')
 
-    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.9.5', date: '2026-09-09' })
-    expect(en.releaseNotes[0]?.version).toBe('0.9.5')
-    expect(zh.releaseNotes[0]?.items.some((item) => item.includes('模式'))).toBe(true)
+    expect(zh.releaseNotes[0]).toMatchObject({ version: '0.9.6', date: '2026-09-14' })
+    expect(en.releaseNotes[0]?.version).toBe('0.9.6')
+    expect(zh.releaseNotes[0]?.items.some((item) => item.includes('研究'))).toBe(true)
     expect(zh.releaseNotes.find((note) => note.version === '0.8.4')).toMatchObject({ version: '0.8.4', date: '2026-09-06' })
     expect(en.releaseNotes.find((note) => note.version === '0.8.4')?.items).toHaveLength(3)
     expect(zh.releaseNotes.find((note) => note.version === '0.8.3')).toMatchObject({ version: '0.8.3', date: '2026-09-06' })
