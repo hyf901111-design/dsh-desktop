@@ -1,0 +1,708 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-01",
+  "branch": "codex/integration/20260914-01",
+  "baseMainCommit": "bcb9ad26f0303b105392ed7336e7a46bef8a6850",
+  "expectedMainCommit": "bcb9ad26f0303b105392ed7336e7a46bef8a6850",
+  "createdAt": "2026-09-14T05:33:26.837Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "已验收研究工作台与客户端交互优化",
+        "branch": "codex/feat/composer-menu-fixes-20260913",
+        "baseCommit": "bcb9ad26f0303b105392ed7336e7a46bef8a6850",
+        "tipCommit": "3adb22527a53859766708ee4a92d7848d3db0b2e",
+        "commits": [
+          {
+            "commit": "b541cbffb495ad2011b83abe33bdfb2989abd242",
+            "parents": [
+              "7d43344b19e851e3ebdcdbe0facd4e10f75f95ff"
+            ],
+            "subject": "修复模型菜单与输入框交互并统一看板空状态"
+          },
+          {
+            "commit": "ef0e0c8735c78d9eb6df1b4b2c9f046cd26a17f3",
+            "parents": [
+              "b541cbffb495ad2011b83abe33bdfb2989abd242"
+            ],
+            "subject": "修复空看板文件报错并稳定页签与侧栏布局"
+          },
+          {
+            "commit": "741dbff4d47e22afeaa26fb810f9188a8cb29b87",
+            "parents": [
+              "ef0e0c8735c78d9eb6df1b4b2c9f046cd26a17f3"
+            ],
+            "subject": "发送首条消息后隐藏输入框上方项目选择行"
+          },
+          {
+            "commit": "7e0ba0656d7c28d7e44ed7d18be61153b4c69f31",
+            "parents": [
+              "741dbff4d47e22afeaa26fb810f9188a8cb29b87"
+            ],
+            "subject": "修复对话服务热重载导致研究画板与输入框消失"
+          },
+          {
+            "commit": "b1fe075422a3be865f718915e1af2eded4a4ec2a",
+            "parents": [
+              "7e0ba0656d7c28d7e44ed7d18be61153b4c69f31"
+            ],
+            "subject": "修复组件生成过程展开测试的依赖加载"
+          },
+          {
+            "commit": "21560b424066429da9e0e4ce683b94c8a09ebf03",
+            "parents": [
+              "b1fe075422a3be865f718915e1af2eded4a4ec2a"
+            ],
+            "subject": "修复工作台组件扩展重叠并保持可视范围"
+          },
+          {
+            "commit": "2d79d700e2d9fabf4cd5b79c42f8cfa3e5bfb6a4",
+            "parents": [
+              "21560b424066429da9e0e4ce683b94c8a09ebf03"
+            ],
+            "subject": "修复生成组件强调按钮在深色主题下文字不可见"
+          },
+          {
+            "commit": "6c9a8721437a763b7a3515b57b2bcf501dcb7552",
+            "parents": [
+              "2d79d700e2d9fabf4cd5b79c42f8cfa3e5bfb6a4"
+            ],
+            "subject": "修复派生组件生成后覆盖来源组件"
+          },
+          {
+            "commit": "e6513f6d5841d72cf99368aa05f1a4046c946e64",
+            "parents": [
+              "6c9a8721437a763b7a3515b57b2bcf501dcb7552"
+            ],
+            "subject": "调整看板区标题和创建图标并隐藏右侧输入框统计"
+          },
+          {
+            "commit": "522237090c626be4b58b12a51bb96745ff712587",
+            "parents": [
+              "e6513f6d5841d72cf99368aa05f1a4046c946e64"
+            ],
+            "subject": "居中显示主对话输入框底部统计信息"
+          },
+          {
+            "commit": "0d78795e5ffa0a839938e8d09877d5269858e373",
+            "parents": [
+              "522237090c626be4b58b12a51bb96745ff712587"
+            ],
+            "subject": "调整回到最新按钮为居中圆形下箭头并同步设计稿"
+          },
+          {
+            "commit": "1cf6df2c691bdd98f0a0ea4cab97c74c068e2dfb",
+            "parents": [
+              "0d78795e5ffa0a839938e8d09877d5269858e373"
+            ],
+            "subject": "修复回到最新区域遮挡正文并仅为按钮添加半透明模糊"
+          },
+          {
+            "commit": "674708efec27b6712576b793d86c27fcfb3c37df",
+            "parents": [
+              "1cf6df2c691bdd98f0a0ea4cab97c74c068e2dfb"
+            ],
+            "subject": "优化四角悬停缩放手柄并修复组件说明气泡层级"
+          },
+          {
+            "commit": "ddfa8408c8a72b5a5d6eedb0b00095273841685a",
+            "parents": [
+              "674708efec27b6712576b793d86c27fcfb3c37df"
+            ],
+            "subject": "修复窄侧栏用量面板和说明气泡的裁切与层级"
+          },
+          {
+            "commit": "3c86731d59b44198d7c4c161dd15c0c3635f954b",
+            "parents": [
+              "ddfa8408c8a72b5a5d6eedb0b00095273841685a"
+            ],
+            "subject": "去除说明气泡的默认白色描边"
+          },
+          {
+            "commit": "bb6dede4b4f3389710e31b59386502357733b6e1",
+            "parents": [
+              "3c86731d59b44198d7c4c161dd15c0c3635f954b"
+            ],
+            "subject": "完善看板独立目录选择并保持关联项目后的看板入口"
+          },
+          {
+            "commit": "c0290594b5cce5ccb8831f2818670c3480178f61",
+            "parents": [
+              "bb6dede4b4f3389710e31b59386502357733b6e1"
+            ],
+            "subject": "修复组件取数提前结束并禁止以搜索摘要代替面板"
+          },
+          {
+            "commit": "35b0f5e08d6e907d35bc2c171223a09a50341353",
+            "parents": [
+              "c0290594b5cce5ccb8831f2818670c3480178f61"
+            ],
+            "subject": "修复看板组件完整展示、网页内交互及菜单和缩放边界"
+          },
+          {
+            "commit": "53c2462aaf4155911919e80ec2435de142669860",
+            "parents": [
+              "35b0f5e08d6e907d35bc2c171223a09a50341353"
+            ],
+            "subject": "取消思维导图菜单的默认勾选"
+          },
+          {
+            "commit": "104faaa728fceb06c25c0490d402ea5a6df4815b",
+            "parents": [
+              "53c2462aaf4155911919e80ec2435de142669860"
+            ],
+            "subject": "统一新会话三个页签的默认标题"
+          },
+          {
+            "commit": "5ab1c550a7f513251d4f2bb30f845bd4a205e257",
+            "parents": [
+              "104faaa728fceb06c25c0490d402ea5a6df4815b"
+            ],
+            "subject": "统一组件菜单尺寸并避免跟随画布缩放"
+          },
+          {
+            "commit": "0bac2b44db689dc4c6fa8da7d995c211515577ec",
+            "parents": [
+              "5ab1c550a7f513251d4f2bb30f845bd4a205e257"
+            ],
+            "subject": "支持双击顶栏修改会话标题并同步侧栏"
+          },
+          {
+            "commit": "cd55e508586433da8e95c342a26f187a6abf81ca",
+            "parents": [
+              "0bac2b44db689dc4c6fa8da7d995c211515577ec"
+            ],
+            "subject": "收起空闲子代理按钮的加载图标占位"
+          },
+          {
+            "commit": "a256a53ee66661284da02b7048103db15323813d",
+            "parents": [
+              "cd55e508586433da8e95c342a26f187a6abf81ca"
+            ],
+            "subject": "移除组件底部信息栏并将来源移入更多菜单"
+          },
+          {
+            "commit": "0c2d6205643ae07d72ef83154047d6644ef9d7e2",
+            "parents": [
+              "a256a53ee66661284da02b7048103db15323813d"
+            ],
+            "subject": "支持链接组件自动补全网站协议"
+          },
+          {
+            "commit": "84111aa566785d61c2b7e3ef203bee993850dac9",
+            "parents": [
+              "0c2d6205643ae07d72ef83154047d6644ef9d7e2"
+            ],
+            "subject": "将运行中子代理状态改为彩色旋转加载环"
+          },
+          {
+            "commit": "660e9d516ee2e43f83afd3b7d418aeac00999f93",
+            "parents": [
+              "84111aa566785d61c2b7e3ef203bee993850dac9"
+            ],
+            "subject": "收紧生成中组件的默认尺寸并保留手动大小"
+          },
+          {
+            "commit": "6d4b0fa32c18174fcec195656216955139b64081",
+            "parents": [
+              "660e9d516ee2e43f83afd3b7d418aeac00999f93"
+            ],
+            "subject": "优化容器创建与生成过程布局并保持展开尺寸"
+          },
+          {
+            "commit": "f672f758cdddf8ace9aeea17123f74e76f93f3ce",
+            "parents": [
+              "6d4b0fa32c18174fcec195656216955139b64081"
+            ],
+            "subject": "修复研究模式对话页签丢失并保持常驻"
+          },
+          {
+            "commit": "ab98aa4b08ea763e66775b0fd1bd5952f3e7818d",
+            "parents": [
+              "f672f758cdddf8ace9aeea17123f74e76f93f3ce"
+            ],
+            "subject": "统一组件标题与内容底色并优化菜单选择和悬停交互"
+          },
+          {
+            "commit": "844734ea82f8f9ccafdc6d771501a1fb8e8719b4",
+            "parents": [
+              "ab98aa4b08ea763e66775b0fd1bd5952f3e7818d"
+            ],
+            "subject": "统一生成内容和智能容器表单的四周内边距"
+          },
+          {
+            "commit": "62586d63d25a2f330dc7938cec9d16db3257d505",
+            "parents": [
+              "844734ea82f8f9ccafdc6d771501a1fb8e8719b4"
+            ],
+            "subject": "将子代理运行指示改为单色旋转环"
+          },
+          {
+            "commit": "7201c69295fc0d8e3f07b68fa02ccbd72ed3b13f",
+            "parents": [
+              "62586d63d25a2f330dc7938cec9d16db3257d505"
+            ],
+            "subject": "按活跃研究状态恢复常驻对话并保护子代理打开路径"
+          },
+          {
+            "commit": "a8ee95f49cfa3002d89cba387040e50c82939fd8",
+            "parents": [
+              "7201c69295fc0d8e3f07b68fa02ccbd72ed3b13f"
+            ],
+            "subject": "隐藏生成组件滚动条并保留链接网页的原有滚动条"
+          },
+          {
+            "commit": "9237b5adb8aeee2251a73bf83ff68aabd19a8f4e",
+            "parents": [
+              "a8ee95f49cfa3002d89cba387040e50c82939fd8"
+            ],
+            "subject": "统一移除组件外框的常态描边"
+          },
+          {
+            "commit": "e529e6b3962d2c2f298c76921635f297d77c4c5c",
+            "parents": [
+              "9237b5adb8aeee2251a73bf83ff68aabd19a8f4e"
+            ],
+            "subject": "同步顶栏会话改名与看板区名称"
+          },
+          {
+            "commit": "d8d3162bcb6926986816ef4d7a64cee6ca3b8d89",
+            "parents": [
+              "e529e6b3962d2c2f298c76921635f297d77c4c5c"
+            ],
+            "subject": "修复研究组件资料生成恢复并统一工作台矩阵布局和内边距"
+          },
+          {
+            "commit": "b0c1a98158151863644273a8da89374db3f4cf19",
+            "parents": [
+              "d8d3162bcb6926986816ef4d7a64cee6ca3b8d89"
+            ],
+            "subject": "避免搜索验证弹窗并修复顶栏拖动与对话页签固定样式"
+          },
+          {
+            "commit": "cecc556337ec0929aae137defeb1b84b4acab910",
+            "parents": [
+              "b0c1a98158151863644273a8da89374db3f4cf19"
+            ],
+            "subject": "改为压缩展示全部侧栏页签并仅显示选中页签关闭按钮"
+          },
+          {
+            "commit": "6fa936a1a444e7f54be82213411463de41effde8",
+            "parents": [
+              "cecc556337ec0929aae137defeb1b84b4acab910"
+            ],
+            "subject": "增加侧栏页签左右留白并随页签数量自适应压缩"
+          },
+          {
+            "commit": "9ddaa7c7719e83b9f09bc31e38df5b45f52082bc",
+            "parents": [
+              "6fa936a1a444e7f54be82213411463de41effde8"
+            ],
+            "subject": "按内容宽度排列侧栏页签并去除多余填充空白"
+          },
+          {
+            "commit": "ef58fb6be33756a14a9934965a933694fc861e66",
+            "parents": [
+              "9ddaa7c7719e83b9f09bc31e38df5b45f52082bc"
+            ],
+            "subject": "准备0.9.6本地测试版并更新中英文日志"
+          },
+          {
+            "commit": "3adb22527a53859766708ee4a92d7848d3db0b2e",
+            "parents": [
+              "ef58fb6be33756a14a9934965a933694fc861e66",
+              "bcb9ad26f0303b105392ed7336e7a46bef8a6850"
+            ],
+            "subject": "集成主线启动品牌和通知修复到0.9.6验收分支"
+          }
+        ],
+        "boundaryParents": [
+          "7d43344b19e851e3ebdcdbe0facd4e10f75f95ff"
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/releases/ework-odyssey-0.9.6.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/research-inline-content-verification-20260914.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-09-14-board-directory.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-directories.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/board-directory-picker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-context-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-derived-menu-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-file-preview-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-model-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-reading-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-refinements-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-session-title.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-settings-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/model-select-restored.txt"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-resident-conversation.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-workbench-growth.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/browser-search-controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/security.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-boards-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-link-frame.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-canvas-gestures.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-file-panel.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/floating-surfaces.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/research-boards.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-search-controller.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-canvas-context-menu.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-canvas-gestures-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-command-menu-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-file-preview.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-final-shell-patch.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-model-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-panel-tab-overflow.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-reading-layout.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-session-title.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-theme-cards.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/floating-surfaces.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-directories.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-project-selection.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-component-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-derived-menu-final.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-derived-placement.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-drop.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-expand-final.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-link-frame.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-loading-size.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-resident-conversation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/security.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/virtual-board-file-list.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/settings-about.test.ts",
+              "test/figma-panel-tab-overflow.test.ts",
+              "test/research-component-chrome.test.ts",
+              "test/research-workbench.test.js",
+              "test/boot-branding.test.js",
+              "test/sidebar-notice-position.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "42项关于页、页签、组件、布局、品牌与通知聚焦检查通过",
+            "verifiedCommit": "3adb22527a53859766708ee4a92d7848d3db0b2e",
+            "completedAt": "2026-09-14T05:33:13.473057+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "用户已明确验收当前开发客户端内容并要求打包0.9.6本地测试"
+        },
+        "acceptanceCriteria": [
+          "保留已验收的研究组件、侧栏与菜单交互",
+          "本地0.9.6测试，不上传发布"
+        ],
+        "risks": [
+          "联网组件仍依赖数据源可用性"
+        ],
+        "generatedAt": "2026-09-14T05:33:13.473057+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/ensure-local-dependencies.mjs"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/settings-about.test.ts",
+        "test/figma-panel-tab-overflow.test.ts",
+        "test/research-component-chrome.test.ts",
+        "test/research-workbench.test.js",
+        "test/boot-branding.test.js",
+        "test/sidebar-notice-position.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
