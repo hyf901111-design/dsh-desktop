@@ -452,6 +452,9 @@ body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow
   background:var(--odyssey-menu-row); color:var(--odyssey-text); box-shadow:none; transform:none;
 }
 
+body .odyssey-session-title-edit{display:inline-flex;position:relative;max-width:200px;min-width:80px;-webkit-app-region:no-drag}
+body .odyssey-session-title-edit input{box-sizing:border-box;width:100%;height:28px;min-width:0;padding:3px 6px;border:1px solid #3487ed;border-radius:5px;background:var(--odyssey-menu);color:var(--odyssey-text);font:500 14px/20px var(--odyssey-font-ui);outline:none}
+body .odyssey-session-title-edit [role=alert]{position:absolute;top:32px;left:0;z-index:3000;padding:6px 8px;border-radius:6px;background:var(--odyssey-menu);color:#d95353;font:12px/18px var(--odyssey-font-ui);width:200px}
 body [data-odyssey-container-menu]{box-sizing:border-box;font:400 13px/20px var(--odyssey-font-ui)}
 body [data-odyssey-container-menu][aria-hidden=true]{opacity:0;transform:translateY(-4px);pointer-events:none}
 body [data-odyssey-container-menu] [role=menuitem]:focus-visible{outline:none;background:var(--odyssey-menu-row)}

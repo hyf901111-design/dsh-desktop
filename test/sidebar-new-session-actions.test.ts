@@ -387,7 +387,7 @@ describe('Sherlock sidebar new-session actions', () => {
         render()
       })
       expect(actions.setView).toHaveBeenLastCalledWith('chat')
-      expect(host.querySelector('header')?.getAttribute('aria-hidden')).toBe('true')
+      expect(host.querySelector('header')?.getAttribute('aria-hidden')).toBeNull()
     } finally {
       await act(async () => { root.unmount() })
     }

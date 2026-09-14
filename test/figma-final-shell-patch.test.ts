@@ -53,6 +53,7 @@ describe('Figma shell patch installation', () => {
     const installed = patchFigmaFinalConversation(source)
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const ComposerSurface = runInNewContext(clientFunction(installed, 'ComposerSurface') + '\nComposerSurface', {
+      EditableSessionTitle: "button",
       react_jsx_runtime: { jsx: element, jsxs: element },
       clsx: (...names: unknown[]) => names.filter(Boolean).join(' '),
       ConversationRoot_module_css_default: {}, HeroGlow: 'glow', HeroShell: 'headline'
@@ -158,6 +159,7 @@ describe('Figma shell patch installation', () => {
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const header = runInNewContext(`${extract('deriveAncestry')}\n${extract('equalBreadcrumbs')}\n${extract('conversationViewTabProps')}\n${extract('ConversationSessionHeader')}\nConversationSessionHeader`, {
       react: { useSyncExternalStore() {}, useCallback: (fn: unknown) => fn, useRef: () => ({ current: 'current' }), Fragment: 'fragment' },
+      EditableSessionTitle: "button",
       react_jsx_runtime: { jsx: element, jsxs: element },
       ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => key }),
       clsx: (...values: unknown[]) => values.filter(Boolean).join(' '),
@@ -227,6 +229,7 @@ describe('Figma shell patch installation', () => {
       contentParts: () => ({ text: 'opaque research prompt', images: [], rest: [] }),
       parseResearchPrompt: () => research,
       projectResearchUserText: (value: typeof research) => { projected.push(value); return value.text },
+      EditableSessionTitle: "button",
       react_jsx_runtime: { jsx: element, jsxs: element },
       MessageItem_module_css_default: { userRow: 'userRow', userStack: 'userStack', bubble: 'bubble' },
       _deepseek_ai_dsh_client_ui_attachment: { ImageGallery: 'images' },

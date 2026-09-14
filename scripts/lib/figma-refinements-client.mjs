@@ -15,6 +15,10 @@ export function patchFigmaRefinementPreset(source) {
   return source.slice(0,start)+seat+source.slice(end)
 }
 export function patchFigmaNavigationTitles(source) {
+  source = exact(source, 'if (session.title && researchSessionEngaged(session.id)) return session.title;', 'if (session.title?.trim()) return session.title;')
+  source = exact(source, 'title: sessionTitle(s),', 'title: sessionTitle(s), explicitTitle: s.title?.trim(),')
+  source = exact(source, 'return node.research && node.title === "New Research"', 'if(node.explicitTitle)return node.explicitTitle; return node.research && node.title === "New Research"')
+
   return exact(source,
     'className: Rows_module_css_default.title,\n\t\t\t\t\t\t\tchildren: title',
     'className: Rows_module_css_default.title + " odyssey-nav-title",\n\t\t\t\t\t\t\tchildren: (0, react_jsx_runtime.jsx)("span", { className: "odyssey-nav-title-text", children: title })')
