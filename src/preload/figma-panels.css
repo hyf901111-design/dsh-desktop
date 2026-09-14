@@ -364,8 +364,8 @@ body .wSkVaW_header :is(button,input,select,textarea,a,[role=button],[role=tab],
 body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag; }
 
 /* Compress every tab in place; never slide tabs underneath the parent chat. */
-.t8lSSG_panel .t8lSSG_tabList { overflow:hidden; gap:2px; container-type:inline-size; }
-.t8lSSG_panel [data-odyssey-panel-tab] { flex:1 1 0; min-width:0; padding-inline:min(8px, calc(22cqw / var(--odyssey-tab-count, 4)))!important; gap:min(6px, calc(15cqw / var(--odyssey-tab-count, 4))); position:relative; }
+.t8lSSG_panel .t8lSSG_tabList { overflow:hidden; gap:2px; flex:0 1 auto; }
+.t8lSSG_panel [data-odyssey-panel-tab] { flex:0 1 auto; min-width:0; padding-inline:min(8px, calc(80px / var(--odyssey-tab-count, 4)))!important; gap:min(6px, calc(60px / var(--odyssey-tab-count, 4))); position:relative; }
 .t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 1 16px; min-width:0; }
 .t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose { display:none!important; }
 .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] { min-width:28px; }
