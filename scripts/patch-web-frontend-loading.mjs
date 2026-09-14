@@ -1,5 +1,6 @@
+import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
 import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
-import { patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
+import { patchInspectPortal, patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
 import { patchEmptyHeaderTitles, patchDesktopLocaleBridge, patchDesktopResearchDefaults } from './lib/desktop-locale-bridge.mjs'
 import { patchResearchResidentConversation } from './lib/research-resident-conversation.mjs'
 import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from './lib/figma-subagent-panel.mjs'
@@ -169,3 +170,8 @@ writeFileSync(deliverablesPath, patchGeneratedFileMentions(readFileSync(delivera
 writeFileSync(conversationPath, patchRestoredFileMentions(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchEmptyHeaderTitles(readFileSync(conversationPath, 'utf8')))
+
+writeFileSync(primitivesPath, patchMarkdownFileLinks(readFileSync(primitivesPath, 'utf8')))
+writeFileSync(asset('.js'), patchMarkdownFileLinks(readFileSync(asset('.js'), 'utf8'), true))
+
+writeFileSync(conversationPath, patchInspectPortal(readFileSync(conversationPath, 'utf8')))

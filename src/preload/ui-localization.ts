@@ -31,7 +31,7 @@ export function translateUiCopy(value: string): string {
   [/^Use current canvas · (\d+) components$/,(_m,n)=>`Use current canvas · ${n} ${n==='1'?'component':'components'}`],
   [/^(?:参考当前画板资料|参考当前画板|使用当前画板)\s*·\s*(\d+)\s*个?\s*组件$/,(_m,n)=>`Use current canvas · ${n} ${n==='1'?'component':'components'}`],
   [/^(\d+)分钟$/,(_m,n)=>`${n}m`],[/^(\d+)小时$/,(_m,n)=>`${n}h`],[/^(\d+)天$/,(_m,n)=>`${n}d`],
-  [/^(.+)，更多$/,(_m,name)=>`${name}, more`],[/^(.+)，打开账户菜单$/,(_m,name)=>`${name}, open account menu`],
+  [/^(.+)，更多$/,(_m,name)=>`${name}, more`],[/^(.+)，打开账户菜单$/,(_m,name)=>`${englishUiCopy[name]??name}, open account menu`],
   [/^(.+)，查看账户信息$/,(_m,name)=>`${name}, view account`]
  ]
  for(const [pattern,render] of patterns)if(pattern.test(key))return value.replace(key,key.replace(pattern,render))
@@ -59,7 +59,7 @@ export function mountUiLocalization(doc:Document=document):()=>void {
    if(source!==rendered||previous)textState.set(text,{source,rendered})
   }
   for(const el of [root,...root.querySelectorAll('[placeholder],[aria-label],[title]')]){
-   if(el.closest('[data-ui-preserve],iframe,[contenteditable],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText'))continue
+   if(el.closest('[data-ui-preserve],iframe,[contenteditable],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText') && el.getAttribute('title')!=='双击修改会话标题')continue
    let saved=attrState.get(el);if(!saved){saved=new Map();attrState.set(el,saved)}
    for(const name of ['placeholder','aria-label','title']){
     const current=el.getAttribute(name);if(current===null)continue

@@ -28,3 +28,22 @@ it('removes the legacy details mount and its reserved column even for persisted 
  expect(out).toContain('sidebarWidth, 0);')
  new Function(out)
 })
+
+it('renders detail portals in the declaring conversation scope and keeps the current view',async()=>{
+ const {patchInspectPortal}=await import('../scripts/lib/inspect-sidebar.mjs')
+ const {patchGeneratedFilePreview}=await import('../scripts/lib/generated-file-preview.mjs')
+ const out=patchInspectPortal(patchGeneratedFilePreview(patchInspectConversation(conversation)))
+ expect(out).toContain("'conversation.inspect.details':{kind:'single',scope:'session'}")
+ expect(out).toContain("name:'conversation.inspect.details'},DetailsPanel)")
+ const a=out.indexOf('function OdysseyInspectPortals('),b=out.indexOf('\n/* sherlock:generated-file-preview',a)
+ const events=[]
+ const Portals=runInNewContext(out.slice(a,b)+';OdysseyInspectPortals',{react_dom:{createPortal:(content,host,key)=>({content,host,key})}})
+ const host={},target={callId:'call-1'}
+ const result=Portals({snapshot:{inspectHosts:new Map([['tab-1',{target,host}]])},sessionId:'session-1',renderSlot:(name,props,scope)=>{events.push({name,props,scope});return 'details'}})
+ expect(events).toEqual([{name:'conversation.inspect.details',props:{inspectTarget:target,globalSidebar:true},scope:{sessionId:'session-1'}}])
+ expect(result[0]).toEqual({content:'details',host,key:'tab-1'})
+ const action=out.slice(out.indexOf('inspectCall: (callId) => {'),out.indexOf('chatScroll: {',out.indexOf('inspectCall: (callId) => {')))
+ expect(action).not.toContain('setView')
+ expect(action).not.toContain('setInspect')
+ new Function(out)
+})
