@@ -135,6 +135,46 @@
           "此前未保存授权的旧附件需重新拖入一次"
         ],
         "generatedAt": "2026-09-14T08:59:28.845394+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7e27e0c3c36d03768039c6d4528511028a0e4c3a",
+        "verificationCommit": "7e27e0c3c36d03768039c6d4528511028a0e4c3a",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-file-preview.test.ts",
+              "test/figma-file-preview.test.ts",
+              "test/research-frame-menu-mount.test.js",
+              "test/research-new-node-stacking.test.ts",
+              "test/research-expanded-edit.test.js",
+              "test/figma-auth-layout.test.ts",
+              "test/figma-auth-errors.test.js",
+              "test/home-flow.test.ts",
+              "test/panel-toggle-drag-region.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-file-preview.test.ts test/figma-file-preview.test.ts test/research-frame-menu-mount.test.js test/research-new-node-stacking.test.ts test/research-expanded-edit.test.js test/figma-auth-layout.test.ts test/figma-auth-errors.test.js test/home-flow.test.ts test/panel-toggle-drag-region.test.js",
+            "verifiedCommit": "7e27e0c3c36d03768039c6d4528511028a0e4c3a",
+            "completedAt": "2026-09-14T09:04:07.000Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7e27e0c3c36d03768039c6d4528511028a0e4c3a",
+            "completedAt": "2026-09-14T09:04:07.000Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-14T09:04:07.000Z"
       }
     }
   ],
