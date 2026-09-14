@@ -148,7 +148,7 @@ describe('Figma shell patch installation', () => {
     expect(() => patchFigmaFinalConversation(installed + '\n/* ODYSSEY_FIGMA_FINAL_SHELL_START */')).toThrow('marker')
   })
 
-  it('uses the Figma empty Research title without replacing explicit titles or chat titles', async () => {
+  it('uses view-specific empty titles while preserving existing session titles', async () => {
     const installed = patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
     const extract = (name: string) => {
       const start = installed.indexOf(`\t\tfunction ${name}(`)
@@ -173,8 +173,8 @@ describe('Figma shell patch installation', () => {
       ['research', false, 'active', undefined, '已有研究', '已有研究'],
       ['research', true, 'sending', undefined, '正在研究', '正在研究'],
       ['chat', false, 'active', undefined, '原对话标题', '原对话标题'],
-      ['chat', true, 'blank', undefined, '测试集', '测试集'],
-      ['trajectory', true, 'blank', undefined, '测试集', '测试集']
+      ['chat', true, 'blank', undefined, '测试集', '新会话'],
+      ['trajectory', true, 'blank', undefined, '测试集', '新轨迹']
     ] as const) {
       const tree = header({
         sessionId: 'current',

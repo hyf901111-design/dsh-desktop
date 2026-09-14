@@ -53,7 +53,9 @@ export function patchFigmaFinalConversation(source) {
     source = exact(source, finalHideChrome, residentHeader)
   }
   source = exact(source, '"data-srb-session-header":"",', '"data-srb-session-header":"", "data-odyssey-home-header":homeHeader,')
-  source = exact(source, 'children: summary.displayTitle', 'children: last && blankResearchTitle ? "新研究" : summary.displayTitle')
+  if (!source.includes('chat: "新会话", research: "新研究", trajectory: "新轨迹"')) source = exact(source, 'children: summary.displayTitle', 'children: last && blankResearchTitle ? "新研究" : summary.displayTitle')
+  source = exact(source, 'const blankResearchTitle = active?.id === "research" && blank === true && composerPhase === "blank" && !explicitSessionTitle?.trim();', 'const blankResearchTitle = blank === true && composerPhase === "blank" && !explicitSessionTitle?.trim();')
+  source = exact(source, 'children: last && blankResearchTitle ? "新研究" : summary.displayTitle', 'children: last && blankResearchTitle ? ({ chat: "新会话", research: "新研究", trajectory: "新轨迹" }[active?.id] ?? summary.displayTitle) : summary.displayTitle')
   // Keep workspace and permission-block placeholders ahead of the empty Research hint.
   source = exact(source, '} : hero ? { placeholder: t("placeholder.hero") } : {},', '} : hero ? { placeholder: t("placeholder.hero") } : researchEmpty ? { placeholder: "描述你想研究的问题…" } : {},')
   // User correction / 164:805,940: retain the live canvas scope control in
