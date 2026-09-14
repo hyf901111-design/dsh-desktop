@@ -268,6 +268,7 @@ function patchTabOverflowMeasurement(source) {
 
 function patchTabClippedControls(source) {
   source = source.replace("setHasOverflow(tabsWidth + Math.max(0, tabs.length - 1) * gap > el.clientWidth + reserved + 1);", "setHasOverflow(tabs.length > 1);");
+  if (!source.includes('el.style.setProperty("--odyssey-tab-count"')) source = source.replace("setHasOverflow(tabs.length > 1);", "el.style.setProperty(\"--odyssey-tab-count\", String(tabs.length)); setHasOverflow(tabs.length > 1);");
   const marker = '/* sherlock:figma-tab-clipped-controls:v1 */'
   if (source.includes(marker)) return source
   return replaceExact(source, `    const reveal = () => {
