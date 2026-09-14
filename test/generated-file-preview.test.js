@@ -35,3 +35,14 @@ it('keeps filenames clickable when restored history has no deliverables projecti
  expect(resolver.resolve('function()')).toBeUndefined()
  new Function(out)
 })
+
+it('resolves relative message links to the absolute path required by the media route',()=>{
+ const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const out=patchGeneratedFilePreview(source)
+ const start=out.indexOf('const fileCwd='),end=out.indexOf('researchSidebar.service.setPanelState',start)
+ const runtime=readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
+ const resolver=runtime.slice(runtime.indexOf('function resolveWorkspacePath('),runtime.indexOf('\n\t\t//#endregion',runtime.indexOf('function resolveWorkspacePath(')))
+ const calls=[]
+ runInNewContext(resolver+'\n'+out.slice(start,end),{sessions:{list:{getSnapshot:()=>({byId:{test:{cwd:'/workspace'}}})}},sessionId:'test',path:'outputs/介绍.pptx',researchSidebar:{service:{openFile:(scope,path)=>calls.push({scope,path})}},_deepseek_ai_dsh_client_runtime_client:{resolveWorkspacePath:runInNewContext(resolver+';resolveWorkspacePath')}})
+ expect(calls[0]).toEqual({scope:{sessionId:'test',cwd:'/workspace'},path:'/workspace/outputs/介绍.pptx'})
+})
