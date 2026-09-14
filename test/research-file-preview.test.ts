@@ -1694,3 +1694,21 @@ describe('Research preview privileged IPC registration', () => {
     })).toBeNull()
   })
 })
+
+it('retains an export-only grant for a dropped unsupported file without enabling preview access', async () => {
+  const { registry, workspace, userData } = await fixture()
+  const file = path.join(workspace, 'clip.mp4')
+  await writeFile(file, Buffer.from('unsupported-video-bytes'))
+  const identity = { path:file, sessionId:'session-1', nodeId:'video-node' }
+  expect(await registry.admitFinder(identity)).toBeNull()
+  const grant = await registry.admitFinder(identity, true)
+  expect(grant).toMatchObject({ name:'clip.mp4', contentType:'application/octet-stream', url:'' })
+  const request = { sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:grant!.authorizationId }
+  expect(await registry.resolveExportSource(request)).toMatchObject({path:await realpath(file),name:'clip.mp4'})
+  expect(await registry.resolveExportSource({...request,sessionId:'other-session'})).toBeNull()
+  expect((await registry.handle(new Request(`sherlock-preview://${grant!.capabilityToken}/`))).status).toBe(403)
+  const restored = new ResearchFilePreviewRegistry({storage:new FileResearchPreviewAuthorizationStorage(userData)})
+  expect(await restored.resolveExportSource(request)).toMatchObject({path:await realpath(file)})
+  restored.revokeAuthorization(grant!.authorizationId)
+  expect(await restored.resolveExportSource(request)).toBeNull()
+})

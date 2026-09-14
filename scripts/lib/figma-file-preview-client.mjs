@@ -10,6 +10,12 @@ function replaceOnce(source, anchor, replacement) {
 }
 
 export function patchFigmaFilePreview(source) {
+  source=source.replaceAll('authorizationId: descriptor.authorizationId, contentType: descriptor.contentType }', 'authorizationId: descriptor.authorizationId, contentType: descriptor.contentType, ...(descriptor.previewEligible === false ? {previewEligible:false} : {}) }');
+  source=source.replace("if(kind!=='image'&&kind!=='assistant')return", "if(kind!=='generic'&&kind!=='image'&&kind!=='assistant')return");
+  {
+    const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);
+    if(start>=0&&end>start)source=source.slice(0,start)+source.slice(start,end).replace('}),document.body) : null]', "}),rootRef.current?.closest('dialog[open]') || document.fullscreenElement || document.body) : null]")+source.slice(end);
+  }
   source=source.replace('"data-research-link-input": "",\n\t\t\t\t\t\t\t\t\ttype: "url",', '"data-research-link-input": "",\n\t\t\t\t\t\t\t\t\ttype: "text", inputMode: "url",');
   source=source.replace('placeholder: "https://example.com",','placeholder: "example.com 或完整网址",');
   if(!source.includes('/* ODYSSEY_WEB_ADDRESS_COMPLETION */')) {
@@ -61,7 +67,7 @@ export function patchFigmaFilePreview(source) {
     part=replaceOnce(part,'if (!rootRef.current?.contains(event.target)) close();','if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) close();');
     part=replaceOnce(part,'present ? (0, react_jsx_runtime.jsx)("div", {','present ? react_dom.createPortal((0, react_jsx_runtime.jsx)("div", {');
     part=replaceOnce(part,'id: menuId, role: "menu",','ref:menuRef,style:menuStyle,"data-odyssey-container-menu":"",id: menuId, role: "menu",');
-    part=replaceOnce(part,'}) : null]','}),document.body) : null]');
+    part=replaceOnce(part,'}) : null]',"}),rootRef.current?.closest('dialog[open]') || document.fullscreenElement || document.body) : null]");
     source=source.slice(0,start)+part+source.slice(end);
   }
 
@@ -142,7 +148,7 @@ export function patchFigmaFilePreview(source) {
   source = replaceOnce(source, 'children: [children, (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: "rScV5Q_previewShield",', 'children: [researchFigmaFilePreviewKind(node)&&node.kind!=="generated-container" ? (0,react_jsx_runtime.jsx)(ResearchFilePreviewPresentation,{node,expanded,children}) : children, (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: "rScV5Q_previewShield",')
   source = replaceOnce(source, '"data-research-compact-chrome": compact || void 0,', '"data-research-compact-chrome": compact || void 0, "data-research-file-presentation": researchFigmaFilePreviewKind(node) || void 0,')
   source = replaceOnce(source, 'const policy = RESEARCH_CANVAS_NODE_POLICIES[kind];\n\t\t\tif (!policy.resizable)', `const policy = RESEARCH_CANVAS_NODE_POLICIES[kind];
-            if(kind!=='image'&&kind!=='assistant')return {width:Number.isFinite(node?.width)&&node.width>0?Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.width):320,height:Number.isFinite(node?.height)&&node.height>0?Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.height):220,sizeMode:node?.sizeMode==='manual'?'manual':'auto',resizable:policy.resizable};
+            if(kind!=='generic'&&kind!=='image'&&kind!=='assistant')return {width:Number.isFinite(node?.width)&&node.width>0?Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.width):320,height:Number.isFinite(node?.height)&&node.height>0?Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.height):220,sizeMode:node?.sizeMode==='manual'?'manual':'auto',resizable:policy.resizable};
 \t\t\tif (!policy.resizable)`)
   source = replaceOnce(source, 'const policy = RESEARCH_CANVAS_NODE_POLICIES[researchCanvasNodeKind(node)];', `const originalPolicy = RESEARCH_CANVAS_NODE_POLICIES[researchCanvasNodeKind(node)];
             const policy = researchFigmaFilePreviewKind(node)&&researchCanvasNodeKind(node)!=='assistant'?{...originalPolicy,minWidth:160,minHeight:100}:originalPolicy;`)

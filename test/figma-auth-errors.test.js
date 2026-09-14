@@ -8,9 +8,9 @@ import { pathToFileURL } from 'node:url'
 let browser, page, script
 beforeAll(async () => {
   const result = await build({
-    stdin: { contents: `import { mountAccountUi } from './src/preload/account-ui';
+    stdin: { contents: `import { mountAccountUi } from './src/preload/account-ui'; import {mountHomeFlow} from './src/preload/home-flow';
       window.startAuth = (user = null) => {
-        window.accountCalls = [];
+        window.accountCalls = []; mountHomeFlow(document);
         return mountAccountUi(document, async (action, input) => {
           window.accountCalls.push({action, input});
           return action === 'me' ? {user} : action === 'usage' ? {usage:[]} : {error:{code:'INVALID_CREDENTIALS'}};
@@ -85,6 +85,7 @@ describe('auth field errors in the real form and browser layout', () => {
     expect(shell.sceneBottom).toBe(shell.footerTop)
     expect(shell.switchBottom).toBe(shell.cardBottom)
     if (process.env.AUTH_SCREENSHOTS) await page.screenshot({ path: `${process.env.AUTH_SCREENSHOTS}/${dark ? 'dark' : 'light'}-${register ? 'register' : 'login'}.png` })
+    expect(await page.locator('.sherlock-auth-scenery canvas[data-odyssey-home-flow]').count()).toBe(1)
     const before = await measurements()
     expect(before.cardHeight).toBe(normalHeight)
     expect(before.fields).toHaveLength(register ? 4 : 2)
@@ -116,7 +117,7 @@ describe('auth field errors in the real form and browser layout', () => {
         background: 'white', backdropFilter: 'none'
       })
     }, { width, height, zoom })
-    await page.addStyleTag({ content: '.sherlock-auth-scenery{background:rgb(255,0,0)}.sherlock-auth-backdrop,.sherlock-auth-scenery:after{display:none}' })
+    await page.addStyleTag({ content: '.sherlock-auth-scenery{background:rgb(255,0,0)}.sherlock-auth-backdrop,.sherlock-auth-scenery:after,[data-odyssey-home-flow]{display:none}' })
     const shot = PNG.sync.read(await page.screenshot())
     const pixel = (x, y) => [...shot.data.subarray((y * shot.width + x) * 4, (y * shot.width + x) * 4 + 3)]
     expect(pixel(70, 16)).toEqual([255, 255, 255]) // third native button stays clear

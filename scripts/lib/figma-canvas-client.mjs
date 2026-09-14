@@ -66,6 +66,19 @@ function patchCanvasGraphicPrimitives(source) {
 }
 
 export function patchFigmaFinalCanvas(source) {
+  if(!source.includes('/* ODYSSEY_NEW_NODES_FRONT */')) {
+    source=exact(source,'const publish = (next, persist = false) => {',`const publish = (next, persist = false, preserveStack = false) => {
+      /* ODYSSEY_NEW_NODES_FRONT */
+      if(persist && !preserveStack) {
+        const known=new Set([...snapshot.files,...snapshot.artifacts].map(n=>n.id));
+        for(const node of [...next.files,...next.artifacts]) {
+          if(known.has(node.id)) continue;
+          const raised=researchCanvasRaisedNodes(next.files,next.artifacts,node.id);
+          if(raised) next={...next,...raised};
+        }
+      }`);
+    source=source.replace('publish({ ...snapshot, files: entry.files, artifacts: artifacts2, selection: entry.selection }, true);','publish({ ...snapshot, files: entry.files, artifacts: artifacts2, selection: entry.selection }, true, true);');
+  }
   return patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)));
 }
 function patchFigmaCanvasContent(source) {
@@ -626,7 +639,7 @@ body:not([data-ds-dark-theme]) [data-research-compact-chrome] .odyssey-component
 body [data-research-compact-chrome] .rScV5Q_containerDraft{box-sizing:border-box;min-height:0;height:100%;padding:20px!important;gap:12px}\nbody [data-research-compact-chrome] .rScV5Q_containerDraft textarea{box-sizing:border-box;min-height:0;flex:1}\n.odyssey-derived-summary{display:flex;flex:1;min-height:0;flex-direction:column}
 body [data-research-compact-chrome][data-research-artifact-card] :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.rScV5Q_mindMap,.rScV5Q_generationProcess,.rScV5Q_containerDraft,.rScV5Q_generationFailure){background:var(--odyssey-content)!important}
 [data-research-compact-chrome] .rScV5Q_artifactBody{background:var(--odyssey-content);min-height:0;max-height:100%;box-sizing:border-box}
-[data-research-compact-chrome] .rScV5Q_contentEditor{box-sizing:border-box;flex:1;min-height:0!important;max-height:calc(100% - 24px);width:calc(100% - 44px)!important;margin:12px 22px;padding:12px!important;border-radius:8px;resize:none}
+[data-research-compact-chrome] .rScV5Q_artifactBody:has(> .rScV5Q_contentEditor){display:flex;flex-direction:column;height:100%;min-height:0;padding:0!important}\n[data-research-compact-chrome] .rScV5Q_contentEditor{height:calc(100% - 24px)!important;box-sizing:border-box;flex:1;min-height:0!important;max-height:calc(100% - 24px);width:calc(100% - 44px)!important;margin:12px 22px;padding:12px!important;border-radius:8px;resize:none}
 .odyssey-derived-summary .rScV5Q_containerMarkdown{min-height:0;overflow:auto;overscroll-behavior:contain}
 .odyssey-derived-sources{flex:none}
 

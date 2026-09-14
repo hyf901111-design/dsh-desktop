@@ -27,3 +27,17 @@ it.each(['home', 'research'])('keeps the portaled panel button clickable over th
     expect(await page.locator('[data-odyssey-panel-entry]').evaluate(e => e.closest('header'))).toBeNull()
   } finally { await page.close() }
 })
+
+it('temporarily releases native header dragging while the mode menu is open', async () => {
+ const page=await browser.newPage()
+ try {
+  await page.setContent('<header class="wSkVaW_header"><div class="wSkVaW_titleRow"><button class="cubgiG_seat" aria-expanded="false">模式</button></div></header>')
+  await page.addScriptTag({content:script})
+  const header=page.locator('header')
+  expect(await header.evaluate(e=>getComputedStyle(e).webkitAppRegion)).toBe('drag')
+  await page.locator('button').evaluate(e=>e.setAttribute('aria-expanded','true'))
+  expect(await header.evaluate(e=>getComputedStyle(e).webkitAppRegion)).toBe('no-drag')
+  await page.locator('button').evaluate(e=>e.setAttribute('aria-expanded','false'))
+  expect(await header.evaluate(e=>getComputedStyle(e).webkitAppRegion)).toBe('drag')
+ } finally {await page.close()}
+})

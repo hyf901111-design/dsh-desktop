@@ -374,3 +374,6 @@ body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag
 
 /* Panel entries are portaled outside the header DOM but overlap its native drag region. */
 body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region:no-drag; }
+
+/* A native drag region swallows outside pointer events while a preset menu is open. */
+body:has(.cubgiG_seat[aria-expanded="true"]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}

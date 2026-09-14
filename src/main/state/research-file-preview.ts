@@ -60,6 +60,7 @@ const CORS_EXPOSE_HEADERS = 'Accept-Ranges, Content-Length, Content-Range, Conte
 export type ResearchPreviewSource = 'finder' | 'sidebar'
 
 export interface ResearchFilePreviewDescriptor {
+  previewEligible?: false
   authorizationId: string
   capabilityToken: string
   url: string
@@ -77,6 +78,7 @@ export interface ResearchPreviewAuthorizationRecord {
   contentType: string
   name: string
   allowSubresources: boolean
+  exportOnly?: boolean
   createdAt: number
 }
 
@@ -404,6 +406,7 @@ function validRecord(value: unknown): value is ResearchPreviewAuthorizationRecor
     typeof record.contentType === 'string' && record.contentType.length <= 128 &&
     typeof record.name === 'string' && record.name.length > 0 && record.name.length <= MAX_ID_LENGTH &&
     typeof record.allowSubresources === 'boolean' &&
+    (record.exportOnly === undefined || record.exportOnly === true && !record.allowSubresources) &&
     typeof record.createdAt === 'number' && Number.isFinite(record.createdAt)
 }
 
@@ -909,12 +912,13 @@ export class ResearchFilePreviewRegistry {
     }
   }
 
-  async admitFinder(value: unknown): Promise<ResearchFilePreviewDescriptor | null> {
+  async admitFinder(value: unknown, exportFallback = false): Promise<ResearchFilePreviewDescriptor | null> {
     if (!this.validFinderAdmission(value)) return null
     const revocation = this.beginAdmissionRevocation(value.sessionId, value.nodeId)
     try {
       return await this.admit({
         source: 'finder',
+        exportFallback,
         targetPath: value.path,
         authorizedRoot: path.dirname(value.path),
         sessionId: value.sessionId,
@@ -1139,6 +1143,7 @@ export class ResearchFilePreviewRegistry {
   private async admit(input: {
     source: ResearchPreviewSource
     targetPath: string
+    exportFallback?: boolean
     authorizedRoot: string
     sessionId: string
     nodeId: string
@@ -1151,6 +1156,7 @@ export class ResearchFilePreviewRegistry {
   private async performAdmission(input: {
     source: ResearchPreviewSource
     targetPath: string
+    exportFallback?: boolean
     authorizedRoot: string
     sessionId: string
     nodeId: string
@@ -1162,8 +1168,8 @@ export class ResearchFilePreviewRegistry {
       const file = await this.fileSystem.stat(target)
       if (!file.isFile()) return null
       const kind = rootKindForPath(target)
-      if (!isRootPreviewKind(kind)) return null
-      if (!await validatesPreviewKind(this.fileSystem, target, file.size, kind, true)) return null
+      const previewable = isRootPreviewKind(kind) && await validatesPreviewKind(this.fileSystem, target, file.size, kind, true)
+      if (!previewable && !input.exportFallback) return null
       const replaced = new Set<string>()
       for (const [authorizationId, existing] of this.authorizations) {
         if (existing.sessionId === input.sessionId && existing.nodeId === input.nodeId) {
@@ -1179,9 +1185,10 @@ export class ResearchFilePreviewRegistry {
         root,
         sessionId: input.sessionId,
         nodeId: input.nodeId,
-        contentType: kind.contentType,
+        contentType: previewable ? kind!.contentType : 'application/octet-stream',
+        ...(!previewable ? { exportOnly: true } : {}),
         name: path.basename(target),
-        allowSubresources: kind.contentType === 'text/html; charset=utf-8',
+        allowSubresources: previewable && kind!.contentType === 'text/html; charset=utf-8',
         createdAt: this.now()
       }
       const retained = [...this.authorizations.values()].filter(
@@ -1205,6 +1212,7 @@ export class ResearchFilePreviewRegistry {
       if (!isContained(root, target)) return false
       const file = await this.fileSystem.stat(target)
       if (!file.isFile()) return false
+      if (record.exportOnly === true) return true
       const kind = rootKindForPath(target)
       if (!isRootPreviewKind(kind) || kind.contentType !== record.contentType) return false
       return validatesPreviewKind(this.fileSystem, target, file.size, kind, true)
@@ -1215,14 +1223,15 @@ export class ResearchFilePreviewRegistry {
 
   private issue(record: ResearchPreviewAuthorizationRecord): ResearchFilePreviewDescriptor {
     const token = this.nextOpaqueId()
-    this.capabilities.set(token, {
+    if (!record.exportOnly) this.capabilities.set(token, {
       authorizationId: record.authorizationId,
       expiresAt: this.now() + this.capabilityTtlMs
     })
     return {
       authorizationId: record.authorizationId,
       capabilityToken: token,
-      url: `${RESEARCH_PREVIEW_SCHEME}://${token}/`,
+      ...(record.exportOnly ? {previewEligible: false as const} : {}),
+      url: record.exportOnly ? '' : `${RESEARCH_PREVIEW_SCHEME}://${token}/`,
       contentType: record.contentType,
       name: record.name
     }
@@ -1352,7 +1361,7 @@ export function registerResearchFilePreviewHandlers(options: {
     string,
     (value: unknown) => unknown
   ]> = [
-    ['research:preview:admit-finder', (value) => options.registry.admitFinder(value)],
+    ['research:preview:admit-finder', (value) => options.registry.admitFinder(value, true)],
     ['research:preview:admit-sidebar', (value) => options.registry.admitSidebar(value)],
     ['research:preview:restore', (value) => options.registry.restore(value)],
     ['research:preview:release', (value) => ({ ok: options.registry.releaseCapability(value) })],

@@ -45,10 +45,11 @@ describe('Figma file entries and complete readers', () => {
   it('uses S for new non-image files and keeps historical manual geometry', async () => {
     const mounted = await mount(fixtureFile('pdf'))
     try {
-      for (const kind of ['pdf', 'docx', 'xlsx', 'pptx', 'html', 'md', 'txt', 'unknown']) {
+      for (const kind of ['pdf', 'docx', 'xlsx', 'pptx', 'html', 'md', 'txt']) {
         expect(mounted.client.normalizeResearchCanvasNodeGeometry(fixtureFile(kind))).toMatchObject({ width: 320, height: 220 })
         expect(mounted.client.normalizeResearchCanvasNodeGeometry({ ...fixtureFile(kind), width: 530, height: 317, sizeMode: 'manual' })).toMatchObject({ width: 530, height: 317, sizeMode: 'manual' })
       }
+      expect(mounted.client.normalizeResearchCanvasNodeGeometry({...fixtureFile('unknown'),width:600,height:400})).toMatchObject({width:220,height:64,resizable:false})
       expect(mounted.client.normalizeResearchCanvasNodeGeometry(fixtureFile('png'))).toMatchObject({ width: 320, height: 306, aspectRatio: 4 / 3 })
       const pdf = { ...fixtureFile('pdf'), width: 320, height: 220, aspectRatio: 0.75 }
       const restored = mounted.client.parseResearchCanvasFileNodes(JSON.stringify([pdf]))[0]
