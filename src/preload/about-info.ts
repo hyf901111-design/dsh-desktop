@@ -20,7 +20,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     {
       version: '0.9.6',
       date: '2026-09-14',
-      items: ["增强研究组件生成恢复：检索不足时补充搜索，格式异常时自动修复，并保留可用资料与真实缺失提示", "研究工作台默认矩阵排列，全部组件生成结束后自动整理画布；优化生成骨架与查看过程布局", "统一组件标题栏、背景、内边距与无描边外观，隐藏内部滚动条并保留网页原生滚动", "研究对话页签常驻首位；所有侧栏页签按内容宽度排列，空间不足时压缩，选中项显示关闭按钮", "优化菜单选中底色、二级菜单悬停展开、按钮间距及单色子代理加载指示", "链接输入自动补全网址协议，顶栏修改会话名称同步看板列表", "搜索遇到人工验证时后台切换入口，避免弹窗打断；修复顶栏拖动区域", "优化浅色组件标题栏，主题名称更新为伊萨卡晨雾与伊萨卡午夜"]
+      items: ["整合研究看板协作与成员管理，完善启动品牌展示和侧栏通知定位", "增强研究组件生成恢复：检索不足时补充搜索，格式异常时自动修复，并保留可用资料与真实缺失提示", "研究工作台默认矩阵排列，全部组件生成结束后自动整理画布；优化生成骨架与查看过程布局", "统一组件标题栏、背景、内边距与无描边外观，隐藏内部滚动条并保留网页原生滚动", "研究对话页签常驻首位；所有侧栏页签按内容宽度排列，空间不足时压缩，选中项显示关闭按钮", "优化菜单选中底色、二级菜单悬停展开、按钮间距及单色子代理加载指示", "链接输入自动补全网址协议，顶栏修改会话名称同步看板列表", "搜索遇到人工验证时后台切换入口，避免弹窗打断；修复顶栏拖动区域", "优化浅色组件标题栏，主题名称更新为伊萨卡晨雾与伊萨卡午夜"]
     },
     { version: '0.9.5', date: '2026-09-09', title: '模式与交互优化', items: ['修复顶部模式按钮点击与子代理入口位置', '切换空白会话时同步顶部和输入区的模式状态', '中文界面下斜杠命令菜单名称和说明完整汉化'] },
     {
@@ -255,7 +255,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     {
       version: '0.9.6',
       date: '2026-09-14',
-      items: ["Improve component recovery with additional searches, format repair, retained usable evidence and explicit missing-data messages", "Arrange workbenches in a grid and automatically tidy the canvas after generation; refine skeletons and process panels", "Unify component headers, backgrounds, padding and borderless styling; hide internal scrollbars except embedded web pages", "Keep Research chat first and persistent; fit all sidebar tabs with natural widths and show close controls on the active tab", "Refine menu selection, hover submenus, button spacing and monochrome subagent loading indicators", "Complete missing website protocols and synchronize renamed session titles with the board list", "Skip search verification screens in the background and fix draggable title-bar areas", "Add subtle light-theme headers and rename themes to Ithaca Morning Mist and Ithaca Midnight"]
+      items: ["Integrate Research board collaboration and member controls, startup branding and sidebar notice placement", "Improve component recovery with additional searches, format repair, retained usable evidence and explicit missing-data messages", "Arrange workbenches in a grid and automatically tidy the canvas after generation; refine skeletons and process panels", "Unify component headers, backgrounds, padding and borderless styling; hide internal scrollbars except embedded web pages", "Keep Research chat first and persistent; fit all sidebar tabs with natural widths and show close controls on the active tab", "Refine menu selection, hover submenus, button spacing and monochrome subagent loading indicators", "Complete missing website protocols and synchronize renamed session titles with the board list", "Skip search verification screens in the background and fix draggable title-bar areas", "Add subtle light-theme headers and rename themes to Ithaca Morning Mist and Ithaca Midnight"]
     },
     { version: '0.9.5', date: '2026-09-09', title: 'Mode and interaction improvements', items: ['Fixed the top mode buttons and the subagent entry position', 'Synchronized header and composer modes when switching blank sessions', 'Completed Chinese names and descriptions in the slash-command menu'] },
     {
