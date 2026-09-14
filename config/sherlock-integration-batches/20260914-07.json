@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-07",
+  "branch": "codex/integration/20260914-07",
+  "baseMainCommit": "1082645e8aedc601b7d942f673974dcfa1b59e10",
+  "expectedMainCommit": "1082645e8aedc601b7d942f673974dcfa1b59e10",
+  "createdAt": "2026-09-14T10:21:03.542Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "补齐英文交互与历史生成文件入口",
+        "branch": "codex/feat/english-ui-20260914",
+        "baseCommit": "1082645e8aedc601b7d942f673974dcfa1b59e10",
+        "tipCommit": "4e0524032b6a817dd6ccf6987e62f23217134195",
+        "commits": [
+          {
+            "commit": "4e0524032b6a817dd6ccf6987e62f23217134195",
+            "parents": [
+              "1082645e8aedc601b7d942f673974dcfa1b59e10"
+            ],
+            "subject": "补齐动态英文文案并修正窄侧栏布局和历史文件预览入口"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/desktop-locale-bridge.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/desktop-locale-bridge.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/generated-file-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-localization.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/english-ui-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/generated-file-preview.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/ui-localization.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/generated-file-preview.test.js",
+              "test/sidebar-live-files.test.js",
+              "test/figma-file-panel.test.ts",
+              "test/sidebar-file-reference.test.ts",
+              "test/inspect-sidebar.test.js",
+              "test/ui-localization.test.ts",
+              "test/english-ui-layout.test.js",
+              "test/figma-auth-errors.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "43 项聚焦检查及类型检查通过",
+            "verifiedCommit": "4e0524032b6a817dd6ccf6987e62f23217134195",
+            "completedAt": "2026-09-14T10:20:45.683450+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "43 项聚焦检查及类型检查通过",
+            "verifiedCommit": "4e0524032b6a817dd6ccf6987e62f23217134195",
+            "completedAt": "2026-09-14T10:20:45.683450+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际客户端验证文件树输出目录和 PPT 右栏预览；真实侧栏样式验证英文窄按钮无溢出。"
+        },
+        "acceptanceCriteria": [
+          "动态文案完整英文显示",
+          "登录入口简写",
+          "窄侧栏英文按钮单行无溢出",
+          "更多按钮默认透明",
+          "历史会话文档文件名可点击"
+        ],
+        "risks": [
+          "同名文件显示路径供用户选择；不翻译用户自定义内容"
+        ],
+        "generatedAt": "2026-09-14T10:20:45.683450+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/generated-file-preview.test.js",
+        "test/sidebar-live-files.test.js",
+        "test/figma-file-panel.test.ts",
+        "test/sidebar-file-reference.test.ts",
+        "test/inspect-sidebar.test.js",
+        "test/ui-localization.test.ts",
+        "test/english-ui-layout.test.js",
+        "test/figma-auth-errors.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
