@@ -171,7 +171,7 @@ body .h8S2Va_disclosure svg { width:12px; height:12px; }
 body .h8S2Va_children { margin-left:20px; padding-left:0; }
 body .h8S2Va_children::before,body .h8S2Va_children>.h8S2Va_node::before,body .h8S2Va_children>.h8S2Va_node>.h8S2Va_row::before { display:none; }
 body [data-odyssey-subagent-activity] { width:10px; height:10px; flex:none; box-sizing:border-box; margin-top:6px; border-radius:50%; background:#8f8f8f; }
-body [data-odyssey-subagent-activity=running] { background:transparent; border:2px solid #5c8fed; border-top-color:transparent; border-right-color:#9879f4; border-bottom-color:#4bc5c9; animation:odyssey-subagent-loading 900ms linear infinite; }
+body [data-odyssey-subagent-activity=running] { background:transparent; border:2px solid #5c8fed; border-top-color:transparent; animation:odyssey-subagent-loading 900ms linear infinite; }
 @keyframes odyssey-subagent-loading { to { transform:rotate(360deg); } }
 body .h8S2Va_label { font-size:14px; font-weight:500; line-height:20px; }
 body .h8S2Va_summary,body .h8S2Va_metrics { color:#737373; font-size:12px; line-height:18px; }
