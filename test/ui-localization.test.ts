@@ -29,3 +29,10 @@ it('bridges the persisted application locale at boot and on changes, idempotentl
  expect(once).toContain('sync(locale.getSnapshot())')
  expect(translateUiCopy('Use current canvas · 1 components')).toBe('Use current canvas · 1 component')
 })
+
+it('translates dynamic notification counts and overlooked canvas controls',()=>{
+ expect(translateUiCopy('未读 0')).toBe('Unread 0')
+ expect(translateUiCopy('未读 12')).toBe('Unread 12')
+ expect(translateUiCopy('从画布移除')).toBe('Remove from canvas')
+ expect(translateUiCopy('登录')).toBe('Sign in')
+})

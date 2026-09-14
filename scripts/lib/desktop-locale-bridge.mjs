@@ -15,3 +15,10 @@ export function patchDesktopResearchDefaults(source) {
  if(source.split(before).length!==2)throw Error('Container default-title anchor drifted')
  return source.replace(before,after)
 }
+export function patchEmptyHeaderTitles(source) {
+ const marker='/* odyssey:localized-empty-header:v1 */'
+ if(source.includes(marker))return source
+ const before='{ chat: "新会话", research: "新研究", trajectory: "新轨迹" }[active?.id]'
+ if(source.split(before).length!==2)throw Error('Empty header title anchor missing')
+ return source.replace(before,`(document.documentElement.dataset.odysseyLocale==='en'?{chat:'New Session',research:'New Research',trajectory:'New Trajectory'}:{chat:'新会话',research:'新研究',trajectory:'新轨迹'})[active?.id] ${marker}`)
+}

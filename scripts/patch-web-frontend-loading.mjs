@@ -1,6 +1,6 @@
-import { patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
+import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
 import { patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
-import { patchDesktopLocaleBridge, patchDesktopResearchDefaults } from './lib/desktop-locale-bridge.mjs'
+import { patchEmptyHeaderTitles, patchDesktopLocaleBridge, patchDesktopResearchDefaults } from './lib/desktop-locale-bridge.mjs'
 import { patchResearchResidentConversation } from './lib/research-resident-conversation.mjs'
 import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from './lib/figma-subagent-panel.mjs'
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
@@ -165,3 +165,7 @@ writeFileSync(layoutPath, patchInspectLayout(readFileSync(layoutPath, 'utf8')))
 writeFileSync(conversationPath, patchGeneratedFilePreview(readFileSync(conversationPath, 'utf8')))
 const deliverablesPath=join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-deliverables/lib/client.js')
 writeFileSync(deliverablesPath, patchGeneratedFileMentions(readFileSync(deliverablesPath, 'utf8')))
+
+writeFileSync(conversationPath, patchRestoredFileMentions(readFileSync(conversationPath, 'utf8')))
+
+writeFileSync(conversationPath, patchEmptyHeaderTitles(readFileSync(conversationPath, 'utf8')))

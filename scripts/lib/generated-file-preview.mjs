@@ -45,3 +45,21 @@ class ResearchSidebarCoordinator {
                                 if(!path.includes('/')&&!path.includes('\\\\')&&path!=='.') {researchSidebar.openGeneratedFile(sessionId,path);return;}`)
  return source
 }
+
+// Replayed or restored history may not have a deliverables projection. File
+// references still resolve through the workspace, without changing message text.
+export function patchRestoredFileMentions(source){
+ const marker='/* sherlock:restored-file-mentions:v1 */'
+ if(source.includes(marker))return source
+ source=exact(source,'function AssistantMarkdown({ blocks, streaming, interrupted, loadImage, mentions, t }) {',`function AssistantMarkdown({ blocks, streaming, interrupted, loadImage, mentions, openFile, t }) {
+            ${marker}
+            const resolvedMentions=react.useMemo(()=>({resolve(value){
+              const known=mentions?.resolve(value);if(known)return known;
+              if(!openFile||!/^[^\\n\\r<>]+\\.(?:pptx?|docx?|xlsx?|pdf|csv|txt|md|html|png|jpe?g|webp|svg|mp4|mov|zip)$/i.test(value))return;
+              return {title:value,label:value,open:()=>openFile(value)};
+            }}),[mentions,openFile]);`)
+ source=exact(source,'fileMentions: mentions\n','fileMentions: resolvedMentions\n')
+ source=exact(source,'blocks: visibleBlocks,','blocks: visibleBlocks,\n                openFile,')
+ source=exact(source,'blocks: update.blocks,','blocks: update.blocks,\n                            openFile:seatProps.openFile,')
+ return source
+}

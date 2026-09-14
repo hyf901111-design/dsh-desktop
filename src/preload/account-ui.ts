@@ -146,7 +146,7 @@ export function mountAccountUi(
     }
     const label = document.createElement('span')
     if (user) label.dataset.uiPreserve = ''
-    label.textContent = user?.username ?? '登录 EWork Odyssey'
+    label.textContent = user?.username ?? '登录'
     trigger.append(avatar, label)
     trigger.setAttribute('aria-label', `${label.textContent}，打开账户菜单`)
   }

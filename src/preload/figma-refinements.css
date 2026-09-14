@@ -494,3 +494,9 @@ body .cubgiG_seat:disabled:hover {
 body .Md3f7G_executionProgress { padding-inline: 0; }
 .odyssey-generated-file-results{padding:16px;overflow:auto}
 .odyssey-generated-file-results button{display:block;max-width:100%;margin-block:8px;padding:8px 12px;border-radius:8px;overflow-wrap:anywhere;text-align:left;color:inherit;background:var(--dsw-alias-markdown-code-block)}
+html[data-odyssey-locale=en] .hHd-Xa_newSessionGroup{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)}
+html[data-odyssey-locale=en] .hHd-Xa_newSession{height:38px;min-height:38px;margin:0;padding:4px;gap:4px;font-size:12px;justify-content:center}
+html[data-odyssey-locale=en] .hHd-Xa_newSessionLabel{white-space:nowrap;line-height:16px;text-align:center}
+html[data-odyssey-locale=en] .rScV5Q_globalToolbar{width:max-content;max-width:calc(100% - 24px);gap:4px}
+html[data-odyssey-locale=en] .rScV5Q_globalToolbar>.rScV5Q_globalToolSlot>button{width:auto;min-width:84px;padding-inline:12px;gap:8px;white-space:nowrap}
+html[data-odyssey-locale=en] .rScV5Q_globalToolSlot{flex:0 0 auto;width:auto}

@@ -2,12 +2,27 @@ import { englishUiCopy } from './ui-copy'
 
 // Preload UI and portaled plugin controls share the application's selected locale,
 // rather than navigator.language. Never replace elements or translate user content.
-const surfaces = 'button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description]'
-const preserved = '.rScV5Q_voiceAccessible,script,style,textarea,input,[contenteditable],[data-ui-preserve],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText,.srb-member-identity strong,.srb-member-avatar,.srb-board-name,.sherlock-account-profile strong,.sherlock-account-menu-identity strong,.sherlock-account-label,[data-research-artifact-content]:not(:has(.rScV5Q_containerDraft,.rScV5Q_generationFailure))'
+const surfaces = '.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description]'
+const preserved = '.rScV5Q_voiceAccessible,script,style,textarea,input,[contenteditable],[data-ui-preserve],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText,.srb-member-identity strong,.srb-member-avatar,.srb-board-name,.sherlock-account-profile strong,.sherlock-account-menu-identity strong,.sherlock-account-label,[data-research-artifact-content]:not(:has(.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_previewPlaceholder))'
 export function translateUiCopy(value: string): string {
  const key=value.trim(), translated=englishUiCopy[key]
  if(translated)return value.replace(key,translated)
  const patterns: Array<[RegExp,(...args:string[])=>string]> = [
+  [/^你已(接受|拒绝|处理)邀请$/,(_m,v)=>`You ${v==='接受'?'accepted':v==='拒绝'?'declined':'responded to'} the invitation`],
+  [/^(.+)(接受|拒绝|处理)了你的邀请$/,(_m,name,v)=>`${name} ${v==='接受'?'accepted':v==='拒绝'?'declined':'responded to'} your invitation`],
+  [/^(.+) 邀请你加入 · (.+)$/,(_m,name,role)=>`${name} invited you · ${englishUiCopy[role]??role}`],
+  [/^版本更新 · (.+)$/,(_m,v)=>`Update · ${v}`],
+  [/^未读 (\d+)$/,(_m,n)=>`Unread ${n}`],
+  [/^还有 (\d+) 条协作邀请$/,(_m,n)=>`${n} more collaboration invitations`],
+  [/^(?:查看 )?(\d+) 位协作成员$/,(_m,n)=>`${n} collaborators`],
+  [/^另外 (\d+) 位协作成员$/,(_m,n)=>`${n} more collaborators`],
+  [/^成员 · (\d+)$/,(_m,n)=>`Members · ${n}`],
+  [/^待处理邀请 · (\d+)$/,(_m,n)=>`Pending invitations · ${n}`],
+  [/^等待接受 · ID (.+)$/,(_m,id)=>`Pending · ID ${id}`],
+  [/^之前的执行记录（(\d+)）$/,(_m,n)=>`Previous runs (${n})`],
+  [/^正在下载更新[ ·]*(\d+)%$/,(_m,n)=>`Downloading update · ${n}%`],
+  [/^发现新版本[ ]*(.+?)(?:，可下载更新)?$/,(_m,v)=>`Update available: ${v}`],
+  [/^已更新至[ ]*(.+?)(?:，当前已是最新版本。)?$/,(_m,v)=>`Updated to ${v}`],
   [/^(\d+) 个组件$/,(_m,n)=>`${n} ${n==='1'?'component':'components'}`],
   [/^(\d+) 条已保存对话$/,(_m,n)=>`${n} saved ${n==='1'?'conversation':'conversations'}`],
   [/^([\d.]+\s*[KMG]?B) 资料$/,(_m,n)=>`${n} of files`],
