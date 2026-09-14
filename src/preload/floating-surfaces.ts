@@ -22,8 +22,8 @@ export function mountFloatingSurfaces(doc: Document) {
 [data-odyssey-floating-surface]{position:fixed!important;inset:auto;margin:0!important;box-sizing:border-box}
 [data-odyssey-floating-surface]::backdrop{background:transparent;pointer-events:none}
 .JObwrW_panel[data-odyssey-floating-surface]{right:auto!important;bottom:auto!important;overflow:auto}
-[role=tooltip][data-odyssey-floating-surface]{right:auto!important;bottom:auto!important;pointer-events:none}
-[data-odyssey-floating-tooltip]{width:max-content;max-width:calc(100vw - 24px);padding:5px 8px;border:1px solid var(--odyssey-menu-border,#dfe0e3);border-radius:6px;background:var(--odyssey-menu,#fff);color:var(--odyssey-text,#292b2f);font:400 12px/18px var(--odyssey-font-ui,sans-serif);overflow-wrap:anywhere;box-shadow:0 4px 12px #0002;transform:none!important}
+[role=tooltip][data-odyssey-floating-surface]{right:auto!important;bottom:auto!important;pointer-events:none;border:0!important;outline:none!important}
+[data-odyssey-floating-tooltip]{width:max-content;max-width:calc(100vw - 24px);padding:5px 8px;border:0;border-radius:6px;background:var(--odyssey-menu,#fff);color:var(--odyssey-text,#292b2f);font:400 12px/18px var(--odyssey-font-ui,sans-serif);overflow-wrap:anywhere;box-shadow:0 4px 12px #0002;transform:none!important}
 ${customTriggers.split(',').map(s => s + '[data-odyssey-floating-anchor]::after').join(',')}{content:none!important}
 `
   doc.head.append(style)
