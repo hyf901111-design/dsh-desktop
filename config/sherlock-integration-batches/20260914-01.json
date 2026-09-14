@@ -12,7 +12,7 @@
         "featureName": "已验收研究工作台与客户端交互优化",
         "branch": "codex/feat/composer-menu-fixes-20260913",
         "baseCommit": "bcb9ad26f0303b105392ed7336e7a46bef8a6850",
-        "tipCommit": "3adb22527a53859766708ee4a92d7848d3db0b2e",
+        "tipCommit": "6946281500e4d50abf82fa4f13bd916223f10830",
         "commits": [
           {
             "commit": "b541cbffb495ad2011b83abe33bdfb2989abd242",
@@ -315,6 +315,13 @@
               "bcb9ad26f0303b105392ed7336e7a46bef8a6850"
             ],
             "subject": "集成主线启动品牌和通知修复到0.9.6验收分支"
+          },
+          {
+            "commit": "6946281500e4d50abf82fa4f13bd916223f10830",
+            "parents": [
+              "3adb22527a53859766708ee4a92d7848d3db0b2e"
+            ],
+            "subject": "修复全新安装时组件菜单补丁锚点不兼容"
           }
         ],
         "boundaryParents": [
@@ -372,6 +379,10 @@
           {
             "status": "M",
             "path": "scripts/lib/figma-canvas-context-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-container-menu.mjs"
           },
           {
             "status": "M",
@@ -641,20 +652,14 @@
         "checks": [
           {
             "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/settings-about.test.ts",
-              "test/figma-panel-tab-overflow.test.ts",
-              "test/research-component-chrome.test.ts",
-              "test/research-workbench.test.js",
-              "test/boot-branding.test.js",
-              "test/sidebar-notice-position.test.ts"
+              "git",
+              "diff",
+              "--check"
             ],
             "outcome": "passed",
-            "summary": "42项关于页、页签、组件、布局、品牌与通知聚焦检查通过",
-            "verifiedCommit": "3adb22527a53859766708ee4a92d7848d3db0b2e",
-            "completedAt": "2026-09-14T05:33:13.473057+00:00",
+            "summary": "全新安装菜单补丁及幂等性检查通过，git diff --check通过",
+            "verifiedCommit": "6946281500e4d50abf82fa4f13bd916223f10830",
+            "completedAt": "2026-09-14T05:35:16.068265+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -669,7 +674,7 @@
         "risks": [
           "联网组件仍依赖数据源可用性"
         ],
-        "generatedAt": "2026-09-14T05:33:13.473057+00:00"
+        "generatedAt": "2026-09-14T05:35:16.068265+00:00"
       }
     }
   ],
