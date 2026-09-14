@@ -6,7 +6,7 @@ const req=createRequire(import.meta.url),React=req('react'),Component=new Functi
 let cleanup=async()=>{};afterEach(async()=>{await cleanup();vi.unstubAllGlobals()})
 async function mount(rename=vi.fn(async()=>{})){
  const w=new Window();vi.stubGlobal('window',w);vi.stubGlobal('document',w.document);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
- const host=w.document.body.appendChild(w.document.createElement('div')),root=req('react-dom/client').createRoot(host)
+ const host=w.document.createElement('div');w.document.body.appendChild(host);const root=req('react-dom/client').createRoot(host)
  await React.act(async()=>root.render(React.createElement(Component,{children:'原标题',rename,className:'title'})))
  cleanup=async()=>{await React.act(async()=>root.unmount());await w.happyDOM.abort()}
  const event=async(selector:string,type:string,props={})=>React.act(async()=>host.querySelector(selector)!.dispatchEvent(type==='dblclick'?new w.MouseEvent(type,{bubbles:true,...props}):new w.KeyboardEvent(type,{bubbles:true,...props})))
