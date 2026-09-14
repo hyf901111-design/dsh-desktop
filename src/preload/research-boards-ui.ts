@@ -1227,6 +1227,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return f ? { path: f.directoryPath ?? f.cwd, workspaceId: f.workspaceId, label: f.workspaceTitle ?? '新建看板目录' } : null
     },
     async associateProject(id: string, workspaceId: string) {
+      if (win.localStorage.getItem('sherlock.research.directory-locked.v1:' + id) === 'true' || deps.researchWorkspaces.for(id).getSnapshot().files.length > 0) throw Error('画板已有资料，项目目录已固定')
       const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
       if (!f) return null
       const workspace = workspaceId === '::board-directory' ? null : deps.workspaces.list.getSnapshot().items.find((w: { workspaceId: string; path: string; title: string }) => w.workspaceId === workspaceId)

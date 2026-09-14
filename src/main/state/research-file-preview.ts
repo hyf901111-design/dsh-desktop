@@ -1356,12 +1356,13 @@ export function registerResearchFilePreviewHandlers(options: {
   ipcMain: ResearchPreviewIpcMain
   getMainWindow(): TrustedWindow | undefined
   registry: ResearchFilePreviewRegistry
+  importFinder?: (value: unknown) => Promise<unknown>
 }): void {
   const handlers: Array<[
     string,
     (value: unknown) => unknown
   ]> = [
-    ['research:preview:admit-finder', (value) => options.registry.admitFinder(value, true)],
+    ['research:preview:admit-finder', (value) => options.importFinder ? options.importFinder(value) : options.registry.admitFinder(value, true)],
     ['research:preview:admit-sidebar', (value) => options.registry.admitSidebar(value)],
     ['research:preview:restore', (value) => options.registry.restore(value)],
     ['research:preview:release', (value) => ({ ok: options.registry.releaseCapability(value) })],
