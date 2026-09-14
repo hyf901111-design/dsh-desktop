@@ -156,7 +156,8 @@ function patchFigmaCanvasContent(source) {
   source=source.replace('onActivate, onAutoHeight, onWebInspection', 'onActivate, onAutoHeight, onExpandGeneration, onWebInspection');
   // Figma 43 manual dimensions are a user choice, not an automatic preset request.
   // Read the latest node because a resize can finish before this render's callback is replaced.
-  const expandGeneration = 'onExpandGeneration:(requestedSize="large")=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current||current.sizeMode==="manual")return;const height=requestedSize==="medium"?220:456;if(height===220&&(current.width>320||current.height>220))return;if(current.height!==height||current.width!==656)workspace.updateNodeGeometry(current.id,{width:656,height,sizeMode:"auto"});},';
+  const expandGeneration = 'onExpandGeneration:(requestedSize="large")=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=Math.min(current.width,400),height=Math.min(current.height,300);if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;if(height===220&&(current.width>320||current.height>220))return;if(current.height!==height||current.width!==656)workspace.updateNodeGeometry(current.id,{width:656,height,sizeMode:"auto"});},';
+  source=source.replace('if(!current||current.sizeMode==="manual")return;const height=requestedSize==="medium"?220:456;','if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=Math.min(current.width,400),height=Math.min(current.height,300);if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;');
   if (!source.includes(expandGeneration)) {
     const oldExpand = [
       'onExpandGeneration:()=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(current&&current.sizeMode!=="manual"&&(current.height!==456||current.width!==656))workspace.updateNodeGeometry(current.id,{width:656,height:456,sizeMode:"auto"});},',
@@ -402,7 +403,7 @@ function researchContainerPromptPreset(prompt) {
   return researchBentoSize({type:large?'chart':small?'kpi':/短表|表格|趋势|走势|对比|比较|trend|table|compare/i.test(text)?'table':'chart'});
 }
 function researchContainerPlannedGeometry(snapshot,node,prompt) {
-  const preset=researchContainerPromptPreset(prompt),dimensions=RESEARCH_BENTO_SIZES[preset];
+  const preset=researchContainerPromptPreset(prompt),dimensions={width:400,height:300};
   const placed=researchCanvasContainedAutoNode(snapshot,{...node,width:dimensions.width,height:dimensions.height});
   return {containerSizePreset:preset,width:placed.width,height:placed.height,x:placed.x,y:placed.y};
 }
@@ -420,7 +421,7 @@ function researchCanvasViewportPlacement(snapshot, kind, cascadeIndex = 0) {
 const generatedPlacementSource = `function researchCanvasGeneratedPlacement(nodes,selectedIds,kind,requestedDetail='standard',context=null) {
   const bounds=researchCanvasSelectionBounds(nodes,selectedIds);
   if(!bounds||!['mind-map','summary','create'].includes(kind))return null;
-  const {width,height}=RESEARCH_BENTO_SIZES[kind==='summary'?'small':'large'];
+  const {width,height}=kind==='summary'?{width:320,height:220}:{width:400,height:300};
   const center={x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2};
   const candidates=[{x:bounds.right+32+width/2,y:center.y},{x:bounds.left-32-width/2,y:center.y},{x:center.x,y:bounds.bottom+32+height/2},{x:center.x,y:bounds.top-32-height/2}];
   let point=candidates[0],fitted=null;
@@ -521,6 +522,7 @@ function ResearchMindMap({nodeId,text,detail='standard',onNodeLabelCommit,readOn
 
 const generationSource = `function ResearchGenerationProcess({node,onCancel,onExpand}) {
   const presentation=researchGenerationPresentation(node);
+  (0,react.useEffect)(()=>{onExpand?.("loading");},[node.id,node.generationTaskId]);
   const [clock,setClock]=(0,react.useState)(Date.now);
   const [expanded,setExpanded]=(0,react.useState)(false);
   const started=(0,react.useRef)(node.generationStartedAt??Date.now());
