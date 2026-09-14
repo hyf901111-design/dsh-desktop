@@ -698,6 +698,54 @@
           "联网组件仍依赖数据源可用性"
         ],
         "generatedAt": "2026-09-14T05:37:26.186427+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b2fbef2567a28ebeac6099c7289e62e39001d6e8",
+        "verificationCommit": "b2fbef2567a28ebeac6099c7289e62e39001d6e8",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/ensure-local-dependencies.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
+            "verifiedCommit": "b2fbef2567a28ebeac6099c7289e62e39001d6e8",
+            "completedAt": "2026-09-14T05:37:29.888Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/settings-about.test.ts",
+              "test/figma-panel-tab-overflow.test.ts",
+              "test/research-component-chrome.test.ts",
+              "test/research-workbench.test.js",
+              "test/boot-branding.test.js",
+              "test/sidebar-notice-position.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/settings-about.test.ts test/figma-panel-tab-overflow.test.ts test/research-component-chrome.test.ts test/research-workbench.test.js test/boot-branding.test.js test/sidebar-notice-position.test.ts",
+            "verifiedCommit": "b2fbef2567a28ebeac6099c7289e62e39001d6e8",
+            "completedAt": "2026-09-14T05:37:29.888Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b2fbef2567a28ebeac6099c7289e62e39001d6e8",
+            "completedAt": "2026-09-14T05:37:29.888Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-14T05:37:29.888Z"
       }
     }
   ],
