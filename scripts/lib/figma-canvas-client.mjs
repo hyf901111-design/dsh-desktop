@@ -70,9 +70,10 @@ export function patchFigmaFinalCanvas(source) {
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);
-  // Empty creation cards use S; generated content still chooses its own size.
+  // Empty creation cards use a compact 400 × 280 editor; completed content chooses its own size.
   source=source.replace('containerPrompt: "", containerSizePreset: "medium"', 'containerPrompt: "", containerSizePreset: "small"');
-  source=source.replace('kind === "generated-container" ? { width: 656, height: 220 }', 'kind === "generated-container" ? { width: 320, height: 220 }');
+  source=source.replace('kind === "generated-container" ? { width: 320, height: 220 }', 'kind === "generated-container" ? { width: 400, height: 280 }');
+  source=source.replace('kind === "generated-container" ? { width: 656, height: 220 }', 'kind === "generated-container" ? { width: 400, height: 280 }');
   // JSON table values commonly arrive as formatted strings. Preserve their
   // text while aligning entire numeric columns, including their headings.
   const tableColumnSource=`function researchTableNumericColumn(spec,index){
@@ -295,7 +296,7 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
   source = block(source, '                    // Normalize component row sizes first,', '\n\t\t\t\t\tcommitUpdate(organized, true);', `                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
                     if (organized === null) return false;`)
   source = source.replaceAll('width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)]', 'width: RESEARCH_BENTO_SIZES[researchComponentSize(current)].width, height: RESEARCH_BENTO_SIZES[researchComponentSize(current)].height')
-  source = source.replace('kind === "generated-container" ? { width: 520, height: 300 }', 'kind === "generated-container" ? { width: 320, height: 220 }')
+  source = source.replace('kind === "generated-container" ? { width: 520, height: 300 }', 'kind === "generated-container" ? { width: 400, height: 280 }')
   source = source.replace('const width = 520;\n\t\t\tconst height = 300;', 'const width = kind === "summary" ? 320 : 656;\n\t\t\tconst height = kind === "summary" ? 220 : 456;')
   source = block(source, 'function researchContainerFinalGeometry(', 'function researchContainerRefreshDue(', `function researchContainerFinalGeometry(node, spec) {
   if(node?.sizeMode==='manual'||spec===null)return null;
@@ -408,7 +409,7 @@ function researchContainerPlannedGeometry(snapshot,node,prompt) {
   return {containerSizePreset:preset,width:placed.width,height:placed.height,x:placed.x,y:placed.y};
 }
 function researchCanvasViewportPlacement(snapshot, kind, cascadeIndex = 0) {
-  const dimensions=kind==='web-link'?{width:656,height:456}:kind==='generated-container'?{width:320,height:220}:null;
+  const dimensions=kind==='web-link'?{width:656,height:456}:kind==='generated-container'?{width:400,height:280}:null;
   if(!dimensions)return null;
   const viewport=snapshot?.viewport??{scale:1,x:0,y:0},area=researchCanvasVisibleArea(snapshot),scale=viewport.scale>0?viewport.scale:1;
   const center=researchCanvasWorldPoint(viewport,{x:(area.width>0?area.width:1200)/2,y:(area.height>0?area.height:712)/2});
@@ -533,7 +534,7 @@ const generationSource = `function ResearchGenerationProcess({node,onCancel,onEx
   if(researchIsDerivedNode(node)){
     const kind=node.kind==='generated-summary'?'summary':node.kind==='generated-mind-map'?'mind-map':'create',count=new Set(node.sourceNodeIds??[]).size;
     const records=rows.filter(row=>row.id!=='preparing'),fullStep=records.at(-1)?.text||presentation.title,maxStep=Math.max(16,Math.floor(((node.width??656)-68)/13)*2),step=expanded||fullStep.length<=maxStep?fullStep:fullStep.slice(0,maxStep-1)+'…';
-    const toggle=event=>{event.stopPropagation();const card=event.currentTarget.closest('[data-research-compact-chrome]');if(!expanded&&!card?.open){card?.querySelector('[data-research-container-expand]')?.click();card?.addEventListener('close',()=>setExpanded(false),{once:true});}setExpanded(!expanded);};
+    const toggle=event=>{event.stopPropagation();setExpanded(!expanded);};
     const source=(0,react_jsx_runtime.jsx)('span',{'data-research-generation-sources':'',children:kind==='summary'?'基于所选 '+count+' 个组件':'来源：'+count+' 个组件'});
     return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess odyssey-derived-process','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'data-process-compact':!expanded&&node.height<=220,'data-derived-kind':kind,'aria-busy':true,children:[
       (0,react_jsx_runtime.jsxs)('button',{type:'button',className:'odyssey-generation-step','aria-label':expanded?'收起生成过程':'查看生成过程','aria-expanded':expanded,onPointerDown:event=>event.stopPropagation(),onClick:toggle,children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:step})]}),
@@ -543,8 +544,8 @@ const generationSource = `function ResearchGenerationProcess({node,onCancel,onEx
   }
   return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'aria-busy':true,children:[
     (0,react_jsx_runtime.jsxs)('div',{className:'odyssey-generation-step',children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:researchPublicProgress(node.title||'当前组件')+' · '+(rows.at(-1)?.text||presentation.title)})]}),
-    expanded?(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-records',children:rows.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id))}):(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-skeleton','aria-hidden':true,children:[0,1,2].map(i=>(0,react_jsx_runtime.jsx)('i',{},i))}),
-    (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationFooter',children:[(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-toggle':'','aria-expanded':expanded,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();if(!expanded)onExpand?.();setExpanded(!expanded);},children:expanded?'收起过程':'查看过程'}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-elapsed':'',children:elapsed+' 秒'}),typeof onCancel==='function'&&node.generationTaskId?(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-cancel':'','aria-label':'停止生成',onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.preventDefault();e.stopPropagation();onCancel(node);},children:'停止'}):null]})]});
+    expanded?(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-records',children:rows.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id))}):(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-skeleton','aria-hidden':true,children:[0,1,2,3,4,5].map(i=>(0,react_jsx_runtime.jsx)('i',{},i))}),
+    (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationFooter',children:[(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-toggle':'','aria-expanded':expanded,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();setExpanded(!expanded);},children:expanded?'收起过程':'查看过程'}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-elapsed':'',children:elapsed+' 秒'}),typeof onCancel==='function'&&node.generationTaskId?(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-cancel':'','aria-label':'停止生成',onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.preventDefault();e.stopPropagation();onCancel(node);},children:'停止'}):null]})]});
 }`
 
 const responsiveSource = `function ResearchContainerContent(props) {
@@ -668,7 +669,7 @@ body[data-ds-dark-theme] .odyssey-derived-process>.rScV5Q_generationFooter butto
 .odyssey-derived-skeleton{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:8px 12px;flex:1;align-content:center;min-height:30px}
 .odyssey-derived-skeleton>i{display:block;height:12px;border-radius:4px;background:#eff0f2;animation:odyssey-skeleton 1.6s ease-in-out infinite}
 body[data-ds-dark-theme] .odyssey-derived-skeleton>i{background:#36373b}
-[data-research-derived] .odyssey-derived-process .odyssey-generation-records{overflow:visible;min-height:0;flex:1}
+[data-research-derived] .odyssey-derived-process .odyssey-generation-records{overflow:auto;min-height:0;flex:1}
 [data-research-compact-chrome][data-research-derived] .odyssey-derived-process[data-process-compact=true]{gap:8px}
 [data-research-derived] .odyssey-derived-process[data-process-compact=true]>.rScV5Q_generationFooter{padding-top:12px}
 .rScV5Q_selectionActions{height:36px!important;padding:4px 6px!important;gap:2px;border-radius:11px!important;background:rgba(255,255,255,.94)!important;border:1px solid #00000014!important;backdrop-filter:blur(12px)!important;box-shadow:0 3px 12px #00000014!important}
@@ -688,10 +689,10 @@ body[data-ds-dark-theme] .rScV5Q_selectionActions button[aria-expanded=true]{bac
 .odyssey-generation-step{display:flex;align-items:center;gap:10px;min-height:23px;font:13px/21px 'Noto Sans SC',sans-serif}
 .odyssey-generation-step [data-research-generation-description]{display:block;overflow:visible;margin:0;line-height:21px}
 .rScV5Q_generationSpinner{width:16px;height:16px;border:1.7px solid color-mix(in srgb,currentColor 16%,transparent);border-top-color:currentColor;border-radius:50%;animation:odyssey-ring .9s linear infinite}
-.odyssey-generation-skeleton{min-height:18px;flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:8px}
-.odyssey-generation-skeleton i{height:8px;max-height:12px;border-radius:4px;width:100%;background:#f0f1f3;animation:odyssey-skeleton 1.6s ease-in-out infinite}.odyssey-generation-skeleton i:nth-child(2){width:82%}.odyssey-generation-skeleton i:nth-child(3){width:58%}
+.odyssey-generation-skeleton{box-sizing:border-box;min-height:0;flex:1;display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:10px;padding:12px;border:1px solid var(--odyssey-card-border);border-radius:8px;overflow:hidden}
+.odyssey-generation-skeleton i{height:24px;border-radius:5px;width:100%;background:#f0f1f3;animation:odyssey-skeleton 1.6s ease-in-out infinite}.odyssey-generation-skeleton i:nth-child(-n+2){grid-column:1/-1;height:8px;width:90%}.odyssey-generation-skeleton i:first-child{width:62%}.odyssey-generation-skeleton i:nth-child(2n){animation-delay:.15s}
 body[data-ds-dark-theme] .odyssey-generation-skeleton i{background:#36373b}
-.odyssey-generation-records{min-height:0;flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-radius:8px;background:#f4f5f7;font:12px/20px 'Noto Sans SC',sans-serif}
+.odyssey-generation-records{min-height:0;flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-radius:8px;background:#f4f5f7;font:12px/20px 'Noto Sans SC',sans-serif}
 .odyssey-generation-records>div{display:flex;gap:8px;overflow-wrap:anywhere}.odyssey-generation-records time{flex:none;color:var(--odyssey-card-muted)}
 body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 [data-research-compact-chrome] .rScV5Q_generationFooter{display:flex;flex:none;align-items:center;gap:8px;border:0;padding:0;min-height:28px;font:12px/20px DINPro,'Noto Sans SC',sans-serif}

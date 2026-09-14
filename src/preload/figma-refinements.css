@@ -400,7 +400,7 @@ body [data-odyssey-subagent-panel] .Md3f7G_scroll{padding:0 16px}
 body [data-odyssey-subagent-panel] .Md3f7G_column{min-width:0;max-width:100%}
 body [data-odyssey-subagent-panel] :is(.Sxvs8a_root,.Sxvs8a_body,[class*=_markdown_],.gdEzaW_bubble){font-size:14px;line-height:24px}
 body [data-odyssey-subagent-panel] .wSkVaW_root[data-odyssey-page=conversation]>[data-center-composer-host]:has(.XJ7liG_frame){padding:16px 0 12px}
-body [data-odyssey-subagent-panel] [data-research-task-input]{box-sizing:border-box;min-height:100px;padding:12px!important;border:0!important;border-radius:10px;background:#f0f0f0;font-size:13px!important;line-height:19px!important}
+body [data-odyssey-subagent-panel] [data-research-task-input]{box-sizing:border-box;min-height:0;padding:12px!important;border:0!important;border-radius:10px;background:#f0f0f0;font-size:13px!important;line-height:19px!important}
 body [data-odyssey-subagent-panel] [data-research-task-input]>div:first-child{margin-bottom:9px!important}
 body [data-odyssey-subagent-panel] [data-research-task-input-details]>summary{font-size:12px;line-height:18px}
 body[data-ds-dark-theme] [data-odyssey-subagent-panel] [data-research-task-input]{background:#2e2e2e}

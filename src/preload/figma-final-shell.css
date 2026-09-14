@@ -139,11 +139,11 @@ body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlo
 /* 164:805/940: live canvas scope, inside the input at x17/y12. */
 .sRp_composer div:has(>[data-research-context-badge]) { margin:12px 17px 0 !important; max-width:calc(100% - 34px) !important; }
 .sRp_composer [data-research-context-badge] {
-  padding:0 !important; border:0 !important; border-radius:4px !important;
-  background:transparent !important; color:#5e5e5e !important;
+  padding:4px 8px !important; border:0 !important; border-radius:6px !important;
+  background:#00000006 !important; color:#5e5e5e !important;
   font:400 13px/20px var(--odyssey-font-ui) !important;
 }
-[data-ds-dark-theme] .sRp_composer [data-research-context-badge] { color:#d0d0d0 !important; }
+[data-ds-dark-theme] .sRp_composer [data-research-context-badge] { color:#d0d0d0 !important; background:#ffffff09 !important; }
 .sRp_composer [data-research-context-badge]:hover { color:var(--odyssey-text) !important; }
 .sRp_composer [data-research-context-badge]:focus-visible { outline:1px solid var(--odyssey-active); outline-offset:3px; }
 .t8lSSG_panel .t8lSSG_tabBar { padding-top:6px; padding-bottom:6px; }
