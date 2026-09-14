@@ -2982,6 +2982,13 @@ describe('Research canvas file drops', () => {
     expect(client.normalizeResearchWebUrl).toBeTypeOf('function')
     if (typeof client.normalizeResearchWebUrl !== 'function') return
 
+    for(const [input,expected] of [
+      ['www.baidu.com','https://www.baidu.com/'],
+      ['baidu.com','https://baidu.com/'],
+      [' ui.shadcn.com/charts/bar#charts ','https://ui.shadcn.com/charts/bar#charts'],
+      ['//example.com/path?q=1','https://example.com/path?q=1'],
+      ['example.com:8443/path','https://example.com:8443/path']
+    ])expect(client.normalizeResearchWebUrl(input)).toBe(expected)
     expect(client.normalizeResearchWebUrl(' HTTPS://Example.com:443/dashboard '))
       .toBe('https://example.com/dashboard')
     expect(client.normalizeResearchWebUrl('http://Example.com:80/path'))
