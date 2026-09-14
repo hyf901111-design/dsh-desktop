@@ -80,6 +80,39 @@
           "原生客户端重建后复核"
         ],
         "generatedAt": "2026-09-14T07:04:56.245173+00:00"
+      },
+      "merged": {
+        "mergeCommit": "fe1302c7e20b9e324dd7c4522811fcea3c853cf0",
+        "verificationCommit": "fe1302c7e20b9e324dd7c4522811fcea3c853cf0",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-auth-layout.test.ts",
+              "test/figma-auth-errors.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/figma-auth-layout.test.ts test/figma-auth-errors.test.js",
+            "verifiedCommit": "fe1302c7e20b9e324dd7c4522811fcea3c853cf0",
+            "completedAt": "2026-09-14T07:04:58.964Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fe1302c7e20b9e324dd7c4522811fcea3c853cf0",
+            "completedAt": "2026-09-14T07:04:58.964Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-14T07:04:58.964Z"
       }
     }
   ],
