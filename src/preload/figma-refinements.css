@@ -153,6 +153,7 @@ body [data-odyssey-refresh-options] [aria-checked=true],body [data-odyssey-conta
 body[data-ds-dark-theme] [data-odyssey-refresh-options] [aria-checked=true],body[data-ds-dark-theme] [data-odyssey-container-menu] [aria-expanded=true] { background:#373737; }
 body .odyssey-menu-check { margin-left:auto; width:14px; height:14px; flex:none; background:currentColor; mask:url(/figma-check.svg) center/contain no-repeat; }
 body .h8S2Va_trigger { height:28px; min-height:28px; border-radius:7px; padding:0 8px; gap:5px; background:#00000008; }
+body .h8S2Va_trigger .h8S2Va_activitySlot:empty { display:none; }
 body[data-ds-dark-theme] .h8S2Va_trigger { background:#ffffff0a; }
 body .h8S2Va_count { margin:0; }
 body .h8S2Va_menu { position:fixed; width:440px; max-height:min(560px,calc(100vh - 100px)); z-index:3000; padding:6px 7px; background:#fff; color:#212121; }
