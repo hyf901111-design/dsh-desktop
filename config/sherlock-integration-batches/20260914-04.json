@@ -71,6 +71,38 @@
           "旧顶栏测试含已失效组件引用；使用独立当前样式测试覆盖修复"
         ],
         "generatedAt": "2026-09-14T08:13:14.938169+00:00"
+      },
+      "merged": {
+        "mergeCommit": "d9138886a0aeb3887ae32c8df371069a6e941d7c",
+        "verificationCommit": "d9138886a0aeb3887ae32c8df371069a6e941d7c",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/panel-toggle-drag-region.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/panel-toggle-drag-region.test.js",
+            "verifiedCommit": "d9138886a0aeb3887ae32c8df371069a6e941d7c",
+            "completedAt": "2026-09-14T08:13:17.919Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "d9138886a0aeb3887ae32c8df371069a6e941d7c",
+            "completedAt": "2026-09-14T08:13:17.919Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-14T08:13:17.919Z"
       }
     }
   ],
