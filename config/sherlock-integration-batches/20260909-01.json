@@ -9,236 +9,87 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复整理画布遮挡与更新失败重试并增加隔离下载验收",
+        "featureName": "启动品牌和通知布局",
         "branch": "codex/feat/research-board-collaboration-20260909",
-        "baseCommit": "b102167075d5f0b00d5139922ae5ddbce12369d5",
-        "tipCommit": "19be6fb375409990f93686a14b853491c24619b9",
+        "baseCommit": "19be6fb375409990f93686a14b853491c24619b9",
+        "tipCommit": "d80cc40923400a8d3c6c57418c14bf929e636f98",
         "commits": [
           {
-            "commit": "943c1e8f4a463655a2f3177ff3a38dda912219cb",
+            "commit": "7f681ef793e9fcb0408a09ed1fc2f49e64cd51de",
             "parents": [
-              "b102167075d5f0b00d5139922ae5ddbce12369d5"
+              "19be6fb375409990f93686a14b853491c24619b9"
             ],
-            "subject": "区分更新检查与下载失败并修正重试路由"
+            "subject": "修正协作设置与成员列表三处浅色文字颜色"
           },
           {
-            "commit": "e160335fbc2cc9b9c8b76cb35bd773112d3113de",
+            "commit": "d80cc40923400a8d3c6c57418c14bf929e636f98",
             "parents": [
-              "943c1e8f4a463655a2f3177ff3a38dda912219cb"
+              "7f681ef793e9fcb0408a09ed1fc2f49e64cd51de"
             ],
-            "subject": "增加隔离本地更新下载验收并严格禁止安装"
-          },
-          {
-            "commit": "19be6fb375409990f93686a14b853491c24619b9",
-            "parents": [
-              "e160335fbc2cc9b9c8b76cb35bd773112d3113de"
-            ],
-            "subject": "修复整理画布多列适配与底部工具栏避让"
+            "subject": "完善启动品牌展示与侧栏通知定位"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
+            "path": "scripts/install-brand-assets.mjs"
           },
           {
             "status": "A",
-            "path": "scripts/local-update-download-fixture.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-figma-canvas-arrange-motion.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/local-check-updater.ts"
+            "path": "scripts/lib/boot-branding.mjs"
           },
           {
             "status": "A",
-            "path": "src/main/update/local-download-http.ts"
+            "path": "scripts/verify-boot-branding.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-notice.ts"
           },
           {
             "status": "A",
-            "path": "src/main/update/local-download-updater.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/local-update-guard.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/update-manager.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/update-state.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-notifications-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-update-control.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/update-notification-store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/update-view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/contracts.ts"
+            "path": "test/boot-branding.test.js"
           },
           {
             "status": "A",
-            "path": "test/local-download-fixture.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/local-update-download.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/local-update-quit.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-bento-arrange-fit.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-bento-visible-layout.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/update-check-error-routing.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/update-error-stage.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-notification-store.test.ts"
+            "path": "test/sidebar-notice-position.test.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/local-update-download.test.ts",
-              "test/local-update-quit.test.ts",
-              "test/local-update-esm.test.ts",
-              "test/local-update-manager.test.ts",
-              "test/local-download-fixture.test.js",
-              "test/local-update-fixture.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/update-error-stage.test.ts",
-              "test/update-check-error-routing.test.ts",
-              "test/sidebar-update-control.test.ts",
-              "test/update-state.test.ts",
-              "test/update-ui.test.ts",
-              "test/update-notification-store.test.ts",
-              "test/update-manager.test.ts",
-              "test/update-freshness.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "106 directly affected updater, error routing, notification and lifecycle tests passed in 15 files",
-            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
-            "completedAt": "2026-09-12T22:54:41.652Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-bento-arrange-fit.test.js",
-              "test/research-bento-visible-layout.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "11 arrange-fit and legacy layout tests passed",
-            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
-            "completedAt": "2026-09-12T22:54:41.652Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "TypeScript passed",
-            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
-            "completedAt": "2026-09-12T22:54:41.652Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
               "node",
-              "scripts/verify-figma-canvas-arrange-motion.mjs"
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/boot-branding.test.js",
+              "test/sidebar-notice-position.test.ts"
             ],
             "outcome": "passed",
-            "summary": "Real ResearchCanvas: themed fit/toolbar clearance and 260ms motion, undo, interruption and cleanup passed in isolated Chromium",
-            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
-            "completedAt": "2026-09-12T22:54:41.652Z",
+            "summary": "13项聚焦检查通过",
+            "verifiedCommit": "d80cc40923400a8d3c6c57418c14bf929e636f98",
+            "completedAt": "2026-09-14T05:26:54.538150+00:00",
             "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-collaboration-e2e.mjs",
-              "--stage",
-              "sources"
-            ],
-            "outcome": "passed",
-            "summary": "17 locked rc.7 packages and two local runtimes converted twice and verified",
-            "verifiedCommit": "19be6fb375409990f93686a14b853491c24619b9",
-            "completedAt": "2026-09-12T22:54:41.652Z",
-            "timeoutMs": 300000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "17包50组PNG/JSON及两组真实动画已记录；D68错误阶段与D69整理遮挡待18原生复核，安全下载限定第二阶段仅聚焦验证。没有宣称整页或全部客户端通过。"
+          "outcome": "passed",
+          "summary": "用户要求将当前全部修改纳入本地0.9.6测试；启动后继续检查主界面"
         },
         "acceptanceCriteria": [
-          "Arrange chooses an appropriate column count within the toolbar-safe visible area and preserves selection/reference/undo semantics",
-          "Check failure retries only checking, while real download failures preserve download retry",
-          "Explicit isolated download mode uses real progress/hash/cache and refuses install/receipt/recovery/native actions",
-          "Actual quit cleanup awaits cancellation and private temporary cache cleanup within existing deadline",
-          "Native evidence is bound to the exact installed package"
+          "保留启动品牌与通知布局修复"
         ],
         "risks": [
-          "18 native verification remains pending",
-          "The isolated downloaded state never installs or restarts; visual copy is not proof of installation",
-          "Other design states remain unverified according to the ledger",
-          "No main promotion, release, version increment, public upload or remote push"
+          "本地包启动后复核"
         ],
-        "generatedAt": "2026-09-12T22:54:41.652Z"
+        "generatedAt": "2026-09-14T05:26:54.538150+00:00"
       },
       "merged": {
-        "mergeCommit": "efdd1d369b132c698d6a3bd116823b3739d77e5f",
-        "verificationCommit": "efdd1d369b132c698d6a3bd116823b3739d77e5f",
+        "mergeCommit": "170cd80a8d4570e0e9d0cbc61d382b1fced685e8",
+        "verificationCommit": "170cd80a8d4570e0e9d0cbc61d382b1fced685e8",
         "checks": [
           {
             "argv": [
@@ -247,8 +98,8 @@
             ],
             "outcome": "passed",
             "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "efdd1d369b132c698d6a3bd116823b3739d77e5f",
-            "completedAt": "2026-09-12T22:56:46.079Z",
+            "verifiedCommit": "170cd80a8d4570e0e9d0cbc61d382b1fced685e8",
+            "completedAt": "2026-09-14T05:27:40.365Z",
             "timeoutMs": 600000
           },
           {
@@ -259,8 +110,8 @@
             ],
             "outcome": "passed",
             "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "efdd1d369b132c698d6a3bd116823b3739d77e5f",
-            "completedAt": "2026-09-12T22:56:46.079Z",
+            "verifiedCommit": "170cd80a8d4570e0e9d0cbc61d382b1fced685e8",
+            "completedAt": "2026-09-14T05:27:40.365Z",
             "timeoutMs": 120000
           },
           {
@@ -276,8 +127,8 @@
             ],
             "outcome": "passed",
             "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/research-boards-service.test.ts test/research-board-client-adapter.test.js test/research-boards-ui.test.ts test/research-board-tasks.test.ts test/slash-menu-locale.test.ts test/standard-agent-preset.test.ts",
-            "verifiedCommit": "efdd1d369b132c698d6a3bd116823b3739d77e5f",
-            "completedAt": "2026-09-12T22:56:46.079Z",
+            "verifiedCommit": "170cd80a8d4570e0e9d0cbc61d382b1fced685e8",
+            "completedAt": "2026-09-14T05:27:40.365Z",
             "timeoutMs": 180000
           },
           {
@@ -289,8 +140,8 @@
             ],
             "outcome": "passed",
             "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage sources",
-            "verifiedCommit": "efdd1d369b132c698d6a3bd116823b3739d77e5f",
-            "completedAt": "2026-09-12T22:56:46.079Z",
+            "verifiedCommit": "170cd80a8d4570e0e9d0cbc61d382b1fced685e8",
+            "completedAt": "2026-09-14T05:27:40.365Z",
             "timeoutMs": 300000
           },
           {
@@ -302,12 +153,12 @@
             ],
             "outcome": "passed",
             "summary": "已在暂存合并树执行：node scripts/test-research-collaboration-e2e.mjs --stage browser",
-            "verifiedCommit": "efdd1d369b132c698d6a3bd116823b3739d77e5f",
-            "completedAt": "2026-09-12T22:56:46.079Z",
+            "verifiedCommit": "170cd80a8d4570e0e9d0cbc61d382b1fced685e8",
+            "completedAt": "2026-09-14T05:27:40.365Z",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-12T22:56:46.079Z"
+        "recordedAt": "2026-09-14T05:27:40.365Z"
       }
     }
   ],

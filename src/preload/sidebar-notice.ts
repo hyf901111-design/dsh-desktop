@@ -9,19 +9,82 @@ export function noticeIcon(doc: Document, name: keyof typeof noticeIconAssets): 
   return icon
 }
 
+function visibleBounds(doc: Document, element: HTMLElement | null | undefined): DOMRect | undefined {
+  if (!element || element.closest('[hidden]')) return
+  const style = doc.defaultView!.getComputedStyle(element)
+  if (style.display === 'none' || style.visibility === 'hidden') return
+  const bounds = element.getBoundingClientRect()
+  return bounds.width > 0 && bounds.height > 0 ? bounds : undefined
+}
+
+function setStyle(element: HTMLElement, key: string, value: string): void {
+  if (element.style.getPropertyValue(key) !== value) element.style.setProperty(key, value)
+}
+
+function reserveSettingsNavigation(doc: Document): void {
+  for (const nav of doc.querySelectorAll<HTMLElement>('.VOzbGW_nav')) {
+    const bounds = visibleBounds(doc, nav), list = nav.querySelector<HTMLElement>('.VOzbGW_navList')
+    const notices = [...doc.querySelectorAll<HTMLElement>('.ework-sidebar-notice')].filter(el =>
+      !el.hidden && !el.hasAttribute('data-notice-unpositioned') && el.dataset.noticeSettings === 'true' && visibleBounds(doc, el))
+    if (!bounds || !list || !notices.length) {
+      nav.removeAttribute('data-ework-notice-reserved')
+      if (nav.style.getPropertyValue('--ework-notice-nav-height')) nav.style.removeProperty('--ework-notice-nav-height')
+      continue
+    }
+    const top = Math.min(...notices.map(el => doc.defaultView!.innerHeight - Number.parseFloat(el.style.bottom) - el.getBoundingClientRect().height))
+    const listTop = list.getBoundingClientRect().top + nav.scrollTop
+    if (!nav.hasAttribute('data-ework-notice-reserved')) nav.setAttribute('data-ework-notice-reserved', '')
+    setStyle(nav, '--ework-notice-nav-height', `${Math.max(0, top - 12 - listTop)}px`)
+  }
+}
+
 export function positionSidebarNotice(doc: Document, element: HTMLElement): void {
   const win = doc.defaultView!
   const sidebar = doc.querySelector<HTMLElement>('[data-dsh-sidebar-root]')
-  const root = doc.querySelector<HTMLElement>('.VOzbGW_nav') ?? sidebar
+  const settingsNav = [...doc.querySelectorAll<HTMLElement>('.VOzbGW_panel .VOzbGW_nav')].find(el => visibleBounds(doc, el))
+  const root = settingsNav ?? sidebar
   const account = sidebar?.querySelector<HTMLElement>('.srb-account-controls, [data-dsh-sidebar-footer], [data-slot="sidebar.settings"]')
-  const bounds = root?.getBoundingClientRect()
-  const anchor = account?.getBoundingClientRect()
-  if (!bounds || !anchor) return
-  const settings = !!doc.querySelector('.VOzbGW_panel:not([hidden]), [data-sherlock-settings-panel]')
-  const width = bounds.width > 100 ? Math.min(settings ? 212 : 252, bounds.width - 28) : 252
-  element.style.width = `${Math.max(180, width)}px`
-  element.style.left = `${Math.max(12, Math.min(bounds.left + 14, win.innerWidth - width - 12))}px`
-  element.style.bottom = `${Math.max(12, win.innerHeight - anchor.top + 12)}px`
+  const bounds = visibleBounds(doc, root), anchor = visibleBounds(doc, account)
+  if (!bounds || (!settingsNav && !anchor)) {
+    if (!element.hasAttribute('data-notice-unpositioned')) element.setAttribute('data-notice-unpositioned', '')
+    reserveSettingsNavigation(doc)
+    return
+  }
+  element.removeAttribute('data-notice-unpositioned')
+  element.dataset.noticeSettings = String(!!settingsNav)
+  const width = bounds.width > 100 ? Math.min(settingsNav ? 212 : 252, bounds.width - 28) : 252
+  // Figma 337:769/872/972: bottom=nav.bottom-56. The top account tab is not a footer.
+  const bottom = Math.max(12, settingsNav ? win.innerHeight - bounds.bottom + 56 : win.innerHeight - anchor!.top + 12)
+  setStyle(element, 'width', `${Math.max(180, width)}px`)
+  setStyle(element, 'left', `${Math.max(12, Math.min(bounds.left + 14, win.innerWidth - width - 12))}px`)
+  setStyle(element, 'bottom', `${bottom}px`)
+  setStyle(element, 'max-height', `${Math.max(0, win.innerHeight - bottom - 12)}px`)
+  reserveSettingsNavigation(doc)
+}
+
+function observeNoticeAnchors(doc: Document): void {
+  const win = doc.defaultView!
+  let frame = 0
+  const observed = new Set<Element>()
+  const refresh = () => {
+    frame = 0
+    const targets = new Set(doc.querySelectorAll('.ework-sidebar-notice,.VOzbGW_nav,[data-dsh-sidebar-root],.srb-account-controls,[data-dsh-sidebar-footer]'))
+    for (const old of observed) if (!targets.has(old)) { resize?.unobserve(old); observed.delete(old) }
+    for (const target of targets) if (!observed.has(target)) { resize?.observe(target); observed.add(target) }
+    for (const notice of doc.querySelectorAll<HTMLElement>('.ework-sidebar-notice')) positionSidebarNotice(doc, notice)
+    reserveSettingsNavigation(doc)
+  }
+  const schedule = () => { if (!frame) frame = win.requestAnimationFrame(refresh) }
+  const resize = typeof win.ResizeObserver === 'function' ? new win.ResizeObserver(schedule) : undefined
+  const mutations = new win.MutationObserver(records => {
+    // Ignore our own positioning styles; external sizes are covered by ResizeObserver.
+    if (records.some(record => record.type !== 'attributes' || record.attributeName !== 'style' ||
+      !(record.target as Element).matches('.ework-sidebar-notice,.VOzbGW_nav'))) schedule()
+  })
+  mutations.observe(doc.body, { childList:true, subtree:true, attributes:true, attributeFilter:['class','hidden','style','data-sidebar-collapsed'] })
+  win.addEventListener('resize', schedule)
+  win.addEventListener('unload', () => { mutations.disconnect();resize?.disconnect();win.removeEventListener('resize', schedule);if (frame) win.cancelAnimationFrame(frame) }, { once:true })
+  schedule()
 }
 
 export function installSidebarNoticeStyles(doc: Document): void {
@@ -29,6 +92,10 @@ export function installSidebarNoticeStyles(doc: Document): void {
   const style = doc.createElement('style')
   style.id = 'ework-sidebar-notice-style'
   style.textContent = `
+.ework-sidebar-notice[data-notice-unpositioned]{visibility:hidden!important}
+.ework-sidebar-notice{overflow:auto}
+.VOzbGW_nav[data-ework-notice-reserved] .VOzbGW_navList{max-height:var(--ework-notice-nav-height);min-height:0;flex:none;overflow-y:auto}
+.VOzbGW_nav[data-ework-notice-reserved] .VOzbGW_navList>*{flex-shrink:0}
 .ework-sidebar-notice{--notice-bg:rgba(247,247,248,.78);--notice-border:rgba(255,255,255,.72);--notice-text:#292b2d;--notice-muted:#74777b;--notice-button:rgba(255,255,255,.55);--notice-button-border:rgba(213,215,219,.65);--notice-primary:#292b2d;--notice-on-primary:#fff;--notice-track:#d5d7db;--notice-accent:#3671d9;box-sizing:border-box;position:fixed;z-index:1500;display:flex;flex-direction:column;gap:6px;width:252px;padding:12px;color:var(--notice-text);background:var(--notice-bg);border:0;outline:1px solid var(--notice-border);outline-offset:-1px;border-radius:10px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 2px 10px -3px rgba(0,0,0,.06);font:400 12px/18px "Noto Sans SC",sans-serif}
 body[data-ds-dark-theme] .ework-sidebar-notice{--notice-bg:rgba(51,51,51,.88);--notice-border:rgba(88,88,88,.45);--notice-text:#e6e6e6;--notice-muted:#aaa;--notice-button:rgba(69,69,69,.55);--notice-button-border:rgba(81,81,81,.65);--notice-primary:#e6e6e6;--notice-on-primary:#1b1b1b;--notice-track:#515151;--notice-accent:#87abff;box-shadow:0 2px 10px -3px rgba(0,0,0,.16)}
 .ework-sidebar-notice[hidden]{display:none!important}.ework-sidebar-notice header{display:flex;align-items:center;gap:6px;min-height:20px;font-size:13px;font-weight:500;line-height:20px}.ework-sidebar-notice header>strong{flex:1;min-width:0;font:inherit;overflow-wrap:anywhere}.ework-notice-icon{display:inline-block;width:16px;height:16px;flex:0 0 16px;background:currentColor;mask:var(--notice-icon) center/contain no-repeat;-webkit-mask:var(--notice-icon) center/contain no-repeat;color:var(--notice-muted,#74777b)}
@@ -36,4 +103,5 @@ body[data-ds-dark-theme] .ework-sidebar-notice{--notice-bg:rgba(51,51,51,.88);--
 .srb-bubble.ework-sidebar-notice{z-index:1501;max-height:calc(100vh - 80px);overflow:auto}.srb-bubble.ework-sidebar-notice .srb-notification{padding:0;border:0;display:flex;flex-direction:column;gap:6px}.srb-bubble.ework-sidebar-notice .srb-notification p{margin:0}.srb-bubble.ework-sidebar-notice .srb-notification-title{padding:0;font-size:12px;font-weight:400;line-height:18px}.srb-bubble.ework-sidebar-notice .srb-notification-title:after{display:none}.srb-bubble.ework-sidebar-notice :is(.srb-notification-subtitle,small){font-size:11px;line-height:17px;color:var(--notice-muted)}.srb-bubble.ework-sidebar-notice .srb-notification-actions{margin:0;min-height:26px;gap:6px}.srb-bubble.ework-sidebar-notice .srb-notification-actions button{padding:0 10px;height:26px}.srb-bubble.ework-sidebar-notice .srb-primary{box-shadow:none;background:var(--notice-primary)!important;color:var(--notice-on-primary)!important}
 `
   doc.head.append(style)
+  observeNoticeAnchors(doc)
 }
