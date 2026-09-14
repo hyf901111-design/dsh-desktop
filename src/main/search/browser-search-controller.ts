@@ -218,7 +218,7 @@ export class BrowserSearchController {
           : '未找到与当前关键词匹配的可引用来源。请调整关键词；不能据此推断实时价格或数据不存在。'
       }
     }
-    if (verificationFailed) throw new Error('搜索验证尚未完成，请在搜索验证窗口完成验证后重试。当前尚未取得可引用来源。')
+    if (verificationFailed) throw new Error('可用搜索入口需要验证，已在后台跳过。请稍后重试；当前尚未取得可引用来源。')
     if (unreadablePage) throw new Error('暂时未能读取搜索结果，页面可能尚未加载完成或结构已变化。请稍后重试或调整关键词。')
     throw new Error('搜索引擎暂时无法连接，可能是网络超时或安全证书验证失败。请检查网络或稍后重试。')
   }
@@ -229,22 +229,9 @@ export class BrowserSearchController {
   ): Promise<SearchPageState> {
     let state = await this.pageState(window, signal)
     if (!isSearchChallenge(state)) return state
-    window.setTitle('完成搜索验证')
-    window.show()
-    const startedAt = Date.now()
-    const timeoutMs = this.options.verificationTimeoutMs ?? 5 * 60_000
-    try {
-      while (isSearchChallenge(state)) {
-        if (Date.now() - startedAt >= timeoutMs) {
-          throw new SearchVerificationError('搜索验证等待超时。')
-        }
-        await this.abortable(this.sleep(1_000), signal, window)
-        state = await this.pageState(window, signal)
-      }
-    } finally {
-      window.hide()
-    }
-    return state
+    // Background research must never steal focus for a provider challenge.
+    // Let the caller try the next independent engine without bypassing it.
+    throw new SearchVerificationError('该搜索入口需要人工验证，已跳过。')
   }
 
   private async pageState(window: BrowserSearchWindow, signal?: AbortSignal): Promise<SearchPageState> {

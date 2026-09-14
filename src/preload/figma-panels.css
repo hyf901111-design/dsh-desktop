@@ -358,3 +358,15 @@ body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-pane
 /* A non-closable conversation tab has no trailing close affordance to balance. */
 .t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { justify-content:center; padding-inline:8px; gap:0; }
 .t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] .t8lSSG_tabTitle { flex:none; text-align:center; }
+
+/* Keep the parent conversation reachable while other tabs scroll. */
+.t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"] {
+  order:-1; position:sticky; left:0; z-index:3; flex-shrink:0;
+  background:#eee; isolation:isolate;
+}
+body[data-ds-dark-theme] .t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"] { background:#222; }
+.t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"][aria-selected=true] { background:#fff; }
+body[data-ds-dark-theme] .t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"][aria-selected=true] { background:#383838; }
+body .wSkVaW_header, body .wSkVaW_titleRow { -webkit-app-region:drag; }
+body .wSkVaW_header :is(button,input,select,textarea,a,[role=button],[role=tab],[contenteditable=true]),
+body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag; }

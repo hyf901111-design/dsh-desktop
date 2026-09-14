@@ -5,7 +5,7 @@ import { patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from '../scrip
 const require = createRequire(import.meta.url)
 const jsx = require('react/jsx-runtime')
 const sourcePath = 'node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js'
-const t = (key: string) => ({ 'appearance.title': '主题', 'appearance.system': '跟随系统', 'appearance.light': '雅典娜白', 'appearance.dark': '阿伽门农黑' })[key as 'appearance.title'] ?? key
+const t = (key: string) => ({ 'appearance.title': '主题', 'appearance.system': '跟随系统', 'appearance.light': '伊萨卡晨雾', 'appearance.dark': '伊萨卡午夜' })[key as 'appearance.title'] ?? key
 
 describe('Figma theme preview controls', () => {
   it.each(['system', 'light', 'dark'])('keeps %s as the persisted selection and calls the real theme action', async preference => {
