@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260914-06",
+  "branch": "codex/integration/20260914-06",
+  "baseMainCommit": "6696531a06f511f2beed2f6f3cae6db74da867d0",
+  "expectedMainCommit": "6696531a06f511f2beed2f6f3cae6db74da867d0",
+  "createdAt": "2026-09-14T09:55:28.154Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一英文界面与全局右栏文件预览",
+        "branch": "codex/feat/english-ui-20260914",
+        "baseCommit": "6696531a06f511f2beed2f6f3cae6db74da867d0",
+        "tipCommit": "634a517b99be7c3ad612fc4288e1708b0ce33648",
+        "commits": [
+          {
+            "commit": "634a517b99be7c3ad612fc4288e1708b0ce33648",
+            "parents": [
+              "6696531a06f511f2beed2f6f3cae6db74da867d0"
+            ],
+            "subject": "修复英文界面与对话布局并统一详情和文件预览右栏"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/desktop-locale-bridge.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/desktop-locale-bridge.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/generated-file-preview.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/inspect-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/sidebar-file-refresh.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-auth.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-file-panel.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/ui-localization.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/english-ui-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-errors.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/generated-file-preview.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/inspect-sidebar.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-live-files.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/ui-localization.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/generated-file-preview.test.js",
+              "test/sidebar-live-files.test.js",
+              "test/figma-file-panel.test.ts",
+              "test/sidebar-file-reference.test.ts",
+              "test/inspect-sidebar.test.js",
+              "test/ui-localization.test.ts",
+              "test/english-ui-layout.test.js",
+              "test/figma-auth-errors.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "41 项聚焦检查与类型检查通过",
+            "verifiedCommit": "634a517b99be7c3ad612fc4288e1708b0ce33648",
+            "completedAt": "2026-09-14T09:55:06.426778+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "41 项聚焦检查与类型检查通过",
+            "verifiedCommit": "634a517b99be7c3ad612fc4288e1708b0ce33648",
+            "completedAt": "2026-09-14T09:55:06.426778+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证登录注册背景和语言切换、控件边距与置灰；构建后验证真实客户端右栏"
+        },
+        "acceptanceCriteria": [
+          "登录外框不透底",
+          "英文文案与按钮布局修复",
+          "Inspect 使用全局页签",
+          "文件列表自动刷新",
+          "生成文档文件名可定位并打开预览",
+          "执行正文左右对齐"
+        ],
+        "risks": [
+          "同名文件显示路径供用户选择；不翻译用户自定义内容"
+        ],
+        "generatedAt": "2026-09-14T09:55:06.426778+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/generated-file-preview.test.js",
+        "test/sidebar-live-files.test.js",
+        "test/figma-file-panel.test.ts",
+        "test/sidebar-file-reference.test.ts",
+        "test/inspect-sidebar.test.js",
+        "test/ui-localization.test.ts",
+        "test/english-ui-layout.test.js",
+        "test/figma-auth-errors.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
