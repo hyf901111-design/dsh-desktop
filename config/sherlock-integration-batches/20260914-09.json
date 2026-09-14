@@ -125,6 +125,42 @@
           "已有画板原引用保留；复制产生同名文件时自动改名，不覆盖原文件"
         ],
         "generatedAt": "2026-09-14T11:42:28.870821+00:00"
+      },
+      "merged": {
+        "mergeCommit": "33086c9008f7d0ba75c40718801647acf764a022",
+        "verificationCommit": "33086c9008f7d0ba75c40718801647acf764a022",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-owned-files.test.ts",
+              "test/board-ownership-ui.test.js",
+              "test/ui-localization.test.ts",
+              "test/markdown-file-links.test.js",
+              "test/inspect-sidebar.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-owned-files.test.ts test/board-ownership-ui.test.js test/ui-localization.test.ts test/markdown-file-links.test.js test/inspect-sidebar.test.js",
+            "verifiedCommit": "33086c9008f7d0ba75c40718801647acf764a022",
+            "completedAt": "2026-09-14T11:43:03.441Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "33086c9008f7d0ba75c40718801647acf764a022",
+            "completedAt": "2026-09-14T11:43:03.441Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-14T11:43:03.441Z"
       }
     }
   ],
