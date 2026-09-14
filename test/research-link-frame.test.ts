@@ -7,6 +7,14 @@ import {
 import { createResearchLinkFrameBridge } from '../src/preload/research-link-frame'
 
 describe('research link frame authorization', () => {
+  it('owns the authorized direct frame and its descendants, not a spoofed name in another subtree',()=>{
+    const registry=new ResearchLinkFrameRegistry();const auth=registry.authorize({sessionId:'s',nodeId:'n',url:'https://example.com'});
+    const main={parent:null},owned={name:auth.frameName,parent:main};
+    expect(registry.ownsFrame(owned as any)).toBe(true);
+    expect(registry.ownsFrame({name:'nested',parent:owned} as any)).toBe(true);
+    expect(registry.ownsFrame({name:auth.frameName,parent:{name:'other',parent:main}} as any)).toBe(false);
+    registry.clear();expect(registry.ownsFrame(owned as any)).toBe(false);
+  });
   it('canonicalizes only bounded credential-free HTTP URLs', () => {
     expect(normalizeResearchLinkUrl(' HTTPS://Example.com:443/report#part '))
       .toBe('https://example.com/report#part')
@@ -135,7 +143,7 @@ describe('research link frame authorization', () => {
 
     for (const invalid of [
       { ...frame, name: 'other-frame' },
-      { ...frame, url: 'https://other.example/report' },
+      { ...frame, url: 'http://127.0.0.1:4310/' },
       { ...frame, isDestroyed: () => true }
     ]) {
       await expect(registry.inspect(
@@ -173,7 +181,7 @@ describe('research link frame authorization', () => {
     expect(() => authorize?.({
       sender: webContents,
       senderFrame: { processId: 7, routingId: 42 }
-    }, payload)).toThrow('main Sherlock window')
+    }, payload)).toThrow('main EWork Odyssey window')
     await expect(Promise.resolve(authorize?.({
       sender: webContents,
       senderFrame: { ...mainFrame }

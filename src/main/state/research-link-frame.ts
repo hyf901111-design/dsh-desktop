@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import type { WebFrameMain } from 'electron'
+import { isTrustedAppUrl } from '../security-policy'
 import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-trust'
 
 const MAX_ID_LENGTH = 256
@@ -168,17 +169,25 @@ export class ResearchLinkFrameRegistry {
     return this.nodes.get(this.key(identity)) ?? null
   }
 
+  ownsFrame(frame: WebFrameMain | null | undefined): boolean {
+    let current = frame
+    while (current?.parent) {
+      if (!current.parent.parent && [...this.nodes.values()].some(node => node.frameName === current!.name)) return true
+      current = current.parent
+    }
+    return false
+  }
+
   async inspect(
     value: unknown,
     frames: readonly WebFrameMain[]
   ): Promise<ResearchLinkFrameInspection | null> {
     const authorization = this.resolve(value)
     if (authorization === null) return null
-    const authorizedOrigin = new URL(authorization.url).origin
     const frame = frames.find((candidate) => {
       if (candidate.name !== authorization.frameName || candidate.isDestroyed()) return false
       const currentUrl = normalizeResearchLinkUrl(candidate.url)
-      return currentUrl !== null && new URL(currentUrl).origin === authorizedOrigin
+      return currentUrl !== null && !isTrustedAppUrl(currentUrl)
     })
     if (frame === undefined) return null
     const url = normalizeResearchLinkUrl(frame.url)

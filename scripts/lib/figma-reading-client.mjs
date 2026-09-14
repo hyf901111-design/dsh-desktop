@@ -51,6 +51,9 @@ function OdysseyTaskSheet({children,onClose}) {
 }
 `;
 export function patchFigmaReadingConversation(source) {
+  source=exact(source,
+    'if (destination === null || composerPortalHost.parentElement === destination) return;',
+    'if (destination === null || !destination.isConnected) { composerPortalHost.remove(); publishComposerHeight(0); return; }\n\t\t\t\tif (composerPortalHost.parentElement === destination) return;');
   const marker='/* odyssey:reading-layout:20260912 */';
   if(source.includes(marker)) {
     const a=source.indexOf('function OdysseyReadingStatus('), b=source.indexOf('function useOdysseyCompactTasks(',a);
