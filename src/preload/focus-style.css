@@ -1,0 +1,16 @@
+/* Focus must not add a ring. Canvas selection is a separate, persistent state. */
+html body :is(:focus,:focus-visible):not([data-research-node-id]) {
+  outline:none!important;
+  box-shadow:none!important;
+}
+html body :is(.fV0t5q_search,.cubgiG_searchShell):focus-within {
+  outline:none!important;
+  box-shadow:none!important;
+  border-color:var(--dsw-alias-border-l2,#7774)!important;
+}
+html body :is(._7yHdaG_editor,.rScV5Q_linkPopover input,.rScV5Q_containerDraft textarea,.qSYn7G_search input,.nLMEza_objectiveInput,.rtSEdW_input,.At1oFq_input,.zGbnIq_input,.Mbwy4a_customTextarea):focus {
+  border-color:var(--dsw-alias-border-l2,#7774)!important;
+}
+html body .odyssey-session-title-edit input {
+  border-color:var(--dsw-alias-border-l2,#7774);
+}
