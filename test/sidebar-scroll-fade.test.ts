@@ -29,5 +29,8 @@ it('updates the mask in the same event as a fast wheel delta', () => {
   expect(event.defaultPrevented).toBe(true)
   expect(root.scrollTop).toBe(400)
   expect(list.style.maskImage).toContain('transparent 364px, transparent 400px')
+  const handled = new w.WheelEvent('wheel', { deltaY: 400, bubbles: true, cancelable: true })
+  handled.preventDefault(); list.dispatchEvent(handled as unknown as Event)
+  expect(root.scrollTop).toBe(400)
   w.dispatchEvent(new w.Event('unload')); w.happyDOM.abort()
 })

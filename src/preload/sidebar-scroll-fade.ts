@@ -53,7 +53,7 @@ export function installSidebarScrollFade(doc: Document): void {
   // Apply trackpad/mouse deltas and the mask atomically; OS momentum deltas remain intact.
   const wheel = (event: WheelEvent) => {
     const root = (event.target as Element).closest?.<HTMLElement>(roots)
-    if (!root || event.ctrlKey || event.metaKey || event.shiftKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY) || root.scrollHeight <= root.clientHeight) return
+    if (event.defaultPrevented || !root || event.ctrlKey || event.metaKey || event.shiftKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY) || root.scrollHeight <= root.clientHeight) return
     event.preventDefault()
     if (frame) { win.cancelAnimationFrame(frame); frame = 0 }
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientHeight : 1
