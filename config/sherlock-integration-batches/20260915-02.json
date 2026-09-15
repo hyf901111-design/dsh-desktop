@@ -9,39 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "优化搜索弹窗与顶栏菜单关闭",
+        "featureName": "统一取消客户端聚焦描边",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
-        "tipCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
+        "baseCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
+        "tipCommit": "42183e4b938c1de7153d555b1a834df70e37edd1",
         "commits": [
           {
-            "commit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
+            "commit": "42183e4b938c1de7153d555b1a834df70e37edd1",
             "parents": [
-              "d11f90eea3cd316ff0513791d89125381e8d726e"
+              "fe5b6577d034b53537c4abc1688f044ca099ecbe"
             ],
-            "subject": "优化会话搜索分组样式并修复顶栏菜单外部关闭"
+            "subject": "统一取消客户端聚焦描边并保留画板选中边框"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
+            "status": "A",
+            "path": "src/preload/focus-style.css"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-session-search.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/ui-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-session-search.test.ts"
+            "path": "src/preload/shell-style.ts"
           }
         ],
         "checks": [
@@ -55,8 +43,8 @@
             ],
             "outcome": "passed",
             "summary": "9项聚焦检查和类型检查通过",
-            "verifiedCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
-            "completedAt": "2026-09-15T23:51:04.724059+00:00",
+            "verifiedCommit": "42183e4b938c1de7153d555b1a834df70e37edd1",
+            "completedAt": "2026-09-15T23:57:11.298707+00:00",
             "timeoutMs": 120000
           },
           {
@@ -69,8 +57,8 @@
             ],
             "outcome": "passed",
             "summary": "9项聚焦检查和类型检查通过",
-            "verifiedCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
-            "completedAt": "2026-09-15T23:51:04.724059+00:00",
+            "verifiedCommit": "42183e4b938c1de7153d555b1a834df70e37edd1",
+            "completedAt": "2026-09-15T23:57:11.298707+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -81,46 +69,13 @@
         "acceptanceCriteria": [
           "搜索输入位置固定且无蓝色描边",
           "结果按看板区和工作区分组",
-          "点击外部关闭搜索和顶栏菜单"
+          "点击外部关闭搜索和顶栏菜单",
+          "客户端聚焦不出现描边，保留画板组件选中蓝框"
         ],
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T23:51:04.724059+00:00"
-      },
-      "merged": {
-        "mergeCommit": "431f5016f1aedb6038dc69b0c71c8a24d300a867",
-        "verificationCommit": "431f5016f1aedb6038dc69b0c71c8a24d300a867",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "431f5016f1aedb6038dc69b0c71c8a24d300a867",
-            "completedAt": "2026-09-15T23:51:07.602Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "431f5016f1aedb6038dc69b0c71c8a24d300a867",
-            "completedAt": "2026-09-15T23:51:07.602Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T23:51:07.602Z"
+        "generatedAt": "2026-09-15T23:57:11.298707+00:00"
       }
     }
   ],
