@@ -853,6 +853,7 @@ export class ResearchBoardIntegration {
         text: r.intent.text,
         context: r.intent.context,
         ...r.reply,
+        submissionState: this.submissions.has(r.key) ? 'creating' : r.reply?.state === 'messageAccepted' ? 'interrupted' : undefined,
         ...(taskFailureMessage(r.failureCode) ? { failureCode: r.failureCode } : {}),
         runtimeState:
           r.runtimeState === 'superseded' && r.intent.targetId && r.restart && !r.restart.intent.targetId

@@ -10,7 +10,7 @@ async function setup(user: {id:string;username:string;createdAt:number} | null =
   document.body.innerHTML = '<button class="VOzbGW_trigger">设置</button>'
   if (user) document.body.insertAdjacentHTML('beforeend', '<div class="VOzbGW_overlay"><div class="VOzbGW_panel"><nav class="VOzbGW_nav"><div class="VOzbGW_navList"></div></nav><div class="VOzbGW_content"></div></div></div>')
   const invoke = vi.fn(async (action: string) => action === 'me' ? {user} : action === 'usage' ? {usage:[{capability:'fund-research',requests:50,succeeded:49}]} : {error:{code:'INVALID_CREDENTIALS'}})
-  const boards = { getSnapshot: vi.fn(async () => ({account:{user:{userId:user?.id, publicId:'123456789012'}}})) }
+  const boards = { getSnapshot: vi.fn(async () => ({account:{user:{userId:user?.id, publicId:'1234567890'}}})) }
   dispose = mountAccountUi(document as unknown as Document, invoke, boards as never)
   await window.happyDOM.waitUntilComplete()
   document.querySelector<HappyButton>('.sherlock-account-button')!.click()
@@ -32,12 +32,17 @@ describe('real account auth rendering', () => {
     expect(document.querySelector('.sherlock-account-page')).toBeNull()
     expect(document.activeElement).toBe(target)
   })
-  it('shows only the designed profile and password controls while preserving real account services', async () => {
-    const { document, invoke } = await setup({id:'account',username:'hyf90',createdAt:1})
+  it('shows the public invitation ID with copy alongside existing account controls', async () => {
+    const { window, document, invoke } = await setup({id:'account',username:'hyf90',createdAt:1})
     const page = document.querySelector('.sherlock-account-page')!
     expect(page.querySelector('.sherlock-account-profile')?.textContent).toContain('hyf90')
-    expect(page.querySelector('.sherlock-account-id-row')).toBeNull()
-    expect(page.textContent).not.toContain('复制 ID')
+    expect(page.querySelector('.sherlock-account-id-row')?.textContent).toContain('1234567890')
+    expect(page.textContent).toContain('复制 ID')
+    const copy = vi.spyOn(window.navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    page.querySelector<HappyButton>('.sherlock-account-id-row button')!.click()
+    await window.happyDOM.waitUntilComplete()
+    expect(copy).toHaveBeenCalledWith('1234567890')
+    expect(page.querySelector('[role=status]')?.textContent).toBe('复制成功')
     expect(page.textContent).toContain('基金研究')
     expect(page.textContent).toContain('50')
     page.querySelector<HappyButton>('.sherlock-account-security button')!.click()

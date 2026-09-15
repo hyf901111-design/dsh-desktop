@@ -61,7 +61,7 @@ export type PageDependencies = {
   document?: Document
 }
 export { selectionNodeReady } from './research-board-presentation'
-import { boardEditTime, boardTaskStatus, boardTaskAttempts, boardMembers, boardEntryActions, boardAvatarBackground } from './research-board-presentation'
+import { boardOnlySession, boardRequestPresentation, boardEditTime, boardTaskStatus, boardTaskAttempts, boardMembers, boardEntryActions, boardAvatarBackground } from './research-board-presentation'
 export { followResearchConversation } from './research-conversation-follow'
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
@@ -1180,6 +1180,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         number | undefined,
     current,
     isShared,
+    isBoardOnly: (id: string) => boardOnlySession(state, id),
     call,
     activate,
     openBoard,
@@ -1194,7 +1195,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     retryRequest: (id: string) => {
       const r = sends.get(id)
       return r?.reply?.accepted &&
-        ['messageAccepted', 'taskCreateFailed'].includes(r.reply.state)
+        !r.busy && r.reply.state === 'taskCreateFailed'
         ? r
         : null
     },
@@ -2380,16 +2381,18 @@ export function ResearchBoardDiscussion({
   const [pendingRequests, setPendingRequests] = React.useState([] as any[])
   React.useEffect(() => {
     let active = true
-    if (v?.permissions.read)
-      void page
-        .call<any[]>('request.list', { boardId: v.boardId })
-        .then((rows) => {
-          if (active) setPendingRequests(rows)
-        })
-        .catch(() => {})
-    return () => {
-      active = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    setPendingRequests([])
+    const load = () => {
+      if (!v?.permissions.read) return
+      void page.call<any[]>('request.list', { boardId: v.boardId }).then(rows => {
+        if (!active) return
+        setPendingRequests(rows)
+        if (rows.some(r => r.state === 'messageAccepted' && r.submissionState !== 'interrupted')) timer = setTimeout(load, 1000)
+      }).catch(() => {})
     }
+    load()
+    return () => { active = false; clearTimeout(timer) }
   }, [v?.boardId, v?.seq, v?.permissions.read])
   if (!v?.permissions.read)
     return h(
@@ -2459,22 +2462,13 @@ export function ResearchBoardDiscussion({
       { className: 'srb-request-statuses' },
       ...pendingRequests
         .filter((r: any) => belongs(r.requestMessageId))
-        .filter((r: any) => r.runtimeState !== 'superseded')
-        .filter(
-          (r: any) =>
-            r.state === 'taskCreateFailed' ||
-            r.state === 'messageAccepted' ||
-            r.runtimeState === 'interrupted' ||
-            r.runtimeState === 'uncertain'
-        )
+        .filter((r: any) => boardRequestPresentation(r, v.tasks))
         .map((r: any) =>
           h(
             'div',
             { className: 'srb-status', key: r.clientMutationId },
-            taskFailureMessage(r.failureCode) ?? (r.runtimeState
-              ? '执行已中断或结果未确认；不会自动重复调用模型。'
-              : '消息已保存，任务尚未启动。'),
-            h(
+            boardRequestPresentation(r, v.tasks)?.text,
+            boardRequestPresentation(r, v.tasks)?.kind === 'retry' && h(
               'button',
               {
                 onClick: () =>

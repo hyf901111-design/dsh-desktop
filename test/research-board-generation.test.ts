@@ -235,3 +235,23 @@ it('shows the same terminal failure on peer components and preserves previous su
   const result = await integration.materialize({ accountId: 'user', boardId: 'board', epoch: 1, localSessionId: 'local', canvas, signal: new AbortController().signal })
   expect(result.artifacts[0]).toMatchObject({ generationStatus: 'failed', generationError: '模型没有返回可展示的内容，自动恢复仍未完成。', refreshError: '模型没有返回可展示的内容，自动恢复仍未完成。', containerSpec: canvas.artifacts[0]!.containerSpec })
 })
+
+it('distinguishes a live message-to-task submission from one interrupted by restart', async () => {
+  const { integration, service } = await fixture()
+  service.taskAuthority = () => ({localSessionId:'local', snapshot:{board:{sharingEpoch:1},tasks:[],snapshot:{canvas:{files:[],artifacts:[]}}}}) as any
+  let release!: () => void
+  const gate = new Promise<void>(r => { release = r })
+  ;(integration as any).options.client.request = async ({body}: any) => {
+    if(body.action === 'message') return {action:body.action,operationId:body.operationId,seq:1,message:{id:'request'}}
+    if(body.action === 'taskCreate') { await gate; throw Object.assign(Error('creation failed'),{status:400}) }
+    return {}
+  }
+  const work = integration.submit({accountId:'user',boardId:'board',clientMutationId:'slow',text:'你好',context:{scope:'board',references:[]},signal:new AbortController().signal})
+  await vi.waitFor(() => expect(integration.requests('user','board')[0]).toMatchObject({state:'messageAccepted',submissionState:'creating'}))
+  release()
+  expect(await work).toMatchObject({state:'taskCreateFailed'})
+  expect(integration.requests('user','board')[0]).toMatchObject({state:'taskCreateFailed'})
+  const key = integration.journal.prepare('user','board','orphan',{text:'尚未创建任务'},1)
+  integration.journal.update(key,{reply:{accepted:true,clientMutationId:'orphan',requestMessageId:'orphan-message',taskId:null,state:'messageAccepted'}})
+  expect(integration.requests('user','board').find(r=>r.clientMutationId==='orphan')).toMatchObject({submissionState:'interrupted'})
+})
