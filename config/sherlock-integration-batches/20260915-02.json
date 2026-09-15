@@ -9,23 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "侧栏整体滚动与吸顶标题",
+        "featureName": "协作提醒与看板样式完善",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
-        "tipCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
+        "baseCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
+        "tipCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
         "commits": [
           {
-            "commit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
+            "commit": "43f7b71e315dc42c196d577bebed026401c8858c",
             "parents": [
-              "64743ac3702e2b92535f8211e1871655ea7bbef5"
+              "099f4451d4af8b9358abfe3bef0285e8c7be7cfd"
             ],
-            "subject": "统一侧栏滚动并保留看板与工作区吸顶标题"
+            "subject": "完善协作邀请提醒并统一看板工具和思维导图样式"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
@@ -33,7 +37,23 @@
           },
           {
             "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-notice.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-notifications-center.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-derived-mindmap-final.test.ts"
           }
         ],
         "checks": [
@@ -42,13 +62,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/onboarding-patch.test.ts",
-              "test/research-board-polish.test.ts"
+              "test/research-board-notifications-center.test.ts",
+              "test/sidebar-notice-position.test.ts",
+              "test/research-derived-mindmap-final.test.ts"
             ],
             "outcome": "passed",
-            "summary": "18项聚焦检查与类型检查通过；补丁重复执行通过",
-            "verifiedCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
-            "completedAt": "2026-09-15T07:48:07.646392+00:00",
+            "summary": "20项聚焦检查与类型检查通过",
+            "verifiedCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
+            "completedAt": "2026-09-15T08:30:08.737546+00:00",
             "timeoutMs": 120000
           },
           {
@@ -60,9 +81,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "18项聚焦检查与类型检查通过；补丁重复执行通过",
-            "verifiedCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
-            "completedAt": "2026-09-15T07:48:07.646392+00:00",
+            "summary": "20项聚焦检查与类型检查通过",
+            "verifiedCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
+            "completedAt": "2026-09-15T08:30:08.737546+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -71,48 +92,15 @@
           "summary": "集成后通过实际客户端验证滚动交互"
         },
         "acceptanceCriteria": [
-          "看板与工作区共享滚动",
-          "标题吸顶但不自动收起",
-          "看板展开返回顶部"
+          "可见账户栏上方展示协作邀请",
+          "标题无底色且新建入口为加号",
+          "画板提示居中于工具栏上方",
+          "思维导图呈蓝色横向分层树"
         ],
         "risks": [
-          "真实任务失败仍保留显式重试，防止重复调用模型"
+          "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T07:48:07.646392+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
-        "verificationCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
-            "completedAt": "2026-09-15T07:48:30.217Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
-            "completedAt": "2026-09-15T07:48:30.217Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T07:48:30.217Z"
+        "generatedAt": "2026-09-15T08:30:08.737546+00:00"
       }
     }
   ],
