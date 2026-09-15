@@ -74,6 +74,7 @@ function requestCloudflareEdge({ url, address, init }) {
         servername: url.hostname,
         path: `${url.pathname}${url.search}`,
         method: init.method ?? 'GET',
+        agent: false,
         headers: Object.fromEntries(headers.entries())
       },
       (response) => {
@@ -100,7 +101,8 @@ function requestCloudflareEdge({ url, address, init }) {
       }
     )
     request.setTimeout(360_000, () => request.destroy(new Error('Cloudflare request timed out.')))
-    request.once('error', reject)
+    request.on('error', reject)
+    request.on('socket', (socket) => socket.on('error', reject))
     if (init.body !== undefined && init.body !== null) request.write(init.body)
     request.end()
   })
