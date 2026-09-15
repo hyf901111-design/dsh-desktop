@@ -1834,3 +1834,14 @@ it('overlays local generation progress without changing the shared document or e
  snapshot.tasks[0]!.status='completed';await t.service.receiveBoard('board',snapshot)
  expect(t.service.getSnapshot().current!.canvas.artifacts[0]!.generationEvents).toBeUndefined()
 })
+
+it('keeps shared preview cleanup local and durable without allowing direct shared canvas writes', async () => {
+  const t=make(); await ready(t)
+  const key='sherlock.research.canvas.preview-revocations.v1:shared-session'
+  expect(t.service.writeCanvasStorage(key,'["file-test"]')).toBe(true)
+  expect(t.service.readCanvasStorage(key)).toBe('["file-test"]')
+  expect(t.storage.getItem(key)).toBe('["file-test"]')
+  expect(t.service.writeCanvasStorage(key,'[{}]')).toBe(false)
+  expect(t.service.writeCanvasStorage('sherlock.research.canvas.files.v1:shared-session','[]')).toBe(false)
+  expect(t.service.writeCanvasStorage(key,'[]')).toBe(true)
+})
