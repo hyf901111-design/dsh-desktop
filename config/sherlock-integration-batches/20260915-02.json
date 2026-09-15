@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "协作提醒与看板样式完善",
+        "featureName": "侧栏标题渐隐与思维导图显示修正",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
-        "tipCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
+        "baseCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
+        "tipCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
         "commits": [
           {
-            "commit": "43f7b71e315dc42c196d577bebed026401c8858c",
+            "commit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
             "parents": [
-              "099f4451d4af8b9358abfe3bef0285e8c7be7cfd"
+              "43f7b71e315dc42c196d577bebed026401c8858c"
             ],
-            "subject": "完善协作邀请提醒并统一看板工具和思维导图样式"
+            "subject": "统一侧栏加号图标并让目录在吸顶标题下渐隐"
           }
         ],
         "files": [
@@ -37,23 +37,19 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-notifications-ui.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/research-boards-ui.ts"
           },
           {
-            "status": "M",
-            "path": "src/preload/sidebar-notice.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-notifications-center.test.ts"
+            "status": "A",
+            "path": "src/preload/sidebar-scroll-fade.ts"
           },
           {
             "status": "M",
             "path": "test/research-derived-mindmap-final.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-scroll-fade.test.ts"
           }
         ],
         "checks": [
@@ -64,12 +60,13 @@
               "run",
               "test/research-board-notifications-center.test.ts",
               "test/sidebar-notice-position.test.ts",
-              "test/research-derived-mindmap-final.test.ts"
+              "test/research-derived-mindmap-final.test.ts",
+              "test/sidebar-scroll-fade.test.ts"
             ],
             "outcome": "passed",
-            "summary": "20项聚焦检查与类型检查通过",
-            "verifiedCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
-            "completedAt": "2026-09-15T08:30:08.737546+00:00",
+            "summary": "23项聚焦检查与类型检查通过",
+            "verifiedCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
+            "completedAt": "2026-09-15T08:46:59.137543+00:00",
             "timeoutMs": 120000
           },
           {
@@ -81,9 +78,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "20项聚焦检查与类型检查通过",
-            "verifiedCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
-            "completedAt": "2026-09-15T08:30:08.737546+00:00",
+            "summary": "23项聚焦检查与类型检查通过",
+            "verifiedCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
+            "completedAt": "2026-09-15T08:46:59.137543+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -92,49 +89,15 @@
           "summary": "集成后通过实际客户端验证滚动交互"
         },
         "acceptanceCriteria": [
-          "可见账户栏上方展示协作邀请",
-          "标题无底色且新建入口为加号",
-          "画板提示居中于工具栏上方",
-          "思维导图呈蓝色横向分层树"
+          "加号采用同套图标",
+          "目录在透明标题下渐隐",
+          "思维导图白底与横向连线",
+          "画板同步错误置于底部功能栏上方"
         ],
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T08:30:08.737546+00:00"
-      },
-      "merged": {
-        "mergeCommit": "80c6331f7ea11d0ff8fca5cff0140428b30c57b1",
-        "verificationCommit": "80c6331f7ea11d0ff8fca5cff0140428b30c57b1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "80c6331f7ea11d0ff8fca5cff0140428b30c57b1",
-            "completedAt": "2026-09-15T08:30:52.752Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "80c6331f7ea11d0ff8fca5cff0140428b30c57b1",
-            "completedAt": "2026-09-15T08:30:52.752Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T08:30:52.752Z"
+        "generatedAt": "2026-09-15T08:46:59.137543+00:00"
       }
     }
   ],
