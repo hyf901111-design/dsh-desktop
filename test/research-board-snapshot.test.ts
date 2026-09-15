@@ -567,3 +567,26 @@ it('preserves numeric accepted reference provenance through portable snapshots w
     ).toThrow('PRIVATE_PATH_IN_HISTORY')
   }
 })
+
+it('preserves interaction event identities while remapping board nodes for sharing and personal copies', async () => {
+  const { ResearchBoardSnapshots } = await import('../src/main/state/research-board-snapshot')
+  const { mkdtemp, rm } = await import('node:fs/promises')
+  const { join } = await import('node:path')
+  const { tmpdir } = await import('node:os')
+  const root = await mkdtemp(join(tmpdir(),'interaction-copy-'))
+  const interactionState = {version:'v',events:{'event-1':{id:'event-1',clock:1,targetRoute:[0],tag:'BUTTON',type:'click'}}}
+  let canvas: any = {files:[],artifacts:[{id:'node',kind:'generated-container',config:{interactionState}}]}
+  const store = new ResearchBoardSnapshots({root,readCanvas:()=>canvas,writeCanvas:(_id: string,value: any)=>{canvas=value},history:async()=>({history:[],revision:'r'}),resolveSource:async()=>null,runtime:async()=>({revision:'empty'}),authorize(){},download:async()=>{throw Error('UNEXPECTED_DOWNLOAD')}} as any)
+  const signal = new AbortController().signal
+  try {
+    const preview = await store.preview({sessionId:'s',accountId:'a',signal})
+    const captured = await store.capture({sessionId:'s',accountId:'a',operationId:'op',captureId:preview.captureId,signal})
+    expect((captured.snapshot.canvas.artifacts[0] as any).config.interactionState).toEqual(interactionState)
+    expect(captured.snapshot.canvas.artifacts[0]!.id).not.toBe('node')
+    const copy = await store.prepareCopy({accountId:'a',boardId:'b',snapshot:{board:{sharingEpoch:1,title:'test'},snapshot:captured.snapshot,messages:[]} as any,signal})
+    canvas={files:[],artifacts:[]}
+    await store.finalizeCopy({accountId:'a',copyId:copy.copyId,localSessionId:'personal',signal})
+    expect(canvas.artifacts[0].config.interactionState).toEqual(interactionState)
+    expect(canvas.artifacts[0].id).not.toBe(captured.snapshot.canvas.artifacts[0]!.id)
+  } finally {await rm(root,{recursive:true,force:true})}
+})
