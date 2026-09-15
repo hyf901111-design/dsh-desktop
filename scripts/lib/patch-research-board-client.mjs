@@ -452,10 +452,20 @@ export function patchResearchBoardSidebar(source) {
   return patchBoardRegion(source)
 }
 function patchBoardRegion(source) {
-  if (source.includes('data-srb-board-region')) return source
-  return replace(source,
+  if (source.includes('data-srb-board-region')) return patchUnifiedSidebarScroll(source)
+  return patchUnifiedSidebarScroll(replace(source,
     'renderSlot("sidebar.researchBoards",{wide,expandSidebar:()=>{if(collapsed)toggleSidebar();}})',
-    'wide && (0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.regionArea,"data-srb-board-region":"",children:renderSlot("sidebar.researchBoards",{wide,expandSidebar:()=>{if(collapsed)toggleSidebar();}})})')
+    'wide && (0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.regionArea,"data-srb-board-region":"",children:renderSlot("sidebar.researchBoards",{wide,expandSidebar:()=>{if(collapsed)toggleSidebar();}})})'))
+}
+function patchUnifiedSidebarScroll(source) {
+  if (source.includes('data-srb-navigation-scroll')) return source
+  const start = 'wide && (0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.regionArea,"data-srb-board-region"'
+  const first = source.indexOf(start)
+  const footer = source.indexOf('className: SidebarRoot_module_css_default.footArea,', first)
+  const end = source.lastIndexOf('(0, react_jsx_runtime.jsxs)("div", {', footer)
+  if (first < 0 || footer < 0 || end < first) throw new Error('Unified sidebar scroll anchors missing')
+  const content = source.slice(first, end).trimEnd().replace(/,$/, '')
+  return source.slice(0, first) + '(0,react_jsx_runtime.jsxs)("div",{"data-srb-navigation-scroll":"",children:[' + content + ']}),\n' + source.slice(end)
 }
 export function patchResearchBoardSidebarTypes(source) {
   if (source.includes("'sidebar.researchBoards'")) return source
