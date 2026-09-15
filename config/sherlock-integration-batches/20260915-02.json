@@ -74,6 +74,40 @@
           "真实任务失败仍保留显式重试，防止重复调用模型"
         ],
         "generatedAt": "2026-09-15T07:28:45.120922+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
+        "verificationCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/onboarding-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
+            "verifiedCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
+            "completedAt": "2026-09-15T07:29:04.338Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
+            "completedAt": "2026-09-15T07:29:04.338Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-15T07:29:04.338Z"
       }
     }
   ],
