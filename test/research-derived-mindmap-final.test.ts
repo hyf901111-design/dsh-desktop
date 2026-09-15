@@ -11,6 +11,7 @@ it.each(['light','dark'])('renders the %s derived hierarchy with blue rectangula
   expect(nodes).toHaveLength(4)
   for(const node of nodes){const style=f.browser.getComputedStyle(node);const depth=node.getAttribute('data-research-mind-map-depth');expect(style.backgroundColor).toBe(depth==='0'?'#00549e':depth==='1'?'#0088bd':'#1ab3d5');expect(['#fff','rgb(255, 255, 255)']).toContain(style.color);expect(style.borderRadius).toBe('0px')}
   expect(f.host.querySelector('[data-research-mind-map-edges]')).not.toBeNull()
+  expect(['#fff','rgb(255, 255, 255)']).toContain(f.browser.getComputedStyle(f.host.querySelector('.rScV5Q_mindMap')!).backgroundColor)
   expect(f.host.querySelector('[data-research-derived-sources]')).not.toBeNull()
  }finally{await f.cleanup()}
 })
