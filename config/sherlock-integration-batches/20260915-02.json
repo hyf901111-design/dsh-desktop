@@ -9,47 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "侧栏标题渐隐与思维导图显示修正",
+        "featureName": "快速滚动标题遮挡修正",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "43f7b71e315dc42c196d577bebed026401c8858c",
-        "tipCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
+        "baseCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
+        "tipCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
         "commits": [
           {
-            "commit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
+            "commit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
             "parents": [
-              "43f7b71e315dc42c196d577bebed026401c8858c"
+              "8adeefc39ffa1183965c5d02d5fc83e1f28cab48"
             ],
-            "subject": "统一侧栏加号图标并让目录在吸顶标题下渐隐"
+            "subject": "防止侧栏快速滚动时目录文字穿透吸顶标题"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-refinements.css"
-          },
-          {
-            "status": "M",
             "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/sidebar-scroll-fade.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-derived-mindmap-final.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/sidebar-scroll-fade.test.ts"
           }
         ],
         "checks": [
@@ -65,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "23项聚焦检查与类型检查通过",
-            "verifiedCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
-            "completedAt": "2026-09-15T08:46:59.137543+00:00",
+            "verifiedCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
+            "completedAt": "2026-09-15T09:00:11.408006+00:00",
             "timeoutMs": 120000
           },
           {
@@ -79,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "23项聚焦检查与类型检查通过",
-            "verifiedCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
-            "completedAt": "2026-09-15T08:46:59.137543+00:00",
+            "verifiedCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
+            "completedAt": "2026-09-15T09:00:11.408006+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -89,49 +65,13 @@
           "summary": "集成后通过实际客户端验证滚动交互"
         },
         "acceptanceCriteria": [
-          "加号采用同套图标",
-          "目录在透明标题下渐隐",
-          "思维导图白底与横向连线",
-          "画板同步错误置于底部功能栏上方"
+          "快速上下滚动标题底下无可辨识目录文字",
+          "保留透明标题与渐变过渡"
         ],
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T08:46:59.137543+00:00"
-      },
-      "merged": {
-        "mergeCommit": "36c37797eccbecf9a3a42a8a7a00e80742fefb17",
-        "verificationCommit": "36c37797eccbecf9a3a42a8a7a00e80742fefb17",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "36c37797eccbecf9a3a42a8a7a00e80742fefb17",
-            "completedAt": "2026-09-15T08:47:43.877Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "36c37797eccbecf9a3a42a8a7a00e80742fefb17",
-            "completedAt": "2026-09-15T08:47:43.877Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T08:47:43.877Z"
+        "generatedAt": "2026-09-15T09:00:11.408006+00:00"
       }
     }
   ],
