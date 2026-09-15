@@ -9,23 +9,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补齐搜索结果英文标签",
+        "featureName": "优化搜索弹窗与顶栏菜单关闭",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "f430e2b675e8020188a217d32375aeac130fe906",
-        "tipCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
+        "baseCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
+        "tipCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
         "commits": [
           {
-            "commit": "d11f90eea3cd316ff0513791d89125381e8d726e",
+            "commit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
             "parents": [
-              "f430e2b675e8020188a217d32375aeac130fe906"
+              "d11f90eea3cd316ff0513791d89125381e8d726e"
             ],
-            "subject": "补齐统一搜索结果的工作区英文标签"
+            "subject": "优化会话搜索分组样式并修复顶栏菜单外部关闭"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-session-search.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-session-search.test.ts"
           }
         ],
         "checks": [
@@ -35,13 +51,12 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/sidebar-session-search.test.ts",
-              "test/sidebar-scroll-fade.test.ts",
               "test/ui-localization.test.ts"
             ],
             "outcome": "passed",
-            "summary": "12项聚焦检查和类型检查通过",
-            "verifiedCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
-            "completedAt": "2026-09-15T10:05:28.772712+00:00",
+            "summary": "9项聚焦检查和类型检查通过",
+            "verifiedCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
+            "completedAt": "2026-09-15T23:51:04.724059+00:00",
             "timeoutMs": 120000
           },
           {
@@ -53,59 +68,25 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "12项聚焦检查和类型检查通过",
-            "verifiedCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
-            "completedAt": "2026-09-15T10:05:28.772712+00:00",
+            "summary": "9项聚焦检查和类型检查通过",
+            "verifiedCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
+            "completedAt": "2026-09-15T23:51:04.724059+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "集成后通过实际客户端验证滚动交互"
+          "summary": "浏览器已验证分组、输入坐标固定与外部关闭；集成后验证原生顶栏"
         },
         "acceptanceCriteria": [
-          "顶部单一入口搜索两区会话标题",
-          "移除栏目搜索和显示排序菜单",
-          "类型分组、手动排序并在更新后置顶"
+          "搜索输入位置固定且无蓝色描边",
+          "结果按看板区和工作区分组",
+          "点击外部关闭搜索和顶栏菜单"
         ],
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T10:05:28.772712+00:00"
-      },
-      "merged": {
-        "mergeCommit": "be149d2c3e87176ad22c5a7a924631d7cb72ec01",
-        "verificationCommit": "be149d2c3e87176ad22c5a7a924631d7cb72ec01",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "be149d2c3e87176ad22c5a7a924631d7cb72ec01",
-            "completedAt": "2026-09-15T10:06:45.513Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "be149d2c3e87176ad22c5a7a924631d7cb72ec01",
-            "completedAt": "2026-09-15T10:06:45.513Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T10:06:45.513Z"
+        "generatedAt": "2026-09-15T23:51:04.724059+00:00"
       }
     }
   ],
