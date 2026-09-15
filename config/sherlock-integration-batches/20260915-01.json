@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "组件交互持久化与协作目录",
         "branch": "codex/feat/component-state-20260915",
-        "baseCommit": "5b19a8155f512773e03f37c6cbd69c946d2d5b6a",
-        "tipCommit": "e9f25daa9d0dc02727a44508f001ae63a72bfcb6",
+        "baseCommit": "e9f25daa9d0dc02727a44508f001ae63a72bfcb6",
+        "tipCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
         "commits": [
           {
-            "commit": "e9f25daa9d0dc02727a44508f001ae63a72bfcb6",
+            "commit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
             "parents": [
-              "5b19a8155f512773e03f37c6cbd69c946d2d5b6a"
+              "e9f25daa9d0dc02727a44508f001ae63a72bfcb6"
             ],
-            "subject": "修复：复制看板时保留组件交互记录标识"
+            "subject": "修复：共享看板文件导入保留本机授权清理记录"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/state/research-board-snapshot.ts"
+            "path": "src/main/research-boards-service.ts"
           },
           {
             "status": "M",
-            "path": "test/research-board-snapshot.test.ts"
+            "path": "test/research-boards-service.test.ts"
           }
         ],
         "checks": [
@@ -38,12 +38,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-board-snapshot.test.ts"
+              "test/research-boards-service.test.ts",
+              "-t",
+              "keeps shared preview cleanup|rejects original binding"
             ],
             "outcome": "passed",
-            "summary": "复制双向交互标识回归及类型检查通过",
-            "verifiedCommit": "e9f25daa9d0dc02727a44508f001ae63a72bfcb6",
-            "completedAt": "2026-09-15T01:40:42.627893+00:00",
+            "summary": "共享文件授权清理与禁止直接写入检查通过",
+            "verifiedCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
+            "completedAt": "2026-09-15T01:47:41.637138+00:00",
             "timeoutMs": 120000
           },
           {
@@ -55,9 +57,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "复制双向交互标识回归及类型检查通过",
-            "verifiedCommit": "e9f25daa9d0dc02727a44508f001ae63a72bfcb6",
-            "completedAt": "2026-09-15T01:40:42.627893+00:00",
+            "summary": "共享文件授权清理与禁止直接写入检查通过",
+            "verifiedCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
+            "completedAt": "2026-09-15T01:47:41.637138+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -74,60 +76,7 @@
         "risks": [
           "交互日志按组件源码版本隔离；自定义异步交互需继续原生验证"
         ],
-        "generatedAt": "2026-09-15T01:40:42.627893+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a731a034345cf7799e1a458aea23a5b7a5c7cd2c",
-        "verificationCommit": "a731a034345cf7799e1a458aea23a5b7a5c7cd2c",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-interaction-state.test.js",
-              "test/research-html-theme.test.js",
-              "test/research-board-role-picker.test.ts",
-              "test/research-board-directories.test.js",
-              "test/research-board-generation.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-interaction-state.test.js test/research-html-theme.test.js test/research-board-role-picker.test.ts test/research-board-directories.test.js test/research-board-generation.test.ts",
-            "verifiedCommit": "a731a034345cf7799e1a458aea23a5b7a5c7cd2c",
-            "completedAt": "2026-09-15T01:42:38.298Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-boards-service.test.ts",
-              "-t",
-              "restores deleted.*through production materialization"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-boards-service.test.ts -t restores deleted.*through production materialization",
-            "verifiedCommit": "a731a034345cf7799e1a458aea23a5b7a5c7cd2c",
-            "completedAt": "2026-09-15T01:42:38.298Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "a731a034345cf7799e1a458aea23a5b7a5c7cd2c",
-            "completedAt": "2026-09-15T01:42:38.298Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T01:42:38.298Z"
+        "generatedAt": "2026-09-15T01:47:41.637138+00:00"
       }
     }
   ],
