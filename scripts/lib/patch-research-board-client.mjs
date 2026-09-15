@@ -505,7 +505,7 @@ function polishPatch(source) {
                     listeners.forEach(listener=>listener());
                 },
 setCollaborationAccess(edit) {`);
-  return patchComponentInteractionState(patchBoardFileOwnership(patchBoardDirectoryConversation(patchFigmaFinalConversation(polishBoardPatch(source)))))
+  return patchBoardOnlyViews(patchComponentInteractionState(patchBoardFileOwnership(patchBoardDirectoryConversation(patchFigmaFinalConversation(polishBoardPatch(source))))))
 }
 function polishBoardPatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_POLISH_V1 */')) return entryPatch(chromePatch(source))
@@ -814,4 +814,22 @@ function patchWorkspaceRailSearch(source) {
   const end = source.indexOf('\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: WorkspaceBrowser_module_css_default.listArea,', start)
   if (start < 0 || end < 0) throw Error('Workspace rail search anchors drifted')
   return source.slice(0, start) + source.slice(end) + '\n/* SHERLOCK_WORKSPACE_RAIL_SEARCH_REMOVED_V1 */'
+}
+
+function patchBoardOnlyViews(source) {
+  if (source.includes('/* SHERLOCK_BOARD_ONLY_V1 */')) return source
+  source = replace(source, 'function conversationViewTabProps(', `/* SHERLOCK_BOARD_ONLY_V1 */
+function useSherlockBoardOnly(sessionId) {
+  react.useSyncExternalStore(sherlockBoardsAdapter?.subscribe ?? (()=>()=>{}), sherlockBoardsAdapter?.version ?? (()=>0));
+  return sherlockBoardsAdapter?.isBoardOnly(sessionId) === true;
+}
+function conversationViewTabProps(`)
+  source = replace(source, 'const activeView = directActiveView ?? sessionPresentation.view;', 'const boardOnly = useSherlockBoardOnly(sessionId);\n            const activeView = boardOnly ? "research" : directActiveView ?? sessionPresentation.view;')
+  // Both resident content and header resolve their view from the same live membership.
+  source = source.replaceAll('const storedView = useStore((s) => s.view);', 'const boardOnly = useSherlockBoardOnly(sessionId);\n            const storedView = useStore((s) => s.view);')
+  source = replace(source, 'const active = resolveActiveView(tabs, initialResearchRequested || persistedResearchRequested ? "research" : storedView);', 'const active = resolveActiveView(tabs, boardOnly || initialResearchRequested || persistedResearchRequested ? "research" : storedView);')
+  source = replace(source, 'const view = initialResearchRequested || persistedResearchRequested ? "research" : storedView ?? "chat";', 'const view = boardOnly || initialResearchRequested || persistedResearchRequested ? "research" : storedView ?? "chat";')
+  source = replace(source, 'tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {', '!boardOnly && tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {')
+  source = replace(source, 'actions.setView(viewId);', 'actions.setView(sherlockBoardsAdapter?.isBoardOnly(sessionId) ? "research" : viewId);')
+  return source
 }

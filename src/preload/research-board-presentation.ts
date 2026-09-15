@@ -88,3 +88,18 @@ export function boardEditTime(value?: number, now = Date.now()) {
     if (age >= size) return `${Math.floor(age / size)}${label}`
   return '刚刚'
 }
+
+/** Only entries currently in Boards are restricted; returned workspace sessions keep their views. */
+export function boardOnlySession(state: {favorites: {sessionId: string; pinned?: boolean}[]; boards: {localSessionId?: string; pinned?: boolean}[]}, id?: string) {
+  return !!id && (state.favorites.some(f => f.sessionId === id && f.pinned !== false) || state.boards.some(b => b.localSessionId === id && b.pinned === true))
+}
+export function boardRequestPresentation(request: {state?: string; requestMessageId?: string; runtimeState?: string; submissionState?: string; failureCode?: unknown}, tasks: {requestMessageId?: string; status?: string}[]) {
+  if (request.runtimeState === 'superseded') return null
+  const interrupted = ['interrupted', 'uncertain'].includes(request.runtimeState ?? '') || request.submissionState === 'interrupted'
+  if (interrupted) return {kind:'retry', text:taskFailureMessage(request.failureCode) ?? '执行已中断或结果未确认；不会自动重复调用模型。'}
+  // Board events can arrive before the request journal refresh. Never regress a known task to creation failure.
+  if (request.requestMessageId && tasks.some(t => t.requestMessageId === request.requestMessageId)) return null
+  if (request.state === 'taskCreateFailed') return {kind:'retry',text:taskFailureMessage(request.failureCode) ?? '消息已保存，任务尚未启动。'}
+  if (request.state === 'messageAccepted') return {kind:'pending',text:'正在启动研究任务…'}
+  return null
+}
