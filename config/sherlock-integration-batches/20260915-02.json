@@ -9,43 +9,70 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首次启动欢迎设计",
+        "featureName": "欢迎页与看板账户验收修复",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "f156e27e8f1c157fc57adfb28cf71ce70f54a37c",
-        "tipCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+        "baseCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+        "tipCommit": "635fa968441577591d214a52821db3fe59cd901a",
         "commits": [
           {
-            "commit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+            "commit": "d910d3182dba74e4ae097dd6f54221e35e5425eb",
             "parents": [
               "f156e27e8f1c157fc57adfb28cf71ce70f54a37c"
             ],
-            "subject": "更新首次启动欢迎弹窗为 Figma 设计稿"
+            "subject": "修复看板模式限制与任务启动提示并增加账户ID复制"
+          },
+          {
+            "commit": "635fa968441577591d214a52821db3fe59cd901a",
+            "parents": [
+              "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+              "d910d3182dba74e4ae097dd6f54221e35e5425eb"
+            ],
+            "subject": "整合本次界面验收的看板与账户修复"
           }
+        ],
+        "boundaryParents": [
+          "f156e27e8f1c157fc57adfb28cf71ce70f54a37c"
         ],
         "files": [
           {
-            "status": "A",
-            "path": "build/brand/figma-welcome-illustration.png"
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-settings-models+0.1.0-rc.7.patch"
+            "path": "src/main/research-board-integration.ts"
           },
           {
             "status": "M",
-            "path": "scripts/install-brand-assets.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/figma-welcome.css"
+            "path": "src/preload/account-ui.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/shell-style.ts"
+            "path": "src/preload/figma-settings.css"
           },
           {
             "status": "M",
-            "path": "test/onboarding-patch.test.ts"
+            "path": "src/preload/research-board-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-generation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-polish.test.ts"
           }
         ],
         "checks": [
@@ -54,12 +81,15 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/onboarding-patch.test.ts"
+              "test/onboarding-patch.test.ts",
+              "test/research-board-polish.test.ts",
+              "test/figma-auth-layout.test.ts",
+              "test/research-board-generation.test.ts"
             ],
             "outcome": "passed",
-            "summary": "12项引导检查及类型检查通过",
-            "verifiedCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
-            "completedAt": "2026-09-15T05:47:14.489912+00:00",
+            "summary": "34项相关检查和类型检查通过",
+            "verifiedCommit": "635fa968441577591d214a52821db3fe59cd901a",
+            "completedAt": "2026-09-15T07:14:16.593711+00:00",
             "timeoutMs": 120000
           },
           {
@@ -71,59 +101,25 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "12项引导检查及类型检查通过",
-            "verifiedCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
-            "completedAt": "2026-09-15T05:47:14.490411+00:00",
+            "summary": "34项相关检查和类型检查通过",
+            "verifiedCommit": "635fa968441577591d214a52821db3fe59cd901a",
+            "completedAt": "2026-09-15T07:14:16.593711+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能分支不构建共享客户端；合入集成分支后进行真实首次启动视觉及流程验证。"
+          "summary": "进入集成包后核验看板固定模式与账户复制；前一欢迎页已通过原生检查"
         },
         "acceptanceCriteria": [
-          "欢迎弹窗与 Figma 原稿一致",
-          "首次确认后不重复弹出",
-          "继续进入模型配置"
+          "看板区仅显示研究画板",
+          "创建任务时不显示失败重试",
+          "账户显示可复制专有ID"
         ],
         "risks": [
-          "仅有深色 Figma 原稿，欢迎卡片在两种主题下均使用品牌深色设计"
+          "真实任务失败仍保留显式重试，防止重复调用模型"
         ],
-        "generatedAt": "2026-09-15T05:48:06.382365+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
-        "verificationCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
-            "completedAt": "2026-09-15T05:49:00.917Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
-            "completedAt": "2026-09-15T05:49:00.917Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T05:49:00.917Z"
+        "generatedAt": "2026-09-15T07:14:16.593711+00:00"
       }
     }
   ],
