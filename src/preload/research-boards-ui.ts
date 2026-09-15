@@ -755,11 +755,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (!reply.result.ok) throw Error('无法读取默认工作目录')
     return reply.result.value.cwd as string
   }
-  async function freshBoard(title: string) {
+  async function freshBoard(title: string, shared = false) {
     const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath: await defaultDirectory() })
     const id = await deps.sessions.create({ cwd: directory.path })
     await deps.sessions.binding(id)?.session.rename(title)
     await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId: id })
+    if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
   }
   async function fresh(title: string) {
@@ -785,8 +786,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           reservationId?: string
           title: string
         }>('board.open', { boardId })
-        if (opened.localSessionId) return opened.localSessionId
-        const id = await freshBoard(opened.title)
+        if (opened.localSessionId) { await call('local.directory',{mode:'ensure',sessionId:opened.localSessionId}); return opened.localSessionId }
+        const id = await freshBoard(opened.title, true)
         const bound = await call<{ view: BoardView }>('board.bind', {
           boardId,
           reservationId: opened.reservationId,
@@ -1224,6 +1225,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     },
     directoryChoice(id: string) {
       const f = state.favorites.find(f => f.sessionId === id && f.dedicated)
+      if (deps.bridge.isSharedSession(id)) return {path:identity(id)?.cwd,label:'新建看板目录'}
       return f ? { path: f.directoryPath ?? f.cwd, workspaceId: f.workspaceId, label: f.workspaceTitle ?? '新建看板目录' } : null
     },
     async associateProject(id: string, workspaceId: string) {
@@ -2023,7 +2025,8 @@ function inviteForm(
   recipient.className = 'srb-recipient'
   const controls = document.createElement('div')
   controls.className = 'srb-invite-controls'
-  const roleLabel = document.createElement('label')
+  const roleLabel = document.createElement('div')
+  roleLabel.className = 'srb-role-label'
   roleLabel.textContent = management ? '' : '邀请权限'
   roleLabel.append(role)
   controls.append(roleLabel)

@@ -39,6 +39,13 @@ export class BoardDirectories {
   async run(input) {
     if (input.mode === 'reserve') return this.reserve(input.basePath, input.title)
     if (typeof input.sessionId !== 'string' || input.sessionId.length > 256) throw Error('INVALID_REQUEST')
+    if (input.mode === 'ensure') {
+      const row=Object.values(this.records).find(r=>r.sessionId===input.sessionId);
+      const source=await this.inspect(input.sessionId);
+      if(!row || source.meta.cwd!==row.path)throw Error('DIRECTORY_BINDING_CONFLICT');
+      mkdirSync(row.path,{recursive:true});
+      return {path:row.path};
+    }
     if (input.mode === 'bind') {
       const row = this.records[input.directoryId]
       const source = await this.inspect(input.sessionId)
