@@ -21,6 +21,7 @@ async function clientArtifacts(nodes: any[]) {
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }) })
 it('creates a leased workbench for an editor from the shared composer, reusing the request and preserving peer nodes', async () => {
   const { integration, service, canvas, runtimeRequest } = await fixture()
+  Object.assign(canvas.artifacts[0]!, { stackOrder: 970 })
   const doc = createDocument(canvas), messages: any[] = [], tasks: any[] = [], commands: any[] = []
   service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks, snapshot: { canvas: projectDocument(doc) } } })) as any
   ;(integration as any).options.client.request = async ({ body }: any) => {
@@ -46,6 +47,8 @@ it('creates a leased workbench for an editor from the shared composer, reusing t
   expect(tasks.every(t => t.requestMessageId === 'request')).toBe(true)
   const created = projectDocument(doc).artifacts.filter((n: any) => n.workbenchId)
   expect(created).toHaveLength(2)
+  expect(created.every(n => Number(n.stackOrder) > 970)).toBe(true)
+  expect((await clientArtifacts(created)).every((n: any) => Number(n.stackOrder) > 970)).toBe(true)
   expect((await clientArtifacts(created)).map((n: any) => n.id)).toEqual(created.map((n: any) => n.id))
   // Mixed S/M panels may wrap in the bento layout; their rectangles must not overlap.
   const [a,b] = created as any[]

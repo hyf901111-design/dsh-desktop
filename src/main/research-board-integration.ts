@@ -172,21 +172,32 @@ export class ResearchBoardIntegration {
   }
   async directory(input: any, signal: AbortSignal) {
     const result = await this.runtime('directory', input, signal)
-    if (['workspace', 'associate'].includes(input.mode) && result.localSessionId !== input.sessionId && !this.options.service().isSharedSession(input.sessionId)) {
+    if (['workspace', 'associate'].includes(input.mode) && !this.options.service().isSharedSession(input.sessionId)) {
       const canvas = structuredClone(this.readOriginal(input.sessionId))
-      await this.snapshots.cloneLocalImport(input.sessionId, result.localSessionId)
-      const files = new FrozenBoardFiles(join(result.path, '资料'))
+      if (result.localSessionId !== input.sessionId) await this.snapshots.cloneLocalImport(input.sessionId, result.localSessionId)
+      const root = await realpath(result.path)
+      const copyIntoDirectory = async (path: string) => {
+        const source = await realpath(path)
+        if (source.startsWith(root + '/')) return source
+        signal.throwIfAborted()
+        return copyResearchFile(source, root)
+      }
       for (const node of canvas.files) {
         const source = await this.resolveSource(input.sessionId, node)
         if (!source) throw Error('研究资料暂不可用，原看板已保留。')
-        const frozen = await files.freeze(source.path, String(node.name ?? source.name ?? '资料'), signal, 'contentType' in source ? String(source.contentType) : undefined)
-        const path = files.path(frozen)
+        const path = await copyIntoDirectory(source.path)
         const grant = await this.options.registry.admitFinder({ path, sessionId: result.localSessionId, nodeId: node.id })
         delete node.authorizationId
         delete node.assetId
         Object.assign(node, { path, source: 'computer' })
         if (grant) Object.assign(node, { authorizationId: grant.authorizationId, contentType: grant.contentType })
         else node.previewEligible = false
+      }
+      for (const node of canvas.artifacts) {
+        for (const source of (node.generationSources ?? []) as any[]) {
+          if (source.type !== 'file' || typeof source.path !== 'string') continue
+          source.path = await copyIntoDirectory(source.path)
+        }
       }
       for (const kind of ['files', 'artifacts'] as const)
         if (!this.options.storage.setItem(`sherlock.research.canvas.${kind}.v1:${result.localSessionId}`, JSON.stringify(canvas[kind]))) throw Error('STORAGE_UNAVAILABLE')
@@ -1358,6 +1369,7 @@ export class ResearchBoardIntegration {
           sourceNodeIds: context.references.map((ref: any) => ref.nodeId),
           x: p.x + p.width / 2, y: top + p.y + p.height / 2, width: p.width, height: p.height,
           containerSizePreset: p.size, sizeMode: 'auto', generationStatus: 'queued',
+          stackOrder: Math.max(0, ...[...canvas.files, ...canvas.artifacts].map(n => Number(n.stackOrder) || 0)) + index + 1,
           workbenchId: id, workbenchIndex: index, workbenchColumns: plan.panels.length === 2 || plan.panels.length === 4 ? 2 : 3,
           workbenchRevealAt: Date.now() + index * 500
         }
