@@ -660,16 +660,15 @@ body [data-research-compact-chrome][data-research-artifact-card] :is(.rScV5Q_pre
 body[data-ds-dark-theme] .odyssey-derived-sources>button{color:#92b5fa}body[data-ds-dark-theme] .odyssey-source-menu{background:#292a2d;outline-color:#414247;color:#ececed;box-shadow:0 4px 16px #00000029}body[data-ds-dark-theme] :is(.odyssey-source-menu,.odyssey-source-links)>button:hover{background:#343538}
 
 [data-research-compact-chrome] .rScV5Q_artifactMeta{flex:none;padding:0 18px 6px;font-size:10px;line-height:18px}
-[data-research-compact-chrome] .rScV5Q_mindMap{position:relative;height:auto;flex:1;min-height:0;box-sizing:border-box;padding:20px;display:grid;grid-template-columns:minmax(108px,28%) minmax(0,1fr);align-items:center;align-content:safe center;gap:12px 40px;overflow:auto;overscroll-behavior:contain;font-family:DINPro,'Noto Sans SC',sans-serif}
-[data-research-compact-chrome] .rScV5Q_mindMap>[data-research-mind-map-edges]{position:absolute;inset:0;pointer-events:none;overflow:visible;color:#adb4c2;z-index:0}
-body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_mindMap>[data-research-mind-map-edges]{color:#5a5e67}
-[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapRoot{grid-column:1;grid-row:1;align-self:center;width:100%;max-width:100%;z-index:1}
-[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapChildren{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:18px;padding:0;min-width:0;z-index:1}
-[data-research-compact-chrome] .rScV5Q_mindMapChildren{min-width:0;gap:10px;justify-content:flex-start}
-[data-research-compact-chrome] .rScV5Q_mindMapBranch{flex-direction:column;align-items:stretch;gap:10px;min-width:0}
-[data-research-compact-chrome] .rScV5Q_mindMapBranch>.rScV5Q_mindMapChildren{padding-left:22px;border:0;display:flex;flex-direction:column}
-[data-research-compact-chrome] .rScV5Q_mindMapNode[data-research-mind-map-depth]{position:relative;width:auto;min-width:0;max-width:100%;min-height:42px;padding:11px 12px;border:0;border-radius:8px;background:#f4f5f7;color:#242529;font:400 12px/20px DINPro,'Noto Sans SC',sans-serif;overflow-wrap:anywhere;z-index:1}
-body[data-ds-dark-theme] [data-research-compact-chrome] .rScV5Q_mindMapNode[data-research-mind-map-depth]{background:#343538;color:#ececed}
+[data-research-compact-chrome] .rScV5Q_mindMap{position:relative;height:auto;flex:1;min-height:0;box-sizing:border-box;padding:24px;display:flex;align-items:center;justify-content:flex-start;gap:40px;overflow:auto;overscroll-behavior:contain;background:#fff;font-family:DINPro,'Noto Sans SC',sans-serif}
+[data-research-compact-chrome] .rScV5Q_mindMap>[data-research-mind-map-edges]{position:absolute;inset:0;pointer-events:none;overflow:visible;color:#a4a4a4;z-index:0}
+[data-research-compact-chrome] .rScV5Q_mindMap>.rScV5Q_mindMapRoot{flex:0 0 160px;align-self:center;z-index:1}
+[data-research-compact-chrome] .rScV5Q_mindMapChildren{display:flex;flex-direction:column;gap:18px;padding:0;flex:none;z-index:1}
+[data-research-compact-chrome] .rScV5Q_mindMapBranch{display:flex;flex-direction:row;align-items:center;gap:40px;min-width:0}
+[data-research-compact-chrome] .rScV5Q_mindMapBranch>.rScV5Q_mindMapChildren{padding:0;border:0;display:flex;flex-direction:column}
+[data-research-compact-chrome] .rScV5Q_mindMapNode[data-research-mind-map-depth]{position:relative;box-sizing:border-box;flex:0 0 160px;width:160px;min-width:160px;max-width:160px;min-height:42px;padding:11px 12px;border:0;border-radius:0;background:#1ab3d5;color:#fff;font:500 12px/20px DINPro,'Noto Sans SC',sans-serif;text-align:center;overflow-wrap:anywhere;z-index:1}
+[data-research-compact-chrome] .rScV5Q_mindMapNode[data-research-mind-map-depth="0"]{background:#00549e}
+[data-research-compact-chrome] .rScV5Q_mindMapNode[data-research-mind-map-depth="1"]{background:#0088bd}
 [data-research-compact-chrome] .rScV5Q_mindMapRoot:after,[data-research-compact-chrome] .rScV5Q_mindMapChildren:before,[data-research-compact-chrome] .rScV5Q_mindMapChildren:after,[data-research-compact-chrome] .rScV5Q_mindMapBranch:before,[data-research-compact-chrome] .rScV5Q_mindMapBranch:after{display:none!important}
 [data-research-compact-chrome] .rScV5Q_mindMap .odyssey-component-summary-note{grid-column:1 / -1;padding:0;line-height:18px}
 [data-research-compact-chrome][open] .rScV5Q_mindMap{overflow:auto;align-content:start}
