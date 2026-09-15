@@ -9,23 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "欢迎页与看板账户验收修复",
+        "featureName": "侧栏整体滚动与吸顶标题",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "635fa968441577591d214a52821db3fe59cd901a",
-        "tipCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
+        "baseCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
+        "tipCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
         "commits": [
           {
-            "commit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
+            "commit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
             "parents": [
-              "635fa968441577591d214a52821db3fe59cd901a"
+              "64743ac3702e2b92535f8211e1871655ea7bbef5"
             ],
-            "subject": "补齐账户ID复制按钮英文文案"
+            "subject": "统一侧栏滚动并保留看板与工作区吸顶标题"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/ui-copy.ts"
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
           }
         ],
         "checks": [
@@ -35,15 +43,12 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/onboarding-patch.test.ts",
-              "test/research-board-polish.test.ts",
-              "test/figma-auth-layout.test.ts",
-              "test/research-board-generation.test.ts",
-              "test/ui-localization.test.ts"
+              "test/research-board-polish.test.ts"
             ],
             "outcome": "passed",
-            "summary": "37项聚焦检查及类型检查通过",
-            "verifiedCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
-            "completedAt": "2026-09-15T07:28:45.120922+00:00",
+            "summary": "18项聚焦检查与类型检查通过；补丁重复执行通过",
+            "verifiedCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
+            "completedAt": "2026-09-15T07:48:07.646392+00:00",
             "timeoutMs": 120000
           },
           {
@@ -55,59 +60,25 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "37项聚焦检查及类型检查通过",
-            "verifiedCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
-            "completedAt": "2026-09-15T07:28:45.120922+00:00",
+            "summary": "18项聚焦检查与类型检查通过；补丁重复执行通过",
+            "verifiedCommit": "099f4451d4af8b9358abfe3bef0285e8c7be7cfd",
+            "completedAt": "2026-09-15T07:48:07.646392+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "进入集成包后核验看板固定模式与账户复制；前一欢迎页已通过原生检查"
+          "summary": "集成后通过实际客户端验证滚动交互"
         },
         "acceptanceCriteria": [
-          "看板区仅显示研究画板",
-          "创建任务时不显示失败重试",
-          "账户显示可复制专有ID"
+          "看板与工作区共享滚动",
+          "标题吸顶但不自动收起",
+          "看板展开返回顶部"
         ],
         "risks": [
           "真实任务失败仍保留显式重试，防止重复调用模型"
         ],
-        "generatedAt": "2026-09-15T07:28:45.120922+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
-        "verificationCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
-            "completedAt": "2026-09-15T07:29:04.338Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "ff08ce0e69606a444e802d014f5ee6230a6818ac",
-            "completedAt": "2026-09-15T07:29:04.338Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T07:29:04.338Z"
+        "generatedAt": "2026-09-15T07:48:07.646392+00:00"
       }
     }
   ],
