@@ -244,7 +244,7 @@ function ResearchFilePreviewPresentation({node,expanded:explicitExpanded,childre
 
 export const filePreviewCss = `
 [data-research-file-presentation]{background:var(--odyssey-card)!important}
-[data-research-file-presentation]:not([data-selected=true]){border-color:var(--odyssey-card-border)!important}
+[data-research-file-presentation]:not([data-selected=true]){border-color:transparent!important;outline:none!important;box-shadow:none!important}
 body[data-ds-dark-theme] [data-research-file-presentation]{--odyssey-card-text:#e7e7e9!important;--odyssey-card-muted:#989aa0!important}
 
 .odyssey-file-presentation,.odyssey-file-reader{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;width:100%;height:100%}
