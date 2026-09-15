@@ -342,6 +342,9 @@ body[data-ds-dark-theme]{--srb-surface:rgba(39,39,39,.97);--srb-input:#202020;--
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] :is(.srb-board-list,[data-srb-workspace-list],.qDHVXG_list){flex:none!important;height:auto!important;max-height:none!important;overflow:visible!important}
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] [data-srb-section-header]{position:sticky;top:0;z-index:3;box-sizing:border-box;min-height:36px;height:36px;margin:0;background:transparent!important;border-radius:0}
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] [data-srb-workspaces] [data-srb-section-header]{top:36px;z-index:2}
+/* The compositor keeps this untinted blur shield aligned during momentum scrolling.
+   The row mask supplies the full fade once layout catches up. */
+[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] [data-srb-section-header]::before{content:"";position:absolute;inset:-12px -12px;z-index:-1;pointer-events:none;background:transparent;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);mask-image:linear-gradient(to bottom,transparent,#000 12px,#000 calc(100% - 12px),transparent)}
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] .srb-board-list{padding-bottom:12px}
 .srb-section .srb-section-toggle,[data-srb-workspaces] .srb-section-toggle{font-size:14px;line-height:20px;height:32px;gap:2px;color:var(--srb-muted)}
 
