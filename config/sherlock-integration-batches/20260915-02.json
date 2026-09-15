@@ -76,6 +76,40 @@
           "尚需本地客户端目视验证"
         ],
         "generatedAt": "2026-09-15T23:57:11.298707+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
+        "verificationCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/onboarding-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
+            "verifiedCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
+            "completedAt": "2026-09-15T23:57:21.948Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
+            "completedAt": "2026-09-15T23:57:21.948Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-15T23:57:21.948Z"
       }
     }
   ],
