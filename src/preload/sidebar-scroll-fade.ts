@@ -48,9 +48,21 @@ export function installSidebarScrollFade(doc: Document): void {
     if (records.some(r => (r.target as Element).closest?.(roots) || [...r.addedNodes].some(n => n instanceof win.Element && (n.matches(roots) || n.querySelector(roots))))) schedule()
   })
   observer.observe(doc.documentElement, { childList: true, subtree: true })
-  const scroll = (event: Event) => { if ((event.target as Element).matches?.(roots)) schedule() }
+  const scroll = (event: Event) => { if ((event.target as Element).matches?.(roots)) update() }
+  // Native asynchronous wheel scrolling can paint a new offset before a JS mask.
+  // Apply trackpad/mouse deltas and the mask atomically; OS momentum deltas remain intact.
+  const wheel = (event: WheelEvent) => {
+    const root = (event.target as Element).closest?.<HTMLElement>(roots)
+    if (!root || event.ctrlKey || event.metaKey || event.shiftKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY) || root.scrollHeight <= root.clientHeight) return
+    event.preventDefault()
+    if (frame) { win.cancelAnimationFrame(frame); frame = 0 }
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientHeight : 1
+    root.scrollTop = Math.max(0, Math.min(root.scrollHeight - root.clientHeight, root.scrollTop + event.deltaY * unit))
+    update()
+  }
+  doc.addEventListener('wheel', wheel, { capture: true, passive: false })
   doc.addEventListener('scroll', scroll, true)
   win.addEventListener('resize', schedule)
-  win.addEventListener('unload', () => { observer.disconnect(); resize?.disconnect(); doc.removeEventListener('scroll', scroll, true); win.removeEventListener('resize', schedule); if (frame) win.cancelAnimationFrame(frame) }, { once: true })
+  win.addEventListener('unload', () => { observer.disconnect(); resize?.disconnect(); doc.removeEventListener('wheel', wheel, true); doc.removeEventListener('scroll', scroll, true); win.removeEventListener('resize', schedule); if (frame) win.cancelAnimationFrame(frame) }, { once: true })
   schedule()
 }
