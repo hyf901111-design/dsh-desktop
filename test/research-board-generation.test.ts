@@ -47,7 +47,9 @@ it('creates a leased workbench for an editor from the shared composer, reusing t
   const created = projectDocument(doc).artifacts.filter((n: any) => n.workbenchId)
   expect(created).toHaveLength(2)
   expect((await clientArtifacts(created)).map((n: any) => n.id)).toEqual(created.map((n: any) => n.id))
-  expect(created[0]!.y).toBe(created[1]!.y)
+  // Mixed S/M panels may wrap in the bento layout; their rectangles must not overlap.
+  const [a,b] = created as any[]
+  expect(Math.abs(a.x-b.x)>=(a.width+b.width)/2 || Math.abs(a.y-b.y)>=(a.height+b.height)/2).toBe(true)
   expect(projectDocument(doc).artifacts.find(n => n.id === 'node')).toEqual(canvas.artifacts[0])
   const results = commands.filter(c => c.action === 'taskResult' && c.node)
   expect(results).toHaveLength(2)

@@ -111,3 +111,20 @@ it('associates a blank board without creating a workspace and retains its unique
     await expect(f.directories.run({ mode: 'associate', sessionId: 'returned', targetSessionId: 'associated' })).rejects.toThrow('BOARD_HAS_CONVERSATION')
   } finally { f.close() }
 })
+
+it('materializes a shared board directory idempotently without replacing its files', async () => {
+  const f = fixture()
+  try {
+    const row = f.directories.reserve(f.root, '协作看板')
+    f.ctx.sessions.create('shared', { meta: { cwd: row.path } })
+    await f.directories.run({mode:'bind',directoryId:row.directoryId,sessionId:'shared'})
+    expect(existsSync(row.path)).toBe(false)
+    expect(await f.directories.run({mode:'ensure',sessionId:'shared'})).toEqual({path:row.path})
+    writeFileSync(join(row.path,'资料.txt'),'保留')
+    f.directories.dispose(); f.directories = new BoardDirectories(f.ctx,f.root)
+    await f.directories.run({mode:'ensure',sessionId:'shared'})
+    expect(readFileSync(join(row.path,'资料.txt'),'utf8')).toBe('保留')
+    f.ctx.sessions.create('unrelated',{meta:{cwd:f.root}})
+    await expect(f.directories.run({mode:'ensure',sessionId:'unrelated'})).rejects.toThrow('DIRECTORY_BINDING_CONFLICT')
+  } finally {f.close()}
+})

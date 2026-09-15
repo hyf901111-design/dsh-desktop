@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import {
   existsSync,
   mkdirSync,
@@ -6,8 +6,9 @@ import {
   writeFileSync,
   renameSync
 } from 'node:fs'
-import { stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { stat, realpath, readFile } from 'node:fs/promises'
+import { copyResearchFile } from './state/research-owned-files'
+import { join, dirname } from 'node:path'
 import { ResearchBoardSnapshots } from './state/research-board-snapshot'
 import {
   FrozenBoardFiles,
@@ -56,8 +57,9 @@ export class ResearchBoardIntegration {
   readonly hooks: ResearchBoardHooks
   private assets: Record<
     string,
-    { file: FrozenFile; assetId: string; epoch: number }
+    { file: FrozenFile; assetId: string; epoch: number; copies?: Record<string,string> }
   > = {}
+  private verifiedCopies = new Map<string,string>()
   private assetFile: string
   private active = new Map<string, AbortController>()
   private submissions = new Map<string, Promise<any>>()
@@ -354,6 +356,31 @@ export class ResearchBoardIntegration {
   }) {
     this.authority(i.accountId, i.boardId, i.epoch)
     const canvas = structuredClone(i.canvas)
+    const directory = (canvas.files.length || canvas.artifacts.some(node => (node.generationSources as any[] ?? []).some(source => source.type === 'file' && source.assetId))) ? await this.runtime('directory', {mode:'ensure',sessionId:i.localSessionId}, i.signal) : null
+    i.signal.throwIfAborted()
+    this.authority(i.accountId,i.boardId,i.epoch)
+    const ownedCopy = async (cached: typeof this.assets[string]): Promise<string> => {
+      const cachedPath = this.cache.path(cached.file)
+      const root = await realpath(directory.path)
+      let path = cached.copies?.[i.localSessionId]
+      let valid = false
+      if(path && dirname(path)===root) {
+        try {
+          const resolved=await realpath(path), info=await stat(path)
+          const marker=[resolved,info.size,info.mtimeMs,info.ino].join(':')
+          valid=resolved===path && info.isFile() && info.size===cached.file.size &&
+            (this.verifiedCopies.get(path)===marker || createHash('sha256').update(await readFile(path)).digest('hex')===cached.file.sha256)
+          if(valid)this.verifiedCopies.set(path,marker)
+        } catch { valid=false }
+      }
+      if(!valid) {
+        path=await copyResearchFile(cachedPath,root)
+        cached.copies={...cached.copies,[i.localSessionId]:path}
+        this.saveAssets()
+      }
+      path=path!
+      return path
+    }
     const authoritativeTasks = this.authority(i.accountId, i.boardId, i.epoch)
       .snapshot.tasks
     for (const [key, controller] of this.active) {
@@ -391,7 +418,9 @@ export class ResearchBoardIntegration {
       }
       i.signal.throwIfAborted()
       this.authority(i.accountId, i.boardId, i.epoch)
-      const path = this.cache.path(cached.file)
+      const path = await ownedCopy(cached)
+      i.signal.throwIfAborted()
+      this.authority(i.accountId,i.boardId,i.epoch)
       const grantKey = i.accountId + ':' + i.localSessionId + ':' + node.id
       let grant: any = this.admissions.get(grantKey)
       if (grant) {
@@ -484,7 +513,7 @@ export class ResearchBoardIntegration {
               this.assets[key] = cached
               this.saveAssets()
             }
-            source.path = this.cache.path(cached.file)
+            source.path = await ownedCopy(cached)
           } else throw Error('RESOURCE_UNAVAILABLE')
         }
       const task = this.authority(i.accountId, i.boardId, i.epoch)

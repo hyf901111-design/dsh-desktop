@@ -2075,7 +2075,7 @@ export class ResearchBoardsService {
     switch (action) {
       case 'local.directory': {
         const p = exact(input, ['mode'], ['basePath', 'title', 'sessionId', 'directoryId', 'targetSessionId', 'workspaceId', 'workspaceTitle'])
-        if (!['reserve', 'bind', 'workspace', 'associate'].includes(String(p.mode))) throw new ResearchBoardsError('INVALID_REQUEST')
+        if (!['reserve', 'bind', 'workspace', 'associate', 'ensure'].includes(String(p.mode))) throw new ResearchBoardsError('INVALID_REQUEST')
         if (p.sessionId !== undefined) safeId(p.sessionId)
         if (p.directoryId !== undefined) safeId(p.directoryId)
         if (p.targetSessionId !== undefined) safeId(p.targetSessionId)

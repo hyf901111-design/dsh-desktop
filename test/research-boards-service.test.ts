@@ -1659,6 +1659,10 @@ it.each(['preview-file', 'nonpreview-file', 'artifact', 'concurrent-file'])(
     let opened = ''
     const integration = new ResearchBoardIntegration({
       root: join(realpathSync(t.dir), 'integration'),
+      runtimeRequest: async (action, body) => {
+        if (action === 'directory' && body.mode === 'ensure') return {path:realpathSync(t.dir)}
+        throw Error('UNEXPECTED_RUNTIME_REQUEST')
+      },
       storage: t.storage,
       registry,
       clipboard: () => undefined,

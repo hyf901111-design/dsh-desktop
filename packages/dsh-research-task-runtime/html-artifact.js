@@ -352,9 +352,73 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   apply()
 }`
 
-// Only trusted code runs in the outer document. The only artifact output it
-// forwards is a bounded pair of layout dimensions, never HTML or page content. Opaque sandbox origins require '*'; contentWindow and parent
+// The outer document relays layout and interaction data, never executable HTML.
+// Opaque sandbox origins require '*'; contentWindow and parent
 // identity checks keep the message confined to this exact parent/child pair.
+// Interaction journal is data only. Existing generated pages keep their own JS
+// closures; replay restores those closures instead of merely repainting the DOM.
+export function researchInteractionVersion(html) {
+  let a=2166136261, b=5381;
+  for (let i=0;i<html.length;i++) { a=Math.imul(a^html.charCodeAt(i),16777619); b=Math.imul(b,33)^html.charCodeAt(i); }
+  return (a>>>0).toString(36)+'-'+(b>>>0).toString(36)+'-'+html.length;
+}
+export function validResearchInteractionEvent(e) {
+  return !!e && typeof e==='object' && !Array.isArray(e) && Object.keys(e).every(k=>['id','clock','targetRoute','tag','type','value','checked','key'].includes(k)) &&
+    typeof e.id==='string' && /^[a-zA-Z0-9-]{1,80}$/.test(e.id) && Number.isSafeInteger(e.clock) && e.clock>0 &&
+    Array.isArray(e.targetRoute) && e.targetRoute.length>0 && e.targetRoute.length<=40 && e.targetRoute.every(n=>Number.isInteger(n)&&n>=0&&n<10000) &&
+    typeof e.tag==='string' && /^[A-Z0-9-]{1,30}$/.test(e.tag) && ['click','input','change','keydown'].includes(e.type) &&
+    (e.value===undefined || typeof e.value==='string'&&e.value.length<=8192) &&
+    (e.checked===undefined || typeof e.checked==='boolean') && (e.key===undefined || ['Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key));
+}
+export function validResearchInteractionState(s) {
+  return !!s && typeof s==='object' && !Array.isArray(s) && Object.keys(s).length===2 && typeof s.version==='string' && s.version.length<=80 &&
+    s.events && typeof s.events==='object' && !Array.isArray(s.events) && Object.keys(s.events).length<=2048 &&
+    Object.entries(s.events).every(([id,e])=>validResearchInteractionEvent(e)&&e.id===id) && JSON.stringify(s).length<=256*1024;
+}
+const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractionRuntime() {
+  let initialized=false, replaying=false, readOnly=true, clock=0;
+  let applied=[];
+  const pathOf=el=>{const p=[];while(el&&el!==document.body){const parent=el.parentElement;if(!parent)return null;p.unshift([...parent.children].indexOf(el));el=parent;}return p;};
+  const resolve=p=>p.reduce((el,n)=>el?.children[n],document.body);
+  const post=(type,extra={})=>parent.postMessage({type,...extra},'*');
+  function apply(e){
+    const el=resolve(e.targetRoute); if(!el || el.tagName!==e.tag) return;
+    if(e.type==='click'){el.click();return;}
+    if(typeof e.value==='string' && 'value' in el) {
+      const proto=el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:el instanceof HTMLSelectElement?HTMLSelectElement.prototype:HTMLInputElement.prototype;
+      const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set; if(setter)setter.call(el,e.value);else el.value=e.value;
+    }
+    if(typeof e.checked==='boolean'&&'checked'in el)el.checked=e.checked;
+    if(e.type==='keydown')el.dispatchEvent(new KeyboardEvent('keydown',{key:e.key,bubbles:true,cancelable:true}));
+    else el.dispatchEvent(new Event(e.type,{bubbles:true,cancelable:true}));
+  }
+  addEventListener('message',event=>{
+    if(event.source!==parent || event.data?.type!=='sherlock-interaction-state')return;
+    const data=event.data; readOnly=data.readOnly!==false;
+    const events=Object.values(data.state?.events||{}).sort((a,b)=>a.clock-b.clock||a.id.localeCompare(b.id));
+    if(applied.some((id,i)=>events[i]?.id!==id)){post('sherlock-interaction-reload');return;}
+    replaying=true;
+    try {for(const e of events.slice(applied.length)){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {replaying=false;initialized=true;}
+  });
+  for(const type of ['click','input','change','keydown']) document.addEventListener(type,event=>{
+    if(!event.isTrusted || replaying)return;
+    if(!initialized||readOnly){event.preventDefault();event.stopImmediatePropagation();return;}
+    let el=event.target;
+    if(!(el instanceof Element))return;
+    if(type==='click')el=el.closest('button,input,select,textarea,summary,[role="button"],[role="checkbox"],[role="tab"]');
+    if(!el || el.closest('a') || el.matches('input[type=password],input[type=file],input[type=hidden]'))return;
+    if(type==='keydown'&&!['Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;
+    // Check/radio click already invokes its input/change events during replay.
+    if(type!=='click'&&el.matches('input[type=checkbox],input[type=radio]'))return;
+    const path=pathOf(el); if(!path?.length)return;
+    const e={id:crypto.randomUUID(),clock:++clock,targetRoute:path,tag:el.tagName,type};
+    if(type==='input'||type==='change'){if('value'in el)e.value=String(el.value).slice(0,8192);if('checked'in el)e.checked=el.checked;}
+    if(type==='keydown')e.key=event.key;
+    applied.push(e.id);post('sherlock-interaction-event',{event:e});
+  },true);
+  addEventListener('DOMContentLoaded',()=>post('sherlock-interaction-ready'),{once:true});
+}`;
+
 const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterThemeRuntime(inner, initialTheme, fixedTheme, runtimeFont) {
   const root = document.documentElement
   const frame = document.getElementById('preview')
@@ -364,6 +428,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   let sizeReports = 0
   let previousSize = ''
   let fontBlob
+  let interactionState
   let fontFailed = false
   const publish = () => {
     root.setAttribute('data-sherlock-theme', fixedTheme || colorScheme)
@@ -372,6 +437,14 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   }
   addEventListener('message', (event) => {
     const data = event.data
+    if(!standalone && event.source===parent && data?.type==='sherlock-interaction-state') {
+      interactionState=data; frame.contentWindow?.postMessage(data,'*'); return;
+    }
+    if(!standalone && event.source===frame.contentWindow && data && ['sherlock-interaction-ready','sherlock-interaction-reload','sherlock-interaction-event'].includes(data.type)) {
+      if(data.type==='sherlock-interaction-ready'&&interactionState)frame.contentWindow.postMessage(interactionState,'*');
+      else if(data.type==='sherlock-interaction-reload'){frame.srcdoc=inner;return;}
+      parent.postMessage(data,'*');return;
+    }
     if (runtimeFont && !standalone && data && typeof data === 'object' && !Array.isArray(data) && data.font === 'noto-sc') {
       if (event.source === frame.contentWindow) {
         if (data.type === 'sherlock-font-retry' && Object.keys(data).length === 2) {
@@ -457,7 +530,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME})();` : ''}(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});</script>`
+  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME})();` : ''}(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})();` : ''}</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
