@@ -9,35 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "会话搜索语言切换",
+        "featureName": "补齐搜索结果英文标签",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
-        "tipCommit": "f430e2b675e8020188a217d32375aeac130fe906",
+        "baseCommit": "f430e2b675e8020188a217d32375aeac130fe906",
+        "tipCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
         "commits": [
           {
-            "commit": "f430e2b675e8020188a217d32375aeac130fe906",
+            "commit": "d11f90eea3cd316ff0513791d89125381e8d726e",
             "parents": [
-              "cc875c83160887afc8822f40a7e90d895b0e7fb8"
+              "f430e2b675e8020188a217d32375aeac130fe906"
             ],
-            "subject": "统一会话搜索语言切换并保留用户原始标题"
+            "subject": "补齐统一搜索结果的工作区英文标签"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-session-search.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/ui-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/ui-localization.ts"
           }
         ],
         "checks": [
@@ -52,8 +40,8 @@
             ],
             "outcome": "passed",
             "summary": "12项聚焦检查和类型检查通过",
-            "verifiedCommit": "f430e2b675e8020188a217d32375aeac130fe906",
-            "completedAt": "2026-09-15T09:54:39.900887+00:00",
+            "verifiedCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
+            "completedAt": "2026-09-15T10:05:28.772712+00:00",
             "timeoutMs": 120000
           },
           {
@@ -66,8 +54,8 @@
             ],
             "outcome": "passed",
             "summary": "12项聚焦检查和类型检查通过",
-            "verifiedCommit": "f430e2b675e8020188a217d32375aeac130fe906",
-            "completedAt": "2026-09-15T09:54:39.900887+00:00",
+            "verifiedCommit": "d11f90eea3cd316ff0513791d89125381e8d726e",
+            "completedAt": "2026-09-15T10:05:28.772712+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -83,41 +71,7 @@
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T09:54:39.900887+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a09d6c671a2cb06b3a891f3a831c4d8eaa3fd203",
-        "verificationCommit": "a09d6c671a2cb06b3a891f3a831c4d8eaa3fd203",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "a09d6c671a2cb06b3a891f3a831c4d8eaa3fd203",
-            "completedAt": "2026-09-15T09:59:01.941Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "a09d6c671a2cb06b3a891f3a831c4d8eaa3fd203",
-            "completedAt": "2026-09-15T09:59:01.941Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T09:59:01.941Z"
+        "generatedAt": "2026-09-15T10:05:28.772712+00:00"
       }
     }
   ],
