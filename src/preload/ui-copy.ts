@@ -3,6 +3,7 @@
  */
 export const englishUiCopy: Record<string, string> = {
   "搜索会话": "Search sessions",
+  "搜索会话…": "Search sessions…",
   "搜索看板区和工作区的会话标题…": "Search board and workspace session titles…",
   "正在打开…": "Opening…",
   "没有匹配的会话": "No matching sessions",

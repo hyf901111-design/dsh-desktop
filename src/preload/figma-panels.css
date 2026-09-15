@@ -379,3 +379,6 @@ body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region
 body:has(.cubgiG_seat[aria-expanded="true"]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}
 
 [data-odyssey-tab-overflow-trigger]:hover{background:color-mix(in srgb,currentColor 8%,transparent)}
+
+/* Native drag regions must yield pointer events to dismiss open top-layer UI. */
+body:has(.wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],.srb-members-popover:popover-open,.srb-avatar-info:popover-open,.srb-session-search[open]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}

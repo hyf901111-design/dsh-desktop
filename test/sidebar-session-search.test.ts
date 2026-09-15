@@ -33,3 +33,26 @@ it('workspace manual ordering also promotes new activity, without changing uncha
   const result = next({ sessionIds: ['a', 'b'], previousOrder: ['a', 'b'], previousUpdatedAt: { a: 1, b: 1 }, list: { byId: { a: { updatedAt: 1 }, b: { updatedAt: 2 } } }, orderBy: 'manual', sortByRecency: false })
   expect(result.order).toEqual(['b', 'a'])
 })
+it('groups results, preserves stable rows on background updates, and dismisses only outside the dialog', async () => {
+  const { Window } = await import('happy-dom')
+  const { showSidebarSessionSearch } = await import('../src/preload/sidebar-session-search')
+  const w = new Window(), doc = w.document as unknown as Document
+  let refresh = () => {}, unsubscribed = false
+  const ui = showSidebarSessionSearch(doc, {
+    results: query => sidebarSearchResults(state, { c: { title: 'Workspace Alpha', updatedAt: 5 } }, [], query),
+    subscribe: fn => { refresh = fn; return () => { unsubscribed = true } }, open: async () => {}
+  })
+  expect([...ui.body.querySelectorAll('h3')].map(e => e.textContent)).toEqual(['看板区', '工作区'])
+  expect(ui.body.querySelectorAll('small')).toHaveLength(0)
+  const first = ui.body.querySelector('.srb-session-search-results button')
+  refresh()
+  expect(ui.body.querySelector('.srb-session-search-results button')).toBe(first)
+  ui.dialog.getBoundingClientRect = () => ({ left: 100, right: 600, top: 100, bottom: 500 } as DOMRect)
+  ui.dialog.dispatchEvent(new w.PointerEvent('pointerdown', { clientX: 110, clientY: 110 }) as unknown as Event)
+  expect(ui.dialog.isConnected).toBe(true)
+  ui.dialog.dispatchEvent(new w.PointerEvent('pointerdown', { clientX: 20, clientY: 20 }) as unknown as Event)
+  expect(ui.dialog.isConnected).toBe(false)
+  await w.happyDOM.waitUntilComplete()
+  expect(unsubscribed).toBe(true)
+  await w.happyDOM.abort()
+})

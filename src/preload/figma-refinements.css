@@ -509,13 +509,17 @@ body .sRp_sourceStatus,body .srb-readonly[data-canvas-error]{position:absolute;l
 /* Unified sidebar session title search. */
 body [data-srb-section-header] .qDHVXG_headerActions{margin-left:auto}
 body [data-slot="sidebar.sessionSearch"]{display:contents}
-body .srb-session-search{width:560px;max-width:calc(100vw - 40px)}
-body .srb-session-search .srb-dialog-body{display:flex;flex-direction:column;gap:12px}
-body .srb-session-search input{box-sizing:border-box;width:100%;height:40px;padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:14px var(--odyssey-font-ui)}
-body .srb-session-search-count{margin:0;color:var(--dsw-alias-label-tertiary);font-size:12px}
-body .srb-session-search-results{max-height:min(440px,50vh);overflow-y:auto;display:flex;flex-direction:column;gap:4px}
-body .srb-session-search-results button{display:flex;align-items:center;gap:16px;flex:none;text-align:left;border:0;border-radius:8px;padding:10px 12px;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font:14px var(--odyssey-font-ui)}
+body .srb-session-search{--search-top:clamp(32px,18vh,180px);position:fixed;inset:var(--search-top) 0 auto;width:572px;max-width:calc(100vw - 32px);max-height:calc(100vh - var(--search-top) - 24px);margin:0 auto;padding:4px;border-radius:20px;overflow:hidden}
+body .srb-session-search>header{display:none}
+body .srb-session-search .srb-dialog-body{display:flex;flex-direction:column;gap:0;min-height:0}
+body .srb-session-search input,body .srb-session-search input:focus,body .srb-session-search input:focus-visible{box-sizing:border-box;flex:none;width:100%;height:46px;padding:0 12px;border:0!important;outline:none!important;box-shadow:none!important;border-radius:0;background:transparent;color:var(--dsw-alias-label-primary);font:15px var(--odyssey-font-ui)}
+body .srb-session-search-count{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+body .srb-session-search-results{max-height:min(480px,calc(100vh - var(--search-top) - 92px));overflow-y:auto;overscroll-behavior:contain;padding:0 0 8px;scrollbar-gutter:stable}
+body .srb-session-search-results h3{margin:0;padding:8px 10px 6px;font:13px/20px var(--odyssey-font-ui);color:var(--dsw-alias-label-tertiary)}
+body .srb-session-search-results section+section{margin-top:6px}
+body .srb-session-search-results button{display:flex;align-items:center;width:100%;min-height:34px;text-align:left;border:0;border-radius:14px;padding:6px 20px;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font:14px/22px var(--odyssey-font-ui)}
 body .srb-session-search-results button:hover,body .srb-session-search-results button[data-active=true]{background:var(--dsw-alias-interactive-bg-hover)}
 body .srb-session-search-results span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body .srb-session-search-results small{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary)}
+body .srb-session-search-empty{margin:0;padding:12px;color:var(--dsw-alias-label-tertiary);font-size:13px}
+body .srb-session-search>.srb-status:empty{display:none}
 body .hHd-Xa_collapsed .hHd-Xa_logoRow{height:auto;overflow:visible;flex-direction:column-reverse;gap:4px}
