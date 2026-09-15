@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   writeFileSync,
   renameSync
 } from 'node:fs'
@@ -73,6 +74,8 @@ export class ResearchBoardIntegration {
   private scheduleFile: string
   constructor(private options: Options) {
     mkdirSync(options.root, { recursive: true, mode: 0o700 })
+    // macOS exposes /var and /tmp through aliases; all owned-file checks use canonical paths.
+    this.options = options = { ...options, root: realpathSync(options.root) }
     this.assetFile = join(options.root, 'assets.json')
     this.scheduleFile = join(options.root, 'refreshes.json')
     if (existsSync(this.scheduleFile))
@@ -201,6 +204,7 @@ export class ResearchBoardIntegration {
       }
       for (const kind of ['files', 'artifacts'] as const)
         if (!this.options.storage.setItem(`sherlock.research.canvas.${kind}.v1:${result.localSessionId}`, JSON.stringify(canvas[kind]))) throw Error('STORAGE_UNAVAILABLE')
+      return { ...result, canvas }
     }
     return result
   }

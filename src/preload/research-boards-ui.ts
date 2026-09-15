@@ -1266,7 +1266,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const id = shared ? await openBoard(entry.boardId) : entry.sessionId
       if (!id) throw Error('研究看板尚未就绪')
       if (shared && view(id)?.permissions.edit) await flushCanvas(id)
-      const result = await call<{ localSessionId: string }>('local.directory', { mode: 'workspace', sessionId: id, title: entry.title, basePath: await defaultDirectory() })
+      const result = await call<{ localSessionId: string; canvas?: Canvas }>('local.directory', { mode: 'workspace', sessionId: id, title: entry.title, basePath: await defaultDirectory() })
+      if (result.canvas) deps.researchWorkspaces.for(result.localSessionId).applyDirectoryCanvas(result.canvas)
       await deps.workspaces.refresh()
       if (result.localSessionId !== id) {
         // Publish the replacement before archiving the retained source record.
