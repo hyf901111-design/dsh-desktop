@@ -1,6 +1,7 @@
 import figmaReadingStyles from './figma-reading.css?raw'
 import figmaFinalStyles from './figma-final-shell.css?raw'
 import figmaHomeStyles from './figma-home.css?raw'
+import figmaWelcomeStyles from './figma-welcome.css?raw'
 import figmaPanelStyles from './figma-panels.css?raw'
 import figmaFilePanelStyles from './figma-file-panel.css?raw'
 import figmaTrajectoryStyles from './figma-trajectory.css?raw'
@@ -25,7 +26,7 @@ export function mountDesktopShellStyles(document: Document): void {
 
   const style = document.createElement('style')
   style.id = DESKTOP_SHELL_STYLE_ID
-  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles + figmaReadingStyles
+  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles + figmaReadingStyles + figmaWelcomeStyles
   document.documentElement.appendChild(style)
   document.getElementById('odyssey-figma-final-shell')?.remove()
 }

@@ -38,7 +38,7 @@ describe('desktop provider onboarding patch', () => {
     expect(installed).toContain('SETTINGS_PROVIDER_PRIORITY')
     expect(installed).not.toContain('displayName: "DeepSeek"')
     expect(installed).toContain('(0, react.useState)("openai")')
-    expect(installed).toContain('Sherlock will enable that provider')
+    expect(installed).toContain('EWork Odyssey will enable that provider')
     expect(installed).toContain('left.entry.displayName.localeCompare(right.entry.displayName)')
   })
 })
