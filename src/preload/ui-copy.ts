@@ -64,6 +64,7 @@ export const englishUiCopy: Record<string, string> = {
   "用户 ID 暂时不可用": "User ID unavailable",
   "退出未完成，请检查网络后重试。": "Sign-out failed. Check your connection and try again.",
   "看板区": "Boards",
+  "工作区": "Workspaces",
   "展开看板区": "Expand boards",
   "折叠看板区": "Collapse boards",
   "搜索研究看板": "Search boards",
