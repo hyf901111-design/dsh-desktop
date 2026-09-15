@@ -11,25 +11,37 @@
         "schemaVersion": 1,
         "featureName": "组件交互持久化与协作目录",
         "branch": "codex/feat/component-state-20260915",
-        "baseCommit": "e9f25daa9d0dc02727a44508f001ae63a72bfcb6",
-        "tipCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
+        "baseCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
+        "tipCommit": "b48e3609997ce8c68183289db49f82c45101bc68",
         "commits": [
           {
-            "commit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
+            "commit": "b48e3609997ce8c68183289db49f82c45101bc68",
             "parents": [
-              "e9f25daa9d0dc02727a44508f001ae63a72bfcb6"
+              "fe10a60c431752bc58c9dbb34ef487b1043fef68"
             ],
-            "subject": "修复：共享看板文件导入保留本机授权清理记录"
+            "subject": "修复：新增共享组件置顶并补齐看板项目目录与资料迁移"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/research-boards-service.ts"
+            "path": "packages/dsh-research-task-runtime/board-directories.js"
           },
           {
             "status": "M",
-            "path": "test/research-boards-service.test.ts"
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-directory-materials.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-generation.test.ts"
           }
         ],
         "checks": [
@@ -38,14 +50,16 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-boards-service.test.ts",
-              "-t",
-              "keeps shared preview cleanup|rejects original binding"
+              "test/research-board-directory-materials.test.ts",
+              "test/research-board-generation.test.ts",
+              "test/research-board-directories.test.js",
+              "test/research-board-snapshot.test.ts",
+              "test/research-new-node-stacking.test.ts"
             ],
             "outcome": "passed",
-            "summary": "共享文件授权清理与禁止直接写入检查通过",
-            "verifiedCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
-            "completedAt": "2026-09-15T01:47:41.637138+00:00",
+            "summary": "33项聚焦检查通过",
+            "verifiedCommit": "b48e3609997ce8c68183289db49f82c45101bc68",
+            "completedAt": "2026-09-15T02:15:26.191004+00:00",
             "timeoutMs": 120000
           },
           {
@@ -57,79 +71,28 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "共享文件授权清理与禁止直接写入检查通过",
-            "verifiedCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
-            "completedAt": "2026-09-15T01:47:41.637138+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "b48e3609997ce8c68183289db49f82c45101bc68",
+            "completedAt": "2026-09-15T02:15:26.191004+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "集成包已验证按钮范围、双端计数勾选、重启恢复及消息后选择器隐藏；本后续修复的复制路径由12项聚焦检查验证，重建后继续原生复验。"
+          "summary": "此前集成包双端交互及按钮范围已实测；本次共享生成层级经过实际客户端归一化器验证，项目目录迁移33项聚焦检查通过，重建后继续原生验证。"
         },
         "acceptanceCriteria": [
           "权限只从按钮触发",
           "交互状态随看板保存和同步",
           "共享资料复制至默认看板目录",
-          "共享消息后隐藏输入框上方选择器"
+          "共享消息后隐藏输入框上方选择器",
+          "新增共享组件置顶",
+          "个人副本及放回工作区绑定项目并复制资料"
         ],
         "risks": [
           "交互日志按组件源码版本隔离；自定义异步交互需继续原生验证"
         ],
-        "generatedAt": "2026-09-15T01:47:41.637138+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1196f3af1694c88e500a64f437b8ed1d4fde277f",
-        "verificationCommit": "1196f3af1694c88e500a64f437b8ed1d4fde277f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-interaction-state.test.js",
-              "test/research-html-theme.test.js",
-              "test/research-board-role-picker.test.ts",
-              "test/research-board-directories.test.js",
-              "test/research-board-generation.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-interaction-state.test.js test/research-html-theme.test.js test/research-board-role-picker.test.ts test/research-board-directories.test.js test/research-board-generation.test.ts",
-            "verifiedCommit": "1196f3af1694c88e500a64f437b8ed1d4fde277f",
-            "completedAt": "2026-09-15T01:48:26.804Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-boards-service.test.ts",
-              "-t",
-              "restores deleted.*through production materialization"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-boards-service.test.ts -t restores deleted.*through production materialization",
-            "verifiedCommit": "1196f3af1694c88e500a64f437b8ed1d4fde277f",
-            "completedAt": "2026-09-15T01:48:26.804Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "1196f3af1694c88e500a64f437b8ed1d4fde277f",
-            "completedAt": "2026-09-15T01:48:26.804Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T01:48:26.804Z"
+        "generatedAt": "2026-09-15T02:15:26.191004+00:00"
       }
     }
   ],
