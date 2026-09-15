@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "组件交互持久化与协作目录",
         "branch": "codex/feat/component-state-20260915",
-        "baseCommit": "a849c907eaff79f42153c6d4a01d54b20fa2d1a7",
-        "tipCommit": "01b06bb47c309998e89b0eb739656b814b876285",
+        "baseCommit": "01b06bb47c309998e89b0eb739656b814b876285",
+        "tipCommit": "d554cb779cf87a811ee3643ea7b9cf5027e07b7e",
         "commits": [
           {
-            "commit": "01b06bb47c309998e89b0eb739656b814b876285",
+            "commit": "d554cb779cf87a811ee3643ea7b9cf5027e07b7e",
             "parents": [
-              "a849c907eaff79f42153c6d4a01d54b20fa2d1a7"
+              "01b06bb47c309998e89b0eb739656b814b876285"
             ],
-            "subject": "修复：粘贴组件在保存与协作同步前统一置顶"
+            "subject": "优化：增强对话首页渐变背景流动速度与形变幅度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/research-new-node-stacking.test.ts"
+            "path": "src/preload/home-flow.ts"
           }
         ],
         "checks": [
@@ -38,12 +34,12 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-new-node-stacking.test.ts"
+              "test/home-flow.test.ts"
             ],
             "outcome": "passed",
-            "summary": "5项层级聚焦检查及类型检查通过",
-            "verifiedCommit": "01b06bb47c309998e89b0eb739656b814b876285",
-            "completedAt": "2026-09-15T03:14:56.570783+00:00",
+            "summary": "7项首页动态检查及类型检查通过",
+            "verifiedCommit": "d554cb779cf87a811ee3643ea7b9cf5027e07b7e",
+            "completedAt": "2026-09-15T03:31:42.487816+00:00",
             "timeoutMs": 120000
           },
           {
@@ -55,83 +51,25 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "5项层级聚焦检查及类型检查通过",
-            "verifiedCommit": "01b06bb47c309998e89b0eb739656b814b876285",
-            "completedAt": "2026-09-15T03:14:56.570783+00:00",
+            "summary": "7项首页动态检查及类型检查通过",
+            "verifiedCommit": "d554cb779cf87a811ee3643ea7b9cf5027e07b7e",
+            "completedAt": "2026-09-15T03:31:42.487816+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生确认旧文件层级53、新粘贴文件0导致遮挡；新保存路径已通过恢复与协作文档检查，重建后继续原生重叠验证。"
+          "summary": "首页动效强度调整，原生客户端连续帧验收将在重建后执行。"
         },
         "acceptanceCriteria": [
-          "权限只从按钮触发",
-          "交互状态随看板保存和同步",
-          "共享资料复制至默认看板目录",
-          "共享消息后隐藏输入框上方选择器",
-          "新增共享组件置顶",
-          "个人副本及放回工作区绑定项目并复制资料",
-          "文件组件默认无描边",
-          "目录别名不导致共享文件同步失败"
+          "首页背景流动速度加快",
+          "首页局部形变增强",
+          "保持灰度与输入内容可读"
         ],
         "risks": [
           "交互日志按组件源码版本隔离；自定义异步交互需继续原生验证"
         ],
-        "generatedAt": "2026-09-15T03:14:56.570783+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8de4242b63263236a538f350d1a0cc06d02728c7",
-        "verificationCommit": "8de4242b63263236a538f350d1a0cc06d02728c7",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-interaction-state.test.js",
-              "test/research-html-theme.test.js",
-              "test/research-board-role-picker.test.ts",
-              "test/research-board-directories.test.js",
-              "test/research-board-generation.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-interaction-state.test.js test/research-html-theme.test.js test/research-board-role-picker.test.ts test/research-board-directories.test.js test/research-board-generation.test.ts",
-            "verifiedCommit": "8de4242b63263236a538f350d1a0cc06d02728c7",
-            "completedAt": "2026-09-15T03:15:37.706Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-boards-service.test.ts",
-              "-t",
-              "restores deleted.*through production materialization"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-boards-service.test.ts -t restores deleted.*through production materialization",
-            "verifiedCommit": "8de4242b63263236a538f350d1a0cc06d02728c7",
-            "completedAt": "2026-09-15T03:15:37.706Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "8de4242b63263236a538f350d1a0cc06d02728c7",
-            "completedAt": "2026-09-15T03:15:37.706Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T03:15:37.706Z"
+        "generatedAt": "2026-09-15T03:31:42.487816+00:00"
       }
     }
   ],
