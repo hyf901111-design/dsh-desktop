@@ -495,6 +495,16 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
+  if (!source.includes('applyDirectoryCanvas(canvas) {')) source = replace(source, 'setCollaborationAccess(edit) {', `                applyDirectoryCanvas(canvas) {
+                    if (sherlockShared(sessionId)) throw new Error("Directory canvas requires a personal binding");
+                    const files = parseResearchCanvasFileNodes(JSON.stringify(canvas.files));
+                    const artifacts = boundedResearchCanvasArtifactNodes(canvas.artifacts);
+                    if (files.length !== canvas.files.length || artifacts.length !== canvas.artifacts.length) throw new Error("画板资料格式不兼容");
+                    pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;
+                    snapshot = researchWorkspaceSnapshot({...snapshot,files,artifacts,selection:parseResearchCanvasSelection(JSON.stringify(snapshot.selection),files,artifacts)});
+                    listeners.forEach(listener=>listener());
+                },
+setCollaborationAccess(edit) {`);
   return patchComponentInteractionState(patchBoardFileOwnership(patchBoardDirectoryConversation(patchFigmaFinalConversation(polishBoardPatch(source)))))
 }
 function polishBoardPatch(source) {

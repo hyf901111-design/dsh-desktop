@@ -201,6 +201,7 @@ export class ResearchBoardIntegration {
       }
       for (const kind of ['files', 'artifacts'] as const)
         if (!this.options.storage.setItem(`sherlock.research.canvas.${kind}.v1:${result.localSessionId}`, JSON.stringify(canvas[kind]))) throw Error('STORAGE_UNAVAILABLE')
+      return { ...result, canvas }
     }
     return result
   }
