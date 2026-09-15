@@ -107,3 +107,38 @@ it.each([
   expect(panel.style.bottom).toBe('28px')
   expect(panel.style.maxHeight).toBe('min(520px, calc(100vh - 40px))')
 })
+
+function visibleAccount(f: ReturnType<typeof fixture>) {
+  const sidebar = f.w.document.querySelector('[data-dsh-sidebar-root]')!
+  const footer = f.w.document.querySelector('[data-dsh-sidebar-footer]')!
+  vi.spyOn(sidebar, 'getBoundingClientRect').mockReturnValue(new f.w.DOMRect(0, 0, 280, 900))
+  vi.spyOn(footer, 'getBoundingClientRect').mockReturnValue(new f.w.DOMRect(0, 844, 280, 44))
+}
+it('presents an initial single invitation with actions instead of a summary', async () => {
+  const f = fixture([note('new-invite', null, 'pending')]); visibleAccount(f)
+  await tick()
+  const bubble = f.w.document.querySelector('.srb-bubble')!
+  expect(bubble.textContent).toContain('收到协作邀请')
+  expect(bubble.textContent).toContain('接受')
+  expect(bubble.textContent).toContain('拒绝')
+  expect(f.w.localStorage.getItem('sherlock.boards.displayed.u')).toContain('new-invite')
+})
+it('keeps an unseen invitation pending until the account anchor is ready', async () => {
+  const f = fixture([note('late-anchor', null, 'pending')]); await tick()
+  expect(f.w.document.querySelector('.srb-bubble')?.hasAttribute('data-notice-unpositioned')).toBe(true)
+  expect(f.w.localStorage.getItem('sherlock.boards.displayed.u')).not.toContain('late-anchor')
+  visibleAccount(f)
+  f.w.document.body.append(f.w.document.createElement('span')); await tick()
+  expect(f.w.document.querySelector('.srb-bubble')?.hasAttribute('data-notice-unpositioned')).toBe(false)
+  expect(f.w.localStorage.getItem('sherlock.boards.displayed.u')).toContain('late-anchor')
+})
+it('waits for a visible window before showing the initial invitation', async () => {
+  const f = fixture([note('background', null, 'pending')]); visibleAccount(f)
+  Object.defineProperty(f.w.document, 'visibilityState', { configurable: true, value: 'hidden' })
+  await tick()
+  expect(f.w.document.querySelector('.srb-bubble')).toBeNull()
+  expect(f.w.localStorage.getItem('sherlock.boards.displayed.u')).not.toContain('background')
+  Object.defineProperty(f.w.document, 'visibilityState', { configurable: true, value: 'visible' })
+  f.w.document.dispatchEvent(new f.w.Event('visibilitychange')); await tick()
+  expect(f.w.document.querySelector('.srb-bubble')?.textContent).toContain('接受')
+})

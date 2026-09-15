@@ -1690,7 +1690,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
           setCreating(true)
           try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }
           finally { setCreating(false) }
-        }) }, h('span', { className: 'srb-research-icon', 'data-sherlock-research-icon': '', 'aria-hidden': true })))),
+        }) }, h('span', { className: 'srb-create-plus', 'aria-hidden': true })))),
     (!collapsed || search) && h(ResearchBoardList, { page, skin, visible, entries, preferences, query, selectedSession, save }))
 }
 function ResearchBoardList({ page, skin, visible, entries, preferences, query, selectedSession, save }: any) {

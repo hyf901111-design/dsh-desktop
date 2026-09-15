@@ -28,13 +28,12 @@ export function mountResearchBoardNotifications(
     bubble: HTMLElement | undefined,
     filter: 'all' | 'unread' = 'all',
     disposed = false,
-    initialized = false,
     lastSeq = -1,
     account = '',
     shown = new Map<string, number>(),
     queue: Notification[] = [],
     burst = 0,
-    aggregate = 0
+    aggregate: Notification[] = []
   let activeNotification: Notification | undefined
   let latestUpdate = readUpdateNotification(win.localStorage)
   let liveUpdatePhase: UpdateStatus['phase'] | undefined
@@ -75,6 +74,7 @@ export function mountResearchBoardNotifications(
     bubble?.remove()
     bubble = undefined
     activeNotification = undefined
+    aggregate = []
     if (next) showNext()
   }
   function pause() {
@@ -85,7 +85,9 @@ export function mountResearchBoardNotifications(
     }
   }
   function resume() {
-    if (hover || focused || !bubble || countdown || ['downloading', 'downloaded', 'installing'].includes(liveUpdatePhase ?? '')) return
+    if (doc.visibilityState === 'hidden' || hover || focused || !bubble || bubble.hasAttribute('data-notice-unpositioned') || countdown || ['downloading', 'downloaded', 'installing'].includes(liveUpdatePhase ?? '')) return
+    for (const item of activeNotification ? [activeNotification] : aggregate) shown.set(item.notificationId, item.eventVersion)
+    persist()
     started = Date.now()
     countdown = setTimeout(() => closeBubble(), remaining)
   }
@@ -373,13 +375,13 @@ export function mountResearchBoardNotifications(
     }
   }
   function showNext() {
-    if (disposed || bubble || !bell || !state?.account.user) return
+    if (disposed || doc.visibilityState === 'hidden' || bubble || !bell || !state?.account.user) return
     if (burst >= 3 && queue.length) {
-      aggregate += queue.length
+      aggregate.push(...queue)
       queue = []
     }
     const n = queue.shift()
-    if (!n && !aggregate) {
+    if (!n && !aggregate.length) {
       burst = 0
       return
     }
@@ -390,7 +392,7 @@ export function mountResearchBoardNotifications(
     bubble.setAttribute('aria-label', n ? '新的协作邀请' : '协作邀请提醒')
     const head = doc.createElement('header')
     const title = doc.createElement('strong')
-    title.textContent = n ? '收到协作邀请' : `还有 ${aggregate} 条协作邀请`
+    title.textContent = n ? '收到协作邀请' : `还有 ${aggregate.length} 条协作邀请`
     const close = boardButton(doc, '', () => closeBubble(), '关闭提醒')
     close.className = 'ework-notice-close'
     close.append(noticeIcon(doc, 'close'))
@@ -398,11 +400,8 @@ export function mountResearchBoardNotifications(
     bubble.append(head)
     if (n) {
       burst++
-      shown.set(n.notificationId, n.eventVersion)
-      persist()
       bubble.append(record(n, true))
     } else {
-      aggregate = 0
       const description = doc.createElement('p')
       description.textContent = '前往消息中心统一处理。'
       description.className = 'ework-notice-description'
@@ -518,6 +517,7 @@ export function mountResearchBoardNotifications(
       updateUnread() || (!!state && state.notifications.unreadCount > 0)
     )
     showNext()
+    if (bubble) { anchor(bubble); resume() }
   }
   function receive(next: ResearchBoardsState) {
     if (disposed || next.eventSeq < lastSeq) return
@@ -527,9 +527,8 @@ export function mountResearchBoardNotifications(
       closeBubble(false)
       if (panel) closePanel()
       queue = []
-      aggregate = 0
+      aggregate = []
       burst = 0
-      initialized = false
       account = id
       shown = new Map()
       try {
@@ -547,32 +546,24 @@ export function mountResearchBoardNotifications(
       (n) =>
         pending(n) && (shown.get(n.notificationId) ?? -1) < n.eventVersion
     )
-    if (id && !initialized) {
-      aggregate = fresh.length
-      fresh.forEach((n) => shown.set(n.notificationId, n.eventVersion))
-      persist()
-      initialized = true
-    } else
-      for (const n of fresh) {
-        if (
-          activeNotification?.invitation?.invitationId &&
-          activeNotification.invitation.invitationId ===
-            n.invitation?.invitationId
-        ) {
-          shown.set(n.notificationId, n.eventVersion)
-          continue
-        }
-        if (
-          !queue.some(
-            (q) =>
-              q.notificationId === n.notificationId &&
-              q.eventVersion === n.eventVersion
-          )
-        ) {
-          queue.push(n)
-          shown.set(n.notificationId, n.eventVersion)
-        }
+    for (const n of fresh) {
+      if (
+        activeNotification?.invitation?.invitationId &&
+        activeNotification.invitation.invitationId ===
+          n.invitation?.invitationId
+      ) {
+        continue
       }
+      if (
+        ![...queue, ...aggregate].some(
+          (q) =>
+            q.notificationId === n.notificationId &&
+            q.eventVersion === n.eventVersion
+        )
+      ) {
+        queue.push(n)
+      }
+    }
     persist()
     queue = queue
       .map((n) =>
@@ -612,7 +603,9 @@ export function mountResearchBoardNotifications(
     if (event.type === 'state') receive(event.state)
   })
   const observer = new win.MutationObserver(reconcile)
-  observer.observe(doc.documentElement, { childList: true, subtree: true })
+  observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-notice-unpositioned'] })
+  const visibility = () => { if (doc.visibilityState === 'hidden') pause(); else { reconcile(); resume() } }
+  doc.addEventListener('visibilitychange', visibility)
   void refresh().catch(() => {})
   reconcile()
   const outside = (e: Event) => {
@@ -659,6 +652,7 @@ export function mountResearchBoardNotifications(
     disposed = true
     off()
     observer.disconnect()
+    doc.removeEventListener('visibilitychange', visibility)
     closeBubble(false)
     panel?.remove()
     bell?.remove()

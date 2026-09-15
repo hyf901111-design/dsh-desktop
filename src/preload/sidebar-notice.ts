@@ -50,7 +50,7 @@ export function positionSidebarNotice(doc: Document, element: HTMLElement): void
     reserveSettingsNavigation(doc)
     return
   }
-  element.removeAttribute('data-notice-unpositioned')
+  if (element.hasAttribute('data-notice-unpositioned')) element.removeAttribute('data-notice-unpositioned')
   element.dataset.noticeSettings = String(!!settingsNav)
   const width = bounds.width > 100 ? Math.min(settingsNav ? 212 : 252, bounds.width - 28) : 252
   // Figma 337:769/872/972: bottom=nav.bottom-56. The top account tab is not a footer.

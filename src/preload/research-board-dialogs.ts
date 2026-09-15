@@ -338,10 +338,11 @@ body[data-ds-dark-theme]{--srb-surface:rgba(39,39,39,.97);--srb-input:#202020;--
 [data-dsh-sidebar-root] [data-srb-navigation-scroll]{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;scroll-padding-top:72px;position:relative;isolation:isolate}
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] :is(.hHd-Xa_regionArea,[data-slot="sidebar.researchBoards"],[data-slot="sidebar.workspaces"],.srb-section,[data-srb-workspaces]){display:contents!important}
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] :is(.srb-board-list,[data-srb-workspace-list],.qDHVXG_list){flex:none!important;height:auto!important;max-height:none!important;overflow:visible!important}
-[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] [data-srb-section-header]{position:sticky;top:0;z-index:3;box-sizing:border-box;min-height:36px;height:36px;margin:0;background:var(--dsw-specific-sidebar-fill,#1d1d1d)}
+[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] [data-srb-section-header]{position:sticky;top:0;z-index:3;box-sizing:border-box;min-height:36px;height:36px;margin:0;background:transparent!important;border-radius:0}
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] [data-srb-workspaces] [data-srb-section-header]{top:36px;z-index:2}
 [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll] .srb-board-list{padding-bottom:12px}
 .srb-section .srb-section-toggle,[data-srb-workspaces] .srb-section-toggle{font-size:14px;line-height:20px;height:32px;gap:2px;color:var(--srb-muted)}
+.srb-create-plus{display:block;width:16px;height:16px;position:relative}.srb-create-plus:before,.srb-create-plus:after{content:"";position:absolute;top:7.25px;left:2px;width:12px;height:1.5px;background:currentColor;border-radius:1px}.srb-create-plus:after{transform:rotate(90deg)}
 .srb-section-toggle .srb-chevron{width:14px;height:14px}
 .srb-section [data-srb-section-header]{min-height:32px;height:32px;gap:2px;margin:0 0 4px;padding:0}
 .srb-section.srb-section{padding-top:0;padding-bottom:12px}
