@@ -9,31 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "侧栏滚动处理去重",
+        "featureName": "侧栏统一搜索与分组手动排序",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
-        "tipCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
+        "baseCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
+        "tipCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
         "commits": [
           {
-            "commit": "1a21603376edf50f03873de01057a5c4bee7b393",
+            "commit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
             "parents": [
-              "fdd7588256b9fe607cb9fecddc5307079adb3652"
+              "1a21603376edf50f03873de01057a5c4bee7b393"
             ],
-            "subject": "避免页面与预加载层重复处理侧栏滚轮"
+            "subject": "统一侧栏会话标题搜索并简化分组排序入口"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/sidebar-scroll-fade.ts"
+            "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
-            "path": "test/sidebar-scroll-fade.test.ts"
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/sidebar-manual-order.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/sidebar-session-search.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-session-search.test.ts"
           }
         ],
         "checks": [
@@ -42,15 +54,13 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/research-board-notifications-center.test.ts",
-              "test/sidebar-notice-position.test.ts",
-              "test/research-derived-mindmap-final.test.ts",
+              "test/sidebar-session-search.test.ts",
               "test/sidebar-scroll-fade.test.ts"
             ],
             "outcome": "passed",
-            "summary": "24项聚焦检查和类型检查通过",
-            "verifiedCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
-            "completedAt": "2026-09-15T09:21:18.214803+00:00",
+            "summary": "9项聚焦检查和类型检查通过",
+            "verifiedCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
+            "completedAt": "2026-09-15T09:45:19.514447+00:00",
             "timeoutMs": 120000
           },
           {
@@ -62,9 +72,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "24项聚焦检查和类型检查通过",
-            "verifiedCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
-            "completedAt": "2026-09-15T09:21:18.214803+00:00",
+            "summary": "9项聚焦检查和类型检查通过",
+            "verifiedCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
+            "completedAt": "2026-09-15T09:45:19.514447+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -73,48 +83,14 @@
           "summary": "集成后通过实际客户端验证滚动交互"
         },
         "acceptanceCriteria": [
-          "快速滚动同次事件更新遮罩",
-          "标题无独立底色",
-          "保留触控板惯性与鼠标滚轮"
+          "顶部单一入口搜索两区会话标题",
+          "移除栏目搜索和显示排序菜单",
+          "类型分组、手动排序并在更新后置顶"
         ],
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T09:21:18.214803+00:00"
-      },
-      "merged": {
-        "mergeCommit": "637568022b9dca97127b809f86a966cfcbece386",
-        "verificationCommit": "637568022b9dca97127b809f86a966cfcbece386",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "637568022b9dca97127b809f86a966cfcbece386",
-            "completedAt": "2026-09-15T09:22:20.519Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "637568022b9dca97127b809f86a966cfcbece386",
-            "completedAt": "2026-09-15T09:22:20.519Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T09:22:20.519Z"
+        "generatedAt": "2026-09-15T09:45:19.514447+00:00"
       }
     }
   ],
