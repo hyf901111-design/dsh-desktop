@@ -1,0 +1,91 @@
+/* Figma Jkyr5rMvgM8GNH6E68xnqd, 891:27847. Only the first welcome step. */
+[role="presentation"]:has(> .dshWelcomeDialog) > [aria-hidden="true"] {
+  background: rgb(0 0 0 / .62);
+  backdrop-filter: blur(3px);
+}
+.dshWelcomeDialog.jLrgrW_dialog {
+  box-sizing: border-box;
+  width: min(820px, calc(100vw - 48px));
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / .1);
+  border-radius: 24px;
+  background: #28282a;
+  color: #f5f5f5;
+  box-shadow: 0 24px 64px rgb(0 0 0 / .36);
+  font-family: var(--odyssey-font-ui, "Noto Sans SC", sans-serif);
+}
+.dshWelcomeLayout {
+  display: grid;
+  grid-template-columns: 324px minmax(0, 1fr);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+.dshWelcomeIllustration {
+  display: block;
+  width: 324px;
+  height: 100%;
+  min-height: 406px;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+}
+.dshWelcomeContent {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 406px;
+  padding: 46px 44px 42px;
+}
+.dshWelcomeContent .jLrgrW_title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  color: #f5f5f5;
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 38px;
+}
+.dshWelcomeProductName {
+  font-family: "DINPro", var(--odyssey-font-ui, sans-serif);
+  font-size: 28px;
+}
+.dshWelcomeContent .jLrgrW_body { margin-top: 53px; }
+.dshWelcomeContent .t1T8VW_copy {
+  max-width: 392px;
+  color: #bababa;
+  font-size: 14px;
+  line-height: 26px;
+}
+.dshWelcomeContent .t1T8VW_copy p { margin: 0; }
+.dshWelcomeContent .t1T8VW_actions { margin-top: 53px; }
+.dshWelcomeContent button.t1T8VW_primary {
+  box-sizing: border-box;
+  width: auto;
+  min-width: 124px;
+  height: 40px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 20px;
+  background: #f7f7f7;
+  color: #141414;
+  font: 500 14px/20px var(--odyssey-font-ui, sans-serif);
+}
+.dshWelcomeContent button.t1T8VW_primary:hover:not(:disabled) { background: #e5e5e5; }
+.dshWelcomeContent button.t1T8VW_primary:focus-visible { outline: 2px solid #82adff; outline-offset: 3px; }
+.dshWelcomeContent button.t1T8VW_primary:disabled { opacity: .5; cursor: wait; }
+@media (max-width: 760px) {
+  .dshWelcomeLayout { grid-template-columns: 32% minmax(0, 1fr); }
+  .dshWelcomeIllustration { width: 100%; }
+  .dshWelcomeContent { padding: 32px 28px; }
+  .dshWelcomeContent .jLrgrW_body,
+  .dshWelcomeContent .t1T8VW_actions { margin-top: 32px; }
+}
+@media (max-width: 480px) {
+  .dshWelcomeLayout { grid-template-columns: 1fr; }
+  .dshWelcomeIllustration { height: 168px; min-height: 0; object-position: center 48%; }
+  .dshWelcomeContent { min-height: 0; padding: 28px 24px; }
+  .dshWelcomeContent .jLrgrW_title { font-size: 24px; line-height: 34px; }
+  .dshWelcomeProductName { font-size: 26px; }
+}

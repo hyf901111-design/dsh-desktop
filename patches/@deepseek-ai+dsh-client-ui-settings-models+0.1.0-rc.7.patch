@@ -1,8 +1,7 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
-index 02caaf7..bf68ca4 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-settings-models/lib/client.js
-@@ -66,6 +66,22 @@ window.__ModuleLoader__.load({
+@@ -66,6 +66,22 @@
  			tag.textContent = css$3;
  			document.head.appendChild(tag);
  		}
@@ -25,10 +24,11 @@ index 02caaf7..bf68ca4 100644
  		var ModelsSection_module_css_default = {
  			"editorRoute": "zGbnIq_editorRoute",
  			"section": "zGbnIq_section",
-@@ -210,6 +226,28 @@ window.__ModuleLoader__.load({
+@@ -209,7 +225,29 @@
+ 		function modelDrafts(value) {
  			if (!Array.isArray(value)) return [];
  			return value.map((entry) => typeof entry === "object" && entry !== null && !Array.isArray(entry) ? entry : {});
- 		}
++		}
 +		/** Translate the Vision checkbox into the model schema consumed by Harness. */
 +		function modelInputForVision(model, enabled) {
 +			const input = Array.isArray(model.input) ? model.input.filter((value) => value === "text" || value === "image") : [];
@@ -37,7 +37,7 @@ index 02caaf7..bf68ca4 100644
 +			if (enabled) next.add("image");
 +			else next.delete("image");
 +			return [...next];
-+		}
+ 		}
 +		function ModelVisionToggle({ model, index, t, disabled, onChange }) {
 +			return (0, react_jsx_runtime.jsxs)("label", {
 +				className: "sherlockModelVision",
@@ -54,7 +54,7 @@ index 02caaf7..bf68ca4 100644
  		/**
  		* Validate adapter constraints that the serialized schema cannot express.
  		* @param value - user-owned `models` value, or undefined while inherited.
-@@ -373,7 +411,7 @@ window.__ModuleLoader__.load({
+@@ -373,7 +411,7 @@
  						children: props.models.map((model, index) => (0, react_jsx_runtime.jsxs)("div", {
  							className: ModelsSection_module_css_default["modelEntry"],
  							children: [(0, react_jsx_runtime.jsxs)("div", {
@@ -63,7 +63,7 @@ index 02caaf7..bf68ca4 100644
  								children: [
  									(0, react_jsx_runtime.jsx)("input", {
  										className: ModelsSection_module_css_default["input"],
-@@ -401,6 +439,13 @@ window.__ModuleLoader__.load({
+@@ -401,6 +439,13 @@
  											update(index, "name", event.target.value === "" ? void 0 : event.target.value);
  										}
  									}),
@@ -77,7 +77,7 @@ index 02caaf7..bf68ca4 100644
  									(0, react_jsx_runtime.jsx)("button", {
  										type: "button",
  										className: ModelsSection_module_css_default["iconButton"],
-@@ -837,6 +882,11 @@ window.__ModuleLoader__.load({
+@@ -837,6 +882,11 @@
  					return next;
  				});
  			};
@@ -89,7 +89,7 @@ index 02caaf7..bf68ca4 100644
  			const askable = probe.provider !== void 0 || probe.baseURL !== void 0 && probe.baseURL.length > 0;
  			return (0, react_jsx_runtime.jsxs)("section", {
  				className: ModelsSection_module_css_default["modelCatalog"],
-@@ -881,7 +931,7 @@ window.__ModuleLoader__.load({
+@@ -881,7 +931,7 @@
  					models.map((model, index) => (0, react_jsx_runtime.jsxs)("div", {
  						className: ModelsSection_module_css_default["modelEntry"],
  						children: [(0, react_jsx_runtime.jsxs)("div", {
@@ -98,7 +98,7 @@ index 02caaf7..bf68ca4 100644
  							children: [
  								(0, react_jsx_runtime.jsx)("input", {
  									className: ModelsSection_module_css_default["input"],
-@@ -905,6 +955,13 @@ window.__ModuleLoader__.load({
+@@ -905,6 +955,13 @@
  										patch(index, { name: event.target.value === "" ? void 0 : event.target.value });
  									}
  								}),
@@ -112,7 +112,7 @@ index 02caaf7..bf68ca4 100644
  								(0, react_jsx_runtime.jsx)("button", {
  									type: "button",
  									className: ModelsSection_module_css_default["iconButton"],
-@@ -1003,7 +1060,15 @@ window.__ModuleLoader__.load({
+@@ -1003,7 +1060,15 @@
  							onClick: adoptPicked,
  							children: t("fetchAdopt")
  						})] }),
@@ -129,7 +129,7 @@ index 02caaf7..bf68ca4 100644
  							className: ModelsSection_module_css_default["candidateList"],
  							children: (candidates ?? []).map((candidate) => (0, react_jsx_runtime.jsx)("li", {
  								className: ModelsSection_module_css_default["candidate"],
-@@ -1021,7 +1086,7 @@ window.__ModuleLoader__.load({
+@@ -1021,7 +1086,7 @@
  									})]
  								})
  							}, candidate.id))
@@ -138,7 +138,7 @@ index 02caaf7..bf68ca4 100644
  					})
  				]
  			});
-@@ -1753,6 +1818,26 @@ window.__ModuleLoader__.load({
+@@ -1753,6 +1818,26 @@
  		function providerCopy(template, target) {
  			return template.replace("{provider}", () => providerTargetLabel(target));
  		}
@@ -165,7 +165,7 @@ index 02caaf7..bf68ca4 100644
  		/**
  		* Render the Models section content column.
  		* @param props - slot-delivered injected dependencies.
-@@ -1778,6 +1863,8 @@ window.__ModuleLoader__.load({
+@@ -1778,6 +1863,8 @@
  			const [deleteFailure, setDeleteFailure] = (0, react.useState)(void 0);
  			const [savedTarget, setSavedTarget] = (0, react.useState)(void 0);
  			const [declaring, setDeclaring] = (0, react.useState)(false);
@@ -174,7 +174,7 @@ index 02caaf7..bf68ca4 100644
  			const [dismissedSetup, setDismissedSetup] = (0, react.useState)(() => /* @__PURE__ */ new Set());
  			const announceSaved = (target) => {
  				controller.load().then(() => {
-@@ -1847,10 +1934,16 @@ window.__ModuleLoader__.load({
+@@ -1847,10 +1934,16 @@
  			};
  			const anyUsable = state.rows.some(providerUsable);
  			const configured = state.rows.filter((row) => row.configured);
@@ -192,7 +192,7 @@ index 02caaf7..bf68ca4 100644
  			return (0, react_jsx_runtime.jsxs)("div", {
  				className: ModelsSection_module_css_default["section"],
  				children: [
-@@ -1967,24 +2060,66 @@ window.__ModuleLoader__.load({
+@@ -1967,24 +2060,66 @@
  							className: ModelsSection_module_css_default["addCard"],
  							children: [(0, react_jsx_runtime.jsxs)("div", {
  								className: ModelsSection_module_css_default["field"],
@@ -220,6 +220,11 @@ index 02caaf7..bf68ca4 100644
 -										/* v8 ignore next -- the select only lists addable rows */
 -										if (row === void 0) return;
 -										setEditing(targetOf(row));
+-									},
+-									children: addable.map((row) => (0, react_jsx_runtime.jsx)("option", {
+-										value: row.entry.provider,
+-										children: row.entry.displayName
+-									}, row.entry.provider))
 +										setProviderQuery(event.target.value);
 +									}
 +								}), (0, react_jsx_runtime.jsx)("div", {
@@ -246,7 +251,7 @@ index 02caaf7..bf68ca4 100644
 +										})]
 +									}, row.entry.provider);
 +									})
-+								})]
+ 								})]
 +							}) : (0, react_jsx_runtime.jsxs)("div", {
 +								className: "dshProviderSummary",
 +								children: [(0, react_jsx_runtime.jsxs)("span", {
@@ -263,18 +268,14 @@ index 02caaf7..bf68ca4 100644
 +									className: "dshProviderChange",
 +									onClick: () => {
 +										setProviderPickerOpen(true);
- 									},
--									children: addable.map((row) => (0, react_jsx_runtime.jsx)("option", {
--										value: row.entry.provider,
--										children: row.entry.displayName
--									}, row.entry.provider))
++									},
 +									children: t("changeProvider")
- 								})]
++								})]
 +							})]
  							}), (0, react_jsx_runtime.jsx)(ProviderEditor, {
  								provider: addTarget.provider,
  								displayName: addTarget.displayName,
-@@ -2027,6 +2162,8 @@ window.__ModuleLoader__.load({
+@@ -2027,6 +2162,8 @@
  									setDeclaring(false);
  									setAdding(true);
  									setEditing(targetOf(first));
@@ -283,7 +284,64 @@ index 02caaf7..bf68ca4 100644
  								},
  								children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }), t("add")]
  							}), (0, react_jsx_runtime.jsxs)("button", {
-@@ -2135,7 +2272,7 @@ window.__ModuleLoader__.load({
+@@ -2099,7 +2236,7 @@
+ 		* @param props.children - step-owned body and actions.
+ 		* @returns the body-portaled modal.
+ 		*/
+-		function OnboardingModal({ title, focusTitle = false, children }) {
++		function OnboardingModal({ title, focusTitle = false, welcome = false, children }) {
+ 			const titleRef = (0, react.useRef)(null);
+ 			(0, react.useEffect)(() => {
+ 				const appRoot = document.getElementById("root");
+@@ -2113,29 +2250,43 @@
+ 			(0, react.useEffect)(() => {
+ 				if (focusTitle) titleRef.current?.focus();
+ 			}, [focusTitle]);
++			const stepContent = [(0, react_jsx_runtime.jsx)("h2", {
++				ref: titleRef,
++				className: OnboardingModal_module_css_default.title,
++				tabIndex: focusTitle ? -1 : void 0,
++				children: welcome ? [(0, react_jsx_runtime.jsx)("span", { children: title }, "welcome"), (0, react_jsx_runtime.jsx)("span", { className: "dshWelcomeProductName", children: "EWork Odyssey" }, "product")] : title
++			}, "title"), (0, react_jsx_runtime.jsx)("div", {
++				className: OnboardingModal_module_css_default.body,
++				children
++			}, "body")];
+ 			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+ 				open: true,
+-				title,
++				title: welcome ? title + " EWork Odyssey" : title,
+ 				onClose: ignoreImplicitDismiss,
+ 				headless: true,
+-				className: OnboardingModal_module_css_default.dialog,
+-				children: (0, react_jsx_runtime.jsxs)("div", {
+-					className: OnboardingModal_module_css_default.content,
+-					children: [(0, react_jsx_runtime.jsx)("h2", {
+-						ref: titleRef,
+-						className: OnboardingModal_module_css_default.title,
+-						tabIndex: focusTitle ? -1 : void 0,
+-						children: title
+-					}), (0, react_jsx_runtime.jsx)("div", {
+-						className: OnboardingModal_module_css_default.body,
+-						children
++				className: OnboardingModal_module_css_default.dialog + (welcome ? " dshWelcomeDialog" : ""),
++				children: welcome ? (0, react_jsx_runtime.jsxs)("div", {
++					className: "dshWelcomeLayout",
++					children: [(0, react_jsx_runtime.jsx)("img", {
++						className: "dshWelcomeIllustration",
++						src: "/figma-welcome-illustration.png",
++						alt: "",
++						width: 324,
++						height: 408,
++						draggable: false
++					}), (0, react_jsx_runtime.jsxs)("div", {
++						className: "dshWelcomeContent",
++						children: stepContent
+ 					})]
++				}) : (0, react_jsx_runtime.jsxs)("div", {
++					className: OnboardingModal_module_css_default.content,
++					children: stepContent
+ 				})
+ 			});
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-settings-models/src/client/DeepSeekOnboardingDialog.module.css.mjs
@@ -292,7 +350,7 @@ index 02caaf7..bf68ca4 100644
  		const tagId$1 = "@deepseek-ai/dsh-client-ui-settings-models/DeepSeekOnboardingDialog.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -2146,50 +2283,59 @@ window.__ModuleLoader__.load({
+@@ -2146,50 +2297,59 @@
  		}
  		var DeepSeekOnboardingDialog_module_css_default = {
  			"description": "GL8Viq_description",
@@ -381,7 +439,7 @@ index 02caaf7..bf68ca4 100644
  			const finishCredential = (changed) => {
  				if (!changed) {
  					complete();
-@@ -2199,28 +2345,54 @@ window.__ModuleLoader__.load({
+@@ -2199,28 +2359,54 @@
  			};
  			return (0, react_jsx_runtime.jsxs)(OnboardingModal, {
  				title: t("onboardingTitle"),
@@ -441,7 +499,20 @@ index 02caaf7..bf68ca4 100644
  				})]
  			});
  		}
-@@ -2307,17 +2479,17 @@ window.__ModuleLoader__.load({
+@@ -2268,10 +2454,11 @@
+ 			const acknowledge = async () => {
+ 				if (await controller.acknowledge()) finish();
+ 			};
+-			const paragraphs = t("welcomeBody").split("\n\n");
++			const paragraphs = t("welcomeBody").split("\n");
+ 			return (0, react_jsx_runtime.jsxs)(OnboardingModal, {
+ 				title: t("welcomeTitle"),
+ 				focusTitle: true,
++				welcome: true,
+ 				children: [
+ 					(0, react_jsx_runtime.jsx)("div", {
+ 						className: WelcomeNotice_module_css_default.copy,
+@@ -2307,18 +2494,18 @@
  		* Bump only when the notice changes materially and every user should see it
  		* again. The acknowledgement is compared for exact equality.
  		*/
@@ -450,19 +521,24 @@ index 02caaf7..bf68ca4 100644
  		/** The complete editable internal-testing notice in both supported GUI locales. */
  		const WELCOME_NOTICE_COPY = {
  			zh: {
- 				title: "内测声明",
+-				title: "内测声明",
 -				body: "DeepSeek Harness 目前的 0.1 版本仍处在面向 Harness 开发者进行测试的阶段，还有许多地方需要持续改进和打磨，希望听取广大开发者的反馈建议。预计 DeepSeek Harness 的核心插件以及基础 API 都会在接下来的一段时间内快速迭代、持续演化。\n\n我们期待与全球开发者一起，在开源、开放、可复用、可组合的基础设施之上，共同探索智能上限。欢迎全球 Harness 开发者加入 DSH 插件生态。",
-+				body: "EWork Odyssey 目前仍处于早期测试阶段，还有许多地方需要持续改进和打磨，欢迎反馈使用中遇到的问题和建议。EWork Odyssey 的核心能力与基础 API 会继续快速迭代。\n\n我们期待与用户一起，在本地优先、开放、可复用、可组合的基础设施之上，探索个人知识与智能协作的更多可能。",
- 				continueLabel: "继续"
+-				continueLabel: "继续"
++				title: "欢迎使用",
++				body: "让灵感、资源与伙伴，在同一张研究画布上相遇。\nEWork Odyssey 内置金融专业工具，与 AI 一起从问题出发，\n探索更远、洞见更深。",
++				continueLabel: "开始探索"
  			},
  			en: {
- 				title: "Internal Testing Notice",
+-				title: "Internal Testing Notice",
 -				body: "DeepSeek Harness 0.1 remains in testing for Harness developers. Many areas need further improvement, and we welcome feedback from the developer community. DeepSeek Harness's core plugins and foundational APIs will continue to evolve rapidly over the coming months.\n\nWe look forward to exploring the limits of intelligence with developers around the world, building on open-source, open, reusable, and composable infrastructure. We welcome Harness developers everywhere to join the DSH plugin ecosystem.",
-+				body: "EWork Odyssey remains in early testing. Many areas still need improvement, and we welcome feedback about issues and ideas from real use. EWork Odyssey's core capabilities and foundational APIs will continue to evolve rapidly.\n\nWe look forward to exploring new possibilities for personal knowledge and intelligent collaboration on local-first, open, reusable, and composable infrastructure.",
- 				continueLabel: "Continue"
+-				continueLabel: "Continue"
++				title: "Welcome to",
++				body: "Bring ideas, resources, and collaborators together on one research canvas.\nWith built-in financial tools, EWork Odyssey helps you explore questions with AI.\nExplore further. See deeper.",
++				continueLabel: "Start exploring"
  			}
  		};
-@@ -2457,6 +2629,8 @@ window.__ModuleLoader__.load({
+ 		//#endregion
+@@ -2457,6 +2644,8 @@
  			deleting: "Deleting {provider}…",
  			add: "Add provider",
  			provider: "Provider",
@@ -471,7 +547,7 @@ index 02caaf7..bf68ca4 100644
  			close: "Close",
  			cancel: "Cancel",
  			apply: "Apply",
-@@ -2483,6 +2657,7 @@ window.__ModuleLoader__.load({
+@@ -2483,6 +2672,7 @@
  			model: "Model",
  			modelId: "Model ID",
  			modelName: "Display name",
@@ -479,7 +555,7 @@ index 02caaf7..bf68ca4 100644
  			modelNamePlaceholder: "Uses the model ID when empty",
  			contextWindow: "Context window",
  			contextWindowPlaceholder: "Uses the provider default",
-@@ -2511,6 +2686,8 @@ window.__ModuleLoader__.load({
+@@ -2511,6 +2701,8 @@
  			fetchEmpty: "The provider listed no models. Add them by hand.",
  			fetchTitle: "Choose models to add",
  			fetchDescription: "These are the models this provider has available. Choose the ones to add.",
@@ -488,7 +564,7 @@ index 02caaf7..bf68ca4 100644
  			fetchAdopt: "Add selected",
  			customAdd: "Add a custom provider",
  			customTitle: "Custom provider",
-@@ -2530,10 +2707,14 @@ window.__ModuleLoader__.load({
+@@ -2530,10 +2722,14 @@
  			welcomeBody: WELCOME_NOTICE_COPY.en.body,
  			welcomeContinue: WELCOME_NOTICE_COPY.en.continueLabel,
  			welcomeError: "The acknowledgement could not be saved. Please try again.",
@@ -506,7 +582,7 @@ index 02caaf7..bf68ca4 100644
  			onboardingSaving: "Saving…",
  			keyRequired: "Enter an API key to continue."
  		};
-@@ -2553,6 +2734,8 @@ window.__ModuleLoader__.load({
+@@ -2553,6 +2749,8 @@
  			deleting: "正在删除 {provider}…",
  			add: "添加提供方",
  			provider: "提供方",
@@ -515,7 +591,7 @@ index 02caaf7..bf68ca4 100644
  			close: "关闭",
  			cancel: "取消",
  			apply: "保存",
-@@ -2579,6 +2762,7 @@ window.__ModuleLoader__.load({
+@@ -2579,6 +2777,7 @@
  			model: "模型",
  			modelId: "模型 ID",
  			modelName: "显示名称",
@@ -523,7 +599,7 @@ index 02caaf7..bf68ca4 100644
  			modelNamePlaceholder: "留空时使用模型 ID",
  			contextWindow: "上下文窗口",
  			contextWindowPlaceholder: "使用提供方默认值",
-@@ -2607,6 +2791,8 @@ window.__ModuleLoader__.load({
+@@ -2607,6 +2806,8 @@
  			fetchEmpty: "该提供方没有列出任何模型，请手动添加。",
  			fetchTitle: "选择要添加的模型",
  			fetchDescription: "以下是模型提供方的可用模型，勾选要添加的模型。",
@@ -532,7 +608,7 @@ index 02caaf7..bf68ca4 100644
  			fetchAdopt: "添加所选",
  			customAdd: "添加自定义提供方",
  			customTitle: "自定义提供方",
-@@ -2626,10 +2812,14 @@ window.__ModuleLoader__.load({
+@@ -2626,10 +2827,14 @@
  			welcomeBody: WELCOME_NOTICE_COPY.zh.body,
  			welcomeContinue: WELCOME_NOTICE_COPY.zh.continueLabel,
  			welcomeError: "暂时无法保存确认状态，请重试。",
@@ -550,7 +626,7 @@ index 02caaf7..bf68ca4 100644
  			onboardingSaving: "保存中…",
  			keyRequired: "请输入 API 密钥后继续。"
  		};
-@@ -2732,6 +2922,8 @@ window.__ModuleLoader__.load({
+@@ -2732,6 +2937,8 @@
  			}, DeepSeekOnboardingDialog));
  		}
  		//#endregion
