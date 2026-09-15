@@ -262,6 +262,7 @@ export const englishUiCopy: Record<string, string> = {
   "没有编辑记录": "No edit history",
   "暂无编辑记录": "No edit history",
   "正在启动研究任务…": "Starting research task…",
+  "复制 ID": "Copy ID",
   "复制成功": "Copied",
   "复制失败，请重试": "Copy failed. Try again",
   "重试这条研究任务": "Retry this research task",
