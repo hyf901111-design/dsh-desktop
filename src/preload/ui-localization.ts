@@ -8,6 +8,7 @@ export function translateUiCopy(value: string): string {
  const key=value.trim(), translated=englishUiCopy[key]
  if(translated)return value.replace(key,translated)
  const patterns: Array<[RegExp,(...args:string[])=>string]> = [
+  [/^(\d+) 个会话$/,(_m,n)=>`${n} ${n==='1'?'session':'sessions'}`],
   [/^你已(接受|拒绝|处理)邀请$/,(_m,v)=>`You ${v==='接受'?'accepted':v==='拒绝'?'declined':'responded to'} the invitation`],
   [/^(.+)(接受|拒绝|处理)了你的邀请$/,(_m,name,v)=>`${name} ${v==='接受'?'accepted':v==='拒绝'?'declined':'responded to'} your invitation`],
   [/^(.+) 邀请你加入 · (.+)$/,(_m,name,role)=>`${name} invited you · ${englishUiCopy[role]??role}`],

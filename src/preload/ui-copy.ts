@@ -2,6 +2,10 @@
  * Keys are exact UI strings. User documents, input values and saved titles are never translated.
  */
 export const englishUiCopy: Record<string, string> = {
+  "搜索会话": "Search sessions",
+  "搜索看板区和工作区的会话标题…": "Search board and workspace session titles…",
+  "正在打开…": "Opening…",
+  "没有匹配的会话": "No matching sessions",
   "返回应用": "Back to app",
   "账户信息": "Account",
   "账户": "Account",
