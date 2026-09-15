@@ -343,7 +343,32 @@ export function mountAccountUi(
       heading.textContent = '账户'
       const list = document.createElement('div')
       list.className = 'sherlock-settings-list'
-      list.append(card)
+      const idRow = document.createElement('div')
+      idRow.className = 'sherlock-account-card sherlock-account-id-row'
+      const idText = document.createElement('span')
+      idText.textContent = boards ? '正在获取用户 ID…' : '用户 ID 暂时不可用'
+      const feedback = document.createElement('span')
+      feedback.setAttribute('role', 'status')
+      let publicId: string | undefined
+      const accountId = user.id
+      const copyId = button('复制 ID', async () => {
+        if (!publicId || user?.id !== accountId) return
+        try {
+          await document.defaultView!.navigator.clipboard.writeText(publicId)
+          feedback.textContent = '复制成功'
+        } catch { feedback.textContent = '复制失败，请重试' }
+      }, '')
+      copyId.disabled = true
+      copyId.setAttribute('aria-label', '复制 ID')
+      idRow.append(idText, feedback, copyId)
+      if (boards) void boards.getSnapshot().then(snapshot => {
+        if (!page.isConnected || user?.id !== accountId) return
+        const identity = snapshot.account.user
+        publicId = identity?.userId === accountId && /^\d{10}$/.test(identity.publicId ?? '') ? identity.publicId : undefined
+        idText.textContent = publicId ? 'ID ' + publicId : '用户 ID 暂时不可用'
+        copyId.disabled = !publicId
+      }).catch(() => { if (page.isConnected) idText.textContent = '用户 ID 暂时不可用' })
+      list.append(card, idRow)
       group.append(heading, list)
       page.append(group)
       const security = document.createElement('div')

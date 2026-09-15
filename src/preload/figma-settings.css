@@ -136,3 +136,7 @@ body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-account-page{--settings-text:
 @media(prefers-reduced-motion:reduce){.VOzbGW_overlay .sherlock-theme-preview:after{transition:none}}
 
 .sherlock-settings-back svg path{stroke:currentColor}
+
+.VOzbGW_overlay .sherlock-account-id-row{min-height:48px;margin:0 16px;padding:0;background:transparent;box-shadow:none;border:0;border-radius:0;color:var(--settings-muted)}
+.VOzbGW_overlay .sherlock-account-id-row [role=status]{flex:1;text-align:right;font-size:12px}
+.VOzbGW_overlay .sherlock-account-id-row button{height:28px;padding:0 18px;border:0;border-radius:8px;background:var(--settings-control);color:var(--settings-text);font:400 13px/20px 'Noto Sans SC',sans-serif}
