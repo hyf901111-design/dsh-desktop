@@ -30,7 +30,7 @@ const FOG_VOLUMES: ReadonlyArray<readonly [number, number, number, number, numbe
   [7, 0.461, 0.802, 0.042, 0.078]
 ]
 
-export function createHomeFlowField() {
+export function createHomeFlowField({ speed = 1, strength = 1 } = {}) {
   const state = new Float64Array(FOG_VOLUMES.length * 5)
   let time = NaN
   let xWeights = new Float64Array(0), yWeights = new Float64Array(0)
@@ -39,9 +39,9 @@ export function createHomeFlowField() {
     if (time === seconds) return
     time = seconds
     FOG_VOLUMES.forEach(([amplitude, x, y, rx, ry], i) => {
-      const phase = i * 2.39996, t = seconds * 3.4 * (.067 + (i % 7) * .006)
-      const local = Math.sin(t + phase) - Math.sin(phase)
-      const cross = Math.sin(t * .79 + phase * 1.7) - Math.sin(phase * 1.7)
+      const phase = i * 2.39996, t = seconds * speed * 3.4 * (.067 + (i % 7) * .006)
+      const local = strength * (Math.sin(t + phase) - Math.sin(phase))
+      const cross = strength * (Math.sin(t * .79 + phase * 1.7) - Math.sin(phase * 1.7))
       state[i*5] = amplitude * (1 + .015 * cross)
       state[i*5+1] = x + .012 * local
       state[i*5+2] = y + .012 * cross
@@ -117,10 +117,12 @@ export function mountHomeFlow(doc: Document = document): () => void {
   let disposed = false
   let dark = doc.body.hasAttribute('data-ds-dark-theme')
   const luminance = createHomeFlowField()
+  const homeLuminance = createHomeFlowField({ speed: 1.5, strength: 1.3 })
 
   const draw = () => {
     if (!canvas || !context || !pixels) return
-    luminance.paint(pixels, elapsed, dark)
+    const field = host?.matches('.sherlock-auth-scenery') ? luminance : homeLuminance
+    field.paint(pixels, elapsed, dark)
     context.putImageData(pixels, 0, 0)
   }
   const stop = () => {
