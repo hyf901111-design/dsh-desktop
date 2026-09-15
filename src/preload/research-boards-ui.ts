@@ -1,7 +1,7 @@
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
-import { Menu, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   BoardView,
   Canvas,
@@ -1690,7 +1690,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
           setCreating(true)
           try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }
           finally { setCreating(false) }
-        }) }, h('span', { className: 'srb-create-plus', 'aria-hidden': true })))),
+        }) }, h(IconPlusOutline16)))),
     (!collapsed || search) && h(ResearchBoardList, { page, skin, visible, entries, preferences, query, selectedSession, save }))
 }
 function ResearchBoardList({ page, skin, visible, entries, preferences, query, selectedSession, save }: any) {
@@ -2655,7 +2655,7 @@ export function ResearchBoardCanvasOverlay({
     (!v.permissions.edit || page.editorError(sessionId)) &&
       h(
         'div',
-        { className: 'srb-readonly' },
+        { className: 'srb-readonly', 'data-canvas-error': page.editorError(sessionId) ? '' : undefined },
         page.editorError(sessionId) ?? '仅可查看',
         page.editorError(sessionId) &&
           h(
