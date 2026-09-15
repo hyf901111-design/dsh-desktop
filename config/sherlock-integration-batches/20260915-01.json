@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260915-01",
+  "branch": "codex/integration/20260915-01",
+  "baseMainCommit": "b69c588c066218062ddd69ab3400247c874666f9",
+  "expectedMainCommit": "b69c588c066218062ddd69ab3400247c874666f9",
+  "createdAt": "2026-09-15T01:13:50.521Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件交互持久化与协作目录",
+        "branch": "codex/feat/component-state-20260915",
+        "baseCommit": "b69c588c066218062ddd69ab3400247c874666f9",
+        "tipCommit": "5b19a8155f512773e03f37c6cbd69c946d2d5b6a",
+        "commits": [
+          {
+            "commit": "5b19a8155f512773e03f37c6cbd69c946d2d5b6a",
+            "parents": [
+              "b69c588c066218062ddd69ab3400247c874666f9"
+            ],
+            "subject": "修复：持久化组件交互并同步协作看板目录与输入状态"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-directories.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/component-interaction-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/component-interaction-state.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-directories.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-generation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-service.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-interaction-state.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-role-picker.test.ts",
+              "test/research-board-directories.test.js",
+              "test/research-board-generation.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "47 项聚焦验证及类型检查通过",
+            "verifiedCommit": "5b19a8155f512773e03f37c6cbd69c946d2d5b6a",
+            "completedAt": "2026-09-15T01:13:35.807092+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-boards-service.test.ts",
+              "-t",
+              "restores deleted.*through production materialization"
+            ],
+            "outcome": "passed",
+            "summary": "47 项聚焦验证及类型检查通过",
+            "verifiedCommit": "5b19a8155f512773e03f37c6cbd69c946d2d5b6a",
+            "completedAt": "2026-09-15T01:13:35.807092+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "47 项聚焦验证及类型检查通过",
+            "verifiedCommit": "5b19a8155f512773e03f37c6cbd69c946d2d5b6a",
+            "completedAt": "2026-09-15T01:13:35.807092+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Happy DOM 已验证权限菜单键盘与位置、组件脚本重放；真实双客户端验证在集成构建后继续，不代表已经通过原生验收。"
+        },
+        "acceptanceCriteria": [
+          "权限只从按钮触发",
+          "交互状态随看板保存和同步",
+          "共享资料复制至默认看板目录",
+          "共享消息后隐藏输入框上方选择器"
+        ],
+        "risks": [
+          "交互日志按组件源码版本隔离；自定义异步交互需继续原生验证"
+        ],
+        "generatedAt": "2026-09-15T01:13:35.807092+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/component-interaction-state.test.js",
+        "test/research-html-theme.test.js",
+        "test/research-board-role-picker.test.ts",
+        "test/research-board-directories.test.js",
+        "test/research-board-generation.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-boards-service.test.ts",
+        "-t",
+        "restores deleted.*through production materialization"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
