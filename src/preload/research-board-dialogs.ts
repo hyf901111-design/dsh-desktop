@@ -275,8 +275,8 @@ export function requestBoardPageAction(
   })
 }
 export function installBoardUiStyles(doc: Document) {
-  installSidebarScrollFade(doc)
   if (doc.getElementById('sherlock-research-boards-style')) return
+  installSidebarScrollFade(doc)
   const style = doc.createElement('style')
   style.id = 'sherlock-research-boards-style'
   style.textContent = `
