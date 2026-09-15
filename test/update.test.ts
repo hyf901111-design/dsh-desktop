@@ -40,7 +40,7 @@ describe('desktop update policy', () => {
 })
 
 describe('sidebar update action', () => {
-  it('offers download after discovery and installation after completion', () => {
+  it('offers download after discovery and verification during automatic installation', () => {
     const idle = initialUpdateStatus('0.5.0')
     const available = reduceUpdateStatus(idle, {
       type: 'available',
@@ -58,7 +58,7 @@ describe('sidebar update action', () => {
     expect(updateAction(idle)).toEqual({ kind: 'hidden' })
     expect(updateAction(available)).toEqual({ kind: 'download', version: '0.6.0' })
     expect(updateAction(downloading)).toEqual({ kind: 'progress', percent: 42.6 })
-    expect(updateAction(downloaded)).toEqual({ kind: 'install', version: '0.6.0' })
+    expect(updateAction(downloaded)).toEqual({ kind: 'verifying' })
   })
 
   it('keeps automatic failures hidden and makes manual failures retryable', () => {

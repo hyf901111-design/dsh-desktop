@@ -295,7 +295,7 @@ describe('GitHub release contract', () => {
     expect(main).toContain("app.commandLine.getSwitchValue('sherlock-user-data-dir')")
     expect(main).toContain("app.commandLine.getSwitchValue('sherlock-app-data-dir')")
     expect(main).toContain("app.setPath('userData', identity.userData)")
-    expect(main).toContain('if (!developmentBuild)')
+    expect(main).toContain('if (!developmentBuild && !acceptanceOrigin)')
   })
 
   it('builds and publishes every supported platform', async () => {

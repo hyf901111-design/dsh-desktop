@@ -19,8 +19,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
       version: '0.9.6',
-      date: '2026-09-14',
-      items: ["整合研究看板协作与成员管理，完善启动品牌展示和侧栏通知定位", "增强研究组件生成恢复：检索不足时补充搜索，格式异常时自动修复，并保留可用资料与真实缺失提示", "研究工作台默认矩阵排列，全部组件生成结束后自动整理画布；优化生成骨架与查看过程布局", "统一组件标题栏、背景、内边距与无描边外观，隐藏内部滚动条并保留网页原生滚动", "研究对话页签常驻首位；所有侧栏页签按内容宽度排列，空间不足时压缩，选中项显示关闭按钮", "优化菜单选中底色、二级菜单悬停展开、按钮间距及单色子代理加载指示", "链接输入自动补全网址协议，顶栏修改会话名称同步看板列表", "搜索遇到人工验证时后台切换入口，避免弹窗打断；修复顶栏拖动区域", "优化浅色组件标题栏，主题名称更新为伊萨卡晨雾与伊萨卡午夜"]
+      date: '2026-09-15',
+      items: ["新增研究看板协作、成员权限管理与共享对话，缩小权限菜单触发区域","组件交互状态随看板保存并同步，复制为个人研究时保留已有状态","拖入资料自动复制到对应目录；协作看板和返回工作区的看板自动补齐项目目录","修复协作文件同步导致的研究看板暂时不可用问题","新增和粘贴组件默认置顶，保存与协作同步后保持层级；统一无描边外框和顶栏间距","工具详情和生成文件预览统一使用全局右侧页签，修复文件列表与历史文件预览入口","完善中英文文案和语言切换，优化英文页签、按钮宽度与简洁登录文案","统一对话正文左右边距，增强任务执行期间模式选择器的禁用样式","产生对话后隐藏输入框上方选择器，完善画板资料绑定后的项目状态","增强组件生成恢复、矩阵排列和完成后的画布整理，保留真实数据缺失提示","完善登录注册界面及浅色菜单，优化通知、组件操作与顶部拖动区域","增强首页灰度渐变动态，流动速度提高50%，局部形变幅度增强30%"]
     },
     { version: '0.9.5', date: '2026-09-09', title: '模式与交互优化', items: ['修复顶部模式按钮点击与子代理入口位置', '切换空白会话时同步顶部和输入区的模式状态', '中文界面下斜杠命令菜单名称和说明完整汉化'] },
     {
@@ -254,8 +254,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   en: [
     {
       version: '0.9.6',
-      date: '2026-09-14',
-      items: ["Integrate Research board collaboration and member controls, startup branding and sidebar notice placement", "Improve component recovery with additional searches, format repair, retained usable evidence and explicit missing-data messages", "Arrange workbenches in a grid and automatically tidy the canvas after generation; refine skeletons and process panels", "Unify component headers, backgrounds, padding and borderless styling; hide internal scrollbars except embedded web pages", "Keep Research chat first and persistent; fit all sidebar tabs with natural widths and show close controls on the active tab", "Refine menu selection, hover submenus, button spacing and monochrome subagent loading indicators", "Complete missing website protocols and synchronize renamed session titles with the board list", "Skip search verification screens in the background and fix draggable title-bar areas", "Add subtle light-theme headers and rename themes to Ithaca Morning Mist and Ithaca Midnight"]
+      date: '2026-09-15',
+      items: ["Added research board collaboration, member permissions and shared conversations with a compact permission menu","Persisted and synchronized component interactions, retaining their state in personal copies","Automatically copied canvas materials into associated folders and created missing project directories for shared and restored boards","Fixed shared file synchronization failures that could make research boards temporarily unavailable","Placed newly created and pasted components in front across saves and collaboration; unified borderless frames and header spacing","Unified tool details and generated-file previews in global sidebar tabs and fixed file lists and historical preview links","Completed Chinese and English localization and language switching, improving English tabs, button sizing and concise sign-in text","Balanced conversation margins and clarified disabled mode selectors during execution","Hid composer selectors after messages and improved project binding for boards with materials","Improved component generation recovery, matrix layouts and completed-board arrangement while retaining genuine missing-data notices","Refined sign-in and registration, light-theme menus, notifications, component actions and title-bar dragging","Strengthened grayscale home animation with 50% faster flow and 30% greater local deformation"]
     },
     { version: '0.9.5', date: '2026-09-09', title: 'Mode and interaction improvements', items: ['Fixed the top mode buttons and the subagent entry position', 'Synchronized header and composer modes when switching blank sessions', 'Completed Chinese names and descriptions in the slash-command menu'] },
     {
