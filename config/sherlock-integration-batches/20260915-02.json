@@ -11,68 +11,21 @@
         "schemaVersion": 1,
         "featureName": "欢迎页与看板账户验收修复",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
-        "tipCommit": "635fa968441577591d214a52821db3fe59cd901a",
+        "baseCommit": "635fa968441577591d214a52821db3fe59cd901a",
+        "tipCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
         "commits": [
           {
-            "commit": "d910d3182dba74e4ae097dd6f54221e35e5425eb",
+            "commit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
             "parents": [
-              "f156e27e8f1c157fc57adfb28cf71ce70f54a37c"
+              "635fa968441577591d214a52821db3fe59cd901a"
             ],
-            "subject": "修复看板模式限制与任务启动提示并增加账户ID复制"
-          },
-          {
-            "commit": "635fa968441577591d214a52821db3fe59cd901a",
-            "parents": [
-              "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
-              "d910d3182dba74e4ae097dd6f54221e35e5425eb"
-            ],
-            "subject": "整合本次界面验收的看板与账户修复"
+            "subject": "补齐账户ID复制按钮英文文案"
           }
-        ],
-        "boundaryParents": [
-          "f156e27e8f1c157fc57adfb28cf71ce70f54a37c"
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/research-board-integration.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/account-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-settings.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-presentation.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/ui-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-auth-layout.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-generation.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-polish.test.ts"
           }
         ],
         "checks": [
@@ -84,12 +37,13 @@
               "test/onboarding-patch.test.ts",
               "test/research-board-polish.test.ts",
               "test/figma-auth-layout.test.ts",
-              "test/research-board-generation.test.ts"
+              "test/research-board-generation.test.ts",
+              "test/ui-localization.test.ts"
             ],
             "outcome": "passed",
-            "summary": "34项相关检查和类型检查通过",
-            "verifiedCommit": "635fa968441577591d214a52821db3fe59cd901a",
-            "completedAt": "2026-09-15T07:14:16.593711+00:00",
+            "summary": "37项聚焦检查及类型检查通过",
+            "verifiedCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
+            "completedAt": "2026-09-15T07:28:45.120922+00:00",
             "timeoutMs": 120000
           },
           {
@@ -101,9 +55,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "34项相关检查和类型检查通过",
-            "verifiedCommit": "635fa968441577591d214a52821db3fe59cd901a",
-            "completedAt": "2026-09-15T07:14:16.593711+00:00",
+            "summary": "37项聚焦检查及类型检查通过",
+            "verifiedCommit": "64743ac3702e2b92535f8211e1871655ea7bbef5",
+            "completedAt": "2026-09-15T07:28:45.120922+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -119,41 +73,7 @@
         "risks": [
           "真实任务失败仍保留显式重试，防止重复调用模型"
         ],
-        "generatedAt": "2026-09-15T07:14:16.593711+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cd21a35f5559e9b8ac7ae36169a8d6cf1db119d2",
-        "verificationCommit": "cd21a35f5559e9b8ac7ae36169a8d6cf1db119d2",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "cd21a35f5559e9b8ac7ae36169a8d6cf1db119d2",
-            "completedAt": "2026-09-15T07:14:40.673Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "cd21a35f5559e9b8ac7ae36169a8d6cf1db119d2",
-            "completedAt": "2026-09-15T07:14:40.673Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T07:14:40.673Z"
+        "generatedAt": "2026-09-15T07:28:45.120922+00:00"
       }
     }
   ],
