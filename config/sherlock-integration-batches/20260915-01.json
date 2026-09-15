@@ -93,6 +93,59 @@
           "交互日志按组件源码版本隔离；自定义异步交互需继续原生验证"
         ],
         "generatedAt": "2026-09-15T02:15:26.191004+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
+        "verificationCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-interaction-state.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-role-picker.test.ts",
+              "test/research-board-directories.test.js",
+              "test/research-board-generation.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-interaction-state.test.js test/research-html-theme.test.js test/research-board-role-picker.test.ts test/research-board-directories.test.js test/research-board-generation.test.ts",
+            "verifiedCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
+            "completedAt": "2026-09-15T02:16:05.715Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-boards-service.test.ts",
+              "-t",
+              "restores deleted.*through production materialization"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-boards-service.test.ts -t restores deleted.*through production materialization",
+            "verifiedCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
+            "completedAt": "2026-09-15T02:16:05.715Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
+            "completedAt": "2026-09-15T02:16:05.715Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-15T02:16:05.715Z"
       }
     }
   ],
