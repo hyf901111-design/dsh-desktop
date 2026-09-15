@@ -22,9 +22,12 @@ export function sidebarSearchResults(state: ResearchBoardsState, sessions: Recor
 export function showSidebarSessionSearch(doc: Document, source: { results(query: string): SidebarSearchResult[]; subscribe(fn: () => void): () => void; open(result: SidebarSearchResult): Promise<void> }) {
   const ui = boardDialog(doc, '搜索会话')
   ui.dialog.classList.add('srb-session-search')
-  ui.dialog.querySelector('.srb-close')?.setAttribute('aria-label', '关闭')
+  ui.dialog.addEventListener('pointerdown', event => {
+    const rect = ui.dialog.getBoundingClientRect()
+    if (event.target === ui.dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) ui.close()
+  })
   const input = doc.createElement('input'), list = doc.createElement('div'), count = doc.createElement('p')
-  input.type = 'search'; input.placeholder = '搜索看板区和工作区的会话标题…'
+  input.type = 'search'; input.placeholder = '搜索会话…'
   input.setAttribute('aria-label', input.placeholder); input.autocomplete = 'off'
   list.className = 'srb-session-search-results'; count.className = 'srb-session-search-count'; count.role = 'status'
   ui.body.append(input, count, list)
@@ -42,23 +45,39 @@ export function showSidebarSessionSearch(doc: Document, source: { results(query:
     opening = false
     if (success) ui.close()
   }
+  let rendered = ''
   const render = () => {
     const focused = rows.indexOf(doc.activeElement as HTMLButtonElement), previous = results[active]?.key
-    results = source.results(input.value); list.replaceChildren()
+    const next = source.results(input.value)
+    const grouped = [...next.filter(result => result.area === 'boards'), ...next.filter(result => result.area === 'workspaces')]
+    const signature = JSON.stringify(grouped)
+    if (signature === rendered) return
+    rendered = signature; results = grouped; list.replaceChildren()
+    let group: HTMLElement | undefined, area: SidebarSearchResult['area'] | undefined
     rows = results.map(result => {
-      const row = doc.createElement('button'), title = doc.createElement('span'), area = doc.createElement('small')
+      if (result.area !== area) {
+        area = result.area
+        group = doc.createElement('section')
+        const heading = doc.createElement('h3')
+        heading.textContent = area === 'boards' ? '看板区' : '工作区'
+        group.setAttribute('aria-label', heading.textContent)
+        group.append(heading); list.append(group)
+      }
+      const row = doc.createElement('button'), title = doc.createElement('span')
       row.type = 'button'; title.dataset.uiPreserve = ''; title.textContent = result.title; title.title = result.title
-      area.textContent = result.area === 'boards' ? '看板区' : '工作区'
-      row.append(title, area); row.addEventListener('click', () => void open(result)); list.append(row); return row
+      row.append(title); row.addEventListener('click', () => void open(result)); group!.append(row); return row
     })
     count.textContent = results.length ? `${results.length} 个会话` : '没有匹配的会话'
+    if (!results.length) {
+      const empty = doc.createElement('p'); empty.className = 'srb-session-search-empty'; empty.textContent = '没有匹配的会话'; list.append(empty)
+    }
     select(Math.max(0, results.findIndex(r => r.key === previous)), focused >= 0)
   }
   input.addEventListener('input', () => { active = 0; render() })
   ui.body.addEventListener('keydown', event => {
     if (event.isComposing) return
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault(); select(Math.max(0, Math.min(rows.length - 1, active + (event.key === 'ArrowDown' ? 1 : -1))), true)
+      event.preventDefault(); select(Math.max(0, Math.min(rows.length - 1, event.target === input ? active : active + (event.key === 'ArrowDown' ? 1 : -1))), true)
     } else if (event.key === 'Enter' && event.target === input && results[active]) { event.preventDefault(); void open(results[active]!) }
   })
   const off = source.subscribe(render)
