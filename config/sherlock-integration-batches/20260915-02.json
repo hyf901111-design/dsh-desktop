@@ -90,6 +90,40 @@
           "仅有深色 Figma 原稿，欢迎卡片在两种主题下均使用品牌深色设计"
         ],
         "generatedAt": "2026-09-15T05:48:06.382365+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
+        "verificationCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/onboarding-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
+            "verifiedCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
+            "completedAt": "2026-09-15T05:49:00.917Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "7edb4fecd8365cf29b392fe8de053fc9e881fa1a",
+            "completedAt": "2026-09-15T05:49:00.917Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-15T05:49:00.917Z"
       }
     }
   ],
