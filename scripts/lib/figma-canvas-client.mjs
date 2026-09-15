@@ -79,6 +79,16 @@ export function patchFigmaFinalCanvas(source) {
       }`);
     source=source.replace('publish({ ...snapshot, files: entry.files, artifacts: artifacts2, selection: entry.selection }, true);','publish({ ...snapshot, files: entry.files, artifacts: artifacts2, selection: entry.selection }, true, true);');
   }
+  if (!source.includes('/* ODYSSEY_CLIPBOARD_NODES_FRONT */')) {
+    source=exact(source,'const next = { ...snapshot, files: nextFiles, artifacts: nextArtifacts, selection };',`let next = { ...snapshot, files: nextFiles, artifacts: nextArtifacts, selection };
+      /* ODYSSEY_CLIPBOARD_NODES_FRONT */
+      // Clipboard commits save atomically before publishing without persistence.
+      // Assign the layer before saving so reloads and collaborators keep it.
+      for (const id of selection.selectedNodeIds) {
+        const raised = researchCanvasRaisedNodes(next.files, next.artifacts, id);
+        if (raised) next = { ...next, ...raised };
+      }`);
+  }
   return patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)));
 }
 function patchFigmaCanvasContent(source) {
