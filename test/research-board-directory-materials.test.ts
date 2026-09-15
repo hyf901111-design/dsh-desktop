@@ -1,0 +1,27 @@
+import { it, expect } from 'vitest'
+import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { ResearchBoardIntegration } from '../src/main/research-board-integration'
+
+it.each([false, true])('copies canvas and generation sources into the project, including unchanged sessions (%s)', async changed => {
+  const temp = await mkdtemp(join(tmpdir(), 'board-materials-'))
+  try {
+    const root = await realpath(temp), target = join(root, '看板目录')
+    await mkdir(target)
+    const source = join(root, '资料.txt'); await writeFile(source, 'board evidence')
+    let canvas: any = { files: [{ id: 'f', name: '资料.txt', path: source }], artifacts: [{ id: 'a', generationSources: [{ type: 'file', path: source }] }] }
+    const integration: any = Object.create(ResearchBoardIntegration.prototype)
+    integration.runtime = async () => ({ path: target, localSessionId: changed ? 'new' : 'original' })
+    integration.snapshots = { cloneLocalImport: async () => {} }
+    integration.readOriginal = () => canvas
+    integration.resolveSource = async (_id: string, node: any) => ({ path: node.path })
+    integration.options = { service: () => ({ isSharedSession: () => false }), registry: { admitFinder: async () => ({ authorizationId: 'grant', contentType: 'text/plain' }) }, storage: { setItem: (key: string, value: string) => { canvas[key.includes('.files.') ? 'files' : 'artifacts'] = JSON.parse(value); return true } } }
+    await integration.directory({ mode: 'workspace', sessionId: 'original' }, new AbortController().signal)
+    const paths = [canvas.files[0].path, canvas.artifacts[0].generationSources[0].path]
+    for (const path of paths) { expect(path.startsWith(target + '/')).toBe(true); expect(await readFile(path, 'utf8')).toBe('board evidence') }
+    await integration.directory({ mode: 'workspace', sessionId: 'original' }, new AbortController().signal)
+    expect([canvas.files[0].path, canvas.artifacts[0].generationSources[0].path]).toEqual(paths)
+    expect(await readFile(source, 'utf8')).toBe('board evidence')
+  } finally { await rm(temp, { recursive: true, force: true }) }
+})

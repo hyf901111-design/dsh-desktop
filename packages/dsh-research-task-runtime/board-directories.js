@@ -81,6 +81,13 @@ export class BoardDirectories {
       await workspace.attachSession(input.sessionId)
       return { localSessionId: input.sessionId, workspaceId: workspace.id, path: source.meta.cwd }
     }
+    if (!row && existsSync(source.meta.cwd)) {
+      const existing = await this.ctx.workspaceRegistry.resolveByPath(source.meta.cwd)
+      if (existing) {
+        await existing.attachSession(input.sessionId)
+        return { localSessionId: input.sessionId, workspaceId: existing.id, path: source.meta.cwd }
+      }
+    }
     let localSessionId = input.sessionId
     if (!row) {
       // Immutable session cwd requires a new session for legacy board entries.

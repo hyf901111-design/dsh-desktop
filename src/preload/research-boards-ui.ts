@@ -763,18 +763,6 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
   }
-  async function fresh(title: string) {
-    const context = identity(current() ?? '')
-    const id = await deps.sessions.create(
-      context?.workspaceId
-        ? { workspaceId: context.workspaceId }
-        : context?.cwd
-          ? { cwd: context.cwd }
-          : {}
-    )
-    await deps.sessions.binding(id)?.session.rename(title)
-    return id
-  }
   async function openBoard(boardId: string) {
     const turn = ++navigation,
       generation = state.account.generation
@@ -1320,7 +1308,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         win.localStorage.setItem(key, JSON.stringify(copy))
         let id = copy.localSessionId ?? copies.get(copy.copyId)
         if (!id) {
-          id = await fresh(copy.title)
+          id = await freshBoard(copy.title, true)
           if (generation !== state.account.generation)
             throw Error('账户已改变')
           copies.set(copy.copyId, id)
@@ -1332,9 +1320,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           localSessionId: id
         })
         if (generation !== state.account.generation) throw Error('账户已改变')
+        const directory = await call<{ localSessionId: string }>('local.directory', { mode: 'workspace', sessionId: id, title: copy.title, basePath: await defaultDirectory() })
+        await deps.workspaces.refresh()
+        await deps.sessions.refresh()
         win.localStorage.removeItem(key)
         copies.delete(copy.copyId)
-        await api.openPersonal(id)
+        await api.openPersonal(directory.localSessionId)
       })()
       copyFlights.set(key, work)
       try {
