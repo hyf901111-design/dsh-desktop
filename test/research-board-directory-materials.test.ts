@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest'
-import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, rm, realpath, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ResearchBoardIntegration } from '../src/main/research-board-integration'
@@ -23,5 +23,18 @@ it.each([false, true])('copies canvas and generation sources into the project, i
     await integration.directory({ mode: 'workspace', sessionId: 'original' }, new AbortController().signal)
     expect([canvas.files[0].path, canvas.artifacts[0].generationSources[0].path]).toEqual(paths)
     expect(await readFile(source, 'utf8')).toBe('board evidence')
+  } finally { await rm(temp, { recursive: true, force: true }) }
+})
+
+it('canonicalizes an aliased runtime directory before freezing shared files', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'board-alias-'))
+  try {
+    const real = await realpath(temp), data = join(real, 'data'), alias = join(real, 'alias')
+    await mkdir(data); await symlink(data, alias)
+    const source = join(real, 'evidence.txt'); await writeFile(source, 'shared evidence')
+    const integration: any = new ResearchBoardIntegration({ root: alias, storage: {}, registry: {}, clipboard: () => undefined, service: () => ({}), runtimeUrl: () => null, runtimeToken: 'test', revealFile() {}, invalidate() {}, client: {} } as any)
+    const frozen = await integration.cache.freeze(source, 'evidence.txt', new AbortController().signal)
+    expect(await integration.cache.verify(frozen)).toBe(true)
+    expect(integration.cache.path(frozen).startsWith(data + '/')).toBe(true)
   } finally { await rm(temp, { recursive: true, force: true }) }
 })
