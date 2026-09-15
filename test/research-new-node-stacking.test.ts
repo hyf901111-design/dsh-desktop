@@ -101,3 +101,45 @@ it.each([7, 1000000])('puts newly added files and conversation results above exi
  workspace.undo();workspace.redo()
  expect(workspace.getSnapshot().files.map((n: {stackOrder:number})=>n.stackOrder)).toEqual(orders)
 })
+
+  it.each([53, 1000000])('persists pasted files above all existing layers at %i', async (order) => {
+    const bundle = await loadClientBundle('dsh-client-ui-conversation', {}, { researchClipboard: { admit: async ({ nodeId }: any) => grant(nodeId) } } as any)
+    const storage = memoryStorage({})
+    const workspace = bundle.createResearchWorkspaceSession(storage, 'target')
+    workspace.setArtifacts([{ ...textNode('existing'), stackOrder: order }])
+    await workspace.insertClipboardNodes({ kind: 'files', files: [file, file] }, { x: 10, y: 20 })
+    const state = workspace.getSnapshot()
+    expect(state.files[0].stackOrder).toBeGreaterThan(state.artifacts[0].stackOrder)
+    expect(state.files[1].stackOrder).toBeGreaterThan(state.files[0].stackOrder)
+    const restored = bundle.createResearchWorkspaceSession(storage, 'target').getSnapshot()
+    expect(restored.files.map((n: any) => n.stackOrder)).toEqual(state.files.map((n: any) => n.stackOrder))
+    workspace.undo(); workspace.redo()
+    expect(workspace.getSnapshot().files.map((n: any) => n.stackOrder)).toEqual(state.files.map((n: any) => n.stackOrder))
+  })
+
+
+const textNode = (id: string) => ({id,kind:'pasted-text',messageId:'old-message',title:'文字',excerpt:'内容',x:10,y:20,width:600,height:360,sizeMode:'manual'})
+const file = {assetId:'a'.repeat(48),name:'report.pdf',mimeType:'application/pdf',size:22,previewable:true}
+const grant = (nodeId: string) => ({nodeId,sessionId:'target',authorizationId:`auth-${nodeId}`,capabilityToken:'runtime-only',url:'sherlock-research-file://preview',name:'report.pdf',contentType:'application/pdf',path:'/managed/report.pdf'})
+
+it('keeps pasted shared files above existing cards through the collaboration document roundtrip', async () => {
+  const bundle = await loadClientBundle('dsh-client-ui-conversation', {}, {
+    researchBoards: { isSharedSession: () => true },
+    researchClipboard: { admit: async ({ nodeId }: any) => grant(nodeId) }
+  } as any)
+  const workspace = bundle.createResearchWorkspaceSession(memoryStorage({}), 'target')
+  const before = { files: [], artifacts: [{ ...textNode('existing'), stackOrder: 53 }] }
+  workspace.applyRemoteCanvas(before)
+  workspace.setCollaborationAccess(true)
+  await workspace.insertClipboardNodes({ kind: 'files', files: [file] }, { x: 10, y: 20 })
+  const state = workspace.getSnapshot()
+  expect(state.files[0].stackOrder).toBeGreaterThan(53)
+  const { createDocument, applyCanvasDiff, encodeDocument, decodeDocument, projectDocument } = await import('../packages/dsh-research-collaboration/document.js')
+  const doc = createDocument(before)
+  const portable = state.files.map(({ id, name, x, y, stackOrder }: any) => ({ id, name, x, y, stackOrder, assetId: file.assetId }))
+  applyCanvasDiff(doc, before, { files: portable, artifacts: state.artifacts })
+  const remote = bundle.createResearchWorkspaceSession(memoryStorage({}), 'target')
+  const received = projectDocument(decodeDocument(encodeDocument(doc)))
+  remote.applyRemoteCanvas({ ...received, files: received.files.map((n: any) => ({ ...n, path: '/remote/report.pdf', source: 'computer' })) })
+  expect(remote.getSnapshot().files[0].stackOrder).toBe(state.files[0].stackOrder)
+})
