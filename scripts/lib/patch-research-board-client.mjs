@@ -430,6 +430,15 @@ function task4Patch(source) {
   return source + '\n/* SHERLOCK_BOARD_EXECUTION_V1 */'
 }
 export function patchResearchBoardSidebar(source) {
+  if (!source.includes('"sidebar.sessionSearch"')) {
+    source = replace(source, '"sidebar.workspaces": {', '"sidebar.sessionSearch": {kind:"list",scope:"root"},\n"sidebar.workspaces": {')
+    const anchor = 'label: collapsed ? t("toggle.open") : t("toggle.collapse"),'
+    const index = source.indexOf(anchor)
+    const before = source.lastIndexOf('(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {', index)
+    if (index < 0 || before < 0) throw new Error('Sidebar search anchor missing')
+    source = source.slice(0, before) + 'renderSlot("sidebar.sessionSearch",{buttonClass:SidebarRoot_module_css_default.iconButton}), ' + source.slice(before)
+  }
+
   // Figma 44: the original sidebar icons retain a 16 px frame in either width.
   source = source.replace('size: wide ? 14 : 18', 'size: 16')
     .replace('size: wide ? 16 : 18', 'size: 16')
@@ -468,6 +477,8 @@ function patchUnifiedSidebarScroll(source) {
   return source.slice(0, first) + '(0,react_jsx_runtime.jsxs)("div",{"data-srb-navigation-scroll":"",children:[' + content + ']}),\n' + source.slice(end)
 }
 export function patchResearchBoardSidebarTypes(source) {
+  if (!source.includes("'sidebar.sessionSearch'")) source = replace(source, "'sidebar.workspaces': {", "'sidebar.sessionSearch': {kind: 'list'; scope: 'root'; owner: {buttonClass:string}};\n        'sidebar.workspaces': {")
+
   if (source.includes("'sidebar.researchBoards'")) return source
   return replace(
     source,
@@ -714,6 +725,15 @@ function chromePatch(source) {
   return source + '\n/* SHERLOCK_BOARD_CHROME_V1 */'
 }
 export function patchResearchBoardWorkspace(source) {
+  source = source.replace('const groupBy = useStore((s) => s.groupBy);', 'const groupBy = "workspace";')
+    .replace('const orderBy = useStore((s) => s.orderBy);', 'const orderBy = "manual";')
+    .replace('children: [wide && (0, react_jsx_runtime.jsx)(ViewOptionsMenu, {', 'children: [false && (0, react_jsx_runtime.jsx)(ViewOptionsMenu, {')
+    .replace('else if (orderBy === "updated") {', 'else if (orderBy === "updated" || orderBy === "manual") {')
+    .replace('previousUpdatedAt[id] === void 0 || session.updatedAt > previousUpdatedAt[id]', '(previousUpdatedAt[id] === void 0 ? Object.keys(previousUpdatedAt).length > 0 : session.updatedAt > previousUpdatedAt[id])')
+
+  // The unified header search replaces both regional search controls.
+  source = source.replace(/wide && (\(0, react_jsx_runtime.jsx\)\("div", \{\s*className: clsx\(WorkspaceBrowser_module_css_default.searchSlot,)/, 'false && $1')
+
   source = patchBoardDirectoryWorkspace(source)
   // Figma 22/44: idle search and the collapsed add-project glyph remain 16 px.
   source = source.replace('size: searchExpanded ? 11 : 14', 'size: searchExpanded ? 11 : 16')

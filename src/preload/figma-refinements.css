@@ -505,3 +505,17 @@ html[data-odyssey-locale=en] .rScV5Q_globalToolSlot{flex:0 0 auto;width:auto}
 
 /* Canvas feedback shares the toolbar's centered floating-card placement. */
 body .sRp_sourceStatus,body .srb-readonly[data-canvas-error]{position:absolute;left:50%;right:auto;top:auto;bottom:80px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);padding:12px 16px;border:1px solid var(--dsw-alias-border-l2,#414141);border-radius:12px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);box-shadow:0 4px 16px #0002;font:13px/20px var(--odyssey-font-ui);z-index:40;overflow-wrap:anywhere}
+
+/* Unified sidebar session title search. */
+body [data-srb-section-header] .qDHVXG_headerActions{margin-left:auto}
+body [data-slot="sidebar.sessionSearch"]{display:contents}
+body .srb-session-search{width:560px;max-width:calc(100vw - 40px)}
+body .srb-session-search .srb-dialog-body{display:flex;flex-direction:column;gap:12px}
+body .srb-session-search input{box-sizing:border-box;width:100%;height:40px;padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:14px var(--odyssey-font-ui)}
+body .srb-session-search-count{margin:0;color:var(--dsw-alias-label-tertiary);font-size:12px}
+body .srb-session-search-results{max-height:min(440px,50vh);overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+body .srb-session-search-results button{display:flex;align-items:center;gap:16px;flex:none;text-align:left;border:0;border-radius:8px;padding:10px 12px;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font:14px var(--odyssey-font-ui)}
+body .srb-session-search-results button:hover,body .srb-session-search-results button[data-active=true]{background:var(--dsw-alias-interactive-bg-hover)}
+body .srb-session-search-results span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body .srb-session-search-results small{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary)}
+body .hHd-Xa_collapsed .hHd-Xa_logoRow{height:auto;overflow:visible;flex-direction:column-reverse;gap:4px}

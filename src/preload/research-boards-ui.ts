@@ -1,7 +1,9 @@
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
-import { Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconPersonalizationOutline16, IconCloseFill14, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { promoteSidebarOrder } from './sidebar-manual-order'
+import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
 import type {
   BoardView,
   Canvas,
@@ -1179,6 +1181,13 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.sessions.list.getSnapshot().byId[id]?.updatedAt as
         number | undefined,
     current,
+    searchSessions(query: string) { return sidebarSearchResults(state, deps.sessions.list.getSnapshot().byId, deps.workspaces.list.getSnapshot().archivedSessionIds ?? [], query) },
+    subscribeSearch(listener: () => void) {
+      listeners.add(listener)
+      const off = deps.workspaces.list.subscribe(listener)
+      return () => { listeners.delete(listener); off() }
+    },
+    openSearchSession(id: string) { navigation++; selectBoardSession(''); deps.sessions.open(id) },
     isShared,
     isBoardOnly: (id: string) => boardOnlySession(state, id),
     call,
@@ -1627,26 +1636,25 @@ export function addBoardCollaborator(page: ResearchBoardsPage, boardId: string, 
   })
 }
 
+export function SidebarSessionSearch({ page, buttonClass }: { page: ResearchBoardsPage; buttonClass: string }) {
+  const label = document.documentElement.lang.startsWith('en') ? 'Search sessions' : '搜索会话'
+  return h('button', { type: 'button', className: buttonClass, 'aria-label': label, title: label, onClick: () => showSidebarSessionSearch(document, {
+    results: page.searchSessions, subscribe: page.subscribeSearch,
+    open: async result => { if (result.boardId) await page.openBoard(result.boardId); else if (result.area === 'boards') await page.openPersonal(result.sessionId!); else page.openSearchSession(result.sessionId!) }
+  }) }, h(IconSearchOutline16))
+}
 export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoardsPage; wide?: boolean; expandSidebar?: () => void }) {
   const state = useBoard(page)
   const skin = React.useSyncExternalStore((listener: () => void) => { window.addEventListener('sherlock-sidebar-skin', listener); return () => window.removeEventListener('sherlock-sidebar-skin', listener) }, () => (window as any).__sherlockWorkspaceSidebarSkin)
-  const searchInput = React.useRef<HTMLInputElement>(null), searchRoot = React.useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('sherlock.boards.collapsed') === 'true')
-  const [search, setSearch] = React.useState(false), [query, setQuery] = React.useState('')
-  React.useEffect(() => { if (search) searchInput.current?.focus({ preventScroll: true }) }, [search])
-  React.useEffect(() => {
-    if (!search) return
-    const outside = (event: MouseEvent) => { if (!query.trim() && !searchRoot.current?.contains(event.target as Node)) setSearch(false) }
-    document.addEventListener('pointerdown', outside)
-    return () => document.removeEventListener('pointerdown', outside)
-  }, [search, query])
-  const [optionsOpen, setOptionsOpen] = React.useState(false), [creating, setCreating] = React.useState(false)
+  const search = false, query = ''
+  const [creating, setCreating] = React.useState(false)
   const [preferences, setPreferences] = React.useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('sherlock.boards.view.v3') ?? localStorage.getItem('sherlock.boards.view.v2') ?? 'null')
-      return { groupBy: saved?.groupBy === 'type' ? 'type' : 'flat', collapsedGroups: Array.isArray(saved?.collapsedGroups) ? saved.collapsedGroups.filter((g: unknown) => g === 'private' || g === 'shared') : [], sort: saved?.sort === 'updated' ? 'updated' : 'manual', order: Array.isArray(saved?.order) ? saved.order.filter((v: unknown) => typeof v === 'string') : [] }
+      return { groupBy: 'type', collapsedGroups: Array.isArray(saved?.collapsedGroups) ? saved.collapsedGroups.filter((g: unknown) => g === 'private' || g === 'shared') : [], sort: 'manual', updatedAt: saved?.updatedAt ?? {}, order: Array.isArray(saved?.order) ? saved.order.filter((v: unknown) => typeof v === 'string') : [] }
     }
-    catch { return { groupBy: 'flat', collapsedGroups: [], sort: 'manual', order: [] } }
+    catch { return { groupBy: 'type', collapsedGroups: [], sort: 'manual', order: [], updatedAt: {} } }
   })
   const selectedSession = React.useSyncExternalStore(subscribeBoardSelection, selectedBoardSession)
   const save = (next: any) => { setPreferences(next); localStorage.setItem('sherlock.boards.view.v3', JSON.stringify(next)) }
@@ -1654,7 +1662,11 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
     ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, page.editedAt(f.sessionId) ?? 0) })),
     ...state.boards.filter(b => b.pinned).map(b => ({ key: 'shared:' + b.boardId, group: b.sharingState === 'shared' ? 'shared' : 'private', value: b, time: b.updatedAt ?? b.createdAt }))
   ]
-  const order = preferences.order as string[]
+  const nextOrder = promoteSidebarOrder(entries, preferences.order, preferences.updatedAt)
+  const order = nextOrder.order
+  React.useEffect(() => {
+    if (entries.length && nextOrder.changed) save({ ...preferences, order: nextOrder.order, updatedAt: nextOrder.updatedAt })
+  }, [JSON.stringify(nextOrder)])
   entries.sort((a, b) => preferences.sort === 'updated' ? b.time - a.time :
     (order.includes(a.key) ? order.indexOf(a.key) : 100000) - (order.includes(b.key) ? order.indexOf(b.key) : 100000))
   const visible = entries.filter(e => e.value.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
@@ -1669,26 +1681,10 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
           setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed))
         } },
         '看板区', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
-      h('div', { className: classes(B.searchSlot, search && B.searchSlotExpanded) },
-        h('div', { ref: searchRoot, className: classes(B.search, search && B.searchExpanded), onClick: () => { setSearch(true); searchInput.current?.focus() } },
-          h('button', { className: B.searchButton, 'aria-label': '搜索研究看板', 'aria-expanded': search, title: '搜索研究看板', onClick: () => setSearch(true) }, h(IconSearchOutline16, { size: search ? 11 : 16 })),
-          h('input', { ref: searchInput, className: B.searchInput, value: query, tabIndex: search ? 0 : -1, placeholder: '搜索研究看板…', 'aria-label': '搜索看板名称',
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') { setQuery(''); setSearch(false) } } }),
-          search && h('button', { className: B.clearButton, 'aria-label': '关闭看板搜索', onClick: (e: React.MouseEvent) => { e.stopPropagation(); setQuery(''); setSearch(false) } }, h(IconCloseFill14)))),
       h('div', { className: classes(B.headerActions, search && B.headerActionsHidden) },
-        h(Menu, { className: 'odyssey-view-menu', open: optionsOpen, onClose: () => setOptionsOpen(false), align: 'end', dense: true, portal: true,
-          selectedIds: [preferences.groupBy, preferences.sort],
-          items: [{ type: 'label', id: 'groups-label', text: '显示方式' }, { id: 'type', label: '按类型' }, { id: 'flat', label: '单列表' },
-            { type: 'separator', id: 'sort-separator' }, { type: 'label', id: 'sort-label', text: '排序' }, { id: 'manual', label: '手动排序' }, { id: 'updated', label: '最近更新' }],
-          onSelect: (id: string) => {
-            setOptionsOpen(false)
-            if (id === 'type' || id === 'flat') save({ ...preferences, groupBy: id })
-            else save({ ...preferences, sort: id })
-          },
-          anchor: h('button', { className: B.iconButton, 'aria-label': '看板视图选项', 'aria-expanded': optionsOpen, title: '看板视图选项', onClick: () => setOptionsOpen(!optionsOpen) }, h(IconPersonalizationOutline16)) }),
         h('button', { className: B.iconButton, 'aria-label': '新建研究看板', title: '新建研究看板', disabled: creating, onClick: safely(page, async () => {
           setCreating(true)
-          try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); setQuery(''); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }
+          try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }
           finally { setCreating(false) }
         }) }, h(IconPlusOutline16)))),
     (!collapsed || search) && h(ResearchBoardList, { page, skin, visible, entries, preferences, query, selectedSession, save }))
@@ -2736,6 +2732,7 @@ function mountBoardSlots(
         component
       )
     )
+  register('sidebar.sessionSearch', 'sherlock-session-search', SidebarSessionSearch)
   register(
     'sidebar.researchBoards',
     'sherlock-research-boards',
