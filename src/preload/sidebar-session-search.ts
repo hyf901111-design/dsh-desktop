@@ -20,12 +20,11 @@ export function sidebarSearchResults(state: ResearchBoardsState, sessions: Recor
   return results.sort((a, b) => b.time - a.time || a.key.localeCompare(b.key))
 }
 export function showSidebarSessionSearch(doc: Document, source: { results(query: string): SidebarSearchResult[]; subscribe(fn: () => void): () => void; open(result: SidebarSearchResult): Promise<void> }) {
-  const en = doc.documentElement.lang.toLowerCase().startsWith('en')
-  const ui = boardDialog(doc, en ? 'Search sessions' : '搜索会话')
+  const ui = boardDialog(doc, '搜索会话')
   ui.dialog.classList.add('srb-session-search')
-  ui.dialog.querySelector('.srb-close')?.setAttribute('aria-label', en ? 'Close' : '关闭')
+  ui.dialog.querySelector('.srb-close')?.setAttribute('aria-label', '关闭')
   const input = doc.createElement('input'), list = doc.createElement('div'), count = doc.createElement('p')
-  input.type = 'search'; input.placeholder = en ? 'Search board and workspace session titles…' : '搜索看板区和工作区的会话标题…'
+  input.type = 'search'; input.placeholder = '搜索看板区和工作区的会话标题…'
   input.setAttribute('aria-label', input.placeholder); input.autocomplete = 'off'
   list.className = 'srb-session-search-results'; count.className = 'srb-session-search-count'; count.role = 'status'
   ui.body.append(input, count, list)
@@ -39,7 +38,7 @@ export function showSidebarSessionSearch(doc: Document, source: { results(query:
   const open = async (result: SidebarSearchResult) => {
     if (opening) return
     opening = true
-    const success = await ui.run(async () => { await source.open(result); return true }, en ? 'Opening…' : '正在打开…')
+    const success = await ui.run(async () => { await source.open(result); return true }, '正在打开…')
     opening = false
     if (success) ui.close()
   }
@@ -48,11 +47,11 @@ export function showSidebarSessionSearch(doc: Document, source: { results(query:
     results = source.results(input.value); list.replaceChildren()
     rows = results.map(result => {
       const row = doc.createElement('button'), title = doc.createElement('span'), area = doc.createElement('small')
-      row.type = 'button'; title.textContent = result.title; row.title = result.title
-      area.textContent = result.area === 'boards' ? (en ? 'Boards' : '看板区') : (en ? 'Workspaces' : '工作区')
+      row.type = 'button'; title.dataset.uiPreserve = ''; title.textContent = result.title; title.title = result.title
+      area.textContent = result.area === 'boards' ? '看板区' : '工作区'
       row.append(title, area); row.addEventListener('click', () => void open(result)); list.append(row); return row
     })
-    count.textContent = results.length ? (en ? `${results.length} sessions` : `${results.length} 个会话`) : (en ? 'No matching sessions' : '没有匹配的会话')
+    count.textContent = results.length ? `${results.length} 个会话` : '没有匹配的会话'
     select(Math.max(0, results.findIndex(r => r.key === previous)), focused >= 0)
   }
   input.addEventListener('input', () => { active = 0; render() })
