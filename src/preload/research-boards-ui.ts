@@ -1664,7 +1664,10 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   return h('section', { className: 'srb-section ' + B.root, 'data-wide': true, 'data-section-collapsed': collapsed && !search, 'aria-label': '看板区' },
     h('div', { className: B.sectionHeader, 'data-srb-section-header': '' },
       h('button', { className: classes('srb-section-toggle', B.sectionLabel, search && B.sectionLabelHidden), 'aria-label': collapsed ? '展开看板区' : '折叠看板区', 'aria-expanded': !collapsed,
-        onClick: () => { setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed)) } },
+        onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+          if (collapsed) event.currentTarget.closest<HTMLElement>('[data-srb-navigation-scroll]')?.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+          setCollapsed(!collapsed); localStorage.setItem('sherlock.boards.collapsed', String(!collapsed))
+        } },
         '看板区', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
       h('div', { className: classes(B.searchSlot, search && B.searchSlotExpanded) },
         h('div', { ref: searchRoot, className: classes(B.search, search && B.searchExpanded), onClick: () => { setSearch(true); searchInput.current?.focus() } },
