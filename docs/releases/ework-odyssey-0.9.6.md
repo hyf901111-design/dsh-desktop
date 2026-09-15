@@ -16,3 +16,17 @@
 - 增强首页灰度渐变动态，流动速度提高50%，局部形变幅度增强30%
 
 Developer ID signed; Apple notarization skipped at the user's explicit request. Both existing update channels retain their signing identities.
+
+## 发布验证记录
+
+- 正式 App 构建来源：干净的本地 main，提交 `04b55b958837edc421cad3061967e0af8b88943a`。后续提交只调整发布工具、测试预期和发布记录，不改变该 App 的运行代码。
+- 79 项相关聚焦检查及类型检查通过；上传连接恢复修复另行重跑 14 项 Cloudflare 检查通过，未执行全功能测试。
+- 正式 App 使用 Developer ID 签名，Bundle ID 为 `com.evanarts.sherlock`；兼容桥沿用旧证书，外层 Bundle ID 为 `io.dsh.desktop`。App 包检查、DMG 签名与镜像完整性检查通过。按用户要求跳过 Apple 公证、stapling 和 Gatekeeper 公证验收。
+- 已打开正式包真实主界面并核对关于页的 0.9.6 版本、中英文更新日志来源及 2026-09-15 日期。
+- 隔离目录实测：旧资料复制成功、目标目录的新设置保留、迁移标记生成；DSH 与 EWork 的隔离进程和独立哨兵同时存在，未执行旧客户端安装替换或重启升级测试。
+- 两个公开更新入口均为 0.9.6，元数据与准备上传的文件完全一致；版本资源和稳定下载的大小、缓存策略及两个 ZIP 的单段 Range/206 检查通过。
+- 实际 electron-updater 差分校验（0.9.5 → 0.9.6）：标准通道传输 152,337,120 字节、复用 300,975,599 字节；兼容通道传输 201,453,031 字节、复用 302,597,486 字节。两份合成 ZIP 的 SHA-512 均与签名构建产物一致，无全量回退。
+- 发布时临时上传连接中断发生在公开入口切换前；关闭上传连接复用并补齐连接错误处理后恢复上传，完成后临时上传 Worker 已清理。
+- 从公开稳定地址重新下载的 DMG 与构建产物 SHA-512 一致，DMG/内置 App 的签名和镜像完整性复核通过；复制到隔离目录后完成首次启动流程并进入真实主界面。
+- 全部公开验证通过后，仅清理 `releases/v0.9.1/` 下清单列出的 5 个对象，逐一确认 404；保留 0.9.2 至 0.9.6 及现有稳定下载/更新入口。
+- 源码发布目标为私有 GitHub 仓库 `awake-ai-lab/sherlock-desktop` 的 `hyf` 与 `main`，使用原子快进推送，不推送标签。
