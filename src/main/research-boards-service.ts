@@ -2881,10 +2881,21 @@ export class ResearchBoardsService {
       (kind === 'files' || kind === 'artifacts')
     )
       return JSON.stringify((r.materialized ?? emptyCanvas())[kind])
+    if (r && this.permissions(r).read && kind === 'preview-revocations') return this.options.storage.getItem(key) ?? '[]'
     return kind === 'selection' ? '{}' : kind === 'engaged' ? '0' : '[]'
   }
   writeCanvasStorage(key: unknown, value: unknown): boolean {
-    if (this.storageBinding(key)?.binding) return false
+    const parsed = this.storageBinding(key)
+    if (parsed?.binding) {
+      // Preview grant cleanup is a local outbox, not a shared canvas mutation.
+      const board = parsed.binding.accountId === this.accountView.user?.userId ? this.boards.get(parsed.binding.boardId) : undefined
+      if (parsed.kind !== 'preview-revocations' || !board || !this.permissions(board).read || typeof value !== 'string') return false
+      try {
+        const ids = JSON.parse(value)
+        if (!Array.isArray(ids) || ids.length > 256 || ids.some(id => typeof id !== 'string' || !/^[-\w:.]{1,128}$/.test(id))) return false
+        return this.options.storage.setItem(key, value)
+      } catch { return false }
+    }
     const before = this.options.storage.getItem(key)
     const saved = this.options.storage.setItem(key, value)
     const match =
