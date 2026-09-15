@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260915-02",
+  "branch": "codex/integration/20260915-02",
+  "baseMainCommit": "f156e27e8f1c157fc57adfb28cf71ce70f54a37c",
+  "expectedMainCommit": "f156e27e8f1c157fc57adfb28cf71ce70f54a37c",
+  "createdAt": "2026-09-15T05:48:31.671Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首次启动欢迎设计",
+        "branch": "codex/feat/welcome-figma-20260915",
+        "baseCommit": "f156e27e8f1c157fc57adfb28cf71ce70f54a37c",
+        "tipCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+        "commits": [
+          {
+            "commit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+            "parents": [
+              "f156e27e8f1c157fc57adfb28cf71ce70f54a37c"
+            ],
+            "subject": "更新首次启动欢迎弹窗为 Figma 设计稿"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/brand/figma-welcome-illustration.png"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-settings-models+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "scripts/install-brand-assets.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-welcome.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/onboarding-patch.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/onboarding-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "12项引导检查及类型检查通过",
+            "verifiedCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+            "completedAt": "2026-09-15T05:47:14.489912+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "12项引导检查及类型检查通过",
+            "verifiedCommit": "4f1fd5657f9cc08d54d1abac3a321c5719e7e2b3",
+            "completedAt": "2026-09-15T05:47:14.490411+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能分支不构建共享客户端；合入集成分支后进行真实首次启动视觉及流程验证。"
+        },
+        "acceptanceCriteria": [
+          "欢迎弹窗与 Figma 原稿一致",
+          "首次确认后不重复弹出",
+          "继续进入模型配置"
+        ],
+        "risks": [
+          "仅有深色 Figma 原稿，欢迎卡片在两种主题下均使用品牌深色设计"
+        ],
+        "generatedAt": "2026-09-15T05:48:06.382365+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/onboarding-patch.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
