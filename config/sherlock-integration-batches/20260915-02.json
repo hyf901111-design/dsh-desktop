@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "同步侧栏滚动与遮罩",
+        "featureName": "侧栏滚动处理去重",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
-        "tipCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
+        "baseCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
+        "tipCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
         "commits": [
           {
-            "commit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
+            "commit": "1a21603376edf50f03873de01057a5c4bee7b393",
             "parents": [
-              "c3d388a923e230c7e2ce6ce81843ec836702c5b4"
+              "fdd7588256b9fe607cb9fecddc5307079adb3652"
             ],
-            "subject": "同步侧栏滚动与渐隐遮罩并保留透明背景"
+            "subject": "避免页面与预加载层重复处理侧栏滚轮"
           }
         ],
         "files": [
@@ -49,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "24项聚焦检查和类型检查通过",
-            "verifiedCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
-            "completedAt": "2026-09-15T09:13:48.756711+00:00",
+            "verifiedCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
+            "completedAt": "2026-09-15T09:21:18.214803+00:00",
             "timeoutMs": 120000
           },
           {
@@ -63,8 +63,8 @@
             ],
             "outcome": "passed",
             "summary": "24项聚焦检查和类型检查通过",
-            "verifiedCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
-            "completedAt": "2026-09-15T09:13:48.756711+00:00",
+            "verifiedCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
+            "completedAt": "2026-09-15T09:21:18.214803+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -80,41 +80,7 @@
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T09:13:48.756711+00:00"
-      },
-      "merged": {
-        "mergeCommit": "608397c1b4c94fd652ed8c037d59c14ad678e7c9",
-        "verificationCommit": "608397c1b4c94fd652ed8c037d59c14ad678e7c9",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "608397c1b4c94fd652ed8c037d59c14ad678e7c9",
-            "completedAt": "2026-09-15T09:14:37.752Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "608397c1b4c94fd652ed8c037d59c14ad678e7c9",
-            "completedAt": "2026-09-15T09:14:37.752Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T09:14:37.752Z"
+        "generatedAt": "2026-09-15T09:21:18.214803+00:00"
       }
     }
   ],
