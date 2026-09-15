@@ -9,23 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "快速滚动标题遮挡修正",
+        "featureName": "同步侧栏滚动与遮罩",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "8adeefc39ffa1183965c5d02d5fc83e1f28cab48",
-        "tipCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
+        "baseCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
+        "tipCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
         "commits": [
           {
-            "commit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
+            "commit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
             "parents": [
-              "8adeefc39ffa1183965c5d02d5fc83e1f28cab48"
+              "c3d388a923e230c7e2ce6ce81843ec836702c5b4"
             ],
-            "subject": "防止侧栏快速滚动时目录文字穿透吸顶标题"
+            "subject": "同步侧栏滚动与渐隐遮罩并保留透明背景"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-scroll-fade.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-scroll-fade.test.ts"
           }
         ],
         "checks": [
@@ -40,9 +48,9 @@
               "test/sidebar-scroll-fade.test.ts"
             ],
             "outcome": "passed",
-            "summary": "23项聚焦检查与类型检查通过",
-            "verifiedCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
-            "completedAt": "2026-09-15T09:00:11.408006+00:00",
+            "summary": "24项聚焦检查和类型检查通过",
+            "verifiedCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
+            "completedAt": "2026-09-15T09:13:48.756711+00:00",
             "timeoutMs": 120000
           },
           {
@@ -54,9 +62,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "23项聚焦检查与类型检查通过",
-            "verifiedCommit": "c3d388a923e230c7e2ce6ce81843ec836702c5b4",
-            "completedAt": "2026-09-15T09:00:11.408006+00:00",
+            "summary": "24项聚焦检查和类型检查通过",
+            "verifiedCommit": "fdd7588256b9fe607cb9fecddc5307079adb3652",
+            "completedAt": "2026-09-15T09:13:48.756711+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -65,47 +73,14 @@
           "summary": "集成后通过实际客户端验证滚动交互"
         },
         "acceptanceCriteria": [
-          "快速上下滚动标题底下无可辨识目录文字",
-          "保留透明标题与渐变过渡"
+          "快速滚动同次事件更新遮罩",
+          "标题无独立底色",
+          "保留触控板惯性与鼠标滚轮"
         ],
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T09:00:11.408006+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3e5f4b0c74c59281d39e80f166829d4e1bf88524",
-        "verificationCommit": "3e5f4b0c74c59281d39e80f166829d4e1bf88524",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "3e5f4b0c74c59281d39e80f166829d4e1bf88524",
-            "completedAt": "2026-09-15T09:01:25.791Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "3e5f4b0c74c59281d39e80f166829d4e1bf88524",
-            "completedAt": "2026-09-15T09:01:25.791Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T09:01:25.791Z"
+        "generatedAt": "2026-09-15T09:13:48.756711+00:00"
       }
     }
   ],
