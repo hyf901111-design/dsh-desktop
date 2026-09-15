@@ -79,6 +79,40 @@
           "真实任务失败仍保留显式重试，防止重复调用模型"
         ],
         "generatedAt": "2026-09-15T07:48:07.646392+00:00"
+      },
+      "merged": {
+        "mergeCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
+        "verificationCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/onboarding-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
+            "verifiedCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
+            "completedAt": "2026-09-15T07:48:30.217Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "f79654a074b77e9f90bce3b82ec257ae0f1c01fc",
+            "completedAt": "2026-09-15T07:48:30.217Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-15T07:48:30.217Z"
       }
     }
   ],
