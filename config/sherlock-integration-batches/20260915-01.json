@@ -11,21 +11,39 @@
         "schemaVersion": 1,
         "featureName": "组件交互持久化与协作目录",
         "branch": "codex/feat/component-state-20260915",
-        "baseCommit": "fe10a60c431752bc58c9dbb34ef487b1043fef68",
-        "tipCommit": "b48e3609997ce8c68183289db49f82c45101bc68",
+        "baseCommit": "b48e3609997ce8c68183289db49f82c45101bc68",
+        "tipCommit": "a849c907eaff79f42153c6d4a01d54b20fa2d1a7",
         "commits": [
           {
-            "commit": "b48e3609997ce8c68183289db49f82c45101bc68",
+            "commit": "921a97058e8c3e9ef8e2cf8cde76e5fd4a853673",
             "parents": [
-              "fe10a60c431752bc58c9dbb34ef487b1043fef68"
+              "b48e3609997ce8c68183289db49f82c45101bc68"
             ],
-            "subject": "修复：新增共享组件置顶并补齐看板项目目录与资料迁移"
+            "subject": "修复：看板返回项目后立即刷新资料路径与授权"
+          },
+          {
+            "commit": "0eae98cb93f06a07d24a4241c6533778f61b9326",
+            "parents": [
+              "921a97058e8c3e9ef8e2cf8cde76e5fd4a853673"
+            ],
+            "subject": "修复：文件预览组件默认外框统一无描边"
+          },
+          {
+            "commit": "a849c907eaff79f42153c6d4a01d54b20fa2d1a7",
+            "parents": [
+              "0eae98cb93f06a07d24a4241c6533778f61b9326"
+            ],
+            "subject": "修复：规范化协作缓存目录避免文件同步失败"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/board-directories.js"
+            "path": "scripts/lib/figma-file-preview-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
@@ -36,12 +54,8 @@
             "path": "src/preload/research-boards-ui.ts"
           },
           {
-            "status": "A",
-            "path": "test/research-board-directory-materials.test.ts"
-          },
-          {
             "status": "M",
-            "path": "test/research-board-generation.test.ts"
+            "path": "test/research-board-directory-materials.test.ts"
           }
         ],
         "checks": [
@@ -51,15 +65,17 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/research-board-directory-materials.test.ts",
+              "test/figma-file-preview.test.ts",
+              "test/component-interaction-state.test.js",
               "test/research-board-generation.test.ts",
               "test/research-board-directories.test.js",
               "test/research-board-snapshot.test.ts",
               "test/research-new-node-stacking.test.ts"
             ],
             "outcome": "passed",
-            "summary": "33项聚焦检查通过",
-            "verifiedCommit": "b48e3609997ce8c68183289db49f82c45101bc68",
-            "completedAt": "2026-09-15T02:15:26.191004+00:00",
+            "summary": "65项聚焦检查与类型检查通过",
+            "verifiedCommit": "a849c907eaff79f42153c6d4a01d54b20fa2d1a7",
+            "completedAt": "2026-09-15T02:41:19.210934+00:00",
             "timeoutMs": 120000
           },
           {
@@ -71,15 +87,15 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "b48e3609997ce8c68183289db49f82c45101bc68",
-            "completedAt": "2026-09-15T02:15:26.191004+00:00",
+            "summary": "65项聚焦检查与类型检查通过",
+            "verifiedCommit": "a849c907eaff79f42153c6d4a01d54b20fa2d1a7",
+            "completedAt": "2026-09-15T02:41:19.210934+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "此前集成包双端交互及按钮范围已实测；本次共享生成层级经过实际客户端归一化器验证，项目目录迁移33项聚焦检查通过，重建后继续原生验证。"
+          "summary": "已实测新版个人副本自动绑定项目，计数器6继承，返回项目实际复制文件；补齐即时路径刷新、文件外框描边与别名目录同步失败，重建后继续原生验证。"
         },
         "acceptanceCriteria": [
           "权限只从按钮触发",
@@ -87,65 +103,14 @@
           "共享资料复制至默认看板目录",
           "共享消息后隐藏输入框上方选择器",
           "新增共享组件置顶",
-          "个人副本及放回工作区绑定项目并复制资料"
+          "个人副本及放回工作区绑定项目并复制资料",
+          "文件组件默认无描边",
+          "目录别名不导致共享文件同步失败"
         ],
         "risks": [
           "交互日志按组件源码版本隔离；自定义异步交互需继续原生验证"
         ],
-        "generatedAt": "2026-09-15T02:15:26.191004+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
-        "verificationCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-interaction-state.test.js",
-              "test/research-html-theme.test.js",
-              "test/research-board-role-picker.test.ts",
-              "test/research-board-directories.test.js",
-              "test/research-board-generation.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-interaction-state.test.js test/research-html-theme.test.js test/research-board-role-picker.test.ts test/research-board-directories.test.js test/research-board-generation.test.ts",
-            "verifiedCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
-            "completedAt": "2026-09-15T02:16:05.715Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-boards-service.test.ts",
-              "-t",
-              "restores deleted.*through production materialization"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-boards-service.test.ts -t restores deleted.*through production materialization",
-            "verifiedCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
-            "completedAt": "2026-09-15T02:16:05.715Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "6494cdbf5e20d8cd043895d8c9d0fdfb62d515fd",
-            "completedAt": "2026-09-15T02:16:05.715Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T02:16:05.715Z"
+        "generatedAt": "2026-09-15T02:41:19.210934+00:00"
       }
     }
   ],
