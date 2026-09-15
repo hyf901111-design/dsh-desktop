@@ -217,7 +217,7 @@ export class ResearchBoardSnapshots {
         r.nodeId = remap(r.nodeId)
       }
     const rewrite = (v: any, k = ''): any =>
-      Array.isArray(v)
+      k === 'interactionState' ? structuredClone(v) : Array.isArray(v)
         ? v.map((x) => rewrite(x, k))
         : v && typeof v === 'object'
           ? Object.fromEntries(
@@ -406,7 +406,7 @@ export class ResearchBoardSnapshots {
         )
       }
       const rewrite = (v: any, k = ''): any =>
-        Array.isArray(v)
+        k === 'interactionState' ? structuredClone(v) : Array.isArray(v)
           ? v.map((x) => rewrite(x, k))
           : v && typeof v === 'object'
             ? Object.fromEntries(
