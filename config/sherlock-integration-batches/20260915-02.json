@@ -9,43 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "侧栏统一搜索与分组手动排序",
+        "featureName": "会话搜索语言切换",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "1a21603376edf50f03873de01057a5c4bee7b393",
-        "tipCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
+        "baseCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
+        "tipCommit": "f430e2b675e8020188a217d32375aeac130fe906",
         "commits": [
           {
-            "commit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
+            "commit": "f430e2b675e8020188a217d32375aeac130fe906",
             "parents": [
-              "1a21603376edf50f03873de01057a5c4bee7b393"
+              "cc875c83160887afc8822f40a7e90d895b0e7fb8"
             ],
-            "subject": "统一侧栏会话标题搜索并简化分组排序入口"
+            "subject": "统一会话搜索语言切换并保留用户原始标题"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-refinements.css"
-          },
-          {
-            "status": "M",
             "path": "src/preload/research-boards-ui.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/sidebar-manual-order.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/sidebar-session-search.ts"
           },
           {
-            "status": "A",
-            "path": "test/sidebar-session-search.test.ts"
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-localization.ts"
           }
         ],
         "checks": [
@@ -55,12 +47,13 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/sidebar-session-search.test.ts",
-              "test/sidebar-scroll-fade.test.ts"
+              "test/sidebar-scroll-fade.test.ts",
+              "test/ui-localization.test.ts"
             ],
             "outcome": "passed",
-            "summary": "9项聚焦检查和类型检查通过",
-            "verifiedCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
-            "completedAt": "2026-09-15T09:45:19.514447+00:00",
+            "summary": "12项聚焦检查和类型检查通过",
+            "verifiedCommit": "f430e2b675e8020188a217d32375aeac130fe906",
+            "completedAt": "2026-09-15T09:54:39.900887+00:00",
             "timeoutMs": 120000
           },
           {
@@ -72,9 +65,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "9项聚焦检查和类型检查通过",
-            "verifiedCommit": "cc875c83160887afc8822f40a7e90d895b0e7fb8",
-            "completedAt": "2026-09-15T09:45:19.514447+00:00",
+            "summary": "12项聚焦检查和类型检查通过",
+            "verifiedCommit": "f430e2b675e8020188a217d32375aeac130fe906",
+            "completedAt": "2026-09-15T09:54:39.900887+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -90,41 +83,7 @@
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T09:45:19.514447+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f4cf222d3000be8303e306668acde85f9ed63ff3",
-        "verificationCommit": "f4cf222d3000be8303e306668acde85f9ed63ff3",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "f4cf222d3000be8303e306668acde85f9ed63ff3",
-            "completedAt": "2026-09-15T09:46:31.316Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "f4cf222d3000be8303e306668acde85f9ed63ff3",
-            "completedAt": "2026-09-15T09:46:31.316Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T09:46:31.316Z"
+        "generatedAt": "2026-09-15T09:54:39.900887+00:00"
       }
     }
   ],
