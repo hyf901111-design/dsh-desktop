@@ -1,3 +1,4 @@
+import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
 import { TemporaryBoards } from './temporary-board'
 import { installBoardSessionFork } from './board-session-fork'
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
@@ -2500,13 +2501,14 @@ export function ResearchBoardDiscussion({
         className: 'srb-message',
         'data-role': m.role,
         'data-message-id': m.id,
+        'data-execution-kind': !m.imported && componentTask(taskForMessage(m, v.tasks)) ? 'component' : 'conversation',
         key: `${m.imported ? 'history' : 'message'}:${m.id ?? i}`
       },
       h(
         'small',
         { className: 'srb-message-author' },
         m.role === 'assistant'
-          ? '研究助手' + (m.author?.username ? ' · ' + m.author.username : '')
+          ? (componentTask(taskForMessage(m, v.tasks)) ? '组件子智能体' : '主智能体') + (m.author?.username ? ' · ' + m.author.username : '')
           : (m.author?.username ?? m.authorName ?? '成员'),
         m.imported ? ' · 复制时的已保存对话' : ''
       ),
@@ -2593,8 +2595,9 @@ export function ResearchBoardDiscussion({
         .filter(
           (t) => boardTaskStatus(t) && !(['failed', 'interrupted'].includes(t.status) && pendingRequests.some((r: any) => r.taskId === t.taskId && ['interrupted', 'uncertain'].includes(r.runtimeState)))
         )
-        .map((t) =>
-          h(
+        .map((t) => t.status === 'running'
+          ? h(ResearchBoardTaskProgress, { key: t.taskId, task: t })
+          : h(
             'p',
             { key: t.taskId, className: 'srb-status' },
             boardTaskStatus(t)
@@ -2618,8 +2621,10 @@ export function ResearchBoardDiscussion({
         {
           key: group.key,
           className: 'srb-request-group',
-          'data-request-message-id': group.requestId
+          'data-request-message-id': group.requestId,
+          'data-execution-kind': group.requestId && componentTask(taskForMessage({ id: group.requestId }, v.tasks)) ? 'component' : 'conversation'
         },
+        group.requestId && componentTask(taskForMessage({ id: group.requestId }, v.tasks)) && h('div', { className: 'srb-component-activity-label' }, '◇ 组件子智能体 · 独立执行', h('span', null, v.canvas?.artifacts?.find((node: any) => node.id === taskForMessage({ id: group.requestId }, v.tasks)?.targetId)?.title ?? '画板组件')),
         ...group.rows.map(renderMessage),
         group.requestId && renderControls(group.requestId)
       )

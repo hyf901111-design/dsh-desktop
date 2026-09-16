@@ -25,7 +25,7 @@ it('holds the turn until a delegated child settles and cancels both on interrupt
   const child = { id: 'child', status: 'running', session: { header: { parentSession: 'main' } }, whenIdle: () => childIdle, cancel() { this.status = 'idle'; finishChild() } }
   const ctx = { agents: { get: id => id === 'main' ? parent : child }, on: (name, fn) => { listeners.set(name, fn); return () => listeners.delete(name) } }
   const controller = new AbortController()
-  const handle = await createSharedMainAgentAdapter(ctx).start({ parentSessionId: 'main', prompt: 'delegate', signal: controller.signal })
+  const handle = await createSharedMainAgentAdapter(ctx).start({ parentSessionId: 'main', prompt: 'delegate', signal: controller.signal, onSessionEvent: () => controller.signal.throwIfAborted() })
   listeners.get('agent/created')({agent: child})
   parent.status = 'idle'; finishParent()
   let settled = false
@@ -61,7 +61,7 @@ it.each([false, true])('waits for delayed native settlement and drains its paren
   const child = { id: 'child', status: 'idle', session: { header: { parentSession: 'main' } }, whenIdle: async () => {}, cancel() {} }
   const ctx = { agents: { get: id => id === 'main' ? parent : id === 'child' ? child : undefined }, on(name, fn) { listeners.set(name, fn); return () => listeners.delete(name) } }
   const controller = new AbortController()
-  const handle = await createSharedMainAgentAdapter(ctx).start({ parentSessionId: 'main', prompt: 'delegate', signal: controller.signal })
+  const handle = await createSharedMainAgentAdapter(ctx).start({ parentSessionId: 'main', prompt: 'delegate', signal: controller.signal, onSessionEvent: () => controller.signal.throwIfAborted() })
   emit('agent/created', { agent: child })
   emit('subagent/start', { id: 'child', runId: 'native-run', local: true })
   emit('session/event', parent, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'provisional' }] } } })
@@ -86,4 +86,18 @@ it.each([false, true])('waits for delayed native settlement and drains its paren
   else expect(value.output).toEqual([{ type: 'text', text: 'final child summary' }])
   await handle.dispose()
   expect(listeners.size).toBe(0)
+})
+it('reports native delegated work as visible activity while preserving the main result', async () => {
+ const listeners=new Map(), scoped=new Map(), progress=[]
+ let finish
+ const waiting=new Promise(r=>finish=r)
+ const parent={id:'p',status:'idle',session:{header:{}},ctx:{on:(name,fn)=>{scoped.set(name,fn);return()=>scoped.delete(name)}},send(){this.status='running'},whenIdle:()=>waiting,cancel(){}}
+ const child={id:'c',status:'idle',session:{header:{parentSession:'p'}},whenIdle:async()=>{},cancel(){}}
+ const ctx={agents:{get:id=>id==='p'?parent:child},on:(name,fn)=>{listeners.set(name,fn);return()=>listeners.delete(name)}}
+ const handle=await createSharedMainAgentAdapter(ctx).start({parentSessionId:'p',prompt:'delegate',signal:new AbortController().signal,onSessionEvent:event=>progress.push(event)})
+ scoped.get('subagent/start')({id:'c',runId:'r'})
+ expect(progress).toContainEqual({type:'tool/call',data:{name:'subagent'}})
+ scoped.get('subagent/end')({runId:'r'})
+ expect(progress).toContainEqual({type:'tool/result',data:{}})
+ parent.status='idle';finish();await handle.result;await handle.dispose()
 })

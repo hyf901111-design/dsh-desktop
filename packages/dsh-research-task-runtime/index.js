@@ -72,7 +72,10 @@ const TOOL_LABELS = new Map([
   ['glob', '查找文件'],
   ['web_search', '搜索资料'],
   ['读取网页'],
-  ['financial_query', '查询金融数据']
+  ['financial_query', '查询金融数据'],
+  ['bash', '运行命令'],
+  ['subagent', '委派子智能体任务'],
+  ['research_workbench_create', '规划工作台组件']
 ])
 
 export class ResearchTaskError extends Error {

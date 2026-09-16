@@ -15,16 +15,22 @@ export function createSharedMainAgentAdapter(ctx) {
       if (agent.status !== 'idle') throw Error('MAIN_AGENT_BUSY')
       const descendants = new Set(), bindings = [], runs = new Set()
       const waiters = new Set()
+      const started = info => {
+        if (!info?.runId || runs.has(info.runId)) return
+        runs.add(info.runId)
+        if (!signal.aborted) onSessionEvent({ type: 'tool/call', data: { name: 'subagent' } })
+      }
       let cancelling = false
       const ended = info => {
         if (!runs.delete(info?.runId)) return
+        if (!signal.aborted) onSessionEvent({ type: 'tool/result', data: {} })
         for (const wake of waiters) wake()
         waiters.clear()
       }
       const observeDelegation = owner => {
         if (!owner.ctx?.on) return
         bindings.push(owner.ctx.on('subagent/start', info => {
-          if (!componentCreationActive() && !isComponentAgent(ctx.agents.get(info?.id), ctx.agents)) runs.add(info.runId)
+          if (!componentCreationActive() && !isComponentAgent(ctx.agents.get(info?.id), ctx.agents)) started(info)
         }))
         bindings.push(owner.ctx.on('subagent/end', ended))
       }
@@ -54,7 +60,7 @@ export function createSharedMainAgentAdapter(ctx) {
       const offStart = ctx.on('subagent/start', info => {
         const child = ctx.agents.get(info?.id)
         attach(child)
-        if (descendants.has(child)) runs.add(info.runId)
+        if (descendants.has(child)) started(info)
       })
       const offEnd = ctx.on('subagent/end', ended)
       const offStatus = ctx.on('agent/status', payload => {
