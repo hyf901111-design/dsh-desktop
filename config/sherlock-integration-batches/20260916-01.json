@@ -114,6 +114,43 @@
           "自动更新沿用既有启动及定时检测，不更改公开更新源"
         ],
         "generatedAt": "2026-09-16T02:03:38.460747+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6a42bdbec96fc4b8b34d448552e655fb955398d8",
+        "verificationCommit": "6a42bdbec96fc4b8b34d448552e655fb955398d8",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/board-session-fork.test.ts",
+              "test/research-board-directories.test.js",
+              "test/research-board-directory-lifecycle.test.js",
+              "test/sidebar-update-control.test.ts",
+              "test/update-manager.test.ts",
+              "test/sidebar-scroll-fade.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/board-session-fork.test.ts test/research-board-directories.test.js test/research-board-directory-lifecycle.test.js test/sidebar-update-control.test.ts test/update-manager.test.ts test/sidebar-scroll-fade.test.ts",
+            "verifiedCommit": "6a42bdbec96fc4b8b34d448552e655fb955398d8",
+            "completedAt": "2026-09-16T02:04:19.316Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6a42bdbec96fc4b8b34d448552e655fb955398d8",
+            "completedAt": "2026-09-16T02:04:19.316Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T02:04:19.316Z"
       }
     }
   ],
