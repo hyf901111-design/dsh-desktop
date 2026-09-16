@@ -1073,6 +1073,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     saveDraft(sessionId, draft)
     shell?.setResearchContextPreparing?.(true)
     try {
+      await (win as any).dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:context.references?.length?context.references.map(ref=>ref.nodeId):deps.researchWorkspaces.for(sessionId).getSnapshot().selection.selectedNodeIds})
       await flushCanvas(sessionId)
       if (generation !== state.account.generation) return
       const reply = await call<RequestReply>('request.submit', {

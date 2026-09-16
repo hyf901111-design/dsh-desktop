@@ -87,6 +87,7 @@ import {
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
 import { ResearchVoiceController, registerResearchVoiceHandlers } from './state/research-voice'
 import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
+import { CanvasActionBridge, registerCanvasActionHandlers } from './state/canvas-action-bridge'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import {
   assertTrustedMainWindowEvent,
@@ -1163,7 +1164,14 @@ async function bootstrap(): Promise<void> {
     workspaceResolver: new HarnessWorkspaceFileResolver(dshHome)
   })
   const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
+  const canvasActions = new CanvasActionBridge({
+    send: value => { if(!mainWindow || mainWindow.isDestroyed())throw Error('画板窗口不可用'); mainWindow.webContents.send('research:canvas-actions:request',value) },
+    canRead: sessionId => { try { if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true }catch{return false} }
+  })
+  const disposeCanvasActions = registerCanvasActionHandlers({ipcMain,getMainWindow:()=>mainWindow,bridge:canvasActions})
+  app.once('before-quit',disposeCanvasActions)
   researchContextBridge = new ResearchContextBridge({
+    canvasAction: (value,signal) => canvasActions.execute(value,signal),
     isSharedSession:id=>researchBoardsService?.isSharedSession(id)===true,
     additionalSources:id=>researchBoardIntegration?.personalContext(id)??[],
     readCanvas: (sessionId) => researchBoardsService?.isSharedSession(sessionId)

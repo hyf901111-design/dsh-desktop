@@ -1,3 +1,4 @@
+import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
 import { patchComponentWheelZoom } from './lib/component-wheel-zoom.mjs'
 import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
@@ -180,3 +181,5 @@ writeFileSync(asset('.js'), patchMarkdownFileLinks(readFileSync(asset('.js'), 'u
 writeFileSync(conversationPath, patchInspectPortal(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchComponentWheelZoom(readFileSync(conversationPath, 'utf8')))
+
+writeFileSync(conversationPath, patchCanvasActionsClient(readFileSync(conversationPath, 'utf8')))
