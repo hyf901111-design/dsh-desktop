@@ -6,21 +6,23 @@ import path from 'node:path'
 // only the patched entry, and fail on version drift instead of mixing APIs.
 const entries = [
   ['@deepseek-ai/dsh-llm', 'function toolImagesAsText(message)'],
-  ['@deepseek-ai/dsh-tool-fs', 'The LLM boundary handles text-only model projection.']
+  ['@deepseek-ai/dsh-tool-fs', 'The LLM boundary handles text-only model projection.', true]
 ]
 async function sources(projectRoot, modulesRoot) {
-  return Promise.all(entries.map(async ([name, marker]) => {
+  return (await Promise.all(entries.map(async ([name, marker, optional]) => {
     const sourceRoot = path.join(projectRoot, 'node_modules', name)
     const targetRoot = path.join(modulesRoot, name)
-    const [sourceManifest, targetManifest, source] = await Promise.all([
+    let targetManifest
+    try { targetManifest = await readFile(path.join(targetRoot, 'package.json'), 'utf8') }
+    catch (error) { if (optional && error.code === 'ENOENT') return null; throw error }
+    const [sourceManifest, source] = await Promise.all([
       readFile(path.join(sourceRoot, 'package.json'), 'utf8'),
-      readFile(path.join(targetRoot, 'package.json'), 'utf8'),
       readFile(path.join(sourceRoot, 'lib/index.js'), 'utf8')
     ])
     if (JSON.parse(sourceManifest).version !== JSON.parse(targetManifest).version) throw Error(`Plugin runtime version mismatch: ${name}`)
     if (!source.includes(marker)) throw Error(`Required runtime patch missing: ${name}`)
     return {name, source, target:path.join(targetRoot, 'lib/index.js')}
-  }))
+  }))).filter(Boolean)
 }
 export async function syncProfileRuntimePatches(projectRoot, profileRoot) {
   const files = await sources(projectRoot, path.join(profileRoot, 'node_modules'))
