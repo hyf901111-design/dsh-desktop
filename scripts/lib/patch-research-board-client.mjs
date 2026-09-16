@@ -708,14 +708,21 @@ function generationActivityClockPatch(source) {
   return source + '\n/* SHERLOCK_GENERATION_ACTIVITY_CLOCK_V1 */'
 }
 
-function generationProgressOverlayPatch(source) {
+export function generationProgressOverlayPatch(source) {
   if (source.includes('/* SHERLOCK_GENERATION_PROGRESS_OVERLAY_V1 */')) return source
   source = replace(source, 'let collaborationWritable = false;', 'let collaborationWritable = false; let collaborationAppliedRevision;')
-  source = replace(source, 'const artifacts = boundedResearchCanvasArtifactNodes(canvas.artifacts);', `const artifacts = boundedResearchCanvasArtifactNodes(canvas.artifacts);
+  // Personal directory and shared canvas paths now have the same parsing lines.
+  // Revision tracking only belongs to the shared path, where metadata exists.
+  const start = source.indexOf('applyRemoteCanvas(canvas, metadata = {}) {')
+  const end = source.indexOf('subscribeAssistantActions', start)
+  if (start < 0 || end < 0) throw new Error('Shared canvas progress patch boundary missing')
+  let remote = source.slice(start, end)
+  remote = replace(remote, 'const artifacts = boundedResearchCanvasArtifactNodes(canvas.artifacts);', `const artifacts = boundedResearchCanvasArtifactNodes(canvas.artifacts);
                     for(const node of artifacts){const original=canvas.artifacts.find(n=>n.id===node.id);for(const key of ['generationLastActivityAt','generationOutputChars'])if(Number.isFinite(original?.[key]))node[key]=original[key];}`)
-  source = replace(source, 'pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;', 'if(collaborationAppliedRevision!==metadata.revision){pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;}collaborationAppliedRevision=metadata.revision;')
-  return source + '\n/* SHERLOCK_GENERATION_PROGRESS_OVERLAY_V1 */'
+  remote = replace(remote, 'pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;', 'if(collaborationAppliedRevision!==metadata.revision){pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;}collaborationAppliedRevision=metadata.revision;')
+  return source.slice(0, start) + remote + source.slice(end) + '\n/* SHERLOCK_GENERATION_PROGRESS_OVERLAY_V1 */'
 }
+
 function chromePatch(source) {
   if (source.includes('/* SHERLOCK_BOARD_CHROME_V1 */')) return source
   for (const [property, attribute] of [['titleRow', 'title-row'], ['titleCluster', 'title-cluster'], ['headerUtilities', 'utilities'], ['tabs', 'tabs']]) {

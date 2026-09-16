@@ -4,3 +4,4 @@ export function patchResearchBoardSidebarTypes(source: string): string
 export function installResearchBoardClientPatches(cwd?: string): Promise<void>
 
 export function patchResearchBoardWorkspace(source: string): string
+export function generationProgressOverlayPatch(source: string): string
