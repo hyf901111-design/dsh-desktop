@@ -1333,6 +1333,12 @@ function patchVirtualBoardListing(source) {
 
 export function patchBetterSidebarServer(source) {
   source = patchVirtualBoardListing(source)
+  // Markdown and restored tabs may carry paths relative to the session root.
+  // Resolve before the existing containment/attachment guard, never bypass it.
+  const mediaPath = 'const path = requireAbsolute(raw);'
+  if (source.includes(mediaPath)) source = replaceExact(source, mediaPath,
+    'const path = resolve(cwd, raw); /* sherlock:relative-media-path:v1 */',
+    'session-relative media preview path')
   const marker = '/* sherlock:session-attached-media:v1 */'
   const defaultWidthMarker = '/* sherlock:figma-panel-default-width-schema:v1 */'
   let next = source

@@ -353,7 +353,7 @@ body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-pane
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { flex:0 0 12px; width:12px; }
 .t8lSSG_panel .t8lSSG_tabList { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
 .t8lSSG_panel .t8lSSG_tabList::-webkit-scrollbar { display:none; }
-.t8lSSG_panel [data-odyssey-tab-clipped=true] .t8lSSG_tabClose { visibility:hidden; pointer-events:none; }
+
 
 /* A non-closable conversation tab has no trailing close affordance to balance. */
 .t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { justify-content:center; padding-inline:8px; gap:0; }
@@ -363,14 +363,13 @@ body .wSkVaW_header, body .wSkVaW_titleRow { -webkit-app-region:drag; }
 body .wSkVaW_header :is(button,input,select,textarea,a,[role=button],[role=tab],[contenteditable=true]),
 body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag; }
 
-/* Compress every tab in place; never slide tabs underneath the parent chat. */
-.t8lSSG_panel .t8lSSG_tabList { overflow:hidden; gap:2px; flex:0 1 auto; }
-.t8lSSG_panel [data-odyssey-panel-tab] { flex:0 1 auto; min-width:0; padding-inline:min(8px, calc(80px / var(--odyssey-tab-count, 4)))!important; gap:min(6px, calc(60px / var(--odyssey-tab-count, 4))); position:relative; }
-.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 1 16px; min-width:0; }
-.t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose { display:none!important; }
-.t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] { min-width:28px; }
-.t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] .t8lSSG_tabClose { visibility:visible; pointer-events:auto; }
-.t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"] { order:-1; position:relative; left:auto; flex:0 0 46px; }
+/* Keep file titles and close controls usable; excess tabs scroll as a row. */
+.t8lSSG_panel .t8lSSG_tabList { overflow-x:auto; overflow-y:hidden; gap:4px; flex:1 1 0; }
+.t8lSSG_panel [data-odyssey-panel-tab] { flex:0 0 auto; min-width:100px; max-width:160px; padding-inline:8px!important; gap:6px; position:relative; }
+.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 0 16px; }
+.t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabTitle { flex:1 1 auto; }
+.t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { display:flex!important; flex-shrink:0; visibility:visible; pointer-events:auto; }
+.t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"] { min-width:46px; }
 
 /* Panel entries are portaled outside the header DOM but overlap its native drag region. */
 body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region:no-drag; }
