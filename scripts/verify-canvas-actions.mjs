@@ -4,17 +4,20 @@ import assert from 'node:assert/strict'
 import { readFile, mkdir } from 'node:fs/promises'
 import { build } from 'esbuild'
 import { pathToFileURL } from 'node:url'
+import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
 import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
 const {default:playwright}=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
-const source=patchCanvasActionsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
-const dependencies=await build({stdin:{contents:`import * as react from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot} from 'react-dom/client';window.testDeps={react,jsx,dom,createRoot};`,resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser'})
+const source=patchCanvasRefresh(patchCanvasActionsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+const boardSource=await readFile('src/preload/research-boards-ui.ts','utf8')
+const groupSource=boardSource.slice(boardSource.indexOf('function ResearchBoardGroup('),boardSource.indexOf('function ResearchBoardRow('))
+const dependencies=await build({stdin:{contents:`import * as react from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot} from 'react-dom/client';window.testDeps={react,jsx,dom,createRoot};const h=react.createElement;const IconTriangleRightFill14=()=>null;${groupSource};window.PersonalBoardGroup=ResearchBoardGroup;`,loader:'tsx',resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser'})
 const browser=await playwright.chromium.launch({executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 try{
  const page=await browser.newPage({viewport:{width:1200,height:800}}),errors=[],blocked=[]
  page.on('pageerror',e=>errors.push(e.message))
  page.on('console',e=>{if(e.type()==='error'&&!e.text().startsWith('Failed to load resource: net::ERR_FAILED'))errors.push(e.text())})
  page.on('requestfailed',r=>blocked.push(r.url()))
- await page.route('**/*',route=>route.request().isNavigationRequest()?route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><title>画布操作协议验证</title><style>body{margin:0;background:#242424;color:#eee}#mount{height:720px;width:1100px;margin:30px;position:relative}[data-research-canvas]{height:100%;position:relative;overflow:hidden}</style><div id="mount"></div>'}):route.abort())
+ await page.route('**/*',route=>route.request().isNavigationRequest()?route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><title>画布操作协议验证</title><style>body{margin:0;background:#242424;color:#eee}#mount{height:720px;width:1100px;margin:30px;position:relative}[data-research-canvas]{height:100%;position:relative;overflow:hidden}</style><div id="group"></div><div id="mount"></div>'}):route.abort())
  await page.goto('https://canvas-actions.fixture/')
  await page.addScriptTag({content:dependencies.outputFiles[0].text})
  await page.evaluate(()=>{window.__ModuleLoader__={load:d=>window.descriptor=d};window.dshDesktop={}})
@@ -27,13 +30,26 @@ try{
    const values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>{values.set(k,v);return true}}
    const registry=new mod.ResearchWorkspaceRegistry(storage)
    window.workspace=registry.for('actions')
+   createRoot(document.querySelector('#group')).render(react.createElement(window.PersonalBoardGroup,{skin:{rows:{},header:{},WorkspaceFolderIcon:()=>null},group:'private',expanded:true,onToggle:()=>{}}))
    window.root=createRoot(document.querySelector('#mount'))
    dom.flushSync(()=>root.render(react.createElement(mod.ResearchCanvas,{sessionId:'actions',t:k=>k,researchWorkspaces:registry})))
    workspace.setArtifacts([{id:'a',kind:'pasted-text',messageId:'a',title:'研究摘要',excerpt:'原始研究内容',x:300,y:250,width:450,height:280,sizeMode:'manual'},{id:'b',kind:'pasted-text',messageId:'b',title:'行情资料',excerpt:'第二个组件',x:820,y:250,width:450,height:280,sizeMode:'manual'}])
    window.execute=async changes=>{const s=await workspace.canvasAction('inspect',{});return workspace.canvasAction('apply',{requestId:crypto.randomUUID(),revision:s.revision,changes})}
  })
  assert.equal(await page.title(),'画布操作协议验证')
+ await page.getByRole('treeitem',{name:'个人看板',exact:true}).waitFor()
+ assert.equal(await page.getByRole('treeitem',{name:'专用看板',exact:true}).count(),0)
  await page.waitForSelector('[data-research-node-id="a"]')
+ await page.locator('[data-research-canvas]').click({button:'right',position:{x:1000,y:650}})
+ await page.evaluate(()=>{window.beforeRefresh=JSON.stringify(workspace.getSnapshot());window.oldLayer=document.querySelector('[data-research-content-layer]');})
+ await page.getByRole('menuitem',{name:'刷新',exact:true}).click()
+ await page.waitForFunction(()=>document.querySelector('[data-research-content-layer]')!==window.oldLayer)
+ assert.equal(await page.evaluate(()=>JSON.stringify(workspace.getSnapshot())),await page.evaluate(()=>window.beforeRefresh),'refresh preserves workspace including layout, selection and viewport')
+ await page.locator('[data-research-node-id="a"]').click({button:'right',position:{x:100,y:20}})
+ await page.getByRole('menuitem',{name:'刷新',exact:true}).waitFor()
+ await page.screenshot({path:'/tmp/sherlock-canvas-refresh-menu.png'})
+ await page.getByRole('menuitem',{name:'刷新',exact:true}).click()
+ await page.waitForFunction(()=>document.querySelector('[data-research-clipboard-feedback]')?.textContent==='画板已刷新')
  await page.evaluate(()=>execute([{op:'remove',ids:['b']}]))
  await page.locator('[data-canvas-action-receipt]').waitFor()
  assert.equal(await page.locator('[data-research-node-id="b"]').count(),0)
@@ -55,5 +71,5 @@ try{
  assert.deepEqual(errors,[])
  assert(blocked.every(url=>new URL(url).hostname==='canvas-actions.fixture'),'Only isolated fixture resource requests may be blocked')
  console.log('Isolated network requests blocked: '+JSON.stringify(blocked))
- console.log('PASS: real canvas delete/undo, content edit + arrange, clear/undo, close and 10-second expiry; no browser errors. Screenshot: '+out+'/canvas-actions.png')
+ console.log('PASS: blank/component context refresh preserves workspace and remounts previews; real canvas delete/undo, content edit + arrange, clear/undo, close and 10-second expiry; no browser errors. Screenshot: '+out+'/canvas-actions.png')
 }finally{await browser.close()}
