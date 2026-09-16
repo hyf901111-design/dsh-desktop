@@ -1,3 +1,4 @@
+import { TemporaryBoards } from './temporary-board'
 import { installBoardSessionFork } from './board-session-fork'
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
@@ -218,6 +219,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   const isShared = (id: string) => bridge.isSharedSession(id)
   const showError = (error: unknown) => {
     showBoardError(doc, error)
+  }
+  const temporaryBoards = new TemporaryBoards(deps.sessions.list, async id => {
+    const favorite = state.favorites.find(f => f.sessionId === id && f.dedicated)
+    if (!favorite || isShared(id)) return
+    await call('favorite.remove', { favoriteId: favorite.favoriteId })
+    await deps.workspaces.archiveSession(id)
+    purge(id)
+  }, showError)
+  cleanups.push(() => temporaryBoards.dispose())
+  const trackTemporary = (id: string) => {
+    const session = deps.sessions.binding(id)?.session
+    if (session) temporaryBoards.track(id, session, deps.researchWorkspaces.for(id))
   }
   const purge = (id: string) => {
     for (const kind of ['files', 'artifacts', 'selection'])
@@ -1246,6 +1259,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (!cwd) throw Error('看板目录暂不可用')
       if (identity(id)?.cwd === cwd) return id
       deps.researchWorkspaces.for(id).persist?.()
+      const wasTemporary = temporaryBoards.keep(id)
       const nextId = await deps.sessions.create({ cwd })
       await deps.sessions.binding(nextId)?.session.rename(f.title)
       try {
@@ -1254,6 +1268,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       prime(nextId)
       await activate(nextId, true)
       selectBoardSession(nextId)
+      if (wasTemporary) trackTemporary(nextId)
       return nextId
     },
     async createPrivateBoard() {
@@ -1263,6 +1278,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       await call('favorite.add', { identity: i, dedicated: true })
       await api.openPersonal(id)
       selectBoardSession(id)
+      trackTemporary(id)
       return id
     },
     async renamePersonal(id: string, title: string) {
@@ -1274,6 +1290,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       }
     },
     async collaborationSource(id: string) {
+      temporaryBoards.keep(id)
       const existing = state.favorites.find(f => f.sessionId === id)
       if (existing) return existing
       const i = identity(id)
@@ -1285,6 +1302,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (shared && entry.sharingState === 'shared') throw Error('请先取消协作，再放回工作区。')
       const id = shared ? await openBoard(entry.boardId) : entry.sessionId
       if (!id) throw Error('研究看板尚未就绪')
+      temporaryBoards.keep(id)
       if (shared && view(id)?.permissions.edit) await flushCanvas(id)
       const result = await call<{ localSessionId: string; canvas?: Canvas }>('local.directory', { mode: 'workspace', sessionId: id, title: entry.title, basePath: await defaultDirectory() })
       if (result.canvas) deps.researchWorkspaces.for(result.localSessionId).applyDirectoryCanvas(result.canvas)
