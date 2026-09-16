@@ -26,6 +26,9 @@ export function boardErrorMessage(error: unknown): string {
     EXECUTION_STILL_STOPPING: '上一次任务正在停止，请稍等片刻后重试。',
     TARGET_NOT_FOUND: '原组件已被移除，请重新发起研究以创建新组件。',
     REFERENCED_SOURCE_CHANGED: '引用的资料已变化，请重新选择资料后发起研究。',
+    QUEUE_ALREADY_STARTED: '这条消息已开始执行，请刷新后查看。',
+    REQUEST_AUTHOR_REQUIRED: '只能操作自己发送的排队消息。',
+    CONVERSATION_BUSY: '看板正在执行其他任务，这条消息将按顺序执行。',
     REQUEST_NOT_FOUND: '这条任务的本地记录已不可用，请重新发起研究。'
   }
   return messages[code] ?? (/^[A-Z][A-Z0-9_]+$/.test(message) || !message

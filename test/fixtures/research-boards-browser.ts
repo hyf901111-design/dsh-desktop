@@ -257,8 +257,9 @@ function FixtureDiscussion({ sessionId, children }: any) {
     }),
     conversationHost && ReactDOM.createPortal(children[0], conversationHost),
     composerHost && ReactDOM.createPortal(h(mod.__ComposerSurface, {
-      hero: false, researchEmpty: false, inputBar: children[1], pending: [],
-      renderSlot: () => null,
+      hero: false, researchEmpty: false, inputBar: children[1], pending: [], zone: sessionId,
+      renderSlot: (name: string) => name === 'conversation.input.dock' && page.isShared(sessionId)
+        ? h(mod.__QueueDock, { sessionId, t, notify: () => {}, useSession: (select: any) => select({queue:[],running:false,subagent:null}) }) : null,
       renderSlotChain: (_name: string, _owner: any, options: any) => options.fallback,
       t
     }), composerHost)

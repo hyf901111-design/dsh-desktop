@@ -402,7 +402,10 @@ const taskActions = new Set([
   'taskClaim',
   'taskHeartbeat',
   'taskResult',
-  'taskStop'
+  'taskStop',
+  'queueEdit',
+  'queueDelete',
+  'queuePromote'
 ])
 
 export class ResearchBoardsService {
@@ -2400,6 +2403,17 @@ export class ResearchBoardsService {
             this.generationAbort.signal,
             r.abort.signal
           ])
+        })
+      }
+      case 'queue.edit':
+      case 'queue.delete':
+      case 'queue.promote': {
+        const p = exact(input, ['boardId', 'taskId'], action === 'queue.edit' ? ['text'] : [])
+        const boardId = safeId(p.boardId)
+        this.requireBoard(boardId, undefined, true)
+        if (action === 'queue.edit' && (typeof p.text !== 'string' || !p.text.trim() || Buffer.byteLength(p.text) > 16384)) throw new ResearchBoardsError('INVALID_REQUEST')
+        return this.command(boardId, { 'queue.edit': 'queueEdit', 'queue.delete': 'queueDelete', 'queue.promote': 'queuePromote' }[action], {
+          taskId: safeId(p.taskId), ...(action === 'queue.edit' ? { text: p.text } : {})
         })
       }
       case 'request.list':

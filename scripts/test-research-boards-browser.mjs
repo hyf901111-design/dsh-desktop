@@ -467,7 +467,7 @@ assets.set(
   '/conversation.js',
   conversation.replace(
     '\t\texports.apply = apply;',
-    '\t\texports.__page=sherlockBoardsPage; exports.__setAdapter=a=>{sherlockBoardsAdapter=a;}; exports.__zh=zh; exports.__Header=ConversationSessionHeader; exports.__InputBar=InputBar; exports.__ResearchConversationPanel=ResearchConversationPanel; exports.__ComposerSurface=ComposerSurface;\n\t\texports.apply = apply;'
+    '\t\texports.__QueueDock=QueueDock; exports.__page=sherlockBoardsPage; exports.__setAdapter=a=>{sherlockBoardsAdapter=a;}; exports.__zh=zh; exports.__Header=ConversationSessionHeader; exports.__InputBar=InputBar; exports.__ResearchConversationPanel=ResearchConversationPanel; exports.__ComposerSurface=ComposerSurface;\n\t\texports.apply = apply;'
   )
 )
 assets.set(
@@ -728,6 +728,56 @@ if (process.argv.includes('--serve')) {
     ])
     await page.waitForFunction(() => window.fixture?.ready)
     await peer.waitForFunction(() => window.fixture?.ready)
+    if (process.argv.includes('--shared-queue-focus')) {
+      await page.getByRole('button', { name: '创建协作', exact: true }).click()
+      await page.getByLabel('对方专有 ID').fill('0000 0000 02')
+      await page.getByRole('button', { name: '查找并核对', exact: true }).click()
+      await page.locator('.srb-recipient').filter({ hasText: '周同事' }).waitFor()
+      await page.getByRole('button', { name: '发送邀请', exact: true }).click()
+      await peer.getByRole('button', { name: '接受', exact: true }).click()
+      await page.waitForFunction(() => window.fixture.page.getState().current?.boardId)
+      const sharedId = await page.evaluate(() => window.fixture.page.getState().current.boardId)
+      await peer.evaluate(id => window.fixture.page.openBoard(id), sharedId)
+      await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.execute)
+      const send = (p, text) => p.evaluate(async text => {
+        const f = window.fixture, id = f.page.current(), shell = f.hub.shell(id)
+        shell.setDraft(text)
+        await f.page.submitShared(id,text,{scope:'board',references:[]},[],'queue')
+      }, text)
+      users[0].control.hold = true
+      await send(page, 'A 正在整理研究资料')
+      await until(() => users[0].control.release, 'A executing')
+      await send(peer, '至少 10 页')
+      await send(peer, '补充结论和引用来源')
+      for (const p of [page,peer]) {
+        await p.getByText('2 条排队消息', {exact:true}).click()
+        await p.locator('[data-queue-author]').filter({hasText:'周同事'}).first().waitFor()
+      }
+      assert.equal(await page.getByLabel('编辑排队消息', {exact:true}).count(), 0)
+      await peer.getByLabel('编辑排队消息', {exact:true}).first().click()
+      await peer.getByRole('textbox', {name:'编辑排队消息',exact:true}).fill('改为 12 页')
+      await peer.getByLabel('保存排队消息', {exact:true}).click()
+      await page.getByText('改为 12 页', {exact:true}).waitFor()
+      await page.screenshot({path:join(out,'shared-queue-owner-light.png')})
+      await peer.screenshot({path:join(out,'shared-queue-peer-light.png')})
+      await peer.evaluate(() => document.body.setAttribute('data-ds-dark-theme',''))
+      await peer.screenshot({path:join(out,'shared-queue-peer-dark.png')})
+      await peer.locator('[data-queue-dock]').screenshot({path:join(out,'shared-queue-dark-detail.png')})
+      await peer.getByText('2 条排队消息', {exact:true}).click()
+      await peer.locator('[data-queue-author]').first().waitFor({state:'hidden'})
+      await peer.screenshot({path:join(out,'shared-queue-collapsed-dark.png')})
+      await peer.getByText('2 条排队消息', {exact:true}).click()
+      await peer.getByLabel('删除排队消息', {exact:true}).last().click()
+      await page.getByText('补充结论和引用来源', {exact:true}).waitFor({state:'hidden'})
+      await peer.getByLabel('插话发送', {exact:true}).click()
+      await until(() => users[1].modelCalls() > 0, 'B executes after A stops', 20000)
+      const tasks = users[0].service.getSnapshot().current.tasks
+      assert.equal(tasks.filter(t=>t.status==='running').length <= 1,true)
+      await page.locator('[data-queue-dock]').waitFor({state:'hidden'})
+      console.log('SHARED_QUEUE_BROWSER_PASSED two-users/author/collapse/edit/delete/steer/single-executor')
+      break focusedFlow
+    }
+
     await page.evaluate(() =>
       window.fixture.registry.for('original').setArtifacts([
         {

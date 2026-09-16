@@ -1,3 +1,4 @@
+import { assertConversationClaim, mutateQueuedConversation, conversationContext } from '../../packages/dsh-research-collaboration/conversation-queue.js'
 import {
   resolveRequestContext,
   historyAssetIds
@@ -960,6 +961,11 @@ export class ResearchBoardRoom {
             delete task.sessionHash
           }
       result = { board }
+    } else if (action === 'queueEdit' || action === 'queueDelete' || action === 'queuePromote') {
+      try {
+        const task = mutateQueuedConversation(current, command.taskId, user.id, {queueEdit:'edit',queueDelete:'delete',queuePromote:'promote'}[action], command.text)
+        result = { task: publicTask(task) }
+      } catch (error) { fail(error.code ?? 'INVALID_INPUT', error.status ?? 400) }
     } else if (action === 'taskCreate') {
       const message = current.messages.find(
         (m) => m.id === command.requestMessageId
@@ -1030,6 +1036,8 @@ export class ResearchBoardRoom {
         targetContentHash: command.targetId
           ? hash(generationContent(canvas[targetCollection].find(n => n.id === command.targetId)))
           : null,
+        conversation: !command.targetId,
+        queueOrder: current.board.seq,
         status: 'pending',
         epoch: board.sharingEpoch,
         createdAt: now()
@@ -1078,6 +1086,7 @@ export class ResearchBoardRoom {
         fail('TASK_INITIATOR_REQUIRED', 403)
       if (action === 'taskClaim') {
         if (task.status !== 'pending') fail('LEASE_UNAVAILABLE', 409)
+        try { assertConversationClaim(current, task) } catch (error) { fail(error.code, 409) }
         const leaseToken = crypto.randomUUID()
         task.status = 'running'
         task.executorId = requiredString(command.executorId)
@@ -1086,10 +1095,15 @@ export class ResearchBoardRoom {
         task.leaseExpiresAt = now() + LIMITS.leaseMs
         const context = await this.env.RESEARCH_ASSETS.get(task.contextKey)
         if (!context) fail('CONTEXT_UNAVAILABLE', 503)
+        const contextSnapshot = task.conversation ? {
+          ...conversationContext(current, task),
+          canvas: projectDocument(decodeDocument(fromBase64(current.documentUpdate))),
+          seq: current.board.seq
+        } : await context.json()
         result = {
           task: {
             ...publicTask(task),
-            contextSnapshot: await context.json()
+            contextSnapshot
           },
           leaseToken
         }
@@ -1098,7 +1112,11 @@ export class ResearchBoardRoom {
           if (task.initiatorId !== user.id) fail('TASK_INITIATOR_REQUIRED', 403)
           if (!taskFailureMessage(command.failureCode)) fail('INVALID_REQUEST', 400)
         }
-        if (task.status === 'pending' || task.status === 'running') {
+        if (task.status === 'running' && task.conversation && command.executorStopped !== true) {
+          task.stopRequested = true
+        } else if (task.status === 'pending' || task.status === 'running') {
+          if (task.status === 'running' && task.conversation &&
+            (task.sessionHash !== user.session_hash || task.leaseHash !== hash(String(command.leaseToken)))) fail('STALE_LEASE', 409)
           task.status = command.failureCode ? 'failed' : 'interrupted'
           if (command.failureCode) task.failureCode = command.failureCode
           task.completedAt = now()

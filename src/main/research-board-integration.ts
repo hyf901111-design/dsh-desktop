@@ -844,7 +844,17 @@ export class ResearchBoardIntegration {
     }
   }
   requests(accountId: string, boardId: string) {
-    this.authority(accountId, boardId)
+    const authority = this.authority(accountId, boardId)
+    // Only a durable, never-started request may resume automatically.
+    for (const r of this.journal.list(accountId, boardId)) {
+      const task = authority.snapshot.tasks.find(t => t.taskId === r.reply?.taskId)
+      if (!task || task.status !== 'pending' || r.runtimeState || this.active.has(r.key)) continue
+      if (task.initiatorId !== accountId || r.epoch !== authority.snapshot.board.sharingEpoch) continue
+      const controller = new AbortController()
+      this.active.set(r.key, controller)
+      void this.execute(r.key, task, AbortSignal.any([authority.signal, controller.signal]))
+        .catch(() => {}).finally(() => this.active.delete(r.key))
+    }
     return this.journal
       .list(accountId, boardId)
       .filter((r) => r.intent.text)
@@ -1087,6 +1097,7 @@ export class ResearchBoardIntegration {
                 }
               : {}),
             source: intent.source,
+            conversation: !intent.targetId && !intent.workbenchRequestId,
             ...(intent.refreshScheduleId
               ? { refreshScheduleId: intent.refreshScheduleId }
               : {})
@@ -1127,6 +1138,8 @@ export class ResearchBoardIntegration {
     let localTaskId: string | undefined
     let failureCode: string | undefined
     let resultSubmitting = false
+    let claimed = false
+    let leaseToken: string | undefined
     const r = this.journal.get(key)
     const stop = () => {
       if (localTaskId)
@@ -1144,13 +1157,29 @@ export class ResearchBoardIntegration {
       }
       const executorId = r.executorId ?? randomUUID()
       this.journal.update(key, { executorId })
-      const claim = await this.step(
-        key,
-        'taskClaim',
-        'taskClaim',
-        { taskId: task.taskId, executorId },
-        signal
-      )
+      let claim: any
+      while (!claim) {
+        signal.throwIfAborted()
+        try {
+          claim = await this.step(
+            key, 'taskClaim', 'taskClaim', { taskId: task.taskId, executorId }, signal
+          )
+        } catch (error) {
+          if ((error as any).code !== 'CONVERSATION_BUSY') throw error
+          await new Promise<void>((resolve, reject) => {
+            const done = () => { signal.removeEventListener('abort', abort); resolve() }
+            const timer = setTimeout(done, 1000)
+            const abort = () => { clearTimeout(timer); signal.removeEventListener('abort', abort); reject(Error('ABORTED')) }
+            signal.addEventListener('abort', abort, { once: true })
+          })
+        }
+      }
+      claimed = true
+      leaseToken = claim.leaseToken
+      if (!r.intent.targetId && !r.intent.workbenchRequestId && claim.task.conversation !== true) {
+        failureCode = 'GENERATION_FAILED'
+        throw Error('协作服务尚未支持共享排队，请更新协作服务后重试。')
+      }
       const lease = claim.leaseToken
       const context = claim.task.contextSnapshot
       let hb = 0
@@ -1161,7 +1190,7 @@ export class ResearchBoardIntegration {
           'taskHeartbeat',
           { taskId: task.taskId, leaseToken: lease },
           signal
-        ).catch(() => {
+        ).then(reply => { if (reply.task?.stopRequested && !resultSubmitting) this.active.get(key)?.abort() }).catch(() => {
           // A heartbeat already in flight can return STALE_LEASE after the
           // result commits and releases that lease. It must not cancel success.
           if (resultSubmitting) return
@@ -1334,6 +1363,8 @@ export class ResearchBoardIntegration {
       // acknowledged cloud result or submit a spurious taskStop.
       await this.options.service().invoke('boards.refresh', {}).catch(() => {})
     } catch (error) {
+      // Waiting messages survive disconnect/restart; no model has consumed them.
+      if (!claimed && signal.aborted) return
       if (this.journal.get(key).runtimeState !== 'uncertain')
         this.journal.update(key, {
           runtimeState: 'interrupted',
@@ -1341,12 +1372,16 @@ export class ResearchBoardIntegration {
           runtimeError: (error as Error).message
         })
       stop()
+      let executorStopped = !localTaskId
+      if (localTaskId) {
+        try { await this.runtime('cancel', { taskId: localTaskId, drain: true }, new AbortController().signal); executorStopped = true } catch {}
+      }
       try {
         await this.step(
           key,
           'taskStop',
           'taskStop',
-          { taskId: task.taskId, ...(!signal.aborted && failureCode ? { failureCode } : {}) },
+          { taskId: task.taskId, ...(claimed && executorStopped ? { executorStopped: true, leaseToken } : {}), ...(!signal.aborted && failureCode ? { failureCode } : {}) },
           new AbortController().signal
         )
       } catch {}
