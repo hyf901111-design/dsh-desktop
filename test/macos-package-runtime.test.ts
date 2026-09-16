@@ -48,6 +48,12 @@ describe('macOS package runtime verification', () => {
         )
         writeFileSync(path.join(runtimeRoot, 'package.json'), '{"type":"module"}\n')
         symlinkSync(nodeModulesPath, path.join(runtimeRoot, 'node_modules'))
+        // The package verifier also checks the independent plugin runtime tree.
+        const pluginLlmRoot = path.join(resourcesPath, 'sherlock-plugin-profile', 'modules', '@deepseek-ai', 'dsh-llm')
+        mkdirSync(path.join(pluginLlmRoot, 'lib'), { recursive: true })
+        for (const file of ['package.json', 'lib/index.js']) {
+          copyFileSync(path.join(nodeModulesPath, '@deepseek-ai', 'dsh-llm', file), path.join(pluginLlmRoot, file))
+        }
         symlinkSync(
           path.join(projectRoot, 'skills', 'efund-ppt-maker'),
           path.join(packagedSkillRoot, 'efund-ppt-maker')
