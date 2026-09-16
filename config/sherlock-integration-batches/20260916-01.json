@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260916-01",
+  "branch": "codex/integration/20260916-01",
+  "baseMainCommit": "02806c32ad1c1db264414e601cd4cf881f489b37",
+  "expectedMainCommit": "02806c32ad1c1db264414e601cd4cf881f489b37",
+  "createdAt": "2026-09-16T02:03:38.910Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "看板分叉项目及侧栏更新体验",
+        "branch": "codex/feat/board-fork-updates-20260916",
+        "baseCommit": "7ca99fbbc8a2d406e6602c74a6dcd25bf6fecab9",
+        "tipCommit": "d464ea14b2ca42507a21273c49c9f6450669d595",
+        "commits": [
+          {
+            "commit": "d464ea14b2ca42507a21273c49c9f6450669d595",
+            "parents": [
+              "7ca99fbbc8a2d406e6602c74a6dcd25bf6fecab9"
+            ],
+            "subject": "修复看板分叉项目归属并完善侧栏行与更新进度入口"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-directories.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/board-session-fork.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/board-session-fork.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-directories.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-update-control.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/board-session-fork.test.ts",
+              "test/research-board-directories.test.js",
+              "test/research-board-directory-lifecycle.test.js",
+              "test/sidebar-update-control.test.ts",
+              "test/update-manager.test.ts",
+              "test/sidebar-scroll-fade.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "34项聚焦测试及类型检查通过",
+            "verifiedCommit": "d464ea14b2ca42507a21273c49c9f6450669d595",
+            "completedAt": "2026-09-16T02:03:38.460747+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "34项聚焦测试及类型检查通过",
+            "verifiedCommit": "d464ea14b2ca42507a21273c49c9f6450669d595",
+            "completedAt": "2026-09-16T02:03:38.460747+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "已定位真实侧栏负边距裁切；集成包中完成最终视觉和分叉验收"
+        },
+        "acceptanceCriteria": [
+          "看板分叉归入真实目录项目",
+          "侧栏圆角完整且隐藏更新时间",
+          "下载圆环进度和气泡可重开",
+          "关于页直接下载更新"
+        ],
+        "risks": [
+          "自动更新沿用既有启动及定时检测，不更改公开更新源"
+        ],
+        "generatedAt": "2026-09-16T02:03:38.460747+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/board-session-fork.test.ts",
+        "test/research-board-directories.test.js",
+        "test/research-board-directory-lifecycle.test.js",
+        "test/sidebar-update-control.test.ts",
+        "test/update-manager.test.ts",
+        "test/sidebar-scroll-fade.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
