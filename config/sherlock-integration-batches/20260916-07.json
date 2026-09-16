@@ -165,6 +165,42 @@
           "跨用户详细原生事件仍受现有同步协议限制"
         ],
         "generatedAt": "2026-09-16T15:39:12.888638+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6b85c4f87327386ccc9e54d2eac52992cc840102",
+        "verificationCommit": "6b85c4f87327386ccc9e54d2eac52992cc840102",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-native-conversation.test.js",
+              "test/shared-main-agent.test.js",
+              "test/research-board-conversation-order.test.ts",
+              "test/research-board-live-discussion.test.ts",
+              "test/research-canvas-deferred-html-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-native-conversation.test.js test/shared-main-agent.test.js test/research-board-conversation-order.test.ts test/research-board-live-discussion.test.ts test/research-canvas-deferred-html-patch.test.ts",
+            "verifiedCommit": "6b85c4f87327386ccc9e54d2eac52992cc840102",
+            "completedAt": "2026-09-16T15:39:37.153Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "6b85c4f87327386ccc9e54d2eac52992cc840102",
+            "completedAt": "2026-09-16T15:39:37.153Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T15:39:37.153Z"
       }
     }
   ],
