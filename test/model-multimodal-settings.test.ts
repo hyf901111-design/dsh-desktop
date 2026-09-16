@@ -57,6 +57,25 @@ async function loadModelsBundle(): Promise<ClientBundle> {
 }
 
 describe('multimodal model settings', () => {
+  it('keeps model configuration in Settings without registering an API key onboarding dialog', async () => {
+    const bundle = await loadModelsBundle()
+    const registrations: Array<{ name: string; id: string }> = []
+    const apply = bundle.apply as (ctx: unknown) => void
+    apply({
+      effect: () => {},
+      get: () => ({ api: {}, isLoopback: true }),
+      locale: { bind: () => (key: string) => key },
+      slots: {
+        inject: (_name: string, register: () => void) => register(),
+        register: (entry: { name: string; id: string }) => { registrations.push(entry) }
+      }
+    })
+    expect(registrations.filter(entry => entry.name === 'settings.section'))
+      .toEqual([expect.objectContaining({ id: 'models' })])
+    expect(registrations.filter(entry => entry.name === 'settings.onboarding')
+      .map(entry => entry.id)).toEqual(['welcome-notice'])
+  })
+
   it('persists the image modality and renders a checked Vision control', async () => {
     const bundle = await loadModelsBundle()
     const modelInputForVision = bundle.modelInputForVision

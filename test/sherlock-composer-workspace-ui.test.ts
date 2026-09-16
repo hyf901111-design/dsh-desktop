@@ -187,6 +187,7 @@ async function loadClientBundle(
     cancelAnimationFrame: options?.window?.cancelAnimationFrame?.bind(options.window),
     setTimeout,
     clearTimeout,
+    queueMicrotask,
     JSON: options?.json ?? globalThis.JSON
   })
   if (descriptor === undefined) throw new Error(`${packageName} did not register its client bundle`)
@@ -347,7 +348,9 @@ async function mountConversationRoot(
         viewport: { scale: number; x: number; y: number }
         canvasSize: { width: number; height: number }
         pendingMessageJump: string | null
+        unavailableSourceMessageIds: string[]
       }
+      setPendingMessageJump(messageId: string | null): void
       assistantActionsActive(): boolean
       focusNode(nodeId: string): boolean
       removeSelectedFile(fileId: string): void
@@ -11945,6 +11948,72 @@ describe('Sherlock workspace and composer controls', () => {
       expect(detailsPortalHost.querySelector('button[aria-label="加入画布"]')).not.toBeNull()
       await mounted.rerenderSession('session-research-second')
       expect(detailsPortalHost.querySelector('button[aria-label="加入画布"]')).toBeNull()
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
+  it.each(['generated-container', 'generated-summary', 'generated-mind-map', 'web-link'])(
+    'does not jump to a synthetic source when activating %s', async (kind) => {
+      const mounted = await mountConversationRoot('research')
+      const canvasHost = mounted.browserWindow.document.createElement('div')
+      mounted.browserWindow.document.body.appendChild(canvasHost)
+      const canvasRoot = createRoot(canvasHost)
+      try {
+        const { browserWindow, client, detailsPortalHost, researchWorkspaces, sessionId, workspace } = mounted
+        await act(async () => {
+          workspace.setArtifacts([{
+            id: 'standalone', kind, messageId: 'standalone', title: '板块行情',
+            excerpt: '行情走势', x: 100, y: 80, generationStatus: 'completed',
+            sourceNodeIds: ['file-a'], containerPrompt: '板块行情', refreshMinutes: 0,
+            ...(kind === 'generated-container' ? { containerSpec: {
+              version: 1, type: 'kpi', title: '板块行情', items: [{ label: '指数', value: '100' }]
+            } } : {}),
+            ...(kind === 'web-link' ? { url: 'https://example.com' } : {})
+          }])
+          canvasRoot.render(createElement(client.ResearchCanvas as ComponentType<Record<string, unknown>>, {
+            sessionId, researchWorkspaces, t: (key: string) => key
+          }))
+        })
+        const card = canvasHost.querySelector('[data-research-artifact-card="standalone"]')
+        expect(card).not.toBeNull()
+        for (const event of [
+          new browserWindow.Event('dblclick', { bubbles: true }),
+          new browserWindow.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+        ]) {
+          await act(async () => { card?.dispatchEvent(event) })
+          expect(detailsPortalHost.querySelector('.sRp_sourceStatus')).toBeNull()
+          expect(workspace.getSnapshot().pendingMessageJump).toBeNull()
+          expect(workspace.getSnapshot().unavailableSourceMessageIds).toEqual([])
+        }
+      } finally {
+        await act(async () => { canvasRoot.unmount() })
+        await mounted.cleanup()
+      }
+    }
+  )
+
+  it('dismisses missing-source feedback automatically and when editing the composer', async () => {
+    const mounted = await mountConversationRoot('research')
+    try {
+      const { browserWindow, detailsPortalHost, workspace } = mounted
+      await act(async () => { workspace.setPendingMessageJump('missing') })
+      const status = detailsPortalHost.querySelector('.sRp_sourceStatus')
+      expect(status).not.toBeNull()
+      const statusStyle = browserWindow.getComputedStyle(status!)
+      expect(statusStyle.top).toBe('10px')
+      expect(statusStyle.bottom).toBe('auto')
+      expect(statusStyle.pointerEvents).toBe('none')
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 3100)) })
+      expect(detailsPortalHost.querySelector('.sRp_sourceStatus')).toBeNull()
+      await act(async () => { workspace.setPendingMessageJump('missing') })
+      expect(detailsPortalHost.querySelector('.sRp_sourceStatus')).not.toBeNull()
+      const composer = detailsPortalHost.querySelector('[data-research-composer-host]')
+      expect(composer).not.toBeNull()
+      await act(async () => {
+        composer?.dispatchEvent(new browserWindow.Event('input', { bubbles: true }))
+      })
+      expect(detailsPortalHost.querySelector('.sRp_sourceStatus')).toBeNull()
     } finally {
       await mounted.cleanup()
     }
