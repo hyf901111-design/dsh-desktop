@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260916-03",
+  "branch": "codex/integration/20260916-03",
+  "baseMainCommit": "32f151a6471b43f3e8d6ca99ed59322b1f66b0c2",
+  "expectedMainCommit": "32f151a6471b43f3e8d6ca99ed59322b1f66b0c2",
+  "createdAt": "2026-09-16T08:25:00.870Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "PPT preview and bundled skill 1.0.7",
+        "branch": "codex/feat/ppt-skill-107-20260916",
+        "baseCommit": "32f151a6471b43f3e8d6ca99ed59322b1f66b0c2",
+        "tipCommit": "584c0bb3676f9acebace1131acf98889dea9c4ba",
+        "commits": [
+          {
+            "commit": "b0fce9a64232dad98ce08ad142b8b70beeba9967",
+            "parents": [
+              "32f151a6471b43f3e8d6ca99ed59322b1f66b0c2"
+            ],
+            "subject": "修复PPT预览缩放卡顿和文件定位菜单，升级制作技能至1.0.7"
+          },
+          {
+            "commit": "584c0bb3676f9acebace1131acf98889dea9c4ba",
+            "parents": [
+              "b0fce9a64232dad98ce08ad142b8b70beeba9967"
+            ],
+            "subject": "验证客户端内置PPT技能1.0.7打包发现及旧版本自动升级"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-office-preview.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-resize-settle.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-resize-settle.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/authoring-guide.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/delivery-107.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/design-system.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/layout-catalog.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/layout-design-playbook.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/runtime-compatibility.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/table-layout-contract.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_delivery.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/lint_efund_layouts.py"
+          },
+          {
+            "status": "M",
+            "path": "src/main/context-menu-template.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/context-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-ppt-skill.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-skill-upgrade.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/context-menu-template.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-107.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-resize-settle.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-office-preview-adapter.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/pptx-resize-settle.test.js",
+              "test/context-menu-template.test.ts",
+              "test/context-menu.test.ts",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/bundled-ppt-skill.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/bundled-skill-upgrade.test.ts",
+              "test/bundled-skill-parity.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "36 focused tests passed",
+            "verifiedCommit": "584c0bb3676f9acebace1131acf98889dea9c4ba",
+            "completedAt": "2026-09-16T08:23:50.883Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript passed",
+            "verifiedCommit": "584c0bb3676f9acebace1131acf98889dea9c4ba",
+            "completedAt": "2026-09-16T08:23:50.883Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "Feature branch not packaged; actual Office bundle adapter tests passed; live UI acceptance pending integration."
+        },
+        "acceptanceCriteria": [
+          "Debounced PPT resize",
+          "Finder resolves workspace-relative links",
+          "Bundled skill 1.0.7 upgrades official 1.0.6",
+          "PPTX title, table and chapter checks"
+        ],
+        "risks": [
+          "Shared client not rebuilt; live resize and menu acceptance pending",
+          "Existing user PPT not regenerated"
+        ],
+        "generatedAt": "2026-09-16T08:23:50.883Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/pptx-resize-settle.test.js",
+        "test/context-menu-template.test.ts",
+        "test/context-menu.test.ts",
+        "test/efund-ppt-107.test.js",
+        "test/efund-ppt-layout-lint.test.ts",
+        "test/bundled-ppt-skill.test.ts",
+        "test/sherlock-office-preview-adapter.test.ts",
+        "test/bundled-skill-upgrade.test.ts",
+        "test/bundled-skill-parity.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
