@@ -60,10 +60,11 @@ export function mountResearchBoardNotifications(
     const bounds = (doc.querySelector<HTMLElement>('.VOzbGW_nav') ?? sidebar)?.getBoundingClientRect()
     const width = Math.min(384, win.innerWidth - 24)
     el.style.left = `${Math.max(12, Math.min((bounds?.left ?? 0) + 16, win.innerWidth - width - 12))}px`
-    // Figma pins the center to the 44px footer baseline, independent of the account hit area.
-    const bottom = Math.min(44, Math.max(12, win.innerHeight - 92))
+    // Keep a fixed panel above the account footer; only its list scrolls.
+    const bottom = Math.min(76, Math.max(12, win.innerHeight - 92))
     el.style.bottom = `${bottom}px`
-    el.style.maxHeight = `min(520px, calc(100vh - ${bottom + 12}px))`
+    el.style.maxHeight = `min(440px, calc(100vh - ${bottom + 12}px))`
+    el.style.height = el.style.maxHeight
   }
   function pending(n: Notification) {
     return n.invitation?.status === 'pending'

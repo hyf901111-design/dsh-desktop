@@ -96,8 +96,8 @@ it.each([
   await tick(); f.bell().click()
   const panel = f.w.document.querySelector('.srb-notifications')! as import('happy-dom').HTMLElement
   expect(panel.style.left).toBe(`${left + 16}px`)
-  expect(panel.style.bottom).toBe('44px')
-  expect(panel.style.maxHeight).toBe('min(520px, calc(100vh - 56px))')
+  expect(panel.style.bottom).toBe('76px')
+  expect(panel.style.maxHeight).toBe('min(440px, calc(100vh - 88px))')
 
   // A smaller viewport must still reserve 12px at both horizontal edges and above the panel.
   Object.defineProperty(f.w, 'innerWidth', { configurable: true, value: 320 })
@@ -105,7 +105,7 @@ it.each([
   f.w.dispatchEvent(new f.w.Event('resize'))
   expect(panel.style.left).toBe('12px')
   expect(panel.style.bottom).toBe('28px')
-  expect(panel.style.maxHeight).toBe('min(520px, calc(100vh - 40px))')
+  expect(panel.style.maxHeight).toBe('min(440px, calc(100vh - 40px))')
 })
 
 function visibleAccount(f: ReturnType<typeof fixture>) {
