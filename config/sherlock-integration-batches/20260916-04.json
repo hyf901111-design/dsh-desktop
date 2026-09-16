@@ -9,24 +9,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "明确旧协作服务不支持共享排队的失败提示",
+        "featureName": "旧协作服务错误码兼容收尾",
         "branch": "codex/feat/shared-main-agent-queue-20260916",
-        "baseCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
-        "tipCommit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
+        "baseCommit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
+        "tipCommit": "0240c9b746416f187fdd4b872d933bd30072d65c",
         "commits": [
           {
-            "commit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
+            "commit": "0240c9b746416f187fdd4b872d933bd30072d65c",
             "parents": [
-              "1bfb0695a45116fc937cb8eada870ec6324c8d62"
+              "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e"
             ],
-            "subject": "修复：明确提示协作服务版本过旧而非组件生成失败"
+            "subject": "修复：旧协作服务使用兼容错误码结束未启动任务"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-collaboration/protocol.js"
-          },
           {
             "status": "M",
             "path": "src/main/research-board-integration.ts"
@@ -41,13 +37,12 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-board-generation.test.ts",
-              "test/shared-conversation-queue.test.js"
+              "test/research-board-generation.test.ts"
             ],
             "outcome": "passed",
-            "summary": "18 项通过，旧服务在启动模型前返回明确失败码",
-            "verifiedCommit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
-            "completedAt": "2026-09-16T09:51:30.150923+00:00",
+            "summary": "14 项通过；保留本地准确错误、服务端使用兼容失败码释放任务",
+            "verifiedCommit": "0240c9b746416f187fdd4b872d933bd30072d65c",
+            "completedAt": "2026-09-16T10:22:06.900560+00:00",
             "timeoutMs": 120000
           },
           {
@@ -59,8 +54,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
-            "completedAt": "2026-09-16T09:51:30.150923+00:00",
+            "verifiedCommit": "0240c9b746416f187fdd4b872d933bd30072d65c",
+            "completedAt": "2026-09-16T10:22:06.900560+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -78,59 +73,7 @@
           "原生模型双客户端端到端验收尚未完成。",
           "排队作者离线时需其重连或自行删除，其他账户不代执行。"
         ],
-        "generatedAt": "2026-09-16T09:51:30.150923+00:00"
-      },
-      "merged": {
-        "mergeCommit": "71cb4a6633a5191be85071aa3388f01127d01bc2",
-        "verificationCommit": "71cb4a6633a5191be85071aa3388f01127d01bc2",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/shared-main-agent.test.js",
-              "test/shared-conversation-queue.test.js",
-              "test/research-board-generation.test.ts",
-              "test/research-board-runtime.test.js",
-              "test/research-boards-service.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/shared-send-draft.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-main-agent.test.js test/shared-conversation-queue.test.js test/research-board-generation.test.ts test/research-board-runtime.test.js test/research-boards-service.test.ts test/research-board-tasks.test.ts test/shared-send-draft.test.ts",
-            "verifiedCommit": "71cb4a6633a5191be85071aa3388f01127d01bc2",
-            "completedAt": "2026-09-16T09:51:58.849Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "shared|leased board"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t shared|leased board",
-            "verifiedCommit": "71cb4a6633a5191be85071aa3388f01127d01bc2",
-            "completedAt": "2026-09-16T09:51:58.849Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "71cb4a6633a5191be85071aa3388f01127d01bc2",
-            "completedAt": "2026-09-16T09:51:58.849Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-16T09:51:58.849Z"
+        "generatedAt": "2026-09-16T10:22:06.900560+00:00"
       }
     }
   ],
