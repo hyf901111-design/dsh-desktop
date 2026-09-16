@@ -1,3 +1,4 @@
+import { startComponentAgent } from './component-agent-scope.js'
 import { createSharedMainAgentAdapter } from './shared-main-agent.js'
 import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES } from './canvas-tools.js'
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
@@ -1291,7 +1292,7 @@ export function createSubagentAdapter(ctx) {
         }
       }
       if (signal.aborted) throw signal.reason
-      const run = await ctx.subagents.start('spawn', {
+      const run = await startComponentAgent(ctx, {
         label: '画布生成任务',
         ...(agentOptions ? { agentOptions } : {}),
         parent,

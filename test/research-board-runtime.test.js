@@ -112,6 +112,7 @@ it('authenticated fixed routes export saved history and reject nonfresh or concu
       body: JSON.stringify(body)
     })
   try {
+    expect(await (await call('cancel', { taskId: 'never-started', drain: true })).json()).toEqual({ taskId: 'never-started', status: 'not-started' })
     expect(
       (
         await call(

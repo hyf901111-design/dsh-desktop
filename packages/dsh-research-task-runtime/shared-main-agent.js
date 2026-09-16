@@ -1,3 +1,4 @@
+import { componentCreationActive, isComponentAgent } from './component-agent-scope.js'
 import { bindCanvasChild } from './canvas-tools.js'
 import { randomUUID } from 'node:crypto'
 import { captureSharedWorkbenchPlan } from './workbench.js'
@@ -22,12 +23,14 @@ export function createSharedMainAgentAdapter(ctx) {
       }
       const observeDelegation = owner => {
         if (!owner.ctx?.on) return
-        bindings.push(owner.ctx.on('subagent/start', info => runs.add(info.runId)))
+        bindings.push(owner.ctx.on('subagent/start', info => {
+          if (!componentCreationActive() && !isComponentAgent(ctx.agents.get(info?.id), ctx.agents)) runs.add(info.runId)
+        }))
         bindings.push(owner.ctx.on('subagent/end', ended))
       }
       observeDelegation(agent)
       const attach = child => {
-        if (!child || child.id === agent.id || descendants.has(child)) return
+        if (!child || child.id === agent.id || descendants.has(child) || isComponentAgent(child, ctx.agents)) return
         let parentId = child.session?.header?.parentSession
         const visited = new Set()
         while (parentId && !visited.has(parentId)) {
@@ -40,6 +43,7 @@ export function createSharedMainAgentAdapter(ctx) {
             return
           }
           visited.add(parentId)
+          if (isComponentAgent(ctx.agents.get(parentId), ctx.agents)) return
           parentId = ctx.agents.get(parentId)?.session?.header?.parentSession
         }
       }

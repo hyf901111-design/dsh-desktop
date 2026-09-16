@@ -5,10 +5,10 @@ export function queuedConversations(state) {
     .sort((a,b) => (a.queueOrder ?? a.createdAt ?? 0) - (b.queueOrder ?? b.createdAt ?? 0))
 }
 export function assertConversationClaim(state, task) {
-  const running = state.tasks.filter(t => t.status === 'running')
+  const running = state.tasks.filter(t => t.conversation && t.status === 'running')
   if (task.conversation) {
-    if (running.length || queuedConversations(state)[0]?.taskId !== task.taskId || state.tasks.some(t => !t.conversation && t.status === 'pending')) reject('CONVERSATION_BUSY')
-  } else if (running.some(t => t.conversation && t.requestMessageId !== task.requestMessageId)) reject('CONVERSATION_BUSY')
+    if (running.length || queuedConversations(state)[0]?.taskId !== task.taskId) reject('CONVERSATION_BUSY')
+  }
 }
 export function mutateQueuedConversation(state, taskId, userId, action, text) {
   const task = state.tasks.find(t => t.taskId === taskId)
@@ -22,8 +22,11 @@ export function mutateQueuedConversation(state, taskId, userId, action, text) {
     task.status = 'interrupted'
     message.queueDeleted = true
   } else if (action === 'promote') {
-    task.queueOrder = Math.min(0, ...queuedConversations(state).map(t => t.queueOrder ?? t.createdAt ?? 0)) - 1
-    for (const active of state.tasks.filter(t => t.status === 'running')) active.stopRequested = true
+    task.queueOrder = Math.min(0, ...queuedConversations(state).map(t => t.queueOrder ?? t.createdAt ?? 0)) - 2
+    for (const active of state.tasks.filter(t => t.conversation && t.status === 'running' && !t.stopRequested)) {
+      if (!active.yieldRequested) active.queueOrder = task.queueOrder + 1
+      active.yieldRequested = true
+    }
   } else reject('INVALID_INPUT')
   return task
 }

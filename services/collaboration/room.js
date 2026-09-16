@@ -1073,7 +1073,7 @@ export class ResearchBoardRoom {
         result = { task: publicTask(task) }
       }
     } else if (
-      ['taskClaim', 'taskHeartbeat', 'taskResult', 'taskStop'].includes(
+      ['taskClaim', 'taskHeartbeat', 'taskResult', 'taskStop', 'taskYield'].includes(
         action
       )
     ) {
@@ -1114,6 +1114,7 @@ export class ResearchBoardRoom {
         }
         if (task.status === 'running' && task.conversation && command.executorStopped !== true) {
           task.stopRequested = true
+          delete task.yieldRequested
         } else if (task.status === 'pending' || task.status === 'running') {
           if (task.status === 'running' && task.conversation &&
             (task.sessionHash !== user.session_hash || task.leaseHash !== hash(String(command.leaseToken)))) fail('STALE_LEASE', 409)
@@ -1127,13 +1128,29 @@ export class ResearchBoardRoom {
       } else {
         if (
           task.status !== 'running' ||
-          task.leaseExpiresAt <= now() ||
+          (action !== 'taskYield' && task.leaseExpiresAt <= now()) ||
           task.epoch !== board.sharingEpoch ||
           task.sessionHash !== user.session_hash ||
-          task.leaseHash !== hash(String(command.leaseToken))
+          (task.leaseHash !== hash(String(command.leaseToken)) && !(action === 'taskYield' && command.executorId === task.executorId))
         )
           fail('STALE_LEASE', 409)
-        if (action === 'taskHeartbeat') {
+        if (action === 'taskYield') {
+          if (!task.conversation || (!task.yieldRequested && !task.stopRequested) || command.executorStopped !== true) fail('YIELD_UNAVAILABLE', 409)
+          if (task.stopRequested) {
+            task.status = 'interrupted'
+            task.completedAt = now()
+          } else {
+            task.status = 'pending'
+            task.resumeCount = (task.resumeCount ?? 0) + 1
+            task.pausedAt = now()
+          }
+          delete task.yieldRequested
+          delete task.leaseHash
+          delete task.sessionHash
+          delete task.executorId
+          delete task.leaseExpiresAt
+          result = { task: publicTask(task) }
+        } else if (action === 'taskHeartbeat') {
           task.leaseExpiresAt = now() + LIMITS.leaseMs
           result = { task: publicTask(task) }
         } else {
@@ -1536,6 +1553,7 @@ export class ResearchBoardRoom {
       for (const task of current.tasks) {
         if (task.status === 'running') {
           let valid = task.leaseExpiresAt > now()
+          let authorized = true
           try {
             await authorize(
               this.env,
@@ -1545,7 +1563,12 @@ export class ResearchBoardRoom {
             )
           } catch {
             valid = false
+            authorized = false
           }
+          // A priority switch needs proof of a drained executor, not just a timeout.
+          // Keep the slot reserved until its originating session acknowledges; it
+          // may recover that acknowledgement after reconnect or application restart.
+          if (!valid && authorized && task.yieldRequested && !task.stopRequested) continue
           if (!valid) {
             task.status = 'interrupted'
             delete task.leaseHash

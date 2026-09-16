@@ -2416,10 +2416,10 @@ export function ResearchBoardQueue({ page, sessionId, QueueDock, ...props }: any
     .sort((a: any,b: any) => (a.queueOrder ?? a.createdAt ?? 0) - (b.queueOrder ?? b.createdAt ?? 0))
     .map((t: any) => {
       const m = view.messages.find((m: any) => m.id === t.requestMessageId)
-      return { id: t.taskId, placement: 'queued', source: { kind: 'user' }, text: m?.text ?? '', preview: m?.text ?? '',
+      return { id: t.taskId, placement: 'queued', source: { kind: 'user' }, text: m?.text ?? '', preview: (t.resumeCount ? '待继续 · ' : '') + (m?.text ?? ''),
         authorName: m?.author?.username ?? m?.authorName ?? '成员', editable: view.permissions.execute && t.initiatorId === userId }
     }), [view, userId])
-  const snapshot = { queue, running: view?.tasks.some((t: any) => t.status === 'running'), subagent: null }
+  const snapshot = { queue, running: view?.tasks.some((t: any) => t.conversation && t.status === 'running'), subagent: null }
   return h(QueueDock, { ...props, useSession: (select: any) => select(snapshot), updateQueue: async (taskId: string, action: any) => {
     await page.call('queue.' + ({ edit: 'edit', remove: 'delete', steer: 'promote' } as any)[action.kind], {
       boardId: view.boardId, taskId, ...(action.kind === 'edit' ? { text: action.content.map((b: any) => b.text ?? '').join('') } : {})
@@ -2467,7 +2467,7 @@ export function ResearchBoardDiscussion({
       h('button', { onClick: () => showRecovery(page) }, '查看我的恢复记录')
     )
   const live = [
-    ...new Map(v.messages.filter((m: any) => !m.queueDeleted && !v.tasks.some((t: any) => t.conversation && t.status === 'pending' && t.requestMessageId === m.id)).map((m: any) => [m.id, m])).values()
+    ...new Map(v.messages.filter((m: any) => !m.queueDeleted && !v.tasks.some((t: any) => t.conversation && t.status === 'pending' && !t.resumeCount && t.requestMessageId === m.id)).map((m: any) => [m.id, m])).values()
   ] as any[]
   const requestIds = new Set(
     live.filter((m) => m.role === 'user').map((m) => m.id)
@@ -2515,7 +2515,7 @@ export function ResearchBoardDiscussion({
   const renderControls = (requestId?: string) => {
     const belongs = (id: unknown) =>
       requestId ? id === requestId : !requestIds.has(id)
-    const tasks = v.tasks.filter((t: any) => belongs(t.requestMessageId) && !(t.conversation && t.status === 'pending') && !v.messages.some((m: any) => m.id === t.requestMessageId && m.queueDeleted))
+    const tasks = v.tasks.filter((t: any) => belongs(t.requestMessageId) && !(t.conversation && t.status === 'pending' && !t.resumeCount) && !v.messages.some((m: any) => m.id === t.requestMessageId && m.queueDeleted))
     const attempts = requestId ? boardTaskAttempts(tasks) : { current: tasks, previous: [] }
     return h(
       'div',

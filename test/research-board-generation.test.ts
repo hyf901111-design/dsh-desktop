@@ -23,7 +23,7 @@ it('creates a leased workbench for an editor from the shared composer, reusing t
   const { integration, service, canvas, runtimeRequest } = await fixture()
   Object.assign(canvas.artifacts[0]!, { stackOrder: 970 })
   const doc = createDocument(canvas), messages: any[] = [], tasks: any[] = [], commands: any[] = []
-  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks, snapshot: { canvas: projectDocument(doc) } } })) as any
+  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', signal: new AbortController().signal, snapshot: { board: { sharingEpoch: 3 }, tasks, snapshot: { canvas: projectDocument(doc) } } })) as any
   ;(integration as any).options.client.request = async ({ body }: any) => {
     commands.push(body)
     const reply: any = { action: body.action, operationId: body.operationId, seq: commands.length }
@@ -68,7 +68,7 @@ async function fixture(tasks: any[] = []) {
   const canvas = { files: [], artifacts: [node] }
   const contextSnapshot = { canvas, history: [], messages: [{ id: 'message', text: '比特币实时监控面板', context: { scope: 'board', references: [] } }, { id: 'old', text: '计数器无需联网' }] }
   const commands: any[] = []
-  const service = { taskAuthority: () => ({ localSessionId: 'local', snapshot: { tasks, snapshot: { canvas } } }), invoke: vi.fn(async () => {}) }
+  const service = { taskAuthority: () => ({ localSessionId: 'local', signal: new AbortController().signal, snapshot: { tasks, snapshot: { canvas } } }), invoke: vi.fn(async () => {}) }
   const runtimeRequest = vi.fn(async (_action: string, _body: any, _signal: AbortSignal): Promise<any> => ({ status: 'failed', errorCode: 'EMPTY_OUTPUT', error: '模型没有返回可展示的内容' }))
   const integration = new ResearchBoardIntegration({ root, storage: {}, registry: {}, clipboard: () => undefined,
     service: () => service, runtimeRequest, runtimeUrl: () => null, runtimeToken: 'test', revealFile() {}, invalidate() {},
@@ -125,7 +125,7 @@ it('sends only the current request as the retrieval query and publishes typed fa
 
 it('restarts an explicitly retried request under current authority after sharing was reopened', async () => {
   const { integration, service } = await fixture()
-  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: { files: [], artifacts: [] } } } })) as any
+  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', signal: new AbortController().signal, snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: { files: [], artifacts: [] } } } })) as any
   const intent = { text: '重新生成计数器', context: { scope: 'board', references: [] }, targetId: 'removed', targetCollection: 'artifacts', source: 'manual' }
   const key = integration.journal.prepare('user', 'board', 'old', intent, 1)
   integration.journal.update(key, { runtimeState: 'superseded', reply: { taskId: 'old-task', requestMessageId: 'old-message' }, restart: { epoch: 3, mutation: 'previous-chat-retry', intent: { text: intent.text, context: intent.context, source: 'manual' } } })
@@ -149,7 +149,7 @@ it('creates and fills a new canvas component when the old retry target was delet
   const { integration, service, canvas, runtimeRequest } = await fixture()
   const doc = createDocument(canvas)
   const commands: any[] = []
-  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: projectDocument(doc) } } })) as any
+  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', signal: new AbortController().signal, snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: projectDocument(doc) } } })) as any
   ;(integration as any).options.client.request = async ({ body }: any) => {
     commands.push(body)
     const reply: any = { action: body.action, operationId: body.operationId, seq: commands.length }
@@ -197,7 +197,7 @@ it('does not restart old requests after current edit access is revoked', async (
 
 it('resumes the same reserved request after a lost reply, retaining an existing target and never restoring a refresh schedule', async () => {
   const { integration, service, canvas, commands } = await fixture()
-  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas } } })) as any
+  service.taskAuthority = vi.fn(() => ({ localSessionId: 'local', signal: new AbortController().signal, snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas } } })) as any
   const key = integration.journal.prepare('user', 'board', 'old', { text: '刷新计数器', context: { scope: 'board', references: [] }, targetId: 'node', targetCollection: 'artifacts', source: 'refresh', refreshScheduleId: 'stale-schedule' }, 1)
   integration.journal.update(key, { runtimeState: 'interrupted', reply: { taskId: 'old-task' } })
   const submit = vi.spyOn(integration, 'submit').mockRejectedValueOnce(Error('connection lost')).mockResolvedValue({ accepted: true, taskId: 'new-task' })
@@ -216,7 +216,7 @@ it('deduplicates concurrent explicit retries before issuing a new task and rejec
   const { integration, service } = await fixture()
   service.taskAuthority = vi.fn((_a: string, _b: string, epoch?: number) => {
     if (epoch !== undefined && epoch !== 3) throw Error('BOARD_ACCESS_CHANGED')
-    return { localSessionId: 'local', snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: { files: [], artifacts: [] } } } }
+    return { localSessionId: 'local', signal: new AbortController().signal, snapshot: { board: { sharingEpoch: 3 }, tasks: [], snapshot: { canvas: { files: [], artifacts: [] } } } }
   }) as any
   const key = integration.journal.prepare('user', 'board', 'old', { text: '计数器', context: { scope: 'board', references: [] } }, 1)
   integration.journal.update(key, { runtimeState: 'interrupted', reply: { taskId: 'old-task' } })
@@ -270,4 +270,55 @@ it('reports an old collaboration service before starting the main agent', async 
   expect(runtimeRequest).not.toHaveBeenCalled()
   expect(commands.find(c => c.action === 'taskStop')).toMatchObject({ failureCode: 'GENERATION_FAILED' })
   expect(integration.journal.get(key)).toMatchObject({ failureCode: 'COLLABORATION_UPGRADE_REQUIRED', runtimeState: 'interrupted' })
+})
+it('checkpoints a promoted-away conversation and continues it automatically with a fresh execution id', async () => {
+  const task: any = { taskId: 'original', requestMessageId: 'message', status: 'running', conversation: true, yieldRequested: true }
+  const { integration, runtimeRequest, commands, service } = await fixture([task])
+  const key = integration.journal.prepare('user', 'board', 'original-mutation', { text: '完成原任务' }, 1)
+  integration.journal.update(key, { reply: { taskId: task.taskId } })
+  runtimeRequest.mockImplementation(async action => action === 'start' ? { status: 'running' } : { status: 'interrupted' })
+  await (integration as any).execute(key, task, new AbortController().signal)
+  expect(commands.some(c => c.action === 'taskStop')).toBe(false)
+  expect(commands.find(c => c.action === 'taskYield')).toMatchObject({ taskId: 'original', executorStopped: true })
+  expect(integration.journal.get(key).runtimeState).toBe('paused')
+  task.status = 'pending'; task.resumeCount = 1; task.initiatorId = 'user'; delete task.yieldRequested
+  service.taskAuthority = () => ({ localSessionId: 'local', signal: new AbortController().signal, snapshot: { tasks: [task], board: { sharingEpoch: 1 }, snapshot: { canvas: { files: [], artifacts: [] } } } } as any)
+  runtimeRequest.mockResolvedValue({ status: 'completed', text: '原任务继续完成' })
+  integration.requests('user', 'board')
+  await vi.waitFor(() => expect(integration.journal.get(key).runtimeState).toBe('completed'))
+  const starts = runtimeRequest.mock.calls.filter(([a]) => a === 'start').map(([, body]) => body)
+  expect(starts[1].taskId).not.toBe(starts[0].taskId)
+  expect(starts[1].sessionId).toBe(starts[0].sessionId)
+  expect(starts[1].prompt).toContain('继续此前暂存的任务')
+  expect(integration.journal.get(key).runtimeState).toBe('completed')
+  expect(commands.filter(c => c.action === 'taskClaim')).toHaveLength(2)
+  expect(service.invoke).toHaveBeenCalled()
+})
+it('workbench component signals are independent of the planning conversation', async () => {
+  const { integration, service, canvas } = await fixture()
+  const boardLifetime = new AbortController(), planner = new AbortController()
+  service.taskAuthority = () => ({ localSessionId: 'local', signal: boardLifetime.signal, snapshot: { board: { sharingEpoch: 1 }, tasks: [], snapshot: { canvas } } } as any)
+  const submit = vi.spyOn(integration, 'submit').mockResolvedValue({} as any)
+  const key = integration.journal.prepare('user', 'board', 'signal-scope', { text: '工作台' }, 1)
+  await (integration as any).createSharedWorkbench(key, 'request', { requestId: 'p', title: '工作台', panels: [0,1].map(i => ({ title: `面板${i}`, prompt: '创建离线组件', type: 'html', size: 'small' })) }, { references: [] }, planner.signal)
+  planner.abort()
+  expect(submit.mock.calls).toHaveLength(2)
+  for (const [request] of submit.mock.calls) expect(request.signal.aborted).toBe(false)
+  boardLifetime.abort()
+  for (const [request] of submit.mock.calls) expect(request.signal.aborted).toBe(true)
+})
+it.each([[undefined, 0], ['interrupted', 0], ['paused', 0], [undefined, 1], ['interrupted', 1], ['paused', 1]])('recovers a drained yield after reconnect (state=%s, attempt=%s)', async (runtimeState, attempt) => {
+  const task: any = { taskId: 'original', requestMessageId: 'message', initiatorId: 'user', status: 'running', conversation: true, yieldRequested: true, executorId: 'original-executor' }
+  const { integration, service, runtimeRequest, commands } = await fixture([task])
+  service.taskAuthority = () => ({ localSessionId: 'local', signal: new AbortController().signal, snapshot: { board: { sharingEpoch: 1 }, tasks: [task], snapshot: { canvas: { files: [], artifacts: [] } } } } as any)
+  const key = integration.journal.prepare('user', 'board', 'lost-ack', { text: '原任务' }, 1)
+  if (attempt) await integration.journal.step(key, 'taskYield', 'taskYield', { taskId: task.taskId, executorId: 'previous-executor', executorStopped: true }, async body => ({ action: body.action, operationId: body.operationId, seq: 1 }))
+  integration.journal.update(key, { reply: { taskId: task.taskId }, runtimeState, attempt: 0, executorAttempt: attempt, executorId: 'original-executor', localTaskId: 'original' })
+  runtimeRequest.mockResolvedValue({ status: 'interrupted' })
+  integration.requests('user', 'board')
+  await vi.waitFor(() => expect(commands.some(c => c.action === 'taskYield')).toBe(true))
+  expect(runtimeRequest.mock.calls.map(([a]) => a)).toEqual(['cancel'])
+  expect(runtimeRequest.mock.calls[0]?.[1]).toEqual({ taskId: attempt ? 'original:resume:1' : 'original', drain: true })
+  expect(commands.find(c => c.action === 'taskYield')).toMatchObject({ executorId: 'original-executor', executorStopped: true })
+  integration.stop()
 })
