@@ -133,3 +133,6 @@
 - 封面声明有效 `coverProfile` 与 `sourceSlide`，使用 `reuse`，并通过 `check_efund_cover.py` 的画布、位置、字号、字体、右侧品牌图媒体/裁切和其他品牌家具精确比对。
 - `check_efund_writing_style.py --warnings-as-errors` 为 0 warning；例外仅限有来源的法务原文、直接引语或正式口号，并逐 Shape 登记。
 - 每页逐张渲染复核；所有自动检查错误为 0，警告均有修复或书面判定。
+
+
+1.0.9 补充以 [delivery-109.md](delivery-109.md) 为准：适用页默认选择左文右图，逐页填写 `layoutChoice` 并复核适用页采用率；封面副标题常规不加粗；目录首行无顶线，其余行下分隔保留。普通正文表格无描边规则不得误用于目录。

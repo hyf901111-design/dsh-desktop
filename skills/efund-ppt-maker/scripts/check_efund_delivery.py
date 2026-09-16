@@ -116,6 +116,74 @@ def check_toc_spacing(root, source_root, page, tolerance):
         return ['toc-layout-unresolved']
 
 
+def check_layout_choice(page):
+    """Require content-led selection; no unconditional slide-count quota."""
+    if page.get('pageKind') != 'content':
+        return []
+    choice = page.get('layoutChoice', {})
+    if (not isinstance(choice, dict) or not isinstance(choice.get('eligible'), bool)
+            or not choice.get('selected') or not str(choice.get('reason', '')).strip()):
+        return ['layout-choice-missing']
+    if choice['selected'] == 'left-text-right-visual' and not choice['eligible']:
+        return ['layout-choice-ineligible']
+    if choice['eligible'] and choice['selected'] != 'left-text-right-visual' and not str(choice.get('alternativeReason', '')).strip():
+        return ['layout-alternative-reason-missing']
+    return []
+
+
+def layout_selection_summary(mapping):
+    choices = [p.get('layoutChoice', {}) for p in mapping.get('outputSlides', [])
+               if p.get('pageKind') == 'content']
+    eligible = [c for c in choices if isinstance(c, dict) and c.get('eligible') is True]
+    selected = sum(c.get('selected') == 'left-text-right-visual' for c in eligible)
+    rate = selected / len(eligible) if eligible else None
+    return {'eligiblePages': len(eligible), 'selectedPages': selected,
+            'adoptionRate': rate, 'reviewSuggested': rate is not None and rate < 0.6}
+
+
+def check_toc_rules(root, page):
+    """TOCs retain row rules; their first row must explicitly disable its top edge."""
+    rows = page.get('tocRows', [])
+    if not rows:
+        return ['toc-layout-unresolved']
+    errors = []
+    try:
+        for index, item in enumerate(rows):
+            if 'tableId' in item:
+                _, row = table_rows(root, item['tableId'])[item['rowIndex']]
+                for cell in row.findall('a:tc', NS):
+                    props = cell.find('a:tcPr', NS)
+                    top = props.find('a:lnT', NS) if props is not None else None
+                    bottom = props.find('a:lnB', NS) if props is not None else None
+                    if index == 0 and (top is None or top.find('a:noFill', NS) is None):
+                        errors.append('toc-top-rule-forbidden')
+                    if bottom is None or bottom.find('a:noFill', NS) is not None:
+                        errors.append('toc-row-separator-mismatch')
+            else:
+                line = next((e for e in root.iter() if object_id(e) == str(item.get('separatorShapeId'))), None)
+                geometry = element_geometry(line) if line is not None else None
+                _, center = toc_item(root, item)
+                if geometry is None or geometry[1] <= center:
+                    errors.append('toc-row-separator-mismatch')
+        # Also catch independent rules above the first entry (including connector shapes).
+        first, center = toc_item(root, rows[0])
+        if 'tableId' in rows[0]:
+            _, row = table_rows(root, rows[0]['tableId'])[rows[0]['rowIndex']]
+            top_y = center - int(row.get('h')) / 2
+        else:
+            top_y = element_geometry(first)[1]
+        for shape in list(root.findall('.//p:sp', NS)) + list(root.findall('.//p:cxnSp', NS)):
+            geom = element_geometry(shape)
+            line = shape.find('p:spPr/a:ln', NS)
+            preset = shape.find('p:spPr/a:prstGeom', NS)
+            is_rule = shape.tag.endswith('}cxnSp') or (preset is not None and preset.get('prst') == 'line')
+            if is_rule and geom and geom[2] > 0 and geom[3] < 20000 and line is not None and line.find('a:noFill', NS) is None and top_y - 150000 <= geom[1] <= center:
+                errors.append('toc-top-rule-forbidden')
+    except (KeyError, ValueError, TypeError, IndexError, AttributeError):
+        errors.append('toc-layout-unresolved')
+    return sorted(set(errors))
+
+
 def audit(pptx, source, mapping):
     output, reference = open_package(pptx), open_package(source)
     issues = []
@@ -135,8 +203,20 @@ def audit(pptx, source, mapping):
             number = page['outputSlide']
             part = logical_slide_part(output, number)
             root = xml_root(output, part)
+            for code in check_layout_choice(page): add(code, number)
+            if page.get('pageKind') == 'toc':
+                for code in check_toc_rules(root, page): add(code, number)
             # Tables must override inherited styles explicitly, including merged edges.
+            toc_cells = set()
+            if page.get('pageKind') == 'toc':
+                for row in page.get('tocRows', []):
+                    if 'tableId' in row:
+                        try:
+                            toc_cells.update(table_rows(root, row['tableId'])[row['rowIndex']][1].findall('a:tc', NS))
+                        except (ValueError, IndexError, KeyError):
+                            add('toc-layout-unresolved', number)
             for cell in root.findall('.//a:tc', NS):
+                if cell in toc_cells: continue
                 props = cell.find('a:tcPr', NS)
                 for code in check_table(props if props is not None else ET.Element('empty')): add(code, number)
             for shape in root.findall('.//p:sp', NS):
@@ -192,9 +272,10 @@ if __name__ == '__main__':
     parser.add_argument('--map',type=Path,required=True);parser.add_argument('--json-output',type=Path)
     args=parser.parse_args()
     try:
-        issues=audit(args.pptx,args.source,json.loads(args.map.read_text()))
+        mapping=json.loads(args.map.read_text())
+        issues=audit(args.pptx,args.source,mapping)
     except Exception as error:
         issues=[{'severity':'error','code':'delivery-audit-failed','message':str(error)}]
-    result=json.dumps({'ok':not issues,'issues':issues},ensure_ascii=False,indent=2)
+    result=json.dumps({'ok':not issues,'issues':issues,'layoutSelection':layout_selection_summary(mapping) if 'mapping' in locals() else None},ensure_ascii=False,indent=2)
     if args.json_output: args.json_output.parent.mkdir(parents=True,exist_ok=True);args.json_output.write_text(result)
     print(result);raise SystemExit(bool(issues))
