@@ -385,6 +385,7 @@ body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag
   .t8lSSG_panel [data-odyssey-panel-tab]:has(>svg) .t8lSSG_tabTitle { display:none; }
 }
 @container odyssey-panel-tab (max-width:40px) {
+  body .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] .t8lSSG_tabClose { margin-inline:auto; }
   .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true]:has(.t8lSSG_tabClose) > svg,
   .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true]:has(.t8lSSG_tabClose) .t8lSSG_tabTitle { display:none; }
 }
