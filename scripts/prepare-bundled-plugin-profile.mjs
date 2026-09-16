@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { syncProfileRuntimePatches } from './lib/profile-runtime-patches.mjs'
 import { patchBetterSidebarPackage } from './lib/patch-sherlock-better-sidebar.mjs'
 import { patchSherlockOfficePreviewPackage } from './lib/patch-sherlock-office-preview.mjs'
 
@@ -256,12 +257,13 @@ async function main() {
     for (const packageName of policy.runtimePackages) {
       await lstat(path.join(stagedProfile, 'node_modules', packageName, 'package.json'))
     }
+    const runtimePatchFingerprint = await syncProfileRuntimePatches(projectRoot, stagedProfile)
     await validatePortableTree(stagedProfile)
 
     // electron-builder excludes directory segments named node_modules from extraResources.
     // Ship the installed offline tree under a neutral name and restore it on first launch.
     await rename(path.join(stagedProfile, 'node_modules'), path.join(stagedProfile, 'modules'))
-    const contentFingerprint = (await portableTreeFingerprint(vendorRoot)).digest('hex')
+    const contentFingerprint = (await portableTreeFingerprint(vendorRoot)).update(runtimePatchFingerprint).digest('hex')
     await writeFile(
       path.join(stagedProfile, 'sherlock-profile-content.sha256'),
       `${contentFingerprint}\n`,

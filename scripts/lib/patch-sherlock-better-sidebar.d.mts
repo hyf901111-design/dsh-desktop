@@ -1,7 +1,7 @@
 export declare function patchBetterSidebarClient(source: string): string
 export declare function patchBetterSidebarEditor(source: string): string
 export declare function patchBetterSidebarPackage(packageRoot: string): Promise<void>
-export declare function sherlockSessionHasChatFile(session: { events?: Array<{ type: string; data?: { source?: { kind: string }; content?: Array<{ type: string; text?: string }> } }> } | undefined, targetPath: string): boolean
+export declare function sherlockSessionHasChatFile(session: { events?: Array<{ type: string; data?: any }> } | undefined, targetPath: string): boolean
 export declare function patchBetterSidebarServer(source: string): string
 export declare function sherlockVirtualBoardDirectory(sessionId: string, cwd: string, target: string, root?: string): Promise<boolean>
 export declare function sherlockResearchGenerationOwnsFocus(state: unknown, document?: { querySelector(selectors: string): unknown }): boolean
