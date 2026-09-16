@@ -15,8 +15,10 @@ export function patchCanvasRefresh(source) {
     if(source.split(anchor).length!==2)throw Error('Canvas refresh anchor missing or ambiguous: '+anchor.slice(0,90));
     source=source.replace(anchor,value);
   };
-  replace('function ResearchCanvas(',marker+'\n'+refreshResearchCanvasView.toString()+'\nfunction ResearchCanvas(');
   const state='const [contextMenu, setContextMenu] = (0, react.useState)(null);';
+  replace(state,marker+'\n'+refreshResearchCanvasView.toString()+'\n'+state);
+  // Older builds may retain hooks while the layout patch regenerated helpers.
+  if(source.includes('const [canvasRefreshEpoch,setCanvasRefreshEpoch]'))return source;
   replace(state,state+`
     const [canvasRefreshEpoch,setCanvasRefreshEpoch]=react.useState(0);
     const [canvasRefreshBusy,setCanvasRefreshBusy]=react.useState(false);
