@@ -1,5 +1,5 @@
 /* Focus must not add a ring. Canvas selection is a separate, persistent state. */
-html body :is(:focus,:focus-visible):not([data-research-node-id]) {
+html body :is(:focus,:focus-visible):not([data-research-node-id],[popover],dialog,[role="dialog"],[role="menu"],[role="listbox"]) {
   outline:none!important;
   box-shadow:none!important;
 }
