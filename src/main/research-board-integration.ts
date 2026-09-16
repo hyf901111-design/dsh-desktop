@@ -1382,7 +1382,7 @@ export class ResearchBoardIntegration {
           key,
           'taskStop',
           'taskStop',
-          { taskId: task.taskId, ...(claimed && executorStopped ? { executorStopped: true, leaseToken } : {}), ...(!signal.aborted && failureCode ? { failureCode } : {}) },
+          { taskId: task.taskId, ...(claimed && executorStopped ? { executorStopped: true, leaseToken } : {}), ...(!signal.aborted && failureCode ? { failureCode: failureCode === 'COLLABORATION_UPGRADE_REQUIRED' ? 'GENERATION_FAILED' : failureCode } : {}) },
           new AbortController().signal
         )
       } catch {}

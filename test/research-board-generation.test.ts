@@ -257,7 +257,7 @@ it('distinguishes a live message-to-task submission from one interrupted by rest
 })
 
 it('reports an old collaboration service before starting the main agent', async () => {
-  const { integration, runtimeRequest } = await fixture()
+  const { integration, runtimeRequest, commands } = await fixture()
   const client = (integration as any).options.client
   const request = client.request
   client.request = async (input: any) => {
@@ -268,5 +268,6 @@ it('reports an old collaboration service before starting the main agent', async 
   const key = integration.journal.prepare('user', 'board', 'old-service', { text: '整理画板' }, 1)
   await (integration as any).execute(key, { taskId: 'task', requestMessageId: 'message' }, new AbortController().signal)
   expect(runtimeRequest).not.toHaveBeenCalled()
+  expect(commands.find(c => c.action === 'taskStop')).toMatchObject({ failureCode: 'GENERATION_FAILED' })
   expect(integration.journal.get(key)).toMatchObject({ failureCode: 'COLLABORATION_UPGRADE_REQUIRED', runtimeState: 'interrupted' })
 })
