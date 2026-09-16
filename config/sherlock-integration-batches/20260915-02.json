@@ -9,27 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一取消客户端聚焦描边",
+        "featureName": "修正搜索视觉及弹层边框稳定性",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "fe5b6577d034b53537c4abc1688f044ca099ecbe",
-        "tipCommit": "42183e4b938c1de7153d555b1a834df70e37edd1",
+        "baseCommit": "42183e4b938c1de7153d555b1a834df70e37edd1",
+        "tipCommit": "c35919d3f3294a813003c63a9f50a7e852a0224f",
         "commits": [
           {
-            "commit": "42183e4b938c1de7153d555b1a834df70e37edd1",
+            "commit": "c35919d3f3294a813003c63a9f50a7e852a0224f",
             "parents": [
-              "fe5b6577d034b53537c4abc1688f044ca099ecbe"
+              "42183e4b938c1de7153d555b1a834df70e37edd1"
             ],
-            "subject": "统一取消客户端聚焦描边并保留画板选中边框"
+            "subject": "还原紧凑搜索布局并保留弹层固定边框"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "src/preload/focus-style.css"
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
-            "path": "src/preload/shell-style.ts"
+            "path": "src/preload/focus-style.css"
+          },
+          {
+            "status": "A",
+            "path": "test/focus-style.test.ts"
           }
         ],
         "checks": [
@@ -39,12 +43,13 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/sidebar-session-search.test.ts",
-              "test/ui-localization.test.ts"
+              "test/ui-localization.test.ts",
+              "test/focus-style.test.ts"
             ],
             "outcome": "passed",
-            "summary": "9项聚焦检查和类型检查通过",
-            "verifiedCommit": "42183e4b938c1de7153d555b1a834df70e37edd1",
-            "completedAt": "2026-09-15T23:57:11.298707+00:00",
+            "summary": "10项聚焦验证及类型检查通过",
+            "verifiedCommit": "c35919d3f3294a813003c63a9f50a7e852a0224f",
+            "completedAt": "2026-09-16T00:07:57.943200+00:00",
             "timeoutMs": 120000
           },
           {
@@ -56,9 +61,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "9项聚焦检查和类型检查通过",
-            "verifiedCommit": "42183e4b938c1de7153d555b1a834df70e37edd1",
-            "completedAt": "2026-09-15T23:57:11.298707+00:00",
+            "summary": "10项聚焦验证及类型检查通过",
+            "verifiedCommit": "c35919d3f3294a813003c63a9f50a7e852a0224f",
+            "completedAt": "2026-09-16T00:07:57.943200+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -75,41 +80,7 @@
         "risks": [
           "尚需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-15T23:57:11.298707+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
-        "verificationCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
-            "completedAt": "2026-09-15T23:57:21.948Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "8e243fcabed7e02d6c3eb92c99699b391924d4f2",
-            "completedAt": "2026-09-15T23:57:21.948Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-15T23:57:21.948Z"
+        "generatedAt": "2026-09-16T00:07:57.943200+00:00"
       }
     }
   ],
