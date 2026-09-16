@@ -27,7 +27,7 @@ const officeClientPath = new URL(
 )
 
 async function officeClientSource(): Promise<string> {
-  return readFile(officeClientPath, 'utf8')
+  return stripPptxResizePatch(await readFile(officeClientPath, 'utf8'))
 }
 
 async function loadPatchedOfficeClient(options: {

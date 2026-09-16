@@ -1,3 +1,4 @@
+import { generatedFileFinderPath } from './generated-file-finder'
 import { buildNativeFileMenu } from './native-file-menu'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
 import { clipboard, ipcMain, Menu, shell, type BrowserWindow } from 'electron'
@@ -8,7 +9,7 @@ async function clickedElementPathCandidates(
   window: BrowserWindow,
   x: number,
   y: number
-): Promise<{ values: string[]; sessionId?: string }> {
+): Promise<{ values: string[]; sessionId?: string; fileName?: string }> {
   if (window.isDestroyed()) return { values: [] }
   try {
     const result = await window.webContents.executeJavaScript(`(() => {
@@ -25,11 +26,16 @@ async function clickedElementPathCandidates(
       }
       if (origin.textContent) values.push(origin.textContent);
       const inputs = Array.from(document.querySelectorAll('textarea[data-odyssey-file-reference-session]')).filter(el => el.getClientRects().length);
-      return { values, sessionId: inputs.length === 1 ? inputs[0].getAttribute('data-odyssey-file-reference-session') : undefined };
+      const button = origin.closest('button');
+      const text = button?.textContent?.trim() ?? '';
+      const title = button?.getAttribute('title') ?? '';
+      const fileName = text && !/[\\/]/.test(text) && (title === text || title.endsWith('/' + text)) ? text : undefined;
+      return { values, fileName, sessionId: inputs.length === 1 ? inputs[0].getAttribute('data-odyssey-file-reference-session') : undefined };
     })()`, true)
     if (!result || !Array.isArray(result.values)) return { values: [] }
     return {
       values: result.values.filter((value: unknown): value is string => typeof value === 'string'),
+      fileName: typeof result.fileName === 'string' ? result.fileName : undefined,
       sessionId: typeof result.sessionId === 'string' ? result.sessionId : undefined
     }
   } catch {
@@ -57,10 +63,25 @@ export function installContextMenu(
       ? await resolveRoot?.(elementCandidates.sessionId).catch(() => null)
       : undefined
     if (window.isDestroyed()) return
-    const finderPath = resolveFinderPath(
+    let finderPath = resolveFinderPath(
       [...elementCandidates.values, params.linkURL, params.selectionText],
       existsSync, cwd
     )
+    if (!finderPath && cwd && elementCandidates.sessionId && elementCandidates.fileName) {
+      try {
+        const request = JSON.stringify({sessionId: elementCandidates.sessionId, cwd, query: elementCandidates.fileName})
+        const result = await window.webContents.executeJavaScript(`(async () => {
+          const response = await fetch('/sidebar/api/fs.search', {
+            method: 'POST', headers: {'content-type':'application/json'},
+            body: ${JSON.stringify(request)}, signal: AbortSignal.timeout(2000)
+          });
+          const payload = await response.json();
+          return response.ok && payload.ok ? payload.value : null;
+        })()`)
+        finderPath = generatedFileFinderPath(result, elementCandidates.fileName, cwd, existsSync)
+      } catch { /* Keep the standard menu available if workspace search fails. */ }
+    }
+    if (window.isDestroyed()) return
     const template = buildContextMenuTemplate({ ...params, finderPath }, locale(), {
       openLink: (url) => {
         void shell.openExternal(url)

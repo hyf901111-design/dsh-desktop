@@ -1,6 +1,9 @@
 export interface PptxResizeViewer {
   sherlockResizeTimer?: ReturnType<typeof setTimeout>
   presentation?: unknown
+  activeRenderMode?: string
+  container: HTMLElement
+  getDisplayMetrics(): { scale: number; displayWidth: number; displayHeight: number }
   queueRender(): unknown
 }
 export function cancelPptxResize(viewer: PptxResizeViewer): void
