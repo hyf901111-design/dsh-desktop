@@ -1,3 +1,4 @@
+import {patchPptxResize,stripPptxResizePatch} from './pptx-resize-settle.mjs'
 import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -477,6 +478,6 @@ export async function patchSherlockOfficePreviewPackage(packageDirectory) {
   }
   const clientPath = path.join(packageDirectory, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
-  const patched = patchSherlockOfficePreviewClient(source)
+  const patched = patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(source)))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
 }

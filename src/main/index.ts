@@ -577,7 +577,7 @@ function createWindow(): BrowserWindow {
   })
   const canvasWheelRouter = installResearchCanvasWheelRouter(window)
   researchCanvasWheelRouter = canvasWheelRouter
-  installContextMenu(window, harnessLocale)
+  installContextMenu(window, harnessLocale, (sessionId) => new HarnessWorkspaceFileResolver(join(app.getPath('userData'), 'harness')).resolveRoot(sessionId))
   window.on('closed', () => {
     canvasWheelRouter.dispose()
     if (researchCanvasWheelRouter === canvasWheelRouter) researchCanvasWheelRouter = undefined

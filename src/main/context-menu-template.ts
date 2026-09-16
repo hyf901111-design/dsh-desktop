@@ -1,5 +1,5 @@
 import type { MenuItemConstructorOptions } from 'electron'
-import { isAbsolute } from 'node:path'
+import { isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export interface ContextMenuState {
@@ -87,12 +87,17 @@ export function isExternalWebUrl(rawUrl: string): boolean {
  */
 export function resolveFinderPath(
   values: readonly string[],
-  exists: (path: string) => boolean
+  exists: (path: string) => boolean,
+  cwd?: string | null
 ): string {
   for (const raw of values) {
     const value = raw.trim()
     if (value === '') continue
+    if (/^(?:https?:|mailto:|javascript:|data:|\/\/)/i.test(value)) continue
     const candidates: string[] = []
+    if (cwd && isAbsolute(cwd) && !isAbsolute(value) && !/^[a-z][a-z0-9+.-]*:/i.test(value)) {
+      try { candidates.push(resolve(cwd, decodeURIComponent(value))) } catch {}
+    }
     if (value.startsWith('file:')) {
       try {
         candidates.push(fileURLToPath(value))
