@@ -208,9 +208,13 @@ class ResearchSidebarCoordinator {
 // Only this record type requests a right-side destination. Ordinary tabs keep
 // following activePane; unlike pinned Research tabs, child records stay closable.
 export function patchSubagentPanelDestination(source) {
+  // Upgrade existing installs as well as pristine plugin sources.
+  source=source.replace("const rightTarget = tab.meta?.sherlockPanel === 'right';","const rightTarget = tab.type === 'sherlock-subagent-conversation' && tab.meta?.sherlockPanel === 'right';");
   source=exact(source,'let targetId = pinned ? firstLeaf(state.splits).id : state.activePane ?? firstLeaf(state.splits).id;',`const rightTarget = tab.type === 'sherlock-subagent-conversation' && tab.meta?.sherlockPanel === 'right';
       let targetId = pinned || (rightTarget && treeOf(state, state.activePane ?? '') === 'bottomSplits') ? firstLeaf(state.splits).id : state.activePane ?? firstLeaf(state.splits).id;`)
-  return exact(source,'if (!pinned) return activateTab(state, leaf.id, existing.id);',"if (!pinned && !(rightTarget && treeOf(state, leaf.id) === 'bottomSplits')) return activateTab(state, leaf.id, existing.id);")
+  source=exact(source,'if (!pinned) return activateTab(state, leaf.id, existing.id);',"if (!pinned && !(rightTarget && treeOf(state, leaf.id) === 'bottomSplits')) return activateTab(state, leaf.id, existing.id);")
+  source=source.replace("const rightTarget = tab.type === 'sherlock-subagent-conversation' && tab.meta?.sherlockPanel === 'right';", "const rightTarget = tab.meta?.sherlockPanel === 'right';");
+  return exact(source, 'const openFile = (scope, path, title) => {\n\t\t\t\topenTab({', 'const openFile = (scope, path, title) => {\n\t\t\t\topenTab({meta:{sherlockPanel:"right"},');
 }
 export function patchSubagentPanelEntry(source, sidebar=false) {
   if(sidebar)return exact(source,'onOpenChild?.(address);\n\t\t\t\ttry {\n\t\t\t\t\tsessions.openSubagent?.(address);',`try {
