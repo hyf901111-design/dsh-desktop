@@ -185,6 +185,70 @@
           "此前已有的三个宽范围测试夹具与当前标题栏、消息中心和即时清空输入行为不同步；直接影响本次改动的聚焦检查通过。"
         ],
         "generatedAt": "2026-09-16T11:41:16.540203+00:00"
+      },
+      "merged": {
+        "mergeCommit": "877992d5d9eb888cd40cd5096ddfd61aa05792c4",
+        "verificationCommit": "877992d5d9eb888cd40cd5096ddfd61aa05792c4",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-agent-scope.test.js",
+              "test/shared-main-agent.test.js",
+              "test/shared-conversation-queue.test.js",
+              "test/research-board-generation.test.ts",
+              "test/research-board-runtime.test.js",
+              "test/research-board-polish.test.ts",
+              "test/research-boards-service.test.ts",
+              "test/shared-send-draft.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-agent-scope.test.js test/shared-main-agent.test.js test/shared-conversation-queue.test.js test/research-board-generation.test.ts test/research-board-runtime.test.js test/research-board-polish.test.ts test/research-boards-service.test.ts test/shared-send-draft.test.ts",
+            "verifiedCommit": "877992d5d9eb888cd40cd5096ddfd61aa05792c4",
+            "completedAt": "2026-09-16T11:41:47.514Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "shared|leased board|subagent"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t shared|leased board|subagent",
+            "verifiedCommit": "877992d5d9eb888cd40cd5096ddfd61aa05792c4",
+            "completedAt": "2026-09-16T11:41:47.514Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-collaboration-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-collaboration-worker.mjs",
+            "verifiedCommit": "877992d5d9eb888cd40cd5096ddfd61aa05792c4",
+            "completedAt": "2026-09-16T11:41:47.514Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "877992d5d9eb888cd40cd5096ddfd61aa05792c4",
+            "completedAt": "2026-09-16T11:41:47.514Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T11:41:47.514Z"
       }
     }
   ],
