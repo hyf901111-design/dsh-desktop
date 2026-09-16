@@ -272,6 +272,73 @@
           "能力错误声明为 image 的纯文本接口仍需纠正模型能力配置"
         ],
         "generatedAt": "2026-09-16T03:00:29.080Z"
+      },
+      "merged": {
+        "mergeCommit": "071916e0e1ac5c6858344e05507893ce38e7d47e",
+        "verificationCommit": "071916e0e1ac5c6858344e05507893ce38e7d47e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/board-session-fork.test.ts",
+              "test/research-board-directories.test.js",
+              "test/research-board-directory-lifecycle.test.js",
+              "test/sidebar-update-control.test.ts",
+              "test/update-manager.test.ts",
+              "test/sidebar-scroll-fade.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/board-session-fork.test.ts test/research-board-directories.test.js test/research-board-directory-lifecycle.test.js test/sidebar-update-control.test.ts test/update-manager.test.ts test/sidebar-scroll-fade.test.ts",
+            "verifiedCommit": "071916e0e1ac5c6858344e05507893ce38e7d47e",
+            "completedAt": "2026-09-16T03:01:10.868Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "071916e0e1ac5c6858344e05507893ce38e7d47e",
+            "completedAt": "2026-09-16T03:01:10.868Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/tool-image-links.test.ts",
+              "test/model-multimodal-settings.test.ts",
+              "test/compact-execution-status.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/tool-image-links.test.ts test/model-multimodal-settings.test.ts test/compact-execution-status.test.ts",
+            "verifiedCommit": "071916e0e1ac5c6858344e05507893ce38e7d47e",
+            "completedAt": "2026-09-16T03:01:10.868Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/integration-executor.test.ts",
+              "-t",
+              "append integration handoff"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/integration-executor.test.ts -t append integration handoff",
+            "verifiedCommit": "071916e0e1ac5c6858344e05507893ce38e7d47e",
+            "completedAt": "2026-09-16T03:01:10.868Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T03:01:10.868Z"
       }
     }
   ],
