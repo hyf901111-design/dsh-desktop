@@ -1,3 +1,4 @@
+import { patchSharedNativeConversation } from './shared-native-conversation.mjs'
 import { patchComponentInteractionState } from './component-interaction-state.mjs'
 import { patchBoardDirectoryConversation, patchBoardDirectoryWorkspace, patchBoardFileOwnership } from './board-directory-picker.mjs'
 import { patchFigmaFinalConversation } from './patch-figma-final-shell.mjs'
@@ -516,7 +517,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
-  source = sharedQueuePatch(source)
+  source = patchSharedNativeConversation(sharedQueuePatch(source))
   if (!source.includes('applyDirectoryCanvas(canvas) {')) source = replace(source, 'setCollaborationAccess(edit) {', `                applyDirectoryCanvas(canvas) {
                     if (sherlockShared(sessionId)) throw new Error("Directory canvas requires a personal binding");
                     const files = parseResearchCanvasFileNodes(JSON.stringify(canvas.files));

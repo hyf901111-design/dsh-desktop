@@ -7,7 +7,7 @@ import { captureSharedWorkbenchPlan } from './workbench.js'
 export function createSharedMainAgentAdapter(ctx) {
   const active = new Set()
   return {
-    async start({ parentSessionId, prompt, signal, onSessionEvent = () => {}, onWorkbenchPlan }) {
+    async start({ parentSessionId, prompt, executionId, signal, onSessionEvent = () => {}, onWorkbenchPlan }) {
       let agent = ctx.agents.get(parentSessionId)
       if (!agent) agent = await ctx.typert?.lookups?.get('agent')?.resolve(parentSessionId)
       if (!agent || agent.id !== parentSessionId || ctx.agents.get(parentSessionId) !== agent) throw Error('PARENT_NOT_LIVE')
@@ -98,7 +98,7 @@ export function createSharedMainAgentAdapter(ctx) {
         off(); offChildren(); offStart(); offEnd(); offStatus(); for (const unbind of bindings.reverse()) unbind(); release?.(); signal.removeEventListener('abort', cancel); active.delete(cancel)
       }
       try {
-        agent.send({ id: randomUUID(), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: prompt }] }, 'next-turn', true)
+        agent.send({ id: executionId ? `shared-board-task:${executionId}` : randomUUID(), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: prompt }] }, 'next-turn', true)
         return { result: settle().then(() => {
           signal.throwIfAborted()
           if (failure) throw failure

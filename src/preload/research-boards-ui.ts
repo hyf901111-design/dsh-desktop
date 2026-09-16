@@ -1,3 +1,4 @@
+import { orderBoardConversationGroups } from './research-board-conversation-order'
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
 import { TemporaryBoards } from './temporary-board'
 import { installBoardSessionFork } from './board-session-fork'
@@ -2443,11 +2444,14 @@ export function ResearchBoardQueue({ page, sessionId, QueueDock, ...props }: any
 export function ResearchBoardDiscussion({
   page,
   sessionId,
-  MarkdownText
+  MarkdownText, NativeGroup, NativeMessage, nativeProps
 }: {
   page: ResearchBoardsPage
   sessionId: string
   MarkdownText?: React.ComponentType<any>
+  NativeGroup?: React.ComponentType<any>
+  NativeMessage?: React.ComponentType<any>
+  nativeProps?: any
 }) {
   useBoard(page)
   const v = page.getView(sessionId)
@@ -2487,7 +2491,7 @@ export function ResearchBoardDiscussion({
   )
   const linked = (m: any) =>
     m.role === 'assistant' && requestIds.has(m.requestMessageId)
-  const groups = [
+  const groups = orderBoardConversationGroups([
     ...(v.history ?? []).map((m: any) => ({
       key: 'history:' + m.id,
       rows: [{ ...m, imported: true }],
@@ -2505,9 +2509,9 @@ export function ResearchBoardDiscussion({
           )
         ]
       }))
-  ]
+  ], v.tasks, v.messages)
   const renderMessage = (m: any, i: number) =>
-    h(
+    NativeMessage && !componentTask(taskForMessage(m, v.tasks)) ? h(NativeMessage, { key: m.id ?? i, message: m, nativeProps }) : h(
       'article',
       {
         className: 'srb-message',
@@ -2605,7 +2609,7 @@ export function ResearchBoardDiscussion({
         ),
       ...attempts.current
         .filter(
-          (t) => boardTaskStatus(t) && !(['failed', 'interrupted'].includes(t.status) && pendingRequests.some((r: any) => r.taskId === t.taskId && ['interrupted', 'uncertain'].includes(r.runtimeState)))
+          (t) => !(NativeGroup && t.conversation && t.status === 'running') && boardTaskStatus(t) && !(['failed', 'interrupted'].includes(t.status) && pendingRequests.some((r: any) => r.taskId === t.taskId && ['interrupted', 'uncertain'].includes(r.runtimeState)))
         )
         .map((t) => t.status === 'running'
           ? h(ResearchBoardTaskProgress, { key: t.taskId, task: t })
@@ -2637,7 +2641,9 @@ export function ResearchBoardDiscussion({
           'data-execution-kind': group.requestId && componentTask(taskForMessage({ id: group.requestId }, v.tasks)) ? 'component' : 'conversation'
         },
         group.requestId && componentTask(taskForMessage({ id: group.requestId }, v.tasks)) && h('div', { className: 'srb-component-activity-label' }, '◇ 组件子智能体 · 独立执行', h('span', null, v.canvas?.artifacts?.find((node: any) => node.id === taskForMessage({ id: group.requestId }, v.tasks)?.targetId)?.title ?? '画板组件')),
-        ...group.rows.map(renderMessage),
+        ...(NativeGroup && group.requestId && !componentTask(taskForMessage({ id: group.requestId }, v.tasks))
+          ? [h(NativeGroup, { key: 'native', group: { ...group, rows: group.rows.filter((m: any) => !componentTask(taskForMessage(m, v.tasks))) }, tasks: v.tasks.filter((t: any) => t.requestMessageId === group.requestId), nativeProps }), ...group.rows.filter((m: any) => componentTask(taskForMessage(m, v.tasks))).map(renderMessage)]
+          : group.rows.map(renderMessage)),
         group.requestId && renderControls(group.requestId)
       )
     ),

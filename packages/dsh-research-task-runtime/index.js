@@ -1662,6 +1662,7 @@ export function createSharedBoardExecutor(ctx) {
       let workbenchPlan
       const start = (text, synthesisOnly = false) => (request.kind === 'board' || request.kind === 'qa' ? mainAdapter : sharedAdapter).start({
         parentSessionId: request.sessionId,
+        executionId: request.taskId,
         kind: request.kind,
         query: request.query ?? request.prompt,
         prompt: text,
