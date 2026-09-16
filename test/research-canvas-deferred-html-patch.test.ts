@@ -15,6 +15,6 @@ it('wires lazy HTML mounts through the production patch and remains idempotent a
 
 it('fails explicitly if the generated container call no longer matches', async () => {
   const raw = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-  expect(() => patchResearchCanvasDeferredHtml(raw.replace('jsx)(ResearchGeneratedContainer, {', 'jsx)(ChangedGeneratedContainer, {')))
+  expect(() => patchResearchCanvasDeferredHtml(raw.replace('/* SHERLOCK_DEFER_OFFSCREEN_HTML_V1 */', '').replace('jsx)(ResearchGeneratedContainer, {', 'jsx)(ChangedGeneratedContainer, {')))
     .toThrow('anchor missing or ambiguous')
 })
