@@ -48,7 +48,9 @@ export function boardTaskAttempts<T extends { createdAt?: number; targetId?: str
   return { current, previous }
 }
 
-export function boardTaskStatus(task: { status: string; failureCode?: unknown }) {
+export function boardTaskStatus(task: { status: string; failureCode?: unknown; resumeCount?: number; yieldRequested?: boolean }) {
+  if (task.status === 'running' && task.yieldRequested) return '正在暂存当前任务，优先处理插队消息…'
+  if (task.status === 'pending' && task.resumeCount) return '任务已暂存，插队消息处理完成后自动继续。'
   if (task.status === 'pending') return '研究任务等待执行'
   if (task.status === 'running') return '正在研究…'
   if (task.status === 'interrupted') return '研究任务已中断。'

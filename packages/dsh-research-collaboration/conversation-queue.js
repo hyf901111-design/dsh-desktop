@@ -22,8 +22,11 @@ export function mutateQueuedConversation(state, taskId, userId, action, text) {
     task.status = 'interrupted'
     message.queueDeleted = true
   } else if (action === 'promote') {
-    task.queueOrder = Math.min(0, ...queuedConversations(state).map(t => t.queueOrder ?? t.createdAt ?? 0)) - 1
-    for (const active of state.tasks.filter(t => t.conversation && t.status === 'running')) active.stopRequested = true
+    task.queueOrder = Math.min(0, ...queuedConversations(state).map(t => t.queueOrder ?? t.createdAt ?? 0)) - 2
+    for (const active of state.tasks.filter(t => t.conversation && t.status === 'running' && !t.stopRequested)) {
+      if (!active.yieldRequested) active.queueOrder = task.queueOrder + 1
+      active.yieldRequested = true
+    }
   } else reject('INVALID_INPUT')
   return task
 }

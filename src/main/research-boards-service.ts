@@ -403,6 +403,7 @@ const taskActions = new Set([
   'taskHeartbeat',
   'taskResult',
   'taskStop',
+  'taskYield',
   'queueEdit',
   'queueDelete',
   'queuePromote'

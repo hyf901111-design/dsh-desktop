@@ -32,6 +32,8 @@ it('offers selection tools for completed table and HTML components but not draft
 it('never labels interrupted or failed research tasks as waiting', () => {
   expect(boardTaskStatus({ status: 'pending' })).toBe('研究任务等待执行')
   expect(boardTaskStatus({ status: 'running' })).toBe('正在研究…')
+  expect(boardTaskStatus({ status: 'running', yieldRequested: true })).toContain('暂存')
+  expect(boardTaskStatus({ status: 'pending', resumeCount: 1 })).toContain('自动继续')
   expect(boardTaskStatus({ status: 'interrupted' })).toBe('研究任务已中断。')
   expect(boardTaskStatus({ status: 'failed', failureCode: 'EMPTY_OUTPUT' })).toBe('模型没有返回可展示的内容，自动恢复仍未完成。')
   expect(boardTaskStatus({ status: 'completed' })).toBeUndefined()
