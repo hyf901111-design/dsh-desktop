@@ -877,3 +877,35 @@ export function refreshIntegrationHandoff({ integrationRepository, manifestPath,
     expectedTip: state.lease.currentTip, nextTip: afterCommit, updatedAt: now })
   return resultFor('prepared', state, state.context.head, afterCommit, actions)
 }
+
+/** Add a separately verified feature to an unaccepted batch without replacing its owner or history. */
+export function appendIntegrationHandoff({ integrationRepository, manifestPath, handoffPath, confirmBatchId, confirmTip, ownerToken, dryRun, now }) {
+  if (typeof dryRun !== 'boolean') fail('dryRun 必须为布尔值。')
+  checkedNow(now)
+  const state = readManifestForMutation(integrationRepository, manifestPath)
+  requireExactConfirmation(confirmBatchId, state.lease.batchId, 'confirmBatchId')
+  requireExactConfirmation(confirmTip, state.context.head, 'confirmTip')
+  sourceClean(state.context.worktreeRoot)
+  verifyMutationOwner(state.context, state.lease, ownerToken)
+  if (state.lease.acceptedTip) fail('已接受的批次不能追加功能。')
+  const handoff = validateFeatureHandoff(JSON.parse(readFileSync(handoffPath, 'utf8')))
+  if (state.manifest.features.some(feature => feature.handoff.branch === handoff.branch)) fail('功能分支已登记，不能重复追加。')
+  const report = verifyFeatureHandoff({ repository: state.context.worktreeRoot, handoff, batchMainCommit: state.context.head })
+  if (!report.ok) fail(`新交接卡预检失败：${report.findings.map(item => item.message).join('；')}`)
+  const checks = [...state.manifest.integrationChecks]
+  for (const check of handoff.checks) {
+    if (!checks.some(existing => JSON.stringify(existing.argv) === JSON.stringify(check.argv) && existing.timeoutMs === check.timeoutMs)) {
+      checks.push({ argv: check.argv, timeoutMs: check.timeoutMs })
+    }
+  }
+  const next = validateIntegrationBatchManifest({ ...state.manifest, features: [...state.manifest.features, { handoff }], integrationChecks: checks })
+  const actions = [action('append-handoff', '追加经验证的新功能交接卡及检查，保留现有功能和合并证据；需要重新合并及验收。')]
+  if (dryRun) return resultFor('planned', state, state.context.head, state.context.head, actions)
+  writeFileSync(state.manifestPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8')
+  runGit(state.context.worktreeRoot, ['add', '--', state.lease.manifestPath])
+  runGit(state.context.worktreeRoot, ['commit', '-m', `集成：追加功能交接 ${handoff.branch}`])
+  const afterCommit = resolveRepositoryContext(state.context.worktreeRoot).head
+  updateActiveBatchTip({ repository: state.context.worktreeRoot, ownerToken, expectedRevision: state.lease.revision,
+    expectedTip: state.lease.currentTip, nextTip: afterCommit, updatedAt: now })
+  return resultFor('prepared', state, state.context.head, afterCommit, actions)
+}
