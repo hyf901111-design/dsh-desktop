@@ -363,13 +363,31 @@ body .wSkVaW_header, body .wSkVaW_titleRow { -webkit-app-region:drag; }
 body .wSkVaW_header :is(button,input,select,textarea,a,[role=button],[role=tab],[contenteditable=true]),
 body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag; }
 
-/* Keep file titles and close controls usable; excess tabs scroll as a row. */
-.t8lSSG_panel .t8lSSG_tabList { overflow-x:auto; overflow-y:hidden; gap:4px; flex:1 1 0; }
-.t8lSSG_panel [data-odyssey-panel-tab] { flex:0 0 auto; min-width:100px; max-width:160px; padding-inline:8px!important; gap:6px; position:relative; }
-.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 0 16px; }
+/* Chrome-style packing: all tabs share the row; the active close never shrinks. */
+.t8lSSG_panel .t8lSSG_tabList { overflow:hidden; gap:2px; flex:1 1 0; }
+.t8lSSG_panel [data-odyssey-panel-tab] {
+  container:odyssey-panel-tab / inline-size;
+  flex:1 1 0; min-width:0; max-width:160px;
+  padding-inline:min(8px, calc(24px / var(--odyssey-tab-count, 1)))!important;
+  gap:4px; position:relative;
+}
+.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 1 16px; min-width:0; }
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabTitle { flex:1 1 auto; }
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { display:flex!important; flex-shrink:0; visibility:visible; pointer-events:auto; }
-.t8lSSG_panel [data-odyssey-panel-tab-id="sherlock-research-conversation"] { min-width:46px; }
+.t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] { min-width:36px; }
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { width:auto; }
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] .t8lSSG_tabTitle { flex:1 1 auto; }
+@container odyssey-panel-tab (max-width:76px) {
+  .t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose { display:none!important; }
+  .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabBadge { display:none; }
+}
+@container odyssey-panel-tab (max-width:52px) {
+  .t8lSSG_panel [data-odyssey-panel-tab]:has(>svg) .t8lSSG_tabTitle { display:none; }
+}
+@container odyssey-panel-tab (max-width:40px) {
+  .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true]:has(.t8lSSG_tabClose) > svg,
+  .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true]:has(.t8lSSG_tabClose) .t8lSSG_tabTitle { display:none; }
+}
 
 /* Panel entries are portaled outside the header DOM but overlap its native drag region. */
 body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region:no-drag; }
