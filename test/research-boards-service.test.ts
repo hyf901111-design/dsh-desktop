@@ -1912,7 +1912,7 @@ it('exposes local discussion task progress without a canvas target or executor s
   expect(task.progress).toEqual(progress)
   expect(task.leaseToken).toBeUndefined()
   expect(task.contextSnapshot).toBeUndefined()
-  expect(t.service.taskAuthority('u', 'board').snapshot.tasks[0].progress).toBeUndefined()
+  expect(t.service.taskAuthority('u', 'board').snapshot.tasks[0]!.progress).toBeUndefined()
 })
 
 
@@ -1965,7 +1965,7 @@ it('does not republish a buffered reply or old canvas after access is revoked du
   const rejected = expect(received).rejects.toThrow()
   await vi.waitFor(() => expect(release).toBeTypeOf('function'))
   t.revoke()
-  const watch = t.watches.findLast(watch => watch.scope.scope === 'board' && !watch.closed)!
+  const watch = t.watches.filter(watch => watch.scope.scope === 'board' && !watch.closed).at(-1)!
   watch.listener({ type: 'accessRevoked' })
   await vi.waitFor(() => expect(t.service.getSnapshot().current!.permissions.read).toBe(false))
   const revokedAt = events.length
