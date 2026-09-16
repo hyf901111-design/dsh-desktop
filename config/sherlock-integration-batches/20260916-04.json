@@ -239,6 +239,74 @@
           "发布包需验证新增补丁与共享对话补丁组合"
         ],
         "generatedAt": "2026-09-16T10:35:40.808274+00:00"
+      },
+      "merged": {
+        "mergeCommit": "75e11d2c6ae099e7a99abdf110bf3fe225565b09",
+        "verificationCommit": "75e11d2c6ae099e7a99abdf110bf3fe225565b09",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-main-agent.test.js",
+              "test/shared-conversation-queue.test.js",
+              "test/research-board-generation.test.ts",
+              "test/research-board-runtime.test.js",
+              "test/research-boards-service.test.ts",
+              "test/research-board-tasks.test.ts",
+              "test/shared-send-draft.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-main-agent.test.js test/shared-conversation-queue.test.js test/research-board-generation.test.ts test/research-board-runtime.test.js test/research-boards-service.test.ts test/research-board-tasks.test.ts test/shared-send-draft.test.ts",
+            "verifiedCommit": "75e11d2c6ae099e7a99abdf110bf3fe225565b09",
+            "completedAt": "2026-09-16T10:35:58.118Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "shared|leased board"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t shared|leased board",
+            "verifiedCommit": "75e11d2c6ae099e7a99abdf110bf3fe225565b09",
+            "completedAt": "2026-09-16T10:35:58.118Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "75e11d2c6ae099e7a99abdf110bf3fe225565b09",
+            "completedAt": "2026-09-16T10:35:58.118Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/task-progress-client.test.js",
+              "test/task-progress-runtime.test.js",
+              "test/efund-ppt-108.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/bundled-skill-upgrade.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/task-progress-client.test.js test/task-progress-runtime.test.js test/efund-ppt-108.test.js test/bundled-ppt-skill.test.ts test/bundled-skill-upgrade.test.ts",
+            "verifiedCommit": "75e11d2c6ae099e7a99abdf110bf3fe225565b09",
+            "completedAt": "2026-09-16T10:35:58.118Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T10:35:58.118Z"
       }
     }
   ],
