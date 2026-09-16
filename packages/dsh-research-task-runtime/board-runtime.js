@@ -96,7 +96,7 @@ export class SharedExecutionRuntime {
     if (!t) throw Error('TASK_NOT_FOUND')
     return structuredClone(t)
   }
-  async cancel(id) {
+  async cancel(id, drain = false) {
     const t = this.tasks[id]
     if (!t) return
     this.controllers.get(id)?.abort()
@@ -105,6 +105,7 @@ export class SharedExecutionRuntime {
       t.error = '执行已停止'
       await this.storage.save(this.tasks)
     }
+    if (drain) await this.flights.get(id)
     return this.inspect(id)
   }
   async dispose() {
@@ -313,7 +314,7 @@ export function registerBoardRuntime(
             } else if (action === 'start') result = await runtime.start(input)
             else if (action === 'inspect')
               result = runtime.inspect(input.taskId)
-            else result = await runtime.cancel(input.taskId)
+            else result = await runtime.cancel(input.taskId, input.drain === true)
             send(200, result)
           } catch (e) {
             send(400, { error: e.message ?? 'INVALID_REQUEST' })

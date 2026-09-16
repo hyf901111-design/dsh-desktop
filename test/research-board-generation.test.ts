@@ -30,7 +30,7 @@ it('creates a leased workbench for an editor from the shared composer, reusing t
     if (body.action === 'update') mergeDocumentUpdate(doc, fromBase64(body.update), new Set())
     if (body.action === 'message') { reply.message = { id: 'request', text: body.text, context: body.context }; messages.push(reply.message) }
     if (body.action === 'taskCreate') { reply.task = { ...body, taskId: 'task-' + tasks.length }; tasks.push(reply.task) }
-    if (body.action === 'taskClaim') { reply.leaseToken = 'lease'; reply.task = { contextSnapshot: { canvas: projectDocument(doc), messages, history: [] } } }
+    if (body.action === 'taskClaim') { reply.leaseToken = 'lease'; reply.task = { conversation: true, contextSnapshot: { canvas: projectDocument(doc), messages, history: [] } } }
     return reply
   }
   const plan = { requestId: 'planner-id', title: '医药工作台', panels: [
@@ -72,7 +72,7 @@ async function fixture(tasks: any[] = []) {
   const runtimeRequest = vi.fn(async (_action: string, _body: any, _signal: AbortSignal): Promise<any> => ({ status: 'failed', errorCode: 'EMPTY_OUTPUT', error: '模型没有返回可展示的内容' }))
   const integration = new ResearchBoardIntegration({ root, storage: {}, registry: {}, clipboard: () => undefined,
     service: () => service, runtimeRequest, runtimeUrl: () => null, runtimeToken: 'test', revealFile() {}, invalidate() {},
-    client: { request: async ({ body }: any) => { commands.push(body); return { action: body.action, operationId: body.operationId, seq: commands.length, ...(body.action === 'taskClaim' ? { leaseToken: 'lease', task: { contextSnapshot } } : {}) } } }
+    client: { request: async ({ body }: any) => { commands.push(body); return { action: body.action, operationId: body.operationId, seq: commands.length, ...(body.action === 'taskClaim' ? { leaseToken: 'lease', task: { conversation: true, contextSnapshot } } : {}) } } }
   } as any)
   return { integration, runtimeRequest, commands, canvas, service }
 }
@@ -156,7 +156,7 @@ it('creates and fills a new canvas component when the old retry target was delet
     if (body.action === 'update') mergeDocumentUpdate(doc, fromBase64(body.update), new Set())
     if (body.action === 'message') reply.message = { id: 'new-message', text: body.text, context: body.context }
     if (body.action === 'taskCreate') reply.task = { taskId: 'new-task', requestMessageId: body.requestMessageId, targetId: body.targetId, targetCollection: body.targetCollection }
-    if (body.action === 'taskClaim') reply.leaseToken = 'lease', reply.task = { contextSnapshot: { canvas: projectDocument(doc), history: [], messages: [{ id: 'new-message', text: '重新生成计数器', context: { scope: 'board', references: [] } }] } }
+    if (body.action === 'taskClaim') reply.leaseToken = 'lease', reply.task = { conversation: true, contextSnapshot: { canvas: projectDocument(doc), history: [], messages: [{ id: 'new-message', text: '重新生成计数器', context: { scope: 'board', references: [] } }] } }
     return reply
   }
   runtimeRequest.mockResolvedValue({ status: 'completed', text: JSON.stringify({ version: 1, type: 'html', title: '计数器', html: '<button>加一</button>' }) } as any)

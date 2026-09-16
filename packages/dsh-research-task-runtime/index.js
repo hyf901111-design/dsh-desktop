@@ -1,3 +1,4 @@
+import { createSharedMainAgentAdapter } from './shared-main-agent.js'
 import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES } from './canvas-tools.js'
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
@@ -1606,6 +1607,7 @@ export function registerResearchTaskRoutes(webServer, runtime) {
 
 export function createSharedBoardExecutor(ctx) {
   const sharedAdapter = createSubagentAdapter(ctx)
+  const mainAdapter = createSharedMainAgentAdapter(ctx)
   return {
     execute: async (request, signal, onProgress = () => {}) => {
       const progress = { startedAt: Date.now(), lastActivityAt: 0, outputChars: 0, events: [] }
@@ -1654,7 +1656,7 @@ export function createSharedBoardExecutor(ctx) {
         }) + '\n\n' + prompt
       }
       let workbenchPlan
-      const start = (text, synthesisOnly = false) => sharedAdapter.start({
+      const start = (text, synthesisOnly = false) => (request.kind === 'board' || request.kind === 'qa' ? mainAdapter : sharedAdapter).start({
         parentSessionId: request.sessionId,
         kind: request.kind,
         query: request.query ?? request.prompt,
@@ -1728,7 +1730,7 @@ export function createSharedBoardExecutor(ctx) {
         await handle?.dispose()
       }
     },
-    dispose: () => sharedAdapter.dispose()
+    dispose: async () => { await mainAdapter.dispose(); await sharedAdapter.dispose() }
   }
 }
 

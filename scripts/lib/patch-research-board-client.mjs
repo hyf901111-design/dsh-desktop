@@ -516,6 +516,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
+  source = sharedQueuePatch(source)
   if (!source.includes('applyDirectoryCanvas(canvas) {')) source = replace(source, 'setCollaborationAccess(edit) {', `                applyDirectoryCanvas(canvas) {
                     if (sherlockShared(sessionId)) throw new Error("Directory canvas requires a personal binding");
                     const files = parseResearchCanvasFileNodes(JSON.stringify(canvas.files));
@@ -869,4 +870,22 @@ function conversationViewTabProps(`)
   source = replace(source, 'tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {', '!boardOnly && tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {')
   source = replace(source, 'actions.setView(viewId);', 'actions.setView(sherlockBoardsAdapter?.isBoardOnly(sessionId) ? "research" : viewId);')
   return source
+}
+
+function sharedQueuePatch(source) {
+  if (source.includes('/* SHERLOCK_SHARED_QUEUE_V1 */')) return source
+  source = replace(source, 'function QueueDock({ useSession, updateQueue, notify, t }) {', `function QueueDock(props) {
+    return sherlockBoardsAdapter && sherlockShared(props.sessionId)
+      ? (0,react_jsx_runtime.jsx)(sherlockBoardsPage.ResearchBoardQueue,{...props,page:sherlockBoardsAdapter,QueueDock:NativeQueueDock})
+      : (0,react_jsx_runtime.jsx)(NativeQueueDock,props);
+  }
+  function NativeQueueDock({ useSession, updateQueue, notify, t }) {`)
+  source = replace(source, 'updateQueue: (itemId, action) => conversation.updateQueue(itemId, action),', 'sessionId, updateQueue: (itemId, action) => conversation.updateQueue(itemId, action),')
+  const start = source.indexOf('function NativeQueueDock('), end = source.indexOf('const queueDockEntry', start)
+  let dock = source.slice(start,end)
+  dock = dock.replace('queueMutable && (0, react_jsx_runtime.jsx)("div",', 'queueMutable && row.editable !== false && (0, react_jsx_runtime.jsx)("div",')
+  dock = dock.replace('queue.length === 1 && (0, react_jsx_runtime.jsx)("span",', '(queue.length === 1 || row.authorName) && (0, react_jsx_runtime.jsx)("span",')
+  dock = dock.replace('editing?.id === row.id ? (0, react_jsx_runtime.jsx)("input",', '(row.authorName && (0,react_jsx_runtime.jsx)("span", {"data-queue-author":"",title:row.authorName,style:{fontSize:"12px",color:"var(--dsw-alias-label-secondary)",maxWidth:"96px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flexShrink:0},children:row.authorName})), editing?.id === row.id ? (0, react_jsx_runtime.jsx)("input",')
+  source = source.slice(0,start) + dock + source.slice(end)
+  return source + '\n/* SHERLOCK_SHARED_QUEUE_V1 */'
 }

@@ -1043,6 +1043,16 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       )
       return
     }
+    if (!text.trim() && !imageIds.length) {
+      if (mode === 'steer') {
+        const own = v.tasks.filter((t: any) => t.conversation && t.status === 'pending' && t.initiatorId === state.account.user?.userId)
+          .sort((a: any, b: any) => (b.queueOrder ?? b.createdAt ?? 0) - (a.queueOrder ?? a.createdAt ?? 0))
+        for (const task of own) {
+          try { await call('queue.promote', { boardId: v.boardId, taskId: task.taskId }) } catch (error) { showError(error); break }
+        }
+      }
+      return
+    }
     if (imageIds.length) {
       shell?.notify('error', '请先将图片加入共享画板后引用，输入已保留。')
       return
@@ -1095,6 +1105,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         reply.requestMessageId
       ) {
         if (admitted.untouched()) saveDraft(sessionId, '')
+        if (mode === 'steer' && reply.taskId) await call('queue.promote', { boardId: v.boardId, taskId: reply.taskId }).catch(showError)
         if (reply.state === 'taskCreateFailed')
           shell.notify(
             'error',
@@ -2395,6 +2406,27 @@ export function manageBoard(page: ResearchBoardsPage, boardId: string, initialTa
       )
   })
 }
+/** Reuse the normal conversation queue dock, including edit/collapse/steer controls. */
+export function ResearchBoardQueue({ page, sessionId, QueueDock, ...props }: any) {
+  useBoard(page)
+  const view = page.getView(sessionId)
+  const userId = page.getState().account.user?.userId
+  const queue = React.useMemo(() => (view?.tasks ?? [])
+    .filter((t: any) => t.conversation && t.status === 'pending')
+    .sort((a: any,b: any) => (a.queueOrder ?? a.createdAt ?? 0) - (b.queueOrder ?? b.createdAt ?? 0))
+    .map((t: any) => {
+      const m = view.messages.find((m: any) => m.id === t.requestMessageId)
+      return { id: t.taskId, placement: 'queued', source: { kind: 'user' }, text: m?.text ?? '', preview: m?.text ?? '',
+        authorName: m?.author?.username ?? m?.authorName ?? '成员', editable: view.permissions.execute && t.initiatorId === userId }
+    }), [view, userId])
+  const snapshot = { queue, running: view?.tasks.some((t: any) => t.status === 'running'), subagent: null }
+  return h(QueueDock, { ...props, useSession: (select: any) => select(snapshot), updateQueue: async (taskId: string, action: any) => {
+    await page.call('queue.' + ({ edit: 'edit', remove: 'delete', steer: 'promote' } as any)[action.kind], {
+      boardId: view.boardId, taskId, ...(action.kind === 'edit' ? { text: action.content.map((b: any) => b.text ?? '').join('') } : {})
+    })
+  } })
+}
+
 export function ResearchBoardDiscussion({
   page,
   sessionId,
@@ -2435,7 +2467,7 @@ export function ResearchBoardDiscussion({
       h('button', { onClick: () => showRecovery(page) }, '查看我的恢复记录')
     )
   const live = [
-    ...new Map(v.messages.map((m: any) => [m.id, m])).values()
+    ...new Map(v.messages.filter((m: any) => !m.queueDeleted && !v.tasks.some((t: any) => t.conversation && t.status === 'pending' && t.requestMessageId === m.id)).map((m: any) => [m.id, m])).values()
   ] as any[]
   const requestIds = new Set(
     live.filter((m) => m.role === 'user').map((m) => m.id)
@@ -2483,13 +2515,13 @@ export function ResearchBoardDiscussion({
   const renderControls = (requestId?: string) => {
     const belongs = (id: unknown) =>
       requestId ? id === requestId : !requestIds.has(id)
-    const tasks = v.tasks.filter((t: any) => belongs(t.requestMessageId))
+    const tasks = v.tasks.filter((t: any) => belongs(t.requestMessageId) && !(t.conversation && t.status === 'pending') && !v.messages.some((m: any) => m.id === t.requestMessageId && m.queueDeleted))
     const attempts = requestId ? boardTaskAttempts(tasks) : { current: tasks, previous: [] }
     return h(
       'div',
       { className: 'srb-request-statuses' },
       ...pendingRequests
-        .filter((r: any) => belongs(r.requestMessageId))
+        .filter((r: any) => belongs(r.requestMessageId) && !v.messages.some((m: any) => m.id === r.requestMessageId && m.queueDeleted))
         .filter((r: any) => boardRequestPresentation(r, v.tasks))
         .map((r: any) =>
           h(
