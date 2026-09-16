@@ -1417,32 +1417,6 @@ def validate_frame_map(
                     )
                 )
 
-    if len(content_slides) >= 6:
-        standard_names = {
-            "standard-narrative-title",
-            "standard-narrative-body",
-            "standard-visual-title",
-        }
-        standard_slides: list[int] = []
-        for slide in content_slides:
-            names = {
-                str(value).strip().lower()
-                for value in layout_objects.get(slide, {})
-            }
-            if standard_names.issubset(names):
-                standard_slides.append(slide)
-        minimum = math.ceil(len(content_slides) / 3)
-        if len(standard_slides) < minimum:
-            findings.append(
-                issue(
-                    "error",
-                    "insufficient-standard-evidence-layouts",
-                    f"普通内容页 {len(content_slides)} 页，基础证据双区页仅 {len(standard_slides)} 页；"
-                    f"至少需要 {minimum} 页（普通内容页的三分之一）",
-                    0,
-                )
-            )
-
     for slide in sorted(expected_slides - mapped_slides):
         findings.append(
             issue(

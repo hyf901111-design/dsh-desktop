@@ -51,6 +51,23 @@ afterEach(() => {
 })
 
 describe('bundled eSkill synchronization', () => {
+  it('upgrades an existing 1.0.6 copy from the actual client bundled 1.0.7 skill', () => {
+    const userRoot = scratchDirectory()
+    const userSkill = writeSkill(userRoot, 'v1.0.6', 'old-official-skill')
+    const result = synchronizeBundledESkillOverrides({
+      bundledSkillDirectory: path.resolve(import.meta.dirname, '../skills'),
+      overrideSkillDirectories: [userRoot]
+    })
+    expect(result.upgraded).toHaveLength(1)
+    expect(result.upgraded[0]).toMatchObject({fromVersion: 'v1.0.6', toVersion: 'v1.0.7'})
+    expect(readFileSync(path.join(userSkill, 'SKILL.md'), 'utf8')).toContain('1.0.7 成品要求')
+    expect(readFileSync(path.join(userSkill, 'scripts/check_efund_delivery.py'), 'utf8')).toContain('title-anchor-mismatch')
+    expect(synchronizeBundledESkillOverrides({
+      bundledSkillDirectory: path.resolve(import.meta.dirname, '../skills'),
+      overrideSkillDirectories: [userRoot]
+    }).upgraded).toEqual([])
+  })
+
   it('backs up and replaces an older official user skill before Harness discovery', () => {
     const root = scratchDirectory()
     const bundledRoot = path.join(root, 'bundled')

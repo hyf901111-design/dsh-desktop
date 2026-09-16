@@ -4,6 +4,8 @@ import { runInNewContext } from 'node:vm'
 import { Window, type HTMLElement as HappyDOMHTMLElement } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 
+import { patchPptxResize, stripPptxResizePatch } from '../scripts/lib/pptx-resize-settle.mjs'
+
 import { patchSherlockOfficePreviewClient } from '../scripts/lib/patch-sherlock-office-preview.mjs'
 
 type ClientBundle = Record<string, any>
@@ -35,7 +37,7 @@ async function loadPatchedOfficeClient(options: {
   sourceTransform?(source: string): string
   testEngine?: Record<string, unknown>
 } = {}): Promise<ClientBundle> {
-  const patched = patchSherlockOfficePreviewClient(await officeClientSource())
+  const patched = patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(await officeClientSource())))
   const source = options.sourceTransform?.(patched) ?? patched
   let descriptor: BundleDescriptor | undefined
   const bundleWindow = options.window ?? {}
@@ -113,6 +115,14 @@ async function waitForCalls(calls: unknown[], count: number): Promise<void> {
 }
 
 describe('Sherlock bundled Office preview adapter', () => {
+  it('round trips the resize patch without changing the pinned preview fingerprint', async () => {
+    const base = patchSherlockOfficePreviewClient(stripPptxResizePatch(await officeClientSource()))
+    const patched = patchPptxResize(base)
+    expect(stripPptxResizePatch(patched)).toBe(base)
+    expect(patchPptxResize(patched)).toBe(patched)
+    expect(patchSherlockOfficePreviewClient(stripPptxResizePatch(patched))).toBe(base)
+  })
+
   it('patches the pinned Office package exactly once and keeps the sidebar route intact', async () => {
     const source = await officeClientSource()
     const patched = patchSherlockOfficePreviewClient(source)

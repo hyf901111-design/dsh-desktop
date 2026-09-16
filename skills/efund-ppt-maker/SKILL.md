@@ -7,6 +7,10 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 以三份经过审计的成品 PPT 为品牌证据，把模板视为完整品牌系统，把案例页视为视觉语法和质量标尺，不视为正文布局答案。选择一个最匹配的源稿作为唯一品牌来源；先根据内容关系自主设计正文几何，再决定在品牌壳内原创或受控重组。整页复用只用于固定标准页、明确续写或结构完全匹配的少数页面。用户已确认或亲自修改的页面优先于内置案例。不得只取色值后自由发挥，也不得把多个源稿的页面或图标混入同一输出文件。
 
+## 1.0.7 成品要求
+
+标题必须继承源模板的完整标题框，不能只继承字号再从左上角重新绘制；表格默认完全无描边；分章材料在每章正文之前重复目录，并仅高亮下一章。执行细则和成品检查见 [delivery-107.md](references/delivery-107.md)，创作前和导出后都必须读取。
+
 ## 开始前
 
 1. 读取 [cover-contract.md](references/cover-contract.md)、[writing-style-contract.md](references/writing-style-contract.md)、[design-system.md](references/design-system.md)、[layout-catalog.md](references/layout-catalog.md)、[table-layout-contract.md](references/table-layout-contract.md)、[typography-contract.md](references/typography-contract.md)、[privacy-contract.md](references/privacy-contract.md) 和 [runtime-compatibility.md](references/runtime-compatibility.md)。
@@ -59,7 +63,7 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 任何情况下都不得使用图形阴影，包括外阴影、内阴影、预设阴影、发光模拟阴影或半透明复制层制造的伪阴影。层级只通过实心/浅色填充、字号、留白、对齐和必要线条建立。
 
-数据、证据、调研结论和方案论证页优先使用“左侧解释 + 右侧图表/主视觉”的标准证据双区页，并把它作为长材料的基础版式。普通内容页达到 6 页时，至少三分之一使用该轮廓；通常可占三分之一到二分之一，但不得为了配额虚构图表或数据。左侧约 35%–42%，负责结论、口径和 2–3 条解释；右侧约 58%–65%，放一个主图表、表格、关系图或证据视觉及近邻来源。对象命名为 `standard-narrative-title`、`standard-narrative-body`、`standard-visual-title`：解释标题 15pt 加粗，解释正文 12pt 常规、150% 行距，图表/视觉标题固定 10pt、常规、不加粗，并显式设置 `华文黑体_易方达`。
+数据、证据、调研结论和方案论证页优先使用“左侧解释 + 右侧图表/主视觉”的标准证据双区页，并把它作为长材料的基础版式。该轮廓只在证据与解释确实适合双区阅读时采用，不设页数配额。不得为了满足版式比例虚构图表或数据，也不得把人物、思想演变、作品关系等内容统一塞入同一双栏或三卡模板。左侧约 35%–42%，负责结论、口径和 2–3 条解释；右侧约 58%–65%，放一个主图表、表格、关系图或证据视觉及近邻来源。对象命名为 `standard-narrative-title`、`standard-narrative-body`、`standard-visual-title`：解释标题 15pt 加粗，解释正文 12pt 常规、150% 行距，图表/视觉标题固定 10pt、常规、不加粗，并显式设置 `华文黑体_易方达`。
 
 标准证据双区页必须按“真实排版后的文字高度”分配空间，不得只比较文本框坐标。`standard-narrative-body` 的行数 × 实际字号 × 150% 行距，加上文本内边距，必须完整落在文本框内；其实际文字底边与下方结论、提示或浅色总结块至少保留 16px。右侧图表须为类别标签预留独立标签槽或标签沟槽；负值柱、正值柱、数据标记和数值标签均不得进入类别标签槽。若标签或正文放不下，依次缩短文案、扩大区域或拆页，禁止用覆盖、负边距或减小字号处理。
 
@@ -88,9 +92,17 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 - 架构/流程优先复用源页图形；连接线先于节点创建并置于节点后方。每条关系连接线在布局 JSON 中导出 `lineStart` / `lineEnd` 或 `points`，并可选用 `fromId` / `toId` 标记其合法端点；除连接对象本身外，线段不得进入任何文字框外扩 8px 的安全区。
 - 禁止用 emoji、Unicode 符号、Wingdings/图标字体、随手画的几何符号或 AI 生成的小图标代替专业图标。
 
-### 5. 导出并执行六道 QA 门禁
+### 5. 导出并执行 QA 门禁
 
 不得在任一硬错误未解决时交付。
+
+先运行 1.0.7 成品校验（字段定义见 delivery-107.md）：
+
+```bash
+python "$SKILL_DIR/scripts/check_efund_delivery.py" "$FINAL_PPTX" --source "$SOURCE_PPTX" --map "$QA_DIR/template-frame-map.json" --json-output "$QA_DIR/efund-delivery.json"
+```
+
+检查最终 PPTX 的标题几何与文本框属性、表格边线、每章目录位置及实际高亮颜色。不得手写一个“通过”的报告替代运行结果。PowerPoint 打开若出现修复提示或 [Repaired]，即使 ZIP 可读也不能交付，必须先修复结构并重新打开确认。
 
 第一道，检查封面硬合同。内置封面配置：
 
@@ -149,7 +161,7 @@ python "$SKILL_DIR/scripts/lint_efund_layouts.py" "$LAYOUT_DIR/final" \
 
 `body-text-not-left-aligned`、`text-inset-clearance`、`missing-text-insets`、`connector-text-clearance`、`connector-endpoints-missing`、`missing-alignment-groups` 和 `alignment-group-violation` 也是硬错误：正文角色必须左对齐，正文图形内边距不得小于 10px，连接线必须提供端点且避开文字外扩 8px 安全区，同级模块必须按声明的边缘、尺寸、中心线和间距网格对齐。
 
-`standard-narrative-text-overflow`、`narrative-callout-clearance`、`chart-label-mark-overlap`、`advisory-callout-not-left-aligned` 和 `insufficient-standard-evidence-layouts` 同样是硬错误：标准解释正文的真实排版高度必须装入文本框，下方总结块须留足 16px，图表类别标签不得与柱、点、面积或数值标记相交，建议/结论浅色框必须左对齐；普通内容页达到 6 页时，标准证据双区页不得少于三分之一。模式 B/C 表格若使用 `grouped-table-*` 命名，`grouped-table-separator-line` 必须为零；不得用“模板有意重叠”或“线条较细”放行。
+`standard-narrative-text-overflow`、`narrative-callout-clearance`、`chart-label-mark-overlap`、`advisory-callout-not-left-aligned` 同样是硬错误：标准解释正文的真实排版高度必须装入文本框，下方总结块须留足 16px，图表类别标签不得与柱、点、面积或数值标记相交，建议/结论浅色框必须左对齐；版式应随内容关系变化，不设双区页数量配额。模式 B/C 表格若使用 `grouped-table-*` 命名，`grouped-table-separator-line` 必须为零；不得用“模板有意重叠”或“线条较细”放行。
 
 第六道，使用当前环境可用的演示文稿渲染接口检测画布溢出，并把每页渲染为 PNG。逐页按 100% 尺寸检查标题换行、字体家族/字重、文本裁切、多行正文孤行、图标清晰度与风格一致性、图片裁切、对齐、图表标签、页脚、Logo、内容密度、实心结构的主次和全篇视觉节奏；朗读标题与结论，确认语气像业务负责人直接陈述事实，不像宣传口号或模板化演讲金句；逐条核对 `visualTextBinding`。封面另须与对应标准页并排检查题名位置、字号、留白和品牌家具。总览图不能代替逐页检查。
 

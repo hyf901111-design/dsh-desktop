@@ -171,7 +171,7 @@
 - `standard-narrative-body` 的真实行数 × 实际字号 × 150% 行距加内边距若超过文本框，触发 `standard-narrative-text-overflow`；其真实文字底边与下方总结块间距不足 16px，触发 `narrative-callout-clearance`。
 - `standard-visual-title` 必须在结构 QA 中通过 10pt、常规、不加粗和显式 `华文黑体_易方达` 检查；任何偏差均为硬错误。
 - 名称含 `takeaway`、`recommendation`、`suggestion` 或 `advice` 的建议/结论框只要出现居中或右对齐段落，就触发 `advisory-callout-not-left-aligned`。
-- 普通内容页达到 6 页时，包含 `standard-narrative-title`、`standard-narrative-body`、`standard-visual-title` 三个具名对象的基础证据双区页必须不少于三分之一，否则触发 `insufficient-standard-evidence-layouts`。
+- v1.0.7 取消基础证据双区页数量配额；仅在使用该布局时检查具名对象的排版质量，不能为过检重复模板。
 - 名称含 `label` 的图表类别标签与名称含 `bar`、`column`、`mark`、`point` 或 `area` 的数据标记相交时，触发 `chart-label-mark-overlap`。数值标签必须使用 `value` 或 `data-label` 命名以区别类别标签。
 - 模式 B 分组表对象使用 `grouped-table-*` 命名；其正文区存在 `rule` 或 `separator` 线条时，触发 `grouped-table-separator-line`。
 - `source`、`note`、`来源`、`注释`、`脚注` 等对象始终按正文内容检查，不得因为接近底部而被误判为页脚家具。
