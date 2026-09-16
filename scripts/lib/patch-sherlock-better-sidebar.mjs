@@ -1294,12 +1294,29 @@ export function patchFigmaTerminalSurface(source) {
     .replace('cursorAccent: background,', 'cursorAccent: dark ? "#151515" : "#fafafa",')
 }
 
-// An external media file is readable only when this exact path was attached by
-// the user in this session. Assistant output and arbitrary request paths do not
-// confer file access. The route retains its origin fence and media size checks.
+// Permit exact user attachments and successful read_image results from this session.
+// Assistant references, arbitrary tool text and failed reads confer no access.
 export function sherlockSessionHasChatFile(session, targetPath) {
+  const imageCalls = new Map()
   for (const event of session?.events ?? []) {
-    if (event.type !== 'user/message' || event.data?.source?.kind !== 'user') continue
+    if (event.type === 'tool/call' && event.data?.name === 'read_image') {
+      try {
+        const args = JSON.parse(event.data.arguments)
+        if (typeof args.file_path === 'string') imageCalls.set(event.data.callId, args.file_path)
+      } catch {}
+    }
+    if (event.type === 'tool/result') {
+      const message = event.data?.message
+      if (message?.source?.kind === 'tool' && imageCalls.get(message.source.callId) === targetPath) {
+        for (const block of message.content ?? []) {
+          if (block.type !== 'tool-result' || block.isError || block.toolCallId !== message.source.callId) continue
+          const content = block.content ?? []
+          if (content.some(part => part.type === 'image' && typeof part.attachment?.attachmentId === 'string') &&
+              content.some(part => part.type === 'text' && part.text?.startsWith('<path>' + targetPath + '</path>'))) return true
+        }
+      }
+    }
+    if (event.type !== 'user/message'  || event.data?.source?.kind !== 'user') continue
     const text = (event.data.content ?? []).filter((block) => block.type === 'text' && typeof block.text === 'string').map((block) => block.text).join('')
     for (const match of text.matchAll(/📎 文件：`((?:\\`|[^`])+)`/g)) {
       if (match[1].replaceAll('\\`', '`') === targetPath) return true
@@ -1332,6 +1349,14 @@ function patchVirtualBoardListing(source) {
 }
 
 export function patchBetterSidebarServer(source) {
+  const scopeMarker = '/* sherlock:session-read-image-media:v2 */'
+  if (source.includes('/* sherlock:session-attached-media:v1 */') && !source.includes(scopeMarker)) {
+    const start = source.indexOf('function sherlockSessionHasChatFile(')
+    const end = source.indexOf('\n}\n', start)
+    if (start < 0 || end < 0) throw Error('Session media scope upgrade anchor missing')
+    source = source.slice(0, start) + sherlockSessionHasChatFile.toString() + source.slice(end + 2)
+    source = scopeMarker + '\n' + source
+  }
   source = patchVirtualBoardListing(source)
   // Markdown and restored tabs may carry paths relative to the session root.
   // Resolve before the existing containment/attachment guard, never bypass it.
@@ -1350,7 +1375,7 @@ export function patchBetterSidebarServer(source) {
   }
   if (next.includes(marker)) return next
   const guard = 'if (!isWithin(cwd, path)) throw new SidebarError("fs-error", "media path outside the session working directory", 403);'
-  return `${marker}\n${sherlockSessionHasChatFile.toString()}\n` + replaceExact(next, guard,
+  return `${scopeMarker}\n${marker}\n${sherlockSessionHasChatFile.toString()}\n` + replaceExact(next, guard,
     'if (!isWithin(cwd, path) && !sherlockSessionHasChatFile(ctx.sessions.get(sessionId), path)) throw new SidebarError("fs-error", "media path outside the session working directory", 403);',
     'session attached media scope')
 }

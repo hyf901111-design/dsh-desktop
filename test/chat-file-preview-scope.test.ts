@@ -23,3 +23,15 @@ describe('session attached media preview scope', () => {
     expect(patchBetterSidebarServer(patched)).toBe(patched)
   })
 })
+
+it('allows only images successfully read by this session, not arbitrary tool output', () => {
+ const file='/tmp/render/pg-01.png'
+ const call={type:'tool/call',data:{callId:'c',name:'read_image',arguments:JSON.stringify({file_path:file})}}
+ const block={type:'tool-result',toolCallId:'c',isError:false,content:[{type:'text',text:`<path>${file}</path>`},{type:'image',attachment:{attachmentId:'sha256:test'}}]}
+ const result={type:'tool/result',data:{message:{source:{kind:'tool',callId:'c'},content:[block]}}}
+ expect(sherlockSessionHasChatFile({events:[call,result]},file)).toBe(true)
+ expect(sherlockSessionHasChatFile({events:[call,result]},'/tmp/other.png')).toBe(false)
+ expect(sherlockSessionHasChatFile({events:[result]},file)).toBe(false)
+ expect(sherlockSessionHasChatFile({events:[{...call,data:{...call.data,name:'bash'}},result]},file)).toBe(false)
+ expect(sherlockSessionHasChatFile({events:[call,{...result,data:{message:{...result.data.message,content:[{...block,isError:true}]}}}]},file)).toBe(false)
+})
