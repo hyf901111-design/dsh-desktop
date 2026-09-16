@@ -1,3 +1,4 @@
+import { installBoardSessionFork } from './board-session-fork'
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
@@ -1171,6 +1172,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   cleanups.push(() =>
     win.removeEventListener('sherlock:boards:request', handle)
   )
+  if (typeof deps.sessions.fork === 'function') {
+    cleanups.push(installBoardSessionFork(deps.sessions as PageDependencies['sessions'] & { fork(input: { sessionId: string; atSeq?: number; increaseTitle?: boolean }): Promise<string> },
+      id => boardOnlySession(state, id),
+      id => call('local.directory', { mode: 'fork', sessionId: id }),
+      async () => { await deps.workspaces.refresh(); selectBoardSession('') }))
+  }
   const api = {
     subscribe: (fn: () => void) => {
       listeners.add(fn)

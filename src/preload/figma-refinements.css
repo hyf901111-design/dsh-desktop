@@ -303,7 +303,7 @@ body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-head
 body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; }
 
 /* One row contract for Research boards AND workspace/flat conversation lists.
-   The trailing slot swaps time for More without changing the title's width. */
+   Reserve a compact More slot so hovering never moves the title. */
 [data-dsh-sidebar-root] .YDXeBa_sessionRow {
   box-sizing:border-box; height:32px; min-height:32px; padding:0 8px; gap:0;
   border-radius:7px; font:400 14px/21px var(--odyssey-font-ui); color:var(--srb-label);
@@ -312,12 +312,9 @@ body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; 
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_title { flex:1 1 0; min-width:0; margin:0 6px 0 4px; font:inherit; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 [data-dsh-sidebar-root] .YDXeBa_flatSessionRowWithoutStatus .YDXeBa_title { margin-left:0; }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_time,
-[data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions { box-sizing:border-box; flex:0 0 40px; width:40px; height:24px; min-width:0; margin:0; padding:0; align-items:center; justify-content:flex-end; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_time { display:flex; font:400 11px/17px var(--odyssey-font-ui); color:var(--srb-tertiary); text-align:right; white-space:nowrap; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow .srb-edit-time { font:inherit; color:inherit; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions { display:none; gap:0; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .YDXeBa_time { display:none; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .YDXeBa_rowActions { display:flex; }
+[data-dsh-sidebar-root] .YDXeBa_sessionRow .srb-edit-time { display:none!important; }
+[data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions { box-sizing:border-box; display:flex; visibility:hidden; flex:0 0 24px; width:24px; height:24px; min-width:0; margin:0; padding:0; gap:0; align-items:center; justify-content:flex-end; }
+[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .YDXeBa_rowActions { visibility:visible; }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button { box-sizing:border-box; display:flex; align-items:center; justify-content:center; width:24px; height:24px; min-width:24px; padding:4px; margin:0; border:0; border-radius:5px; background:transparent; box-shadow:none; color:var(--srb-muted); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button:hover { background:var(--srb-row-hover); color:var(--srb-label); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button svg { width:16px; height:16px; flex:none; }

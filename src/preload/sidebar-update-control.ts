@@ -7,6 +7,27 @@ const PANEL_ID = 'sherlock-sidebar-update-panel'
 const FOOTER_SELECTOR = '[data-dsh-sidebar-footer]'
 const SETTINGS_SLOT_SELECTOR = '[data-dsh-sidebar-root] [data-slot="sidebar.settings"]'
 
+function progressRing(doc: Document, percent: number, label: string): SVGSVGElement {
+  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  const value = Math.max(0, Math.min(100, Number.isFinite(percent) ? percent : 0))
+  svg.setAttribute('viewBox', '0 0 20 20')
+  svg.setAttribute('width', '18'); svg.setAttribute('height', '18')
+  svg.setAttribute('role', 'progressbar'); svg.setAttribute('aria-label', label)
+  svg.setAttribute('aria-valuemin', '0'); svg.setAttribute('aria-valuemax', '100')
+  svg.setAttribute('aria-valuenow', String(Math.round(value)))
+  for (const foreground of [false, true]) {
+    const circle = doc.createElementNS(svg.namespaceURI, 'circle')
+    for (const [key, val] of Object.entries({cx:'10',cy:'10',r:'7',fill:'none',stroke:'currentColor','stroke-width':'2',pathLength:'100'})) circle.setAttribute(key,val)
+    if (foreground) {
+      circle.setAttribute('data-progress','')
+      circle.setAttribute('stroke-dasharray','100'); circle.setAttribute('stroke-dashoffset',String(100-value))
+      circle.setAttribute('transform','rotate(-90 10 10)'); circle.setAttribute('stroke-linecap','round')
+    } else circle.setAttribute('opacity','.22')
+    svg.append(circle)
+  }
+  return svg
+}
+
 export interface SidebarUpdateCallbacks {
   download(): void | Promise<unknown>
   install(): void | Promise<unknown>
@@ -35,7 +56,7 @@ export class SidebarUpdateControl {
     this.panel?.remove()
     installSidebarNoticeStyles(this.document)
     footer.setAttribute('data-sherlock-update-footer', '')
-    // The compact control is only used while the navigation is collapsed or the notice is dismissed.
+    // Keep the entry available even while its detailed notice is open.
     const button = this.document.createElement('button')
     button.id = BUTTON_ID
     button.type = 'button'
@@ -44,6 +65,7 @@ export class SidebarUpdateControl {
       this.dismissed = ''
       if (this.status) this.render(this.status)
     })
+    button.setAttribute('aria-controls', PANEL_ID)
     const panel = this.document.createElement('aside')
     panel.id = PANEL_ID
     panel.className = 'ework-sidebar-notice'
@@ -56,7 +78,7 @@ export class SidebarUpdateControl {
     if (!this.document.getElementById('sherlock-sidebar-update-style')) {
       const style = this.document.createElement('style')
       style.id = 'sherlock-sidebar-update-style'
-      style.textContent = `[data-sherlock-update-footer]{display:flex;align-items:center;gap:4px}[data-sidebar-collapsed=true] [data-sherlock-update-footer]{flex-direction:column-reverse}#${BUTTON_ID}{flex:none;appearance:none;width:28px;height:28px;padding:6px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}#${BUTTON_ID}[hidden]{display:none!important}#${BUTTON_ID}:hover{background:var(--dsw-alias-interactive-bg-hover)}#${BUTTON_ID}:focus-visible{outline:1.5px solid #6b96d9;outline-offset:2px}[data-sherlock-update-footer]:has(#${BUTTON_ID}:not([hidden])) .srb-account-controls{width:calc(100% - 28px)}#${PANEL_ID}[data-collapsed=true]{z-index:1502}body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=downloaded]):not([data-phase=installing]){visibility:hidden}body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice{visibility:hidden}`
+      style.textContent = `[data-sherlock-update-footer]{display:flex;align-items:center;gap:4px}[data-sidebar-collapsed=true] [data-sherlock-update-footer]{flex-direction:column-reverse}#${BUTTON_ID}{flex:none;appearance:none;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}#${BUTTON_ID}[hidden]{display:none!important}#${BUTTON_ID}:hover{background:var(--dsw-alias-interactive-bg-hover)}#${BUTTON_ID}:focus-visible{outline:none}[data-sherlock-update-footer]:has(#${BUTTON_ID}:not([hidden])) .srb-account-controls{width:calc(100% - 32px)}[data-sidebar-collapsed=true] .srb-account-controls .srb-bell{order:0}[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button{order:1}#${PANEL_ID}[data-collapsed=true]{z-index:1502}body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=downloaded]):not([data-phase=installing]){visibility:hidden}body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice{visibility:hidden}`
       this.document.head.append(style)
     }
     if (!this.observed) {
@@ -82,15 +104,18 @@ export class SidebarUpdateControl {
     const phaseKey = `${status.availableVersion ?? status.currentVersion}:${status.phase}:${status.phase === 'error' ? updateErrorStage(status) : ''}`
     const active = ['downloading', 'downloaded', 'installing'].includes(status.phase)
     button.dataset.action = action.kind
-    button.replaceChildren(noticeIcon(doc, active ? 'loading' : 'update'))
+    button.replaceChildren(status.phase === 'downloading'
+      ? progressRing(doc, status.percent ?? 0, zh ? '下载进度' : 'Download progress')
+      : noticeIcon(doc, active ? 'loading' : 'download'))
     button.setAttribute('aria-label', updateMessage(status, this.locale) || (zh ? '查看更新' : 'View update'))
     button.title = button.getAttribute('aria-label')!
     const collapsed = !!doc.querySelector('[data-sidebar-collapsed=true]') && !doc.querySelector('.VOzbGW_panel')
-    button.hidden = action.kind === 'hidden' || (!collapsed && this.dismissed !== phaseKey)
+    button.hidden = action.kind === 'hidden'
     panel.dataset.phase = status.phase
     panel.dataset.installStage = status.installStage ?? ''
     panel.dataset.collapsed = String(collapsed)
     panel.hidden = action.kind === 'hidden' || this.dismissed === phaseKey
+    button.setAttribute('aria-expanded', String(!panel.hidden))
     if (action.kind === 'hidden') { this.broadcast(status); return }
     const header = doc.createElement('header')
     const title = doc.createElement('strong')
