@@ -20,6 +20,8 @@ it('patches the actual conversation renderer using its native flow and node seat
  const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const patched=patchSharedNativeConversation(raw)
  expect(patched).toContain('}, SharedResearchChatView);')
+ expect(patched).toContain('? sessionPresentation.conversationView : researchEmpty ?')
+ expect(patched).not.toContain('renderSlot("conversation.view", {}, { entryKey: "chat" }) : researchEmpty ?')
  expect(patched).toContain('compactConversationFlow(slice.keys, nodeStore, runningTurn)')
  expect(patched).toContain('NativeGroup: SharedResearchRequest')
  expect(patched).not.toContain('sessionId,MarkdownText:_deepseek_ai_dsh_client_ui_primitives.MarkdownText}) : researchEmpty ?')

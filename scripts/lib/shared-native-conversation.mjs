@@ -68,10 +68,12 @@ function SharedResearchDiscussion(props) {
 }
 export function patchSharedNativeConversation(source) {
   const marker = '/* SHERLOCK_SHARED_NATIVE_CONVERSATION_V1 */'
+  // Reuse the existing session slot's owner and injection context.
+  source = source.replace('renderSlot("conversation.view", {}, { entryKey: "chat" }) : researchEmpty ?', 'sessionPresentation.conversationView : researchEmpty ?')
   if (source.includes(marker)) return source
   const old = 'sessionId !== void 0 && sherlockShared(sessionId) && sherlockBoardsAdapter ? (0, react_jsx_runtime.jsx)(sherlockBoardsPage.ResearchBoardDiscussion,{page:sherlockBoardsAdapter,sessionId,MarkdownText:_deepseek_ai_dsh_client_ui_primitives.MarkdownText}) : researchEmpty ?'
   if (!source.includes(old) || !source.includes('}, ChatView);')) throw Error('Native shared conversation anchor missing')
-  source = source.replace(old, 'sessionId !== void 0 && sherlockShared(sessionId) && sherlockBoardsAdapter ? renderSlot("conversation.view", {}, { entryKey: "chat" }) : researchEmpty ?')
+  source = source.replace(old, 'sessionId !== void 0 && sherlockShared(sessionId) && sherlockBoardsAdapter ? sessionPresentation.conversationView : researchEmpty ?')
   const adapter = [sharedTaskNativeSlice, SharedResearchMessage, SharedResearchRequest, SharedResearchChatView, SharedResearchDiscussion].map(fn => fn.toString()).join('\n')
   return source.replace('}, ChatView);', '}, SharedResearchChatView);').replace('function ChatView({', marker + '\n' + adapter + '\nfunction ChatView({')
 }
