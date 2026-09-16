@@ -176,6 +176,58 @@
           "排队作者离线时需其重连或自行删除，其他账户不代执行。"
         ],
         "generatedAt": "2026-09-16T09:26:56.714814+00:00"
+      },
+      "merged": {
+        "mergeCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
+        "verificationCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-main-agent.test.js",
+              "test/shared-conversation-queue.test.js",
+              "test/research-board-generation.test.ts",
+              "test/research-board-runtime.test.js",
+              "test/research-boards-service.test.ts",
+              "test/research-board-tasks.test.ts",
+              "test/shared-send-draft.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-main-agent.test.js test/shared-conversation-queue.test.js test/research-board-generation.test.ts test/research-board-runtime.test.js test/research-boards-service.test.ts test/research-board-tasks.test.ts test/shared-send-draft.test.ts",
+            "verifiedCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
+            "completedAt": "2026-09-16T09:27:29.804Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "shared|leased board"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t shared|leased board",
+            "verifiedCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
+            "completedAt": "2026-09-16T09:27:29.804Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
+            "completedAt": "2026-09-16T09:27:29.804Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T09:27:29.804Z"
       }
     }
   ],
