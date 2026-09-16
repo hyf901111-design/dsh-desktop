@@ -2,6 +2,7 @@
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
 import { Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { admitSharedDraft } from './shared-send-draft'
 import { promoteSidebarOrder } from './sidebar-manual-order'
 import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
 import type {
@@ -1014,7 +1015,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     text: string,
     context: SharedRequestContext,
     imageIds: string[],
-    mode: string
+    mode: string,
+    retryDraft?: string
   ) {
     const shell = deps.inputHub.shells.get(sessionId),
       v = view(sessionId)
@@ -1045,9 +1047,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       sends.set(sessionId, request)
     }
     request.retry = () =>
-      submitShared(sessionId, text, context, imageIds, mode)
+      submitShared(sessionId, text, context, imageIds, mode, retryDraft ?? draft)
     request.busy = true
     const generation = state.account.generation
+    const admitted = retryDraft !== undefined && retryDraft !== draft
+      ? { untouched: () => false, restore: () => false }
+      : admitSharedDraft(shell)
+    const restoreInput = () => {
+      if (generation === state.account.generation && deps.inputHub.shells.get(sessionId) === shell) admitted.restore()
+    }
     saveDraft(sessionId, draft)
     shell?.setResearchContextPreparing?.(true)
     try {
@@ -1071,21 +1079,16 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         typeof reply.requestMessageId === 'string' &&
         reply.requestMessageId
       ) {
-        if (
-          shell.snapshot.draftRev === before.draftRev &&
-          shell.snapshot.draft === draft
-        ) {
-          shell.commitSend([], draft)
-          saveDraft(sessionId, '')
-        }
+        if (admitted.untouched()) saveDraft(sessionId, '')
         if (reply.state === 'taskCreateFailed')
           shell.notify(
             'error',
             reply.error?.message ??
               '消息已发送，研究任务尚未启动；可重试该任务。'
           )
-      } else shell?.notify('error', '请求尚未确认，输入已保留。')
+      } else { restoreInput(); shell?.notify('error', '请求尚未确认，输入已保留。') }
     } catch (error) {
+      restoreInput()
       shell?.notify(
         'error',
         (error as any)?.code === 'INVALID_REQUEST'

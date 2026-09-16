@@ -525,3 +525,13 @@ body .srb-session-search-results span{flex:1;min-width:0;overflow:hidden;text-ov
 body .srb-session-search-empty{margin:0;padding:12px;color:var(--dsw-alias-label-tertiary);font-size:13px}
 body .srb-session-search>.srb-status:empty{display:none}
 body .hHd-Xa_collapsed .hHd-Xa_logoRow{height:auto;overflow:visible;flex-direction:column-reverse;gap:4px}
+/* Compact, evenly spaced derivation choices; a more comfortable component toolbar. */
+body .rScV5Q_mindMapMenu.odyssey-derived-detail-menu button{height:54px!important;min-height:54px;padding:7px 10px!important}
+body .odyssey-derived-detail-copy{gap:2px}
+body .rScV5Q_selectionActions{height:42px!important;padding:5px 8px!important;gap:4px}
+body .rScV5Q_selectionActions button{height:30px;padding:0 8px;gap:6px;font-size:13px;line-height:20px}
+body .rScV5Q_selectionActions button :is(svg,.odyssey-canvas-icon){width:16px;height:16px}
+body .srb-notifications{padding:10px;gap:6px}
+body .srb-notification-list{flex:1;gap:6px}
+body .srb-notifications .srb-notification{padding:10px;gap:3px}
+body .srb-notification-empty{flex:1;height:auto;min-height:120px}
