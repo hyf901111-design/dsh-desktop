@@ -26,7 +26,7 @@ it('patches both context menus once and preserves existing menu entries',async()
 it('restores refresh helper after the layout patch regenerates pre-canvas helpers',async()=>{
  const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const once=patchCanvasRefresh(raw)
- const stripped=once.replace('/* odyssey:canvas-refresh:v1 */','').replace(refreshResearchCanvasView.toString(),'')
+ const stripped=once.replace('/* odyssey:canvas-refresh:v1 */','').replace(/async function refreshResearchCanvasView[\s\S]*?\n}/,'')
  const restored=patchCanvasRefresh(stripped)
  expect(restored.match(/async function refreshResearchCanvasView/g)).toHaveLength(1)
  expect(restored.match(/const \[canvasRefreshEpoch/g)).toHaveLength(1)
