@@ -434,6 +434,7 @@ export class ResearchBoardsService {
   private eventSeq = 0
   private flushing?: Promise<void>
   private refreshPromise?: Promise<void>
+  private refreshRequested = false
   private retryTimer?: ReturnType<typeof setTimeout>
   constructor(private readonly options: Options) {
     this.store = options.store
@@ -655,7 +656,8 @@ export class ResearchBoardsService {
               contextSnapshot: _context,
               ...safe
             } = t
-            return copy(safe) as typeof t
+            const progress = this.localTaskProgress.get(`${id}:${boardId}:${t.taskId}`)
+            return copy({ ...safe, ...(progress ? { progress } : {}) }) as typeof t
           })
         : [],
       members: read ? copy(r.snapshot.members) : [],
@@ -727,6 +729,7 @@ export class ResearchBoardsService {
     clearTimeout(this.retryTimer)
     this.retryTimer = undefined
     this.refreshPromise = undefined
+    this.refreshRequested = false
     for (const [boardId, r] of this.boards) {
       if (oldId) this.invalidateLocal(oldId, boardId)
       r.abort.abort()
@@ -761,80 +764,91 @@ export class ResearchBoardsService {
     this.retryTimer.unref?.()
   }
   async refresh(): Promise<void> {
-    if (this.refreshPromise) return this.refreshPromise
+    if (this.refreshPromise) {
+      // A result may have committed after the active read captured its snapshot.
+      // Coalesce concurrent invalidations, but never discard the next fresh read.
+      this.refreshRequested = true
+      return this.refreshPromise
+    }
     const generation = this.options.account.generation
     const work = (async () => {
-      if (!this.options.account.authenticated) return
-      try {
-        const me = await this.client.request<{
-          user: { userId: string; publicId: string; username: string }
-        }>({ kind: 'me' })
-        if (generation !== this.options.account.generation || this.stopped)
-          return
-        safeId(me.user.userId)
-        if (!/^\d{10}$/.test(me.user.publicId))
-          throw new ResearchBoardsError('INVALID_RESPONSE')
-        this.accountView = {
-          status: 'ready',
-          generation,
-          user: {
-            userId: me.user.userId,
-            publicId: me.user.publicId,
-            username: text(me.user.username, 512)
-          }
-        }
-        const ctx = this.context()
-        const list = await this.client.request<{ boards: Board[] }>({
-          kind: 'boards.list'
-        })
-        this.check(ctx)
-        if (!Array.isArray(list.boards))
-          throw new ResearchBoardsError('INVALID_RESPONSE')
-        const known = this.store.account(ctx.userId)
-        for (const boardId of new Set([
-          ...Object.keys(known.bindings),
-          ...known.pending.map((p) => p.boardId)
-        ]))
-          if (!list.boards.some((b) => b.boardId === boardId))
-            await this.revoke(boardId, 'ACCESS_DENIED')
-        this.check(ctx)
-        this.store.setBoards(ctx.userId, list.boards)
-        if (
-          this.currentBoard &&
-          list.boards.some((b) => b.boardId === this.currentBoard)
-        )
-          await this.loadBoard(this.currentBoard, true)
-        await this.flushAuxiliary()
-        this.check(ctx)
-        await this.catchUpNotifications()
-        this.check(ctx)
-        if (!this.notificationsDispose)
-          this.notificationsDispose = this.client.watch(
-            { scope: 'notifications' },
-            (event) => {
-              if (ctx.generation === this.options.account.generation)
-                void this.notificationEvent(event, ctx)
-            }
-          )
-        await this.flush()
-        this.emitState()
-      } catch (error) {
-        if (generation !== this.options.account.generation || this.stopped)
-          return
-        if (errorCode(error) === 'BOARD_ACCESS_CHANGED') return
-        this.accountView.status = this.accountView.user
-          ? 'ready'
-          : 'unavailable'
-        for (const r of this.boards.values()) this.markOffline(r)
-        this.emitState()
-        this.retry()
-      }
+      do {
+        this.refreshRequested = false
+        await this.refreshOnce(generation)
+      } while (this.refreshRequested && generation === this.options.account.generation && !this.stopped)
     })()
     this.refreshPromise = work
     try {
       await work
     } finally {
       if (this.refreshPromise === work) this.refreshPromise = undefined
+    }
+  }
+  private async refreshOnce(generation: number): Promise<void> {
+    if (!this.options.account.authenticated) return
+    try {
+      const me = await this.client.request<{
+        user: { userId: string; publicId: string; username: string }
+      }>({ kind: 'me' })
+      if (generation !== this.options.account.generation || this.stopped)
+        return
+      safeId(me.user.userId)
+      if (!/^\d{10}$/.test(me.user.publicId))
+        throw new ResearchBoardsError('INVALID_RESPONSE')
+      this.accountView = {
+        status: 'ready',
+        generation,
+        user: {
+          userId: me.user.userId,
+          publicId: me.user.publicId,
+          username: text(me.user.username, 512)
+        }
+      }
+      const ctx = this.context()
+      const list = await this.client.request<{ boards: Board[] }>({
+        kind: 'boards.list'
+      })
+      this.check(ctx)
+      if (!Array.isArray(list.boards))
+        throw new ResearchBoardsError('INVALID_RESPONSE')
+      const known = this.store.account(ctx.userId)
+      for (const boardId of new Set([
+        ...Object.keys(known.bindings),
+        ...known.pending.map((p) => p.boardId)
+      ]))
+        if (!list.boards.some((b) => b.boardId === boardId))
+          await this.revoke(boardId, 'ACCESS_DENIED')
+      this.check(ctx)
+      this.store.setBoards(ctx.userId, list.boards)
+      if (
+        this.currentBoard &&
+        list.boards.some((b) => b.boardId === this.currentBoard)
+      )
+        await this.loadBoard(this.currentBoard, true)
+      await this.flushAuxiliary()
+      this.check(ctx)
+      await this.catchUpNotifications()
+      this.check(ctx)
+      if (!this.notificationsDispose)
+        this.notificationsDispose = this.client.watch(
+          { scope: 'notifications' },
+          (event) => {
+            if (ctx.generation === this.options.account.generation)
+              void this.notificationEvent(event, ctx)
+          }
+        )
+      await this.flush()
+      this.emitState()
+    } catch (error) {
+      if (generation !== this.options.account.generation || this.stopped)
+        return
+      if (errorCode(error) === 'BOARD_ACCESS_CHANGED') return
+      this.accountView.status = this.accountView.user
+        ? 'ready'
+        : 'unavailable'
+      for (const r of this.boards.values()) this.markOffline(r)
+      this.emitState()
+      this.retry()
     }
   }
   private async durableAuxiliary(
@@ -1186,6 +1200,10 @@ export class ResearchBoardsService {
       if (i >= 0) a.boards[i] = copy(snapshot.board)
       else a.boards.push(copy(snapshot.board))
     })
+    // Discussion state is already authoritative. Deliver it without waiting for
+    // asset downloads, keeping the previously materialized canvas/revision pair.
+    // Replaced/revoked runtimes have no materialized revision and cannot leak it.
+    if (r.materializedRevision) this.emitBoard(boardId, 'remote')
     await this.materialize(r, ctx)
     this.checkBoard(ctx)
     if (this.currentBoard === boardId && !this.activeDispose)
@@ -2828,7 +2846,12 @@ export class ResearchBoardsService {
     if (!task || !['pending', 'running'].includes(task.status)) return
     if (!progress || !Array.isArray(progress.events) || !Number.isFinite(progress.lastActivityAt) || !Number.isFinite(progress.outputChars)) return
     const key = `${accountId}:${boardId}:${taskId}`
-    const value = { events: progress.events.slice(-12), lastActivityAt: progress.lastActivityAt, outputChars: progress.outputChars }
+    const value = {
+      ...(Number.isFinite(progress.startedAt) ? { startedAt: progress.startedAt } : {}),
+      events: progress.events.slice(-12),
+      lastActivityAt: progress.lastActivityAt,
+      outputChars: progress.outputChars
+    }
     if (JSON.stringify(this.localTaskProgress.get(key)) === JSON.stringify(value)) return
     this.localTaskProgress.set(key, copy(value))
     if (this.localTaskProgress.size > 100) this.localTaskProgress.delete(this.localTaskProgress.keys().next().value!)

@@ -115,3 +115,6 @@ python "$SKILL_DIR/scripts/check_efund_typography.py" \
 - 没有“找不到 Shape”“没有字号声明”或“字号无法解析”的未处理警告。
 - 具名标准证据页文本满足对象名对应的字号、字重、150% 行距和显式中英文字体合同；其中 `standard-visual-title` 必须为 10pt 常规、不加粗。
 - 例外必须逐 Shape 说明原因并使用 `--allow 输出页码:ShapeID` 放行；不得全局忽略。
+
+
+1.0.9 补充以 [delivery-109.md](delivery-109.md) 为准：适用页默认选择左文右图，逐页填写 `layoutChoice` 并复核适用页采用率；封面副标题常规不加粗；目录首行无顶线，其余行下分隔保留。普通正文表格无描边规则不得误用于目录。

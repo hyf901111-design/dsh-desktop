@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import type { BoardSnapshot } from '../src/shared/research-boards'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -1844,4 +1844,138 @@ it('keeps shared preview cleanup local and durable without allowing direct share
   expect(t.service.writeCanvasStorage(key,'[{}]')).toBe(false)
   expect(t.service.writeCanvasStorage('sherlock.research.canvas.files.v1:shared-session','[]')).toBe(false)
   expect(t.service.writeCanvasStorage(key,'[]')).toBe(true)
+})
+
+
+it('coalesces refreshes requested after an in-flight snapshot into a fresh read', async () => {
+  const t = make()
+  await ready(t)
+  const original = t.client.request
+  const stale = t.snapshot()
+  const latest = structuredClone(stale)
+  latest.seq = latest.board.seq = 1
+  latest.messages = [{ messageId: 'answer', role: 'assistant', text: 'Fresh result' }] as any
+  let release!: (snapshot: BoardSnapshot) => void
+  let reads = 0
+  t.client.request = async (request: any) => {
+    if (request.kind === 'board.get') {
+      reads++
+      if (reads === 1) return await new Promise<BoardSnapshot>(resolve => { release = resolve })
+      return latest
+    }
+    return original(request)
+  }
+  const beforeCompletion = t.service.refresh()
+  await vi.waitFor(() => expect(reads).toBe(1))
+  const afterCompletion = Array.from({ length: 4 }, () => t.service.refresh())
+  release(stale)
+  await Promise.all([beforeCompletion, ...afterCompletion])
+  expect(reads).toBe(2)
+  expect(t.service.getSnapshot().current!.messages).toEqual(latest.messages)
+})
+
+it('publishes completed replies while assets materialize and keeps the canvas revision paired', async () => {
+  let hold = false
+  let release!: () => void
+  const t = make({ materializeBoard: async input => {
+    if (hold) await new Promise<void>(resolve => { release = resolve })
+    return input.canvas
+  } })
+  const before = await ready(t)
+  const events: any[] = []
+  t.service.subscribe(event => events.push(event))
+  hold = true
+  const snapshot = t.snapshot()
+  snapshot.seq = snapshot.board.seq = 1
+  snapshot.messages = [{ messageId: 'answer', role: 'assistant', text: 'Done' }] as any
+  snapshot.tasks = [{ taskId: 'task', status: 'completed' }] as any
+  const received = t.service.receiveBoard('board', snapshot)
+  await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+  const delivered = events.filter(event => event.type === 'board').at(-1)?.view
+  release()
+  await received
+  expect(delivered?.messages).toEqual(snapshot.messages)
+  expect(delivered?.tasks[0].status).toBe('completed')
+  expect(delivered?.canvasRevision).toBe(before.canvasRevision)
+  expect(delivered?.canvas).toEqual(before.canvas)
+})
+
+it('exposes local discussion task progress without a canvas target or executor secrets', async () => {
+  const t = make()
+  await ready(t)
+  const snapshot = t.snapshot()
+  snapshot.tasks = [{ taskId: 'discussion', targetId: null, status: 'running', leaseToken: 'secret', contextSnapshot: { private: true } }] as any
+  await t.service.receiveBoard('board', snapshot)
+  const progress = { startedAt: 123, events: [{ seq: 1, type: 'tool-started', tool: '查询金融数据' }], lastActivityAt: 456, outputChars: 1200 }
+  t.service.setLocalTaskProgress('u', 'board', 'discussion', progress)
+  const task = t.service.getSnapshot().current!.tasks[0] as any
+  expect(task.progress).toEqual(progress)
+  expect(task.leaseToken).toBeUndefined()
+  expect(task.contextSnapshot).toBeUndefined()
+  expect(t.service.taskAuthority('u', 'board').snapshot.tasks[0]!.progress).toBeUndefined()
+})
+
+
+it('keeps competing discussion snapshots monotonic while older materialization finishes last', async () => {
+  const releases: Array<() => void> = []
+  let hold = false
+  const t = make({ materializeBoard: async input => {
+    if (hold) await new Promise<void>(resolve => releases.push(resolve))
+    return input.canvas
+  } })
+  await ready(t)
+  const events: any[] = []
+  t.service.subscribe(event => { if (event.type === 'board') events.push(event) })
+  hold = true
+  const first = t.snapshot()
+  first.seq = first.board.seq = 1
+  first.tasks = [{ taskId: 'task', status: 'running' }] as any
+  const second = structuredClone(first)
+  second.seq = second.board.seq = 2
+  second.tasks[0]!.status = 'completed'
+  second.messages = [{ messageId: 'answer', role: 'assistant', text: 'Done' }] as any
+  const receivingFirst = t.service.receiveBoard('board', first)
+  const receivingSecond = t.service.receiveBoard('board', second)
+  await vi.waitFor(() => expect(releases).toHaveLength(2))
+  expect(events.map(event => event.view.seq)).toEqual([1, 2])
+  releases[1]!()
+  await receivingSecond
+  releases[0]!()
+  await receivingFirst
+  expect(events.map(event => event.view.seq)).toEqual([1, 2, 2, 2])
+  expect(events.at(-1).view.messages).toEqual(second.messages)
+  expect(events.every((event, index) => index === 0 || event.eventSeq > events[index - 1].eventSeq)).toBe(true)
+})
+
+it('does not republish a buffered reply or old canvas after access is revoked during materialization', async () => {
+  let hold = false
+  let release!: () => void
+  const t = make({ materializeBoard: async input => {
+    if (hold) await new Promise<void>(resolve => { release = resolve })
+    return input.canvas
+  } })
+  await ready(t)
+  const events: any[] = []
+  t.service.subscribe(event => events.push(event))
+  hold = true
+  const snapshot = t.snapshot()
+  snapshot.seq = snapshot.board.seq = 1
+  snapshot.messages = [{ messageId: 'answer', role: 'assistant', text: 'Done' }] as any
+  const received = t.service.receiveBoard('board', snapshot)
+  const rejected = expect(received).rejects.toThrow()
+  await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+  t.revoke()
+  const watch = t.watches.filter(watch => watch.scope.scope === 'board' && !watch.closed).at(-1)!
+  watch.listener({ type: 'accessRevoked' })
+  await vi.waitFor(() => expect(t.service.getSnapshot().current!.permissions.read).toBe(false))
+  const revokedAt = events.length
+  release()
+  await rejected
+  for (const event of events.slice(revokedAt)) {
+    const view = event.type === 'board' ? event.view : event.state?.current
+    if (!view) continue
+    expect(view.messages).toEqual([])
+    expect(view.canvas).toEqual({ files: [], artifacts: [] })
+  }
+  expect(t.service.getSnapshot().current!.messages).toEqual([])
 })
