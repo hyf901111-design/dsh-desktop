@@ -1,3 +1,4 @@
+import { patchResearchCanvasDeferredHtml } from '../scripts/lib/research-canvas-deferred-html.mjs'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
@@ -16,7 +17,8 @@ function fallbackModule(): any {
   return fallback
 }
 
-async function mountContainer(overrides: Record<string, unknown> = {}) {
+async function mountContainer(overrides: Record<string, unknown> = {}, initialCardProps: Record<string, unknown> = {}) {
+  let cardProps = initialCardProps
   const browserWindow = new Window({ url: 'https://sherlock.local/' })
   const globals = ['window', 'document', 'navigator', 'IS_REACT_ACT_ENVIRONMENT']
   const previous = globals.map((key) => Object.getOwnPropertyDescriptor(globalThis, key))
@@ -25,7 +27,7 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
   }
   let descriptor: any
   Object.assign(browserWindow, { __ModuleLoader__: { load(value: any) { descriptor = value } } })
-  runInNewContext(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'), {
+  runInNewContext(patchResearchCanvasDeferredHtml(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')), {
     window: browserWindow, document: browserWindow.document, localStorage: browserWindow.localStorage,
     navigator: browserWindow.navigator, HTMLElement: browserWindow.HTMLElement,
     HTMLTextAreaElement: browserWindow.HTMLTextAreaElement, Text: browserWindow.Text,
@@ -56,7 +58,7 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
   function Harness() {
     const snapshot = useSyncExternalStore(workspace.subscribe, workspace.getSnapshot, workspace.getSnapshot)
     return createElement(client.ResearchCanvasArtifactCard, {
-      node: snapshot.artifacts[0], sessionId: 'chrome', visible: true,
+      node: snapshot.artifacts[0], sessionId: 'chrome', visible: true, ...cardProps,
       onActivate: activated, onFrameAction: frameAction,
       onAutoHeight: (node: any, height: number) => workspace.updateNodeGeometry(node.id, { height, sizeMode: "auto" }),
       onSubmitContainer: (node: any, prompt: string) => {
@@ -80,6 +82,10 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
   }
   return {
     browserWindow, host: browserWindow.document.body, workspace, submitted, activated, frameAction, click, key,
+    async setCardProps(next: Record<string, unknown>) {
+      cardProps = { ...cardProps, ...next }
+      await act(async () => { root.render(createElement(Harness)) })
+    },
     async cleanup() {
       await act(async () => { root.unmount() })
       await browserWindow.happyDOM.close()
@@ -91,6 +97,53 @@ async function mountContainer(overrides: Record<string, unknown> = {}) {
     }
   }
 }
+
+describe('deferred offscreen HTML previews', () => {
+  it('mounts zero offscreen iframes until visible, then retains the same iframe across pans', async () => {
+    const mounted = await mountContainer({}, { visible: false })
+    try {
+      expect(mounted.host.querySelectorAll('iframe[data-research-html-artifact]')).toHaveLength(0)
+      expect(mounted.host.querySelector('[data-research-artifact-card]')).not.toBeNull()
+      await mounted.setCardProps({ visible: true })
+      const frame = mounted.host.querySelector('iframe[data-research-html-artifact]')
+      expect(frame).not.toBeNull()
+      await mounted.setCardProps({ visible: false })
+      expect(mounted.host.querySelector('iframe[data-research-html-artifact]')).toBe(frame)
+      await mounted.setCardProps({ visible: true })
+      expect(mounted.host.querySelector('iframe[data-research-html-artifact]')).toBe(frame)
+    } finally { await mounted.cleanup() }
+  })
+  it.each(['selected'])('renders an offscreen %s card immediately', async flag => {
+    const mounted = await mountContainer({}, { visible: false, [flag]: true })
+    try {
+      expect(mounted.host.querySelector('iframe[data-research-html-artifact]')).not.toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+  it('reveals a newly selected offscreen card and retains its preview after deselection', async () => {
+    const mounted = await mountContainer({}, { visible: false })
+    try {
+      expect(mounted.host.querySelector('iframe[data-research-html-artifact]')).toBeNull()
+      await mounted.setCardProps({ selected: true })
+      const frame = mounted.host.querySelector('iframe[data-research-html-artifact]')
+      expect(frame).not.toBeNull()
+      await mounted.setCardProps({ selected: false })
+      expect(mounted.host.querySelector('iframe[data-research-html-artifact]')).toBe(frame)
+    } finally { await mounted.cleanup() }
+  })
+  it('preserves non-HTML content outside the viewport', async () => {
+    const mounted = await mountContainer({ containerSpec: { version: 1, type: 'markdown', title: '研究', content: '保留完整内容' } }, { visible: false })
+    try {
+      expect(mounted.host.textContent).toContain('保留完整内容')
+      expect(mounted.host.querySelector('[data-research-deferred-html]')).toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+  it('keeps live task previews active outside the viewport', async () => {
+    const mounted = await mountContainer({ generationStatus: 'running' }, { visible: false })
+    try {
+      expect(mounted.host.querySelector('iframe[data-research-html-artifact]')).not.toBeNull()
+    } finally { await mounted.cleanup() }
+  })
+})
 
 describe('Research container chrome', () => {
   it.each([
