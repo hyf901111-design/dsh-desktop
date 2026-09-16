@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "画板工具栏消息中心和即时发送优化",
+        "featureName": "修复常驻描边与消息卡片背景",
         "branch": "codex/feat/welcome-figma-20260915",
-        "baseCommit": "c35919d3f3294a813003c63a9f50a7e852a0224f",
-        "tipCommit": "687b40e0685bf00aaba5997c5632b1c6f6a43ba0",
+        "baseCommit": "687b40e0685bf00aaba5997c5632b1c6f6a43ba0",
+        "tipCommit": "f11f3ba9566bf48d7871731914376536a16b0619",
         "commits": [
           {
-            "commit": "687b40e0685bf00aaba5997c5632b1c6f6a43ba0",
+            "commit": "f11f3ba9566bf48d7871731914376536a16b0619",
             "parents": [
-              "c35919d3f3294a813003c63a9f50a7e852a0224f"
+              "687b40e0685bf00aaba5997c5632b1c6f6a43ba0"
             ],
-            "subject": "优化画板工具栏与消息中心并即时清空协作发送输入"
+            "subject": "保留控件聚焦前后的常驻描边并柔化消息卡片背景"
           }
         ],
         "files": [
@@ -29,23 +29,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-notifications-ui.ts"
+            "path": "src/preload/focus-style.css"
           },
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/shared-send-draft.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-notifications-center.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/shared-send-draft.test.ts"
+            "path": "test/focus-style.test.ts"
           }
         ],
         "checks": [
@@ -54,77 +42,28 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/shared-send-draft.test.ts",
+              "test/focus-style.test.ts",
               "test/research-board-notifications-center.test.ts"
             ],
             "outcome": "passed",
-            "summary": "11项聚焦验证及类型检查通过",
-            "verifiedCommit": "687b40e0685bf00aaba5997c5632b1c6f6a43ba0",
-            "completedAt": "2026-09-16T00:26:06.528454+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "11项聚焦验证及类型检查通过",
-            "verifiedCommit": "687b40e0685bf00aaba5997c5632b1c6f6a43ba0",
-            "completedAt": "2026-09-16T00:26:06.528454+00:00",
+            "summary": "11项聚焦检查通过",
+            "verifiedCommit": "f11f3ba9566bf48d7871731914376536a16b0619",
+            "completedAt": "2026-09-16T00:37:08.110241+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "浏览器已验证分组、输入坐标固定与外部关闭；集成后验证原生顶栏"
+          "summary": "集成后验证原生输入框聚焦与消息卡片"
         },
         "acceptanceCriteria": [
-          "菜单间距均匀紧凑，工具栏加大",
-          "发送即清空并安全恢复失败草稿",
-          "消息中心上移且切换标签不改变尺寸"
+          "输入框常驻浅描边聚焦前后保持一致",
+          "消息卡片使用中性背景"
         ],
         "risks": [
-          "尚需本地客户端目视验证"
+          "需本地客户端目视验证"
         ],
-        "generatedAt": "2026-09-16T00:26:06.528454+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a11b078523809361446a0bd86f30890d17d4cc87",
-        "verificationCommit": "a11b078523809361446a0bd86f30890d17d4cc87",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/onboarding-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/onboarding-patch.test.ts",
-            "verifiedCommit": "a11b078523809361446a0bd86f30890d17d4cc87",
-            "completedAt": "2026-09-16T00:26:09.348Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "a11b078523809361446a0bd86f30890d17d4cc87",
-            "completedAt": "2026-09-16T00:26:09.348Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-16T00:26:09.348Z"
+        "generatedAt": "2026-09-16T00:37:08.110241+00:00"
       }
     }
   ],
