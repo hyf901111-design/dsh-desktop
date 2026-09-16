@@ -173,6 +173,46 @@
           "Existing user PPT not regenerated"
         ],
         "generatedAt": "2026-09-16T08:23:50.883Z"
+      },
+      "merged": {
+        "mergeCommit": "33488c06000b44d70dc5e07b810426679036aa66",
+        "verificationCommit": "33488c06000b44d70dc5e07b810426679036aa66",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/pptx-resize-settle.test.js",
+              "test/context-menu-template.test.ts",
+              "test/context-menu.test.ts",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-layout-lint.test.ts",
+              "test/bundled-ppt-skill.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/bundled-skill-upgrade.test.ts",
+              "test/bundled-skill-parity.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/pptx-resize-settle.test.js test/context-menu-template.test.ts test/context-menu.test.ts test/efund-ppt-107.test.js test/efund-ppt-layout-lint.test.ts test/bundled-ppt-skill.test.ts test/sherlock-office-preview-adapter.test.ts test/bundled-skill-upgrade.test.ts test/bundled-skill-parity.test.ts",
+            "verifiedCommit": "33488c06000b44d70dc5e07b810426679036aa66",
+            "completedAt": "2026-09-16T08:25:49.538Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "33488c06000b44d70dc5e07b810426679036aa66",
+            "completedAt": "2026-09-16T08:25:49.538Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T08:25:49.538Z"
       }
     }
   ],
