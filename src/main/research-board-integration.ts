@@ -1308,7 +1308,8 @@ export class ResearchBoardIntegration {
           signal.addEventListener('abort', abort, { once: true })
           setTimeout(() => signal.removeEventListener('abort', abort), 510)
         })
-        this.authority(r.accountId, r.boardId, r.epoch, true)
+        const live = this.authority(r.accountId, r.boardId, r.epoch, true)
+        if (live.snapshot.tasks.some(t => t.taskId === task.taskId && t.stopRequested)) throw Error('EXECUTION_INTERRUPTED')
         local = await this.runtime('inspect', { taskId: localTaskId }, signal)
         if (local.progress) this.options.service().setLocalTaskProgress?.(r.accountId, r.boardId, task.taskId, local.progress)
       }
