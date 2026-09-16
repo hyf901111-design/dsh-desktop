@@ -38,6 +38,7 @@ export function patchQuestionCountdown(source) {
   replace('const updateDraft = (update) => {', 'const updateDraft = (update) => {\n touchedQuestions.current.add(index); cancelCountdown.current(); setCountdown(null);')
   replace('const submitDrafts = (values) => {', 'const submitDrafts = (values) => {\n cancelCountdown.current();')
   replace('focusedQuestions.current.add(index);', 'focusedQuestions.current.add(index); touchedQuestions.current.add(index); cancelCountdown.current(); setCountdown(null);')
+  replace('onChange: draftCustom,', 'onFocus: () => { touchedQuestions.current.add(index); cancelCountdown.current(); setCountdown(null); },\n onChange: draftCustom,')
   replace('const skipQuestion = () => {', 'const skipQuestion = () => {\n cancelCountdown.current();')
   const anchor = '\t\t\treturn (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: QuestionComposer_module_css_default.frame,'
   replace(anchor, `
