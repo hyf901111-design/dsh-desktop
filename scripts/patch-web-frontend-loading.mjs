@@ -186,3 +186,9 @@ writeFileSync(conversationPath, patchComponentWheelZoom(readFileSync(conversatio
 writeFileSync(conversationPath, patchCanvasActionsClient(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchCanvasRefresh(readFileSync(conversationPath, 'utf8')))
+
+import { patchTaskProgressRuntime } from './lib/task-progress-runtime.mjs'
+import { patchTaskProgressClient } from './lib/task-progress-client.mjs'
+const todoRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js')
+writeFileSync(todoRuntimePath, patchTaskProgressRuntime(readFileSync(todoRuntimePath, 'utf8')))
+writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversationPath, 'utf8')))
