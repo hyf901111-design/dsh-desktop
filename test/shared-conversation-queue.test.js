@@ -8,3 +8,22 @@ it('excludes a message admitted before its taskCreate finishes from another user
   const s=state();s.messages.push({id:'not-created-yet',role:'user',text:'C'})
   expect(conversationContext(s,s.tasks[0]).messages.map(m=>m.id)).not.toContain('not-created-yet')
 })
+it('lets component generation and a main conversation claim independently', () => {
+  const s = state()
+  const component = { taskId: 'component', requestMessageId: 'mc', conversation: false, status: 'pending' }
+  s.tasks.push(component)
+  expect(() => assertConversationClaim(s, component)).not.toThrow()
+  s.tasks[0].status = 'completed'
+  expect(() => assertConversationClaim(s, s.tasks[1])).not.toThrow()
+  component.status = 'running'
+  expect(() => assertConversationClaim(s, s.tasks[1])).not.toThrow()
+})
+it('conversation promotion stops only the main conversation and preserves component work', () => {
+  const s = state()
+  const component = { taskId: 'component', conversation: false, status: 'running' }
+  s.tasks.push(component)
+  mutateQueuedConversation(s, 'b', 'bob', 'promote')
+  expect(s.tasks[0].stopRequested).toBe(true)
+  expect(component.stopRequested).toBeUndefined()
+  expect(component.status).toBe('running')
+})

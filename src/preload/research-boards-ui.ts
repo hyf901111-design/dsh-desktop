@@ -2419,7 +2419,7 @@ export function ResearchBoardQueue({ page, sessionId, QueueDock, ...props }: any
       return { id: t.taskId, placement: 'queued', source: { kind: 'user' }, text: m?.text ?? '', preview: m?.text ?? '',
         authorName: m?.author?.username ?? m?.authorName ?? '成员', editable: view.permissions.execute && t.initiatorId === userId }
     }), [view, userId])
-  const snapshot = { queue, running: view?.tasks.some((t: any) => t.status === 'running'), subagent: null }
+  const snapshot = { queue, running: view?.tasks.some((t: any) => t.conversation && t.status === 'running'), subagent: null }
   return h(QueueDock, { ...props, useSession: (select: any) => select(snapshot), updateQueue: async (taskId: string, action: any) => {
     await page.call('queue.' + ({ edit: 'edit', remove: 'delete', steer: 'promote' } as any)[action.kind], {
       boardId: view.boardId, taskId, ...(action.kind === 'edit' ? { text: action.content.map((b: any) => b.text ?? '').join('') } : {})
