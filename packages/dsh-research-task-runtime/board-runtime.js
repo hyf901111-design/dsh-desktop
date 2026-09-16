@@ -98,7 +98,7 @@ export class SharedExecutionRuntime {
   }
   async cancel(id, drain = false) {
     const t = this.tasks[id]
-    if (!t) return
+    if (!t) return { taskId: id, status: 'not-started' }
     this.controllers.get(id)?.abort()
     if (['running', 'queued'].includes(t.status)) {
       t.status = 'interrupted'
