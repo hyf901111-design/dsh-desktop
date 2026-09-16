@@ -1177,8 +1177,8 @@ export class ResearchBoardIntegration {
       claimed = true
       leaseToken = claim.leaseToken
       if (!r.intent.targetId && !r.intent.workbenchRequestId && claim.task.conversation !== true) {
-        failureCode = 'GENERATION_FAILED'
-        throw Error('协作服务尚未支持共享排队，请更新协作服务后重试。')
+        failureCode = 'COLLABORATION_UPGRADE_REQUIRED'
+        throw Error(taskFailureMessage(failureCode))
       }
       const lease = claim.leaseToken
       const context = claim.task.contextSnapshot

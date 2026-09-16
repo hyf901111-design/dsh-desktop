@@ -8,6 +8,7 @@ const TASK_FAILURES = Object.freeze({
   TIMEOUT: '模型响应超时，本次生成未完成。',
   TRANSPORT: '模型连接中断，本次生成未完成。',
   RATE_LIMIT: '模型服务暂时限流，本次生成未完成。',
+  COLLABORATION_UPGRADE_REQUIRED: '协作服务版本过旧，尚不支持主智能体与共享排队；请先更新协作服务，重复重试无法解决。',
   GENERATION_FAILED: '本次组件生成未完成，可重新执行。'
 })
 export function taskFailureMessage(code) {
