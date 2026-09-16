@@ -49,3 +49,41 @@ it('does not publish partial text from a failed main-agent turn', async () => {
   await expect(handle.result).rejects.toThrow('EXECUTION_INTERRUPTED')
   await handle.dispose()
 })
+it.each([false, true])('waits for delayed native settlement and drains its parent wake (aborted=%s)', async aborted => {
+  const listeners = new Map()
+  const emit = (name, ...args) => listeners.get(name)?.(...args)
+  let idleWaiters = []
+  const parent = { id: 'main', status: 'idle', session: { header: {} },
+    send() { this.status = 'running'; emit('agent/status', { agent: this, status: 'running' }) },
+    whenIdle() { return this.status === 'idle' ? Promise.resolve() : new Promise(r => idleWaiters.push(r)) },
+    cancel() { this.status = 'idle'; for (const r of idleWaiters.splice(0)) r() }
+  }
+  const child = { id: 'child', status: 'idle', session: { header: { parentSession: 'main' } }, whenIdle: async () => {}, cancel() {} }
+  const ctx = { agents: { get: id => id === 'main' ? parent : id === 'child' ? child : undefined }, on(name, fn) { listeners.set(name, fn); return () => listeners.delete(name) } }
+  const controller = new AbortController()
+  const handle = await createSharedMainAgentAdapter(ctx).start({ parentSessionId: 'main', prompt: 'delegate', signal: controller.signal })
+  emit('agent/created', { agent: child })
+  emit('subagent/start', { id: 'child', runId: 'native-run', local: true })
+  emit('session/event', parent, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'provisional' }] } } })
+  parent.cancel()
+  let settled = false
+  const result = handle.result.catch(e => e).finally(() => { settled = true })
+  if (aborted) controller.abort()
+  await new Promise(r => setTimeout(r, 5))
+  expect(settled).toBe(false)
+  // Native final persistence completes, then wakes the parent, then emits end.
+  parent.send()
+  emit('subagent/end', { id: 'child', runId: 'native-run' })
+  if (aborted) expect(parent.status).toBe('idle')
+  else {
+    await new Promise(r => setTimeout(r, 5))
+    expect(settled).toBe(false)
+    emit('session/event', parent, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'final child summary' }] } } })
+    parent.cancel()
+  }
+  const value = await result
+  if (aborted) expect(value).toBeInstanceOf(Error)
+  else expect(value.output).toEqual([{ type: 'text', text: 'final child summary' }])
+  await handle.dispose()
+  expect(listeners.size).toBe(0)
+})

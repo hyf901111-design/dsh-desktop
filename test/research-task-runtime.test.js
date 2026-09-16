@@ -1904,7 +1904,7 @@ it('exposes the existing workbench tool only to a leased board planner and retur
   ctx.tools = { register: t => { tool = t; return () => {} } }
   ctx.webServer = { register: () => () => {} }
   const sessionOn = ctx.on.bind(ctx)
-  ctx.on = (name, listener) => name === 'agent/created' ? () => {} : sessionOn(name, listener)
+  ctx.on = (name, listener) => name === 'session/event' ? sessionOn(name, listener) : () => {}
   const on = vi.spyOn(ctx, 'on'), unleasedStart = vi.fn()
   const disposeTool = await registerWorkbench(ctx, { start: unleasedStart }, { filePath: join(dir, 'plans.json'), isTrustedRequest: () => true, readJsonBody: async () => ({}) })
   parent.send = vi.fn()
