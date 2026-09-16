@@ -11,22 +11,18 @@
         "schemaVersion": 1,
         "featureName": "画布操作与图片运行兼容修复",
         "branch": "codex/feat/canvas-actions-20260916",
-        "baseCommit": "91affab469bfefcb4c8fb1b0f496991c0d9c9654",
-        "tipCommit": "a9116d2cafe958c90102f306aa6723223ab1042a",
+        "baseCommit": "a9116d2cafe958c90102f306aa6723223ab1042a",
+        "tipCommit": "c60cb5821e63ade38c13c39873f294cfbf2e7bb2",
         "commits": [
           {
-            "commit": "a9116d2cafe958c90102f306aa6723223ab1042a",
+            "commit": "c60cb5821e63ade38c13c39873f294cfbf2e7bb2",
             "parents": [
-              "91affab469bfefcb4c8fb1b0f496991c0d9c9654"
+              "a9116d2cafe958c90102f306aa6723223ab1042a"
             ],
-            "subject": "修复：画布刷新补丁在重复构建时保持完整与幂等"
+            "subject": "测试：兼容真实构建产物中的刷新辅助函数格式"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-refresh.mjs"
-          },
           {
             "status": "M",
             "path": "test/canvas-refresh.test.js"
@@ -45,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "17项聚焦测试通过",
-            "verifiedCommit": "a9116d2cafe958c90102f306aa6723223ab1042a",
-            "completedAt": "2026-09-16T07:32:58.444Z",
+            "verifiedCommit": "c60cb5821e63ade38c13c39873f294cfbf2e7bb2",
+            "completedAt": "2026-09-16T07:37:54.643Z",
             "timeoutMs": 120000
           },
           {
@@ -59,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a9116d2cafe958c90102f306aa6723223ab1042a",
-            "completedAt": "2026-09-16T07:32:58.444Z",
+            "verifiedCommit": "c60cb5821e63ade38c13c39873f294cfbf2e7bb2",
+            "completedAt": "2026-09-16T07:37:54.643Z",
             "timeoutMs": 120000
           }
         ],
@@ -81,53 +77,7 @@
           "Original PPT/PDF contents are not edited",
           "Two inherited baseline assertion failures documented in docs/research-canvas-actions.md"
         ],
-        "generatedAt": "2026-09-16T07:32:58.444Z"
-      },
-      "merged": {
-        "mergeCommit": "3be31fcdc9c02034fc9c4ffc2de84d53582942ee",
-        "verificationCommit": "3be31fcdc9c02034fc9c4ffc2de84d53582942ee",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/canvas-refresh.test.js",
-              "test/figma-canvas-context-menu.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/canvas-refresh.test.js test/figma-canvas-context-menu.test.js",
-            "verifiedCommit": "3be31fcdc9c02034fc9c4ffc2de84d53582942ee",
-            "completedAt": "2026-09-16T07:33:17.311Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "3be31fcdc9c02034fc9c4ffc2de84d53582942ee",
-            "completedAt": "2026-09-16T07:33:17.311Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-canvas-actions.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-canvas-actions.mjs",
-            "verifiedCommit": "3be31fcdc9c02034fc9c4ffc2de84d53582942ee",
-            "completedAt": "2026-09-16T07:33:17.311Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-16T07:33:17.311Z"
+        "generatedAt": "2026-09-16T07:37:54.643Z"
       }
     }
   ],
