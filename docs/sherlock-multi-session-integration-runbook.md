@@ -130,3 +130,7 @@ node scripts/refresh-sherlock-integration-handoff.mjs --repo <integration-worktr
 ```
 
 确认 dry-run 后去掉该参数执行。此入口不接受脏工作区，不改变功能引用，也不复用旧 tip 的检查结论。
+
+## 向未验收批次追加独立功能
+
+执行器 API `appendIntegrationHandoff` 可追加另一张有效交接卡。调用前仍需检查工作区干净；使用已有持久 owner token，并精确提供 `confirmBatchId` 与 `confirmTip`，先 `dryRun: true` 再执行。该入口拒绝已验收批次、重复功能、失效交接卡及错误所有者；保留原功能与合并证据，把新功能的检查加入批次。追加只登记交接卡，后续仍须执行 `merge` 预检与合并，并由用户验收；不得手改清单或释放租约来代替此流程。

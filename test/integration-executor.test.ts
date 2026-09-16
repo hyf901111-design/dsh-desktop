@@ -9,6 +9,7 @@ import { acquireActiveBatchLease, readActiveBatchLease, updateActiveBatchTip } f
 import { resolveRepositoryContext } from '../scripts/lib/sherlock-git-state.mjs'
 import {
   refreshIntegrationHandoff,
+  appendIntegrationHandoff,
   adoptIntegrationBatch,
   acceptIntegrationBatch,
   cancelIntegrationBatch,
@@ -859,5 +860,39 @@ describe('successor handoff refresh', () => {
     acceptIntegrationBatch({ ...options, commit: next.afterCommit })
     expect(readActiveBatchLease(integration)?.acceptedTip).toBe(next.afterCommit)
     expect(() => refreshIntegrationHandoff({ ...options, confirmTip: next.afterCommit })).toThrow(/已接受/)
+  }, 30000)
+})
+
+
+describe('append integration handoff', () => {
+  it('appends a verified feature with owner and exact-tip checks, preserving prior work', () => {
+    const repository = fixture()
+    prepareIntegrationRoot(repository)
+    const first = handoffFile(repository, 'first')
+    const second = handoffFile(repository, 'second')
+    const integration = repository.createWorktree('integration-append', 'codex/integration/20260831-98')
+    const declared: Array<{ argv: [string, ...string[]]; timeoutMs: number }> = [{ argv: [process.execPath, '-e', 'process.exit(0)'], timeoutMs: 1000 }]
+    adoptIntegrationBatch({ integrationRepository: integration, batchId: '20260831-98', handoffPaths: [first], integrationChecks: declared, dryRun: false, now: '2026-08-31T06:00:00.000Z' })
+    const context = resolveRepositoryContext(integration)
+    const ownerToken = JSON.parse(readFileSync(path.join(context.gitDirectory, 'sherlock-integration-owner.json'), 'utf8')).ownerToken
+    const manifestPath = path.join(integration, 'config/sherlock-integration-batches/20260831-98.json')
+    const firstMerged = mergeIntegrationFeature({ integrationRepository: integration, manifestPath, featureBranch: 'codex/feat/first-20260831', ownerToken, dryRun: false, now: '2026-08-31T06:01:00.000Z' })
+    const options = { integrationRepository: integration, manifestPath, handoffPath: second, confirmBatchId: '20260831-98', confirmTip: firstMerged.afterCommit, ownerToken, dryRun: false, now: '2026-08-31T06:02:00.000Z' }
+    const previousFeature = JSON.parse(readFileSync(manifestPath, 'utf8')).features[0]
+    const before = repository.snapshot()
+    expect(() => appendIntegrationHandoff({ ...options, ownerToken: 'wrong' })).toThrow(/owner/)
+    expect(() => appendIntegrationHandoff({ ...options, confirmTip: '0'.repeat(40) })).toThrow(/confirmTip/)
+    expect(() => appendIntegrationHandoff({ ...options, handoffPath: first })).toThrow(/已登记/)
+    expect(appendIntegrationHandoff({ ...options, dryRun: true }).status).toBe('planned')
+    expect(repository.snapshot().equals(before)).toBe(true)
+    const appended = appendIntegrationHandoff(options)
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    expect(manifest.features).toHaveLength(2)
+    expect(manifest.features[0]).toEqual(previousFeature)
+    expect(repository.git(integration, 'merge-base', '--is-ancestor', firstMerged.afterCommit, appended.afterCommit)).toBe('')
+    expect(manifest.features[1].merged).toBeUndefined()
+    expect(manifest.integrationChecks).toHaveLength(2)
+    expect(readActiveBatchLease(integration)?.currentTip).toBe(appended.afterCommit)
+    expect(() => acceptIntegrationBatch({ ...options, commit: appended.afterCommit })).toThrow(/合并/)
   }, 30000)
 })
