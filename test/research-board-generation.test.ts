@@ -255,3 +255,18 @@ it('distinguishes a live message-to-task submission from one interrupted by rest
   integration.journal.update(key,{reply:{accepted:true,clientMutationId:'orphan',requestMessageId:'orphan-message',taskId:null,state:'messageAccepted'}})
   expect(integration.requests('user','board').find(r=>r.clientMutationId==='orphan')).toMatchObject({submissionState:'interrupted'})
 })
+
+it('reports an old collaboration service before starting the main agent', async () => {
+  const { integration, runtimeRequest } = await fixture()
+  const client = (integration as any).options.client
+  const request = client.request
+  client.request = async (input: any) => {
+    const reply = await request(input)
+    if (input.body.action === 'taskClaim') delete reply.task.conversation
+    return reply
+  }
+  const key = integration.journal.prepare('user', 'board', 'old-service', { text: '整理画板' }, 1)
+  await (integration as any).execute(key, { taskId: 'task', requestMessageId: 'message' }, new AbortController().signal)
+  expect(runtimeRequest).not.toHaveBeenCalled()
+  expect(integration.journal.get(key)).toMatchObject({ failureCode: 'COLLABORATION_UPGRADE_REQUIRED', runtimeState: 'interrupted' })
+})
