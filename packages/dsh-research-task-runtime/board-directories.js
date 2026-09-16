@@ -54,10 +54,27 @@ export class BoardDirectories {
       this.save()
       // The Host creates cwd while initializing the session. Keep generated files;
       // remove only a still-empty directory, never recursively or after tool use.
-      if (!source.events.some(e => e.type === 'tool/call')) {
+      if (!source.events.some(e => e.type === 'tool/call') && !(await this.ctx.workspaceRegistry.resolveByPath(row.path))) {
         try { rmdirSync(row.path) } catch (error) { if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code)) throw error }
       }
       return row
+    }
+    if (input.mode === 'fork') {
+      const source = await this.inspect(input.sessionId)
+      const path = source.meta.cwd
+      if (typeof path !== 'string' || !isAbsolute(path)) throw Error('DIRECTORY_BINDING_CONFLICT')
+      const row = Object.values(this.records).find(r => r.sessionId === input.sessionId)
+      // Only create a missing directory when this client reserved that exact path.
+      if (row?.path === path) mkdirSync(path, { recursive: true })
+      else if (!existsSync(path)) throw Error('DIRECTORY_BINDING_CONFLICT')
+      let workspace = await this.ctx.workspaceRegistry.resolveByPath(path)
+      if (!workspace) {
+        workspace = await this.ctx.workspaceRegistry.create(path)
+        if (row?.path === path) await workspace.setTitle(row.title)
+      }
+      // The normal Host fork inherits project membership from its source.
+      await workspace.attachSession(input.sessionId)
+      return { localSessionId: input.sessionId, workspaceId: workspace.id, path }
     }
     if (input.mode === 'associate') {
       const row = Object.values(this.records).find(r => r.sessionId === input.sessionId || r.previousSessionId === input.sessionId)

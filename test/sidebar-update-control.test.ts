@@ -91,3 +91,31 @@ describe('Figma sidebar update states', () => {
     expect(callbacks.retry).toHaveBeenCalledOnce();expect(callbacks.install).not.toHaveBeenCalled()
   })
 })
+
+it('retains the update entry after automatic discovery and opens the notice without navigating', () => {
+  const {document,control,callbacks}=fixture()
+  const about=vi.fn();document.addEventListener('ework-open-about',about)
+  control.render({...available,manual:false})
+  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  expect(button.hidden).toBe(false)
+  panel(document).querySelector<HTMLButtonElement>('.ework-notice-close')!.click()
+  button.click()
+  expect(panel(document).hidden).toBe(false)
+  expect(about).not.toHaveBeenCalled()
+  expect(callbacks.download).not.toHaveBeenCalled()
+})
+
+it('keeps a dismissed download bubble closed across progress ticks while the ring advances', () => {
+  const {document,control}=fixture()
+  control.render({...available,phase:'downloading',percent:25})
+  panel(document).querySelector<HTMLButtonElement>('.ework-notice-close')!.click()
+  control.render({...available,phase:'downloading',percent:64})
+  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  expect(button.hidden).toBe(false)
+  expect(button.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('64')
+  expect(button.querySelector('circle[data-progress]')?.getAttribute('stroke-dashoffset')).toBe('36')
+  expect(panel(document).hidden).toBe(true)
+  button.click()
+  expect(panel(document).hidden).toBe(false)
+  expect(panel(document).textContent).toContain('64%')
+})

@@ -49,7 +49,7 @@ export function mountAccountUi(
  .sherlock-account-button .sherlock-account-chevron{flex:none}
  [data-sherlock-update-footer]:has(#sherlock-sidebar-update-button:not([hidden])) .sherlock-account-button{width:calc(100% - 40px)}
  [data-sherlock-update-footer]:has(#sherlock-sidebar-update-button:not([hidden])) .sherlock-account-chevron{display:none}
- [data-sherlock-update-footer]:has(#sherlock-sidebar-update-button[data-action=download]:hover) .sherlock-account-button{width:calc(100% - 100px)}
+
 
  .sherlock-account-avatar{display:grid;place-items:center;background:transparent;color:var(--dsw-alias-label-primary);border-radius:50%;width:23px;height:23px;flex:none;font:11px system-ui}
  .sherlock-account-menu{position:fixed;z-index:3000;width:240px;padding:8px;border-radius:16px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);border:1px solid var(--dsw-alias-border-l2,#555);box-shadow:0 12px 40px #0003;font:13px system-ui}

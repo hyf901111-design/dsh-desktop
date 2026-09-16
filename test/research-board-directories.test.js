@@ -128,3 +128,34 @@ it('materializes a shared board directory idempotently without replacing its fil
     await expect(f.directories.run({mode:'ensure',sessionId:'unrelated'})).rejects.toThrow('DIRECTORY_BINDING_CONFLICT')
   } finally {f.close()}
 })
+
+it('prepares a virtual board directory as a durable project before forking, without copying the source', async () => {
+  const f = fixture()
+  try {
+    const row = f.directories.reserve(f.root, '研究项目')
+    const source = f.ctx.sessions.create('board', { meta: { cwd: row.path } })
+    await f.directories.run({mode:'bind',directoryId:row.directoryId,sessionId:source.id})
+    const result = await f.directories.run({mode:'fork',sessionId:source.id,title:'研究项目'})
+    expect(result.localSessionId).toBe(source.id)
+    expect(existsSync(row.path)).toBe(true)
+    expect(f.workspaces.get(row.path).sessionIds).toEqual([source.id])
+    await f.workspaces.get(row.path).setTitle('用户自定义项目名')
+    await f.directories.run({mode:'fork',sessionId:source.id,title:'研究项目'})
+    expect(f.workspaces.size).toBe(1)
+    expect(f.workspaces.get(row.path).title).toBe('用户自定义项目名')
+    expect(source.header.cwd).toBe(row.path)
+  } finally { f.close() }
+})
+
+it('keeps a fork project directory when a blank board binds again', async () => {
+  const f = fixture()
+  try {
+    const row = f.directories.reserve(f.root, '分叉项目')
+    f.ctx.sessions.create('board', { meta: { cwd: row.path } })
+    const bind = { mode: 'bind', sessionId: 'board', directoryId: row.directoryId }
+    await f.directories.run(bind)
+    await f.directories.run({ mode: 'fork', sessionId: 'board' })
+    await f.directories.run(bind)
+    expect(existsSync(row.path)).toBe(true)
+  } finally { f.close() }
+})
