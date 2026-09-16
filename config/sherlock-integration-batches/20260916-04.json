@@ -127,6 +127,119 @@
         ],
         "recordedAt": "2026-09-16T10:22:49.875Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "任务清单进度同步与PPT技能1.0.8",
+        "branch": "codex/feat/task-progress-sync-20260916",
+        "baseCommit": "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c",
+        "tipCommit": "30fdaf9c4898ce85dcf01eb29430b2361522c12e",
+        "commits": [
+          {
+            "commit": "4ff68bcc4a32a551a5e02a55d06145e1322847c1",
+            "parents": [
+              "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c"
+            ],
+            "subject": "修复任务清单进度核对与结束后持续转圈"
+          },
+          {
+            "commit": "30fdaf9c4898ce85dcf01eb29430b2361522c12e",
+            "parents": [
+              "4ff68bcc4a32a551a5e02a55d06145e1322847c1"
+            ],
+            "subject": "升级内置PPT技能至1.0.8并校验目录紧凑行距"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/task-progress-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/task-progress-runtime.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-107.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/toc-spacing-108.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_delivery.py"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-ppt-skill.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-skill-upgrade.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-108.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/task-progress-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/task-progress-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/task-progress-client.test.js",
+              "test/task-progress-runtime.test.js",
+              "test/efund-ppt-108.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/bundled-skill-upgrade.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查通过，证据 /tmp/sherlock-099-extra-checks.log",
+            "verifiedCommit": "30fdaf9c4898ce85dcf01eb29430b2361522c12e",
+            "completedAt": "2026-09-16T10:35:40.807874+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "运行时与内置技能修正；将在发布包完成真实客户端检查"
+        },
+        "acceptanceCriteria": [
+          "任务结束后不持续转圈",
+          "PPT技能升级至1.0.8"
+        ],
+        "risks": [
+          "发布包需验证新增补丁与共享对话补丁组合"
+        ],
+        "generatedAt": "2026-09-16T10:35:40.808274+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -160,6 +273,18 @@
         "--noEmit",
         "-p",
         "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/task-progress-client.test.js",
+        "test/task-progress-runtime.test.js",
+        "test/efund-ppt-108.test.js",
+        "test/bundled-ppt-skill.test.ts",
+        "test/bundled-skill-upgrade.test.ts"
       ],
       "timeoutMs": 120000
     }
