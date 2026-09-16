@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "画布操作与图片运行兼容修复",
         "branch": "codex/feat/canvas-actions-20260916",
-        "baseCommit": "1ab1da946d9292b65d2254786bf0aebd8e928bf8",
-        "tipCommit": "91affab469bfefcb4c8fb1b0f496991c0d9c9654",
+        "baseCommit": "91affab469bfefcb4c8fb1b0f496991c0d9c9654",
+        "tipCommit": "a9116d2cafe958c90102f306aa6723223ab1042a",
         "commits": [
           {
-            "commit": "91affab469bfefcb4c8fb1b0f496991c0d9c9654",
+            "commit": "a9116d2cafe958c90102f306aa6723223ab1042a",
             "parents": [
-              "1ab1da946d9292b65d2254786bf0aebd8e928bf8"
+              "91affab469bfefcb4c8fb1b0f496991c0d9c9654"
             ],
-            "subject": "修复：兼容插件依赖树未独立安装文件工具的打包布局"
+            "subject": "修复：画布刷新补丁在重复构建时保持完整与幂等"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/profile-runtime-patches.mjs"
+            "path": "scripts/lib/canvas-refresh.mjs"
           },
           {
             "status": "M",
-            "path": "test/profile-runtime-patches.test.js"
+            "path": "test/canvas-refresh.test.js"
           }
         ],
         "checks": [
@@ -40,12 +40,13 @@
               "run",
               "test/profile-runtime-patches.test.js",
               "test/chat-file-preview-scope.test.ts",
-              "test/tool-image-links.test.ts"
+              "test/tool-image-links.test.ts",
+              "test/canvas-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "12项图片兼容、预览授权及打包一致性测试通过",
-            "verifiedCommit": "91affab469bfefcb4c8fb1b0f496991c0d9c9654",
-            "completedAt": "2026-09-16T07:30:26.680Z",
+            "summary": "17项聚焦测试通过",
+            "verifiedCommit": "a9116d2cafe958c90102f306aa6723223ab1042a",
+            "completedAt": "2026-09-16T07:32:58.444Z",
             "timeoutMs": 120000
           },
           {
@@ -58,8 +59,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "91affab469bfefcb4c8fb1b0f496991c0d9c9654",
-            "completedAt": "2026-09-16T07:30:26.680Z",
+            "verifiedCommit": "a9116d2cafe958c90102f306aa6723223ab1042a",
+            "completedAt": "2026-09-16T07:32:58.444Z",
             "timeoutMs": 120000
           }
         ],
@@ -80,53 +81,7 @@
           "Original PPT/PDF contents are not edited",
           "Two inherited baseline assertion failures documented in docs/research-canvas-actions.md"
         ],
-        "generatedAt": "2026-09-16T07:30:26.680Z"
-      },
-      "merged": {
-        "mergeCommit": "e3c1e1a0628fd3d34e9c0b0f7ca81a4d5e4264c2",
-        "verificationCommit": "e3c1e1a0628fd3d34e9c0b0f7ca81a4d5e4264c2",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/canvas-refresh.test.js",
-              "test/figma-canvas-context-menu.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/canvas-refresh.test.js test/figma-canvas-context-menu.test.js",
-            "verifiedCommit": "e3c1e1a0628fd3d34e9c0b0f7ca81a4d5e4264c2",
-            "completedAt": "2026-09-16T07:31:01.387Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "e3c1e1a0628fd3d34e9c0b0f7ca81a4d5e4264c2",
-            "completedAt": "2026-09-16T07:31:01.387Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-canvas-actions.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-canvas-actions.mjs",
-            "verifiedCommit": "e3c1e1a0628fd3d34e9c0b0f7ca81a4d5e4264c2",
-            "completedAt": "2026-09-16T07:31:01.387Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-16T07:31:01.387Z"
+        "generatedAt": "2026-09-16T07:32:58.444Z"
       }
     }
   ],
