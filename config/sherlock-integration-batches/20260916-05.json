@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260916-05",
+  "branch": "codex/integration/20260916-05",
+  "baseMainCommit": "6dad92f3b6f1ffc20dc124e90ec35d8630925f54",
+  "expectedMainCommit": "6dad92f3b6f1ffc20dc124e90ec35d8630925f54",
+  "createdAt": "2026-09-16T11:41:36.828Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件独立执行与插队暂存自动续跑",
+        "branch": "codex/feat/component-chat-isolation-20260916",
+        "baseCommit": "6dad92f3b6f1ffc20dc124e90ec35d8630925f54",
+        "tipCommit": "7b6af9312a5a9f128a16535d4c5d0ed8cf060ef8",
+        "commits": [
+          {
+            "commit": "6208740c98555a0e4bce01b6fa26d402e1a70294",
+            "parents": [
+              "6dad92f3b6f1ffc20dc124e90ec35d8630925f54"
+            ],
+            "subject": "修复：隔离画板组件子智能体与主对话排队及取消范围"
+          },
+          {
+            "commit": "f0a33dda22d4fea30c9356aed4dc142377514803",
+            "parents": [
+              "6208740c98555a0e4bce01b6fa26d402e1a70294"
+            ],
+            "subject": "修复：插队暂存主对话并在优先消息完成后自动续跑"
+          },
+          {
+            "commit": "7b6af9312a5a9f128a16535d4c5d0ed8cf060ef8",
+            "parents": [
+              "f0a33dda22d4fea30c9356aed4dc142377514803"
+            ],
+            "subject": "修复：未启动的运行时任务返回可恢复的取消确认"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-collaboration/conversation-queue.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-agent-scope.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-main-agent.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-collaboration-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/PROTOCOL.md"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/room.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/component-agent-scope.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-generation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-polish.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-conversation-queue.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-agent-scope.test.js",
+              "test/shared-main-agent.test.js",
+              "test/shared-conversation-queue.test.js",
+              "test/research-board-generation.test.ts",
+              "test/research-board-runtime.test.js",
+              "test/research-board-polish.test.ts",
+              "test/research-boards-service.test.ts",
+              "test/shared-send-draft.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦测试、真实 Worker 与类型检查通过；另含真实 HTTP 未启动任务取消恢复回归",
+            "verifiedCommit": "7b6af9312a5a9f128a16535d4c5d0ed8cf060ef8",
+            "completedAt": "2026-09-16T11:41:16.540203+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "shared|leased board|subagent"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦测试、真实 Worker 与类型检查通过；另含真实 HTTP 未启动任务取消恢复回归",
+            "verifiedCommit": "7b6af9312a5a9f128a16535d4c5d0ed8cf060ef8",
+            "completedAt": "2026-09-16T11:41:16.540203+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-collaboration-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦测试、真实 Worker 与类型检查通过；另含真实 HTTP 未启动任务取消恢复回归",
+            "verifiedCommit": "7b6af9312a5a9f128a16535d4c5d0ed8cf060ef8",
+            "completedAt": "2026-09-16T11:41:16.540203+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦测试、真实 Worker 与类型检查通过；另含真实 HTTP 未启动任务取消恢复回归",
+            "verifiedCommit": "7b6af9312a5a9f128a16535d4c5d0ed8cf060ef8",
+            "completedAt": "2026-09-16T11:41:16.540203+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 不构建共享客户端；正式 main 包构建后再执行原生界面隔离验收。"
+        },
+        "acceptanceCriteria": [
+          "组件与主对话可以独立认领及运行",
+          "主对话插队仅取消主对话，不取消组件",
+          "原生主智能体委派仍等待子任务回传",
+          "组件进度和结果保留在共享对话流中",
+          "插队完成后原任务自动续跑，同一会话保留上下文",
+          "重复插队、断线和重启后恢复不会丢失原任务，也不重用旧执行结果"
+        ],
+        "risks": [
+          "此前已有的三个宽范围测试夹具与当前标题栏、消息中心和即时清空输入行为不同步；直接影响本次改动的聚焦检查通过。"
+        ],
+        "generatedAt": "2026-09-16T11:41:16.540203+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-agent-scope.test.js",
+        "test/shared-main-agent.test.js",
+        "test/shared-conversation-queue.test.js",
+        "test/research-board-generation.test.ts",
+        "test/research-board-runtime.test.js",
+        "test/research-board-polish.test.ts",
+        "test/research-boards-service.test.ts",
+        "test/shared-send-draft.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "shared|leased board|subagent"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/test-collaboration-worker.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
