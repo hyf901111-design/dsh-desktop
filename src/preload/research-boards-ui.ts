@@ -104,6 +104,7 @@ type EditState = {
   view: BoardView
   revision: string
   observed: string
+  appliedCanvas?: { revision: string; signature: string }
   applying: boolean
   queued?: Canvas
   remote?: BoardView
@@ -335,14 +336,24 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       e.remote = v
       return
     }
+    // A board activation/state refresh also carries the canvas. Only rebuild the
+    // workspace when its authority or content changed. Revision alone is not
+    // enough: generation progress is overlaid without a document revision bump.
+    const canvas = v.permissions.read ? v.canvas : { files: [], artifacts: [] }
+    const remoteSignature = signature(canvas)
+    if (
+      e.appliedCanvas?.revision === v.canvasRevision &&
+      e.appliedCanvas.signature === remoteSignature
+    ) return
     e.applying = true
     try {
       e.revision = v.canvasRevision
       e.workspace.applyRemoteCanvas(
-        v.permissions.read ? v.canvas : { files: [], artifacts: [] },
+        canvas,
         { revision: v.canvasRevision }
       )
       e.observed = signature(canvasOf(e.workspace))
+      e.appliedCanvas = { revision: v.canvasRevision, signature: remoteSignature }
     } finally {
       e.applying = false
     }
@@ -367,15 +378,16 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       editors.set(v.localSessionId, e)
       const editor = e
       e.unsubscribe = workspace.subscribe(() => {
-        const next = canvasOf(workspace),
-          sig = signature(next)
         if (
           editor.applying ||
-          sig === editor.observed ||
           editor.generation !== state.account.generation ||
           editor.accountId !== state.account.user?.userId
-        )
-          return
+        ) return
+        const next = canvasOf(workspace),
+          sig = signature(next)
+        if (sig === editor.observed) return
+        // Local edits invalidate the remote-content cache, including held gestures.
+        editor.appliedCanvas = undefined
         const before = JSON.parse(editor.observed) as Canvas
         editor.observed = sig
         if (!editor.view.permissions.edit) return
