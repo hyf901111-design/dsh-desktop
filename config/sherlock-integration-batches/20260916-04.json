@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260916-04",
+  "branch": "codex/integration/20260916-04",
+  "baseMainCommit": "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c",
+  "expectedMainCommit": "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c",
+  "createdAt": "2026-09-16T09:27:15.754Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "协作看板主智能体和跨用户共享队列",
+        "branch": "codex/feat/shared-main-agent-queue-20260916",
+        "baseCommit": "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c",
+        "tipCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
+        "commits": [
+          {
+            "commit": "7060400b52bc5df5543319defd55393720bdffd3",
+            "parents": [
+              "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c"
+            ],
+            "subject": "功能：协作看板改用主智能体并增加跨用户共享消息队列"
+          },
+          {
+            "commit": "125078b3c44c1c8154795f2e5a5737652826dc99",
+            "parents": [
+              "7060400b52bc5df5543319defd55393720bdffd3"
+            ],
+            "subject": "优化：收到协作插队通知后及时停止当前主智能体"
+          },
+          {
+            "commit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
+            "parents": [
+              "125078b3c44c1c8154795f2e5a5737652826dc99"
+            ],
+            "subject": "修复：等待原生子智能体回传后再交接协作执行权"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/verification/2026-09-16-shared-main-agent-queue.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-collaboration/conversation-queue.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/shared-main-agent.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-collaboration-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/PROTOCOL.md"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/room.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/research-boards-browser.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-generation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/shared-conversation-queue.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/shared-main-agent.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-main-agent.test.js",
+              "test/shared-conversation-queue.test.js",
+              "test/research-board-generation.test.ts",
+              "test/research-board-runtime.test.js",
+              "test/research-boards-service.test.ts",
+              "test/research-board-tasks.test.ts",
+              "test/shared-send-draft.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "88 项核心聚焦检查通过",
+            "verifiedCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
+            "completedAt": "2026-09-16T09:26:56.714814+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "shared|leased board"
+            ],
+            "outcome": "passed",
+            "summary": "10 项主智能体与组件执行回归通过",
+            "verifiedCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
+            "completedAt": "2026-09-16T09:26:56.714814+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "主进程类型检查通过",
+            "verifiedCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
+            "completedAt": "2026-09-16T09:26:56.714814+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际 QueueDock + 本地协作服务双用户浏览器验证：作者、折叠展开、编辑删除插队、单执行器；执行模型为受控 fixture，非原生双客户端验收。截图 output/playwright/research-boards/shared-queue-*.png。"
+        },
+        "acceptanceCriteria": [
+          "每位发送者主智能体执行，支持原生委派及回传后串行交接",
+          "两用户共享队列作者与顺序一致，作者可编辑删除插队",
+          "真实模型双客户端验收后再接受集成版本"
+        ],
+        "risks": [
+          "尚未部署 Worker 或替换共享客户端；需先更新 Worker 再启用客户端。",
+          "原生模型双客户端端到端验收尚未完成。",
+          "排队作者离线时需其重连或自行删除，其他账户不代执行。"
+        ],
+        "generatedAt": "2026-09-16T09:26:56.714814+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/shared-main-agent.test.js",
+        "test/shared-conversation-queue.test.js",
+        "test/research-board-generation.test.ts",
+        "test/research-board-runtime.test.js",
+        "test/research-boards-service.test.ts",
+        "test/research-board-tasks.test.ts",
+        "test/shared-send-draft.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "shared|leased board"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
