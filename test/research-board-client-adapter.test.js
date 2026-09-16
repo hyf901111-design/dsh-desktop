@@ -1372,3 +1372,13 @@ it('renaming a board session also persists its favorite title',async()=>{
  const rename=vi.fn(async()=>{});f.sessions.binding=()=>({session:{rename}})
  try{await f.page.renamePersonal('shared','新研究标题');expect(rename).toHaveBeenCalledWith('新研究标题');expect(f.bridge.invoke).toHaveBeenCalledWith('favorite.rename',{favoriteId:'favorite',title:'新研究标题'})}finally{f.dispose()}
 })
+
+it('binds canvas tools to the shared request references before submitting the task',async()=>{
+ const f=await pageFixture()
+ const bind=vi.fn(async()=>({ok:true}))
+ f.window.dshDesktop.researchCanvasActions={bind}
+ try{
+   await f.page.submitShared('shared','删除引用的组件',{scope:'references',references:[{collection:'artifacts',nodeId:'a'}]},[],'queue')
+   expect(bind).toHaveBeenCalledWith({sessionId:'shared',selectedIds:['a']})
+ }finally{f.dispose()}
+})

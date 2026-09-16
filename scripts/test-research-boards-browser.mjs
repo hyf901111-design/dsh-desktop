@@ -814,7 +814,7 @@ if (process.argv.includes('--serve')) {
     assert.deepEqual(await boardTitles(), ['黄金市场研究', '目录延迟创建验收'])
     await page.getByRole('button', { name: '看板视图选项', exact: true }).click()
     await page.getByRole('menuitem', { name: '按类型', exact: true }).click()
-    const privateGroup = page.getByRole('treeitem', { name: '专用看板', exact: true })
+    const privateGroup = page.getByRole('treeitem', { name: '个人看板', exact: true })
     await privateGroup.waitFor()
     const groupLayout = await privateGroup.evaluate(el => {
       const skin = window.__sherlockWorkspaceSidebarSkin, row = el.nextElementSibling

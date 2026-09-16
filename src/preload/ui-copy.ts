@@ -343,6 +343,7 @@ export const englishUiCopy: Record<string, string> = {
   "已保存的研究对话": "Saved research conversations",
   "协作看板": "Shared board",
   "专用看板": "Private board",
+  "个人看板": "Personal boards",
   "研究助手": "Research assistant",
   "其他成员立即失去访问权。": "Other members lose access immediately.",
   "打开看板后可查看成员和管理协作。": "Open the board to view members and manage collaboration.",

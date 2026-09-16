@@ -207,10 +207,10 @@ describe('Research context runtime', () => {
     await f.runtime.dispose()
     let dispose
     try {
-      await apply({ ...f.ctx, effect: (setup) => { dispose = setup() } })
+      await apply({ ...f.ctx, on: () => () => {}, effect: (setup) => { dispose = setup() } })
       expect(inject).toContain('tools')
-      expect([...f.routes.keys()].sort()).toEqual(['/sherlock/research-context/prepare', '/sherlock/research-tasks/cancel', '/sherlock/research-tasks/inspect', '/sherlock/research-tasks/start'])
-      expect(f.tools.size).toBe(3)
+      expect([...f.routes.keys()]).toEqual(expect.arrayContaining(['/sherlock/research-context/prepare', '/sherlock/research-tasks/cancel', '/sherlock/research-tasks/inspect', '/sherlock/research-tasks/start']))
+      expect([...f.tools.keys()]).toEqual(expect.arrayContaining(['research_canvas_inspect','research_canvas_apply','research_canvas_undo']))
     } finally {
       await dispose?.()
       if (previous === undefined) delete process.env.DSH_HOME

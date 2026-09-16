@@ -1073,6 +1073,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     saveDraft(sessionId, draft)
     shell?.setResearchContextPreparing?.(true)
     try {
+      await (win as any).dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:context.references?.length?context.references.map(ref=>ref.nodeId):deps.researchWorkspaces.for(sessionId).getSnapshot().selection.selectedNodeIds})
       await flushCanvas(sessionId)
       if (generation !== state.account.generation) return
       const reply = await call<RequestReply>('request.submit', {
@@ -1773,7 +1774,7 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
     firstMarker && h('span', { className: B.listTopDropIndicator, 'aria-hidden': true })))
 }
 function ResearchBoardGroup({ skin, group, expanded, onToggle, children }: any) {
-  const R = skin.rows, title = group === 'private' ? '专用看板' : '协作看板'
+  const R = skin.rows, title = group === 'private' ? '个人看板' : '协作看板'
   return h('div', { className: skin.header.groupSection, 'data-srb-board-group': group },
     h('div', { className: R.projectRow, role: 'treeitem', tabIndex: 0, 'aria-label': title, 'aria-expanded': expanded,
       onClick: onToggle, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } } },

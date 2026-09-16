@@ -1875,7 +1875,8 @@ it('default shared executor uses the production subagent adapter for QA and nati
       expect(request.maxDepth).toBe(1)
       expect(request.toolFilter.allow).toEqual([
         'financial_query',
-        'web_search'
+        'web_search',
+        ...(kind === 'qa' ? ['research_canvas_inspect'] : [])
       ])
       expect(request.persona).toContain(kind === 'qa' ? '直接回答' : '画布')
       if (kind === 'container') {
@@ -1909,7 +1910,7 @@ it('exposes the existing workbench tool only to a leased board planner and retur
     const pending = executor.execute({ taskId: 'leased-task', sessionId: parent.id, kind: 'board', query: '创建两个离线面板', prompt: '创建两个离线面板' }, new AbortController().signal)
     await vi.waitFor(() => expect(on).toHaveBeenCalled())
     const config = ctx.subagents.start.mock.calls[0][1]
-    expect(config.toolFilter.allow).toContain('research_workbench_create')
+    expect(config.toolFilter.allow).toEqual(expect.arrayContaining(['research_workbench_create','research_canvas_inspect','research_canvas_apply','research_canvas_undo']))
     expect(config.persona).toContain('具有共享画布编辑权限')
     const input = { requestId: 'stable', title: '双面板', panels: [0,1].map(i => ({ title: `面板${i}`, prompt: '原生 HTML 离线计数器', type: 'html', size: 'small' })) }
     const exec = { agent: child, signal: new AbortController().signal }

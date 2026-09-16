@@ -14,6 +14,7 @@ type Source = { id: string; title: string; kind: string; text: string; status: s
 type Canvas = { files: unknown[]; artifacts: unknown[] }
 type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes: number }
 type Options = {
+  canvasAction?(value: unknown,signal?:AbortSignal): Promise<unknown>
   canReadSession?(sessionId: string): boolean
   isSharedSession?(sessionId:string):boolean
   additionalSources?(sessionId:string):Source[]|Promise<Source[]>
@@ -117,17 +118,28 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (!['/snapshot','/board-authority'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/board-authority','/canvas-actions'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
       try {
         const chunks: Buffer[] = []
         let size = 0
-        if (Number(req.headers['content-length']) > MAX_BODY_BYTES) throw new Error()
+        const maxBody = req.url === "/canvas-actions" ? 1600000 : MAX_BODY_BYTES
+        if (Number(req.headers['content-length']) > maxBody) throw new Error()
         for await (const part of req) {
           const chunk = Buffer.from(part); size += chunk.length
-          if (size > MAX_BODY_BYTES) throw new Error()
+          if (size > maxBody) throw new Error()
           chunks.push(chunk)
         }
         const raw=JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if(req.url==='/canvas-actions') {
+          const controller=new AbortController(),abort=()=>controller.abort()
+          const close=()=>{if(!res.writableEnded)abort()}
+          req.on('aborted',abort);res.on('close',close)
+          if(req.aborted||res.destroyed)abort()
+          try { if(!this.options.canvasAction)throw Error('画布操作服务不可用。');return send(200,await this.options.canvasAction(raw,controller.signal)) }
+          catch(error){if(!res.destroyed)return send(400,{error:error instanceof Error?error.message:'画布操作失败。'})}
+          finally{req.off('aborted',abort);res.off('close',close)}
+          return
+        }
         if(req.url==='/board-authority'){const input=exact(raw,['sessionId']);return send(200,{shared:this.options.isSharedSession?.(String(input.sessionId))===true})}
         const input = exact(raw, ['sessionId', 'captureId'])
         this.purge()

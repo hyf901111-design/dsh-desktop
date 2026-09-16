@@ -1,3 +1,4 @@
+import { createCanvasActionsBridge } from './canvas-actions'
 import { mountUiLocalization } from './ui-localization'
 import { mountFloatingSurfaces } from './floating-surfaces'
 import { mountResearchBoardNotifications } from './research-board-notifications-ui'
@@ -216,6 +217,7 @@ contextBridge.exposeInMainWorld(
     }),
     researchVoice: createResearchVoiceBridge(ipcRenderer),
     researchCanvasWheel: createResearchCanvasWheelBridge(ipcRenderer),
+    researchCanvasActions: createCanvasActionsBridge(ipcRenderer),
     researchContext: createResearchContextBridge(
       (channel, value) => ipcRenderer.invoke(channel, value)
     ),
