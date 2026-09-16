@@ -103,6 +103,17 @@ describe('offline HTML component theme runtime', () => {
     }
   })
 
+  it('relays bounded zoom events only from the owned inner frame', () => {
+    const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
+    const zoom = { type:'sherlock-content-zoom',x:0.5,y:0.2,deltaX:0,deltaY:120,ctrlKey:false };
+    outer.send(zoom, {});
+    outer.send({...zoom, deltaY:Infinity}, outer.frame.contentWindow);
+    outer.send({...zoom, x:2}, outer.frame.contentWindow);
+    expect(outer.parentMessages).toHaveLength(0);
+    outer.send(zoom, outer.frame.contentWindow);
+    expect(outer.parentMessages[0].data).toEqual(zoom);
+  });
+
   it('relays content selection only from its own inner frame and validates modifiers', () => {
     const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
     const pointer = { type: 'sherlock-content-pointer', metaKey: false, shiftKey: true };

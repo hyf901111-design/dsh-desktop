@@ -1,3 +1,4 @@
+import { patchComponentWheelZoom } from './lib/component-wheel-zoom.mjs'
 import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
 import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
@@ -177,3 +178,5 @@ writeFileSync(primitivesPath, patchMarkdownFileLinks(readFileSync(primitivesPath
 writeFileSync(asset('.js'), patchMarkdownFileLinks(readFileSync(asset('.js'), 'utf8'), true))
 
 writeFileSync(conversationPath, patchInspectPortal(readFileSync(conversationPath, 'utf8')))
+
+writeFileSync(conversationPath, patchComponentWheelZoom(readFileSync(conversationPath, 'utf8')))

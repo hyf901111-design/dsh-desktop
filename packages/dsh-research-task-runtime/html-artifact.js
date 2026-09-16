@@ -323,6 +323,13 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   document.addEventListener('pointerdown', event => {
     if (event.isTrusted && event.button === 0) parent.postMessage({ type: 'sherlock-content-pointer', metaKey: event.metaKey, shiftKey: event.shiftKey }, '*')
   }, true)
+  document.addEventListener('wheel', event => {
+    if (!event.isTrusted || (!event.metaKey && !event.ctrlKey)) return
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? document.documentElement.clientHeight : 1
+    parent.postMessage({ type: 'sherlock-content-zoom', x: Math.max(0, Math.min(1, event.clientX / Math.max(1, document.documentElement.clientWidth))), y: Math.max(0, Math.min(1, event.clientY / Math.max(1, document.documentElement.clientHeight))), deltaX: Math.max(-4096, Math.min(4096, event.deltaX * unit)), deltaY: Math.max(-4096, Math.min(4096, event.deltaY * unit)), ctrlKey: event.ctrlKey }, '*')
+  }, { capture: true, passive: false })
   document.addEventListener('click', event => {
     const anchor = event.target?.closest?.('a[href]')
     if (!anchor) return
@@ -478,6 +485,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
       }
     }
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data)) {
+      if (data.type === 'sherlock-content-zoom' && Object.keys(data).length === 6 && [data.x, data.y, data.deltaX, data.deltaY].every(Number.isFinite) && data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1 && Math.abs(data.deltaX) <= 4096 && Math.abs(data.deltaY) <= 4096 && typeof data.ctrlKey === 'boolean') { parent.postMessage(data, '*'); return }
       if (data.type === 'sherlock-content-hover' && Object.keys(data).length === 2 && typeof data.active === 'boolean') { parent.postMessage({ type: data.type, active: data.active }, '*'); return }
       if (data.type === 'sherlock-content-pointer' && Object.keys(data).length === 3 && typeof data.metaKey === 'boolean' && typeof data.shiftKey === 'boolean') { parent.postMessage({ type: data.type, metaKey: data.metaKey, shiftKey: data.shiftKey }, '*'); return }
       if (data.type === 'sherlock-content-failed' && Object.keys(data).length === 1) { parent.postMessage({ type: data.type }, '*'); return }
