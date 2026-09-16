@@ -59,6 +59,25 @@
           "跨用户详细原生事件仍受现有同步协议限制"
         ],
         "generatedAt": "2026-09-16T15:39:12.888638+00:00"
+      },
+      "merged": {
+        "mergeCommit": "a6f83b1c385a791f1a6c59d66a0b13c6ecfb7142",
+        "verificationCommit": "a6f83b1c385a791f1a6c59d66a0b13c6ecfb7142",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-native-conversation.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-native-conversation.test.js",
+            "verifiedCommit": "a6f83b1c385a791f1a6c59d66a0b13c6ecfb7142",
+            "completedAt": "2026-09-16T15:48:41.050Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T15:48:41.050Z"
       }
     }
   ],
