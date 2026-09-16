@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260916-08",
+  "branch": "codex/integration/20260916-08",
+  "baseMainCommit": "e066cfac9019e19fa4e805af8a2ad66d2487937e",
+  "expectedMainCommit": "e066cfac9019e19fa4e805af8a2ad66d2487937e",
+  "createdAt": "2026-09-16T15:48:28.052Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复原生协作对话插槽作用域",
+        "branch": "codex/feat/board-native-slot-fix-20260916",
+        "baseCommit": "e066cfac9019e19fa4e805af8a2ad66d2487937e",
+        "tipCommit": "49812813a8c6df363d22de6703096db29db1a269",
+        "commits": [
+          {
+            "commit": "49812813a8c6df363d22de6703096db29db1a269",
+            "parents": [
+              "e066cfac9019e19fa4e805af8a2ad66d2487937e"
+            ],
+            "subject": "修复协作原生对话复用时的插槽作用域"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/shared-native-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-native-conversation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-native-conversation.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "4项原生展示聚焦回归通过",
+            "verifiedCommit": "49812813a8c6df363d22de6703096db29db1a269",
+            "completedAt": "2026-09-16T15:48:27.381724+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "集成后按本地测试手册构建核验"
+        },
+        "acceptanceCriteria": [
+          "避免重复画板水合及离屏首次HTML加载",
+          "复用原生对话过程",
+          "插队后恢复整轮位于下方"
+        ],
+        "risks": [
+          "跨用户详细原生事件仍受现有同步协议限制"
+        ],
+        "generatedAt": "2026-09-16T15:39:12.888638+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/shared-native-conversation.test.js"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
