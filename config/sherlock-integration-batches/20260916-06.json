@@ -207,6 +207,46 @@
           "远端执行者的详细进度仍受现有协议限制"
         ],
         "generatedAt": "2026-09-16T14:50:40.080532+00:00"
+      },
+      "merged": {
+        "mergeCommit": "a84c847d861fa218bb4291c38a5b290bbe8c2cc7",
+        "verificationCommit": "a84c847d861fa218bb4291c38a5b290bbe8c2cc7",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-main-agent.test.js",
+              "test/component-agent-scope.test.js",
+              "test/research-board-live-discussion.test.ts",
+              "test/research-board-polish.test.ts",
+              "test/shared-conversation-queue.test.js",
+              "test/research-boards-service.test.ts",
+              "test/bundled-ppt-skill.test.ts",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-109.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-main-agent.test.js test/component-agent-scope.test.js test/research-board-live-discussion.test.ts test/research-board-polish.test.ts test/shared-conversation-queue.test.js test/research-boards-service.test.ts test/bundled-ppt-skill.test.ts test/efund-ppt-107.test.js test/efund-ppt-109.test.js",
+            "verifiedCommit": "a84c847d861fa218bb4291c38a5b290bbe8c2cc7",
+            "completedAt": "2026-09-16T14:51:37.290Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "a84c847d861fa218bb4291c38a5b290bbe8c2cc7",
+            "completedAt": "2026-09-16T14:51:37.290Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T14:51:37.290Z"
       }
     }
   ],
