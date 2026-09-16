@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260916-06",
+  "branch": "codex/integration/20260916-06",
+  "baseMainCommit": "e457a89cfbd2a17d6ac7239e89e4a96109695b88",
+  "expectedMainCommit": "e457a89cfbd2a17d6ac7239e89e4a96109695b88",
+  "createdAt": "2026-09-16T14:50:40.996Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "协作对话实时进度与组件活动区分及PPT技能1.0.9",
+        "branch": "codex/feat/shared-progress-ppt109-20260916",
+        "baseCommit": "e457a89cfbd2a17d6ac7239e89e4a96109695b88",
+        "tipCommit": "ab6bb7e0578c642f07c7c16db10512c8dcab9f6d",
+        "commits": [
+          {
+            "commit": "57fdc76cdbde4ff7fd2810529a9e1305c46176c4",
+            "parents": [
+              "e457a89cfbd2a17d6ac7239e89e4a96109695b88"
+            ],
+            "subject": "修复协作任务完成回复实时同步与讨论进度投影"
+          },
+          {
+            "commit": "138972cb8fbb62c9db37b406726cd7cc5d9f39c7",
+            "parents": [
+              "57fdc76cdbde4ff7fd2810529a9e1305c46176c4"
+            ],
+            "subject": "升级PPT制作助手至1.0.9并修正封面目录与正文版式规则"
+          },
+          {
+            "commit": "76cf0115e84970e27b06452ae0706ea2a0261be8",
+            "parents": [
+              "138972cb8fbb62c9db37b406726cd7cc5d9f39c7"
+            ],
+            "subject": "修复协作同步回归测试的类型与运行目标兼容性"
+          },
+          {
+            "commit": "ab6bb7e0578c642f07c7c16db10512c8dcab9f6d",
+            "parents": [
+              "76cf0115e84970e27b06452ae0706ea2a0261be8"
+            ],
+            "subject": "修复右侧对话执行进度并区分组件子智能体活动"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-09-16-shared-progress-ppt109.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-main-agent.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/assets/efund-ai-platform-v21.pptx"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/assets/efund-template-v6.pptx"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/authoring-guide.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/cover-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-107.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/delivery-109.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/design-system.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/layout-catalog.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/layout-design-playbook.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/runtime-compatibility.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/toc-spacing-108.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/typography-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_delivery.py"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-board-task-progress.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-ppt-skill.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/efund-ppt-107.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-109.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-live-discussion.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-main-agent.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-main-agent.test.js",
+              "test/component-agent-scope.test.js",
+              "test/research-board-live-discussion.test.ts",
+              "test/research-board-polish.test.ts",
+              "test/shared-conversation-queue.test.js",
+              "test/research-boards-service.test.ts",
+              "test/bundled-ppt-skill.test.ts",
+              "test/efund-ppt-107.test.js",
+              "test/efund-ppt-109.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "86项聚焦回归和类型检查通过",
+            "verifiedCommit": "ab6bb7e0578c642f07c7c16db10512c8dcab9f6d",
+            "completedAt": "2026-09-16T14:50:40.080532+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "86项聚焦回归和类型检查通过",
+            "verifiedCommit": "ab6bb7e0578c642f07c7c16db10512c8dcab9f6d",
+            "completedAt": "2026-09-16T14:50:40.080532+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "PPT三页实际渲染已核验；客户端按本地测试请求集成后构建并核验"
+        },
+        "acceptanceCriteria": [
+          "完成回复无需切换会话显示",
+          "主对话显示真实工具进度",
+          "组件任务显示独立样式",
+          "PPT副标题常规字重、目录无顶线、增加适用的左文右图"
+        ],
+        "risks": [
+          "模型实际推理耗时不属于本次性能改善保证",
+          "远端执行者的详细进度仍受现有协议限制"
+        ],
+        "generatedAt": "2026-09-16T14:50:40.080532+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/shared-main-agent.test.js",
+        "test/component-agent-scope.test.js",
+        "test/research-board-live-discussion.test.ts",
+        "test/research-board-polish.test.ts",
+        "test/shared-conversation-queue.test.js",
+        "test/research-boards-service.test.ts",
+        "test/bundled-ppt-skill.test.ts",
+        "test/efund-ppt-107.test.js",
+        "test/efund-ppt-109.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
