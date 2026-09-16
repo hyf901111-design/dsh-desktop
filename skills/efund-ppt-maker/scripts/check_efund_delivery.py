@@ -74,6 +74,48 @@ def resolved_shape(package, part, shape):
     return shape
 
 
+def table_rows(root, table_id):
+    frame = next((e for e in root.findall('.//p:graphicFrame', NS)
+                  if object_id(e) == str(table_id)), None)
+    if frame is None:
+        raise ValueError('TOC table missing')
+    y = int(frame.find('p:xfrm/a:off', NS).get('y'))
+    result = []
+    for row in frame.findall('.//a:tbl/a:tr', NS):
+        height = int(row.get('h'))
+        result.append((y + height / 2, row))
+        y += height
+    return result
+
+
+def toc_item(root, item):
+    if 'tableId' in item:
+        center, row = table_rows(root, item['tableId'])[item['rowIndex']]
+        return row.findall('a:tc', NS)[item['columnIndex']], center
+    shape = find_shape(root, item.get('shapeId'))
+    geometry = element_geometry(shape) if shape is not None else None
+    if geometry is None:
+        raise ValueError('TOC shape geometry missing')
+    return shape, geometry[1] + geometry[3] / 2
+
+
+def check_toc_spacing(root, source_root, page, tolerance):
+    try:
+        expected = table_rows(source_root, page['tocLayout']['sourceTableId'])
+        rows = page['tocRows']
+        if len(rows) > len(expected):
+            return ['toc-source-capacity-exceeded']
+        for index, row in enumerate(rows):
+            _, center = toc_item(root, row)
+            number = row.get('numberCell', {'shapeId': row.get('numberShapeId')})
+            _, number_center = toc_item(root, number)
+            if abs(center - expected[index][0]) > tolerance or abs(number_center - expected[index][0]) > tolerance:
+                return ['toc-row-spacing-mismatch']
+        return []
+    except (KeyError, ValueError, TypeError, IndexError, AttributeError):
+        return ['toc-layout-unresolved']
+
+
 def audit(pptx, source, mapping):
     output, reference = open_package(pptx), open_package(source)
     issues = []
@@ -122,8 +164,17 @@ def audit(pptx, source, mapping):
             if page.get('pageKind') == 'toc' and chapters:
                 rows = page.get('tocRows', [])
                 if [r.get('chapterId') for r in rows] != [c['id'] for c in chapters]: add('toc-rows-incomplete',number)
+                layout = page.get('tocLayout', {})
+                if 'sourceSlide' not in layout:
+                    add('toc-layout-unresolved', number)
+                else:
+                    source_root = xml_root(reference, logical_slide_part(reference, layout['sourceSlide']))
+                    for code in check_toc_spacing(root, source_root, page, output.canvas[0]/1920): add(code, number)
                 for row, chapter in zip(rows,chapters):
-                    shape = find_shape(root,row.get('shapeId'))
+                    try:
+                        shape, _ = toc_item(root, row)
+                    except (KeyError, ValueError, TypeError, IndexError, AttributeError):
+                        shape = None
                     if shape is None: add('toc-shape-missing',number); continue
                     if ''.join(t.text or '' for t in shape.findall('.//a:t',NS)).strip() != chapter['title']: add('toc-label-mismatch',number)
                     active = chapter['id'] == page.get('activeChapterId')

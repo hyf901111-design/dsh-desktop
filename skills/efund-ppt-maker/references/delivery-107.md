@@ -20,7 +20,7 @@
 
 分章材料顺序为：封面 → 完整目录（高亮第一章）→ 第一章的一页或多页正文 → 完整目录（高亮第二章）→ 第二章正文 → …… → 最后一章正文 → 结束页。不能只在开头放一张目录，也不能开头就高亮第二章。每张目录保留全部章节的名称、编号、位置与顺序，仅当前即将讲解的章节标题为源模板蓝色，其余标题为浅灰。目录数字与品牌家具按源模板保留。目录不应连续出现，不在章节内部重复，不在最后一章之后增加没有后续正文的目录。
 
-顶层 `chapters` 为有序的 `{id,title}` 数组。所有 `outputSlides` 按最终逻辑页码排列，声明 `pageKind`：正文为 content，并填 `chapterId`；目录为 toc，并填 `activeChapterId` 及完整 `tocRows:[{chapterId,shapeId}]`，其中 shapeId 对应仅含章节标题的文本框。源模板默认蓝色为 00529B、灰色为 D9D9D9，实际不同则填 `tocActiveColor` / `tocInactiveColor` 并在模板审计中记录依据。标题 run 显式写入最终 RGB，防止主题颜色被错误继承。单章短材料可不插目录，但仍要声明章节；多章不可省略导航。
+顶层 `chapters` 为有序的 `{id,title}` 数组。所有 `outputSlides` 按最终逻辑页码排列，声明 `pageKind`：正文为 content，并填 `chapterId`；目录为 toc，并填 `activeChapterId` 及完整 `tocRows:[{chapterId,shapeId}]`，其中 shapeId 对应仅含章节标题的文本框；1.0.8 也支持原生表格单元格映射，目录间距和映射扩展以 [toc-spacing-108.md](toc-spacing-108.md) 为准。源模板默认蓝色为 00529B、灰色为 D9D9D9，实际不同则填 `tocActiveColor` / `tocInactiveColor` 并在模板审计中记录依据。标题 run 显式写入最终 RGB，防止主题颜色被错误继承。单章短材料可不插目录，但仍要声明章节；多章不可省略导航。
 
 ## 正文布局由论点和证据决定
 
