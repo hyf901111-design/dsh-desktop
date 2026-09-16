@@ -1,3 +1,4 @@
+import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
 import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
 import { patchInspectPortal, patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
@@ -134,6 +135,7 @@ writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')
 
 for (const [name, patch] of [
   ['dsh-client-locale', patchDesktopLocaleBridge],
+  ['dsh-client-ui-user-questions', patchQuestionCountdown],
   ['dsh-client-ui-model-selection', patchFigmaModelMenu],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
   ['dsh-client-ui-workspace', source => patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source))],

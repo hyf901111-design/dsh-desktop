@@ -1,0 +1,61 @@
+// This function is also embedded in the question renderer; keep it self-contained.
+export function startQuestionCountdown(onTick, onExpire, now = Date.now, every = setInterval, stop = clearInterval) {
+  const deadline = now() + 30_000
+  let done = false
+  onTick(30)
+  const timer = every(() => {
+    if (done) return
+    const seconds = Math.max(0, Math.ceil((deadline - now()) / 1000))
+    onTick(seconds)
+    if (seconds === 0) {
+      done = true
+      stop(timer)
+      onExpire()
+    }
+  }, 250)
+  return () => { done = true; stop(timer) }
+}
+
+export function automaticQuestionDraft(question) {
+  const recommended = question.options?.find(option => /\s*(?:\((?:recommended|推荐)\)|（(?:recommended|推荐)）)\s*$/i.test(option.label))
+  return recommended
+    ? { selected: [recommended.label], custom: '', skipped: false }
+    : { selected: [], custom: '30 秒内未收到用户选择。请在已有任务授权范围内，根据上下文自行选择合适的默认方案继续；不要将超时视为用户批准新增权限或高风险操作。', skipped: false }
+}
+
+export function patchQuestionCountdown(source) {
+  if (source.includes('odyssey-question-countdown-v1')) return source
+  function replace(needle, replacement) {
+    if (!source.includes(needle)) throw new Error('Question countdown patch anchor missing: ' + needle.slice(0, 80))
+    source = source.replace(needle, replacement)
+  }
+  replace('function QuestionFlow({ pending, t }) {', `// odyssey-question-countdown-v1\n${startQuestionCountdown.toString()}\n${automaticQuestionDraft.toString()}\nfunction QuestionFlow({ pending, t }) {`)
+  replace('const question = questions[index];', `const [countdown, setCountdown] = (0, react.useState)(30);
+      const touchedQuestions = (0, react.useRef)(new Set());
+      const cancelCountdown = (0, react.useRef)(() => {});
+      const question = questions[index];`)
+  replace('const cancelFlow = () => {', 'const cancelFlow = () => {\n cancelCountdown.current();')
+  replace('const updateDraft = (update) => {', 'const updateDraft = (update) => {\n touchedQuestions.current.add(index); cancelCountdown.current(); setCountdown(null);')
+  replace('const submitDrafts = (values) => {', 'const submitDrafts = (values) => {\n cancelCountdown.current();')
+  replace('focusedQuestions.current.add(index);', 'focusedQuestions.current.add(index); touchedQuestions.current.add(index); cancelCountdown.current(); setCountdown(null);')
+  replace('const skipQuestion = () => {', 'const skipQuestion = () => {\n cancelCountdown.current();')
+  const anchor = '\t\t\treturn (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: QuestionComposer_module_css_default.frame,'
+  replace(anchor, `
+      (0, react.useEffect)(() => {
+        if (!hasOptions || busy || error || touchedQuestions.current.has(index) || answered(draft) || draft.skipped) {
+          setCountdown(null);
+          return;
+        }
+        const cancel = startQuestionCountdown(setCountdown, () => {
+          const nextDrafts = drafts.map((item, itemIndex) => itemIndex === index ? automaticQuestionDraft(question) : item);
+          setDrafts(nextDrafts);
+          if (index < questions.length - 1) setIndex(index + 1);
+          else submitDrafts(nextDrafts);
+        });
+        cancelCountdown.current = cancel;
+        return cancel;
+      }, [index, busy, error, draft, pending.key]);
+${anchor}`)
+  replace('children: t("action.skip")', 'title: countdown === null ? undefined : "倒计时结束后按推荐方案继续；没有推荐项时由模型自行判断",\n children: t("action.skip") + (countdown === null ? "" : ` (${countdown}s)`)')
+  return source
+}
