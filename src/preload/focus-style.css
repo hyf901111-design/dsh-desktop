@@ -14,3 +14,17 @@ html body :is(._7yHdaG_editor,.rScV5Q_linkPopover input,.rScV5Q_containerDraft t
 html body .odyssey-session-title-edit input {
   border-color:var(--dsw-alias-border-l2,#7774);
 }
+/* These strokes belong to the control/state, not to keyboard or mouse focus. */
+html body [data-research-create-popover].odyssey-derived-create-popover textarea {
+  outline:1px solid var(--odyssey-derived-border)!important;
+  outline-offset:-1px;
+}
+html body .sherlock-auth-dialog input[aria-invalid=true] {
+  box-shadow:inset 0 0 0 1px var(--auth-field-error-stroke)!important;
+}
+html body .GL8Viq_providerButtonSelected {
+  box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary)!important;
+}
+html body .srb-notifications :is(.srb-notification-actions,.srb-notification-footer) button:not(.srb-primary) {
+  box-shadow:inset 0 0 0 1px var(--center-button-border)!important;
+}
