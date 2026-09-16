@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260916-07",
+  "branch": "codex/integration/20260916-07",
+  "baseMainCommit": "36d2eedbaef7301511d1182c96c1f2175dad082d",
+  "expectedMainCommit": "36d2eedbaef7301511d1182c96c1f2175dad082d",
+  "createdAt": "2026-09-16T15:39:26.661Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "画板性能与原生协作对话及恢复顺序",
+        "branch": "codex/feat/board-performance-native-flow-20260916",
+        "baseCommit": "36d2eedbaef7301511d1182c96c1f2175dad082d",
+        "tipCommit": "d8e4b66cd0524a0209368b70322388dd16bda8bd",
+        "commits": [
+          {
+            "commit": "091a054ebaeadc4767553e79e97e5c613a53b070",
+            "parents": [
+              "36d2eedbaef7301511d1182c96c1f2175dad082d"
+            ],
+            "subject": "优化共享画板重复快照水合并避免回写订阅重复克隆"
+          },
+          {
+            "commit": "7c8ef8e634084b8b74d5ffada7628b3c6783f4b1",
+            "parents": [
+              "091a054ebaeadc4767553e79e97e5c613a53b070"
+            ],
+            "subject": "修复共享对话插队恢复后的整轮显示顺序"
+          },
+          {
+            "commit": "641a77b440b236bc92f493bd4213091717c37af7",
+            "parents": [
+              "7c8ef8e634084b8b74d5ffada7628b3c6783f4b1"
+            ],
+            "subject": "延迟挂载离屏画板HTML预览并保留平移后的交互状态"
+          },
+          {
+            "commit": "d8e4b66cd0524a0209368b70322388dd16bda8bd",
+            "parents": [
+              "641a77b440b236bc92f493bd4213091717c37af7"
+            ],
+            "subject": "复用原生对话过程展示协作主任务并接入恢复轮次排序"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-main-agent.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-canvas-deferred-html.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-canvas-deferred-html.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/shared-native-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-collaboration-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/PROTOCOL.md"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/room.js"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-board-conversation-order.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-conversation-order.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-deferred-html-patch.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-container-chrome.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-main-agent.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/shared-native-conversation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-native-conversation.test.js",
+              "test/shared-main-agent.test.js",
+              "test/research-board-conversation-order.test.ts",
+              "test/research-board-live-discussion.test.ts",
+              "test/research-canvas-deferred-html-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "24项聚焦测试及类型检查通过，另8项画板性能回归通过",
+            "verifiedCommit": "d8e4b66cd0524a0209368b70322388dd16bda8bd",
+            "completedAt": "2026-09-16T15:39:12.888638+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "24项聚焦测试及类型检查通过，另8项画板性能回归通过",
+            "verifiedCommit": "d8e4b66cd0524a0209368b70322388dd16bda8bd",
+            "completedAt": "2026-09-16T15:39:12.888638+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "集成后按本地测试手册构建核验"
+        },
+        "acceptanceCriteria": [
+          "避免重复画板水合及离屏首次HTML加载",
+          "复用原生对话过程",
+          "插队后恢复整轮位于下方"
+        ],
+        "risks": [
+          "跨用户详细原生事件仍受现有同步协议限制"
+        ],
+        "generatedAt": "2026-09-16T15:39:12.888638+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/shared-native-conversation.test.js",
+        "test/shared-main-agent.test.js",
+        "test/research-board-conversation-order.test.ts",
+        "test/research-board-live-discussion.test.ts",
+        "test/research-canvas-deferred-html-patch.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
