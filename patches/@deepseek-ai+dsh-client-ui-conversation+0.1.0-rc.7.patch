@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
-index 1dd0e89..c8731df 100644
+index 1dd0e89..fd808e3 100644
 --- a/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 +++ b/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js
 @@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
@@ -1631,7 +1631,7 @@ index 1dd0e89..c8731df 100644
  					entryKey: routedNode.kind,
  					hookContext: nodeKey,
  					fallback: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.JsonBlock, {
-@@ -5275,26 +6231,166 @@ window.__ModuleLoader__.load({
+@@ -5275,22 +6231,209 @@ window.__ModuleLoader__.load({
  						payload: routedNode.data,
  						truncatedLabel: (total) => t("json.truncated", { total })
  					})
@@ -1644,15 +1644,6 @@ index 1dd0e89..c8731df 100644
 -		/** Active column host when present; otherwise the view-local scroller. */
 -		function scrollerOf(from) {
 -			return from.closest("[data-conversation-scroll]") ?? from;
--		}
--		/** Find an already-rendered settled row without interpolating a selector. */
--		function anchorElement(list, key) {
--			for (const row of list.querySelectorAll("[data-chat-anchor-key]")) if (row.dataset.chatAnchorKey === key) return row;
--			return null;
--		}
--		/** Row position in scrollport coordinates (viewport-independent). */
--		function flowTop(row, scrollport) {
--			return row.getBoundingClientRect().top - scrollport.getBoundingClientRect().top;
 +		function ExecutionDetailGroupIcon({ id }) {
 +			if (id === "read-search") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutline16, { size: 14 });
 +			if (id === "tools-skills") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutline14, { size: 14 });
@@ -1660,8 +1651,59 @@ index 1dd0e89..c8731df 100644
 +			if (id === "task-verify") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChecklistOutline14, { size: 14 });
 +			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutline14, { size: 14 });
  		}
--		/** Select a visible stable node/call identity, falling back only when layout
--		* has not exposed a visible box yet. */
+-		/** Find an already-rendered settled row without interpolating a selector. */
+-		function anchorElement(list, key) {
+-			for (const row of list.querySelectorAll("[data-chat-anchor-key]")) if (row.dataset.chatAnchorKey === key) return row;
+-			return null;
++		/** Image outputs remain visible even when execution details are collapsed. */
++		function toolImageOutputs(nodes) {
++			const files = new Map();
++			const images = new Map();
++			const linkedImages = new Set();
++			function collect(content, argsRaw) {
++				const blocks = Array.isArray(content) ? content : [];
++				const refs = blocks.filter((b) => b.type === "image" && b.attachment).map((b) => b.attachment);
++				const text = blocks.filter((b) => b.type === "text").map((b) => b.text).join("\n");
++				let path = text.match(/<path>([^<]+)<\/path>/)?.[1];
++				if (!path && refs.length > 0 && argsRaw) {
++					try { path = JSON.parse(argsRaw).file_path; } catch {}
++				}
++				const localImage = typeof path === "string" && !/^[a-z][a-z0-9+.-]*:/i.test(path) && /\.(?:png|jpe?g|webp|gif|svg|avif|bmp|tiff?)$/i.test(path);
++				if (localImage) {
++					files.set(path, { path, name: path.split(/[\\/]/).pop() || path });
++					for (const ref of refs) linkedImages.add(ref.attachmentId);
++				} else for (const attachment of refs) images.set(attachment.attachmentId, { attachment });
++				for (const block of blocks) if (block.type === "tool-result" && !block.isError) collect(block.content);
++			}
++			function visit(root) {
++				if (!root) return;
++				if (root.kind === "tool-result" && !root.isError) collect(root.content, root.call?.argsRaw);
++				for (const child of root.subCalls ?? []) visit(child);
++			}
++			for (const node of nodes) {
++				if (node.kind === "tool-call") visit(node.data?.root);
++				if (node.kind === "context" && node.data?.source?.plugin === "tools-code-mode") collect(node.data.content);
++			}
++			return { files: [...files.values()], images: [...images.entries()].filter(([id]) => !linkedImages.has(id)).map(([, value]) => value) };
+ 		}
+-		/** Row position in scrollport coordinates (viewport-independent). */
+-		function flowTop(row, scrollport) {
++		function ToolImageOutputs({ nodes, openFile, loadImage, t }) {
++			const output = toolImageOutputs(nodes);
++			if (output.files.length === 0 && output.images.length === 0) return null;
++			return (0, react_jsx_runtime.jsxs)("div", {
++				"data-tool-image-outputs": "",
++				style: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, marginTop: 8 },
++				children: [output.files.map((file) => (0, react_jsx_runtime.jsx)("button", {
++					type: "button", title: file.path, disabled: !openFile,
++					"data-tool-image-path": file.path,
++					style: { font: "inherit", fontSize: 13, color: "var(--dsw-alias-label-primary)", background: "var(--dsw-alias-interactive-bg-hover)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", maxWidth: "100%", overflowWrap: "anywhere" },
++					onClick: () => openFile?.(file.path), children: file.name
++				}, file.path)), output.images.length > 0 && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_attachment.ImageGallery, {
++					images: output.images, load: loadImage ?? (() => Promise.reject(new Error(t("image.serviceUnavailable")))), align: "start", labels: messageImageLabels(t)
++				})]
++			});
++		}
 +		/** One turn-level status row whose disclosure owns all process detail. */
 +		const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {
 +			const [expanded, setExpanded] = (0, react.useState)(false);
@@ -1777,7 +1819,7 @@ index 1dd0e89..c8731df 100644
 +							}, nodeKey))
 +						})]
 +					}, group.id))
-+				})]
++				}), (0, react_jsx_runtime.jsx)(ToolImageOutputs, { nodes: activityNodes, openFile: seatProps.openFile, loadImage: seatProps.loadImage, t })]
 +			});
 +		});
 +		//#endregion
@@ -1808,14 +1850,10 @@ index 1dd0e89..c8731df 100644
 +		}
 +		/** Row position in scrollport coordinates (viewport-independent). */
 +		function flowTop(row, scrollport) {
-+			return row.getBoundingClientRect().top - scrollport.getBoundingClientRect().top;
-+		}
-+		/** Select a visible stable node/call identity, falling back only when layout
-+		* has not exposed a visible box yet. */
- 		function pagingAnchor(list, scrollport) {
- 			const viewport = scrollport.getBoundingClientRect();
- 			const visibleBottom = scrollport.querySelector("[data-composer-seat]")?.getBoundingClientRect().top ?? viewport.bottom;
-@@ -5332,35 +6428,606 @@ window.__ModuleLoader__.load({
+ 			return row.getBoundingClientRect().top - scrollport.getBoundingClientRect().top;
+ 		}
+ 		/** Select a visible stable node/call identity, falling back only when layout
+@@ -5332,35 +6475,606 @@ window.__ModuleLoader__.load({
  				scrollTop: scrollport.scrollTop
  			};
  		}
@@ -2446,7 +2484,7 @@ index 1dd0e89..c8731df 100644
  				})]
  			});
  		}
-@@ -5374,6 +7041,11 @@ window.__ModuleLoader__.load({
+@@ -5374,6 +7088,11 @@ window.__ModuleLoader__.load({
  			const timeline = useSession((s) => s.chat.timeline);
  			const inbox = useSession((s) => s.queue);
  			const cwd = useSessions((s) => s.byId[sessionId]?.cwd);
@@ -2458,7 +2496,7 @@ index 1dd0e89..c8731df 100644
  			const running = useSession((s) => s.running);
  			const openState = useSession((s) => s.openState);
  			const openError = useSession((s) => s.openError);
-@@ -5381,11 +7053,61 @@ window.__ModuleLoader__.load({
+@@ -5381,11 +7100,61 @@ window.__ModuleLoader__.load({
  			const loadingOlder = useSession((s) => s.loadingOlder);
  			const selectedCallId = useStore((s) => s.selection?.callId);
  			const pendingSteering = (0, react.useMemo)(() => inbox.filter((item) => item.placement === "steering"), [inbox]);
@@ -2521,7 +2559,7 @@ index 1dd0e89..c8731df 100644
  			/** Last position delivered or written on the main thread. */
  			const observedTopRef = (0, react.useRef)(0);
  			/** Paging anchor: semantic row/position at click, updated by reader scrolls
-@@ -5394,7 +7116,9 @@ window.__ModuleLoader__.load({
+@@ -5394,7 +7163,9 @@ window.__ModuleLoader__.load({
  			const firstSeqRef = (0, react.useRef)(null);
  			const openedRef = (0, react.useRef)(false);
  			const lastKeyRef = (0, react.useRef)(null);
@@ -2531,7 +2569,7 @@ index 1dd0e89..c8731df 100644
  			/** Flow tip signature — follow-scroll only when this moves, never on a
  			*  scroll-driven at-bottom chrome re-render (which would snap inertial
  			*  scrolls the rest of the way to the floor). */
-@@ -5402,26 +7126,37 @@ window.__ModuleLoader__.load({
+@@ -5402,26 +7173,37 @@ window.__ModuleLoader__.load({
  			const firstKey = order[0];
  			const firstSeq = firstKey === void 0 ? null : nodeStore.get(firstKey)?.anchorSeq ?? null;
  			const lastKey = order.at(-1) ?? null;
@@ -2573,7 +2611,7 @@ index 1dd0e89..c8731df 100644
  					else {
  						el.scrollTop = saved.scrollTop;
  						const row = anchorElement(local, saved.anchorKey);
-@@ -5436,6 +7171,7 @@ window.__ModuleLoader__.load({
+@@ -5436,6 +7218,7 @@ window.__ModuleLoader__.load({
  					}
  					firstSeqRef.current = firstSeq;
  					lastKeyRef.current = lastKey;
@@ -2581,7 +2619,7 @@ index 1dd0e89..c8731df 100644
  					lastSteeringIdRef.current = lastSteeringId;
  					followSigRef.current = followSig;
  					return;
-@@ -5449,18 +7185,26 @@ window.__ModuleLoader__.load({
+@@ -5449,18 +7232,26 @@ window.__ModuleLoader__.load({
  					firstSeqRef.current = firstSeq;
  					/* v8 ignore next -- ?? arm: a prepend adds nodes, so the flow list here is never empty. */
  					lastKeyRef.current = lastKey;
@@ -2610,7 +2648,7 @@ index 1dd0e89..c8731df 100644
  			});
  			const onScrollRef = (0, react.useRef)(() => {});
  			onScrollRef.current = () => {
-@@ -5468,6 +7212,7 @@ window.__ModuleLoader__.load({
+@@ -5468,6 +7259,7 @@ window.__ModuleLoader__.load({
  				/* v8 ignore next -- ref-null guard: the handler only fires while mounted. */
  				if (local === null) return;
  				const el = scrollerOf(local);
@@ -2618,7 +2656,7 @@ index 1dd0e89..c8731df 100644
  				const floor = Math.max(0, el.scrollHeight - el.clientHeight);
  				const movedByReader = Math.abs(el.scrollTop - Math.min(observedTopRef.current, floor)) > .5;
  				const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;
-@@ -5487,6 +7232,10 @@ window.__ModuleLoader__.load({
+@@ -5487,6 +7279,10 @@ window.__ModuleLoader__.load({
  				else if (position !== null) chatScroll.save(position);
  				observedTopRef.current = el.scrollTop;
  			};
@@ -2629,7 +2667,7 @@ index 1dd0e89..c8731df 100644
  			(0, react.useEffect)(() => {
  				const local = listRef.current;
  				/* v8 ignore next -- ref-null guard: effect runs after the list node commits. */
-@@ -5514,11 +7263,13 @@ window.__ModuleLoader__.load({
+@@ -5514,11 +7310,13 @@ window.__ModuleLoader__.load({
  				const column = columnRef.current;
  				const local = listRef.current;
  				if (column === null || local === null || typeof ResizeObserver === "undefined") return;
@@ -2644,7 +2682,7 @@ index 1dd0e89..c8731df 100644
  				if (composer !== null) observer.observe(composer);
  				return () => {
  					observer.disconnect();
-@@ -5540,9 +7291,29 @@ window.__ModuleLoader__.load({
+@@ -5540,9 +7338,29 @@ window.__ModuleLoader__.load({
  				}
  				loadOlder();
  			};
@@ -2675,7 +2713,7 @@ index 1dd0e89..c8731df 100644
  					ref: listRef,
  					className: ChatView_module_css_default.scroll,
  					children: [(0, react_jsx_runtime.jsxs)("div", {
-@@ -5570,28 +7341,27 @@ window.__ModuleLoader__.load({
+@@ -5570,28 +7388,27 @@ window.__ModuleLoader__.load({
  									children: loadingOlder ? t("loading") : t("chat.loadOlder")
  								})
  							}),
@@ -2725,7 +2763,7 @@ index 1dd0e89..c8731df 100644
  						]
  					}), !atBottom && (0, react_jsx_runtime.jsx)("div", {
  						className: ChatView_module_css_default.toBottomSlot,
-@@ -5607,7 +7377,7 @@ window.__ModuleLoader__.load({
+@@ -5607,7 +7424,7 @@ window.__ModuleLoader__.load({
  							children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
  						})
  					})]
@@ -2734,7 +2772,7 @@ index 1dd0e89..c8731df 100644
  			});
  		}
  		//#endregion
-@@ -5816,6 +7586,33 @@ window.__ModuleLoader__.load({
+@@ -5816,6 +7633,33 @@ window.__ModuleLoader__.load({
  		/** Simplified Chinese dictionary (the key-set source of truth). */
  		const zh = {
  			"view.chat": "对话",
@@ -2768,7 +2806,7 @@ index 1dd0e89..c8731df 100644
  			"hint.plan": PLAN_NEXT_ACTION_ZH,
  			"hint.goal": "输入目标，智能体将持续执行",
  			"hint.goal.active": "当前目标进行中。可输入 edit 修改 / pause 暂停 / resume 继续 / clear 清除",
-@@ -5870,12 +7667,15 @@ window.__ModuleLoader__.load({
+@@ -5870,12 +7714,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "仅在智能体运行时生效；Cmd/Ctrl+Enter 使用另一行为",
  			"settings.enter.queue": "排队发送",
  			"settings.enter.steer": "插话发送",
@@ -2788,7 +2826,7 @@ index 1dd0e89..c8731df 100644
  			"hero.preview": "预览版",
  			"hero.chooseWorkspace": "选择工作区",
  			"session.hierarchy": "会话层级",
-@@ -5896,6 +7696,46 @@ window.__ModuleLoader__.load({
+@@ -5896,6 +7743,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "历史加载失败：{message}（{code}）",
  			"chat.loadOlder": "加载更早",
  			"chat.toBottom": "回到底部",
@@ -2835,7 +2873,7 @@ index 1dd0e89..c8731df 100644
  			"message.extraBlock": "附加内容块",
  			"message.contextInjection": "上下文注入",
  			"message.contextRecall": "跨会话召回",
-@@ -5981,6 +7821,33 @@ window.__ModuleLoader__.load({
+@@ -5981,6 +7868,33 @@ window.__ModuleLoader__.load({
  		/** English dictionary, checked complete against the zh key set. */
  		const en = {
  			"view.chat": "Chat",
@@ -2869,7 +2907,7 @@ index 1dd0e89..c8731df 100644
  			"hint.plan": PLAN_NEXT_ACTION_EN,
  			"hint.goal": "describe the objective for a long-running task",
  			"hint.goal.active": "goal active — edit / pause / resume / clear",
-@@ -6035,12 +7902,15 @@ window.__ModuleLoader__.load({
+@@ -6035,12 +7949,15 @@ window.__ModuleLoader__.load({
  			"settings.enter.description": "Busy only; Cmd/Ctrl+Enter uses the other behavior",
  			"settings.enter.queue": "Queue",
  			"settings.enter.steer": "Steer",
@@ -2886,7 +2924,7 @@ index 1dd0e89..c8731df 100644
  			"hero.preview": "Preview",
  			"hero.chooseWorkspace": "Choose workspace",
  			"session.hierarchy": "Session hierarchy",
-@@ -6061,6 +7931,46 @@ window.__ModuleLoader__.load({
+@@ -6061,6 +7978,46 @@ window.__ModuleLoader__.load({
  			"chat.loadError": "Failed to load history: {message} ({code})",
  			"chat.loadOlder": "Load earlier",
  			"chat.toBottom": "Back to bottom",
@@ -2933,7 +2971,7 @@ index 1dd0e89..c8731df 100644
  			"message.extraBlock": "Extra content block",
  			"message.contextInjection": "Context injection",
  			"message.contextRecall": "Session recall",
-@@ -6383,7 +8293,11 @@ window.__ModuleLoader__.load({
+@@ -6383,7 +8340,11 @@ window.__ModuleLoader__.load({
  		*/
  		function QueueDock({ useSession, updateQueue, notify, t }) {
  			const inbox = useSession((s) => s.queue);
@@ -2946,7 +2984,7 @@ index 1dd0e89..c8731df 100644
  			const running = useSession((s) => s.running);
  			const queueMutable = useSession((s) => s.subagent === null);
  			const [editing, setEditing] = (0, react.useState)(null);
-@@ -6532,7 +8446,7 @@ window.__ModuleLoader__.load({
+@@ -6532,7 +8493,7 @@ window.__ModuleLoader__.load({
  												type: "button",
  												className: QueueDock_module_css_default.action,
  												"aria-label": t("queue.edit"),
@@ -2955,7 +2993,7 @@ index 1dd0e89..c8731df 100644
  												disabled: busy !== null || row.text === null,
  												onClick: () => {
  													if (row.text !== null) setEditing({
-@@ -6627,7 +8541,7 @@ window.__ModuleLoader__.load({
+@@ -6627,7 +8588,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$7;
@@ -2964,7 +3002,7 @@ index 1dd0e89..c8731df 100644
  			document.head.appendChild(tag);
  		}
  		var HeroShell_module_css_default = {
-@@ -6751,49 +8665,7221 @@ window.__ModuleLoader__.load({
+@@ -6751,49 +8712,7221 @@ window.__ModuleLoader__.load({
  				})]
  			});
  		}
@@ -10220,7 +10258,7 @@ index 1dd0e89..c8731df 100644
  			document.head.appendChild(tag);
  		}
  		var ConversationRoot_module_css_default = {
-@@ -6822,7 +15908,358 @@ window.__ModuleLoader__.load({
+@@ -6822,7 +15955,358 @@ window.__ModuleLoader__.load({
  		};
  		//#endregion
  		//#region lib/types/client/skeleton/ConversationRoot.js
@@ -10580,7 +10618,7 @@ index 1dd0e89..c8731df 100644
  			const openState = useSession((s) => s.openState);
  			const composerPhase = useSession((s) => s.composerPhase);
  			const pending = useSession((s) => s.pending) ?? [];
-@@ -6832,22 +16269,202 @@ window.__ModuleLoader__.load({
+@@ -6832,22 +16316,202 @@ window.__ModuleLoader__.load({
  			const summaryBlank = useSessions((s) => sessionId === void 0 ? void 0 : s.byId[sessionId]?.blank);
  			const workspaces = useWorkspaces((s) => s);
  			const composerBlock = useComposerBlock((block) => block);
@@ -10787,7 +10825,7 @@ index 1dd0e89..c8731df 100644
  			(0, react.useEffect)(() => {
  				if (pendingWorkspaceId === void 0) return;
  				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
-@@ -6857,8 +16474,9 @@ window.__ModuleLoader__.load({
+@@ -6857,8 +16521,9 @@ window.__ModuleLoader__.load({
  				workspaces.phase,
  				pendingWorkspace
  			]);
@@ -10799,7 +10837,7 @@ index 1dd0e89..c8731df 100644
  			const zone = session === void 0 || inputState === void 0 ? void 0 : {
  				session,
  				input: inputState
-@@ -6866,6 +16484,7 @@ window.__ModuleLoader__.load({
+@@ -6866,6 +16531,7 @@ window.__ModuleLoader__.load({
  			const chipTitle = pendingWorkspace?.title ?? (sessionId === void 0 ? void 0 : sessionWorkspace?.title ?? (workspaces.phase === "ready" || cwd === void 0 || cwd === "" ? void 0 : workspaceLabel(cwd)));
  			const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)("div", {
  				className: ConversationRoot_module_css_default.heroWorkspaceRow,
@@ -10807,7 +10845,7 @@ index 1dd0e89..c8731df 100644
  				children: [
  					(0, react_jsx_runtime.jsx)(WorkspaceChip, {
  						buttonRef: pickerAnchor,
-@@ -6897,6 +16516,9 @@ window.__ModuleLoader__.load({
+@@ -6897,6 +16563,9 @@ window.__ModuleLoader__.load({
  			const inert = sessionId === void 0 || hero && chipTitle === void 0;
  			const inputBar = renderSlot("conversation.composer.bar", {
  				variant: hero ? "hero" : "composer",
@@ -10817,7 +10855,7 @@ index 1dd0e89..c8731df 100644
  				...inert ? {
  					disabled: true,
  					placeholder: t("placeholder.workspace"),
-@@ -6913,37 +16535,81 @@ window.__ModuleLoader__.load({
+@@ -6913,37 +16582,81 @@ window.__ModuleLoader__.load({
  				rightItems: zone === void 0 ? null : renderSlot("conversation.input.right", zone),
  				footer: !hero && zone !== void 0 ? renderSlot("conversation.composer.dock", zone) : null
  			});
@@ -10922,7 +10960,7 @@ index 1dd0e89..c8731df 100644
  				})]
  			});
  		}
-@@ -6951,6 +16617,31 @@ window.__ModuleLoader__.load({
+@@ -6951,6 +16664,31 @@ window.__ModuleLoader__.load({
  		//#region lib/types/client/skeleton/ConversationSession.js
  		/** Strict per-session header/body content inserted into the resident conversation layout. */
  		const DEFAULT_VIEW_ID = "chat";
@@ -10954,7 +10992,7 @@ index 1dd0e89..c8731df 100644
  		/** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
  		function resolveActiveView(tabs, selectedId) {
  			const requestedId = selectedId ?? DEFAULT_VIEW_ID;
-@@ -6980,6 +16671,20 @@ window.__ModuleLoader__.load({
+@@ -6980,6 +16718,20 @@ window.__ModuleLoader__.load({
  				return other !== void 0 && item.id === other.id && item.displayTitle === other.displayTitle;
  			});
  		}
@@ -10975,7 +11013,7 @@ index 1dd0e89..c8731df 100644
  		/**
  		* Renders Session header chrome above the resident conversation scrollport.
  		* @param props - Strict Session store, view ledger, navigation, render, and locale shares.
-@@ -6988,10 +16693,21 @@ window.__ModuleLoader__.load({
+@@ -6988,10 +16740,21 @@ window.__ModuleLoader__.load({
  		function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, t }) {
  			(0, react.useSyncExternalStore)(views.subscribe, views.version);
  			const tabs = views.list();
@@ -10999,7 +11037,7 @@ index 1dd0e89..c8731df 100644
  			return (0, react_jsx_runtime.jsx)("header", {
  				className: clsx(ConversationRoot_module_css_default.header, hideChrome && ConversationRoot_module_css_default.headerHidden),
  				"aria-hidden": hideChrome || void 0,
-@@ -7034,16 +16750,7 @@ window.__ModuleLoader__.load({
+@@ -7034,16 +16797,7 @@ window.__ModuleLoader__.load({
  				}), tabs.length > 1 && (0, react_jsx_runtime.jsx)("div", {
  					className: ConversationRoot_module_css_default.tabs,
  					role: "tablist",
@@ -11017,7 +11055,7 @@ index 1dd0e89..c8731df 100644
  				})] })
  			});
  		}
-@@ -7053,14 +16760,76 @@ window.__ModuleLoader__.load({
+@@ -7053,14 +16807,76 @@ window.__ModuleLoader__.load({
  		* @param props - Strict Session input/store, view ledger, and render shares.
  		* @returns the active view area, or null while the Session remains blank.
  		*/
@@ -11096,7 +11134,7 @@ index 1dd0e89..c8731df 100644
  			(0, react.useEffect)(() => {
  				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
  				const unmirror = bindDraftMirror(actions.setDraft);
-@@ -7071,11 +16840,15 @@ window.__ModuleLoader__.load({
+@@ -7071,11 +16887,15 @@ window.__ModuleLoader__.load({
  			(0, react.useEffect)(() => () => {
  				releaseSessionImages(sessionId);
  			}, [releaseSessionImages, sessionId]);
@@ -11113,7 +11151,7 @@ index 1dd0e89..c8731df 100644
  					onInspectDone: () => {
  						actions.setInspect(null);
  					}
-@@ -7090,7 +16863,7 @@ window.__ModuleLoader__.load({
+@@ -7090,7 +16910,7 @@ window.__ModuleLoader__.load({
  			const tag = document.createElement("style");
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-conversation";
  			tag.dataset.pluginCss = tagId$5;
@@ -11122,7 +11160,7 @@ index 1dd0e89..c8731df 100644
  			document.head.appendChild(tag);
  		}
  		var DetailsPanel_module_css_default = {
-@@ -7143,13 +16916,17 @@ window.__ModuleLoader__.load({
+@@ -7143,13 +16963,17 @@ window.__ModuleLoader__.load({
  		}
  		function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }) {
  			const selection = useStore((s) => s.selection);
@@ -11140,7 +11178,7 @@ index 1dd0e89..c8731df 100644
  					children: [(0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.title,
  						children: selection === null ? t("details.title") : material?.name ?? selection.toolName ?? t("details.title")
-@@ -7175,6 +16952,7 @@ window.__ModuleLoader__.load({
+@@ -7175,6 +16999,7 @@ window.__ModuleLoader__.load({
  					})]
  				}), (0, react_jsx_runtime.jsx)("div", {
  					className: DetailsPanel_module_css_default.body,
@@ -11148,7 +11186,7 @@ index 1dd0e89..c8731df 100644
  					children: selection === null || callId === void 0 ? (0, react_jsx_runtime.jsx)("div", {
  						className: DetailsPanel_module_css_default.empty,
  						children: t("details.empty")
-@@ -8066,13 +17844,30 @@ window.__ModuleLoader__.load({
+@@ -8066,13 +17891,30 @@ window.__ModuleLoader__.load({
  		//#endregion
  		//#region lib/types/client/conversation-nodes/compaction.js
  		function fallbackState$2(context) {
@@ -11179,7 +11217,7 @@ index 1dd0e89..c8731df 100644
  		/** Automatic compaction lifecycle and landed checkpoint Definition. */
  		const compactionDefinition = {
  			kind: "compaction",
-@@ -8094,11 +17889,21 @@ window.__ModuleLoader__.load({
+@@ -8094,11 +17936,21 @@ window.__ModuleLoader__.load({
  				}
  				return null;
  			},
@@ -11204,7 +11242,7 @@ index 1dd0e89..c8731df 100644
  				const marker = compactSummary(state.summary, state.checkpoint);
  				return chatNode(context, "compaction", marker.seq, marker);
  			}
-@@ -9038,7 +18843,7 @@ window.__ModuleLoader__.load({
+@@ -9038,7 +18890,7 @@ window.__ModuleLoader__.load({
  		}
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/AssistantMarkdown.module.css.mjs
@@ -11213,7 +11251,7 @@ index 1dd0e89..c8731df 100644
  		const tagId$2 = "@deepseek-ai/dsh-client-ui-conversation/AssistantMarkdown.module.css";
  		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
  			const tag = document.createElement("style");
-@@ -9128,29 +18933,36 @@ window.__ModuleLoader__.load({
+@@ -9128,29 +18980,36 @@ window.__ModuleLoader__.load({
  			const data = node.data;
  			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
  			const tail = useTurnData("turn-tail");
@@ -11255,7 +11293,7 @@ index 1dd0e89..c8731df 100644
  		});
  		//#endregion
  		//#region \0dsh-css:/home/runner/work/deepseek-harness/deepseek-harness/packages/client/ui-conversation/src/client/chat/GenericCommandCard.module.css.mjs
-@@ -9330,13 +19142,14 @@ window.__ModuleLoader__.load({
+@@ -9330,13 +19189,14 @@ window.__ModuleLoader__.load({
  			});
  			const runMs = turn.start === void 0 || turn.end === void 0 ? void 0 : Math.max(0, turn.end.time - turn.start.time);
  			const messageId = closing.finalNode.messageId;
@@ -11272,7 +11310,7 @@ index 1dd0e89..c8731df 100644
  					time: closing.time,
  					runMs,
  					ttftMs: data.ttftMs,
-@@ -9499,6 +19312,9 @@ window.__ModuleLoader__.load({
+@@ -9499,6 +19359,9 @@ window.__ModuleLoader__.load({
  			const workspaces = ctx.workspaces;
  			const layout = ctx.layout;
  			const slots = ctx.slots;
@@ -11282,7 +11320,7 @@ index 1dd0e89..c8731df 100644
  			registerConversationNodes(ctx);
  			registerChatNodeRenderers(ctx);
  			ctx.effect(() => ctx.locale.register(NS, {
-@@ -9538,8 +19354,13 @@ window.__ModuleLoader__.load({
+@@ -9538,8 +19401,13 @@ window.__ModuleLoader__.load({
  				subscribe: (fn) => slots.subscribe("conversation.view", fn),
  				version: () => slots.getVersion("conversation.view")
  			};
@@ -11297,7 +11335,7 @@ index 1dd0e89..c8731df 100644
  			ctx.effect(() => sessions.provide({
  				hooks: ["input"],
  				props: ["inputActions"],
-@@ -9551,9 +19372,9 @@ window.__ModuleLoader__.load({
+@@ -9551,9 +19419,9 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}), "ui-conversation: input standard-kit provider");
@@ -11310,7 +11348,7 @@ index 1dd0e89..c8731df 100644
  				children: {
  					"conversation.session": {
  						kind: "single",
-@@ -9600,8 +19421,11 @@ window.__ModuleLoader__.load({
+@@ -9600,8 +19468,11 @@ window.__ModuleLoader__.load({
  						scope: "root"
  					}
  				},
@@ -11324,7 +11362,7 @@ index 1dd0e89..c8731df 100644
  					selectWorkspace: async (workspaceId) => {
  						const nextId = await workspaces.connectWorkspace(workspaceId);
  						if (sessionId !== void 0 && nextId !== sessionId) {
-@@ -9635,6 +19459,9 @@ window.__ModuleLoader__.load({
+@@ -9635,6 +19506,9 @@ window.__ModuleLoader__.load({
  						releaseSessionImages: (id) => {
  							conversation.releaseSessionImages(id);
  						},
@@ -11334,7 +11372,7 @@ index 1dd0e89..c8731df 100644
  						bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)
  					};
  				}
-@@ -9764,10 +19591,19 @@ window.__ModuleLoader__.load({
+@@ -9764,10 +19638,19 @@ window.__ModuleLoader__.load({
  					return {
  						openDetails: (target) => {
  							actions.select(target);
@@ -11355,7 +11393,7 @@ index 1dd0e89..c8731df 100644
  							const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
  							workspaces.openPath((0, _deepseek_ai_dsh_client_runtime_client.resolveWorkspacePath)(cwd, path)).catch(() => {});
  						},
-@@ -9776,6 +19612,8 @@ window.__ModuleLoader__.load({
+@@ -9776,6 +19659,8 @@ window.__ModuleLoader__.load({
  						},
  						loadImage: (attachment) => conversation.resolveImage(sessionId, attachment),
  						inspectCall: (callId) => {
@@ -11364,7 +11402,7 @@ index 1dd0e89..c8731df 100644
  							actions.setInspect({ callId });
  							actions.setView("trajectory");
  						},
-@@ -9798,6 +19636,8 @@ window.__ModuleLoader__.load({
+@@ -9798,6 +19683,8 @@ window.__ModuleLoader__.load({
  					};
  				}
  			}, ChatView);
@@ -11373,7 +11411,7 @@ index 1dd0e89..c8731df 100644
  			slots.register({
  				name: "conversation.composer.dock",
  				id: "stats",
-@@ -9822,9 +19662,153 @@ window.__ModuleLoader__.load({
+@@ -9822,9 +19709,155 @@ window.__ModuleLoader__.load({
  					layout.closeDetails();
  				} })
  			}, DetailsPanel);
@@ -11413,6 +11451,8 @@ index 1dd0e89..c8731df 100644
 +		exports.UserStyleBubble = UserStyleBubble;
 +		exports.compactionDefinition = compactionDefinition;
 +		exports.compactConversationFlow = compactConversationFlow;
++		exports.toolImageOutputs = toolImageOutputs;
++		exports.ToolImageOutputs = ToolImageOutputs;
 +		exports.mergePendingSteeringFlow = mergePendingSteeringFlow;
 +		exports.latestDirectUserKey = latestDirectUserKey;
 +		exports.settleConversationScrollBottom = settleConversationScrollBottom;

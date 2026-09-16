@@ -1,0 +1,73 @@
+diff --git a/node_modules/@deepseek-ai/dsh-llm/lib/index.js b/node_modules/@deepseek-ai/dsh-llm/lib/index.js
+index 6c3a740..7b17311 100644
+--- a/node_modules/@deepseek-ai/dsh-llm/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-llm/lib/index.js
+@@ -651,6 +651,20 @@ function contentHasImage(content) {
+ 	return content.some((block) => block.type === "image" || block.type === "tool-result" && contentHasImage(block.content));
+ }
+ //#endregion
++/** Project tool images only at the provider boundary; durable session attachments stay intact. */
++function toolImagesAsText(message) {
++	const toolOrigin = message.source.kind === "tool" || message.source.kind === "plugin" && message.source.plugin === "tools-code-mode";
++	function project(blocks, fromTool) {
++		return blocks.map((block) => {
++			if (block.type === "tool-result") return { ...block, content: project(block.content, true) };
++			if (block.type !== "image" || !fromTool) return block;
++			const ref = block.attachment;
++			return { type: "text", text: `\n[Image file: ${ref.name ?? "image"}; ${ref.mediaType}; ${ref.width}x${ref.height}. Available in the client preview. Image pixels were not inspected by this text-only model.]\n` };
++		});
++	}
++	if (!contentHasImage(message.content)) return message;
++	return freezeMessage({ ...message, content: project(message.content, toolOrigin) });
++}
+ //#region lib/types/assembler.js
+ /**
+ * Incremental chunk-to-message assembler. This is the single canonical assembly
+@@ -1284,6 +1298,7 @@ var LlmRuntime = class extends Service {
+ 		}
+ 		return {
+ 			config: resolvedConfig,
++			inputModalities: info.inputModalities,
+ 			...info.context === void 0 ? {} : { context: info.context }
+ 		};
+ 	}
+@@ -1316,7 +1331,8 @@ var LlmRuntime = class extends Service {
+ 				dispatched = true;
+ 				return this.streamWithRegistration(options, {
+ 					registration,
+-					config: resolvedConfig
++					config: resolvedConfig,
++					inputModalities: resolved.inputModalities
+ 				});
+ 			}
+ 		});
+@@ -1327,8 +1343,9 @@ var LlmRuntime = class extends Service {
+ 		return registration;
+ 	}
+ 	/** Remove replay state whose historical route is owned by another adapter. */
+-	forAdapter(options, adapter) {
++	forAdapter(options, adapter, inputModalities) {
+ 		const messages = options.messages.map((message) => {
++			if (!inputModalities?.includes("image")) message = toolImagesAsText(message);
+ 			const source = message.source;
+ 			if (message.role !== "assistant" || source.kind !== "model" || source.replayState === void 0) return message;
+ 			if (this.adapters.get(source.provider)?.adapter === adapter) return message;
+@@ -1357,7 +1374,8 @@ var LlmRuntime = class extends Service {
+ 		let iterator;
+ 		try {
+ 			const registration = prepared?.registration ?? this.registration(options.provider);
+-			const resolvedConfig = prepared === void 0 ? (await this.resolveCallFor(registration, options, options.signal)).config : prepared.config;
++			const resolved = prepared ?? await this.resolveCallFor(registration, options, options.signal);
++			const resolvedConfig = resolved.config;
+ 			if (prepared !== void 0 && !callConfigEquals(options, resolvedConfig)) throw new LlmError("prepared LLM call config changed before adapter dispatch", "INVALID_PREPARED_CALL");
+ 			const resolvedOptions = callConfigEquals(options, resolvedConfig) ? options : Object.isFrozen(options) ? deepFreeze({
+ 				...options,
+@@ -1367,7 +1385,7 @@ var LlmRuntime = class extends Service {
+ 				...resolvedConfig
+ 			};
+ 			const adapter = registration.adapter;
+-			iterator = adapter.stream(this.forAdapter(resolvedOptions, adapter))[Symbol.asyncIterator]();
++			iterator = adapter.stream(this.forAdapter(resolvedOptions, adapter, resolved.inputModalities))[Symbol.asyncIterator]();
+ 		} catch (error) {
+ 			yield adapterFailureChunk(error, options.signal);
+ 			return;
