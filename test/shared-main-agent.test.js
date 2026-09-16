@@ -5,8 +5,8 @@ it('delivers to the existing main agent and keeps native delegation and tools in
  const parent={id:'mine',status:'idle',session:{events:[]},send(m,target,wake){sent={m,target,wake};this.status='running'},whenIdle:()=>idle,cancel(){}}
  const ctx={agents:{get:()=>parent},on:(_,fn)=>{events.add(fn);return()=>events.delete(fn)}}
  const adapter=createSharedMainAgentAdapter(ctx)
- const handle=await adapter.start({parentSessionId:'mine',prompt:'request',signal:new AbortController().signal,onSessionEvent:()=>{}})
- expect(sent).toMatchObject({target:'next-turn',wake:true,m:{role:'user',content:[{type:'text',text:'request'}]}})
+ const handle=await adapter.start({parentSessionId:'mine',prompt:'request',executionId:'t:resume:1',signal:new AbortController().signal,onSessionEvent:()=>{}})
+ expect(sent).toMatchObject({target:'next-turn',wake:true,m:{id:'shared-board-task:t:resume:1',role:'user',content:[{type:'text',text:'request'}]}})
  for(const fn of events)fn({id:'other'},{type:'assistant/message',data:{message:{content:[{type:'text',text:'wrong'}]}}})
  for(const fn of events)fn(parent,{type:'assistant/message',data:{message:{content:[{type:'text',text:'done'}]}}})
  parent.status='idle';resolve();expect(await handle.result).toMatchObject({output:[{type:'text',text:'done'}]});await handle.dispose();expect(events.size).toBe(0)

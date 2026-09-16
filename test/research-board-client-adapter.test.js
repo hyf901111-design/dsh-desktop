@@ -306,6 +306,56 @@ async function pageFixture(favorites = []) {
     }
   }
 }
+it('does not rebuild the canvas for repeated activation snapshots with unchanged content', async () => {
+  const f = await pageFixture()
+  const w = f.registry.for('shared')
+  const largeView = { ...f.view, canvas: { files: [], artifacts: Array.from({ length: 100 }, (_, i) => ({
+    ...f.view.canvas.artifacts[0], id: `node-${i}`, messageId: `message-${i}`, excerpt: '研究内容'.repeat(500)
+  })) } }
+  f.emit({ type: 'board', view: largeView })
+  const apply = vi.spyOn(w, 'applyRemoteCanvas')
+  const redraw = vi.fn(), off = w.subscribe(redraw)
+  // IPC delivers new objects even when a session returns to the same canvas.
+  const updates = Array.from({ length: 20 }, (_, i) => ({
+    ...structuredClone(largeView), messages: [{ id: `message-${i}` }]
+  }))
+  const clone = vi.spyOn(globalThis, 'structuredClone')
+  try {
+    for (const view of updates) f.emit({ type: 'board', view })
+    expect(apply.mock.calls.length).toBe(0)
+    expect(redraw).not.toHaveBeenCalled()
+    expect(clone).not.toHaveBeenCalled()
+    expect(f.page.getView('shared').messages).toEqual(updates.at(-1).messages)
+  } finally { clone.mockRestore(); off(); f.dispose() }
+})
+it('still applies same-revision progress changes, new revisions and revoked/regranted access', async () => {
+  const f = await pageFixture(), w = f.registry.for('shared')
+  const apply = vi.spyOn(w, 'applyRemoteCanvas')
+  try {
+    const progress = { ...f.view, canvas: { ...f.view.canvas,
+      artifacts: f.view.canvas.artifacts.map(node => ({ ...node, generationOutputChars: 100 })) } }
+    f.emit({ type: 'board', view: progress })
+    expect(apply).toHaveBeenCalledTimes(1)
+    expect(w.getSnapshot().artifacts[0].generationOutputChars).toBe(100)
+    f.emit({ type: 'board', view: { ...progress, canvasRevision: 'new-revision' } })
+    expect(apply).toHaveBeenCalledTimes(2)
+    f.emit({ type: 'access', boardId: 'board', localSessionId: 'shared', recoveries: [] })
+    expect(w.getSnapshot().artifacts).toEqual([])
+    f.emit({ type: 'board', view: progress })
+    expect(w.getSnapshot().artifacts[0].generationOutputChars).toBe(100)
+    expect(apply).toHaveBeenCalledTimes(4)
+  } finally { f.dispose() }
+})
+it('does not clone the entire canvas in the local subscription during remote application', async () => {
+  const f = await pageFixture(), w = f.registry.for('shared')
+  const clone = vi.spyOn(globalThis, 'structuredClone')
+  try {
+    f.emit({ type: 'board', view: { ...f.view, canvasRevision: 'changed' } })
+    // One immutable observation is sufficient; the applying subscription must return first.
+    expect(clone).toHaveBeenCalledTimes(1)
+    expect(w.getSnapshot().artifacts).toHaveLength(1)
+  } finally { clone.mockRestore(); f.dispose() }
+})
 it('update preparation saves actual workspaces and releases the input lock on failure', async () => {
   const f = await pageFixture()
   try {

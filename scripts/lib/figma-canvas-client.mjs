@@ -1,3 +1,4 @@
+import { patchResearchCanvasDeferredHtml } from './research-canvas-deferred-html.mjs'
 import { patchResearchOfficeResize } from './research-office-resize.mjs'
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
 import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
@@ -67,6 +68,7 @@ function patchCanvasGraphicPrimitives(source) {
 }
 
 export function patchFigmaFinalCanvas(source) {
+  source = patchResearchCanvasDeferredHtml(source)
   if(!source.includes('/* ODYSSEY_NEW_NODES_FRONT */')) {
     source=exact(source,'const publish = (next, persist = false) => {',`const publish = (next, persist = false, preserveStack = false) => {
       /* ODYSSEY_NEW_NODES_FRONT */

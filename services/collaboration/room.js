@@ -1089,6 +1089,7 @@ export class ResearchBoardRoom {
         try { assertConversationClaim(current, task) } catch (error) { fail(error.code, 409) }
         const leaseToken = crypto.randomUUID()
         task.status = 'running'
+        if (task.conversation) task.conversationDisplayOrder = current.board.seq + 1
         task.executorId = requiredString(command.executorId)
         task.sessionHash = user.session_hash
         task.leaseHash = hash(leaseToken)
