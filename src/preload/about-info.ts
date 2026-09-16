@@ -17,6 +17,7 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
+    {"version": "0.9.7", "date": "2026-09-16", "items": ["更新首次启动欢迎页，采用新的品牌插画与欢迎文案", "看板区固定使用画板模式，优化协作任务启动提示；发送消息后立即清空输入，失败时安全恢复", "侧栏改为整体滚动，标题吸顶并渐隐遮挡下方内容，修复快速滚动时文字穿透", "统一搜索看板区和工作区会话标题，按区域分组显示，固定搜索框位置并支持点击外部关闭", "简化侧栏标题操作，默认按类型分组、手动排序，更新的会话自动前移", "账户信息增加用户ID显示与复制；完善协作邀请和版本更新提醒", "优化消息中心位置、卡片颜色与紧凑布局，切换全部和未读时保持尺寸稳定", "统一思维导图样式，放大组件工具栏并压紧菜单间距，将画板提示集中到底部工具栏上方", "修复顶栏菜单点击空白处无法关闭，以及弹窗边框延迟显示问题", "取消额外聚焦高亮，保留输入框常驻浅边框、状态提示和组件选中蓝框"]},
     {
       version: '0.9.6',
       date: '2026-09-15',
@@ -252,6 +253,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {"version": "0.9.7", "date": "2026-09-16", "items": ["Redesigned the first-launch welcome screen with new brand artwork and copy", "Board sessions now stay in canvas mode; improved shared task startup feedback and immediate composer clearing with safe failure recovery", "Unified sidebar scrolling with sticky headings and fading content, including a fix for text showing through during fast scrolling", "Search board and workspace session titles together with grouped results, a stable input position, and outside-click dismissal", "Simplified sidebar controls with type grouping, manual ordering, and updated sessions moving to the top", "Added account ID display and copying, and improved collaboration invitations and update notifications", "Refined notification center placement, card colors, and spacing; All and Unread keep the same panel size", "Unified mind-map presentation, enlarged component actions, tightened menu spacing, and moved canvas notices above the bottom toolbar", "Fixed header menus not closing when clicking blank space and delayed popup borders", "Removed extra focus highlights while preserving permanent field strokes, state indicators, and blue canvas selection borders"]},
     {
       version: '0.9.6',
       date: '2026-09-15',
