@@ -9,73 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "协作看板主智能体和跨用户共享队列",
+        "featureName": "明确旧协作服务不支持共享排队的失败提示",
         "branch": "codex/feat/shared-main-agent-queue-20260916",
-        "baseCommit": "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c",
-        "tipCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
+        "baseCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
+        "tipCommit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
         "commits": [
           {
-            "commit": "7060400b52bc5df5543319defd55393720bdffd3",
+            "commit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
             "parents": [
-              "83e2c87b61bd85c0ca1bdbb27c09dfdc742e365c"
+              "1bfb0695a45116fc937cb8eada870ec6324c8d62"
             ],
-            "subject": "功能：协作看板改用主智能体并增加跨用户共享消息队列"
-          },
-          {
-            "commit": "125078b3c44c1c8154795f2e5a5737652826dc99",
-            "parents": [
-              "7060400b52bc5df5543319defd55393720bdffd3"
-            ],
-            "subject": "优化：收到协作插队通知后及时停止当前主智能体"
-          },
-          {
-            "commit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
-            "parents": [
-              "125078b3c44c1c8154795f2e5a5737652826dc99"
-            ],
-            "subject": "修复：等待原生子智能体回传后再交接协作执行权"
+            "subject": "修复：明确提示协作服务版本过旧而非组件生成失败"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/superpowers/verification/2026-09-16-shared-main-agent-queue.md"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/conversation-queue.js"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/board-runtime.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/shared-main-agent.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-collaboration-worker.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/test-research-boards-browser.mjs"
-          },
-          {
-            "status": "M",
-            "path": "services/collaboration/PROTOCOL.md"
-          },
-          {
-            "status": "M",
-            "path": "services/collaboration/room.js"
+            "path": "packages/dsh-research-collaboration/protocol.js"
           },
           {
             "status": "M",
@@ -83,35 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/main/research-boards-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/research-boards-browser.ts"
-          },
-          {
-            "status": "M",
             "path": "test/research-board-generation.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/shared-conversation-queue.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/shared-main-agent.test.js"
           }
         ],
         "checks": [
@@ -119,32 +41,13 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/shared-main-agent.test.js",
-              "test/shared-conversation-queue.test.js",
               "test/research-board-generation.test.ts",
-              "test/research-board-runtime.test.js",
-              "test/research-boards-service.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/shared-send-draft.test.ts"
+              "test/shared-conversation-queue.test.js"
             ],
             "outcome": "passed",
-            "summary": "88 项核心聚焦检查通过",
-            "verifiedCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
-            "completedAt": "2026-09-16T09:26:56.714814+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "shared|leased board"
-            ],
-            "outcome": "passed",
-            "summary": "10 项主智能体与组件执行回归通过",
-            "verifiedCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
-            "completedAt": "2026-09-16T09:26:56.714814+00:00",
+            "summary": "18 项通过，旧服务在启动模型前返回明确失败码",
+            "verifiedCommit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
+            "completedAt": "2026-09-16T09:51:30.150923+00:00",
             "timeoutMs": 120000
           },
           {
@@ -155,15 +58,15 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "主进程类型检查通过",
-            "verifiedCommit": "1bfb0695a45116fc937cb8eada870ec6324c8d62",
-            "completedAt": "2026-09-16T09:26:56.714814+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "0ad9cb034f5d25cd3b1a39771227736b2d4a0e7e",
+            "completedAt": "2026-09-16T09:51:30.150923+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "实际 QueueDock + 本地协作服务双用户浏览器验证：作者、折叠展开、编辑删除插队、单执行器；执行模型为受控 fixture，非原生双客户端验收。截图 output/playwright/research-boards/shared-queue-*.png。"
+          "outcome": "not-applicable",
+          "summary": "本次为错误码和固定提示映射修正；运行中客户端仍为先前已核验集成包。"
         },
         "acceptanceCriteria": [
           "每位发送者主智能体执行，支持原生委派及回传后串行交接",
@@ -175,59 +78,7 @@
           "原生模型双客户端端到端验收尚未完成。",
           "排队作者离线时需其重连或自行删除，其他账户不代执行。"
         ],
-        "generatedAt": "2026-09-16T09:26:56.714814+00:00"
-      },
-      "merged": {
-        "mergeCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
-        "verificationCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/shared-main-agent.test.js",
-              "test/shared-conversation-queue.test.js",
-              "test/research-board-generation.test.ts",
-              "test/research-board-runtime.test.js",
-              "test/research-boards-service.test.ts",
-              "test/research-board-tasks.test.ts",
-              "test/shared-send-draft.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-main-agent.test.js test/shared-conversation-queue.test.js test/research-board-generation.test.ts test/research-board-runtime.test.js test/research-boards-service.test.ts test/research-board-tasks.test.ts test/shared-send-draft.test.ts",
-            "verifiedCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
-            "completedAt": "2026-09-16T09:27:29.804Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "shared|leased board"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t shared|leased board",
-            "verifiedCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
-            "completedAt": "2026-09-16T09:27:29.804Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "96bbcb841144219c2c60c7ddd0740194c842b8da",
-            "completedAt": "2026-09-16T09:27:29.804Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-16T09:27:29.804Z"
+        "generatedAt": "2026-09-16T09:51:30.150923+00:00"
       }
     }
   ],
