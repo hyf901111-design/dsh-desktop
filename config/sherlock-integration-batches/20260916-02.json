@@ -101,6 +101,52 @@
           "Two inherited baseline assertion failures documented in docs/research-canvas-actions.md"
         ],
         "generatedAt": "2026-09-16T07:28:17.751Z"
+      },
+      "merged": {
+        "mergeCommit": "59e7920fd5e6700ab2e9153385abc642ed7549fc",
+        "verificationCommit": "59e7920fd5e6700ab2e9153385abc642ed7549fc",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/canvas-refresh.test.js",
+              "test/figma-canvas-context-menu.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/canvas-refresh.test.js test/figma-canvas-context-menu.test.js",
+            "verifiedCommit": "59e7920fd5e6700ab2e9153385abc642ed7549fc",
+            "completedAt": "2026-09-16T07:28:41.006Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "59e7920fd5e6700ab2e9153385abc642ed7549fc",
+            "completedAt": "2026-09-16T07:28:41.006Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-canvas-actions.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-canvas-actions.mjs",
+            "verifiedCommit": "59e7920fd5e6700ab2e9153385abc642ed7549fc",
+            "completedAt": "2026-09-16T07:28:41.006Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-16T07:28:41.006Z"
       }
     }
   ],
