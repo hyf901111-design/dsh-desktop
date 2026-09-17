@@ -802,11 +802,12 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     getRouter: () => researchCanvasWheelRouter,
     onRejected: (error) => console.warn('[research-canvas] rejected wheel region update', error)
   })
-  registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry})
+  const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry})
   registerResearchLinkFrameHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,
-    registry: researchLinkFrameRegistry
+    registry: researchLinkFrameRegistry,
+    inspectNative: nativeResearchWeb.inspect
   })
   registerResearchWebReaderHandlers({
     ipcMain,

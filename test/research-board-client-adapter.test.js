@@ -1445,3 +1445,19 @@ it('syncs generated session titles into pinned personal board titles', async () 
    expect(f.bridge.invoke).toHaveBeenCalledWith('favorite.rename',{favoriteId:'favorite',title:'公司员工管理工作台'})
  } finally {f.dispose()}
 })
+
+it('refreshes referenced webpage text before a shared chat request', async () => {
+  const f=await pageFixture()
+  try {
+    const node={id:'web',kind:'web-link',messageId:'web',title:'搜索',url:'https://www.bing.com/',excerpt:'https://www.bing.com/',sourceText:'旧正文',x:0,y:0}
+    f.emit({type:'board',view:{...f.view,canvasRevision:'web-revision',canvas:{files:[],artifacts:[node]}}})
+    const inspection={title:'搜索结果',url:node.url,sourceText:'当前网页的实际内容',scrollWidth:800,clientWidth:600}
+    const inspect=vi.fn(async()=>inspection)
+    f.window.dshDesktop.researchLinkFrame={inspect}
+    const apply=vi.spyOn(f.registry.for('shared'),'applyWebLinkInspection')
+    await f.page.submitShared('shared','总结网页',{scope:'references',references:[{collection:'artifacts',nodeId:'web'}]},[],'queue')
+    expect(inspect).toHaveBeenCalledWith({sessionId:'shared',nodeId:'web'})
+    expect(apply).toHaveBeenCalledWith('web',node.url,inspection)
+    expect(f.registry.for('shared').getSnapshot().artifacts[0].sourceText).toBe(inspection.sourceText)
+  } finally {f.dispose()}
+})

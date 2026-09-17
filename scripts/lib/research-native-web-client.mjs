@@ -1,5 +1,35 @@
 export function patchResearchNativeWeb(source) {
-  if(source.includes('/* ODYSSEY_HYBRID_WEB */'))return source
+  if(source.includes('/* ODYSSEY_HYBRID_WEB */')) {
+    const start=source.indexOf('/* ODYSSEY_HYBRID_WEB */'),end=source.indexOf('function ResearchCanvasWebFrame(props) {',start);
+    if(end<0)throw Error('Missing hybrid web renderer boundary');
+    source=source.slice(0,start)+source.slice(end);
+  }
+  if(!source.includes('/* ODYSSEY_WEB_REFERENCE_REFRESH */')) {
+    const sink='async sink(session, text, imageIds, mode) {';
+    if(!source.includes(sink))throw Error('Missing research message sink');
+    source=source.replace(sink,sink+`
+                /* ODYSSEY_WEB_REFERENCE_REFRESH */
+                if(this.researchActiveSessions.has(session.sessionId)||sherlockShared(session.sessionId)) {
+                  const inspect=window.dshDesktop?.researchLinkFrame?.inspect;
+                  if(inspect) {
+                    const workspace=this.researchWorkspaces.for(session.sessionId),shell=this.shells.get(session.sessionId),draftRev=shell?.snapshot?.draftRev;
+                    const references=extractResearchReferences(text).artifacts;
+                    try {
+                      await Promise.all(references.map(async reference=>{
+                        const node=workspace.getSnapshot().artifacts.find(n=>n.id===reference.id);
+                        if(node?.kind!=='web-link'||isResearchWechatArticleUrl(node.url))return;
+                        const inspection=await inspect({sessionId:session.sessionId,nodeId:node.id});
+                        if(!inspection?.sourceText?.trim())throw Error('无法读取「'+node.title+'」的当前网页正文，请等待页面加载完成后重试。');
+                        const current=workspace.getSnapshot().artifacts.find(n=>n.id===node.id);
+                        if(current?.url!==node.url)throw Error('网页来源已变化，请重新选择。');
+                        workspace.applyWebLinkInspection(node.id,node.url,inspection);
+                      }));
+                    }catch(error){shell?.notify('error',error.message);return;}
+                    if(shell&&shell.snapshot.draftRev!==draftRev)return;
+                  }
+                }
+`);
+  }
   const anchor='function ResearchCanvasWebFrame(props) {'
   if(!source.includes(anchor))throw Error('Missing web frame renderer')
   source=source.replace(anchor,`/* ODYSSEY_HYBRID_WEB */
@@ -9,7 +39,7 @@ export function patchResearchNativeWeb(source) {
     (0,react.useEffect)(()=>{
       const bridge=window.dshDesktop?.researchLinkFrame,identity={sessionId,nodeId:node.id};
       if(!visible||!bridge?.updateNative)return;
-      let stopped=false,busy=false,last='',lastSent=0,lastMotion=Date.now(),held=false,space=false,timer,lastTitle='';
+      let stopped=false,busy=false,last='',lastSent=0,lastMotion=Date.now(),held=false,space=false,timer,lastInspection='';
       const hide=()=>{lastMotion=Date.now();last='';bridge.hideNative().catch(()=>{});};
       const down=()=>{held=true;hide();},up=()=>{held=false;lastMotion=Date.now();},keyDown=e=>{if(e.code==='Space'&&!e.target?.closest?.('input,textarea,[contenteditable=true]')){space=true;hide();}},keyUp=e=>{if(e.code==='Space'){space=false;lastMotion=Date.now();}};
       document.addEventListener('pointerdown',down,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('wheel',hide,true);document.addEventListener('keydown',keyDown,true);document.addEventListener('keyup',keyUp,true);
@@ -29,7 +59,7 @@ export function patchResearchNativeWeb(source) {
         tick.signature=signature;lastSent=Date.now();busy=true;
         try {const state=await bridge.updateNative({...identity,url:node.url,bounds,scale,radius:Math.round(9*scale),active});if(stopped)return;
           if(state.image&&imageRef.current){imageRef.current.src=state.image;setReady(true)}setError(state.error||'');
-          if(state.title&&state.title!==lastTitle){lastTitle=state.title;onInspection?.(node.url,{url:state.url,title:state.title,sourceText:'',scrollWidth:0,clientWidth:0})}
+          if(state.inspection){const signature=JSON.stringify(state.inspection);if(signature!==lastInspection){lastInspection=signature;onInspection?.(node.url,state.inspection)}}
         }catch{if(!stopped)setError('网页暂时无法加载')}finally{busy=false}
       };
       timer=setInterval(tick,100);tick();

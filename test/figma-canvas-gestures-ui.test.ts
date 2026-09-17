@@ -224,3 +224,78 @@ it.each(['markdown','html'])('preserves drawn geometry through %s generation and
     expect(m.workspace.getSnapshot().artifacts.find((n:any)=>n.id===node.id)).toMatchObject({...geometry,generationStatus:'completed'})
   }
 })
+
+
+it('reads live webpage content when the component toolbar generates a summary', async () => {
+  const inspect=vi.fn(async()=>({title:'搜索结果',url:'https://www.bing.com/search?q=test',sourceText:'实际搜索结果：第一条事实和第二条事实',scrollWidth:800,clientWidth:600}))
+  const generate=vi.fn(async()=>({ok:true}))
+  const m=await mounted({researchLinkFrame:{inspect}},undefined,{disabled:false,generate})
+  await act(async()=>{
+    m.workspace.setArtifacts([{id:'web',kind:'web-link',messageId:'web',title:'搜索',url:'https://www.bing.com/',excerpt:'https://www.bing.com/',sourceText:'过期内容',x:100,y:100,width:600,height:400}])
+    m.workspace.updateSelection(['web'],'replace')
+  })
+  const button=Array.from(m.host.querySelectorAll('[data-research-selection-actions] button')).find((b:any)=>b.textContent==='总结提炼')
+  expect(button).toBeTruthy()
+  await m.event('click',button)
+  expect(inspect).toHaveBeenCalledWith({sessionId:'target',nodeId:'web'})
+  expect(generate).toHaveBeenCalledTimes(1)
+  const generated=m.workspace.getSnapshot().artifacts.find((n:any)=>n.kind==='generated-summary')
+  expect(JSON.stringify(generated.generationSources)).toContain('实际搜索结果：第一条事实和第二条事实')
+  expect(JSON.stringify(generated.generationSources)).not.toContain('过期内容')
+})
+
+  it('includes inspected webpage text when a link component tag is sent to Research chat', async () => {
+    const inspect = vi.fn()
+    const m = await mounted({researchLinkFrame:{inspect}})
+    const client = m.bundle
+    expect(client.InputHub).toBeTypeOf('function')
+    expect(client.ResearchWorkspaceRegistry).toBeTypeOf('function')
+    if (typeof client.InputHub !== 'function' ||
+        typeof client.ResearchWorkspaceRegistry !== 'function') return
+
+    const sourceText = 'DaDa 是面向 Z 世代投资者的 ETF 投资伙伴，支持观点转组合与动态再平衡。'
+    const link = {
+      id: 'web-link-1', kind: 'web-link', messageId: 'web-link-1',
+      title: 'DaDa：AI 原生的 Z 世代 ETF 投资伙伴',
+      excerpt: 'https://efund.feishu.cn/docx/example',
+      url: 'https://efund.feishu.cn/docx/example',
+      sourceText: '过期的页面正文',
+      x: 100, y: 120
+    }
+    const sessionId = 'target'
+    const registry = m.registry
+    await act(async()=>m.workspace.setArtifacts([link]))
+    const sendSession = vi.fn(async (_session: unknown, _prompt: string) => undefined)
+    const hub = new client.InputHub({
+      get: (name: string) => name === 'conversation'
+        ? { sendSession, releaseDraftImage: () => undefined }
+        : undefined
+    }, (key: string) => key, registry)
+    hub.setResearchActive(sessionId, true)
+
+    const reference = client.researchArtifactReference(link)
+    const marker = await client.researchArtifactReferenceCodec.serialize(
+      reference.ref,
+      new AbortController().signal
+    )
+    expect(marker).not.toContain(sourceText)
+    inspect.mockResolvedValue({title:link.title,sourceText,url:link.url,scrollWidth:900,clientWidth:600})
+    await hub.sink({ sessionId }, `${marker}请分析该网页的产品定位`, [], 'queue')
+
+    expect(inspect).toHaveBeenCalledWith({sessionId,nodeId:link.id})
+    expect(sendSession).toHaveBeenCalledTimes(1)
+    const prompt = sendSession.mock.calls[0]?.[1] as string
+    expect(client.parseResearchPrompt(prompt)).toMatchObject({
+      text: '请分析该网页的产品定位',
+      artifacts: [{
+        id: link.id,
+        kind: 'web-link',
+        title: link.title,
+        excerpt: link.excerpt,
+        sourceText
+      }]
+    })
+    inspect.mockResolvedValue(null)
+    await hub.sink({sessionId}, `${marker}再次分析`, [], 'queue')
+    expect(sendSession).toHaveBeenCalledTimes(1)
+  })

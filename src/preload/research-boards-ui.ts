@@ -1113,6 +1113,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     saveDraft(sessionId, draft)
     shell?.setResearchContextPreparing?.(true)
     try {
+      const inspect = (win as any).dshDesktop?.researchLinkFrame?.inspect
+      if (inspect && context.references?.length) {
+        const workspace = deps.researchWorkspaces.for(sessionId)
+        await Promise.all(context.references.filter(ref => ref.collection === 'artifacts').map(async ref => {
+          const node = workspace.getSnapshot().artifacts.find((n: LegacyNode) => n.id === ref.nodeId)
+          if (node?.kind !== 'web-link' || new URL(node.url).hostname === 'mp.weixin.qq.com') return
+          const inspection = await inspect({ sessionId, nodeId: node.id })
+          if (!inspection?.sourceText?.trim()) throw Error(`无法读取「${node.title}」的当前网页正文，请等待页面加载完成后重试。`)
+          if (workspace.getSnapshot().artifacts.find((n: LegacyNode) => n.id === node.id)?.url !== node.url) throw Error('网页来源已变化，请重新选择。')
+          workspace.applyWebLinkInspection(node.id, node.url, inspection)
+        }))
+      }
       await (win as any).dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:context.references?.length?context.references.map(ref=>ref.nodeId):deps.researchWorkspaces.for(sessionId).getSnapshot().selection.selectedNodeIds})
       await flushCanvas(sessionId)
       if (generation !== state.account.generation) return

@@ -142,6 +142,32 @@ function sharesTrustedResearchRedirectSite(source: URL, target: URL): boolean {
   ))
 }
 
+export async function inspectResearchWebContent(
+  page: { executeJavaScript(script: string): Promise<unknown> },
+  currentUrl: () => string
+): Promise<ResearchLinkFrameInspection | null> {
+  const url = normalizeResearchLinkUrl(currentUrl())
+  if (url === null || isTrustedAppUrl(url)) return null
+  try {
+    const result = await page.executeJavaScript(RESEARCH_LINK_INSPECTION_SCRIPT)
+    if (normalizeResearchLinkUrl(currentUrl()) !== url) return null
+    if (typeof result !== 'object' || result === null || Array.isArray(result)) return null
+    const record = result as Record<string, unknown>
+    const scrollWidth = boundedInspectionMetric(record.scrollWidth)
+    const clientWidth = boundedInspectionMetric(record.clientWidth)
+    if (scrollWidth === null || clientWidth === null) return null
+    return {
+      url,
+      title: inspectionTitle(record.title),
+      sourceText: inspectionSourceText(record.sourceText),
+      scrollWidth,
+      clientWidth
+    }
+  } catch {
+    return null
+  }
+}
+
 export class ResearchLinkFrameRegistry {
   private readonly nodes = new Map<string, ResearchLinkAuthorization>()
 
@@ -192,23 +218,7 @@ export class ResearchLinkFrameRegistry {
     if (frame === undefined) return null
     const url = normalizeResearchLinkUrl(frame.url)
     if (url === null) return null
-    try {
-      const result = await frame.executeJavaScript(RESEARCH_LINK_INSPECTION_SCRIPT)
-      if (typeof result !== 'object' || result === null || Array.isArray(result)) return null
-      const record = result as Record<string, unknown>
-      const scrollWidth = boundedInspectionMetric(record.scrollWidth)
-      const clientWidth = boundedInspectionMetric(record.clientWidth)
-      if (scrollWidth === null || clientWidth === null) return null
-      return {
-        url,
-        title: inspectionTitle(record.title),
-        sourceText: inspectionSourceText(record.sourceText),
-        scrollWidth,
-        clientWidth
-      }
-    } catch {
-      return null
-    }
+    return inspectResearchWebContent(frame, () => frame.url)
   }
 
   release(value: unknown): boolean {
@@ -249,10 +259,13 @@ export function registerResearchLinkFrameHandlers(options: {
   ipcMain: ResearchLinkFrameIpcMain
   getMainWindow(): TrustedWindow | undefined
   registry: ResearchLinkFrameRegistry
+  inspectNative?(value: unknown): Promise<ResearchLinkFrameInspection | null>
 }): void {
   const handlers: Array<[string, (value: unknown) => unknown]> = [
     ['research:link-frame:authorize', (value) => options.registry.authorize(value)],
-    ['research:link-frame:inspect', (value) => {
+    ['research:link-frame:inspect', async (value) => {
+      const native = await options.inspectNative?.(value)
+      if (native) return native
       const window = options.getMainWindow() as (TrustedWindow & {
         webContents: {
           mainFrame: TrustedWindow['webContents']['mainFrame'] & {

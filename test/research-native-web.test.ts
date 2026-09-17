@@ -3,11 +3,11 @@ const handlers=new Map<string,Function>(), views:any[]=[]
 const mock=vi.hoisted(()=>({fetch:vi.fn(),permission:vi.fn()}))
 vi.mock('electron',()=>({net:{fetch:mock.fetch},session:{fromPartition:()=>({setPermissionRequestHandler:mock.permission,setPermissionCheckHandler:mock.permission})},WebContentsView:class {
   visible=false;bounds:any; webContents:any
-  constructor(public settings:any){views.push(this);this.webContents={close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),loadURL:vi.fn(async()=>{}),setZoomFactor:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
+  constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),loadURL:vi.fn(async()=>{}),setZoomFactor:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
   setVisible(v:boolean){this.visible=v} setBounds(v:any){this.bounds=v} setBorderRadius(){}
 }}))
 import {nativeWebBounds,registerResearchNativeWeb,requiresNativeWeb} from '../src/main/state/research-native-web'
-import {ResearchLinkFrameRegistry} from '../src/main/state/research-link-frame'
+import {registerResearchLinkFrameHandlers,ResearchLinkFrameRegistry} from '../src/main/state/research-link-frame'
 beforeEach(()=>{handlers.clear();views.length=0;mock.fetch.mockReset()})
 it('routes denied and same-origin frames to native views, leaving permitted sites in iframes',()=>{
  expect(requiresNativeWeb(new Headers({'x-frame-options':'SAMEORIGIN'}))).toBe(true)
@@ -18,7 +18,9 @@ it('routes denied and same-origin frames to native views, leaving permitted site
 it('isolates native content, enforces trusted IPC, hides overlays and releases views',async()=>{
  const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
  const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),focus:vi.fn()},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1000,800]}
- registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(name:string,fn:Function)=>handlers.set(name,fn)} as any})
+ const ipcMain={removeHandler:()=>{},handle:(name:string,fn:Function)=>handlers.set(name,fn)} as any
+ const native=registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:ipcMain})
+ registerResearchLinkFrameHandlers({registry,getMainWindow:()=>win,ipcMain,inspectNative:native.inspect})
  const event={sender:win.webContents,senderFrame:mainFrame},identity={sessionId:'s',nodeId:'n'},call=(name:string,value:any)=>handlers.get('research:native-web:'+name)!(event,value)
  mock.fetch.mockResolvedValue({headers:new Headers({'x-frame-options':'SAMEORIGIN'})})
  await expect(call('resolve',{...identity,url:'https://www.google.com/'})).resolves.toEqual({engine:'native'})
@@ -26,6 +28,22 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  await call('update',layout)
  expect(views[0].settings.webPreferences).toMatchObject({nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true})
  expect(views[0].visible).toBe(true)
+ const wc=views[0].webContents
+ wc.executeJavaScript.mockResolvedValue({title:'搜索结果',sourceText:' 最新网页正文\n第二段 ',scrollWidth:400,clientWidth:400})
+ const inspect=()=>handlers.get('research:link-frame:inspect')!(event,identity)
+ await expect(inspect()).resolves.toMatchObject({title:'搜索结果',sourceText:'最新网页正文\n第二段'})
+ const updated=await call('update',layout)
+ expect(updated.inspection.sourceText).toBe('最新网页正文\n第二段')
+ wc.executeJavaScript.mockResolvedValue({title:'搜索结果',sourceText:'同标题动态更新正文',scrollWidth:400,clientWidth:400})
+ expect((await inspect()).sourceText).toBe('同标题动态更新正文')
+ wc.isLoadingMainFrame=()=>true
+ await expect(inspect()).resolves.toBeNull()
+ wc.isLoadingMainFrame=()=>false
+ let url='https://www.google.com/'
+ wc.getURL=()=>url
+ wc.executeJavaScript.mockImplementation(async()=>{url='https://www.google.com/search?q=new';return {title:'旧页面',sourceText:'旧正文',scrollWidth:400,clientWidth:400}})
+ await expect(inspect()).resolves.toBeNull()
+
  await call('hide',{});expect(views[0].visible).toBe(false)
  await call('update',{...layout,bounds:{...layout.bounds,x:900}});expect(views[0].visible).toBe(false)
  expect(()=>handlers.get('research:native-web:hide')!({sender:{},senderFrame:mainFrame},{})).toThrow()

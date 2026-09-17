@@ -1,6 +1,6 @@
 import { WebContentsView, session, net, type BrowserWindow, type IpcMain } from 'electron'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
-import { normalizeResearchLinkUrl, type ResearchLinkFrameRegistry } from './research-link-frame'
+import { inspectResearchWebContent, normalizeResearchLinkUrl, type ResearchLinkFrameRegistry } from './research-link-frame'
 
 export function requiresNativeWeb(headers: Pick<Headers, 'get'>): boolean {
   const xfo = headers.get('x-frame-options') ?? ''
@@ -17,6 +17,12 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   const routes = new Map<string, Promise<boolean>>()
   const key = (v: any) => { if (!v || typeof v.sessionId !== 'string' || typeof v.nodeId !== 'string' || v.sessionId.length > 256 || v.nodeId.length > 256) throw Error('Invalid webpage identity'); return JSON.stringify([v.sessionId,v.nodeId]) }
   const release = (id: string) => { const e=entries.get(id); if(e){ options.getMainWindow()?.contentView.removeChildView(e.view); e.view.webContents.close(); entries.delete(id) } }
+  const inspect = async (value: unknown) => {
+    const authorization = options.registry.resolve(value)
+    const entry = entries.get(key(value))
+    if (!authorization || !entry || entry.url !== authorization.url || entry.view.webContents.isDestroyed() || entry.view.webContents.isLoadingMainFrame()) return null
+    return inspectResearchWebContent(entry.view.webContents, () => entry.view.webContents.getURL())
+  }
   const clear = () => { for(const id of entries.keys())release(id) }
   let hooked: BrowserWindow | undefined
   const window = () => {
@@ -73,8 +79,10 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
         current.typing=await entry.view.webContents.executeJavaScript("!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]')").catch(()=>false)
       } catch {} finally {current.busy=false}
     }
-    return {image:entry.image,error:entry.error,url:entry.view.webContents.getURL(),title:entry.view.webContents.getTitle()}
+    const inspection = await inspect({sessionId:value.sessionId,nodeId:value.nodeId})
+    return {image:entry.image,error:entry.error,inspection}
   })
   bind('research:native-web:hide',()=>{for(const e of entries.values())e.view.setVisible(false);return true})
   bind('research:native-web:release',value=>{release(key(value));return true})
+  return { inspect }
 }
