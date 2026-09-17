@@ -112,5 +112,5 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   })
   bind('research:native-web:hide',()=>{for(const e of entries.values())e.view.setVisible(false);return true})
   bind('research:native-web:release',value=>{release(key(value));return true})
-  return { inspect }
+  return { inspect, contents:(value:any)=>entries.get(key(value))?.view.webContents }
 }

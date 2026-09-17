@@ -17,7 +17,7 @@ export class CanvasActionBridge {
   }
   async execute(value:any,signal?:AbortSignal):Promise<unknown> {
     const binding=this.bindings.get(value?.sessionId)
-    if(this.stopped||!binding||binding.expires<Date.now()||!this.options.canRead(value.sessionId)||!['inspect','apply','undo'].includes(value.method)||this.pending.size>=20)throw Error('当前执行未绑定可访问的画板，请从画板右侧重新发送指令。')
+    if(this.stopped||!binding||binding.expires<Date.now()||!this.options.canRead(value.sessionId)||!['inspect','apply','undo','use'].includes(value.method)||this.pending.size>=20)throw Error('当前执行未绑定可访问的画板，请从画板右侧重新发送指令。')
     signal?.throwIfAborted()
     const requestId=randomUUID()
     return new Promise((resolve,reject)=>{
