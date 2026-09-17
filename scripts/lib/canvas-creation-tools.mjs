@@ -8,7 +8,7 @@ export function componentPlacement(rect, viewport) {
 export function patchCanvasCreationTools(source) {
   source = patchComponentMarquee(source)
   source = patchComponentDraftFocus(source)
-  source = patchLinkCanvasFrame(source)
+  source = patchLinkDraftChrome(patchLinkCanvasFrame(source))
   if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
@@ -52,9 +52,23 @@ export function patchCanvasCreationTools(source) {
   replace('title: "语音 · 双击 Fn 开始，单按结束发送；长按 Fn 说话，松开发送",', '')
   replace('children: "输入网页地址" }),', 'children: "输入网页地址" }), (0,react_jsx_runtime.jsx)("button",{type:"button",className:"odyssey-link-close","aria-label":"关闭链接输入",onClick:()=>setLinkPopoverOpen(false),children:"×"}),')
   // Labels are kept in markup for older patch compatibility but visually hidden.
-  source = patchLinkCanvasFrame(source)
+  source = patchLinkDraftChrome(patchLinkCanvasFrame(source))
   source = installCreationStyle(source)
   return source
+}
+function patchLinkDraftChrome(source) {
+  if (!source.includes('/* ODYSSEY_LINK_CANVAS_FRAME */') || source.includes('/* ODYSSEY_LINK_SHARED_CHROME */')) return source
+  source=source.replace('className: "rScV5Q_linkPopover odyssey-link-draft",', `/* ODYSSEY_LINK_SHARED_CHROME */
+    className: "rScV5Q_richNode odyssey-link-draft", "data-research-compact-chrome":"", "data-research-artifact-card":"",`)
+  source=source.replace("width:400,height:280,sizeMode:'manual'", "width:400,height:177,sizeMode:'manual'")
+  const start=source.indexOf('/* ODYSSEY_LINK_SHARED_CHROME */'), end=source.indexOf('}), rootRef.current)]',start)
+  let block=source.slice(start,end)
+  block=block.replace('children: "链接组件",','children: (0,react_jsx_runtime.jsx)("span",{className:"rScV5Q_nodeTitleText",children:"链接组件"}),')
+  block=block.replace('children: [(0, react_jsx_runtime.jsx)("input", {','className:"rScV5Q_containerDraft", children: [(0, react_jsx_runtime.jsx)("textarea", {')
+  block=block.replace('type: "text", inputMode: "url",','rows:1, inputMode: "url",')
+  block=block.replace('(0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-link-submit":', '(0, react_jsx_runtime.jsx)("div", {className:"rScV5Q_containerDraftFooter",children:(0, react_jsx_runtime.jsx)("button", { type: "button", "data-research-link-submit":')
+  block=block.replace('children: "创建" })]', 'children: "创建" })})]')
+  return source.slice(0,start)+block+source.slice(end)
 }
 function patchLinkCanvasFrame(source) {
   source = source.replace("setCanvasTool(tool);setLinkPopoverOpen(false);", "setCanvasTool(tool);")
@@ -124,12 +138,12 @@ body[data-ds-dark-theme] [data-canvas-tool]{--odyssey-tool-color:#eee}
 [data-research-container-draft] textarea{box-sizing:border-box;flex:1;min-height:40px!important;height:auto!important;resize:none}
 [data-research-container-draft] .rScV5Q_containerDraftFooter{flex:none;margin-top:0}
 [data-research-canvas][data-canvas-tool]{overflow:hidden!important;isolation:isolate}
-.rScV5Q_linkPopover.odyssey-link-draft{box-sizing:border-box;bottom:auto!important;right:auto!important;min-height:0;padding:0!important;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);box-shadow:none;display:flex;flex-direction:column;gap:0!important;z-index:20;transform-origin:center;overflow:hidden;color:var(--dsw-alias-label-primary)}
-body[data-ds-dark-theme] .rScV5Q_linkPopover.odyssey-link-draft{background:var(--dsw-alias-bg-layer-2);color:#eee}
-.odyssey-link-draft .odyssey-link-title{box-sizing:border-box;flex:none;width:100%;height:36px;min-height:36px;margin:0!important;padding:0 42px 0 14px;display:flex;align-items:center;background:var(--dsw-alias-bg-layer-2);font:var(--dsw-font-xs-13);cursor:grab;touch-action:none}
-.odyssey-link-draft>div{box-sizing:border-box;flex:1;min-height:0;display:flex!important;flex-direction:column;justify-content:center;align-items:stretch!important;padding:20px;gap:14px!important}
-.odyssey-link-draft input{box-sizing:border-box;width:100%;min-width:0;flex:none!important;height:44px!important;padding:12px!important;font-size:14px!important}
-.odyssey-link-draft [data-research-link-submit]{align-self:flex-end;flex:none}
-.odyssey-link-draft .odyssey-link-close{position:absolute;right:6px;top:4px;width:28px!important;height:28px!important;padding:0!important;border:0!important;background:transparent!important;color:inherit!important;box-shadow:none!important;font-size:20px;cursor:pointer}
+.odyssey-link-draft{box-sizing:border-box;bottom:auto!important;right:auto!important;min-height:0;padding:0!important;border:1px solid transparent;background:var(--odyssey-content);display:flex;flex-direction:column;gap:0!important;z-index:20;transform-origin:center;overflow:hidden;color:var(--odyssey-card-text)}
+.odyssey-link-draft .odyssey-link-title{box-sizing:border-box;flex:none;width:100%;margin:0!important;display:flex;background:var(--odyssey-card);cursor:grab;touch-action:none}
+.odyssey-link-draft .rScV5Q_containerDraft{flex:1;min-height:0!important;height:auto!important}
+body [data-research-compact-chrome].odyssey-link-draft .rScV5Q_containerDraft textarea{width:100%;height:44px!important;min-height:44px!important;flex:0 0 44px;resize:none;white-space:nowrap;overflow-x:auto}
+.odyssey-link-draft .rScV5Q_containerDraftFooter{flex:none;display:flex}
+.odyssey-link-draft .rScV5Q_containerDraftFooter button{width:100%}
+.odyssey-link-draft .odyssey-link-close{position:absolute;right:12px;top:11px;width:24px!important;height:24px!important;padding:0!important;border:0!important;border-radius:6px;background:transparent!important;color:var(--odyssey-card-muted)!important;box-shadow:none!important;font-size:20px;cursor:pointer}
 .odyssey-link-draft .rScV5Q_linkError{padding:0 20px 12px}
 `

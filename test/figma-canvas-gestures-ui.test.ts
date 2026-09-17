@@ -181,6 +181,9 @@ it('opens the link editor at the canvas center without changing the selected too
   await m.event('click', m.query('[data-research-global-link]'))
   const draft = m.win.document.querySelector('[data-research-link-popover]')!
   expect(draft.parentElement).toBe(m.canvas)
+  expect(draft.hasAttribute('data-research-compact-chrome')).toBe(true)
+  expect(draft.querySelector('.rScV5Q_containerDraftFooter [data-research-link-submit]')).not.toBeNull()
+  expect((draft as any).style.height).toBe('177px')
   expect(draft.querySelector('.odyssey-link-title')?.textContent).toBe('链接组件')
   expect(m.canvas.getAttribute('data-canvas-tool')).toBe('component')
   expect((draft as any).style.left).toBe('500px')
@@ -195,7 +198,7 @@ it('opens the link editor at the canvas center without changing the selected too
   await m.event('pointermove', title, { pointerId: 8, clientX: 280, clientY: 240 })
   await m.event('pointerup', title, { pointerId: 8 })
   expect((draft as any).style.left).toBe('1180px')
-  const input = draft.querySelector('input')! as any
+  const input = draft.querySelector('textarea')! as any
   input.value = 'https://example.com'
   await m.event('input', input)
   await m.event('click', draft.querySelector('[data-research-link-submit]'))
