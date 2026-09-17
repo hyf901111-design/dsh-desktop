@@ -14,3 +14,32 @@
 ## 发布范围
 
 保留 Developer ID 与旧客户端兼容桥两条签名更新通道。按用户要求跳过 Apple 公证、stapling 与公证相关 Gatekeeper 验收。更新验证采用差分重建和 SHA-512 校验，不进行旧客户端全量安装升级测试。
+
+## 构建与验收
+
+- 构建源码：`1b0cdbe55656c5e3836a935d7581c93cf61eaa2f`，干净的本地 main；正式构建前确认所有本地功能分支已集成、所有 worktree 干净。
+- 15 个直接相关测试文件、93 项检查及 TypeScript 类型检查通过，未运行全功能测试。
+- 标准 App 与 DMG 签名有效，DMG 与双通道 ZIP 完整性通过；包内 `efund-ppt-maker` 1.0.9 与源码一致。
+- 兼容桥外层 `io.dsh.desktop`、内嵌 `com.evanarts.sherlock`，版本均为 0.9.10；旧证书指定要求校验通过，ShipIt 可执行，Squirrel、Mantle、ReactiveObjC 完整。
+- 实际启动正式签名客户端，关于页显示 0.9.10；hyf90 原账户、历史会话与“开黑测试”16 个组件正常加载，原生执行详情与组件独立任务标识可见，客户端保持打开。
+- 画板性能、原生执行过程和插队续跑的功能验收见 `docs/superpowers/plans/2026-09-16-board-performance-native-flow-acceptance.md`，用户已明确验收通过。
+- 本次没有修改应用身份、默认目录迁移或 DSH 共存逻辑；沿用 0.9.9 的隔离双哨兵与迁移验收，本次未重复该测试。
+
+## 线上协作服务
+
+- 已部署 `sherlock-research-collaboration`，版本 ID `3b2cc981-ae65-4f36-9de7-4f4914b27641`，部署列表确认承载 100% 流量。
+- 本次服务端变更是在任务领取时记录 `conversationDisplayOrder`，使插队后恢复的整轮对话落在后方；现有账户、D1、DO、私有 R2 与路由保持不变，不需要数据库迁移。
+- 公开未登录 `/v1/collaboration/me` 请求返回预期 401 `LOGIN_REQUIRED`；发布客户端中的既有协作画板正常加载。
+
+## 公开发布验证
+
+- 已先上传五个不可变版本资源，再提升稳定 DMG 及两个更新源；两个更新源均为 0.9.10，并携带完整更新日志。临时上传 Worker 已删除。
+- 8 个公开入口的文件大小、版本、元数据、缓存策略与单段 Range/206 响应全部通过；两个公开 blockmap 与本地文件逐字节一致。上传前标准 ZIP 的 404 缓存已自然失效，公开地址返回新文件，不依赖额外缓存清理权限。
+- 标准通道 0.9.9 → 0.9.10：814 次单段 Range 请求，实际下载 119,078,776 字节，复用 334,316,106 字节（约 74%）。
+- 兼容通道 0.9.9 → 0.9.10：751 次单段 Range 请求，实际下载 169,876,158 字节，复用 334,269,957 字节（约 66%）。
+- 两条差分重建 ZIP 的 SHA-512 均与签名构建产物完全一致，无全量回退；未执行旧客户端全量安装重启升级测试。
+- 从稳定公开地址完整重新下载 DMG，374,177,524 字节；SHA-512、镜像完整性、DMG 签名、挂载后 App 深度签名与版本标识全部通过。按用户要求跳过 Apple 公证、stapling 和 Gatekeeper 公证验收。
+- 两条公开更新源：`https://updates.evanarts.com/latest/latest-mac.yml`、`https://updates.evanarts.com/notarized/latest/latest-mac.yml`。
+- 稳定安装包：`https://updates.evanarts.com/download/sherlock-mac-arm64.dmg`。
+- 构建提交已通过原子推送同步至私有 `awake-ai-lab/sherlock-desktop` 的 hyf 和 main，远端 SHA 一致，未推送标签。
+- 全部公开检查成功后，按预演清单精确删除最旧 0.9.5 的五个版本资源；版本清单现保留 0.9.6 至 0.9.10，更新源和稳定下载对象保持不变。
