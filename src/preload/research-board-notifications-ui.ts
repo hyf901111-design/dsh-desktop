@@ -241,8 +241,7 @@ export function mountResearchBoardNotifications(
       }
     }
     if (!compact && !n.readAt) {
-      const actions = row.querySelector('.srb-notification-actions, .srb-notification-footer') ?? row
-      actions.append(boardButton(doc, '标记已读', () => markRead([n.notificationId])))
+      appendMarkRead(row, () => markRead([n.notificationId]))
     }
     return row
   }
@@ -265,9 +264,14 @@ export function mountResearchBoardNotifications(
       doc.dispatchEvent(new win.Event('ework-open-about'))
     }))
     if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
-    if (updateUnread()) actions.append(boardButton(doc, '标记已读', () => markRead([], latestUpdate?.availableVersion)))
     row.append(actions)
+    if (updateUnread()) appendMarkRead(row, () => markRead([], latestUpdate?.availableVersion))
     return row
+  }
+  function appendMarkRead(row: HTMLElement, onRead: () => Promise<void>) {
+    const button = boardButton(doc, '标记已读', onRead)
+    button.classList.add('srb-notification-mark-read')
+    row.append(button)
   }
   function updateUnread() {
     return !!latestUpdate?.availableVersion && latestUpdate.availableVersion !== updateReadVersion

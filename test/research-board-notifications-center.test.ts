@@ -166,7 +166,11 @@ it('hides signed-out collaboration prompts and supports reading one update', asy
 })
 it('marks only the selected collaboration message read', async () => {
  const f=fixture([note('first',null,'accepted'),note('second',null,'accepted')]);await tick();f.bell().click()
- f.w.document.querySelector<HTMLButtonElement>('[data-notification-id="first"] button[aria-label="标记已读"]')!.click();await tick()
+ const card=f.w.document.querySelector('[data-notification-id="first"]')!
+ const read=card.querySelector<HTMLButtonElement>(':scope > .srb-notification-mark-read')!
+ expect(read.textContent).toBe('标记已读')
+ expect(card.querySelector('.srb-notification-footer .srb-notification-mark-read')).toBeNull()
+ read.click();await tick()
  expect(f.invoke).toHaveBeenCalledWith('notifications.read',{notificationIds:['first']})
  expect(f.state.notifications.notifications[1]!.readAt).toBeNull()
 })
