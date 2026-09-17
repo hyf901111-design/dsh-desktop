@@ -90,6 +90,40 @@
           "双方客户端需包含新版交互桥"
         ],
         "generatedAt": "2026-09-17T01:55:43.557520+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8bc77b9ec047f4726b02af793c174eb523425fa3",
+        "verificationCommit": "8bc77b9ec047f4726b02af793c174eb523425fa3",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-native-conversation.test.js",
+              "test/component-interaction-state.test.js",
+              "test/research-board-live-discussion.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-native-conversation.test.js test/component-interaction-state.test.js test/research-board-live-discussion.test.ts",
+            "verifiedCommit": "8bc77b9ec047f4726b02af793c174eb523425fa3",
+            "completedAt": "2026-09-17T01:56:02.070Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "8bc77b9ec047f4726b02af793c174eb523425fa3",
+            "completedAt": "2026-09-17T01:56:02.070Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-17T01:56:02.070Z"
       }
     }
   ],
