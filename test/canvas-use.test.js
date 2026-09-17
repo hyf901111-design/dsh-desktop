@@ -34,6 +34,12 @@ describe('generic canvas interaction surface',()=>{
   const s=await use({op:'observe'});await use({op:'drag',revision:s.revision,ref:s.elements[0].ref,point:{x:.25,y:.2},to:{x:.8,y:.9}})
   expect(events).toEqual([[60,40,1],[170,110,0]]);expect(w.document.querySelector('[data-canvas-use-cursor]')).not.toBeNull();dom.window.close()
  })
+ it('observes checkbox state and real select values, including changes without text updates',async()=>{
+  const {dom,use}=surface('<input type="checkbox"><select><option value="pending">待办</option><option value="done">完成</option></select>')
+  let s=await use({op:'observe'});const original=s.revision;expect(s.elements[1].options[1]).toMatchObject({value:'done',label:'完成'})
+  await use({op:'click',revision:s.revision,ref:s.elements[0].ref});s=await use({op:'observe'});expect(s.elements[0].checked).toBe(true);expect(s.revision).not.toBe(original)
+  await use({op:'select',revision:s.revision,ref:s.elements[1].ref,value:'done'});expect((await use({op:'observe'})).elements[1].value).toBe('done');dom.window.close()
+ })
  it('keeps injected client patch idempotent and syntactically valid',async()=>{
   const s=patchCanvasUseClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
   expect(patchCanvasUseClient(s)).toBe(s);expect(()=>new Script(s)).not.toThrow()
