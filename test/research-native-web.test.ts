@@ -38,8 +38,20 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:600,height:450},scale:1}))
  wc.enableDeviceEmulation.mockClear()
  for (const scale of [.5,.6,.7]) await call('update',{...layout,scale,active:false,bounds:{x:100,y:100,width:400*scale,height:300*scale}})
- expect(wc.enableDeviceEmulation).toHaveBeenCalledTimes(1)
- expect(views[0].bounds).toEqual({x:0,y:0,width:400,height:300})
+ expect(wc.enableDeviceEmulation).toHaveBeenCalledTimes(3)
+ expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:400,height:300},scale:.7}))
+ expect(views[0].bounds).toEqual({x:100,y:100,width:280,height:210})
+ const scaled={...layout,scale:.7,bounds:{x:100,y:100,width:280,height:210}}
+ wc.enableDeviceEmulation.mockClear()
+ wc.setZoomFactor.mockClear()
+ for (const active of [true,false,true,false]) {
+   await call('update',{...scaled,active})
+   expect(views[0].visible).toBe(active)
+   expect(views[0].bounds).toEqual(scaled.bounds)
+   expect(wc.capturePage).toHaveBeenLastCalledWith(undefined,{stayHidden:!active,stayAwake:true})
+ }
+ expect(wc.enableDeviceEmulation).not.toHaveBeenCalled()
+ expect(wc.setZoomFactor).not.toHaveBeenCalled()
  wc.executeJavaScript.mockResolvedValue({title:'搜索结果',sourceText:' 最新网页正文\n第二段 ',scrollWidth:400,clientWidth:400})
  const inspect=()=>handlers.get('research:link-frame:inspect')!(event,identity)
  await expect(inspect()).resolves.toMatchObject({title:'搜索结果',sourceText:'最新网页正文\n第二段'})

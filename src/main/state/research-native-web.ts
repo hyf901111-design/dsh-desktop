@@ -75,8 +75,9 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     const size=win.getContentSize()
     const show=value.active===true&&bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=(size[0]??0)&&bounds.y+bounds.height<=(size[1]??0)
     // Canvas zoom scales the rendered surface, never the page's CSS viewport.
-    // Hidden previews stay at 1x so wheel gestures cannot trigger responsive reflow.
-    const displayScale = show ? value.scale : 1
+    // Selection only changes visibility. Capture the identical surface used by
+    // the interactive view; a separate 1x capture changes Chromium rasterization.
+    const displayScale = value.scale
     const presentation = JSON.stringify([viewport, displayScale])
     if (!show || entry.presentation !== presentation) entry.view.setVisible(false)
     if (entry.presentation !== presentation) {
@@ -84,7 +85,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       entry.view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:viewport,viewPosition:{x:0,y:0},deviceScaleFactor:0,viewSize:viewport,scale:displayScale})
       entry.presentation = presentation
     }
-    entry.view.setBounds(show ? bounds : {x:0,y:0,...viewport})
+    entry.view.setBounds(bounds)
     entry.view.setVisible(show)
     if(!entry.busy){
       entry.busy=true;const current=entry
