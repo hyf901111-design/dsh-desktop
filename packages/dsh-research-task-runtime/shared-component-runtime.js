@@ -63,6 +63,7 @@ export function sharedComponentRuntime() {
     dispose() { stopped = true; connected = false; host = false; clearInterval(heartbeat); clearInterval(ticker); post({ op: 'leave' }); listeners.clear() }
   })
   Object.defineProperty(window, 'sherlockShared', { value: Object.freeze({
+    inspect() { return config ? {state:clone(state),...status()} : null },
     register(options) {
       if (config) throw Error('每个组件只能注册一个共享状态容器')
       if (!options || typeof options.reduce !== 'function' || typeof options.render !== 'function' || !valid(options.initialState)) throw Error('无效的共享状态配置')

@@ -107,6 +107,7 @@
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "happy-dom": "^20.11.6",
+    "jsdom": "^26.1.0",
     "patch-package": "^8.0.1",
     "pdfjs-dist": "4.10.38",
     "typescript": "5.9.3",

@@ -1,9 +1,17 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 const children = new Map()
-export function bindCanvasChild(childId, parentId) {
-  children.set(childId,parentId)
-  return () => { if(children.get(childId)===parentId)children.delete(childId) }
+export function bindCanvasChild(childId, parentId, guard) {
+  const binding={parentId,guard};children.set(childId,binding)
+  return () => { if(children.get(childId)===binding)children.delete(childId) }
 }
+export const canvasSession = exec => children.get(exec.agent?.session?.id)?.parentId ?? exec.agent?.session?.id
+export async function callCanvas(sessionId,method,args,signal,{env=process.env,fetch:request=globalThis.fetch}={}) {
+  const url=new URL(env.SHERLOCK_RESEARCH_CONTEXT_URL)
+  if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||url.username||url.password||!env.SHERLOCK_RESEARCH_CONTEXT_TOKEN)throw Error('画布操作服务不可用。')
+  const response=await request(`${url.origin}/canvas-actions`,{method:'POST',redirect:'error',signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(45000)]),headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({sessionId,method,args})})
+  const result=await response.json();if(!response.ok)throw Error(result.error??'画布操作失败。');return result
+}
+export async function guardCanvas(exec,method,args){return children.get(exec.agent?.session?.id)?.guard?.(method,args)}
 export const CANVAS_TOOL_NAMES=['research_canvas_inspect','research_canvas_apply','research_canvas_undo']
 export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThis.fetch}={}) {
   const disposers=[],controllers=new Set()
@@ -14,7 +22,8 @@ export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThi
       output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result}]},
       execute:async(args,exec)=>{
         if(!args||Object.keys(args).some(k=>!Object.hasOwn(parameters,k)))throw Error('画布操作参数无效。')
-        const sessionId=children.get(exec.agent?.session?.id)??exec.agent?.session?.id
+        const sessionId=canvasSession(exec)
+        await guardCanvas(exec,method,args)
         if(typeof sessionId!=='string'||!sessionId)throw Error('当前执行未绑定画板。')
         const url=new URL(env.SHERLOCK_RESEARCH_CONTEXT_URL)
         if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||url.username||url.password||!env.SHERLOCK_RESEARCH_CONTEXT_TOKEN)throw Error('画布操作服务不可用。')

@@ -2910,6 +2910,13 @@ export class ResearchBoardsService {
     if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
     return projectDocument(this.requireBoard(binding.boardId).doc)
   }
+  authorizeCanvasUse(sessionId: string, write: boolean): void {
+    if (!this.isSharedSession(sessionId)) return
+    const binding = this.getBinding(sessionId)
+    if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
+    const board=this.requireBoard(binding.boardId, sessionId, write)
+    if(write&&!this.permissions(board).execute)throw Error('协作连接不可用，任务已暂停。')
+  }
   private storageBinding(key: unknown) {
     if (typeof key !== 'string') return undefined
     const match = key.match(

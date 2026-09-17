@@ -2,6 +2,7 @@ import { patchResearchNativeWeb } from './lib/research-native-web-client.mjs'
 import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
 import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
 import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
+import { patchCanvasUseClient } from './lib/canvas-use-client.mjs'
 import { patchComponentWheelZoom } from './lib/component-wheel-zoom.mjs'
 import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
@@ -186,6 +187,7 @@ writeFileSync(conversationPath, patchInspectPortal(readFileSync(conversationPath
 writeFileSync(conversationPath, patchComponentWheelZoom(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchCanvasActionsClient(readFileSync(conversationPath, 'utf8')))
+writeFileSync(conversationPath, patchCanvasUseClient(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchCanvasRefresh(readFileSync(conversationPath, 'utf8')))
 

@@ -11,8 +11,8 @@ async function fixture(){
  new Script(source)
  let descriptor
  const window={__ModuleLoader__:{load:d=>descriptor=d}}
- const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
- runInNewContext(source,{window,crypto,AbortController,TextEncoder,TextDecoder,setTimeout,clearTimeout})
+ const fake=new Proxy(function(){},{get:(_t,key)=>key===Symbol.toPrimitive?()=> '':fake,apply:()=>fake,construct:()=>fake})
+ runInNewContext(source,{window,document:fake,crypto,AbortController,TextEncoder,TextDecoder,setTimeout,clearTimeout})
  const bundle=descriptor.factory(id=>id==='react'||id==='react/jsx-runtime'?require(id):fake)
  const data=new Map();let fail=false
  const storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>{if(fail&&k.includes('artifacts'))return false;data.set(k,v);return true}}
