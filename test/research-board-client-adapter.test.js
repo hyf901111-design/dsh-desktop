@@ -270,7 +270,8 @@ async function pageFixture(favorites = []) {
     byId: { shared: { id: 'shared', title: 'Shared' } },
     phase: 'ready'
   }
-  const list = { getSnapshot: () => sessionState, subscribe: () => () => {} }
+  const listListeners = new Set()
+  const list = { getSnapshot: () => sessionState, subscribe: fn => { listListeners.add(fn); return () => listListeners.delete(fn) } }
   const sessions = {
     list,
     binding: () => undefined,
@@ -296,6 +297,7 @@ async function pageFixture(favorites = []) {
     registry,
     hub,
     sessions,
+    emitSessions: () => listListeners.forEach(fn => fn()),
     emit: (event) =>
       events.forEach((fn) =>
         fn({ eventSeq: ++state.eventSeq, accountGeneration: 1, ...event })
@@ -609,6 +611,7 @@ it('preserves exact references and mutation identity across unavailable and acce
   const f = await pageFixture()
   const shell = {
     snapshot: { draft: '\ufffc 总结', draftRev: 4 },
+    restoreDraftState: vi.fn(function (snapshot) { this.snapshot = { ...snapshot } }),
     notify: vi.fn(),
     setResearchContextPreparing: vi.fn(),
     commitSend: vi.fn(function () {
@@ -649,7 +652,8 @@ it('preserves exact references and mutation identity across unavailable and acce
       'queue'
     )
     expect(shell.snapshot.draft).toBe('\ufffc 总结')
-    expect(shell.commitSend).not.toHaveBeenCalled()
+    expect(shell.commitSend).toHaveBeenCalledTimes(1)
+    expect(shell.restoreDraftState).toHaveBeenCalledTimes(1)
     fail = false
     await f.page.submitShared(
       'shared',
@@ -658,7 +662,7 @@ it('preserves exact references and mutation identity across unavailable and acce
       [],
       'queue'
     )
-    expect(shell.commitSend).toHaveBeenCalledTimes(1)
+    expect(shell.commitSend).toHaveBeenCalledTimes(2)
     await f.page.retryRequest('shared').retry()
     const calls = f.bridge.invoke.mock.calls
       .filter(([a]) => a === 'request.submit')
@@ -1431,4 +1435,13 @@ it('binds canvas tools to the shared request references before submitting the ta
    await f.page.submitShared('shared','删除引用的组件',{scope:'references',references:[{collection:'artifacts',nodeId:'a'}]},[],'queue')
    expect(bind).toHaveBeenCalledWith({sessionId:'shared',selectedIds:['a']})
  }finally{f.dispose()}
+})
+
+it('syncs generated session titles into pinned personal board titles', async () => {
+ const f=await pageFixture([{favoriteId:'favorite',sessionId:'shared',title:'新研究看板'}])
+ try {
+   f.sessions.list.getSnapshot().byId.shared.title='公司员工管理工作台'
+   f.emitSessions(); await new Promise(resolve=>setTimeout(resolve,0))
+   expect(f.bridge.invoke).toHaveBeenCalledWith('favorite.rename',{favoriteId:'favorite',title:'公司员工管理工作台'})
+ } finally {f.dispose()}
 })

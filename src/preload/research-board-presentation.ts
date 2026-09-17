@@ -18,7 +18,8 @@ export function boardEntryActions(entry: { boardId?: string; sharingState?: stri
   return [
     { id: 'rename', label: '重命名', disabled: !!entry.boardId && entry.role !== 'owner' },
     { id: 'collaboration', label: collaboration ? '管理协作' : '共享协作' },
-    ...(!collaboration ? [{ id: 'workspace', label: '放回工作区' }] : [])
+    ...(!collaboration ? [{ id: 'workspace', label: '放回工作区' }] : []),
+    ...(!entry.boardId ? [{ id: 'delete', label: '删除' }] : [])
   ]
 }
 

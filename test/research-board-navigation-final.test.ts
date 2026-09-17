@@ -21,7 +21,7 @@ function fixture(role = 'owner') {
   return { w, view, page, listeners, emit: () => listeners.forEach(listener => listener()) }
 }
 it('only returns active collaboration to its workspace after sharing has ended, with owner rename permissions', () => {
-  expect(boardEntryActions({}).map(action => action.label)).toEqual(['重命名', '共享协作', '放回工作区'])
+  expect(boardEntryActions({}).map(action => action.label)).toEqual(['重命名', '共享协作', '放回工作区', '删除'])
   expect(boardEntryActions({ boardId: 'b', sharingState: 'shared', role: 'owner' }).map(action => action.label)).toEqual(['重命名', '管理协作'])
   expect(boardEntryActions({ boardId: 'b', sharingState: 'shared', role: 'viewer' })[0]?.disabled).toBe(true)
   expect(boardEntryActions({ boardId: 'b', sharingState: 'ownerOnly', role: 'owner' }).map(action => action.label)).toEqual(['重命名', '共享协作', '放回工作区'])
