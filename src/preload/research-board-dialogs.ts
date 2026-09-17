@@ -316,7 +316,9 @@ export function installBoardUiStyles(doc: Document) {
 .srb-discussion [data-shared-native-message]{min-width:0}
 .srb-discussion [data-shared-native-message=user][data-self=true] .srb-native-author{text-align:right}
 .srb-discussion [data-shared-native-message=user][data-self=false] .gdEzaW_userRow{align-items:flex-start}
-.srb-discussion .srb-message[data-role=user][data-self=false]{align-self:flex-start}
+.srb-discussion [data-shared-native-message=user][data-self=false] .gdEzaW_userStack{margin-left:0;margin-right:auto;align-items:flex-start}
+.srb-discussion .srb-message[data-role=user][data-self=false]{align-self:flex-start;margin-left:0;margin-right:auto}
+.srb-discussion .srb-message[data-execution-kind=component]{width:auto;margin-inline:0}
 .srb-discussion [data-chat-flow-kind=execution]>button{padding-inline:0}
 .srb-discussion .srb-request-group[data-execution-kind=component]+.srb-request-group[data-execution-kind=component]{margin-top:-12px}
 .sRp_messages .odyssey-table-actions{font-size:13px;line-height:24px;color:var(--dsw-alias-label-secondary)}

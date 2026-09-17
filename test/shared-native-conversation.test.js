@@ -64,3 +64,17 @@ it('mounts the actual native execution group and streams real commentary instead
  expect(host.textContent).toContain('资料已核对，正在整理结果')
  } finally {await React.act(async()=>root.unmount());await w.happyDOM.abort();Object.assign(globalThis,old)}
 })
+
+it('overrides the shell auto margin for peer bubbles while preserving self alignment',async()=>{
+ const {Window}=await import('happy-dom');const w=new Window();
+ const shell=await readFile('src/preload/figma-final-shell.css','utf8');
+ const board=(await readFile('src/preload/research-board-dialogs.ts','utf8')).split('style.textContent = `')[1].split('`')[0];
+ w.document.head.innerHTML='<style>'+shell+'</style><style>'+board+'</style>';
+ w.document.body.innerHTML='<div class="srb-discussion"><div data-shared-native-message="user" data-self="false"><small class="srb-native-author">乙</small><div class="gdEzaW_userRow"><div class="gdEzaW_userStack">peer</div></div></div><div data-shared-native-message="user" data-self="true"><small class="srb-native-author">甲</small><div class="gdEzaW_userRow"><div class="gdEzaW_userStack">self</div></div></div></div>';
+ const stacks=w.document.querySelectorAll('.gdEzaW_userStack');
+ expect(w.getComputedStyle(stacks[0]).marginLeft).toBe('0px');
+ expect(w.getComputedStyle(stacks[0]).alignItems).toBe('flex-start');
+ expect(w.getComputedStyle(stacks[1]).marginLeft).toBe('auto');
+ expect(w.getComputedStyle(w.document.querySelector('[data-self=true] small')).textAlign).toBe('right');
+ await w.happyDOM.close();
+});
