@@ -11,40 +11,25 @@
         "schemaVersion": 1,
         "featureName": "全画布持续任务与通用交互",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "b4e4709863bd626d70347c1c005d54115e74aee7",
-        "tipCommit": "b21067c8f798baee3609217a4b292b20bdc7f019",
+        "baseCommit": "b21067c8f798baee3609217a4b292b20bdc7f019",
+        "tipCommit": "7d730a540905c0ababfb98e0d50b943f96accb90",
         "commits": [
           {
-            "commit": "4ea38744da1680b97c324d9648b0757807bd3c2d",
+            "commit": "7d730a540905c0ababfb98e0d50b943f96accb90",
             "parents": [
-              "b4e4709863bd626d70347c1c005d54115e74aee7"
+              "b21067c8f798baee3609217a4b292b20bdc7f019"
             ],
-            "subject": "修复：观察控件实际状态并隔离网页跳转后的旧操作"
-          },
-          {
-            "commit": "b21067c8f798baee3609217a4b292b20bdc7f019",
-            "parents": [
-              "4ea38744da1680b97c324d9648b0757807bd3c2d"
-            ],
-            "subject": "完善：支持持续任务在画布上创建组件与链接草稿"
+            "subject": "修复：补齐客户端生成组件的画布交互桥依赖"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-tools.js"
-          },
           {
             "status": "M",
             "path": "scripts/lib/canvas-use-client.mjs"
           },
           {
             "status": "M",
-            "path": "test/canvas-use.test.js"
+            "path": "test/research-canvas-actions-client.test.js"
           }
         ],
         "checks": [
@@ -61,9 +46,9 @@
               "test/research-native-web.test.ts"
             ],
             "outcome": "passed",
-            "summary": "34 项直接相关检查通过",
-            "verifiedCommit": "b21067c8f798baee3609217a4b292b20bdc7f019",
-            "completedAt": "2026-09-17T16:22:54.402639+00:00",
+            "summary": "35 项直接相关检查通过，含实际客户端 HTML 预览构建回归",
+            "verifiedCommit": "7d730a540905c0ababfb98e0d50b943f96accb90",
+            "completedAt": "2026-09-17T16:26:35.890048+00:00",
             "timeoutMs": 120000
           },
           {
@@ -76,8 +61,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "b21067c8f798baee3609217a4b292b20bdc7f019",
-            "completedAt": "2026-09-17T16:22:54.402639+00:00",
+            "verifiedCommit": "7d730a540905c0ababfb98e0d50b943f96accb90",
+            "completedAt": "2026-09-17T16:26:35.890048+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -95,59 +80,7 @@
           "受信任硬件输入和系统交互需要用户接管",
           "真实模型链路与界面待集成验收"
         ],
-        "generatedAt": "2026-09-17T16:22:54.402639+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c0e7c0d2042201f7fe88833abb2d2bceb5d7d566",
-        "verificationCommit": "c0e7c0d2042201f7fe88833abb2d2bceb5d7d566",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "c0e7c0d2042201f7fe88833abb2d2bceb5d7d566",
-            "completedAt": "2026-09-17T16:23:44.856Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "c0e7c0d2042201f7fe88833abb2d2bceb5d7d566",
-            "completedAt": "2026-09-17T16:23:44.856Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "c0e7c0d2042201f7fe88833abb2d2bceb5d7d566",
-            "completedAt": "2026-09-17T16:23:44.856Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-17T16:23:44.856Z"
+        "generatedAt": "2026-09-17T16:26:35.890048+00:00"
       }
     }
   ],
