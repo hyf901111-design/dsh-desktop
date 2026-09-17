@@ -5,7 +5,7 @@ import { installBoardSessionFork } from './board-session-fork'
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
-import { Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { admitSharedDraft } from './shared-send-draft'
 import { promoteSidebarOrder } from './sidebar-manual-order'
 import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
@@ -611,6 +611,20 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     sends.clear()
     clearingEditors = false
   }
+  const titleWrites = new Set<string>()
+  function syncFavoriteTitles() {
+    for (const favorite of state.favorites) {
+      const title = deps.sessions.list.getSnapshot().byId[favorite.sessionId]?.title?.trim()
+      if (!title || title === favorite.title || titleWrites.has(favorite.favoriteId)) continue
+      titleWrites.add(favorite.favoriteId)
+      void call('favorite.rename', { favoriteId: favorite.favoriteId, title })
+        .catch(() => {}).finally(() => {
+          titleWrites.delete(favorite.favoriteId)
+          const latest = deps.sessions.list.getSnapshot().byId[favorite.sessionId]?.title?.trim()
+          if (!disposed && latest && latest !== title) syncFavoriteTitles()
+        })
+    }
+  }
   function watchFavoriteDeletion() {
     for (const f of state.favorites) {
       if (favoriteWatches.has(f.favoriteId)) continue
@@ -637,6 +651,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   cleanups.push(
     deps.sessions.list.subscribe(() => {
       watchFavoriteDeletion()
+      syncFavoriteTitles()
       notify()
     })
   )
@@ -789,7 +804,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   async function freshBoard(title: string, shared = false) {
     const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath: await defaultDirectory() })
     const id = await deps.sessions.create({ cwd: directory.path })
-    await deps.sessions.binding(id)?.session.rename(title)
+    if (shared || title !== '新研究看板') await deps.sessions.binding(id)?.session.rename(title)
     await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId: id })
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
@@ -1301,11 +1316,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const id = await freshBoard('新研究看板')
       const i = identity(id)
       if (!i) throw Error('研究看板尚未就绪')
-      await call('favorite.add', { identity: i, dedicated: true })
+      await call('favorite.add', { identity: { ...i, title: '新研究看板' }, dedicated: true })
       await api.openPersonal(id)
       selectBoardSession(id)
       trackTemporary(id)
       return id
+    },
+    async deletePersonal(entry: Favorite) {
+      await deps.workspaces.archiveSession(entry.sessionId)
+      await call('favorite.remove', { favoriteId: entry.favoriteId })
     },
     async renamePersonal(id: string, title: string) {
       const binding = deps.sessions.binding(id)
@@ -1825,12 +1844,15 @@ function ResearchBoardGroup({ skin, group, expanded, onToggle, children }: any) 
 }
 function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, nested, ...drag }: any) {
   const [open, setOpen] = React.useState(false)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [deleting, setDeleting] = React.useState(false)
+  const [deleteError, setDeleteError] = React.useState('')
   const R = skin.rows
   const selected = selectedSession === ('boardId' in entry ? entry.localSessionId : entry.sessionId) && page.current() === selectedSession
   const shared = 'boardId' in entry
   const sessionId = shared ? entry.localSessionId : entry.sessionId
   const collaboration = shared && entry.sharingState === 'shared'
-  const items = boardEntryActions(entry).map(item => ({ ...item, icon: item.id === 'collaboration' ? boardIcon('people') : h(item.id === 'rename' ? IconEditOutline16 : IconFolderOpenOutline16) }))
+  const items = boardEntryActions(entry).map(item => ({ ...item, icon: item.id === 'collaboration' ? boardIcon('people') : h(item.id === 'delete' ? IconTrashOutline16 : item.id === 'rename' ? IconEditOutline16 : IconFolderOpenOutline16) }))
   return h('div', { className: ['srb-row', R.sessionRow, !nested && R.flatSessionRowWithoutStatus, selected && R.selected, open && R.menuOpen, marker === 'before' && R.dropBefore, marker === 'after' && R.dropAfter].filter(Boolean).join(' '), 'data-menu-open': open, 'aria-current': selected,
     ...drag, 'data-drop-marker': marker ?? undefined,
     onContextMenu: (event: React.MouseEvent) => { event.preventDefault(); setOpen(true) } },
@@ -1851,6 +1873,7 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
     onSelect: (id: string) => {
       setOpen(false)
       if (id === 'rename') renameBoardEntry(page, entry)
+      if (id === 'delete') { setDeleteError(''); setDeleteOpen(true) }
       if (id === 'collaboration') {
         if (collaboration) manageBoard(page, entry.boardId, 'members')
         else if (shared) void page.openBoard(entry.boardId).then((id: string) => addBoardCollaborator(page, entry.boardId, id)).catch(page.showError)
@@ -1858,7 +1881,18 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
       }
       if (id === 'workspace') void page.returnToWorkspace(entry).catch(page.showError)
     }
-  })))
+  })), h(Modal, {
+    open: deleteOpen, onClose: () => { if (!deleting) setDeleteOpen(false) }, closeLabel: '关闭',
+    title: '删除看板', description: `将“${entry.title}”从看板列表中删除，并归档对应会话。已有文件与会话记录会保留。`,
+    footer: h(React.Fragment, null,
+      h(Button, { variant: 'outline', disabled: deleting, onClick: () => setDeleteOpen(false) }, '取消'),
+      h(Button, { variant: 'outline', disabled: deleting, style: { color: 'var(--dsw-alias-status-error, #d44)' }, onClick: async () => {
+        setDeleting(true); setDeleteError('')
+        try { await page.deletePersonal(entry); setDeleteOpen(false) }
+        catch (error) { setDeleteError(error instanceof Error ? error.message : '删除失败，请重试') }
+        finally { setDeleting(false) }
+      } }, '删除看板'))
+  }, deleting && h('div', { role: 'status' }, '正在删除…'), deleteError && h('div', { role: 'alert' }, deleteError)))
 }
 function renameBoardEntry(page: ResearchBoardsPage, entry: Favorite | BoardSummary) {
   const d = boardDialog(document, '重命名看板')

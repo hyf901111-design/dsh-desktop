@@ -1,3 +1,4 @@
+import { patchCanvasCreationTools } from './canvas-creation-tools.mjs'
 import { patchResearchCanvasDeferredHtml } from './research-canvas-deferred-html.mjs'
 import { patchResearchOfficeResize } from './research-office-resize.mjs'
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
@@ -59,7 +60,7 @@ function patchCanvasGraphicPrimitives(source) {
       const iconEnd = line.indexOf(', (0, react_jsx_runtime.jsx)("span", { children: "' + label + '" })', iconStart);
       if (iconEnd < 0) throw Error('Figma toolbar icon boundary missing: ' + key);
       source = exact(source, line, line.slice(0, iconStart) + "(0,react_jsx_runtime.jsx)('span',{className:'odyssey-global-icon odyssey-global-" + key + "','aria-hidden':true})" + line.slice(iconEnd));
-    } else if (!source.includes("className:'odyssey-global-icon odyssey-global-" + key + "'")) throw Error('Figma toolbar icon anchor missing: ' + key);
+    } else if (!source.includes("className:'odyssey-global-icon odyssey-global-" + key + "'") && !source.includes("/* ODYSSEY_CREATION_TOOLS */")) throw Error('Figma toolbar icon anchor missing: ' + key);
   }
   const voiceAnchor = 'icon("M6.5 5a2.5 2.5 0 0 1 5 0v4a2.5 2.5 0 0 1-5 0V5ZM4.5 8.5V9a4.5 4.5 0 0 0 9 0v-.5M9 13.5V16M6.5 16h5")';
   if (source.includes(voiceAnchor)) source = exact(source, voiceAnchor, "(0,react_jsx_runtime.jsx)('span',{className:'odyssey-global-icon odyssey-global-voice','aria-hidden':true})");
@@ -92,7 +93,7 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))));
+  return patchCanvasCreationTools(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)))));
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);

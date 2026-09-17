@@ -1,3 +1,4 @@
+import { patchCanvasCreationTools } from '../scripts/lib/canvas-creation-tools.mjs'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
@@ -23,7 +24,7 @@ async function fixture(desktop: any = {}, win?: Window) {
   let descriptor: any
   const window: any = win ?? {}
   Object.assign(window, { dshDesktop: desktop, __ModuleLoader__: { load: (value: any) => { descriptor = value } } })
-  const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+  const source = patchCanvasCreationTools(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
   runInNewContext(source, { window, document: win?.document, localStorage: win?.localStorage, navigator: win?.navigator, HTMLElement: win?.HTMLElement, HTMLTextAreaElement: win?.HTMLTextAreaElement, Text: win?.Text, ResizeObserver: win?.ResizeObserver, requestAnimationFrame: win?.requestAnimationFrame.bind(win), cancelAnimationFrame: win?.cancelAnimationFrame.bind(win), AbortController, TextDecoder, TextEncoder, setTimeout, clearTimeout })
   const bundle = descriptor.factory((id: string) => {
     if (id === 'react') return react
@@ -90,7 +91,7 @@ describe('Figma canvas pointer transactions', () => {
     const m = await mounted({researchBoards:{isSharedSession:()=>true}}, undefined, {disabled:false})
     expect(m.query('[data-research-global-link]').disabled).toBe(true)
     expect(m.query('[data-research-global-container]').disabled).toBe(true)
-    expect([...m.host.querySelectorAll('[data-research-global-toolbar] button')].every((b:any)=>b.disabled)).toBe(true)
+    expect([...m.host.querySelectorAll('[data-research-global-toolbar] button:not([data-research-global-select])')].every((b:any)=>b.disabled)).toBe(true)
   })
   it('snaps to neighbouring edges, bypasses with Alt, and cancels without adding undo history', async () => {
     const m = await mounted()
@@ -142,4 +143,41 @@ describe('Figma canvas pointer transactions', () => {
     expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({x:200,y:200,width:600,height:360})
     expect(m.canvas.hasAttribute('data-research-resize-corner')).toBe(false)
   })
+})
+
+it('draws manually sized components in zoomed world coordinates, persists the tool and cancels incomplete drags', async () => {
+  const m = await mounted({}, undefined, { disabled: false })
+  await act(async () => m.workspace.setViewport({ x: 100, y: 40, scale: 0.5 }))
+  await m.event('click', m.query('[data-research-global-container]'))
+  await m.event('pointerdown', m.canvas, { button: 0, pointerId: 1, clientX: 250, clientY: 200 })
+  await m.event('pointermove', m.canvas, { pointerId: 1, clientX: 650, clientY: 450 })
+  await m.event('pointerup', m.canvas, { pointerId: 1 })
+  const first = m.workspace.getSnapshot().artifacts[0]
+  expect(first).toMatchObject({ width: 800, height: 500, x: 600, y: 450, sizeMode: 'manual', generationStatus: 'draft' })
+  expect(m.query('[data-research-global-container]').getAttribute('aria-pressed')).toBe('true')
+  await m.event('pointerdown', m.canvas, { button: 0, pointerId: 2, clientX: 350, clientY: 250 })
+  await m.event('pointerup', m.canvas, { pointerId: 2 })
+  const small = m.workspace.getSnapshot().artifacts[1]
+  expect(small).toMatchObject({ width: 320, height: 220, x: 560, y: 410 })
+  await m.event('pointerdown', m.canvas, { button: 0, pointerId: 3, clientX: 450, clientY: 350 })
+  await m.event('pointercancel', m.canvas, { pointerId: 3 })
+  expect(m.workspace.getSnapshot().artifacts).toHaveLength(2)
+  await m.event('click', m.query('[data-research-global-select]'))
+  expect(m.canvas.getAttribute('data-canvas-tool')).toBe('select')
+})
+it('opens the link editor at the canvas center without changing the selected tool', async () => {
+  const m = await mounted({}, undefined, { disabled: false })
+  await m.event('click', m.query('[data-research-global-container]'))
+  await m.event('click', m.query('[data-research-global-link]'))
+  const draft = m.win.document.querySelector('[data-research-link-popover]')!
+  expect(draft.parentElement).toBe(m.win.document.body)
+  expect(m.canvas.getAttribute('data-canvas-tool')).toBe('component')
+  expect((draft as any).style.left).toBe('550px')
+  expect((draft as any).style.top).toBe('410px')
+  const input = draft.querySelector('input')! as any
+  input.value = 'https://example.com'
+  await m.event('input', input)
+  await m.event('click', draft.querySelector('[data-research-link-submit]'))
+  expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({ kind: 'web-link', url: 'https://example.com/' })
+  expect(m.win.document.querySelector('[data-research-link-popover]')).toBeNull()
 })
