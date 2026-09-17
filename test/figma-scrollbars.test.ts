@@ -141,3 +141,14 @@ it('releases keyboard retention on a pointer click even if the same link keeps D
     await win.happyDOM.close()
   }
 })
+
+it('preserves native horizontal scrollbars in wide tables and expanded tables',async()=>{
+ const win=new Window(),doc=win.document;
+ doc.body.innerHTML='<section class="t8lSSG_panelBody"><div class="odyssey-table-block"><div id="wide" style="overflow:auto"><table></table></div></div><dialog class="odyssey-table-dialog"><div id="full" style="overflow:auto"></div></dialog></section>';
+ Object.defineProperty(win,'ResizeObserver',{value:class{observe(){} unobserve(){} disconnect(){}}});
+ const dispose=mountFigmaScrollbars(doc as unknown as Document,true);
+ expect(doc.querySelector('#wide')!.hasAttribute('data-odyssey-scrollport')).toBe(false);
+ expect(doc.querySelector('#full')!.hasAttribute('data-odyssey-scrollport')).toBe(false);
+ expect(doc.querySelector('.odyssey-scroll-track')).toBeNull();
+ dispose();await win.happyDOM.close();
+});

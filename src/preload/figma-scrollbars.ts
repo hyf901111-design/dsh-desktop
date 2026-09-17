@@ -29,6 +29,8 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   const schedule = () => { if (!scheduled) scheduled = win.requestAnimationFrame(refresh) }
   const resize = new win.ResizeObserver(schedule)
   const install = (port: HTMLElement) => {
+    // Tables need their native horizontal thumb; overflow-x:auto computes overflow-y:auto too.
+    if (port.closest('.odyssey-table-block,.odyssey-table-dialog')) return
     if (bars.has(port) || port.closest('.odyssey-scroll-track') || /^(TEXTAREA|INPUT)$/.test(port.tagName)) return
     const style = win.getComputedStyle(port)
     if (!/auto|scroll/.test(style.overflowY)) return

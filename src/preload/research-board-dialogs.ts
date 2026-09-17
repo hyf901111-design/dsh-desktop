@@ -320,7 +320,7 @@ export function installBoardUiStyles(doc: Document) {
 .srb-discussion [data-chat-flow-kind=execution]>button{padding-inline:0}
 .srb-discussion .srb-request-group[data-execution-kind=component]+.srb-request-group[data-execution-kind=component]{margin-top:-12px}
 .sRp_messages .odyssey-table-actions{font-size:13px;line-height:24px;color:var(--dsw-alias-label-secondary)}
-.sRp_messages .odyssey-table-block>:first-child{scrollbar-width:auto;scrollbar-color:var(--dsw-alias-label-tertiary,#999) transparent}
+.sRp_messages .odyssey-table-block>:first-child{scrollbar-width:auto;scrollbar-color:auto}
 .sRp_messages .odyssey-table-block>:first-child::-webkit-scrollbar{height:10px;display:block}
 .sRp_messages .odyssey-table-block>:first-child::-webkit-scrollbar-thumb{background:var(--dsw-alias-label-tertiary,#999);border-radius:5px;border:2px solid transparent;background-clip:padding-box}
 /* Shared section geometry and understated board actions. */
