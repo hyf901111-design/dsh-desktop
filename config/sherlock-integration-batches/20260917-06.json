@@ -61,6 +61,41 @@
           "已有组件需要重新生成或改造"
         ],
         "generatedAt": "2026-09-17T10:03:36.759559+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5f00ed766bb0a40cc2d2315bbb719464cc666d26",
+        "verificationCommit": "5f00ed766bb0a40cc2d2315bbb719464cc666d26",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "generated shared-state acceptance|shared-state generation gate|shared component generation|shared current request|Research task persistence"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/shared-component-validation.test.js test/research-task-runtime.test.js -t generated shared-state acceptance|shared-state generation gate|shared component generation|shared current request|Research task persistence",
+            "verifiedCommit": "5f00ed766bb0a40cc2d2315bbb719464cc666d26",
+            "completedAt": "2026-09-17T10:40:21.472Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "5f00ed766bb0a40cc2d2315bbb719464cc666d26",
+            "completedAt": "2026-09-17T10:40:21.472Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-17T10:40:21.472Z"
       }
     }
   ],
