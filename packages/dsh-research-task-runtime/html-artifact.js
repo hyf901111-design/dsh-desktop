@@ -457,7 +457,10 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   addEventListener('message', (event) => {
     const data = event.data
     if(!standalone && event.source===parent && ['sherlock-component-context','sherlock-component-receive'].includes(data?.type)) { frame.contentWindow?.postMessage(data,'*'); return }
-    if(!standalone && event.source===frame.contentWindow && data?.type==='sherlock-component-send') { parent.postMessage(data,'*'); return }
+    if(event.source===frame.contentWindow && data?.type==='sherlock-component-send') {
+      if(!runtimeFont) { if(data.message?.op==='join')frame.contentWindow.postMessage({type:'sherlock-component-context',shared:false,online:true,readOnly:false,userId:'local'},'*'); return }
+      if(!standalone)parent.postMessage(data,'*'); return
+    }
     if(!standalone && event.source===parent && data?.type==='sherlock-interaction-state') {
       interactionState=data; frame.contentWindow?.postMessage(data,'*'); return;
     }
@@ -552,7 +555,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME})();` : ''}(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})();(${sharedComponentRuntime.toString()})();` : ''}</script>`
+  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME})();` : ''}(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})();` : ''}(${sharedComponentRuntime.toString()})();</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
