@@ -10,7 +10,7 @@ export function patchCanvasCreationTools(source) {
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
   source = patchComponentMarquee(source)
   source = patchComponentDraftFocus(source)
-  source = patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))
+  source = patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source))))
   if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
@@ -54,8 +54,61 @@ export function patchCanvasCreationTools(source) {
   replace('title: "语音 · 双击 Fn 开始，单按结束发送；长按 Fn 说话，松开发送",', '')
   replace('children: "输入网页地址" }),', 'children: "输入网页地址" }), (0,react_jsx_runtime.jsx)("button",{type:"button",className:"odyssey-link-close","aria-label":"关闭链接输入",onClick:()=>setLinkPopoverOpen(false),children:"×"}),')
   // Labels are kept in markup for older patch compatibility but visually hidden.
-  source = patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))
+  source = patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source))))
   source = installCreationStyle(source)
+  return source
+}
+function patchNativeLinkDraft(source) {
+  if(source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')&&!source.includes('/* ODYSSEY_LINK_GEOMETRY */'))source=source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
+    /* ODYSSEY_LINK_GEOMETRY */
+    if(node?.containerPrompt==='odyssey:link-draft')return {width:Math.max(320,node.width||400),height:Math.max(177,node.height||177),sizeMode:'manual',resizable:true};`)
+  if (!source.includes('/* ODYSSEY_LINK_SELECTION */') || source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')) return source
+  const change=(from,to)=>{if(!source.includes(from))throw Error('Native link anchor missing: '+from.slice(0,90));source=source.replace(from,to)}
+  change('createContainerDraft(placement = null) {', 'createContainerDraft(placement = null, draftKind = "container") {')
+  change('containerPrompt: "", containerSizePreset: "small",', 'containerPrompt: draftKind === "link" ? "odyssey:link-draft" : "", ...(draftKind === "link" ? {title:"添加链接"} : {}), containerSizePreset: "small",')
+  change('createWebLink(rawUrl, placement = null) {', `completeLinkDraft(nodeId,rawUrl){
+    const current=snapshot.artifacts.find(node=>node.id===nodeId&&node.containerPrompt==='odyssey:link-draft');
+    const url=normalizeResearchWebUrl(rawUrl);if(!current||!url)return false;
+    const node=canonicalResearchCanvasArtifactNode({id:current.id,messageId:current.messageId,kind:'web-link',url,title:researchWebUrlHostname(url),titleMode:'auto',excerpt:url,x:current.x,y:current.y,width:current.width,height:current.height,sizeMode:'manual',stackOrder:current.stackOrder});
+    if(!node)return false;
+    commitUpdate({artifacts:snapshot.artifacts.map(item=>item.id===nodeId?node:item)},true);return true;
+  },
+  createWebLink(rawUrl, placement = null) {`)
+  // Remove the independent portal. Drafts now live in the same transformed layer as every node.
+  const portal=source.indexOf(', !linkPopoverOpen ? null : react_dom.createPortal(')
+  const portalEnd=source.indexOf('}), rootRef.current)]',portal)
+  if(portal<0||portalEnd<0)throw Error('Missing legacy link portal')
+  source=source.slice(0,portal)+']'+source.slice(portalEnd+'}), rootRef.current)]'.length)
+  const open=source.indexOf('setLinkPlacement({x:')
+  const openEnd=source.indexOf('linkInputRef.current?.focus();',open)
+  if(open<0||openEnd<0)throw Error('Missing link toolbar callback')
+  let creation=source.slice(open,openEnd+'linkInputRef.current?.focus();'.length)
+  creation=creation.slice(0,creation.indexOf(";\n"))+';'
+  creation=creation.replace('setLinkPlacement(', 'workspace.createContainerDraft(').replace("sizeMode:'manual'});", "sizeMode:'manual'},'link');")
+  source=source.slice(0,open)+creation+source.slice(openEnd+'linkInputRef.current?.focus();'.length)
+  change('artifacts.map((node) => (0, react_jsx_runtime.jsx)(ResearchCanvasArtifactCard, {', `artifacts.map((node) => node.containerPrompt==='odyssey:link-draft'&&node.generationStatus==='draft' ? (0,react_jsx_runtime.jsx)(ResearchLinkDraftCard,{node,workspace,selected:selectedIds.has(node.id),readOnly:sharedReadOnly},node.id) : (0, react_jsx_runtime.jsx)(ResearchCanvasArtifactCard, {`)
+  change('selectedNodes.every((node) => sherlockBoardsPage.selectionNodeReady(node)', 'selectedNodes.every((node) => node.containerPrompt!=="odyssey:link-draft" && sherlockBoardsPage.selectionNodeReady(node)')
+  change('function ResearchContainerDraft(', `/* ODYSSEY_NATIVE_LINK_DRAFT */
+  function ResearchLinkDraftCard({node,workspace,selected,readOnly}) {
+    const [url,setUrl]=(0,react.useState)('');const [error,setError]=(0,react.useState)(null);
+    const submit=()=>{if(readOnly)return;if(!workspace.completeLinkDraft(node.id,url))setError('请输入有效的网页链接');};
+    return (0,react_jsx_runtime.jsxs)('div',{
+      className:'rScV5Q_richNode odyssey-link-draft', 'data-research-compact-chrome':'','data-research-artifact-card':node.id,'data-research-node-id':node.id,'data-research-link-draft':'','data-selected':selected||undefined,
+      style:{position:'absolute',left:node.x,top:node.y,width:node.width,height:node.height,transform:'translate(-50%,-50%)',zIndex:researchCanvasStackOrder(node.stackOrder)},
+      onFocusCapture:()=>{if(!selected)workspace.updateSelection([node.id],'replace');},
+      children:[(0,react_jsx_runtime.jsx)('div',{className:'rScV5Q_nodeTitle','data-research-node-move-handle':'',children:(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_nodeTitleText',children:'添加链接'})}),
+      (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_containerDraft','data-research-preview-interactive':'',children:[
+        (0,react_jsx_runtime.jsx)('textarea',{'aria-label':'输入链接',placeholder:'输入网页链接，例如 https://example.com',rows:1,inputMode:'url',value:url,disabled:readOnly,onInput:event=>{setUrl(event.currentTarget.value);setError(null);},onKeyDown:event=>{event.stopPropagation();if(event.key==='Enter'){event.preventDefault();submit();}}}),
+        (0,react_jsx_runtime.jsx)('div',{className:'rScV5Q_containerDraftFooter',children:(0,react_jsx_runtime.jsx)('button',{'data-research-link-submit':'',disabled:readOnly||!url.trim(),onClick:submit,children:'创建'})}),
+        error&&(0,react_jsx_runtime.jsx)('span',{role:'alert',children:error})]})]});
+  }
+  function ResearchContainerDraft(`)
+  change('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
+    /* ODYSSEY_LINK_GEOMETRY */
+    if(node?.containerPrompt==='odyssey:link-draft')return {width:Math.max(320,node.width||400),height:Math.max(177,node.height||177),sizeMode:'manual',resizable:true};`)
+  // Old overlay-only selection listeners must not clear the native node selection.
+  const legacy=source.indexOf('/* ODYSSEY_LINK_SELECTION */'), legacyEnd=source.indexOf('const selectCanvasTool=',legacy)
+  if(legacy>=0&&legacyEnd>=0)source=source.slice(0,legacy)+source.slice(legacyEnd)
   return source
 }
 function patchLinkSelection(source) {
@@ -156,7 +209,7 @@ body[data-ds-dark-theme] [data-canvas-tool]{--odyssey-tool-color:#eee}
 [data-research-container-draft] textarea{box-sizing:border-box;flex:1;min-height:40px!important;height:auto!important;resize:none}
 [data-research-container-draft] .rScV5Q_containerDraftFooter{flex:none;margin-top:0}
 [data-research-canvas][data-canvas-tool]{overflow:hidden!important;isolation:isolate}
-.odyssey-link-draft{box-sizing:border-box;bottom:auto!important;right:auto!important;min-height:0;padding:0!important;border:1px solid transparent;background:var(--odyssey-content);display:flex;flex-direction:column;gap:0!important;z-index:20;transform-origin:center;overflow:hidden;color:var(--odyssey-card-text)}
+.odyssey-link-draft{box-sizing:border-box;bottom:auto!important;right:auto!important;min-height:0;padding:0!important;border:1px solid transparent;background:var(--odyssey-content);display:flex;flex-direction:column;gap:0!important;transform-origin:center;overflow:hidden;color:var(--odyssey-card-text)}
 .odyssey-link-draft .odyssey-link-title{box-sizing:border-box;flex:none;width:100%;margin:0!important;display:flex;background:var(--odyssey-card);cursor:grab;touch-action:none}
 .odyssey-link-draft .rScV5Q_containerDraft{flex:1;min-height:0!important;height:auto!important}
 body [data-research-compact-chrome].odyssey-link-draft .rScV5Q_containerDraft textarea{width:100%;height:44px!important;min-height:44px!important;flex:0 0 44px;resize:none;white-space:nowrap;overflow-x:auto}
@@ -167,4 +220,8 @@ body [data-research-compact-chrome].odyssey-link-draft{border-radius:12px!import
 body [data-research-compact-chrome].odyssey-link-draft>.rScV5Q_containerDraft{border-radius:0 0 11px 11px;overflow:hidden}
 body [data-research-compact-chrome].odyssey-link-draft[data-selected=true]::after{inset:0;border-radius:inherit}
 .odyssey-link-draft .rScV5Q_linkError{padding:0 20px 12px}
+[data-research-canvas] [data-research-node-id][data-research-node-id][data-selected=true]{outline:none!important;border-color:transparent!important;box-shadow:0 0 0 2px #60a5fa66,0 0 20px 3px #3b82f640!important}
+[data-research-canvas] [data-research-node-id][data-research-node-id][data-selected=true]::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1.5px var(--odyssey-select,#1b77ff);pointer-events:none;z-index:5}
+[data-research-canvas] [data-research-node-id]:not([data-selected=true]){box-shadow:none!important}
+[data-research-canvas] [data-research-marquee]{z-index:25!important;pointer-events:none}
 `
