@@ -193,3 +193,16 @@ import { patchTaskProgressClient } from './lib/task-progress-client.mjs'
 const todoRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js')
 writeFileSync(todoRuntimePath, patchTaskProgressRuntime(readFileSync(todoRuntimePath, 'utf8')))
 writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversationPath, 'utf8')))
+
+// Dedicated new boards take their durable name from the first task, not an empty component.
+{
+  const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
+  let source = readFileSync(path, 'utf8')
+  const before = 'if (!research.engaged) continue;'
+  const after = 'if (!research.engaged || window.localStorage.getItem("sherlock.research.intent-title.v1:" + id) === "true") continue;'
+  if (!source.includes(after)) {
+    if (!source.includes(before)) throw Error('Research intent title anchor missing')
+    source = source.replace(before, after)
+    writeFileSync(path, source)
+  }
+}

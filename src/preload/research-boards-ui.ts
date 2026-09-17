@@ -805,6 +805,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath: await defaultDirectory() })
     const id = await deps.sessions.create({ cwd: directory.path })
     if (shared || title !== '新研究看板') await deps.sessions.binding(id)?.session.rename(title)
+    else win.localStorage.setItem('sherlock.research.intent-title.v1:' + id, 'true')
     await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId: id })
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id

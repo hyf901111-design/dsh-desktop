@@ -6,7 +6,8 @@ export function componentPlacement(rect, viewport) {
   return { x: (rect.left - viewport.x) / viewport.scale + width / 2, y: (rect.top - viewport.y) / viewport.scale + height / 2, width, height, sizeMode: 'manual' }
 }
 export function patchCanvasCreationTools(source) {
-  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return source
+  source = patchComponentMarquee(source)
+  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
     source = source.replace(from, to)
@@ -49,20 +50,43 @@ export function patchCanvasCreationTools(source) {
   replace('title: "语音 · 双击 Fn 开始，单按结束发送；长按 Fn 说话，松开发送",', '')
   replace('children: "输入网页地址" }),', 'children: "输入网页地址" }), (0,react_jsx_runtime.jsx)("button",{type:"button",className:"odyssey-link-close","aria-label":"关闭链接输入",onClick:()=>setLinkPopoverOpen(false),children:"×"}),')
   // Labels are kept in markup for older patch compatibility but visually hidden.
-  source += `\n;(()=>{const id='odyssey-creation-tools-style';document.getElementById(id)?.remove();const style=document.createElement('style');style.id=id;style.textContent=${JSON.stringify(css)};document.head.append(style)})();\n`
+  source = installCreationStyle(source)
   return source
 }
+function patchComponentMarquee(source) {
+  if (source.includes('"data-research-component-marquee"')) return source
+  const anchor = '"data-research-marquee": "",'
+  if (!source.includes(anchor)) throw Error('Missing component marquee')
+  return source.replace(anchor, `${anchor}
+    "data-research-component-marquee":operationRef.current?.createComponent?"":undefined,
+    children:operationRef.current?.createComponent?[(0,react_jsx_runtime.jsx)('span',{className:'odyssey-frame-label',children:'智能组件'},'label'),...['nw','ne','sw','se'].map(corner=>(0,react_jsx_runtime.jsx)('i',{'data-frame-corner':corner},corner))]:undefined,`)
+}
+function installCreationStyle(source) {
+  source = source.replace(/\n;\(\(\)=>\{const id='odyssey-creation-tools-style';[^\n]+\n/g, '\n')
+  return source + `\n;(()=>{const id='odyssey-creation-tools-style';document.getElementById(id)?.remove();const style=document.createElement('style');style.id=id;style.textContent=${JSON.stringify(css)};document.head.append(style)})();\n`
+}
 const css = `
-[data-research-global-toolbar].rScV5Q_globalToolbar{width:188px;height:48px;padding:6px;gap:4px;overflow:visible}
-[data-research-global-toolbar].rScV5Q_globalToolbar>button,[data-research-global-toolbar].rScV5Q_globalToolbar .rScV5Q_globalToolSlot>button{position:relative;width:40px;height:36px;min-width:40px;background:transparent;border-radius:7px;gap:0}
-[data-research-global-toolbar] button>span:not(.odyssey-global-icon){display:none}
-[data-research-global-toolbar] .rScV5Q_globalToolSlot{width:40px}
-[data-research-global-toolbar].rScV5Q_globalToolbar button[aria-pressed=true]{background:#0d99ff;color:white}
-.odyssey-tool-icon{width:20px;height:20px}body[data-ds-dark-theme] .odyssey-tool-icon{filter:invert(.9)}
-[data-research-global-toolbar] button[aria-pressed=true] .odyssey-tool-icon{filter:brightness(0) invert(1)}
-[data-research-global-toolbar] button[data-tool-tooltip]:hover:after,[data-research-global-toolbar] button[data-tool-tooltip]:focus-visible:after{content:attr(data-tool-tooltip);position:absolute;bottom:calc(100% + 14px);left:50%;transform:translateX(-50%);padding:6px 9px;border-radius:6px;background:#202124;color:white;font:12px/18px sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px #0003;z-index:100}
-[data-canvas-tool=component]{cursor:crosshair}
+[data-research-component-marquee]{border:1px solid #0d99ff!important;background:transparent!important;overflow:visible!important;pointer-events:none!important;border-radius:0!important}
+[data-research-component-marquee] .odyssey-frame-label{position:absolute;left:-1px;bottom:calc(100% + 5px);color:#64c5ff;font:12px/16px sans-serif;white-space:nowrap}
+[data-frame-corner]{position:absolute;width:7px;height:7px;box-sizing:border-box;background:white;border:1px solid #0d99ff;pointer-events:none}
+[data-frame-corner=nw]{left:-4px;top:-4px}[data-frame-corner=ne]{right:-4px;top:-4px}[data-frame-corner=sw]{left:-4px;bottom:-4px}[data-frame-corner=se]{right:-4px;bottom:-4px}
+
+[data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar{width:188px!important;height:48px!important;padding:6px!important;gap:4px!important;overflow:visible;display:flex!important;align-items:center}
+[data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar>button,[data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar .rScV5Q_globalToolSlot>button{position:relative;width:40px!important;height:36px!important;min-width:40px!important;max-width:40px!important;flex:0 0 40px!important;padding:0!important;display:flex!important;align-items:center;justify-content:center;background:transparent!important;border-radius:7px;gap:0;color:#333}
+[data-canvas-tool] [data-research-global-toolbar] button>span:not(.odyssey-global-icon){display:none}
+[data-canvas-tool] [data-research-global-toolbar] .rScV5Q_globalToolSlot{width:40px!important;min-width:40px!important;flex:0 0 40px!important;display:flex}
+[data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar button[aria-pressed=true]{background:#0d99ff!important;color:white!important}
+.odyssey-tool-icon{width:20px;height:20px;display:block;flex:none;filter:brightness(0) opacity(.8)}body[data-ds-dark-theme] .odyssey-tool-icon{filter:brightness(0) invert(.94)}
+[data-canvas-tool] [data-research-global-toolbar] button[aria-pressed=true] .odyssey-tool-icon{filter:brightness(0) invert(1)}
+[data-canvas-tool] [data-research-global-toolbar] button[data-tool-tooltip]:hover:after,[data-canvas-tool] [data-research-global-toolbar] button[data-tool-tooltip]:focus-visible:after{content:attr(data-tool-tooltip);position:absolute;bottom:calc(100% + 14px);left:50%;transform:translateX(-50%);padding:6px 9px;border-radius:6px;background:#202124;color:white;font:12px/18px sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px #0003;z-index:100}
+[data-research-canvas][data-canvas-tool=component]{cursor:crosshair!important}
+[data-canvas-tool=component]>div:not([data-research-global-toolbar]),[data-canvas-tool=component] .rScV5Q_previewShield,[data-canvas-tool=component] [data-research-node-id]:not(:has([data-research-container-draft])){cursor:crosshair!important}
 [data-canvas-tool=component] [data-research-node-id]:not(:has([data-research-container-draft])) iframe{pointer-events:none}
+[data-canvas-tool] [data-research-global-toolbar] .odyssey-global-icon{display:block!important;width:20px!important;height:20px!important;flex:none;background:currentColor!important;mask-position:center;mask-size:20px 20px;mask-repeat:no-repeat}
+[data-canvas-tool] [data-research-global-toolbar] .odyssey-global-link{mask-image:url("${icon('link')}")}
+[data-canvas-tool] [data-research-global-toolbar] .odyssey-global-voice{mask-image:url("${icon('voice')}")}
+body[data-ds-dark-theme] [data-canvas-tool] [data-research-global-toolbar] button{color:#eee}
+[data-canvas-tool] [data-research-global-toolbar] button:hover:not([aria-pressed=true]){background:#8882!important}
 [data-research-container-draft]{box-sizing:border-box;min-height:0;height:100%;display:flex;flex-direction:column;padding:16px!important;gap:12px}
 [data-research-container-draft] textarea{box-sizing:border-box;flex:1;min-height:40px!important;height:auto!important;resize:none}
 [data-research-container-draft] .rScV5Q_containerDraftFooter{flex:none;margin-top:0}

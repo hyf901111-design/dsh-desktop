@@ -151,6 +151,8 @@ it('draws manually sized components in zoomed world coordinates, persists the to
   await m.event('click', m.query('[data-research-global-container]'))
   await m.event('pointerdown', m.canvas, { button: 0, pointerId: 1, clientX: 250, clientY: 200 })
   await m.event('pointermove', m.canvas, { pointerId: 1, clientX: 650, clientY: 450 })
+  expect(m.query('[data-research-component-marquee]').textContent).toBe('智能组件')
+  expect(m.query('[data-research-component-marquee]').querySelectorAll('[data-frame-corner]')).toHaveLength(4)
   await m.event('pointerup', m.canvas, { pointerId: 1 })
   const first = m.workspace.getSnapshot().artifacts[0]
   expect(first).toMatchObject({ width: 800, height: 500, x: 600, y: 450, sizeMode: 'manual', generationStatus: 'draft' })
