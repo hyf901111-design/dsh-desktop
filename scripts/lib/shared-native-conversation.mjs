@@ -18,11 +18,11 @@ export function sharedTaskNativeSlice(order, nodes, task) {
 function SharedResearchMessage({ message, nativeProps }) {
   const { t, openFile, loadImage } = nativeProps
   const self = message.role === 'user' && !!nativeProps.currentUserId && (message.author?.userId ?? message.authorId) === nativeProps.currentUserId
-  const node = { data: { content: [{ type: 'text', text: message.text ?? '' }], time: message.createdAt } }
+  const author = message.author?.username ?? message.authorName ?? '成员'
   return react.createElement('div', { 'data-message-id': message.id, 'data-shared-native-message': message.role, 'data-self': self },
-    react.createElement('small', { className: 'srb-native-author' }, message.author?.username ?? message.authorName ?? '成员'),
+    react.createElement('small', { className: 'srb-native-author' }, message.role === 'assistant' ? author + '的智能助理' : author),
     message.role === 'user'
-      ? react.createElement(UserMessageNodeView, { node, t, openFile, loadImage })
+      ? react.createElement(UserStyleBubble, { content: [{ type:'text', text:message.text ?? '' }], t, openFile, imageLoader:loadImage, actions:text=>react.createElement(MessageIconActions, { text, time:message.createdAt, clock:self?'start':'end', t }) })
       : react.createElement(react.Fragment, null,
         react.createElement(AssistantMarkdown, { blocks: [{ kind: 'text', text: message.text ?? '' }], streaming: false, interrupted: false, openFile, loadImage, t }),
         react.createElement(MessageIconActions, { text: message.text ?? '', t })))
@@ -40,6 +40,7 @@ function SharedResearchRequest({ group, tasks, nativeProps }) {
   const replies = group.rows.filter(message => message !== request)
   return react.createElement('div', { 'data-shared-native-task': task?.taskId },
     request && react.createElement(SharedResearchMessage, { message: request, nativeProps }),
+    (flow.length > 0 || running) && react.createElement('small', { className:'srb-native-author', 'data-shared-agent-author':true }, (request?.author?.username ?? request?.authorName ?? '成员') + '的智能助理'),
     ...flow.map(entry => {
       if (entry.kind === 'node') return react.createElement(ChatNodeSeat, { ...seatProps, nodeKey: entry.key, key: entry.key })
       const turn = entry.turn === null ? undefined : timeline.turns.get(entry.turn)

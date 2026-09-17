@@ -2527,7 +2527,7 @@ export function ResearchBoardDiscussion({
         'small',
         { className: 'srb-message-author' },
         m.role === 'assistant'
-          ? (componentTask(taskForMessage(m, v.tasks)) ? '组件子智能体' : '主智能体') + (m.author?.username ? ' · ' + m.author.username : '')
+          ? (m.author?.username ?? m.authorName ?? '成员') + '的智能助理' + (componentTask(taskForMessage(m, v.tasks)) ? ' · 组件子智能体' : '')
           : (m.author?.username ?? m.authorName ?? '成员'),
         m.imported ? ' · 复制时的已保存对话' : ''
       ),

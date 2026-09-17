@@ -420,6 +420,8 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     let el=event.target;
     if(!(el instanceof Element))return;
     // Keep the actual target: canvas, SVG and delegated grid handlers need it.
+    // Label activation forwards a second click to its input; record only that control click.
+    if(type==='click' && el.closest('label') && !el.matches('input,select,textarea,button'))return;
     if(!el || el.closest('a') || el.matches('input[type=password],input[type=file],input[type=hidden]'))return;
     if(type==='keydown'&&!['Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;
     // Check/radio click already invokes its input/change events during replay.

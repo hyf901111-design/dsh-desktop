@@ -317,6 +317,8 @@ export function installBoardUiStyles(doc: Document) {
 .srb-discussion [data-shared-native-message=user][data-self=true] .srb-native-author{text-align:right}
 .srb-discussion [data-shared-native-message=user][data-self=false] .gdEzaW_userRow{align-items:flex-start}
 .srb-discussion [data-shared-native-message=user][data-self=false] .gdEzaW_userStack{margin-left:0;margin-right:auto;align-items:flex-start}
+.srb-discussion [data-shared-native-message=user][data-self=false] .p-xYUq_actions{align-self:flex-start;gap:8px}
+.srb-discussion [data-shared-native-message=user][data-self=false] .p-xYUq_timeEnd{padding-left:0}
 .srb-discussion .srb-message[data-role=user][data-self=false]{align-self:flex-start;margin-left:0;margin-right:auto}
 .srb-discussion .srb-message[data-execution-kind=component]{width:auto;margin-inline:0}
 .srb-discussion [data-chat-flow-kind=execution]>button{padding-inline:0}
