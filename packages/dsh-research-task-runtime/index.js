@@ -237,7 +237,12 @@ function containerAllowsWebSearch(prompt) {
 
 function containerNeedsWebData(prompt) {
   if (!containerAllowsWebSearch(prompt)) return false
+  // Freshness of shared UI state is not a request for external research.
+  // Remove only qualified interaction phrases, retaining real data requests
+  // elsewhere in the same prompt (for example a collaborative weather board).
   const value = String(prompt ?? '')
+    .replace(/(?:实时|即时)(?:的)?(?:联机|协作|同步|共享|交互|模拟)|(?:当前|最新)(?:的)?(?:局面|状态|输入|位置|进度|画面)|动态(?:交互|布局|效果)/gu, '')
+    .replace(/\b(?:real[ -]?time|live)\s+(?:collaboration|multiplayer|synchronization|sync|interaction|simulation)|\b(?:current|latest)\s+(?:state|input|position|progress)\b/giu, '')
   return /最近|近期|近况|近[几数一二三四五六七八九十\d]+(?:天|周|月|年)|本周|本月|今年|recent(?:ly)?|up.to.date|实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|推特|微博|社交媒体|社媒|行情|报价|价格|净值|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|\b(?:live|latest|current|today|now|price|quote|market|twitter|tweet|social|monitor)\b/iu.test(value)
 }
 

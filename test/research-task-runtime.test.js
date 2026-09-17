@@ -980,6 +980,24 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it.each([
+    '创建多人实时协作组件，实时同步当前状态、位置和最新进度，动态交互使用共享时钟。',
+    '保留界面，修复跨设备实时联机；晚加入用户恢复当前局面。',
+    'Create real-time multiplayer and live collaboration with current state and latest position.'
+  ])('does not research shared interaction freshness as external data: %s', async query => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start(query)
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    await handle.dispose()
+  })
+
+  it('preserves external freshness in a collaborative component request', async () => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start('创建实时协作天气面板，同步当前状态，并查询北京今日天气。')
+    expect(fixture.ctx.web.search).toHaveBeenCalled()
+    await handle.dispose()
+  })
+
   it('bounds a stuck research child and carries only its search evidence into recovery', async () => {
     const { createSubagentAdapter } = await runtimeModule()
     vi.useFakeTimers()
