@@ -18,14 +18,14 @@ export class CanvasUseTasks {
   list(sessionId){return [...this.tasks.values()].filter(t=>t.sessionId===sessionId).map(copy)}
   persist(){const data=copy([...this.tasks.values()].slice(-100));const p=this.saving.then(()=>this.save(data));this.saving=p.catch(()=>{});return p}
   start(args){return this.serial(args.sessionId,()=>this.startTask(args))}
-  async startTask({sessionId,goal,completion,maxMinutes=60,maxActions=200}) {
+  async startTask({sessionId,title,goal,completion,maxMinutes=60,maxActions=200}) {
     if(this.closed)throw Error('任务服务已停止。')
     if(typeof goal!=='string'||!goal.trim()||goal.length>8000||typeof completion!=='string'||!completion.trim()||completion.length>2000)throw Error('需要明确的任务目标和结束条件。')
     if(!Number.isInteger(maxMinutes)||maxMinutes<1||maxMinutes>480||!Number.isInteger(maxActions)||maxActions<1||maxActions>2000)throw Error('任务时长或操作上限无效。')
     if(this.list(sessionId).some(live))throw Error('当前画板已有持续任务，请先暂停或停止，避免争抢操作。')
     const observation=await this.observe(sessionId)
     if(!observation.writable)throw Error('当前画板不可编辑。')
-    const task={id:randomUUID(),sessionId,goal:goal.trim(),completion:completion.trim(),state:'running',reason:'正在观察画布',createdAt:this.now(),updatedAt:this.now(),deadline:this.now()+maxMinutes*60000,maxActions,actions:0,rounds:0,history:[]}
+    const task={id:randomUUID(),sessionId,title:typeof title==='string'?title.trim().slice(0,60):'持续执行画布任务',goal:goal.trim(),completion:completion.trim(),state:'running',reason:'正在观察画布',createdAt:this.now(),updatedAt:this.now(),deadline:this.now()+maxMinutes*60000,maxActions,actions:0,rounds:0,history:[]}
     this.tasks.set(task.id,task);await this.persist();this.launch(task,observation);return copy(task)
   }
   control(sessionId,id,action){return this.serial(sessionId,()=>this.controlTask(sessionId,id,action))}
@@ -69,7 +69,7 @@ export class CanvasUseTasks {
           const read=method==='inspect'||(method==='use'&&args.op==='observe')
           if(read)return
           if(t.actions>=t.maxActions||roundActions>=12)throw Error('本轮或任务操作次数已达到上限。')
-          t.actions++;roundActions++;observedAfterAction=false;t.updatedAt=this.now();await this.persist();signal.throwIfAborted()
+          t.actions++;roundActions++;observedAfterAction=false;t.updatedAt=this.now();t.reason=({click:'正在点击组件',input:'正在填写内容',choose:'正在选择选项',scroll:'正在滚动内容',key:'正在按键操作',drag:'正在拖动',create:'正在创建组件',viewport:'正在调整画布视口',focus:'正在定位组件',select:'正在选择组件'})[args.op]??'正在更新画布';await this.persist();signal.throwIfAborted()
         }
         const decision=await this.execute(copy(t),observation,signal,guard)
         signal.throwIfAborted();if(!live(t))return
@@ -120,7 +120,7 @@ export async function registerCanvasUseTasks(ctx,{filePath,isTrustedRequest,read
     } finally {clearTimeout(timer);signal.removeEventListener('abort',abort);controller.abort();unbind?.();await run?.dispose().catch(()=>{})}
   }})
   let stored=[];try{stored=JSON.parse(await readFile(filePath,'utf8'))}catch(error){if(error.code!=='ENOENT')throw error}await tasks.restore(stored)
-  const disposeTool=ctx.tools.register(defineTool({name:'research_canvas_task',description:'通过当前画板右侧会话管理持续任务。start 适用于用户明确要求持续跟踪、等待其他用户或状态变化并反复操作整个画布的任务；先与用户目标对应，指定清晰结束条件。返回任务卡后主会话即可结束，子代理持续执行。任务支持 list/pause/resume/takeover/stop，只在当前客户端打开此画板期间执行；离开、断线、重启或权限变化会暂停。不能声称离线或云端持续运行。一次性操作用 research_canvas_use。不要针对某种游戏硬编码。',parameters:{action:{type:'string',required:true,enum:['start','list','pause','resume','takeover','stop']},goal:{type:'string'},completion:{type:'string'},taskId:{type:'string'},maxMinutes:{type:'integer'},maxActions:{type:'integer'}},output:{schema:{type:'string'},render:(_a,r)=>[{type:'text',text:r}]},execute:async(args,exec)=>{
+  const disposeTool=ctx.tools.register(defineTool({name:'research_canvas_task',description:'通过当前画板右侧会话管理持续任务。start 适用于用户明确要求持续跟踪、等待其他用户或状态变化并反复操作整个画布的任务；先与用户目标对应，指定清晰结束条件。返回任务卡后主会话即可结束，子代理持续执行。任务支持 list/pause/resume/takeover/stop，只在当前客户端打开此画板期间执行；离开、断线、重启或权限变化会暂停。不能声称离线或云端持续运行。一次性操作用 research_canvas_use。不要针对某种游戏硬编码。',parameters:{action:{type:'string',required:true,enum:['start','list','pause','resume','takeover','stop']},title:{type:'string',description:'简短的中文任务名称，面向用户，不含工具名、技术说明或执行步骤。'},goal:{type:'string'},completion:{type:'string'},taskId:{type:'string'},maxMinutes:{type:'integer'},maxActions:{type:'integer'}},output:{schema:{type:'string'},render:(_a,r)=>[{type:'text',text:r}]},execute:async(args,exec)=>{
     const sessionId=canvasSession(exec);if(!sessionId)throw Error('当前会话未绑定画板。')
     return JSON.stringify(args.action==='start'?await tasks.start({...args,sessionId}):args.action==='list'?tasks.list(sessionId):await tasks.control(sessionId,args.taskId,args.action))
   }}))

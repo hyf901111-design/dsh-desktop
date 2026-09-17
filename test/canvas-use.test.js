@@ -44,6 +44,19 @@ describe('generic canvas interaction surface',()=>{
   const s=patchCanvasUseClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
   expect(patchCanvasUseClient(s)).toBe(s);expect(()=>new Script(s)).not.toThrow()
  })
+ it('supports local form submit handlers without permitting navigation, including Enter and validation',async()=>{
+  const {dom,w,use}=surface('<form><input required><button type="submit">保存</button><output></output></form>')
+  const source=await readFile('packages/dsh-research-task-runtime/html-artifact.js','utf8')
+  const start=source.indexOf('  const submitLocally ='),local=source.slice(start,source.indexOf("  document.addEventListener('DOMContentLoaded'",start))
+  w.eval(local)
+  const form=w.document.querySelector('form'),input=w.document.querySelector('input'),button=w.document.querySelector('button'),out=w.document.querySelector('output');let count=0
+  form.onsubmit=e=>{e.preventDefault();expect(e.submitter).toBe(button);out.textContent=input.value;count++}
+  button.click();expect(count).toBe(0)
+  let s=await use({op:'observe'});await use({op:'input',revision:s.revision,ref:s.elements.find(e=>e.tag==='input').ref,text:'表单验收'})
+  s=await use({op:'observe'});await use({op:'click',revision:s.revision,ref:s.elements.find(e=>e.tag==='button').ref});expect(count).toBe(1);expect(out.textContent).toBe('表单验收')
+  s=await use({op:'observe'});await use({op:'key',revision:s.revision,ref:s.elements.find(e=>e.tag==='input').ref,key:'Enter'});expect(count).toBe(2)
+  button.onclick=e=>e.preventDefault();button.click();expect(count).toBe(2);dom.window.close()
+ })
 })
 
 describe('persistent whole-canvas tasks',()=>{
