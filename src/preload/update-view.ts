@@ -75,9 +75,9 @@ export function updateMessage(status: UpdateStatus, locale: UpdateLocale): strin
     }
     case 'installing':
       if (status.installStage) { const copy = updateInstallCopy(status, locale); return `${copy.title} · ${copy.description}` }
-      return zh ? '正在校验更新文件，完成后将自动重启' : 'Verifying update files; EWork Odyssey will restart automatically'
+      return zh ? '更新文件下载完成，正在校验解压，完成后将自动重启客户端。' : 'Verifying update files; EWork Odyssey will restart automatically'
     case 'downloaded':
-      return zh ? '正在校验更新文件，完成后将自动重启' : 'Verifying update files; EWork Odyssey will restart automatically'
+      return zh ? '更新文件下载完成，正在校验解压，完成后将自动重启客户端。' : 'Verifying update files; EWork Odyssey will restart automatically'
     case 'up-to-date':
       return zh ? 'EWork Odyssey 已是最新版本' : 'EWork Odyssey is up to date'
     case 'updated':
@@ -103,9 +103,9 @@ export function updateInstallCopy(status: UpdateStatus, locale: UpdateLocale): {
   const zh = locale === 'zh'
   const stage = status.phase === 'installing' ? status.installStage : undefined
   switch (stage) {
-    case 'preparing': return { title: zh ? '正在准备安装' : 'Preparing installation', description: zh ? '校验通过，随后自动重启。' : 'Verification passed. The app will restart automatically.' }
+    case 'preparing': return { title: zh ? '更新文件下载完成' : 'Update downloaded', description: zh ? '更新文件下载完成，正在校验解压，完成后将自动重启客户端。' : 'Verifying and extracting the update. The app will restart automatically when complete.' }
     case 'saving': return { title: zh ? '正在保存研究状态' : 'Saving research state', description: zh ? '保存完成后将自动重启。' : 'The app will restart automatically after saving.' }
     case 'restarting': return { title: zh ? '正在重启应用' : 'Restarting the app', description: zh ? '更新安装中，请稍候。' : 'Installing the update. Please wait.' }
-    default: return { title: zh ? '正在校验更新文件' : 'Verifying update files', description: zh ? '完成后将自动重启应用。' : 'The app will restart automatically.' }
+    default: return { title: zh ? '更新文件下载完成' : 'Update downloaded', description: zh ? '更新文件下载完成，正在校验解压，完成后将自动重启客户端。' : 'Verifying and extracting the update. The app will restart automatically when complete.' }
   }
 }

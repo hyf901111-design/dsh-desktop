@@ -59,7 +59,7 @@ it('never restores cached transfer progress as a live operation and reconciles t
  expect(record().textContent).toContain('版本更新 · 0.9.6')
  expect(record().textContent).not.toContain('校验')
  expect(record().textContent).not.toContain('%')
- expect(record().querySelectorAll('button')).toHaveLength(1)
+ expect([...record().querySelectorAll('button')].map(button => button.textContent)).toEqual(['详情', '标记已读'])
  w.document.documentElement.dataset.eworkUpdateStatus=JSON.stringify({phase:'idle',currentVersion:'0.9.6',manual:false})
  w.document.dispatchEvent(new w.CustomEvent('ework-update-status'))
  expect(record().textContent).toContain('已是最新版本')

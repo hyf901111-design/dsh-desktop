@@ -15,7 +15,7 @@ const available:UpdateStatus = {phase:'available',currentVersion:'0.9.5',availab
 const panel = (d:Document) => d.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
 
 describe('Figma sidebar update states', () => {
-  it.each([['preparing','正在准备安装'],['saving','正在保存研究状态'],['restarting','正在重启应用']] as const)('shows the real %s stage without another action or fake percent', (installStage, title) => {
+  it.each([['preparing','更新文件下载完成'],['saving','正在保存研究状态'],['restarting','正在重启应用']] as const)('shows the real %s stage without another action or fake percent', (installStage, title) => {
     const {document,control}=fixture(); control.render({...available,phase:'installing',installStage})
     expect(panel(document).textContent).toContain(title)
     expect(panel(document).querySelector('button')).toBeNull()
@@ -69,8 +69,8 @@ describe('Figma sidebar update states', () => {
   it.each(['downloaded','installing'] as const)('shows indeterminate verification for %s without a second installation click', phase => {
     const {document,control,callbacks}=fixture();control.render({...available,phase,percent:100})
     expect(panel(document).hidden).toBe(false)
-    expect(panel(document).textContent).toContain('正在校验更新文件')
-    expect(panel(document).textContent).toContain('完成后将自动重启应用。')
+    expect(panel(document).textContent).toContain('更新文件下载完成')
+    expect(panel(document).textContent).toContain('更新文件下载完成，正在校验解压，完成后将自动重启客户端。')
     expect(panel(document).querySelector('[data-notice-icon=loading]')).not.toBeNull()
     expect(panel(document).querySelector('button')).toBeNull()
     expect(panel(document).querySelector('[aria-valuenow]')).toBeNull()
@@ -92,7 +92,7 @@ describe('Figma sidebar update states', () => {
   })
 })
 
-it('retains the update entry after automatic discovery and opens the notice without navigating', () => {
+it('retains the update entry after automatic discovery and starts downloading without navigating', () => {
   const {document,control,callbacks}=fixture()
   const about=vi.fn();document.addEventListener('ework-open-about',about)
   control.render({...available,manual:false})
@@ -102,7 +102,7 @@ it('retains the update entry after automatic discovery and opens the notice with
   button.click()
   expect(panel(document).hidden).toBe(false)
   expect(about).not.toHaveBeenCalled()
-  expect(callbacks.download).not.toHaveBeenCalled()
+  expect(callbacks.download).toHaveBeenCalledOnce()
 })
 
 it('keeps a dismissed download bubble closed across progress ticks while the ring advances', () => {
@@ -118,4 +118,19 @@ it('keeps a dismissed download bubble closed across progress ticks while the rin
   button.click()
   expect(panel(document).hidden).toBe(false)
   expect(panel(document).textContent).toContain('64%')
+})
+
+it('starts a download from the footer immediately and shows progress before IPC resolves', async () => {
+  const {document,control,callbacks}=fixture()
+  let finish!: () => void
+  callbacks.download.mockImplementation(() => new Promise<void>(resolve => {finish=resolve}))
+  control.render(available)
+  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  button.click();button.click()
+  expect(callbacks.download).toHaveBeenCalledOnce()
+  expect(button.querySelector('[role=progressbar]')).not.toBeNull()
+  expect(panel(document).hidden).toBe(false)
+  control.render({...available,phase:'checking'})
+  expect(button.querySelector('[role=progressbar]')).not.toBeNull()
+  finish();await Promise.resolve()
 })
