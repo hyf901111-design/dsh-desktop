@@ -205,3 +205,18 @@ it('opens the link editor at the canvas center without changing the selected too
   expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({ kind: 'web-link', url: 'https://example.com/' })
   expect(m.win.document.querySelector('[data-research-link-popover]')).toBeNull()
 })
+
+it.each(['markdown','html'])('preserves drawn geometry through %s generation and refresh', async type => {
+  const m = await mounted({}, undefined, { disabled: false })
+  let node: any
+  await act(async () => { node = m.workspace.createContainerDraft({x:470,y:330,width:510,height:290,sizeMode:'manual'}) })
+  const geometry = {x:470,y:330,width:510,height:290,sizeMode:'manual'}
+  for (const taskId of ['first','refresh']) {
+    await act(async () => {
+      m.workspace.beginContainerGeneration(node.id, '生成内容')
+      m.workspace.attachGenerationTask(node.id, {taskId,canvasNodeId:node.id,state:"running",lastSeq:0})
+      expect(m.workspace.applyGenerationInspection(node.id, {taskId,canvasNodeId:node.id,state:'completed',lastSeq:1,events:[],finalOutput:JSON.stringify(type==='html'?{version:1,type,title:'内容',html:'<div style="height:1200px">test</div>'}:{version:1,type,title:'内容',content:'# 标题\n'+ '正文内容'.repeat(200)})})).toBe(true)
+    })
+    expect(m.workspace.getSnapshot().artifacts.find((n:any)=>n.id===node.id)).toMatchObject({...geometry,generationStatus:'completed'})
+  }
+})

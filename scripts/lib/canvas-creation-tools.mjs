@@ -6,6 +6,8 @@ export function componentPlacement(rect, viewport) {
   return { x: (rect.left - viewport.x) / viewport.scale + width / 2, y: (rect.top - viewport.y) / viewport.scale + height / 2, width, height, sizeMode: 'manual' }
 }
 export function patchCanvasCreationTools(source) {
+  source = source.replace('// Resizing a placeholder must not lock the first finished artifact.', '// Explicit user dimensions remain authoritative after generation.')
+  source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
   source = patchComponentMarquee(source)
   source = patchComponentDraftFocus(source)
   source = patchLinkDraftChrome(patchLinkCanvasFrame(source))
