@@ -5,7 +5,9 @@ export function patchFigmaContainerMenu(source) {
     .replace('const left=m.right+8+width>window.innerWidth-12?-width-8:m.width+8;', 'const left=(m.right+8+width>window.innerWidth-12?-width-8:m.width+8)-menuRef.current.clientLeft;')
     .replace('))-m.top,width});', '))-m.top-menuRef.current.clientTop,width});')
     .replace('focusSubmenuRef.current=true;setRefreshOpen(!refreshOpen);', "focusSubmenuRef.current=true;setRefreshOpen(true);if(refreshOpen){focusSubmenuRef.current=false;submenuRef.current?.querySelector('[aria-checked=true]')?.focus({preventScroll:true});}")
-  const start=source.indexOf('function ResearchContainerMenu('),end=source.indexOf('\n\t\tfunction ResearchGeneratedContainer(',start)
+  const start=source.indexOf('function ResearchContainerMenu(');
+  const boundary=start<0?-1:source.slice(start).search(/\n[ \t]*function Research(?:Deferred)?GeneratedContainer\(/);
+  const end=boundary<0?-1:start+boundary;
   if(start<0||end<start)throw Error('Container menu boundary drifted')
   let part=source.slice(start,end)
   const exact=(before,after)=>{
