@@ -8,6 +8,7 @@ import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
 import { hash } from '../services/accounts/auth.js'
 import { componentVersion } from '../packages/dsh-research-collaboration/component-state.js'
+import { sharedComponentIssue } from '../packages/dsh-research-task-runtime/shared-component-validation.js'
 import { buildResearchHtmlPreview } from '../packages/dsh-research-task-runtime/html-artifact.js'
 const html=`<!doctype html><html><body><h2>通用组件同步验收</h2><p>独立账号 · 本地协作服务 · 合成数据</p><label>姓名 <input id="name"></label><label>城市 <input id="city"></label><p><button id="add">累加</button> <button id="move">移动到 120,350</button> <button id="run">开始 / 暂停模拟</button></p><output id="state"></output><div id="status"></div><script>
 const shared=window.sherlockShared.register({
@@ -17,6 +18,7 @@ const shared=window.sherlockShared.register({
  render:(s,c)=>{document.getElementById('state').textContent=JSON.stringify(s);document.getElementById('status').textContent=c.connected?(c.readOnly?'只读':c.isHost?'执行端':'协作端'):'等待同步';for(const id of ['name','city']){const e=document.getElementById(id);if(document.activeElement!==e)e.value=s.fields[id];e.disabled=!c.connected||c.readOnly;}for(const id of ['add','move','run'])document.getElementById(id).disabled=!c.connected||c.readOnly;}
 });for(const key of ['name','city'])document.getElementById(key).onchange=e=>shared.dispatch({type:'field',key,value:e.target.value});for(const type of ['add','move','run'])document.getElementById(type).onclick=()=>shared.dispatch({type});
 </script></body></html>`
+assert.equal(sharedComponentIssue(html), undefined, 'browser component must pass generation acceptance')
 const nodeId='generic-shared', version=componentVersion(html)
 const bundle=await build({entryPoints:['services/collaboration/worker.js'],bundle:true,write:false,format:'esm',platform:'neutral',external:['cloudflare:*','node:*']})
 const persist=mkdtempSync(join(tmpdir(),'component-worker-'))

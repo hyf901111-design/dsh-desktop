@@ -2139,3 +2139,47 @@ it('reports real tool and output activity without copying code, arguments or rea
  result.resolve({stopReason:'completed',output:[{type:'text',text:'{"version":1,"type":"markdown","title":"结果","content":"已完成"}'}]})
  await pending;await executor.dispose()
 })
+
+it.each(['shared', 'local', 'markdown', 'static', 'malformed'])('shared-state generation gate repairs executable local-only components and fails closed: repair=%s', async (repairKind) => {
+  const { createSharedBoardExecutor } = await runtimeModule()
+  const parent = { id: 'shared-parent', session: { events: [] } }
+  const child = { id: 'child', session: { id: 'child', events: [] } }
+  const bad = JSON.stringify({version:1,type:'html',title:'协作模拟',html:'<p>这是一段足够长的可读说明，不能让它成为静态降级的成功结果。</p><script>let time=0;setInterval(()=>time++,140);</script>'})
+  const good = JSON.stringify({version:1,type:'html',title:'协作模拟',html:'<p>同步计时</p><script>window.sherlockShared.register({initialState:{time:0},reduce(s){return s},render(s){document.querySelector("p").textContent=s.time},tick(s){return {time:s.time+1}},tickMs:140});</script>'})
+  const run = text => ({id:'child',localAgent:child,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text}]}),dispose:vi.fn(async()=>{})})
+  const repaired = {shared:good, local:bad, markdown:JSON.stringify({version:1,type:'markdown',title:'说明',content:'交互未完成，但不能作为成功交付。'}), static:JSON.stringify({version:1,type:'html',title:'说明',html:'<p>交互未完成</p>'}), malformed:'格式无效。交互组件未完成，但这些文字不能作为成功交付。'}[repairKind]
+  const first=run(bad),second=run(repaired),ctx=sessionEventContext(parent,child,first)
+  ctx.subagents.start.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+  const executor=createSharedBoardExecutor(ctx)
+  try {
+    const result=executor.execute({sessionId:parent.id,kind:'container',prompt:'创建多人实时模拟组件',files:[]},new AbortController().signal)
+    if(repairKind === 'shared') expect(JSON.parse(await result).html).toContain('sherlockShared.register')
+    else await expect(result).rejects.toMatchObject({code:'SHARED_STATE_REQUIRED'})
+    expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
+    const repair=ctx.subagents.start.mock.calls[1][1]
+    expect(repair.prompt[0].text).toContain('共享状态验收未通过')
+    expect(repair.toolFilter.allow).toEqual([])
+    expect(first.dispose).toHaveBeenCalledTimes(1)
+  } finally {await executor.dispose()}
+})
+
+it('personal shared-state generation gate never turns unsynchronized HTML into a successful markdown fallback', async () => {
+ const {ResearchTaskRuntime}=await runtimeModule(),calls=[]
+ const html='<p>这是一段足够长的组件描述，即使共享状态接入失败也不能被当作成功交付。</p><script>let count=0;setInterval(()=>count++,100);</script>'
+ const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{calls.push(request);return {childSessionId:'child-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'html',title:'协作计数',html})}]})}},dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+ try {
+  await runtime.start(containerRequest('shared'))
+  await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe('failed'))
+  expect(calls).toHaveLength(2)
+  expect(calls[1].prompt).toContain('共享状态验收未通过')
+  expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput).toBeUndefined()
+ }finally{await runtime.dispose()}
+})
+
+it('shared-state generation gate preserves legacy completed task output on restore', async () => {
+ const {ResearchTaskRuntime}=await runtimeModule()
+ const finalOutput=JSON.stringify({version:1,type:'html',title:'旧组件',html:'<p>已有计时器</p><script>setInterval(()=>{},100)</script>'})
+ const storage=memoryTaskStorage({version:1,tasks:[{...containerRequest('legacy'),taskId:'legacy',state:'completed',createdAt:1,completedAt:2,lastSeq:3,finalOutput}]})
+ const runtime=new ResearchTaskRuntime({adapter:{start:vi.fn(),dispose:async()=>{}},storage})
+ try {await runtime.restore();expect(runtime.inspect({parentSessionId:'parent-1',taskId:'legacy'})).toMatchObject({state:'completed',finalOutput})}finally{await runtime.dispose()}
+})
