@@ -71,6 +71,39 @@
           "真实客户端交互将在集成后发布前验证"
         ],
         "generatedAt": "2026-09-17T00:42:02.461046+00:00"
+      },
+      "merged": {
+        "mergeCommit": "08e23e0a48a626ee991a65695ff91a1a224c94e8",
+        "verificationCommit": "08e23e0a48a626ee991a65695ff91a1a224c94e8",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-notice-position.test.ts",
+              "test/sidebar-update-control.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-notice-position.test.ts test/sidebar-update-control.test.ts",
+            "verifiedCommit": "08e23e0a48a626ee991a65695ff91a1a224c94e8",
+            "completedAt": "2026-09-17T00:42:33.292Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "08e23e0a48a626ee991a65695ff91a1a224c94e8",
+            "completedAt": "2026-09-17T00:42:33.292Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-17T00:42:33.292Z"
       }
     }
   ],
