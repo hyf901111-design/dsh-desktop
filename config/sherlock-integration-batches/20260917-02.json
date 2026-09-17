@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260917-02",
+  "branch": "codex/integration/20260917-02",
+  "baseMainCommit": "a45029ee1ad6826b6d18cb7fd29078483ff8e9dd",
+  "expectedMainCommit": "a45029ee1ad6826b6d18cb7fd29078483ff8e9dd",
+  "createdAt": "2026-09-17T00:42:21.155Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复下载气泡实际侧栏锚点",
+        "branch": "codex/feat/update-notice-anchor-20260917",
+        "baseCommit": "a45029ee1ad6826b6d18cb7fd29078483ff8e9dd",
+        "tipCommit": "e97f537c06dd2231c47e1cae108ae15cf3402364",
+        "commits": [
+          {
+            "commit": "e97f537c06dd2231c47e1cae108ae15cf3402364",
+            "parents": [
+              "a45029ee1ad6826b6d18cb7fd29078483ff8e9dd"
+            ],
+            "subject": "修复更新气泡误用无尺寸侧栏槽位导致不可见"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-notice.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-notice-position.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-notice-position.test.ts",
+              "test/sidebar-update-control.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "24项聚焦检查与类型检查通过",
+            "verifiedCommit": "e97f537c06dd2231c47e1cae108ae15cf3402364",
+            "completedAt": "2026-09-17T00:42:02.461046+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "24项聚焦检查与类型检查通过",
+            "verifiedCommit": "e97f537c06dd2231c47e1cae108ae15cf3402364",
+            "completedAt": "2026-09-17T00:42:02.461046+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "集成后在签名客户端执行下载与关于页验收"
+        },
+        "acceptanceCriteria": [
+          "使用真实可见侧栏账户区域定位下载气泡"
+        ],
+        "risks": [
+          "真实客户端交互将在集成后发布前验证"
+        ],
+        "generatedAt": "2026-09-17T00:42:02.461046+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-notice-position.test.ts",
+        "test/sidebar-update-control.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
