@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260917-01",
+  "branch": "codex/integration/20260917-01",
+  "baseMainCommit": "fdb01084da32dd6248e75e5dd257bb954c43b831",
+  "expectedMainCommit": "fdb01084da32dd6248e75e5dd257bb954c43b831",
+  "createdAt": "2026-09-17T00:26:22.457Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "更新下载反馈与消息中心交互修复",
+        "branch": "codex/feat/update-notification-feedback-20260917",
+        "baseCommit": "fdb01084da32dd6248e75e5dd257bb954c43b831",
+        "tipCommit": "536de6f71c9176e82c43c58549971c04c62f5aa2",
+        "commits": [
+          {
+            "commit": "536de6f71c9176e82c43c58549971c04c62f5aa2",
+            "parents": [
+              "fdb01084da32dd6248e75e5dd257bb954c43b831"
+            ],
+            "subject": "修复更新下载反馈和消息中心交互并补齐版本日志"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-notifications-center.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-update-control.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-notification-store.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-release-notes.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-update-control.test.ts",
+              "test/research-board-notifications-center.test.ts",
+              "test/update-release-notes.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/sidebar-notice-position.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "47项聚焦检查与类型检查通过",
+            "verifiedCommit": "536de6f71c9176e82c43c58549971c04c62f5aa2",
+            "completedAt": "2026-09-17T00:26:08.287821+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "47项聚焦检查与类型检查通过",
+            "verifiedCommit": "536de6f71c9176e82c43c58549971c04c62f5aa2",
+            "completedAt": "2026-09-17T00:26:08.287821+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "集成后在签名客户端执行下载与关于页验收"
+        },
+        "acceptanceCriteria": [
+          "点击下载立即展示圆环和气泡",
+          "下载进度不打断消息中心筛选和详情点击",
+          "未登录不显示邀请登录提示，支持单条已读",
+          "关于页包含0.9.10和0.9.11日志"
+        ],
+        "risks": [
+          "真实客户端交互将在集成后发布前验证"
+        ],
+        "generatedAt": "2026-09-17T00:26:22.067154+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-update-control.test.ts",
+        "test/research-board-notifications-center.test.ts",
+        "test/update-release-notes.test.ts",
+        "test/update-notification-store.test.ts",
+        "test/sidebar-notice-position.test.ts",
+        "test/settings-about.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
