@@ -145,7 +145,7 @@ describe('Figma canvas pointer transactions', () => {
   })
 })
 
-it('draws manually sized components in zoomed world coordinates, persists the tool and cancels incomplete drags', async () => {
+it('draws manually sized components in zoomed world coordinates, returns to selection and cancels incomplete drags', async () => {
   const m = await mounted({}, undefined, { disabled: false })
   await act(async () => m.workspace.setViewport({ x: 100, y: 40, scale: 0.5 }))
   await m.event('click', m.query('[data-research-global-container]'))
@@ -162,11 +162,13 @@ it('draws manually sized components in zoomed world coordinates, persists the to
   await m.event('keyup', m.canvas, { code: 'Space', key: ' ' })
   const first = m.workspace.getSnapshot().artifacts[0]
   expect(first).toMatchObject({ width: 800, height: 500, x: 600, y: 450, sizeMode: 'manual', generationStatus: 'draft' })
-  expect(m.query('[data-research-global-container]').getAttribute('aria-pressed')).toBe('true')
+  expect(m.query('[data-research-global-select]').getAttribute('aria-pressed')).toBe('true')
+  await m.event('click', m.query('[data-research-global-container]'))
   await m.event('pointerdown', m.canvas, { button: 0, pointerId: 2, clientX: 350, clientY: 250 })
   await m.event('pointerup', m.canvas, { pointerId: 2 })
   const small = m.workspace.getSnapshot().artifacts[1]
   expect(small).toMatchObject({ width: 320, height: 220, x: 560, y: 410 })
+  await m.event('click', m.query('[data-research-global-container]'))
   await m.event('pointerdown', m.canvas, { button: 0, pointerId: 3, clientX: 450, clientY: 350 })
   await m.event('pointercancel', m.canvas, { pointerId: 3 })
   expect(m.workspace.getSnapshot().artifacts).toHaveLength(2)
@@ -178,10 +180,21 @@ it('opens the link editor at the canvas center without changing the selected too
   await m.event('click', m.query('[data-research-global-container]'))
   await m.event('click', m.query('[data-research-global-link]'))
   const draft = m.win.document.querySelector('[data-research-link-popover]')!
-  expect(draft.parentElement).toBe(m.win.document.body)
+  expect(draft.parentElement).toBe(m.canvas)
+  expect(draft.querySelector('.odyssey-link-title')?.textContent).toBe('链接组件')
   expect(m.canvas.getAttribute('data-canvas-tool')).toBe('component')
-  expect((draft as any).style.left).toBe('550px')
-  expect((draft as any).style.top).toBe('410px')
+  expect((draft as any).style.left).toBe('500px')
+  expect((draft as any).style.top).toBe('350px')
+  await act(async () => m.workspace.setViewport({ x: 100, y: 40, scale: 2 }))
+  expect((draft as any).style.left).toBe('1100px')
+  expect((draft as any).style.top).toBe('740px')
+  expect((draft as any).style.position).toBe('absolute')
+  expect((draft as any).style.transform).toContain('scale(2)')
+  const title = draft.querySelector('.odyssey-link-title')!
+  await m.event('pointerdown', title, { button: 0, pointerId: 8, clientX: 200, clientY: 200 })
+  await m.event('pointermove', title, { pointerId: 8, clientX: 280, clientY: 240 })
+  await m.event('pointerup', title, { pointerId: 8 })
+  expect((draft as any).style.left).toBe('1180px')
   const input = draft.querySelector('input')! as any
   input.value = 'https://example.com'
   await m.event('input', input)
