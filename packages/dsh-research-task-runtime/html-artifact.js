@@ -339,6 +339,27 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     if (!event.isTrusted) return
     try { const u = new URL(anchor.getAttribute('href')); if (/^https?:$/.test(u.protocol) && !u.username && !u.password) parent.postMessage({ type: 'sherlock-source-request', url: u.href }, '*') } catch {}
   }, true)
+  // Opaque frames intentionally forbid network form submission. Chromium also
+  // suppresses their submit event, so deliver local handlers without navigation.
+  const submitLocally = (event, form, submitter) => {
+    if (event.defaultPrevented || !form || submitter?.disabled) return
+    event.preventDefault()
+    if (!form.noValidate && !submitter?.formNoValidate && !form.reportValidity()) return
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter }))
+  }
+  document.addEventListener('click', event => {
+    const button = event.target?.closest?.('button,input[type="submit"],input[type="image"]')
+    if (button && (button.type === 'submit' || button.type === 'image')) submitLocally(event, button.form, button)
+  })
+  document.addEventListener('keydown', event => {
+    const input = event.target
+    if (event.key !== 'Enter' || event.isComposing || input?.tagName !== 'INPUT' || !['text','search','email','url','tel','number','password'].includes(input.type)) return
+    const form = input.form
+    if (!form) return
+    const button = [...form.elements].find(el => el.type === 'submit' || el.type === 'image')
+    if (button) { if (!event.defaultPrevented && !button.disabled) { event.preventDefault(); button.click() } }
+    else if ([...form.elements].filter(el => el.tagName === 'INPUT' && ['text','search','email','url','tel','number','password'].includes(el.type)).length === 1) submitLocally(event, form, null)
+  })
   document.addEventListener('DOMContentLoaded', () => {
     const declaration = Array.from(document.querySelectorAll('meta[name]')).find((meta) => meta.getAttribute('name')?.trim().toLowerCase() === 'sherlock-theme')
     const value = declaration?.getAttribute('content')?.trim().toLowerCase()
