@@ -35,7 +35,8 @@
 .sherlock-auth-dialog .sherlock-auth-close{position:absolute;right:12px;top:12px;display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:#737373;cursor:pointer}
 .sherlock-auth-close svg{display:block;width:7.66667px;height:7.66667px}.sherlock-auth-close svg path{stroke:currentColor}
 .sherlock-auth-dialog .sherlock-account-page [role=status]:empty{display:none}
-.sherlock-auth-dialog .sherlock-account-page [role=status]:not(:empty){min-height:0;font:400 12px/20px 'Noto Sans SC',sans-serif;color:#bc574f}
+.sherlock-auth-dialog .sherlock-account-page [role=status]:not(:empty){min-height:0;font:400 12px/20px 'Noto Sans SC',sans-serif;color:inherit}
+.sherlock-auth-dialog .sherlock-account-page [role=status][data-state=error]{color:#bc574f}
 .sherlock-auth-dialog input[aria-invalid=true]{box-shadow:inset 0 0 0 1px var(--auth-field-error-stroke)}
 .sherlock-auth-dialog button:focus-visible,.sherlock-auth-dialog input:focus-visible{outline:1.5px solid #6b96d9;outline-offset:2px}
 body[data-ds-dark-theme] .sherlock-auth-dialog{--auth-field-error-stroke:#ef938b;background:#090909;color:#efefef}body[data-ds-dark-theme] .sherlock-auth-scenery:after{background:linear-gradient(transparent calc(100% - 160px),rgba(0,0,0,.4)),rgba(0,0,0,.3)}

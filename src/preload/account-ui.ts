@@ -150,6 +150,32 @@ export function mountAccountUi(
     trigger.append(avatar, label)
     trigger.setAttribute('aria-label', `${label.textContent}，打开账户菜单`)
   }
+  async function logout(source: HTMLButtonElement) {
+    if (source.disabled) return
+    source.disabled = true
+    const showError = () => {
+      closeMenu()
+      open(true)
+      const status = panel()?.querySelector('[data-account-logout-status]')
+      if (status) status.textContent = '退出未完成，请稍后重试。'
+    }
+    try {
+      const reply = await invoke('logout')
+      if (reply.error) {
+        showError()
+        return
+      }
+      user = null
+      updateTrigger()
+      closeMenu()
+      const root = panel()
+      if (root) renderAccount(root)
+    } catch {
+      showError()
+    } finally {
+      source.disabled = false
+    }
+  }
   let authDialog: HTMLDialogElement | undefined
   function showAuth(register = false) {
     if (!authDialog?.isConnected) {
@@ -471,10 +497,12 @@ export function mountAccountUi(
       delete input.confirmPassword
       const action = user ? 'password' : register ? 'register' : 'login'
       submit.disabled = true
+      status.dataset.state = 'pending'
       status.textContent = '正在处理…'
       void invoke(action, input)
         .then((reply) => {
           if (reply.error) {
+            status.dataset.state = 'error'
             const target =
               reply.error.code === 'INVALID_INVITE'
                 ? 'invite'
@@ -507,6 +535,7 @@ export function mountAccountUi(
           }
         })
         .catch(() => {
+          status.dataset.state = 'error'
           status.textContent =
             errors.ACCOUNT_SERVICE_UNAVAILABLE ?? '账户服务暂时不可用。'
         })
@@ -532,6 +561,14 @@ export function mountAccountUi(
       heading.textContent = '最近 30 天用量'
       group.append(heading, usage)
       page.append(group)
+      const actions = document.createElement('div')
+      actions.className = 'sherlock-account-actions'
+      const signOut = button('退出登录', () => { void logout(signOut) }, '')
+      const logoutStatus = document.createElement('div')
+      logoutStatus.dataset.accountLogoutStatus = ''
+      logoutStatus.setAttribute('role', 'status')
+      actions.append(signOut, logoutStatus)
+      page.append(actions)
       void invoke('usage')
         .then((reply) => {
           if (!usage.isConnected) return
@@ -610,24 +647,10 @@ export function mountAccountUi(
             }).catch(()=>{if(profile.isConnected)id.textContent='用户 ID 暂时不可用'})
           }else menu.append(menuButton('登录 / 注册','account',()=>open(true)))
           menu.append(menuButton('设置', 'settings', () => open(false)))
-          if (user)
-            menu.append(
-              menuButton('退出登录', 'logout', () => {
-                void invoke('logout').then((reply) => {
-                  if (reply.error) {
-                    open(true)
-                    const status = panel()?.querySelector('[role=status]')
-                    if (status)
-                      status.textContent = '退出未完成，请检查网络后重试。'
-                    return
-                  }
-                  user = null
-                  updateTrigger()
-                  closeMenu()
-                  if (panel()) renderAccount(panel()!)
-                })
-              })
-            )
+          if (user) {
+            const signOut = menuButton('退出登录', 'logout', () => { void logout(signOut) })
+            menu.append(signOut)
+          }
           for (const b of menu.querySelectorAll('button')) b.role = 'menuitem'
           document.body.append(menu)
           const rect = trigger!.getBoundingClientRect()

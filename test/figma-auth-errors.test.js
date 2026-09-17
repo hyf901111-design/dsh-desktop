@@ -13,6 +13,11 @@ beforeAll(async () => {
         window.accountCalls = []; mountHomeFlow(document);mountUiLocalization(document);
         return mountAccountUi(document, async (action, input) => {
           window.accountCalls.push({action, input});
+          if (action === 'login' && window.deferLogin) return new Promise(resolve => { window.finishLogin = resolve });
+          if (action === 'logout') {
+            if (window.failLogout) throw new Error('offline');
+            user = null; return {user:null};
+          }
           return action === 'me' ? {user} : action === 'usage' ? {usage:[]} : {error:{code:'INVALID_CREDENTIALS'}};
         });
       };`, resolveDir: process.cwd(), loader: 'ts' },
@@ -65,6 +70,41 @@ async function measurements() {
 }
 
 describe('auth field errors in the real form and browser layout', () => {
+  it.each([false, true])('uses body color during login and error color only on failure (dark=%s)', async dark => {
+    await open({ dark })
+    await page.evaluate(() => { window.deferLogin = true })
+    await page.locator('input[name=username]').fill('fixture_user')
+    await page.locator('input[name=password]').fill('fixture-password-only')
+    await page.locator('button[type=submit]').click()
+    const status = page.locator('form [role=status]')
+    expect(await status.textContent()).toBe('正在处理…')
+    const colors = await status.evaluate(el => ({ status: getComputedStyle(el).color, body: getComputedStyle(el.closest('.sherlock-account-page')).color }))
+    expect(colors.status).toBe(colors.body)
+    await page.evaluate(() => window.finishLogin({ error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } }))
+    await status.getByText('账户服务暂时不可用，请稍后重试。').waitFor()
+    expect(await status.evaluate(el => getComputedStyle(el).color)).toBe('rgb(188, 87, 79)')
+    await page.locator('button[type=submit]').click()
+    expect(await status.evaluate(el => getComputedStyle(el).color)).toBe(colors.body)
+  })
+  it('signs out from account settings and returns to login', async () => {
+    await open({ user: { id: 'fixture-account', username: 'fixture_user', createdAt: 1 } })
+    await page.locator('.sherlock-account-actions button').click()
+    await page.locator('.sherlock-auth-dialog').waitFor()
+    expect((await page.locator('.sherlock-account-button').textContent()).trim()).toBe('登录')
+    expect(await page.evaluate(() => window.accountCalls.filter(call => call.action === 'logout').length)).toBe(1)
+  })
+  it('keeps the account signed in and allows retry after logout fails', async () => {
+    await open({ user: { id: 'fixture-account', username: 'fixture_user', createdAt: 1 } })
+    await page.evaluate(() => { window.failLogout = true })
+    await page.locator('.sherlock-account-actions button').click()
+    await page.locator('[data-account-logout-status]').getByText('退出未完成，请稍后重试。').waitFor()
+    expect(await page.locator('.sherlock-account-button').textContent()).toBe('Ffixture_user')
+    expect(await page.locator('.sherlock-account-actions button').isEnabled()).toBe(true)
+    await page.evaluate(() => { window.failLogout = false })
+    await page.locator('.sherlock-account-actions button').click()
+    await page.locator('.sherlock-auth-dialog').waitFor()
+  })
+
   it.each([
     ['light login', false, false, 440, 'rgb(198, 88, 80)'],
     ['dark login', true, false, 440, 'rgb(239, 147, 139)'],
