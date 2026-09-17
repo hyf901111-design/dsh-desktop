@@ -184,7 +184,7 @@ it('opens the link editor at the canvas center without changing the selected too
   expect(draft.getAttribute('data-selected')).toBe('true')
   await m.event('pointerdown', m.canvas, {button:0,pointerId:11,clientX:30,clientY:30})
   await m.event('pointercancel', m.canvas, {pointerId:11})
-  expect(draft.getAttribute('data-selected')).toBe('false')
+  expect(draft.hasAttribute('data-selected')).toBe(false)
   await m.event('pointerdown', draft.querySelector('textarea'), {button:0,pointerId:12})
   expect(draft.getAttribute('data-selected')).toBe('true')
   expect(m.workspace.getSnapshot().selection.selectedNodeIds).toEqual([])

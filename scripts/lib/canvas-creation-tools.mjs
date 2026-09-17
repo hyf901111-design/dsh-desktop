@@ -59,6 +59,7 @@ export function patchCanvasCreationTools(source) {
   return source
 }
 function patchLinkSelection(source) {
+  source=source.replace('"data-selected":linkSelected?"true":"false"', '"data-selected":linkSelected?"true":undefined')
   if (!source.includes('/* ODYSSEY_LINK_SHARED_CHROME */') || source.includes('/* ODYSSEY_LINK_SELECTION */')) return source
   source=source.replace('const linkDragRef=(0,react.useRef)(null);', `const linkDragRef=(0,react.useRef)(null);
       /* ODYSSEY_LINK_SELECTION */
@@ -69,7 +70,7 @@ function patchLinkSelection(source) {
         document.addEventListener('pointerdown',select,true);
         return ()=>document.removeEventListener('pointerdown',select,true);
       },[workspace]);`)
-  source=source.replace('className: "rScV5Q_richNode odyssey-link-draft",', `className: "rScV5Q_richNode odyssey-link-draft",ref:linkCardRef,"data-selected":linkSelected?"true":"false",onFocusCapture:()=>{setLinkSelected(true);workspace.updateSelection([],'replace');},`)
+  source=source.replace('className: "rScV5Q_richNode odyssey-link-draft",', `className: "rScV5Q_richNode odyssey-link-draft",ref:linkCardRef,"data-selected":linkSelected?"true":undefined,onFocusCapture:()=>{setLinkSelected(true);workspace.updateSelection([],'replace');},`)
   source=source.replace('setLinkPopoverOpen(true); linkInputRef.current?.focus();','setLinkSelected(true); setLinkPopoverOpen(true); linkInputRef.current?.focus();')
   return source
 }
