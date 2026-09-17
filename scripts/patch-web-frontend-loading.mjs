@@ -1,3 +1,4 @@
+import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
 import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
 import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
 import { patchComponentWheelZoom } from './lib/component-wheel-zoom.mjs'
@@ -128,7 +129,7 @@ patchStyles(asset('.css'))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(conversationPath, patchFigmaRefinementConversation(patchFigmaCanvasGestures(patchConversationFileReference(patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8')))))))
+writeFileSync(conversationPath, patchCanvasCreationTools(patchFigmaRefinementConversation(patchFigmaCanvasGestures(patchConversationFileReference(patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8'))))))))
 
 const trajectoryPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-trajectory/lib/client.js')
 writeFileSync(trajectoryPath, patchFigmaTrajectory(readFileSync(trajectoryPath, 'utf8')))

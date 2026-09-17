@@ -1,4 +1,3 @@
-import { patchCanvasCreationTools } from './canvas-creation-tools.mjs'
 import { patchResearchCanvasDeferredHtml } from './research-canvas-deferred-html.mjs'
 import { patchResearchOfficeResize } from './research-office-resize.mjs'
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
@@ -93,7 +92,7 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchCanvasCreationTools(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)))));
+  return patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))));
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);

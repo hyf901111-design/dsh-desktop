@@ -51,9 +51,11 @@ function exact(source, from, to) {
 }
 
 export function patchFigmaCanvasGestures(source) {
+  if (!source.includes("/* ODYSSEY_CREATION_TOOLS */")) {
   source = exact(source, '"data-research-global-link": "",', '"data-research-global-link": "", disabled: sharedReadOnly,');
   source = exact(source, '"data-research-global-container": "",\n\t\t\t\t\t\tdisabled: selectionGeneration', '"data-research-global-container": "",\n\t\t\t\t\t\tdisabled: sharedReadOnly || selectionGeneration');
   source = exact(source, '(ResearchVoiceControl, {\n\t\t\t\t\t\tsessionId,\n\t\t\t\t\t\tdisabled: selectionGeneration', '(ResearchVoiceControl, {\n\t\t\t\t\t\tsessionId,\n\t\t\t\t\t\tdisabled: sharedReadOnly || selectionGeneration');
+  }
   source = exact(source, 'function ResearchCanvasResizeHandles({ nodeId, compact = false }) {', `${figmaCanvasBounds.toString()}\n${figmaCanvasSnap.toString()}\nfunction ResearchCanvasResizeHandles({ nodeId, compact = false }) {`)
   source = exact(source, '(compact ? ["se"] : ["nw", "ne", "sw", "se"]).map', '["nw", "ne", "sw", "se"].map')
   source = exact(source, '!expanded && (selected || compact) ? (0, react_jsx_runtime.jsx)(ResearchCanvasResizeHandles', '!expanded && geometry.resizable ? (0, react_jsx_runtime.jsx)(ResearchCanvasResizeHandles')
