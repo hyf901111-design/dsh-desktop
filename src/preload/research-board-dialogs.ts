@@ -314,6 +314,7 @@ export function installBoardUiStyles(doc: Document) {
 /* Native conversation controls retain the same geometry as ordinary chat. */
 .srb-discussion [data-shared-native-task]{display:flex;flex-direction:column;gap:16px;min-width:0}
 .srb-discussion [data-shared-native-message]{min-width:0}
+.srb-discussion [data-shared-native-message=assistant]>.p-xYUq_actions{margin-top:8px}
 .srb-discussion [data-shared-native-message=user][data-self=true] .srb-native-author{text-align:right}
 .srb-discussion [data-shared-native-message=user][data-self=false] .gdEzaW_userRow{align-items:flex-start}
 .srb-discussion [data-shared-native-message=user][data-self=false] .gdEzaW_userStack{margin-left:0;margin-right:auto;align-items:flex-start}
