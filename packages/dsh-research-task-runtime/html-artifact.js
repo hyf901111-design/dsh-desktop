@@ -370,10 +370,11 @@ export function researchInteractionVersion(html) {
   return (a>>>0).toString(36)+'-'+(b>>>0).toString(36)+'-'+html.length;
 }
 export function validResearchInteractionEvent(e) {
-  return !!e && typeof e==='object' && !Array.isArray(e) && Object.keys(e).every(k=>['id','clock','targetRoute','tag','type','value','checked','key'].includes(k)) &&
+  return !!e && typeof e==='object' && !Array.isArray(e) && Object.keys(e).every(k=>['id','clock','targetRoute','tag','type','value','checked','key','x','y'].includes(k)) &&
     typeof e.id==='string' && /^[a-zA-Z0-9-]{1,80}$/.test(e.id) && Number.isSafeInteger(e.clock) && e.clock>0 &&
     Array.isArray(e.targetRoute) && e.targetRoute.length>0 && e.targetRoute.length<=40 && e.targetRoute.every(n=>Number.isInteger(n)&&n>=0&&n<10000) &&
     typeof e.tag==='string' && /^[A-Z0-9-]{1,30}$/.test(e.tag) && ['click','input','change','keydown'].includes(e.type) &&
+    ((e.x===undefined && e.y===undefined) || [e.x,e.y].every(n=>Number.isFinite(n)&&n>=0&&n<=1)) &&
     (e.value===undefined || typeof e.value==='string'&&e.value.length<=8192) &&
     (e.checked===undefined || typeof e.checked==='boolean') && (e.key===undefined || ['Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key));
 }
@@ -389,8 +390,14 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
   const resolve=p=>p.reduce((el,n)=>el?.children[n],document.body);
   const post=(type,extra={})=>parent.postMessage({type,...extra},'*');
   function apply(e){
-    const el=resolve(e.targetRoute); if(!el || el.tagName!==e.tag) return;
-    if(e.type==='click'){el.click();return;}
+    const el=resolve(e.targetRoute); if(!el || el.tagName.toUpperCase()!==e.tag) return;
+    if(e.type==='click'){
+      if(typeof e.x==='number' && typeof e.y==='number'){
+        const r=el.getBoundingClientRect();
+        el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:document.defaultView,clientX:r.left+e.x*r.width,clientY:r.top+e.y*r.height,button:0}));
+      } else el.click();
+      return;
+    }
     if(typeof e.value==='string' && 'value' in el) {
       const proto=el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:el instanceof HTMLSelectElement?HTMLSelectElement.prototype:HTMLInputElement.prototype;
       const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set; if(setter)setter.call(el,e.value);else el.value=e.value;
@@ -412,14 +419,15 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     if(!initialized||readOnly){event.preventDefault();event.stopImmediatePropagation();return;}
     let el=event.target;
     if(!(el instanceof Element))return;
-    if(type==='click')el=el.closest('button,input,select,textarea,summary,[role="button"],[role="checkbox"],[role="tab"]');
+    // Keep the actual target: canvas, SVG and delegated grid handlers need it.
     if(!el || el.closest('a') || el.matches('input[type=password],input[type=file],input[type=hidden]'))return;
     if(type==='keydown'&&!['Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;
     // Check/radio click already invokes its input/change events during replay.
     if(type!=='click'&&el.matches('input[type=checkbox],input[type=radio]'))return;
     const path=pathOf(el); if(!path?.length)return;
-    const e={id:crypto.randomUUID(),clock:++clock,targetRoute:path,tag:el.tagName,type};
+    const e={id:crypto.randomUUID(),clock:++clock,targetRoute:path,tag:el.tagName.toUpperCase(),type};
     if(type==='input'||type==='change'){if('value'in el)e.value=String(el.value).slice(0,8192);if('checked'in el)e.checked=el.checked;}
+    if(type==='click'){const r=el.getBoundingClientRect();if(r.width>0&&r.height>0){e.x=Math.max(0,Math.min(1,(event.clientX-r.left)/r.width));e.y=Math.max(0,Math.min(1,(event.clientY-r.top)/r.height));}}
     if(type==='keydown')e.key=event.key;
     applied.push(e.id);post('sherlock-interaction-event',{event:e});
   },true);

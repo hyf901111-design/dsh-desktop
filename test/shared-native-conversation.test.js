@@ -47,15 +47,18 @@ it('mounts the actual native execution group and streams real commentary instead
  const loc={kind:'step',turn:{turn:1,status:'open'},step:{step:1}}
  const nodeStore=new Map([['u',{id:'shared-board-task:native',kind:'user',data:{content:[{type:'text',text:'PRIVATE FROZEN PROMPT'}]}}],['a',{id:'a',key:'a',kind:'assistant-step',location:loc,data:{status:'running',blocks:[{kind:'text',text:'正在核对两份资料中的日期与口径'}]}}]])
  const snapshot={order:['u','a'],nodeStore,timeline:{turns:new Map()},cwd:'/tmp'}
- const group={rows:[{id:'request',role:'user',text:'核对资料',author:{username:'甲'}}]}
- const props={sharedSnapshot:snapshot,useSession:select=>select({chat:{nodes:nodeStore}}),renderSlot:()=>null,t:key=>key}
+ const group={rows:[{id:'request',role:'user',text:'核对资料',author:{username:'甲',userId:'self'}}]}
+ const props={currentUserId:'self',sharedSnapshot:snapshot,useSession:select=>select({chat:{nodes:nodeStore}}),renderSlot:()=>null,t:key=>key}
  const host=w.document.createElement('div');w.document.body.append(host);const root=createRoot(host)
  try {
  await React.act(async()=>root.render(React.createElement(exports.__NativeRequest,{group,tasks:[task],nativeProps:props})))
  expect(host.querySelector('[data-chat-flow-kind="execution"]')).not.toBeNull()
  expect(host.textContent).toContain('正在核对两份资料中的日期与口径')
  expect(host.textContent).not.toContain('PRIVATE FROZEN PROMPT')
- expect(host.querySelector('[data-shared-native-message="user"]')).not.toBeNull()
+ expect(host.querySelector('[data-shared-native-message="user"]')?.dataset.self).toBe('true')
+ group.rows[0].author.userId='peer'
+ await React.act(async()=>root.render(React.createElement(exports.__NativeRequest,{group:{...group},tasks:[task],nativeProps:props})))
+ expect(host.querySelector('[data-shared-native-message="user"]')?.dataset.self).toBe('false')
  nodeStore.set('a',{...nodeStore.get('a'),data:{status:'running',blocks:[{kind:'text',text:'资料已核对，正在整理结果'}]}})
  await React.act(async()=>root.render(React.createElement(exports.__NativeRequest,{group,tasks:[task],nativeProps:{...props,sharedSnapshot:{...snapshot,nodeStore:new Map(nodeStore)}}})))
  expect(host.textContent).toContain('资料已核对，正在整理结果')
