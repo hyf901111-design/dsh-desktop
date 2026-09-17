@@ -1626,11 +1626,13 @@ export function showBoardAvatarInfo(page: ResearchBoardsPage, sessionId: string,
 
 export function showBoardMembers(page: ResearchBoardsPage, sessionId: string, anchor: HTMLElement) {
   const doc = anchor.ownerDocument, win = doc.defaultView!
+  const same = anchor.getAttribute('aria-expanded') === 'true'
   doc.querySelectorAll('.srb-avatar-info').forEach(element => element.dispatchEvent(new win.Event('srb-close')))
   doc.querySelectorAll('.srb-members-popover').forEach(element => element.dispatchEvent(new win.Event('srb-close')))
+  if (same) return
   const popover = doc.createElement('div')
   popover.className = 'srb-members-popover'
-  popover.setAttribute('popover', 'auto')
+  popover.setAttribute('popover', 'manual')
   popover.setAttribute('role', 'dialog')
   popover.setAttribute('aria-label', '协作成员')
   const title = uiText('h2', ''), online = uiText('p', '', 'srb-members-online')
@@ -1638,7 +1640,18 @@ export function showBoardMembers(page: ResearchBoardsPage, sessionId: string, an
   input.type = 'search'; input.placeholder = '搜索成员姓名…'; input.setAttribute('aria-label', '搜索成员姓名')
   const list = uiText('div', '', 'srb-members-scroll')
   const footer = uiText('div', '', 'srb-members-footer')
-  const close = () => { popover.hidePopover?.(); popover.remove(); off(); win.removeEventListener('resize', position) }
+  let closed = false
+  const outside = (event: Event) => {
+    if (!popover.contains(event.target as Node) && !anchor.contains(event.target as Node)) close()
+  }
+  const close = () => {
+    if (closed) return
+    closed = true
+    popover.hidePopover?.(); popover.remove(); off()
+    anchor.setAttribute('aria-expanded', 'false')
+    doc.removeEventListener('pointerdown', outside, true)
+    win.removeEventListener('resize', position)
+  }
   const position = () => {
     // Figma 305:614 is aligned with the management button's right edge,
     // regardless of which avatar or overflow count opened it.
@@ -1673,6 +1686,8 @@ export function showBoardMembers(page: ResearchBoardsPage, sessionId: string, an
   popover.append(title, online, input, list, footer)
   doc.body.append(popover)
   render(); if (!popover.isConnected) return { popover, close }; popover.showPopover?.(); position(); win.addEventListener('resize', position)
+  anchor.setAttribute('aria-expanded', 'true')
+  doc.addEventListener('pointerdown', outside, true)
   popover.tabIndex = -1
   popover.focus({ preventScroll: true })
   return { popover, close }

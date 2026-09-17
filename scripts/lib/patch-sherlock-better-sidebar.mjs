@@ -1,5 +1,5 @@
 import { patchSidebarSystemTitles } from './sidebar-system-titles.mjs'
-import { patchSidebarFileRefresh } from './sidebar-file-refresh.mjs'
+import { patchSidebarFileRefresh, patchSidebarRefreshFeedback } from './sidebar-file-refresh.mjs'
 import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
@@ -1028,6 +1028,8 @@ export function patchBetterSidebarClient(source) {
       )
     )
   )
+
+  next = patchSidebarRefreshFeedback(next)
 
   if (!next.includes(RESEARCH_GENERATION_FOCUS_PATCH_MARKER)) {
     next = replaceExact(next,

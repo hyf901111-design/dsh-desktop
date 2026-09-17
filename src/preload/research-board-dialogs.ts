@@ -221,6 +221,17 @@ export function boardDialog(doc: Document, title: string) {
   dialog.append(heading, body, status)
   doc.body.append(dialog)
   dialog.addEventListener('close', () => dialog.remove())
+  // Backdrop events target the dialog; padding inside its bounds must remain interactive.
+  const outside = (event: MouseEvent) => {
+    const rect = dialog.getBoundingClientRect()
+    return event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)
+  }
+  let pressedBackdrop = false
+  dialog.addEventListener('pointerdown', event => { pressedBackdrop = outside(event) })
+  dialog.addEventListener('click', event => {
+    if (pressedBackdrop && outside(event)) close()
+    pressedBackdrop = false
+  })
   dialog.showModal()
   let running = false
   const run = async <T>(

@@ -366,3 +366,8 @@ body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"] svg {
   min-height:34px; padding-block:8px; white-space:normal; overflow-wrap:anywhere;
   word-break:break-word; line-height:20px; flex-wrap:wrap; align-items:flex-start;
 }
+
+[data-odyssey-refresh-status]{padding:0 16px 6px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}
+[data-odyssey-file-refresh][aria-busy=true] svg{animation:odyssey-file-refresh-spin .8s linear infinite}
+@keyframes odyssey-file-refresh-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){[data-odyssey-file-refresh][aria-busy=true] svg{animation:none}}
