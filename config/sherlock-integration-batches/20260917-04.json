@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260917-04",
+  "branch": "codex/integration/20260917-04",
+  "baseMainCommit": "7cc5d94444074fd9193a0c84169bcfecdf22ea41",
+  "expectedMainCommit": "7cc5d94444074fd9193a0c84169bcfecdf22ea41",
+  "createdAt": "2026-09-17T01:55:52.119Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "协作会话样式与棋盘同步修复",
+        "branch": "codex/feat/board-chat-interaction-20260917",
+        "baseCommit": "7cc5d94444074fd9193a0c84169bcfecdf22ea41",
+        "tipCommit": "452f0592fe96ba79a3d956c91af7eac36a57d341",
+        "commits": [
+          {
+            "commit": "452f0592fe96ba79a3d956c91af7eac36a57d341",
+            "parents": [
+              "7cc5d94444074fd9193a0c84169bcfecdf22ea41"
+            ],
+            "subject": "修复协作会话对齐字号与棋盘点击状态同步"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/shared-native-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-interaction-state.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-native-conversation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-native-conversation.test.js",
+              "test/component-interaction-state.test.js",
+              "test/research-board-live-discussion.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦验证通过",
+            "verifiedCommit": "452f0592fe96ba79a3d956c91af7eac36a57d341",
+            "completedAt": "2026-09-17T01:55:43.557520+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦验证通过",
+            "verifiedCommit": "452f0592fe96ba79a3d956c91af7eac36a57d341",
+            "completedAt": "2026-09-17T01:55:43.557520+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "集成包构建后检查真实客户端"
+        },
+        "acceptanceCriteria": [
+          "本人靠右其他成员靠左",
+          "原生按钮尺寸不被覆盖",
+          "棋盘坐标跨尺寸回放"
+        ],
+        "risks": [
+          "双方客户端需包含新版交互桥"
+        ],
+        "generatedAt": "2026-09-17T01:55:43.557520+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/shared-native-conversation.test.js",
+        "test/component-interaction-state.test.js",
+        "test/research-board-live-discussion.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
