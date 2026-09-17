@@ -43,7 +43,11 @@ export function patchSidebarFileRefresh(source) {
 }
 
 export function patchSidebarRefreshFeedback(source) {
- const marker='/* sherlock:file-refresh-feedback:v1 */'
+ const marker='/* sherlock:file-refresh-feedback:v2 */'
+ if(source.includes('/* sherlock:file-refresh-feedback:v1 */'))return source
+   .replace('/* sherlock:file-refresh-feedback:v1 */',marker)
+   .replace('ok?"已刷新":"刷新失败，请重试"','ok?"":"刷新失败，请重试"')
+   .replace('}), refreshStatus && (0,react_jsx_runtime.jsx)("div", {','}), refreshStatus === "刷新失败，请重试" && (0,react_jsx_runtime.jsx)("div", {')
  if(source.includes(marker))return source
  const start=source.indexOf('\t\tfunction TreePanel(props) {')
  const end=source.indexOf('\n\t\t//#endregion',start)
@@ -52,7 +56,7 @@ export function patchSidebarRefreshFeedback(source) {
  const replace=(from,to)=>{if(!panel.includes(from))throw Error('File refresh feedback anchor missing: '+from);panel=panel.replace(from,to)}
  replace('const needle = query.trim();',`${marker}
             const [refreshStatus,setRefreshStatus]=(0,react.useState)("");
-            const onRefreshComplete=(0,react.useCallback)(ok=>setRefreshStatus(ok?"已刷新":"刷新失败，请重试"),[]);
+            const onRefreshComplete=(0,react.useCallback)(ok=>setRefreshStatus(ok?"":"刷新失败，请重试"),[]);
             (0,react.useEffect)(()=>{setRefreshStatus("");},[sessionId,cwd,query]);
             const needle = query.trim();`)
  replace('setResults(found);','setResults(found);\n                        if(refreshTick>0)onRefreshComplete(true);')
@@ -60,7 +64,7 @@ export function patchSidebarRefreshFeedback(source) {
  replace('\t\t\t\tneedle\n','\t\t\t\tneedle, refreshTick\n')
  replace('"aria-label": t("refresh"),','"aria-label": refreshStatus === "刷新中…" ? refreshStatus : t("refresh"),\n                        "aria-busy": refreshStatus === "刷新中…",\n                        disabled: refreshStatus === "刷新中…",')
  replace('setRefreshTick((tick) => tick + 1);','setRefreshStatus("刷新中…");\n                            setRefreshTick((tick) => tick + 1);')
- replace('}), needle === "" ?',`}), refreshStatus && (0,react_jsx_runtime.jsx)("div", {
+ replace('}), needle === "" ?',`}), refreshStatus === "刷新失败，请重试" && (0,react_jsx_runtime.jsx)("div", {
                     "data-odyssey-refresh-status":true, role:"status", children:refreshStatus
                 }), needle === "" ?`)
  replace('\t\t\t\t\trefreshTick\n','\t\t\t\t\trefreshTick, onRefreshComplete\n')
