@@ -196,6 +196,7 @@ export type ResearchBoardsEvent = (
       view: BoardView
       cause: string
     }
+  | { type: 'component'; boardId: string; localSessionId: string | null; message: Record<string, unknown> }
   | {
       type: 'presence'
       boardId: string

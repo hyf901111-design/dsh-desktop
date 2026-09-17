@@ -1,0 +1,126 @@
+// Serialized into the opaque generated HTML sandbox before its own scripts.
+export function sharedComponentRuntime() {
+  let config, state, revision = 0, token = '', host = false, connected = false, readOnly = true, local = false
+  let waiting = false, proposal, pending = [], lastTick = Date.now(), stopped = false
+  const uuid = () => typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : [...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,'0')).join('')
+  const peerId = uuid(), listeners = new Set(), outgoing = new Map()
+  let inputSequence = 0, lastResponse = Date.now()
+  const clone = value => JSON.parse(JSON.stringify(value))
+  const valid = (value, max = 65536) => { try { const text = JSON.stringify(value); return text !== undefined && new TextEncoder().encode(text).length <= max } catch { return false } }
+  const post = message => parent.postMessage({ type: 'sherlock-component-send', message: { ...message, peerId } }, '*')
+  const status = () => ({ connected, readOnly, isHost: host, userId: identity, revision })
+  let identity = ''
+  function paint() {
+    if (!config) return
+    config.render(clone(state), status())
+    for (const listener of listeners) listener(clone(state), status())
+  }
+  function fail(message) {
+    waiting = false; proposal = undefined; host = false; connected = false; pending = []
+    try { paint() } catch {}
+    config?.onStatus?.({ ...status(), error: message })
+    window.dispatchEvent(new CustomEvent('sherlock-shared-status', { detail: { ...status(), error: message } }))
+  }
+  function commit(next, ack) {
+    if (!valid(next)) { fail('组件状态过大或不是有效的 JSON'); return }
+    waiting = true; proposal = { state: clone(next), revision: revision + 1, ack }
+    post({ op: 'commit', token, ...proposal })
+  }
+  function run(tick = false) {
+    if (!config || !connected || !host || waiting || stopped) return
+    try {
+      let next = clone(state), ack = []
+      for (const input of pending) {
+        next = config.reduce(next, clone(input.payload), { userId: input.userId })
+        ack.push(input.id)
+      }
+      pending = []
+      if (tick && config.tick && config.tickMs) {
+        const now = Date.now(), dtMs = Math.min(1000, Math.max(0, now - lastTick)); lastTick = now
+        next = config.tick(next, { dtMs, now })
+      }
+      if (!ack.length && JSON.stringify(next) === JSON.stringify(state)) return
+      if (local) { state = clone(next); revision++; post({op:'localCommit',state,revision}); paint(); return }
+      if (ack.length || JSON.stringify(next) !== JSON.stringify(state)) commit(next, ack)
+    } catch (error) { fail('组件状态更新失败：' + String(error.message).slice(0, 160)) }
+  }
+  const handle = Object.freeze({
+    getState: () => clone(state),
+    getStatus: status,
+    dispatch(action) {
+      if (!connected || readOnly || stopped) return false
+      if (!valid(action, 4096)) return false
+      const inputId = uuid()
+      if (local) { pending.push({ id: inputId, payload: clone(action), userId: identity }); run() }
+      else {
+        if (outgoing.size >= 32) return false
+        const message = { op: 'input', inputId, sequence: ++inputSequence, payload: clone(action) }
+        outgoing.set(message.sequence, message); post(message)
+      }
+      return true
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn) },
+    dispose() { stopped = true; connected = false; host = false; clearInterval(heartbeat); clearInterval(ticker); post({ op: 'leave' }); listeners.clear() }
+  })
+  Object.defineProperty(window, 'sherlockShared', { value: Object.freeze({
+    register(options) {
+      if (config) throw Error('每个组件只能注册一个共享状态容器')
+      if (!options || typeof options.reduce !== 'function' || typeof options.render !== 'function' || !valid(options.initialState)) throw Error('无效的共享状态配置')
+      document.documentElement.setAttribute('data-sherlock-shared-state', '1')
+      config = options; state = clone(options.initialState)
+      if (options.tickMs !== undefined && (!Number.isFinite(options.tickMs) || options.tickMs < 100)) throw Error('tickMs 最小为 100ms')
+      paint(); post({ op: 'join' }); return handle
+    }
+  }), writable: false, configurable: false })
+  addEventListener('message', event => {
+    if (event.source !== parent || !config || stopped) return
+    const data = event.data
+    if (data?.type === 'sherlock-component-context') {
+      identity = data.userId || 'local'
+      readOnly = data.readOnly !== false
+      if (!data.shared) {
+        if (!local && data.saved && Number.isSafeInteger(data.saved.revision) && valid(data.saved.state)) { state=clone(data.saved.state);revision=data.saved.revision }
+        local = true; connected = true; host = !readOnly; paint(); return
+      }
+      local = false
+      if (!data.online) { fail('连接中断，组件同步已暂停'); return }
+      return
+    }
+    if (data?.type !== 'sherlock-component-receive') return
+    const m = data.message
+    if (m?.peerId !== peerId) return
+    lastResponse = Date.now()
+    if (Number.isSafeInteger(m.accepted)) for (const seq of outgoing.keys()) if (seq <= m.accepted) outgoing.delete(seq)
+    if (m.kind === 'receipt') return
+    if (m.kind === 'error') { fail(m.error || '组件同步暂不可用'); return }
+    if (m.kind === 'snapshot') {
+      if (m.token === token && m.revision < revision) return
+      const changedHost = token !== m.token
+      token = m.token; host = m.isHost === true; readOnly = m.readOnly !== false; connected = true
+      if (changedHost) { waiting = false; proposal = undefined; pending = []; lastTick = Date.now() }
+      if (waiting && m.revision >= proposal.revision) { waiting = false; proposal = undefined }
+      revision = m.revision
+      state = clone(m.state === null && revision === 0 ? config.initialState : m.state)
+      paint(); config.onStatus?.(status())
+      if (host && revision === 0 && !waiting) commit(state, [])
+      else run()
+    } else if (m.kind === 'inputs' && m.token === token && host && connected) {
+      // The service resends unacknowledged actions on join/takeover. Do not
+      // apply actions already included in our one outstanding proposal twice.
+      pending = m.inputs.filter(i => !proposal?.ack.includes(i.id))
+      run()
+    }
+  })
+  const heartbeat = setInterval(() => {
+    if (!config || stopped || local) return
+    if (connected && Date.now()-lastResponse>15000) fail('连接中断，组件同步已暂停')
+    // Resend the SAME revision after a lost acknowledgment, never advance it.
+    if (waiting && proposal) post({ op: 'commit', token, ...proposal })
+    post({ op: 'join' })
+    if (!readOnly) for (const message of outgoing.values()) post(message)
+  }, 5000)
+  const ticker = setInterval(() => {
+    if (config?.tick && Date.now() - lastTick >= (config.tickMs || 100)) run(true)
+  }, 25)
+  addEventListener('pagehide', () => handle.dispose(), { once: true })
+}

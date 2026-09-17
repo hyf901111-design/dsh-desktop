@@ -28,7 +28,9 @@ it('restores JS closure state, incrementally applies remote events, and ignores 
 it('patches the actual renderer without dropping saved state on parsing',()=>{
  const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');const patched=patchComponentInteractionState(source);
  expect(patchComponentInteractionState(patched)).toBe(patched);
- expect(patched).toContain('config:{interactionState:value.config.interactionState}');
+ expect(patched).toContain('config:{interactionState:value.config.interactionState,');
+ expect(patched).toContain('researchSharedStateSinks.set(sessionId');
+ expect(patched).toContain('function sharedComponentRuntime()');
  expect(patched).toContain('if(!collaborationCanWrite()');
 })
 it('preserves independent interaction events through shared document merging',async()=>{

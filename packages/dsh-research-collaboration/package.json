@@ -11,6 +11,10 @@
     "./protocol": {
       "types": "./protocol.d.ts",
       "default": "./protocol.js"
+    },
+    "./component-state": {
+      "types": "./component-state.d.ts",
+      "default": "./component-state.js"
     }
   },
   "dependencies": {

@@ -714,6 +714,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       next.boards.some(board => board.localSessionId === selected)
     ) void activate(selected, true)
   }
+  const componentListeners = new Set<(event: any) => void>()
   const receive = (event: ResearchBoardsEvent) => {
     if (
       disposed ||
@@ -726,6 +727,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return
     }
     eventSeq = event.eventSeq
+    if (event.type === 'component') { for (const listener of componentListeners) listener(event); return }
     if (event.type === 'board') {
       acceptView(event.view)
       state = { ...state, current: event.view }
@@ -1246,6 +1248,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       async () => { await deps.workspaces.refresh(); selectBoardSession('') }))
   }
   const api = {
+    subscribeComponent(fn: (event: any) => void) { componentListeners.add(fn); return () => { componentListeners.delete(fn) } },
     subscribe: (fn: () => void) => {
       listeners.add(fn)
       return () => listeners.delete(fn)

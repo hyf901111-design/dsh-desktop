@@ -1979,3 +1979,18 @@ it('does not republish a buffered reply or old canvas after access is revoked du
   }
   expect(t.service.getSnapshot().current!.messages).toEqual([])
 })
+it('binds component transport to the active board, exact HTML version and editor permission', async () => {
+  const { componentVersion } = await import('../packages/dsh-research-collaboration/component-state.js')
+  const t=make();await ready(t)
+  const html='<button>共享</button>'
+  await t.remote(c=>{c.artifacts[0].containerSpec={version:1,type:'html',title:'共享',html}})
+  const send=vi.fn();Object.assign(t.client,{sendComponent:send})
+  const message={op:'join',nodeId:'n',version:componentVersion(html),peerId:'peer'}
+  expect((await t.service.invoke('component.send',{boardId:'board',message})).ok).toBe(true)
+  expect(send).toHaveBeenCalledWith('board',message)
+  expect((await t.service.invoke('component.send',{boardId:'board',message:{...message,version:'old'}})).ok).toBe(false)
+  expect((await t.service.invoke('component.send',{boardId:'other-board',message})).ok).toBe(false)
+  t.setRole('viewer');await t.service.receiveBoard('board',t.snapshot())
+  expect((await t.service.invoke('component.send',{boardId:'board',message})).ok).toBe(true)
+  expect((await t.service.invoke('component.send',{boardId:'board',message:{...message,op:'input',inputId:'input',sequence:1,payload:{type:'increment'}}})).ok).toBe(false)
+})

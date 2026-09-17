@@ -1,4 +1,4 @@
-export function patchComponentInteractionState(source) {
+function patchLegacyComponentInteractionState(source) {
   if(source.includes('/* ODYSSEY_COMPONENT_INTERACTION_V1 */'))return source;
   const once=(a,b)=>{if(!source.includes(a)||source.indexOf(a)!==source.lastIndexOf(a))throw Error('Interaction anchor missing or ambiguous: '+a.slice(0,90));source=source.replace(a,b);};
   once('function createResearchWorkspaceSession(storage, sessionId) {',`const researchInteractionSinks = new Map();
@@ -42,4 +42,63 @@ export function patchComponentInteractionState(source) {
     if (data.type === "sherlock-content-hover" && Object.keys(data).length === 2`);
   once('const heroWorkspaceRow = research && directoryLocked ? null', "const heroWorkspaceRow = (research && directoryLocked) || (sherlockShared(sessionId) && ((sherlockBoardsAdapter?.getView(sessionId)?.history?.length ?? 0)+(sherlockBoardsAdapter?.getView(sessionId)?.messages?.length ?? 0))>0) ? null");
   return source+'\n/* ODYSSEY_COMPONENT_INTERACTION_V1 */';
+}
+
+export function patchComponentInteractionState(source) {
+  source = patchLegacyComponentInteractionState(source);
+  if(source.includes('/* ODYSSEY_COMPONENT_SHARED_STATE_V1 */'))return source;
+  const once=(a,b)=>{if(!source.includes(a)||source.indexOf(a)!==source.lastIndexOf(a))throw Error('Shared state anchor missing: '+a.slice(0,90));source=source.replace(a,b);};
+  once('const researchInteractionSinks = new Map();',`const researchInteractionSinks = new Map(); const researchSharedStateSinks = new Map();`);
+  once('researchInteractionSinks.set(sessionId,(nodeId,version,event)=>{',`researchSharedStateSinks.set(sessionId,(nodeId,version,state,revision)=>{
+    let encoded;try{encoded=JSON.stringify(state);}catch{return false;}
+    if(sherlockShared(sessionId)||!collaborationCanWrite()||!Number.isSafeInteger(revision)||revision<1||typeof encoded!=='string'||new TextEncoder().encode(encoded).length>65536)return false;
+    const node=snapshot.artifacts.find(n=>n.id===nodeId);
+    if(!node?.containerSpec?.html||researchInteractionVersion(node.containerSpec.html)!==version)return false;
+    return commitUpdate({artifacts:snapshot.artifacts.map(n=>n.id===nodeId?{...n,config:{...n.config,sharedComponentState:{version,state,revision}}}:n)},true)!==false;
+  });
+  researchInteractionSinks.set(sessionId,(nodeId,version,event)=>{`);
+  once('...(container && validResearchInteractionState(value.config?.interactionState)',`...(container && value.config?.sharedComponentState && JSON.stringify(value.config.sharedComponentState).length<66000 ? {config:{sharedComponentState:value.config.sharedComponentState}} : {}),
+                ...(container && validResearchInteractionState(value.config?.interactionState)`);
+  once('config:{interactionState:value.config.interactionState}', 'config:{interactionState:value.config.interactionState,...(value.config?.sharedComponentState && JSON.stringify(value.config.sharedComponentState).length<66000 ? {sharedComponentState:value.config.sharedComponentState} : {})}');
+  once('const sendInteraction=()=>{',`const sharedPeerRef=(0,react.useRef)(null);
+    const componentContext=()=>{
+      const c=interactionRef.current, v=sherlockBoardsAdapter?.getView(c.sessionId);
+      return {type:'sherlock-component-context',shared:sherlockShared(c.sessionId),online:v?.connection==='online',readOnly:c.readOnly,userId:sherlockBoardsAdapter?.getState()?.account?.user?.userId,saved:c.node.config?.sharedComponentState?.version===researchInteractionVersion(c.node.containerSpec.html)?c.node.config.sharedComponentState:undefined};
+    };
+    (0,react.useLayoutEffect)(()=>{
+      frameRef.current?.contentWindow?.postMessage(componentContext(),'*');
+    });
+    (0,react.useLayoutEffect)(()=>{
+      const off=sherlockBoardsAdapter?.subscribeComponent?.(event=>{
+        const c=interactionRef.current, m=event.message;
+        if(event.localSessionId!==c.sessionId || m.nodeId!==c.node.id || m.version!==researchInteractionVersion(c.node.containerSpec.html))return;
+        frameRef.current?.contentWindow?.postMessage({type:'sherlock-component-receive',message:m},'*');
+      });
+      return ()=>{
+        off?.();
+        const peer=sharedPeerRef.current;
+        if(peer)void sherlockBoardsAdapter?.call('component.send',{boardId:peer.boardId,message:{...peer.message,op:'leave'}}).catch(()=>{});
+        sharedPeerRef.current=null;
+      };
+    },[interactionSessionId,node.id,spec.html]);
+    const sendInteraction=()=>{`);
+  once("if(data.type==='sherlock-interaction-ready'){",`if(data.type==='sherlock-component-send'){
+      const c=interactionRef.current, context=componentContext(), m=data.message;
+      if(!m||typeof m!=='object')return;
+      if(m.op==='localCommit'){
+        if(!context.shared)researchSharedStateSinks.get(c.sessionId)?.(c.node.id,researchInteractionVersion(c.node.containerSpec.html),m.state,m.revision);
+        return;
+      }
+      if(m.op==='join')frameRef.current?.contentWindow?.postMessage(context,'*');
+      if(!context.shared||!context.online)return;
+      const v=sherlockBoardsAdapter?.getView(c.sessionId);
+      const message={...m,nodeId:c.node.id,version:researchInteractionVersion(c.node.containerSpec.html)};
+      if(m.op==='join')sharedPeerRef.current={boardId:v.boardId,message};
+      void sherlockBoardsAdapter.call('component.send',{boardId:v.boardId,message}).catch(error=>{
+        frameRef.current?.contentWindow?.postMessage({type:'sherlock-component-receive',message:{peerId:m.peerId,kind:'error',error:'组件同步暂不可用'}},'*');
+      });
+      return;
+    }
+    if(data.type==='sherlock-interaction-ready'){`);
+  return source+'\n/* ODYSSEY_COMPONENT_SHARED_STATE_V1 */';
 }

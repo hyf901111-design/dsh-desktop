@@ -1,3 +1,4 @@
+import { SHARED_COMPONENT_INSTRUCTION } from './shared-component-contract.js'
 import { startComponentAgent } from './component-agent-scope.js'
 import { createSharedMainAgentAdapter } from './shared-main-agent.js'
 import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES } from './canvas-tools.js'
@@ -335,6 +336,7 @@ export function buildResearchTaskPrompt(request) {
       DELIVERABLE_FAILURE_SCHEMA,
       DELIVERABLE_INSTRUCTION,
       HTML_ARTIFACT_INSTRUCTION,
+      SHARED_COMPONENT_INSTRUCTION,
       NATIVE_FORMAT_INSTRUCTION,
       COMPONENT_STYLE_INSTRUCTION,
       '图表最多24个标签、6个系列；表格最多12列、100行；KPI最多12项；思维导图使用 Markdown 层级列表。',
@@ -365,6 +367,7 @@ export function buildResearchTaskPrompt(request) {
       DELIVERABLE_FAILURE_SCHEMA,
       DELIVERABLE_INSTRUCTION,
       HTML_ARTIFACT_INSTRUCTION,
+      SHARED_COMPONENT_INSTRUCTION,
       NATIVE_FORMAT_INSTRUCTION,
       COMPONENT_STYLE_INSTRUCTION,
       allowsWeb

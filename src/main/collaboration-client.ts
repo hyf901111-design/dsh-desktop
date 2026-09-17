@@ -428,6 +428,11 @@ export class CollaborationClient {
     void connect()
     return dispose
   }
+  sendComponent(boardId: string, message: unknown) {
+    const socket = this.sockets.get(boardId)
+    if (socket?.readyState !== 1) throw new ResearchBoardsError('COMPONENT_OFFLINE')
+    socket.send(JSON.stringify({ type: 'component', message }))
+  }
   sendPresence(
     boardId: string,
     value: import('dsh-research-collaboration/protocol').PresenceHints

@@ -1,3 +1,4 @@
+import { componentVersion, validateComponentMessage } from 'dsh-research-collaboration/component-state'
 import {
   normalizeRequestContext,
   historyAssetIds,
@@ -464,6 +465,7 @@ export class ResearchBoardsService {
           Extract<ResearchBoardsEvent, { type: 'board' }>,
           'eventSeq' | 'accountGeneration'
         >
+      | Omit<Extract<ResearchBoardsEvent, { type: 'component' }>, 'eventSeq' | 'accountGeneration'>
       | Omit<
           Extract<ResearchBoardsEvent, { type: 'presence' }>,
           'eventSeq' | 'accountGeneration'
@@ -2586,6 +2588,19 @@ export class ResearchBoardsService {
         this.emitState()
         return this.store.account(ctx.userId).notifications
       }
+      case 'component.send': {
+        const p = exact(input, ['boardId', 'message'])
+        const boardId = safeId(p.boardId), message = p.message as any
+        const r = this.requireBoard(boardId)
+        if (boardId !== this.currentBoard) throw new ResearchBoardsError('INVALID_REQUEST')
+        validateComponentMessage(message)
+        if (message.op === 'input' || message.op === 'commit') this.requireBoard(boardId, undefined, true)
+        const node = projectDocument(r.doc).artifacts.find(n => n.id === message.nodeId)
+        const html = (node?.containerSpec as { html?: string } | undefined)?.html
+        if (typeof html !== 'string' || componentVersion(html) !== message.version) throw new ResearchBoardsError('COMPONENT_VERSION_CHANGED')
+        this.client.sendComponent(boardId, message)
+        return { ok: true }
+      }
       case 'presence.update': {
         const p = exact(
           input,
@@ -2751,6 +2766,8 @@ export class ResearchBoardsService {
         this.checkBoard(access)
         if (event.presence) this.updatePresence(boardId, event.presence)
         void this.flush()
+      } else if (event.type === 'component') {
+        this.emit({ type: 'component', boardId, localSessionId: this.localSession(boardId), message: event })
       } else if (event.type === 'presence')
         this.updatePresence(boardId, event.presence)
       else if (event.type === 'accessRevoked') {

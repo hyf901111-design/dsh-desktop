@@ -1,3 +1,5 @@
+import { ComponentRooms } from './component-room.js'
+import { componentVersion } from '../../packages/dsh-research-collaboration/component-state.js'
 import { assertConversationClaim, mutateQueuedConversation, conversationContext } from '../../packages/dsh-research-collaboration/conversation-queue.js'
 import {
   resolveRequestContext,
@@ -55,6 +57,7 @@ export class ResearchBoardRoom {
   constructor(ctx, env) {
     this.ctx = ctx
     this.env = env
+    this.components = new ComponentRooms(ctx.storage)
   }
   async fetch(request) {
     // Request body chunks must arrive outside the DO input gate. Revalidate in the commit gate.
@@ -1384,7 +1387,7 @@ export class ResearchBoardRoom {
   }
   async webSocketMessage(socket, data) {
     await this.ctx.blockConcurrencyWhile(async () => {
-      let requestId
+      let requestId, componentPacket
       try {
         const a = socket.deserializeAttachment()
         const authority = await authorize(this.env, a.boardId, a.user, {
@@ -1402,6 +1405,25 @@ export class ResearchBoardRoom {
         if (message.type === 'ping') {
           socket.send(JSON.stringify({ type: 'pong' }))
           await this.sendPresence()
+        } else if (message.type === 'component') {
+          const packet = componentPacket = message.message
+          const canvas = projectDocument(decodeDocument(fromBase64(authority.current.documentUpdate)))
+          const node = canvas.artifacts.find(n => n.id === packet?.nodeId)
+          if (!node?.containerSpec?.html || componentVersion(node.containerSpec.html) !== packet?.version) fail('COMPONENT_VERSION_CHANGED', 409)
+          try { await this.components.receive(packet, {
+            userId: a.user.id, epoch: a.epoch, connection: socket,
+            canWrite: authority.member.role !== 'viewer' && authority.current.board.lifecycle === 'active',
+            alive: () => this.ctx.getWebSockets().includes(socket),
+            send: async value => {
+              try {
+                await authorize(this.env, a.boardId, a.user, { epoch: a.epoch })
+                socket.send(JSON.stringify(value))
+              } catch { try { socket.close(4003, 'ACCESS_REVOKED') } catch {} }
+            }
+          }) } catch (error) {
+            if (/^(?:ACCESS_DENIED|(?:INVALID_)?COMPONENT_[A-Z_]+)$/.test(error.message)) fail(error.message, error.message === 'ACCESS_DENIED' ? 403 : 400)
+            throw error
+          }
         } else if (message.type === 'presence') {
           const hints = {
             cursor: message.cursor ?? null,
@@ -1450,6 +1472,7 @@ export class ResearchBoardRoom {
       } catch (e) {
         const response = await errorResponse(e).json()
         try {
+          if (componentPacket) socket.send(JSON.stringify({ type: 'component', nodeId: componentPacket.nodeId, version: componentPacket.version, peerId: componentPacket.peerId, kind: 'error', error: response.code || 'COMPONENT_UNAVAILABLE' }))
           socket.send(
             JSON.stringify({ type: 'error', requestId, ...response })
           )

@@ -1,3 +1,4 @@
+import { sharedComponentRuntime } from '../../packages/dsh-research-task-runtime/shared-component-runtime.js'
 import { patchSharedNativeConversation } from './shared-native-conversation.mjs'
 import { patchComponentInteractionState } from './component-interaction-state.mjs'
 import { patchBoardDirectoryConversation, patchBoardDirectoryWorkspace, patchBoardFileOwnership } from './board-directory-picker.mjs'
@@ -14,7 +15,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
   .replace(/^export /gm, '')
-  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n')
+  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n')
   .replace(/\bparseResearchHtmlArtifact\(/g, 'parseResearchContainerSpec(')
 const START = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_BEGIN */',
   END = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_END */'
