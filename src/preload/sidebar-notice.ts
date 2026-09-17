@@ -43,7 +43,8 @@ export function positionSidebarNotice(doc: Document, element: HTMLElement): void
   const sidebar = doc.querySelector<HTMLElement>('[data-dsh-sidebar-root]')
   const settingsNav = [...doc.querySelectorAll<HTMLElement>('.VOzbGW_panel .VOzbGW_nav')].find(el => visibleBounds(doc, el))
   const root = settingsNav ?? sidebar
-  const account = sidebar?.querySelector<HTMLElement>('.srb-account-controls, [data-dsh-sidebar-footer], [data-slot="sidebar.settings"]')
+  // The settings slot uses display:contents in the real sidebar; its box is empty.
+  const account = [...sidebar?.querySelectorAll<HTMLElement>('.srb-account-controls, [data-dsh-sidebar-footer], [data-slot="sidebar.settings"]') ?? []].find(el => visibleBounds(doc, el))
   const bounds = visibleBounds(doc, root), anchor = visibleBounds(doc, account)
   if (!bounds || (!settingsNav && !anchor)) {
     if (!element.hasAttribute('data-notice-unpositioned')) element.setAttribute('data-notice-unpositioned', '')

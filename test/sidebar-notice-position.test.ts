@@ -39,6 +39,17 @@ describe('D70 notice positioning uses the active navigation',()=>{
     expect(f.notice.hidden).toBe(false)
     await f.win.happyDOM.abort()
   })
+  it('skips the zero-size display:contents settings slot and anchors to visible account controls', async()=>{
+    const f=fixture();f.settings.hidden=true;rect(f.sidebar,0,0,280,900)
+    f.sidebar.innerHTML='<div data-slot="sidebar.settings" style="display:contents"><div class="srb-account-controls"></div></div>'
+    const slot=f.sidebar.firstElementChild as HTMLElement,controls=slot.firstElementChild as HTMLElement
+    rect(slot,0,0,0,0);rect(controls,14,850,220,36)
+    positionSidebarNotice(f.doc,f.notice)
+    expect(f.notice.hasAttribute('data-notice-unpositioned')).toBe(false)
+    expect(f.notice.style.bottom).toBe('62px')
+    expect(f.notice.style.width).toBe('252px')
+    await f.win.happyDOM.abort()
+  })
   it('temporarily conceals a missing anchor without changing the business hidden/dismiss state',async()=>{
     const f=fixture();f.settings.hidden=true;positionSidebarNotice(f.doc,f.notice)
     expect(f.notice.hasAttribute('data-notice-unpositioned')).toBe(true);expect(f.notice.hidden).toBe(false)
