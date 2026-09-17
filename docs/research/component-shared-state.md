@@ -43,3 +43,11 @@ document.querySelector('button').onclick = () => shared.dispatch({ type: 'increm
 `npx vitest run test/component-shared-state.test.js test/component-interaction-state.test.js test/collaboration-client.test.ts test/research-boards-service.test.ts`
 
 `node scripts/test-component-shared-browser.mjs`：本地真实 D1/DO/WebSocket + 独立 Chromium 账号上下文 + 生产 HTML 双重沙盒，验证同时编辑、计数、坐标、随机定时模拟、只读限制、晚加入、执行端退出、重连。合成数据与截图位于 `output/playwright/component-shared`，不读取或修改用户画板。
+
+## 生成交付验收
+
+个人和协作组件使用同一验收入口。新生成的原始 HTML 若含脚本或内联事件，必须包含可解析的共享注册配置（initialState/reduce/render）和 dispatch 或 tick；注释、字符串、空注册不算接入。独立 setInterval 会被拒绝。静态 HTML 和宿主原生格式不受此约束。
+
+验收失败会在同一任务内自动修复一次，保留用户原来的界面和交互要求；修复仍失败则报错，不降级为静态说明或把旧 HTML 标为成功。历史组件中的“平台没有同步通道”等文案不再作为生成依据。
+
+这是生成代码的结构校验，不能证明任意 JavaScript 的业务逻辑正确，仍需双端运行验证；也不会自动改写已保存的旧组件。已有组件需要重新生成或改造后才会走新验收。聚焦回归：`test/shared-component-validation.test.js` 及 `test/research-task-runtime.test.js` 中 `shared-state generation gate` 用例。
