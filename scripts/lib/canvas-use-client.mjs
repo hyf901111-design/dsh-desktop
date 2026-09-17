@@ -1,4 +1,4 @@
-import {createCanvasUseSurface} from '../../packages/dsh-research-task-runtime/canvas-use-surface.js'
+import {createCanvasUseSurface,installCanvasUseSurface} from '../../packages/dsh-research-task-runtime/canvas-use-surface.js'
 
 function installCanvasUseClient(sessionId,workspace,root) {
   let stopped=false,busy=false,revision='',fingerprint='',last='',cursor,timer
@@ -119,7 +119,7 @@ function CanvasUseTaskPanel({sessionId,active}) {
 
 export function patchCanvasUseClient(source) {
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
-  const defs=start+'\nconst canvasUseOwners = new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+CanvasUseTaskPanel.toString()+'\n'+end+'\n'
+  const defs=start+'\nconst canvasUseOwners = new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+CanvasUseTaskPanel.toString()+'\n'+end+'\n'
   if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return source.slice(0,a)+defs+source.slice(b+end.length+1)}
   const once=(a,b)=>{if(!source.includes(a))throw Error('Canvas use anchor missing: '+a.slice(0,100));source=source.replace(a,b)}
   once('function createResearchWorkspaceSession(storage, sessionId) {',defs+'function createResearchWorkspaceSession(storage, sessionId) {')
