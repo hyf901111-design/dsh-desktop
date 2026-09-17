@@ -154,6 +154,12 @@ it('draws manually sized components in zoomed world coordinates, persists the to
   expect(m.query('[data-research-component-marquee]').textContent).toBe('智能组件')
   expect(m.query('[data-research-component-marquee]').querySelectorAll('[data-frame-corner]')).toHaveLength(4)
   await m.event('pointerup', m.canvas, { pointerId: 1 })
+  expect(m.win.document.activeElement).toBe(m.canvas)
+  await m.event('keydown', m.canvas, { code: 'Space', key: ' ' })
+  await m.event('pointerdown', m.canvas, { button: 0, pointerId: 4, clientX: 300, clientY: 200 })
+  expect(m.canvas.getAttribute('data-research-operation')).toBe('pan')
+  await m.event('pointerup', m.canvas, { pointerId: 4 })
+  await m.event('keyup', m.canvas, { code: 'Space', key: ' ' })
   const first = m.workspace.getSnapshot().artifacts[0]
   expect(first).toMatchObject({ width: 800, height: 500, x: 600, y: 450, sizeMode: 'manual', generationStatus: 'draft' })
   expect(m.query('[data-research-global-container]').getAttribute('aria-pressed')).toBe('true')

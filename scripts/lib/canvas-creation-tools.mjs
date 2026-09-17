@@ -7,6 +7,7 @@ export function componentPlacement(rect, viewport) {
 }
 export function patchCanvasCreationTools(source) {
   source = patchComponentMarquee(source)
+  source = patchComponentDraftFocus(source)
   if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
@@ -52,6 +53,17 @@ export function patchCanvasCreationTools(source) {
   // Labels are kept in markup for older patch compatibility but visually hidden.
   source = installCreationStyle(source)
   return source
+}
+function patchComponentDraftFocus(source) {
+  const start = source.indexOf('function ResearchContainerDraft(')
+  const end = source.indexOf('function ', start + 10)
+  if (start < 0 || end < start) throw Error('Missing component draft renderer')
+  const body = source.slice(start, end)
+  if (body.includes('ODYSSEY_DRAFT_CANVAS_FOCUS')) return source
+  const anchor = 'inputRef.current?.focus({ preventScroll: true });'
+  if (!body.includes(anchor)) throw Error('Missing component draft focus')
+  return source.slice(0,start) + body.replace(anchor, `/* ODYSSEY_DRAFT_CANVAS_FOCUS */
+    if (!inputRef.current?.closest('[data-canvas-tool="component"]')) inputRef.current?.focus({ preventScroll: true });`) + source.slice(end)
 }
 function patchComponentMarquee(source) {
   if (source.includes('"data-research-component-marquee"')) return source
