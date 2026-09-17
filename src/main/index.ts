@@ -1,3 +1,4 @@
+import { registerResearchNativeWeb } from './state/research-native-web'
 import { copyResearchFile } from './state/research-owned-files'
 import {randomUUID} from 'node:crypto'
 import { ResearchBoardIntegration } from './research-board-integration'
@@ -801,6 +802,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     getRouter: () => researchCanvasWheelRouter,
     onRejected: (error) => console.warn('[research-canvas] rejected wheel region update', error)
   })
+  registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry})
   registerResearchLinkFrameHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,
