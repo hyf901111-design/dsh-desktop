@@ -12,8 +12,14 @@ export function nativeWebBounds(value: any) {
   if (!r || !['x', 'y', 'width', 'height'].every(k => Number.isFinite(r[k]) && Math.abs(r[k]) <= 30000)) throw Error('Invalid webpage bounds')
   return { x: Math.round(r.x), y: Math.round(r.y), width: Math.max(1, Math.min(4096, Math.round(r.width))), height: Math.max(1, Math.min(4096, Math.round(r.height))) }
 }
+export function nativeWebViewport(value: any) {
+  const size = value?.layoutSize
+  if (!size || !['width', 'height'].every(k => Number.isFinite(size[k]) && size[k] > 0 && size[k] <= 16384)) throw Error('Invalid webpage layout size')
+  if (!Number.isFinite(value.scale) || value.scale <= 0 || value.scale > 16) throw Error('Invalid webpage display scale')
+  return { width: Math.round(size.width), height: Math.round(size.height) }
+}
 export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry }) {
-  const entries = new Map<string, { view: WebContentsView; url: string; image: string; error: string; busy: boolean; typing: boolean; touched: number }>()
+  const entries = new Map<string, { view: WebContentsView; url: string; image: string; error: string; busy: boolean; typing: boolean; touched: number; presentation: string }>()
   const routes = new Map<string, Promise<boolean>>()
   const key = (v: any) => { if (!v || typeof v.sessionId !== 'string' || typeof v.nodeId !== 'string' || v.sessionId.length > 256 || v.nodeId.length > 256) throw Error('Invalid webpage identity'); return JSON.stringify([v.sessionId,v.nodeId]) }
   const release = (id: string) => { const e=entries.get(id); if(e){ options.getMainWindow()?.contentView.removeChildView(e.view); e.view.webContents.close(); entries.delete(id) } }
@@ -42,7 +48,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   bind('research:native-web:update',async value=>{
     const id=key(value),authorization=options.registry.resolve({sessionId:value.sessionId,nodeId:value.nodeId})
     if(!authorization || authorization.url!==normalizeResearchLinkUrl(value.url))throw Error('Webpage not authorized')
-    const bounds=nativeWebBounds(value), win=window()
+    const bounds=nativeWebBounds(value), viewport=nativeWebViewport(value), win=window()
     let entry=entries.get(id)
     if(entry&&entry.url!==authorization.url){release(id);entry=undefined}
     if(!entry){
@@ -51,7 +57,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})
-      entry={view,url:authorization.url,image:'',error:'',busy:false,typing:false,touched:Date.now()};entries.set(id,entry)
+      entry={view,url:authorization.url,image:'',error:'',busy:false,typing:false,touched:Date.now(),presentation:''};entries.set(id,entry)
       const current=entry
       view.setVisible(false);win.contentView.addChildView(view)
       view.webContents.setWindowOpenHandler(({url})=>{if(normalizeResearchLinkUrl(url))void view.webContents.loadURL(url).catch(()=>{});return {action:'deny'}})
@@ -65,11 +71,20 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       void view.webContents.loadURL(authorization.url).catch(error=>{current.error=String(error.message)})
     }
     entry.touched=Date.now()
-    entry.view.setBounds(bounds)
     entry.view.setBorderRadius(Math.max(0,Math.min(16,Math.round(Number(value.radius)||0))))
-    entry.view.webContents.setZoomFactor(Math.max(.25,Math.min(3,Number(value.scale)||1)))
     const size=win.getContentSize()
     const show=value.active===true&&bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=(size[0]??0)&&bounds.y+bounds.height<=(size[1]??0)
+    // Canvas zoom scales the rendered surface, never the page's CSS viewport.
+    // Hidden previews stay at 1x so wheel gestures cannot trigger responsive reflow.
+    const displayScale = show ? value.scale : 1
+    const presentation = JSON.stringify([viewport, displayScale])
+    if (!show || entry.presentation !== presentation) entry.view.setVisible(false)
+    if (entry.presentation !== presentation) {
+      entry.view.webContents.setZoomFactor(1)
+      entry.view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:viewport,viewPosition:{x:0,y:0},deviceScaleFactor:0,viewSize:viewport,scale:displayScale})
+      entry.presentation = presentation
+    }
+    entry.view.setBounds(show ? bounds : {x:0,y:0,...viewport})
     entry.view.setVisible(show)
     if(!entry.busy){
       entry.busy=true;const current=entry

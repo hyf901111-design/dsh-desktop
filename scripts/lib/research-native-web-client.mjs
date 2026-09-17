@@ -47,7 +47,8 @@ export function patchResearchNativeWeb(source) {
         if(stopped||!ref.current)return;
         const el=ref.current,card=el.closest('[data-research-node-id]'),root=el.closest('[data-research-canvas]'),r=el.getBoundingClientRect(),c=root?.getBoundingClientRect();
         if(!card||!c)return;
-        const scale=r.width/(el.offsetWidth||r.width||1);
+        const layoutSize={width:el.offsetWidth,height:el.offsetHeight};
+        const scale=r.width/(layoutSize.width||r.width||1);
         const bounds={x:r.left,y:r.top,width:r.width,height:r.height};
         const rectKey=JSON.stringify(bounds);if(last&&last!==rectKey)lastMotion=Date.now();last=rectKey;
         const points=[[r.left+4,r.top+4],[r.right-4,r.top+4],[r.left+4,r.bottom-4],[r.right-4,r.bottom-4],[(r.left+r.right)/2,(r.top+r.bottom)/2]];
@@ -57,7 +58,7 @@ export function patchResearchNativeWeb(source) {
         const signature=rectKey+active;
         if(busy||r.width<1||r.height<1||signature===tick.signature&&Date.now()-lastSent<1000)return;
         tick.signature=signature;lastSent=Date.now();busy=true;
-        try {const state=await bridge.updateNative({...identity,url:node.url,bounds,scale,radius:Math.round(9*scale),active});if(stopped)return;
+        try {const state=await bridge.updateNative({...identity,url:node.url,bounds,layoutSize,scale,radius:Math.round(9*scale),active});if(stopped)return;
           if(state.image&&imageRef.current){imageRef.current.src=state.image;setReady(true)}setError(state.error||'');
           if(state.inspection){const signature=JSON.stringify(state.inspection);if(signature!==lastInspection){lastInspection=signature;onInspection?.(node.url,state.inspection)}}
         }catch{if(!stopped)setError('网页暂时无法加载')}finally{busy=false}
