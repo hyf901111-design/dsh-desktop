@@ -110,6 +110,43 @@
           "真实客户端交互将在集成后发布前验证"
         ],
         "generatedAt": "2026-09-17T00:26:22.067154+00:00"
+      },
+      "merged": {
+        "mergeCommit": "bab3e5258f208bb7dc2979d9ee18ef57f19562dc",
+        "verificationCommit": "bab3e5258f208bb7dc2979d9ee18ef57f19562dc",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-update-control.test.ts",
+              "test/research-board-notifications-center.test.ts",
+              "test/update-release-notes.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/sidebar-notice-position.test.ts",
+              "test/settings-about.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-update-control.test.ts test/research-board-notifications-center.test.ts test/update-release-notes.test.ts test/update-notification-store.test.ts test/sidebar-notice-position.test.ts test/settings-about.test.ts",
+            "verifiedCommit": "bab3e5258f208bb7dc2979d9ee18ef57f19562dc",
+            "completedAt": "2026-09-17T00:26:55.549Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "bab3e5258f208bb7dc2979d9ee18ef57f19562dc",
+            "completedAt": "2026-09-17T00:26:55.549Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-17T00:26:55.549Z"
       }
     }
   ],
