@@ -68,7 +68,12 @@ function installCanvasUseClient(sessionId,workspace,root) {
     if(receipts.size>200)receipts.delete(receipts.keys().next().value)
     try {
       const state=workspace.getSnapshot(),nodes=[...state.files,...state.artifacts],node=nodes.find(n=>n.id===args.nodeId)
-      if(args.op==='viewport') {
+      let createdId
+      if(args.op==='create') {
+        if(![args.x,args.y,args.width,args.height].every(Number.isFinite)||Math.abs(args.x)>100000||Math.abs(args.y)>100000||args.width<320||args.width>4000||args.height<177||args.height>4000||!['component','link'].includes(args.kind))throw Error('组件创建参数无效。')
+        const created=workspace.createContainerDraft({x:args.x,y:args.y,width:args.width,height:args.height,sizeMode:'manual'},args.kind==='link'?'link':undefined)
+        if(!created)throw Error('当前画布无法创建组件。');createdId=created.id;workspace.updateSelection([createdId],'replace')
+      } else if(args.op==='viewport') {
         if(![args.x,args.y,args.scale].every(Number.isFinite)||Math.abs(args.x)>100000||Math.abs(args.y)>100000||args.scale<.1||args.scale>4)throw Error('画布视口参数无效。')
         workspace.setViewport({x:args.x,y:args.y,scale:args.scale})
       } else if(args.op==='select') {
@@ -89,7 +94,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
         check(true);if(isCancelled())throw Error('任务已取消。')
         await surface(node,{...args,op:args.op==='choose'?'select':args.op,revision:args.surfaceRevision})
       }
-      const result={status:'dispatched',requestId,message:'已执行操作，需重新观察确认结果。'};delete receipt.error;receipt.result=result;return result
+      const result={status:'dispatched',requestId,...(createdId?{createdId}:{}),message:'已执行操作，需重新观察确认结果。'};delete receipt.error;receipt.result=result;return result
     } finally {busy=false}
   }
   canvasUseOwners.set(sessionId,use)
