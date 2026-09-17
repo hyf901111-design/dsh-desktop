@@ -10,7 +10,7 @@ export function patchCanvasCreationTools(source) {
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
   source = patchComponentMarquee(source)
   source = patchComponentDraftFocus(source)
-  source = patchLinkDraftChrome(patchLinkCanvasFrame(source))
+  source = patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))
   if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
@@ -54,8 +54,23 @@ export function patchCanvasCreationTools(source) {
   replace('title: "语音 · 双击 Fn 开始，单按结束发送；长按 Fn 说话，松开发送",', '')
   replace('children: "输入网页地址" }),', 'children: "输入网页地址" }), (0,react_jsx_runtime.jsx)("button",{type:"button",className:"odyssey-link-close","aria-label":"关闭链接输入",onClick:()=>setLinkPopoverOpen(false),children:"×"}),')
   // Labels are kept in markup for older patch compatibility but visually hidden.
-  source = patchLinkDraftChrome(patchLinkCanvasFrame(source))
+  source = patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))
   source = installCreationStyle(source)
+  return source
+}
+function patchLinkSelection(source) {
+  if (!source.includes('/* ODYSSEY_LINK_SHARED_CHROME */') || source.includes('/* ODYSSEY_LINK_SELECTION */')) return source
+  source=source.replace('const linkDragRef=(0,react.useRef)(null);', `const linkDragRef=(0,react.useRef)(null);
+      /* ODYSSEY_LINK_SELECTION */
+      const [linkSelected,setLinkSelected]=(0,react.useState)(false);
+      const linkCardRef=(0,react.useRef)(null);
+      (0,react.useEffect)(()=>{
+        const select=event=>{const inside=linkCardRef.current?.contains(event.target);setLinkSelected(!!inside);if(inside)workspace.updateSelection([],'replace');};
+        document.addEventListener('pointerdown',select,true);
+        return ()=>document.removeEventListener('pointerdown',select,true);
+      },[workspace]);`)
+  source=source.replace('className: "rScV5Q_richNode odyssey-link-draft",', `className: "rScV5Q_richNode odyssey-link-draft",ref:linkCardRef,"data-selected":linkSelected?"true":"false",onFocusCapture:()=>{setLinkSelected(true);workspace.updateSelection([],'replace');},`)
+  source=source.replace('setLinkPopoverOpen(true); linkInputRef.current?.focus();','setLinkSelected(true); setLinkPopoverOpen(true); linkInputRef.current?.focus();')
   return source
 }
 function patchLinkDraftChrome(source) {
@@ -147,5 +162,8 @@ body [data-research-compact-chrome].odyssey-link-draft .rScV5Q_containerDraft te
 .odyssey-link-draft .rScV5Q_containerDraftFooter{flex:none;display:flex}
 .odyssey-link-draft .rScV5Q_containerDraftFooter button{width:100%}
 .odyssey-link-draft .odyssey-link-close{position:absolute;right:12px;top:11px;width:24px!important;height:24px!important;padding:0!important;border:0!important;border-radius:6px;background:transparent!important;color:var(--odyssey-card-muted)!important;box-shadow:none!important;font-size:20px;cursor:pointer}
+body [data-research-compact-chrome].odyssey-link-draft{border-radius:12px!important;overflow:hidden!important}
+body [data-research-compact-chrome].odyssey-link-draft>.rScV5Q_containerDraft{border-radius:0 0 11px 11px;overflow:hidden}
+body [data-research-compact-chrome].odyssey-link-draft[data-selected=true]::after{inset:0;border-radius:inherit}
 .odyssey-link-draft .rScV5Q_linkError{padding:0 20px 12px}
 `

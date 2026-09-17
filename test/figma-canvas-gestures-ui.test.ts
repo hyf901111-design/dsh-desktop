@@ -181,6 +181,13 @@ it('opens the link editor at the canvas center without changing the selected too
   await m.event('click', m.query('[data-research-global-link]'))
   const draft = m.win.document.querySelector('[data-research-link-popover]')!
   expect(draft.parentElement).toBe(m.canvas)
+  expect(draft.getAttribute('data-selected')).toBe('true')
+  await m.event('pointerdown', m.canvas, {button:0,pointerId:11,clientX:30,clientY:30})
+  await m.event('pointercancel', m.canvas, {pointerId:11})
+  expect(draft.getAttribute('data-selected')).toBe('false')
+  await m.event('pointerdown', draft.querySelector('textarea'), {button:0,pointerId:12})
+  expect(draft.getAttribute('data-selected')).toBe('true')
+  expect(m.workspace.getSnapshot().selection.selectedNodeIds).toEqual([])
   expect(draft.hasAttribute('data-research-compact-chrome')).toBe(true)
   expect(draft.querySelector('.rScV5Q_containerDraftFooter [data-research-link-submit]')).not.toBeNull()
   expect((draft as any).style.height).toBe('177px')
