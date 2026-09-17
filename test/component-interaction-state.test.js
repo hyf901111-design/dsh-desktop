@@ -40,3 +40,26 @@ it('preserves independent interaction events through shared document merging',as
  applyCanvasDiff(a,base,edit('a'));applyCanvasDiff(b,base,edit('b'));Y.applyUpdate(a,encodeDocument(b));Y.applyUpdate(b,encodeDocument(a));
  expect(projectDocument(a)).toEqual(projectDocument(b));expect(Object.keys(projectDocument(a).artifacts[0].config.interactionState.events)).toHaveLength(2);
 })
+
+it('replays coordinate clicks on a resized canvas in another client and after reopening',()=>{
+ const runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1];
+ const client=(width)=>{
+  const w=new Window({settings:{disableJavaScriptEvaluation:true}});w.document.body.innerHTML='<canvas></canvas>';
+  const board=w.document.querySelector('canvas'), moves=[],out=[];let capture;
+  board.getBoundingClientRect=()=>({left:40,top:20,width,height:width});
+  board.onclick=ev=>moves.push([Math.round((ev.clientX-40)/width*14),Math.round((ev.clientY-20)/width*14)]);
+  const listen=w.document.addEventListener.bind(w.document);
+  w.document.addEventListener=(type,fn,...args)=>{if(type==='click')capture=fn;listen(type,fn,...args)};
+  const parent={postMessage:m=>out.push(m)};
+  vm.runInNewContext('('+runtime+')()', {document:w.document,parent,addEventListener:w.addEventListener.bind(w),Element:w.Element,Event:w.Event,MouseEvent:w.MouseEvent,KeyboardEvent:w.KeyboardEvent,HTMLInputElement:w.HTMLInputElement,HTMLSelectElement:w.HTMLSelectElement,HTMLTextAreaElement:w.HTMLTextAreaElement,crypto:{randomUUID:()=> 'move-1'}});
+  const send=events=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events},readOnly:false}}));
+  send({});return {moves,out,send,click:()=>capture({isTrusted:true,target:board,clientX:40+width*.5,clientY:20+width*.25})};
+ };
+ const a=client(400),b=client(280);a.click();const event=a.out.at(-1).event;
+ expect(event.tag).toBe('CANVAS');expect(validResearchInteractionEvent(event)).toBe(true);
+ b.send({[event.id]:event});expect(b.moves).toEqual([[7,4]]);
+ b.send({[event.id]:event});expect(b.moves).toHaveLength(1);
+ const reopened=client(560);reopened.send({[event.id]:event});expect(reopened.moves).toEqual(b.moves);
+ expect(validResearchInteractionEvent({...event,x:NaN})).toBe(false);
+ expect(validResearchInteractionEvent({...event,y:2})).toBe(false);
+});

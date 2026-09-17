@@ -2510,12 +2510,15 @@ export function ResearchBoardDiscussion({
         ]
       }))
   ], v.tasks, v.messages)
+  const currentUserId = page.getState().account?.user?.userId
+  nativeProps = { ...nativeProps, currentUserId }
   const renderMessage = (m: any, i: number) =>
     NativeMessage && !componentTask(taskForMessage(m, v.tasks)) ? h(NativeMessage, { key: m.id ?? i, message: m, nativeProps }) : h(
       'article',
       {
         className: 'srb-message',
         'data-role': m.role,
+        'data-self': m.role === 'user' && !!currentUserId && (m.author?.userId ?? m.authorId) === currentUserId,
         'data-message-id': m.id,
         'data-execution-kind': !m.imported && componentTask(taskForMessage(m, v.tasks)) ? 'component' : 'conversation',
         key: `${m.imported ? 'history' : 'message'}:${m.id ?? i}`
