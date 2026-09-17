@@ -28,6 +28,12 @@ it('uses real workspace persistence and one undo for content + geometry changes'
  await w.canvasAction('undo',{requestId:'undo',revision:r.revision,actionId:r.actionId})
  expect(w.getSnapshot().artifacts[0].excerpt).toBe('原始内容')
 })
+it('builds generated HTML through the patched client with the full canvas interaction bridge',async()=>{
+ const {bundle}=await fixture()
+ const html=bundle.buildResearchHtmlPreview('<!doctype html><html><body><button>保存</button></body></html>','交互组件','dark',{notoFont:'runtime'})
+ expect(html).toContain('sherlock-canvas-use-request')
+ expect(html).toContain('sherlock-canvas-use-result')
+})
 it('clears the real workspace and restores components through undo',async()=>{
  const {workspace:w}=await fixture(),s=await w.canvasAction('inspect',{})
  const r=await w.canvasAction('apply',{requestId:'clear',revision:s.revision,changes:[{op:'remove',ids:s.nodes.map(n=>n.id)}]})
