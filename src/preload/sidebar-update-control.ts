@@ -40,6 +40,7 @@ export class SidebarUpdateControl {
   private status?: UpdateStatus
   private dismissed = ''
   private pending = false
+  private downloadRequested = false
   private observed = false
 
   constructor(private readonly document: Document, private readonly locale: UpdateLocale, private readonly callbacks: SidebarUpdateCallbacks) {}
@@ -63,7 +64,9 @@ export class SidebarUpdateControl {
     button.hidden = true
     button.addEventListener('click', () => {
       this.dismissed = ''
-      if (this.status) this.render(this.status)
+      if (this.status?.phase === 'available') void this.startDownload()
+      else if (this.status?.phase === 'error') void this.retryUpdate()
+      else if (this.status) this.render(this.status)
     })
     button.setAttribute('aria-controls', PANEL_ID)
     const panel = this.document.createElement('aside')
@@ -87,7 +90,7 @@ export class SidebarUpdateControl {
       win.addEventListener('resize', () => { if (this.panel) positionSidebarNotice(this.document, this.panel) })
       this.document.addEventListener('ework-update-action', (event) => {
         const action = (event as CustomEvent).detail
-        if (action === 'download') void this.invoke(this.callbacks.download)
+        if (action === 'download') void this.startDownload()
         else if (action === 'retry') void this.retryUpdate()
         else if (action === 'show') { this.dismissed = ''; if (this.status) this.render(this.status) }
       })
@@ -97,6 +100,7 @@ export class SidebarUpdateControl {
   }
 
   render(status: UpdateStatus): void {
+    if (this.downloadRequested && ['available', 'checking'].includes(status.phase)) status = { ...status, phase: 'downloading', percent: 0 }
     this.status = status
     if (!this.mount() || !this.button || !this.panel) return
     const doc = this.document, panel = this.panel, button = this.button
@@ -163,7 +167,7 @@ export class SidebarUpdateControl {
         actions.append(this.action(zh ? '知道了' : 'Got it', () => { this.dismissed = phaseKey; this.render(status) }))
       } else if (status.phase === 'available') {
         actions.append(this.action(zh ? '详情' : 'Details', () => doc.dispatchEvent(new doc.defaultView!.Event('ework-open-about'))))
-        const download = this.action(zh ? '更新' : 'Update', () => this.invoke(this.callbacks.download))
+        const download = this.action(zh ? '更新' : 'Update', () => this.startDownload())
         download.dataset.updateDownload = ''
         download.className = 'ework-notice-primary'
         actions.append(download)
@@ -194,6 +198,15 @@ export class SidebarUpdateControl {
     if (this.document.documentElement.dataset.eworkUpdateStatus === serialized) return
     this.document.documentElement.dataset.eworkUpdateStatus = serialized
     this.document.dispatchEvent(new this.document.defaultView!.CustomEvent('ework-update-status', { detail: serialized }))
+  }
+
+  private async startDownload(): Promise<void> {
+    if (this.pending || this.downloadRequested || !this.status) return
+    this.downloadRequested = true
+    this.dismissed = ''
+    this.render({ ...this.status, phase: 'downloading', percent: 0 })
+    try { await this.invoke(this.callbacks.download, () => 'download') }
+    finally { this.downloadRequested = false }
   }
 
   private async retryUpdate(): Promise<void> {

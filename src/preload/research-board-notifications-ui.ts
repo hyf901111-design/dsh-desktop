@@ -34,6 +34,7 @@ export function mountResearchBoardNotifications(
     queue: Notification[] = [],
     burst = 0,
     aggregate: Notification[] = []
+  let panelSignature = ''
   let activeNotification: Notification | undefined
   let latestUpdate = readUpdateNotification(win.localStorage)
   let liveUpdatePhase: UpdateStatus['phase'] | undefined
@@ -239,6 +240,10 @@ export function mountResearchBoardNotifications(
         if (compact) footer.lastElementChild?.classList.add('ework-notice-primary')
       }
     }
+    if (!compact && !n.readAt) {
+      const actions = row.querySelector('.srb-notification-actions, .srb-notification-footer') ?? row
+      actions.append(boardButton(doc, '标记已读', () => markRead([n.notificationId])))
+    }
     return row
   }
   function updateRecord() {
@@ -260,6 +265,7 @@ export function mountResearchBoardNotifications(
       doc.dispatchEvent(new win.Event('ework-open-about'))
     }))
     if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
+    if (updateUnread()) actions.append(boardButton(doc, '标记已读', () => markRead([], latestUpdate?.availableVersion)))
     row.append(actions)
     return row
   }
@@ -269,13 +275,16 @@ export function mountResearchBoardNotifications(
   function closePanel() {
     panel?.remove()
     panel = undefined
+    panelSignature = ''
     bell?.setAttribute('aria-expanded', 'false')
     bell?.focus()
   }
   async function markAllRead() {
+    const ids = state?.account.user ? state.notifications.notifications.filter(n => !n.readAt).map(n => n.notificationId) : []
+    await markRead(ids, latestUpdate?.availableVersion)
+  }
+  async function markRead(ids: string[], version?: string) {
     const openedPanel = panel, owner = account, generation = state?.account.generation
-    const ids = state?.notifications.notifications.filter(n => !n.readAt).map(n => n.notificationId) ?? []
-    const version = latestUpdate?.availableVersion
     try {
       for (let start = 0; start < ids.length; start += 100) {
         if (owner !== account || generation !== state?.account.generation) return
@@ -286,7 +295,9 @@ export function mountResearchBoardNotifications(
         updateReadVersion = version
         try { win.localStorage.setItem('ework.update.read', version) } catch {}
       }
-      await refresh()
+      reconcile()
+      renderPanel()
+      if (ids.length) await refresh()
     } catch (error) {
       if (panel !== openedPanel || !panel || owner !== account || generation !== state?.account.generation) return
       panel.querySelector('[role=alert]')?.remove()
@@ -298,6 +309,16 @@ export function mountResearchBoardNotifications(
   }
   function renderPanel() {
     if (!panel) return
+    // Transfer ticks must not replace controls between pointerdown and click.
+    const signature = JSON.stringify([filter, state?.account.status, state?.account.user?.userId,
+      state?.account.user ? state.notifications.notifications : [], updateReadVersion,
+      latestUpdate?.availableVersion, latestUpdate?.phase, latestUpdate?.errorStage, liveUpdatePhase])
+    if (signature === panelSignature) {
+      const message = panel.querySelector('[data-update-notification] .srb-notification-subtitle')
+      if (message) message.textContent = latestUpdate && liveUpdatePhase === latestUpdate.phase ? updateMessage(latestUpdate, 'zh') : ''
+      return
+    }
+    panelSignature = signature
     const active = panel.contains(doc.activeElement) ? doc.activeElement as HTMLElement : undefined
     const activeFilter = active?.dataset.notificationFilter
     const activeLabel = active?.getAttribute('aria-label')
@@ -359,11 +380,6 @@ export function mountResearchBoardNotifications(
       status.className = 'srb-notifications-service'
       status.append(doc.createTextNode(state.account.status === 'loading' ? '正在连接协作服务…' : '协作服务暂不可用。'),
         boardButton(doc, '重试连接', async () => { await call('boards.refresh'); await refresh() }))
-      list.append(status)
-    } else if (!state?.account.user) {
-      const status = doc.createElement('div')
-      status.className = 'srb-notifications-service'
-      status.append(doc.createTextNode('登录后查看协作邀请。'), boardButton(doc, '登录', () => requestBoardPageAction(doc, 'login')))
       list.append(status)
     }
     panel.append(list)
