@@ -19,7 +19,7 @@ export function nativeWebViewport(value: any) {
   return { width: Math.round(size.width), height: Math.round(size.height) }
 }
 export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry }) {
-  const entries = new Map<string, { view: WebContentsView; url: string; image: string; error: string; busy: boolean; typing: boolean; touched: number; presentation: string }>()
+  const entries = new Map<string, { view: WebContentsView; url: string; image: string; error: string; busy: boolean; typing: boolean; touched: number; presentation: string; layout: string; surfaceScale: number }>()
   const routes = new Map<string, Promise<boolean>>()
   const key = (v: any) => { if (!v || typeof v.sessionId !== 'string' || typeof v.nodeId !== 'string' || v.sessionId.length > 256 || v.nodeId.length > 256) throw Error('Invalid webpage identity'); return JSON.stringify([v.sessionId,v.nodeId]) }
   const release = (id: string) => { const e=entries.get(id); if(e){ options.getMainWindow()?.contentView.removeChildView(e.view); e.view.webContents.close(); entries.delete(id) } }
@@ -57,7 +57,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})
-      entry={view,url:authorization.url,image:'',error:'',busy:false,typing:false,touched:Date.now(),presentation:''};entries.set(id,entry)
+      entry={view,url:authorization.url,image:'',error:'',busy:false,typing:false,touched:Date.now(),presentation:'',layout:'',surfaceScale:1};entries.set(id,entry)
       const current=entry
       view.setVisible(false);win.contentView.addChildView(view)
       view.webContents.setWindowOpenHandler(({url})=>{if(normalizeResearchLinkUrl(url))void view.webContents.loadURL(url).catch(()=>{});return {action:'deny'}})
@@ -74,18 +74,30 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     entry.view.setBorderRadius(Math.max(0,Math.min(16,Math.round(Number(value.radius)||0))))
     const size=win.getContentSize()
     const show=value.active===true&&bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=(size[0]??0)&&bounds.y+bounds.height<=(size[1]??0)
-    // Canvas zoom scales the rendered surface, never the page's CSS viewport.
-    // Selection only changes visibility. Capture the identical surface used by
-    // the interactive view; a separate 1x capture changes Chromium rasterization.
-    const displayScale = value.scale
-    const presentation = JSON.stringify([viewport, displayScale])
-    if (!show || entry.presentation !== presentation) entry.view.setVisible(false)
-    if (entry.presentation !== presentation) {
-      entry.view.webContents.setZoomFactor(1)
-      entry.view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:viewport,viewPosition:{x:0,y:0},deviceScaleFactor:0,viewSize:viewport,scale:displayScale})
-      entry.presentation = presentation
+    // A hidden Chromium surface does not reliably resize its compositor. Keep
+    // the last complete surface and let the canvas scale its snapshot. Only a
+    // real component resize or entering interaction may configure the surface.
+    const layout = JSON.stringify(viewport)
+    if (!show) entry.view.setVisible(false)
+    if (show || entry.layout !== layout) {
+      const displayScale = show || !entry.presentation ? value.scale : entry.surfaceScale
+      const surface = show || !entry.presentation ? bounds : {
+        x: bounds.x, y: bounds.y,
+        width: Math.max(1, Math.round(viewport.width * displayScale)),
+        height: Math.max(1, Math.round(viewport.height * displayScale))
+      }
+      const presentation = JSON.stringify([viewport, displayScale])
+      if (entry.presentation !== presentation) entry.view.setVisible(false)
+      // Size the native surface before configuring its fixed CSS viewport.
+      entry.view.setBounds(surface)
+      if (entry.presentation !== presentation) {
+        entry.view.webContents.setZoomFactor(1)
+        entry.view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:viewport,viewPosition:{x:0,y:0},deviceScaleFactor:0,viewSize:viewport,scale:displayScale})
+        entry.presentation = presentation
+        entry.surfaceScale = displayScale
+        entry.layout = layout
+      }
     }
-    entry.view.setBounds(bounds)
     entry.view.setVisible(show)
     if(!entry.busy){
       entry.busy=true;const current=entry
