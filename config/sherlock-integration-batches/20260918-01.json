@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260918-01",
+  "branch": "codex/integration/20260918-01",
+  "baseMainCommit": "68a294f2854ad061b2a0d12c53a1f96b62858c5b",
+  "expectedMainCommit": "68a294f2854ad061b2a0d12c53a1f96b62858c5b",
+  "createdAt": "2026-09-17T16:16:29.255Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "全画布持续任务与通用交互",
+        "branch": "codex/feat/canvas-use-tasks-20260917",
+        "baseCommit": "68a294f2854ad061b2a0d12c53a1f96b62858c5b",
+        "tipCommit": "b4e4709863bd626d70347c1c005d54115e74aee7",
+        "commits": [
+          {
+            "commit": "b4e4709863bd626d70347c1c005d54115e74aee7",
+            "parents": [
+              "68a294f2854ad061b2a0d12c53a1f96b62858c5b"
+            ],
+            "subject": "功能：新增全画布持续任务、通用交互与虚拟光标"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/research/canvas-use.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/canvas-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-runtime.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/canvas-use-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/canvas-action-bridge.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/canvas-use-web.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-native-web.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-link-frame.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/canvas-use.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-actions-client.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/canvas-use.test.js",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-canvas-action-bridge.test.ts",
+              "test/research-canvas-actions.test.js",
+              "test/component-interaction-state.test.js",
+              "test/research-native-web.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "33 项直接相关检查通过",
+            "verifiedCommit": "b4e4709863bd626d70347c1c005d54115e74aee7",
+            "completedAt": "2026-09-17T16:16:15.383065+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "-p",
+              "tsconfig.node.json",
+              "--noEmit"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "b4e4709863bd626d70347c1c005d54115e74aee7",
+            "completedAt": "2026-09-17T16:16:15.383065+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 不构建共享客户端；真实界面和会话执行链将在集成批次验证。"
+        },
+        "acceptanceCriteria": [
+          "右侧会话创建全画布持续任务，支持跨组件操作",
+          "观察版本保护、虚拟光标、暂停接管恢复停止",
+          "无变化时不调用模型，离开或重启暂停"
+        ],
+        "risks": [
+          "当前画板前台执行；不含云端离线任务",
+          "受信任硬件输入和系统交互需要用户接管",
+          "真实模型链路与界面待集成验收"
+        ],
+        "generatedAt": "2026-09-17T16:16:15.383065+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/canvas-use.test.js",
+        "test/research-canvas-actions-client.test.js",
+        "test/research-canvas-action-bridge.test.ts",
+        "test/research-canvas-actions.test.js",
+        "test/component-interaction-state.test.js",
+        "test/research-native-web.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "tsc",
+        "-p",
+        "tsconfig.node.json",
+        "--noEmit"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
