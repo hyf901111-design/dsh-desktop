@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260917-05",
+  "branch": "codex/integration/20260917-05",
+  "baseMainCommit": "addf1025a4b2d414566c1566d1b5a612af8f2f8b",
+  "expectedMainCommit": "addf1025a4b2d414566c1566d1b5a612af8f2f8b",
+  "createdAt": "2026-09-17T04:17:04.023Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "看板命名删除与拖框工具栏",
+        "branch": "codex/feat/canvas-tools-20260917",
+        "baseCommit": "addf1025a4b2d414566c1566d1b5a612af8f2f8b",
+        "tipCommit": "5f6831c73982393ef9c97c5ae9cd01d31fae2dca",
+        "commits": [
+          {
+            "commit": "5f6831c73982393ef9c97c5ae9cd01d31fae2dca",
+            "parents": [
+              "addf1025a4b2d414566c1566d1b5a612af8f2f8b"
+            ],
+            "subject": "功能：看板自动命名和删除入口，新增图标工具栏与拖框创建组件"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/LICENSE-lucide"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/tool-frame.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/tool-select.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/tools-source.md"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/canvas-creation-tools.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/canvas-creation-tools.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-canvas-gestures-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-navigation-final.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-board-client-adapter.test.js",
+              "test/figma-canvas-gestures-ui.test.ts",
+              "test/research-board-navigation-final.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "61 项聚焦测试与类型检查通过",
+            "verifiedCommit": "5f6831c73982393ef9c97c5ae9cd01d31fae2dca",
+            "completedAt": "2026-09-17T04:16:55.460375+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "61 项聚焦测试与类型检查通过",
+            "verifiedCommit": "5f6831c73982393ef9c97c5ae9cd01d31fae2dca",
+            "completedAt": "2026-09-17T04:16:55.460375+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "集成构建后核验真实客户端"
+        },
+        "acceptanceCriteria": [
+          "首任务自动命名",
+          "个人看板删除确认",
+          "纯图标工具栏",
+          "持续组件模式拖框创建",
+          "链接输入居中"
+        ],
+        "risks": [
+          "自动标题使用既有会话模型服务"
+        ],
+        "generatedAt": "2026-09-17T04:16:55.460375+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-board-client-adapter.test.js",
+        "test/figma-canvas-gestures-ui.test.ts",
+        "test/research-board-navigation-final.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
