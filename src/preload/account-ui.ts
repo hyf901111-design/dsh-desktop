@@ -417,6 +417,14 @@ export function mountAccountUi(
       passwordToggle.setAttribute('aria-controls', form.id)
       security.append(label, passwordToggle)
       list.append(security)
+      const actions = document.createElement('div')
+      actions.className = 'sherlock-account-actions'
+      const signOut = button('退出登录', () => { void logout(signOut) }, '')
+      const logoutStatus = document.createElement('div')
+      logoutStatus.dataset.accountLogoutStatus = ''
+      logoutStatus.setAttribute('role', 'status')
+      actions.append(logoutStatus, signOut)
+      list.append(actions)
       field('currentPassword', '当前密码', 'password', 'current-password')
       field('password', '新密码', 'password', 'new-password')
       field('confirmPassword', '确认新密码', 'password', 'new-password')
@@ -561,14 +569,6 @@ export function mountAccountUi(
       heading.textContent = '最近 30 天用量'
       group.append(heading, usage)
       page.append(group)
-      const actions = document.createElement('div')
-      actions.className = 'sherlock-account-actions'
-      const signOut = button('退出登录', () => { void logout(signOut) }, '')
-      const logoutStatus = document.createElement('div')
-      logoutStatus.dataset.accountLogoutStatus = ''
-      logoutStatus.setAttribute('role', 'status')
-      actions.append(signOut, logoutStatus)
-      page.append(actions)
       void invoke('usage')
         .then((reply) => {
           if (!usage.isConnected) return

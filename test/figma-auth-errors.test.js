@@ -88,6 +88,7 @@ describe('auth field errors in the real form and browser layout', () => {
   })
   it('signs out from account settings and returns to login', async () => {
     await open({ user: { id: 'fixture-account', username: 'fixture_user', createdAt: 1 } })
+    expect(await page.locator('.sherlock-settings-list > .sherlock-account-security + .sherlock-account-actions button').count()).toBe(1)
     await page.locator('.sherlock-account-actions button').click()
     await page.locator('.sherlock-auth-dialog').waitFor()
     expect((await page.locator('.sherlock-account-button').textContent()).trim()).toBe('登录')

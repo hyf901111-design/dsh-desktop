@@ -141,6 +141,8 @@ body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-account-page{--settings-text:
 .VOzbGW_overlay .sherlock-account-id-row [role=status]{flex:1;text-align:right;font-size:12px}
 .VOzbGW_overlay .sherlock-account-id-row button{height:28px;padding:0 18px;border:0;border-radius:8px;background:var(--settings-control);color:var(--settings-text);font:400 13px/20px 'Noto Sans SC',sans-serif}
 
-.VOzbGW_overlay .sherlock-account-actions{display:flex;align-items:center;gap:16px;margin-top:28px}
-.VOzbGW_overlay .sherlock-account-actions button{height:32px;padding:0 18px;border:0;border-radius:8px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif}
+.VOzbGW_overlay .sherlock-account-actions{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:16px;min-height:54px;padding:0 16px}
+.VOzbGW_overlay .sherlock-account-actions:before{content:'';position:absolute;top:0;left:16px;right:16px;height:1px;background:var(--settings-divider)}
+.VOzbGW_overlay .sherlock-account-actions [role=status]{flex:1}
+.VOzbGW_overlay .sherlock-account-actions button{height:28px;padding:0 18px;border:0;border-radius:8px;background:var(--settings-control);font:400 13px/20px 'Noto Sans SC',sans-serif}
 .VOzbGW_overlay .sherlock-account-actions button:hover:not(:disabled){background:var(--settings-active)}
