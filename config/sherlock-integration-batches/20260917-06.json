@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260917-06",
+  "branch": "codex/integration/20260917-06",
+  "baseMainCommit": "3691245f949804e0d33f258f1ec4184aaf4baac7",
+  "expectedMainCommit": "3691245f949804e0d33f258f1ec4184aaf4baac7",
+  "createdAt": "2026-09-17T10:04:07.838Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "生成组件共享状态强制验收",
+        "branch": "codex/feat/component-sync-enforcement-20260917",
+        "baseCommit": "3691245f949804e0d33f258f1ec4184aaf4baac7",
+        "tipCommit": "52282b26c0f0f8b3b7919f74162c659e66b02f07",
+        "commits": [
+          {
+            "commit": "52282b26c0f0f8b3b7919f74162c659e66b02f07",
+            "parents": [
+              "3691245f949804e0d33f258f1ec4184aaf4baac7"
+            ],
+            "subject": "修复：强制生成交互组件接入共享状态并自动修复不合格输出"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/research/component-shared-state.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-component-shared-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/shared-component-validation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "generated shared-state acceptance|shared-state generation gate|shared component generation|shared current request|Research task persistence"
+            ],
+            "outcome": "passed",
+            "summary": "19项聚焦测试及类型检查通过",
+            "verifiedCommit": "52282b26c0f0f8b3b7919f74162c659e66b02f07",
+            "completedAt": "2026-09-17T10:03:36.759559+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "19项聚焦测试及类型检查通过",
+            "verifiedCommit": "52282b26c0f0f8b3b7919f74162c659e66b02f07",
+            "completedAt": "2026-09-17T10:03:36.759559+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实D1/DO/WebSocket与两个独立Chromium上下文验证表单、计数、位置、随机定时、只读、晚加入、接管及重连；实际报告HTML被新验收拒绝。模型真实生成仍需本地客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "新生成脚本组件必须接入共享状态",
+          "允许一次修复，失败不可静态降级",
+          "旧任务恢复保持原内容"
+        ],
+        "risks": [
+          "静态结构验收不能证明任意JavaScript业务逻辑正确",
+          "已有组件需要重新生成或改造"
+        ],
+        "generatedAt": "2026-09-17T10:03:36.759559+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/shared-component-validation.test.js",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "generated shared-state acceptance|shared-state generation gate|shared component generation|shared current request|Research task persistence"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
