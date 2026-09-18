@@ -425,3 +425,16 @@ describe('current-session model web search', () => {
     expect(localCalls).toBe(0)
   })
 })
+
+it('fetches rendered page content through the authenticated desktop route', async () => {
+  const { fetchLocalBrowser } = await import('../packages/dsh-web-search-session-model/index.js')
+  let seen
+  const url = await listen((req,res) => {
+    seen = {path:req.url,token:req.headers.authorization}
+    res.setHeader('content-type','application/json')
+    res.end(JSON.stringify({url:'https://example.com/doc',statusCode:200,body:{kind:'text',content:'文档正文'},truncated:false}))
+  })
+  const result = await fetchLocalBrowser({url:'https://example.com/doc'},undefined,{url,token:'test-token'})
+  expect(seen).toEqual({path:'/fetch',token:'Bearer test-token'})
+  expect(result.body.content).toBe('文档正文')
+})

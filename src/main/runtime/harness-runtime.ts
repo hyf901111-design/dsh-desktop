@@ -81,7 +81,8 @@ export function buildHarnessSpawnOptions(
       ...(localSearch
         ? {
             SHERLOCK_LOCAL_SEARCH_URL: localSearch.url,
-            SHERLOCK_LOCAL_SEARCH_TOKEN: localSearch.token
+            SHERLOCK_LOCAL_SEARCH_TOKEN: localSearch.token,
+            DSH_WEB_FETCH_PROVIDER: process.env.DSH_WEB_FETCH_PROVIDER ?? 'sherlock-browser'
           }
         : {}),
       ...(researchContext

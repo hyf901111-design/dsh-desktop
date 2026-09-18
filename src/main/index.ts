@@ -1,3 +1,4 @@
+import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
 import { registerResearchNativeWeb } from './state/research-native-web'
 import { registerCanvasUseWeb } from './state/canvas-use-web'
@@ -1233,7 +1234,8 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
   localSearchRuntime = await startLocalSearchRuntime({
-    createWindow: createLocalSearchWindow
+    createWindow: createLocalSearchWindow,
+    readPage: readBrowserPage
   })
   runtime = new HarnessRuntime({
     dshEntryPath: dshEntryPath(),

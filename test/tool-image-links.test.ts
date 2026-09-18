@@ -29,12 +29,15 @@ async function dispatch(messages: any[], inputModalities = ['text'], prepared = 
 }
 
 async function loadClient() {
-  const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-  let descriptor: any
-  runInNewContext(source, { window: { __ModuleLoader__: { load(value: any) { descriptor = value } } } })
-  let fake: any
-  fake = new Proxy(function () {}, { get: () => fake, apply: () => fake })
-  return descriptor.factory((id: string) => id === 'react' || id === 'react/jsx-runtime' ? requireModule(id) : fake)
+  // @ts-expect-error Build-time patch module is JavaScript.
+  const {patchCanvasUseClient}=await import('../scripts/lib/canvas-use-client.mjs')
+  const source = patchCanvasUseClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const start = source.indexOf('function toolImageOutputs(')
+  const end = source.indexOf('/** One turn-level status',start)
+  return runInNewContext(source.slice(start,end)+';({toolImageOutputs,ToolImageOutputs})', {
+    react_jsx_runtime:requireModule('react/jsx-runtime'),
+    _deepseek_ai_dsh_client_ui_attachment:{ImageGallery:()=>null},messageImageLabels:()=>({})
+  })
 }
 
 const node = { kind: 'tool-call', data: { root: { kind: 'tool-result', callId: 'c', content: result.content, subCalls: [] } } }
@@ -60,8 +63,8 @@ describe('tool image output', () => {
     const client = await loadClient()
     expect(client.toolImageOutputs).toBeTypeOf('function')
     const links = client.toolImageOutputs([node, node, { kind: 'tool-call', data: { root: { subCalls: [node.data.root] } } }])
-    expect(links.files).toEqual([{ path: '/tmp/logo.png', name: 'logo.png' }])
-    expect(links.images).toEqual([])
+    expect(links.files).toEqual([])
+    expect(links.images).toEqual([{ attachment }])
     expect(client.toolImageOutputs([{ ...node, data: { root: { ...node.data.root, isError: true } } }]).files).toEqual([])
   })
   it('keeps images without a filesystem path available through the attachment gallery', async () => {
@@ -70,11 +73,11 @@ describe('tool image output', () => {
     const output = client.toolImageOutputs([{ kind: 'context', data: { source: { kind: 'plugin', plugin: 'tools-code-mode' }, content: [image] } }])
     expect(output.images).toEqual([{ attachment }])
   })
-  it('renders a filename button and opens its exact path', async () => {
+  it('keeps a compact filename fallback when an old result has no attachment', async () => {
     const client = await loadClient()
     expect(client.ToolImageOutputs).toBeTypeOf('function')
     let opened = ''
-    const view = client.ToolImageOutputs({ nodes: [node], openFile: (p: string) => { opened = p }, t: (key: string) => key })
+    const view = client.ToolImageOutputs({ nodes: [{...node,data:{root:{...node.data.root,content:[result.content[0]]}}}], openFile: (p: string) => { opened = p }, t: (key: string) => key })
     const button = view.props.children[0][0]
     expect(button.props.children).toBe('logo.png')
     button.props.onClick()
