@@ -23,7 +23,7 @@ export function browserCursorScript(x: number, y: number, label: string, active 
     }
     cursor.style.left=Math.max(0,Math.min(innerWidth-1,${JSON.stringify(x)}*innerWidth))+'px';cursor.style.top=Math.max(0,Math.min(innerHeight-1,${JSON.stringify(y)}*innerHeight))+'px';
     cursor.style.transform='scale('+${JSON.stringify(scale)}+')';
-    cursor.__label.style.position='absolute';cursor.__label.style.left=${JSON.stringify(x)}*innerWidth>innerWidth-150*${scale}?'auto':'18px';cursor.__label.style.right=${JSON.stringify(x)}*innerWidth>innerWidth-150*${scale}?'8px':'auto';cursor.__label.style.top=${JSON.stringify(y)}>.85?'-22px':'2px';cursor.__label.textContent=${JSON.stringify(label)};
+    cursor.__label.style.position='absolute';cursor.__label.style.left=${JSON.stringify(x)}*innerWidth>innerWidth-150*${scale}?'auto':'18px';cursor.__label.style.right=${JSON.stringify(x)}*innerWidth>innerWidth-150*${scale}?'8px':'auto';cursor.__label.style.top=${JSON.stringify(y)}>.85?'-22px':'2px';cursor.__label.querySelector('[data-canvas-cursor-text]').textContent=${JSON.stringify(label)};
     cursor.style.opacity=${JSON.stringify(active ? '1' : '0')};cursor.dataset.active=${JSON.stringify(String(active))};if(${active})cursor.__animation?.play();else cursor.__animation?.pause();
   })()`
 }
