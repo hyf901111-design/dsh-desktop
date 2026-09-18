@@ -1,3 +1,4 @@
+import { contextMenuTargetScript } from './context-menu-target'
 import { generatedFileFinderPath } from './generated-file-finder'
 import { buildNativeFileMenu } from './native-file-menu'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
@@ -9,31 +10,13 @@ async function clickedElementPathCandidates(
   window: BrowserWindow,
   x: number,
   y: number
-): Promise<{ values: string[]; sessionId?: string; fileName?: string }> {
+): Promise<{ values: string[]; sessionId?: string; fileName?: string; targeted?: boolean }> {
   if (window.isDestroyed()) return { values: [] }
   try {
-    const result = await window.webContents.executeJavaScript(`(() => {
-      const origin = document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
-      if (!(origin instanceof Element)) return [];
-      const values = [];
-      let element = origin;
-      for (let depth = 0; element instanceof Element && depth < 5; depth += 1) {
-        for (const name of ['data-path', 'title', 'aria-label', 'href']) {
-          const value = element.getAttribute(name);
-          if (value) values.push(value);
-        }
-        element = element.parentElement;
-      }
-      if (origin.textContent) values.push(origin.textContent);
-      const inputs = Array.from(document.querySelectorAll('textarea[data-odyssey-file-reference-session]')).filter(el => el.getClientRects().length);
-      const button = origin.closest('button');
-      const text = button?.textContent?.trim() ?? '';
-      const title = button?.getAttribute('title') ?? '';
-      const fileName = text && !/[\\/]/.test(text) && (title === text || title.endsWith('/' + text)) ? text : undefined;
-      return { values, fileName, sessionId: inputs.length === 1 ? inputs[0].getAttribute('data-odyssey-file-reference-session') : undefined };
-    })()`, true)
+    const result = await window.webContents.executeJavaScript(contextMenuTargetScript(x, y), true)
     if (!result || !Array.isArray(result.values)) return { values: [] }
     return {
+      targeted: result.targeted === true,
       values: result.values.filter((value: unknown): value is string => typeof value === 'string'),
       fileName: typeof result.fileName === 'string' ? result.fileName : undefined,
       sessionId: typeof result.sessionId === 'string' ? result.sessionId : undefined
@@ -64,7 +47,7 @@ export function installContextMenu(
       : undefined
     if (window.isDestroyed()) return
     let finderPath = resolveFinderPath(
-      [...elementCandidates.values, params.linkURL, params.selectionText],
+      [...elementCandidates.values, params.linkURL, ...(elementCandidates.targeted ? [] : [params.selectionText])],
       existsSync, cwd
     )
     if (!finderPath && cwd && elementCandidates.sessionId && elementCandidates.fileName) {
