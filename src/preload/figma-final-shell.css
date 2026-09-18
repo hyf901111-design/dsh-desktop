@@ -82,7 +82,8 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .srb-discussion-empty>.sRp_emptyState { flex:1; margin:0; }
 .sRp_messages .Md3f7G_scroll { padding-inline:0; }
 .gdEzaW_userRow { justify-content:flex-end; }
-.gdEzaW_userStack { width:fit-content !important; max-width:100%; margin-left:auto; align-items:flex-end; }
+/* Keep long user messages inset from the assistant column in both chat surfaces. */
+.gdEzaW_userStack { width:fit-content !important; min-width:0; max-width:70%; margin-left:auto; align-items:flex-end; }
 .gdEzaW_bubble { width:fit-content !important; max-width:100%; text-align:left !important; box-sizing:border-box; }
 .gdEzaW_bubble :is(p,[data-research-message-files]) { text-align:left; }
 .srb-message[data-role=user] { width:fit-content; max-width:100%; margin-left:auto; }
