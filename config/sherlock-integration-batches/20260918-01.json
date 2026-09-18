@@ -11,75 +11,32 @@
         "schemaVersion": 1,
         "featureName": "PPT技能1.1.0与右键目标捕获",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "695778edbe2ec4cb5142886ba3f92e28b0104dba",
-        "tipCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
+        "baseCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
+        "tipCommit": "19240c07e81e732b072d2ff45b143cb16cb0106f",
         "commits": [
           {
-            "commit": "9ea6781095fd697fe22af9f5e4b2aafe9d76d89f",
+            "commit": "19240c07e81e732b072d2ff45b143cb16cb0106f",
             "parents": [
-              "695778edbe2ec4cb5142886ba3f92e28b0104dba"
+              "54b54c99a9ec400c563b462fd6e807ec270343f0"
             ],
-            "subject": "升级PPT技能至1.1.0并补齐颜色阴影目录与视觉验收门禁"
-          },
-          {
-            "commit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
-            "parents": [
-              "9ea6781095fd697fe22af9f5e4b2aafe9d76d89f"
-            ],
-            "subject": "按真实右键事件锁定文件目标避免缩放坐标误选"
+            "subject": "补充PowerPoint修复导致目录变色的XML顺序门禁"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/efund-ppt-110-audit.md"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/_meta.json"
-          },
-          {
-            "status": "A",
             "path": "skills/efund-ppt-maker/references/delivery-110.md"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/check_efund_delivery.py"
-          },
-          {
-            "status": "A",
             "path": "skills/efund-ppt-maker/scripts/check_efund_portability.py"
           },
           {
-            "status": "A",
-            "path": "skills/efund-ppt-maker/scripts/check_efund_visual_review.py"
-          },
-          {
             "status": "M",
-            "path": "src/main/context-menu-target.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/context-menu.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-ppt-skill.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/context-menu-target.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/efund-ppt-107.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/efund-ppt-110.test.js"
           }
         ],
@@ -93,28 +50,12 @@
               "test/efund-ppt-109.test.js",
               "test/efund-ppt-108.test.js",
               "test/efund-ppt-107.test.js",
-              "test/bundled-ppt-skill.test.ts",
-              "test/context-menu-target.test.js",
-              "test/context-menu-template.test.ts",
-              "test/context-menu.test.ts",
-              "test/generated-file-finder.test.ts"
+              "test/bundled-ppt-skill.test.ts"
             ],
             "outcome": "passed",
-            "summary": "PPT 6项与文件菜单15项聚焦检查分别通过",
-            "verifiedCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
-            "completedAt": "2026-09-18T09:55:24.054770+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
-            "completedAt": "2026-09-18T09:55:24.054770+00:00",
+            "summary": "6项PPT聚焦检查通过，新增XML顺序失败用例",
+            "verifiedCommit": "19240c07e81e732b072d2ff45b143cb16cb0106f",
+            "completedAt": "2026-09-18T10:00:21.309267+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -127,59 +68,7 @@
           "右键事件目标优先于坐标回查"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T09:55:24.054770+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c7ab6831c8664cf939eb03c62efb2980a0abf91b",
-        "verificationCommit": "c7ab6831c8664cf939eb03c62efb2980a0abf91b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "c7ab6831c8664cf939eb03c62efb2980a0abf91b",
-            "completedAt": "2026-09-18T09:56:07.512Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "c7ab6831c8664cf939eb03c62efb2980a0abf91b",
-            "completedAt": "2026-09-18T09:56:07.512Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "c7ab6831c8664cf939eb03c62efb2980a0abf91b",
-            "completedAt": "2026-09-18T09:56:07.512Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T09:56:07.512Z"
+        "generatedAt": "2026-09-18T10:00:21.309267+00:00"
       }
     }
   ],
