@@ -9,46 +9,50 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "持续任务单上下文与全局执行过程和窗口性能优化",
+        "featureName": "全局会话展开、持续反馈、动态超时与输入框高度",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
-        "tipCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
+        "baseCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
+        "tipCommit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
         "commits": [
           {
-            "commit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
+            "commit": "b621ea09e82b903282fc39f4b1148dea7074374b",
             "parents": [
-              "43c5b70ab9595f0b51d50e5ff1554de48206953b"
+              "c649d8e86fcf38c91d2a1e9652c2967c310b17c0"
             ],
-            "subject": "优化：持续任务复用执行上下文并统一全局过程展开与窗口缩放反馈"
+            "subject": "修复：全局执行详情向下展开并保留阅读位置，增加正文间距"
           },
           {
-            "commit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
+            "commit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
             "parents": [
-              "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e"
+              "b621ea09e82b903282fc39f4b1148dea7074374b"
             ],
-            "subject": "测试：补全全局过程渲染验证的脚本类型边界"
+            "subject": "优化：持续任务动态超时与状态反馈，归并结束操作栏并自适应输入高度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-collaboration/activity.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/canvas-task-executor.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/canvas-task-timing.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-agent-scope.js"
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/conversation-disclosure.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/conversation-disclosure.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/canvas-task-notices.mjs"
           },
           {
             "status": "M",
@@ -56,51 +60,43 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/shared-native-conversation.mjs"
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-motion.css"
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-resize-feedback.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-responsive-header.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-scrollbars.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/navigation-title-preview.ts"
+            "path": "src/preload/research-conversation-follow.ts"
           },
           {
             "status": "M",
             "path": "test/canvas-task-conversation.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/canvas-task-executor.test.js"
           },
           {
-            "status": "M",
-            "path": "test/canvas-use.test.js"
+            "status": "A",
+            "path": "test/canvas-task-notices.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/canvas-task-timing.test.js"
           },
           {
             "status": "M",
             "path": "test/compact-execution-status.test.ts"
           },
           {
+            "status": "A",
+            "path": "test/conversation-disclosure.test.ts"
+          },
+          {
             "status": "M",
-            "path": "test/figma-resize-feedback.test.ts"
+            "path": "test/research-conversation-follow.test.ts"
           }
         ],
         "checks": [
@@ -109,22 +105,20 @@
               "npx",
               "vitest",
               "run",
-              "test/canvas-task-executor.test.js",
-              "test/canvas-use.test.js",
-              "test/canvas-task-recovery.test.js",
+              "test/conversation-disclosure.test.ts",
+              "test/research-conversation-follow.test.ts",
+              "test/compact-execution-status.test.ts",
               "test/canvas-task-conversation.test.js",
-              "test/shared-native-conversation.test.js",
-              "test/canvas-use-tool-observation.test.js",
-              "test/component-interaction-state.test.js",
-              "test/figma-resize-feedback.test.ts",
-              "test/figma-responsive-header.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/compact-execution-status.test.ts"
+              "test/canvas-task-executor.test.js",
+              "test/canvas-task-notices.test.js",
+              "test/canvas-task-timing.test.js",
+              "test/canvas-task-recovery.test.js",
+              "test/canvas-use.test.js"
             ],
             "outcome": "passed",
-            "summary": "95 项聚焦验证通过，包含同一执行上下文接续、主调用持续等待、取消以及全局折叠顺序",
-            "verifiedCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
-            "completedAt": "2026-09-18T04:21:25.996902+00:00",
+            "summary": "82 项聚焦验证通过，涵盖展开定位、消息归并、通知去重、连续上下文与动态超时",
+            "verifiedCommit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
+            "completedAt": "2026-09-18T04:52:38.316870+00:00",
             "timeoutMs": 120000
           },
           {
@@ -137,88 +131,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
-            "completedAt": "2026-09-18T04:21:25.996902+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-canvas-activity-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "实际 D1/DO/WS 进度、重连及权限验证通过",
-            "verifiedCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
-            "completedAt": "2026-09-18T04:21:25.996902+00:00",
+            "verifiedCommit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
+            "completedAt": "2026-09-18T04:52:38.316870+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能 worktree 不构建共享客户端；真实 UI 在集成批次验证。"
+          "summary": "功能 worktree 不构建共享客户端；将在集成产物中检查全局展开。"
         },
         "acceptanceCriteria": [
-          "整条任务保持主会话执行状态并复用同一执行上下文",
-          "普通对话和研究画板的过程标题均在展开正文之前",
-          "光标形状和阴影符合参考，窗口调整即时响应"
+          "普通对话与研究面板展开标题保持原位置，正文向下展开",
+          "过程标题和正文间距增加",
+          "执行中实时动作显示在标题下方光泽状态行",
+          "同一任务仅一个结束操作栏",
+          "输入框随内容增高且有高度上限",
+          "模型等待及恢复时限结合近期耗时动态调整"
         ],
-        "risks": [
-          "模型请求延迟仍受提供方影响",
-          "真实客户端退出需重新启动任务；不具备离线云端执行能力"
-        ],
-        "generatedAt": "2026-09-18T04:21:25.996902+00:00"
-      },
-      "merged": {
-        "mergeCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
-        "verificationCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
-            "completedAt": "2026-09-18T04:21:51.461Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
-            "completedAt": "2026-09-18T04:21:51.461Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
-            "completedAt": "2026-09-18T04:21:51.461Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T04:21:51.461Z"
+        "risks": [],
+        "generatedAt": "2026-09-18T04:52:38.316870+00:00"
       }
     }
   ],
