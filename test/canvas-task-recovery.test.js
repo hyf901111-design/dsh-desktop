@@ -72,3 +72,32 @@ it('a slow successful model round does not look like client sleep and pause the 
  const tasks=new CanvasUseTasks({observe:async()=>normal(),execute})
  try{await start(tasks);await vi.advanceTimersByTimeAsync(100000);expect(tasks.list('board')[0]).toMatchObject({state:'waiting',rounds:1})}finally{await tasks.dispose()}
 })
+
+it('keeps an ongoing goal alive when a model completes just one interaction',async()=>{
+ vi.useFakeTimers()
+ const tasks=new CanvasUseTasks({observe:async()=>normal(),execute:async()=>({status:'complete',reason:'本轮操作已完成'})})
+ try {
+  const t=await tasks.start({sessionId:'board',goal:'持续协作',completion:'用户停止',completionMode:'until-stopped'})
+  await settle();expect(tasks.list('board')[0]).toMatchObject({id:t.id,state:'waiting'})
+  await tasks.control('board',t.id,'stop');expect(tasks.list('board')[0].state).toBe('stopped')
+ }finally{await tasks.dispose()}
+})
+
+it('steers the same goal even without a canvas change and rejects stale in-flight actions',async()=>{
+ vi.useFakeTimers();let staleGuard,release
+ const execute=vi.fn(async(task,_observation,_signal,guard)=>{
+  if(task.rounds===1){staleGuard=guard;await new Promise(r=>release=r)}
+  else expect(task.instructions).toEqual(['接下来的内容使用新名称'])
+  return {status:'wait',reason:'继续等待'}
+ })
+ const tasks=new CanvasUseTasks({observe:async()=>normal(),execute})
+ try {
+  const t=await start(tasks);await settle()
+  await tasks.steer('board',t.id,'接下来的内容使用新名称')
+  await expect(staleGuard('use',{op:'click'})).rejects.toThrow('要求已补充')
+  release();await vi.advanceTimersByTimeAsync(1000)
+  expect(tasks.list('board')).toHaveLength(1)
+  expect(tasks.list('board')[0]).toMatchObject({id:t.id,state:'waiting',rounds:2,actions:0})
+  await expect(tasks.steer('other',t.id,'new')).rejects.toThrow()
+ }finally{await tasks.dispose()}
+})
