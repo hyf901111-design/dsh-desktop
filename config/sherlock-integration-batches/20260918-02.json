@@ -9,106 +9,50 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复组件菜单悬停遮挡选中描边",
+        "featureName": "统一智能助理光标标签",
         "branch": "codex/feat/web-content-composer-20260918",
-        "baseCommit": "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7",
-        "tipCommit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
+        "baseCommit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
+        "tipCommit": "af7755e73915d887eb10282f10c127e976b6db58",
         "commits": [
           {
-            "commit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
+            "commit": "af7755e73915d887eb10282f10c127e976b6db58",
             "parents": [
-              "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7"
+              "e828026e94608b258c1bfd7cb65c7bbbf9074c44"
             ],
-            "subject": "修复：悬停更多菜单时完整显示组件选中描边"
+            "subject": "优化：统一智能助理灰色标签并居中白色文字"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/figma-canvas-gestures.css"
+            "path": "packages/dsh-research-task-runtime/agent-cursor.js"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/figma-canvas-gestures-ui.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "12 项画布交互检查通过",
-            "verifiedCommit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
-            "completedAt": "2026-09-18T14:17:26.231054+00:00",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "已在集成客户端复现标题栏悬停时遮挡上边框，确认标题层10高于旧描边层5；本次将描边提升至20，保持菜单层3000及非交互描边。新包随后核验。"
-        },
-        "acceptanceCriteria": [
-          "智能容器与链接组件在更多菜单打开及hover时保留完整蓝色外框"
-        ],
-        "risks": [],
-        "generatedAt": "2026-09-18T14:17:26.231054+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
-        "verificationCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
-            "completedAt": "2026-09-18T14:18:40.435Z",
-            "timeoutMs": 240000
-          },
           {
             "argv": [
               "npx",
               "vitest",
               "run",
               "test/conversation-browser.test.ts",
-              "test/canvas-use.test.js",
-              "test/canvas-use-tool-observation.test.js",
-              "test/workspace-drag-feedback.test.js",
-              "test/browser-page-reader.test.ts",
-              "test/rendered-page-content.test.ts",
-              "test/sidebar-scroll-fade.test.ts",
-              "test/local-search-bridge.test.ts",
-              "test/figma-reading-layout.test.ts",
-              "test/figma-reading-column.test.js",
-              "test/research-board-navigation-final.test.ts"
+              "test/canvas-use.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/conversation-browser.test.ts test/canvas-use.test.js test/canvas-use-tool-observation.test.js test/workspace-drag-feedback.test.js test/browser-page-reader.test.ts test/rendered-page-content.test.ts test/sidebar-scroll-fade.test.ts test/local-search-bridge.test.ts test/figma-reading-layout.test.ts test/figma-reading-column.test.js test/research-board-navigation-final.test.ts",
-            "verifiedCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
-            "completedAt": "2026-09-18T14:18:40.435Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
-            "completedAt": "2026-09-18T14:18:40.435Z",
+            "summary": "25 项光标与画布检查通过",
+            "verifiedCommit": "af7755e73915d887eb10282f10c127e976b6db58",
+            "completedAt": "2026-09-18T14:21:18.438502+00:00",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-09-18T14:18:40.435Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实 Electron 网页验证统一灰色标签和居中文案，宽窄自适应与结束淡出仍通过。"
+        },
+        "acceptanceCriteria": [
+          "画板及浏览器使用光标同色灰底、白字、水平垂直居中标签"
+        ],
+        "risks": [],
+        "generatedAt": "2026-09-18T14:21:18.438502+00:00"
       }
     }
   ],
