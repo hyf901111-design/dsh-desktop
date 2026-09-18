@@ -111,3 +111,14 @@ it('anchors resumed tasks to the resume request instead of the old completed rep
  expect(result.map(e=>e.key)).toEqual(['old','resume','e','canvas-task:t'])
  expect(result.find(e=>e.key==='e').running).toBe(true)
 })
+
+it('edits queued human wording without losing frozen canvas references or image attachments',async()=>{
+ const {canvasQueueEditContent}=await import('../scripts/lib/canvas-use-client.mjs')
+ const context={files:[{id:'f'}],artifacts:[{id:'component'}],canvasContext:{snapshotId:'same'}}
+ let passed
+ const serialize=(...args)=>{passed=args;return 'preserved-context:'+args[1]}
+ const image={type:'image',url:'attachment'}
+ const content=canvasQueueEditContent({canvasQueuedContext:context,content:[{type:'text',text:'old'},image]},'修改后的要求',serialize)
+ expect(passed).toEqual([context.files,'修改后的要求',[],context.artifacts,[],context.canvasContext])
+ expect(content).toEqual([{type:'text',text:'preserved-context:修改后的要求'},image])
+})

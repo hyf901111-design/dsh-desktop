@@ -132,6 +132,9 @@ body .Md3f7G_executionGroup[data-expanded=true] > .odyssey-canvas-live-status { 
 @media(prefers-reduced-motion:reduce) { body .odyssey-canvas-live-status { animation:none; background:none; color:var(--dsw-alias-label-secondary); } }
 
 /* Keep status and prose distinct, and reveal process records directly below. */
-body .Md3f7G_executionGroup > .Md3f7G_executionTrigger { margin-bottom:20px; }
-body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:20px; }
+body .Md3f7G_executionGroup > .Md3f7G_executionTrigger { margin-bottom:0; }
+body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:0; }
 body .Md3f7G_executionGroup > .Md3f7G_executionDetails { margin-top:16px; gap:12px; max-height:none; overflow:visible; }
+
+body .Md3f7G_executionGroup:has(> .Md3f7G_executionProgress) > .Md3f7G_executionTrigger { margin-bottom:10px; }
+body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:10px; }

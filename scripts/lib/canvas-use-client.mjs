@@ -7,6 +7,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
   const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return(h>>>0).toString(36)}
   const check=(write=false)=>{
     if(stopped||!root.isConnected||document.hidden||!root.getBoundingClientRect().width)throw Error('画板暂不可见，等待恢复后重新观察。')
+    if(document.documentElement.hasAttribute('data-odyssey-window-resizing'))throw Error('窗口正在调整尺寸，稍后重新观察。')
     if(write&&sherlockShared(sessionId)){const v=sherlockBoardsAdapter?.getView(sessionId);if(v?.connection!=='online')throw Error('画板连接暂不可用。');if(!v?.permissions.edit)throw Error('[CANVAS_FATAL] 画板编辑权限已撤销。')}
     if(root.hasAttribute('data-research-operation')||root.querySelector('[data-research-marquee]'))throw Error('用户正在操作画布，等待操作结束后重新观察。')
   }
@@ -227,9 +228,15 @@ function CanvasUseConversation({sessionId,active,t,from=0,to=Infinity}) {
   return react.createElement(react.Fragment,null,...tasks.filter(task=>(task.resumedAt??task.createdAt)>=from&&(task.resumedAt??task.createdAt)<to).sort((a,b)=>a.createdAt-b.createdAt).map(task=>react.createElement(CanvasUseTaskMessage,{key:task.id,task,t})))
 }
 
+export function canvasQueueEditContent(row,text,serialize) {
+  const context=row?.canvasQueuedContext
+  const body=context?serialize(context.files,text,[],context.artifacts??[],[],context.canvasContext):text
+  return [{type:'text',text:body},...(row?.content??[]).filter(part=>part.type!=='text')]
+}
+
 export function patchCanvasUseClient(source) {
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
-  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[anchorConversationDisclosures,canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
+  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasQueueEditContent,anchorConversationDisclosures,canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
   const inlineTasks=value=>{
     // Migrate the former global tail into the native chronological flow.
     value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),','')
@@ -279,6 +286,14 @@ export function patchCanvasUseClient(source) {
     return value.slice(0,at)+timing+value.slice(at)
   }
   const connectConversation=value=>{
+    if(!value.includes('if (action.kind === "remove" && result.error.code === "queue-item-not-found")'))value=value.replace('if (action.kind === "steer" && (result.error.code === "steer-unavailable" || result.error.code === "queue-item-not-found")) return;', 'if (action.kind === "remove" && result.error.code === "queue-item-not-found") return; if (action.kind === "steer" && (result.error.code === "steer-unavailable" || result.error.code === "queue-item-not-found")) return;')
+    value=value.replace('text: null, preview: research.text', 'text: row.content?.some(part=>part.type!=="text") ? null : research.text, canvasQueuedContext: research, preview: research.text')
+    value=value.replace('title: row.frozenCanvasContext ? t(\"research.context.queueEdit\") : row.text === null ?', 'title: row.text === null ?')
+    const queueStart=value.indexOf('function NativeQueueDock(')
+    if(queueStart>=0){
+      const before=value.slice(0,queueStart),tail=value.slice(queueStart)
+      value=before+tail.replace(/content: \[\{\s*type: "text",\s*text: editing\.text\s*\}\]/, 'content: canvasQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)')
+    }
     // Ongoing goals do not have a near-term queue boundary. Deliver new input
     // as steering, without invoking the explicit goal-stop control.
     value=value.replace('keyboard.submit(resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));', 'keyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));')

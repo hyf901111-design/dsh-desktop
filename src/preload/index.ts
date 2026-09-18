@@ -126,10 +126,15 @@ function checkBootFailureInDom(): void {
   queueBootFailure(errorText)
 }
 
+let domMaintenanceFrame = 0
 const domObserver = new MutationObserver(() => {
-  checkBootFailureInDom()
-  syncDeveloperModeVisibility()
-  sidebarUpdateControl.mount()
+  if (domMaintenanceFrame) return
+  domMaintenanceFrame = window.requestAnimationFrame(() => {
+    domMaintenanceFrame = 0
+    checkBootFailureInDom()
+    syncDeveloperModeVisibility()
+    sidebarUpdateControl.mount()
+  })
 })
 
 contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
