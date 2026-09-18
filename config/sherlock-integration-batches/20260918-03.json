@@ -11,114 +11,63 @@
         "schemaVersion": 1,
         "featureName": "Computer Use 接入与长网址断行修复",
         "branch": "codex/feat/computer-use-evaluation-20260918",
-        "baseCommit": "a400b9d361c41d89bfab06b4fb92665d4aa7651b",
-        "tipCommit": "eec959980ac118311fd7f9e7b2f86ab21c7385f9",
+        "baseCommit": "eec959980ac118311fd7f9e7b2f86ab21c7385f9",
+        "tipCommit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
         "commits": [
           {
-            "commit": "eec959980ac118311fd7f9e7b2f86ab21c7385f9",
+            "commit": "8e63807ff5a4c7af2ba61baa04ce5f7bd9472fef",
             "parents": [
-              "a400b9d361c41d89bfab06b4fb92665d4aa7651b"
+              "eec959980ac118311fd7f9e7b2f86ab21c7385f9"
             ],
-            "subject": "修复：桌面操作失败后释放控制并保留正确光标终点"
+            "subject": "修复：包校验兼容仅提供 ESM 入口的桌面控制驱动"
+          },
+          {
+            "commit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
+            "parents": [
+              "8e63807ff5a4c7af2ba61baa04ce5f7bd9472fef"
+            ],
+            "subject": "修复：侧栏短消息靠右收窄并消除任务卡片上方重复留白"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/computer/controller.ts"
+            "path": "scripts/verify-packaged-macos.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/computer/desktop-computer.ts"
+            "path": "src/preload/figma-reading.css"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
+              "node",
+              "--check",
+              "scripts/verify-packaged-macos.mjs"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "eec959980ac118311fd7f9e7b2f86ab21c7385f9",
-            "completedAt": "2026-09-18T15:22:45.753428+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "18项聚焦检查通过",
-            "verifiedCommit": "eec959980ac118311fd7f9e7b2f86ab21c7385f9",
-            "completedAt": "2026-09-18T15:22:45.753428+00:00",
+            "summary": "ESM包校验语法检查通过",
+            "verifiedCommit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
+            "completedAt": "2026-09-18T15:41:25.144833+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能 worktree 不构建共享客户端；气泡 Chromium 多宽度布局已验证，原生权限与 Photoshop 验收将在集成包执行。"
+          "summary": "Chromium已验证280/320/420/560/800px侧栏宽度，短气泡60px、长网址无溢出；任务卡片有无时底部间隔均6px。实际集成客户端验收待进行。"
         },
         "acceptanceCriteria": [
           "对话中调用 computer_use 完成 Photoshop 五角星操作",
           "权限缺失有明确入口，停止取消可用，光标一致且结束淡出",
-          "长网址在窄侧栏完整换行"
+          "长网址在窄侧栏完整换行",
+          "短消息靠右随内容收窄，长消息最大560px且网址换行",
+          "任务卡片展开/折叠时正文与底部卡片间只有6px间隔"
         ],
         "risks": [
           "原生权限和 Photoshop 端到端仍待集成客户端实测"
         ],
-        "generatedAt": "2026-09-18T15:22:45.753428+00:00"
-      },
-      "merged": {
-        "mergeCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
-        "verificationCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
-            "completedAt": "2026-09-18T15:23:06.589Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
-            "completedAt": "2026-09-18T15:23:06.589Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
-            "verifiedCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
-            "completedAt": "2026-09-18T15:23:06.589Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T15:23:06.589Z"
+        "generatedAt": "2026-09-18T15:41:25.144833+00:00"
       }
     }
   ],
