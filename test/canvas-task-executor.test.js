@@ -50,7 +50,17 @@ it('keeps the initiating tool pending through changes and resolves only when sto
   await tasks.control('board',t.id,'stop');expect((await pending).state).toBe('stopped')
  }finally{await tasks.dispose()}
 })
-it('propagates main composer cancellation to the task watcher',async()=>{
- const tasks=new CanvasUseTasks({observe:async()=>({writable:true,fingerprint:'a'}),execute:async()=>({status:'wait',reason:'等待'}),pollMs:10})
- try{const t=await tasks.start({sessionId:'board',goal:'等待',completion:'主动停止'}),abort=new AbortController();const pending=tasks.wait('board',t.id,abort.signal);abort.abort();expect((await pending).state).toBe('stopped')}finally{await tasks.dispose()}
+it('detaches an interrupted parent turn while the durable task continues until explicit stop',async()=>{
+ let fingerprint='a'
+ const execute=vi.fn(async()=>({status:'wait',reason:'等待'}))
+ const tasks=new CanvasUseTasks({observe:async()=>({writable:true,fingerprint}),execute,pollMs:10})
+ try {
+  const t=await tasks.start({sessionId:'board',goal:'持续响应',completion:'主动停止'}),abort=new AbortController()
+  const pending=tasks.wait('board',t.id,abort.signal);abort.abort(new Error('new user message'))
+  await expect(pending).rejects.toThrow('new user message')
+  await new Promise(r=>setTimeout(r,20));fingerprint='b';tasks.wake('board');await new Promise(r=>setTimeout(r,20))
+  expect(execute).toHaveBeenCalledTimes(2);expect(tasks.list('board')[0].state).toBe('waiting')
+  const attached=tasks.wait('board',t.id);await tasks.control('board',t.id,'stop')
+  expect((await attached).state).toBe('stopped')
+ } finally {await tasks.dispose()}
 })
