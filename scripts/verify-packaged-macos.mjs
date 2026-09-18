@@ -47,9 +47,9 @@ function verifyRuntime(runtimeNode, runtimeRoot) {
   if (missing.length) throw new Error(`packaged local dependencies missing: ${missing.join(', ')}`)
 
   const probe = String.raw`
-const { createRequire } = require('node:module')
-const { pathToFileURL } = require('node:url')
-const path = require('node:path')
+import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
+import path from 'node:path'
 
 const runtimeRoot = process.argv[1]
 const runtimeRequire = createRequire(path.join(runtimeRoot, 'package.json'))
@@ -57,7 +57,11 @@ const runtimeRequire = createRequire(path.join(runtimeRoot, 'package.json'))
 async function loadDependency(name, required) {
   let entryPath
   try {
-    entryPath = runtimeRequire.resolve(name)
+    try { entryPath = pathToFileURL(runtimeRequire.resolve(name)).href }
+    catch (error) {
+      if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error
+      entryPath = import.meta.resolve(name)
+    }
   } catch (error) {
     if (!required && error && error.code === 'MODULE_NOT_FOUND') {
       console.log(name + ': not present (optional)')
@@ -66,7 +70,7 @@ async function loadDependency(name, required) {
     throw error
   }
 
-  await import(pathToFileURL(entryPath).href)
+  await import(entryPath)
   console.log(name + ': loadable')
 }
 
@@ -80,7 +84,7 @@ Promise.resolve()
   })
 `
 
-  execFileSync(runtimeNode, ['-e', probe, runtimeRoot], {
+  execFileSync(runtimeNode, ['--input-type=module', '-e', probe, runtimeRoot], {
     cwd: runtimeRoot,
     stdio: 'inherit'
   })
