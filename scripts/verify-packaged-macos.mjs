@@ -72,6 +72,7 @@ async function loadDependency(name, required) {
 
 Promise.resolve()
   .then(() => loadDependency('apache-arrow', true))
+  .then(() => loadDependency('@trycua/cua-driver', true))
   .then(() => loadDependency('@lancedb/lancedb', false))
   .catch((error) => {
     console.error(error && error.stack ? error.stack : error)
@@ -116,6 +117,11 @@ try {
     const resourcesPath = path.join(appPath, 'Contents', 'Resources')
     const runtimeRoot = path.join(resourcesPath, 'app')
     const runtimeNode = path.join(runtimeRoot, 'node_modules', 'node', 'bin', 'node')
+    const computerDriver = path.join(resourcesPath, 'native', 'cua-driver')
+    if (!existsSync(computerDriver)) throw new Error('Computer use driver is missing')
+    const driverVersion = execFileSync(computerDriver, ['--version'], { encoding: 'utf8' }).trim()
+    if (driverVersion !== 'cua-driver 0.28.2') throw new Error(`Unexpected computer driver: ${driverVersion}`)
+    if (!existsSync(path.join(resourcesPath, 'native', 'cua-driver-MIT.txt'))) throw new Error('Computer driver license is missing')
     const bundledSkill = verifyBundledSkillParity({
       sourceSkillDirectory: path.resolve('skills', 'efund-ppt-maker'),
       packagedSkillDirectory: path.join(

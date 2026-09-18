@@ -10,6 +10,7 @@ import {
 
 export interface LocalSearchRuntimeOptions {
   readPage?(url: string, signal: AbortSignal): Promise<unknown>
+  computerUse?(input: unknown, signal: AbortSignal): Promise<unknown>
   browserUse?(input: unknown, signal: AbortSignal): Promise<unknown>
   createWindow(options: BrowserWindowConstructorOptions): BrowserSearchWindow
 }
@@ -26,6 +27,7 @@ export async function startLocalSearchRuntime(
   const bridge = new LocalSearchBridge({
     search: (query, maxResults, signal) => browser.search(query, maxResults, signal),
     readPage: options.readPage,
+    computerUse: options.computerUse,
     browserUse: options.browserUse
   })
   try {
