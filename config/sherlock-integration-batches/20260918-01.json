@@ -9,31 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补充消息及时唤醒持续任务主会话",
+        "featureName": "持续任务状态布局与消息队列",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "d4c5aca5edb25af0a57b3a8e19e3415e8bfb918b",
-        "tipCommit": "ed5778e3903e92df177604371eb61473ad657b6a",
+        "baseCommit": "ed5778e3903e92df177604371eb61473ad657b6a",
+        "tipCommit": "fad433941ca4988114f7bfa855f2a3f7ada17c07",
         "commits": [
           {
-            "commit": "ed5778e3903e92df177604371eb61473ad657b6a",
+            "commit": "fad433941ca4988114f7bfa855f2a3f7ada17c07",
             "parents": [
-              "d4c5aca5edb25af0a57b3a8e19e3415e8bfb918b"
+              "ed5778e3903e92df177604371eb61473ad657b6a"
             ],
-            "subject": "修复：补充消息唤醒主会话等待且保留持续任务执行"
+            "subject": "优化：执行状态并入标题并统一任务运行中的发送排队交互"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
           },
           {
             "status": "M",
-            "path": "test/canvas-task-routing.test.js"
+            "path": "scripts/lib/canvas-use-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "test/canvas-task-conversation.test.js"
           }
         ],
         "checks": [
@@ -51,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "51 项聚焦验证通过",
-            "verifiedCommit": "ed5778e3903e92df177604371eb61473ad657b6a",
-            "completedAt": "2026-09-18T06:27:19.127230+00:00",
+            "verifiedCommit": "fad433941ca4988114f7bfa855f2a3f7ada17c07",
+            "completedAt": "2026-09-18T06:31:12.495040+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -67,59 +71,7 @@
           "主动停止仍立即生效"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T06:27:19.127230+00:00"
-      },
-      "merged": {
-        "mergeCommit": "adaa625c5b8b40acb70b08916084c3f2d4a7b062",
-        "verificationCommit": "adaa625c5b8b40acb70b08916084c3f2d4a7b062",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "adaa625c5b8b40acb70b08916084c3f2d4a7b062",
-            "completedAt": "2026-09-18T06:27:35.645Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "adaa625c5b8b40acb70b08916084c3f2d4a7b062",
-            "completedAt": "2026-09-18T06:27:35.645Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "adaa625c5b8b40acb70b08916084c3f2d4a7b062",
-            "completedAt": "2026-09-18T06:27:35.645Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T06:27:35.645Z"
+        "generatedAt": "2026-09-18T06:31:12.495040+00:00"
       }
     }
   ],
