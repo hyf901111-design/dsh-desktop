@@ -18,6 +18,8 @@ async function collectRenderedPage(maxMilliseconds: number) {
     : text
   while (Date.now() < deadline) {
     const doc = document.querySelector('.docx-page-block')
+    // Do not mistake a Feishu SPA loading shell for a complete document.
+    if (!doc && /(^|\.)feishu\.cn$/.test(location.hostname) && /^\/(wiki|docx)\//.test(location.pathname)) { await pause(); continue }
     const root = doc ?? document.querySelector('main,article,[role=main]') ?? document.body
     if (!root) { await pause(); continue }
     if (!scroller || !scroller.isConnected) {
