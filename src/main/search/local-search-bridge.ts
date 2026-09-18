@@ -9,6 +9,7 @@ const MAX_RESULTS = 8
 
 export interface LocalSearchBridgeOptions {
   readPage?(url: string, signal: AbortSignal): Promise<unknown>
+  computerUse?(input: unknown, signal: AbortSignal): Promise<unknown>
   browserUse?(input: unknown, signal: AbortSignal): Promise<unknown>
   search(
     query: string,
@@ -71,7 +72,7 @@ export class LocalSearchBridge {
       return
     }
     const requestUrl = new URL(request.url ?? '/', 'http://127.0.0.1')
-    if (requestUrl.pathname !== '/search' && !(requestUrl.pathname === '/fetch' && this.options.readPage) && !(requestUrl.pathname === '/browser' && this.options.browserUse)) {
+    if (requestUrl.pathname !== '/search' && !(requestUrl.pathname === '/fetch' && this.options.readPage) && !(requestUrl.pathname === '/browser' && this.options.browserUse) && !(requestUrl.pathname === '/computer' && this.options.computerUse)) {
       sendJson(response, 404, { error: 'Not found.' })
       return
     }
@@ -101,8 +102,9 @@ export class LocalSearchBridge {
     }
     const isFetch = requestUrl.pathname === '/fetch'
     const isBrowser = requestUrl.pathname === '/browser'
+    const isComputer = requestUrl.pathname === '/computer'
     const query = typeof parsed.query === 'string' ? parsed.query.trim() : ''
-    if (!isFetch && !isBrowser && (query.length === 0 || query.length > MAX_QUERY_LENGTH)) {
+    if (!isFetch && !isBrowser && !isComputer && (query.length === 0 || query.length > MAX_QUERY_LENGTH)) {
       sendJson(response, 400, { error: 'Query must contain 1 to 512 characters.' })
       return
     }
@@ -120,7 +122,9 @@ export class LocalSearchBridge {
     request.once('aborted', abort)
     response.once('close', abort)
     try {
-      const result = isBrowser
+      const result = isComputer
+        ? await this.options.computerUse!(parsed, controller.signal)
+        : isBrowser
         ? await this.options.browserUse!(parsed, controller.signal)
         : isFetch
         ? await this.options.readPage!(typeof parsed.url === 'string' ? parsed.url : '', controller.signal)

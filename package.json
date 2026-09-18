@@ -29,8 +29,8 @@
     "predev": "node scripts/ensure-local-dependencies.mjs",
     "prebuild": "node scripts/ensure-local-dependencies.mjs",
     "preprepare:bundled-plugin-profile": "node scripts/ensure-local-dependencies.mjs",
-    "dev": "npm run build:native:voice && electron-vite dev",
-    "build": "npm run build:native:voice && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
+    "dev": "npm run build:native:voice && npm run build:native:computer && electron-vite dev",
+    "build": "npm run build:native:voice && npm run build:native:computer && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json",
@@ -62,7 +62,8 @@
     "sync:plugins:to-dev": "node scripts/sync-plugin-profile.mjs formal-to-dev",
     "sync:plugins:to-formal": "node scripts/sync-plugin-profile.mjs dev-to-formal",
     "build:native:voice": "node scripts/build-research-voice.mjs",
-    "fund-service:capabilities": "node scripts/check-fund-research-capabilities.mjs"
+    "fund-service:capabilities": "node scripts/check-fund-research-capabilities.mjs",
+    "build:native:computer": "node scripts/prepare-computer-driver.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis-plugin-group": "1.0.1",
@@ -85,6 +86,7 @@
     "@deepseek-ai/dsh-subprocess": "0.1.0-rc.7",
     "@deepseek-ai/dsh-timeout": "0.1.0-rc.7",
     "@deepseek-ai/dsh-workflow": "0.1.0-rc.7",
+    "@trycua/cua-driver": "0.28.2",
     "apache-arrow": "18.1.0",
     "cheerio": "^1.2.0",
     "dsh-desktop-market-installer": "file:packages/dsh-desktop-market-installer",
@@ -178,7 +180,10 @@
         "from": "build/native",
         "to": "native",
         "filter": [
-          "research-voice.node"
+          "research-voice.node",
+          "cua-driver",
+          "cua-driver-version.json",
+          "cua-driver-MIT.txt"
         ]
       },
       {

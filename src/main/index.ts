@@ -1,3 +1,4 @@
+import { createDesktopComputer } from './computer/desktop-computer'
 import { registerConversationBrowser } from './search/conversation-browser'
 import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
@@ -145,6 +146,7 @@ let researchBoardsService: ResearchBoardsService | undefined
 let disposeResearchBoardsHandlers: (() => void) | undefined
 let mainWindow: BrowserWindow | undefined
 let runtime: HarnessRuntime
+let desktopComputer: ReturnType<typeof createDesktopComputer> | undefined
 let localSearchRuntime: LocalSearchRuntime | undefined
 let researchBoardIntegration:ResearchBoardIntegration|undefined
 let researchClipboardService:ResearchCanvasClipboard|undefined
@@ -1234,11 +1236,13 @@ async function bootstrap(): Promise<void> {
   )
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
+  desktopComputer = createDesktopComputer(() => mainWindow)
   const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
     readPage: readBrowserPage,
-    browserUse: (input,signal)=>conversationBrowser.run(input,signal)
+    browserUse: (input,signal)=>conversationBrowser.run(input,signal),
+    computerUse: (input,signal)=>desktopComputer!.run(input,signal)
   })
   runtime = new HarnessRuntime({
     dshEntryPath: dshEntryPath(),
@@ -1360,7 +1364,7 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )

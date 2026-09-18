@@ -95,3 +95,13 @@ Cua 已有原生 overlay、会话名和自定义主题，但标签由原生 badg
   - [拖拽要求](https://github.com/openclaw/Peekaboo/blob/4d3c92eaf6e08ad3f17657daa2754b851bc754f4/docs/commands/drag.md)
   - [发布版](https://github.com/openclaw/Peekaboo/releases/tag/v4.4.0)
 - [nut.js 官方仓库及分发说明](https://github.com/nut-tree/nut.js)。
+
+## 接入进度（2026-09-18）
+
+已新增 `computer_use` 会话工具和回环鉴权路由；宿主直接管理 Cua 的私有嵌入 daemon，固定 standard 权限模式、不接受模型传入驱动参数或脚本。桌面租约、观察 revision、窗口/像素边界检查、操作后截图、会话结束清理和取消均由宿主执行。
+
+首用缺少系统权限时，由签名 EWork 主进程解释并提供系统设置入口。桌面覆盖层沿用灰色指针、灰底白字居中标签；独立状态条提供停止按钮，快捷键为 `⌘⇧Esc`。原生 drag 是 700ms 有界手势，取消后保留租约至输入清理完成，不声称能中断原生阻塞手势的任意一个事件。
+
+分发锁定官方 universal 二进制 SHA-256：`386db225a3080714a0f9f935525e61efaf46709587ef8b94dd2df81aeb2f6daa`；构建自动准备资源，包验收验证驱动版本和 SDK 可加载性。不开启 unrestricted，不引入第三方模型服务。
+
+聚焦检查：18 项 controller/bridge 测试、类型检查、真实嵌入 daemon 的 metadata/工具清单/关闭探针通过。用户气泡长网址在 Chromium 280–800px 布局探针中无水平溢出。Photoshop 绘制、最终包权限归属、可见光标与停止仍需集成客户端实测；本段不代表这些验收已经完成。
