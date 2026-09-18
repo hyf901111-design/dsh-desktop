@@ -25,7 +25,7 @@ describe('Figma shell patch installation', () => {
     const constructorEnd = installed.indexOf('\n\t\t\t}', constructorStart) + '\n\t\t\t}'.length
     const Controller = runInNewContext('class Controller extends Service { createdImageUrls = new Set(); draftAttachments = new Map(); imageUrls = new Map(); imageGenerations = new Map(); ' + installed.slice(constructorStart, constructorEnd) + ' }; Controller', { Service, revokePreview() {} })
     const initialize = runInNewContext('(ctx) => { const t = () => {}; const researchWorkspaces = {}; ' + apply.slice(begin, end) + ' return conversationController; }', {
-      ConversationController: Controller, InputHub: class {}, ComposerBlockRegistry: class {}
+      window: {}, ConversationController: Controller, InputHub: class {}, ComposerBlockRegistry: class {}
     })
     const root = new Context()
     let previous: { disposed: boolean; draftAttachments: Map<string, unknown> } | undefined
@@ -152,7 +152,7 @@ describe('Figma shell patch installation', () => {
   it('uses view-specific empty titles while preserving existing session titles', async () => {
     const installed = patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
     const extract = (name: string) => {
-      const start = installed.indexOf(`\t\tfunction ${name}(`)
+      const start = installed.indexOf(`function ${name}(`)
       const end = installed.indexOf('\n\t\t}', start) + '\n\t\t}'.length
       return installed.slice(start, end)
     }
@@ -163,6 +163,8 @@ describe('Figma shell patch installation', () => {
       react_jsx_runtime: { jsx: element, jsxs: element },
       ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => key }),
       clsx: (...values: unknown[]) => values.filter(Boolean).join(' '),
+      document: { documentElement: { dataset: { odysseyLocale: "zh" } } },
+      useSherlockBoardOnly: () => false,
       isInitialResearchSession: () => false,
       isPersistedResearchSession: () => false,
       explicitResearchViewSessions: new Set(),
