@@ -19,8 +19,9 @@ export function createWorkspaceDragFeedback() {
   }
 }
 export function patchWorkspaceDragFeedback(source) {
-  const marker = '/* odyssey:workspace-drag-feedback:v1 */'
+  const marker = '/* odyssey:workspace-drag-feedback:v2 */'
   if (source.includes(marker)) return source
+  if (source.includes('/* odyssey:workspace-drag-feedback:v1 */')) return immediateDrop(source.replace('/* odyssey:workspace-drag-feedback:v1 */', marker))
   const exact = (from, to) => { if (!source.includes(from)) throw Error('Workspace drag boundary missing: ' + from.slice(0, 100)); source = source.replace(from, to) }
   exact('function workspaceGroupHalf(e) {', `${marker}\n${createWorkspaceDragFeedback.toString()}\nfunction workspaceGroupHalf(e) {`)
   exact('const [workspaceDrag, setWorkspaceDrag] = (0, react.useState)(null);', `const [workspaceDrag, publishWorkspaceDrag] = (0, react.useState)(null);
@@ -41,5 +42,13 @@ export function patchWorkspaceDragFeedback(source) {
         e.preventDefault(); hoverWorkspace(workspaceGroupHalf(e), e.currentTarget);
       },
       onDragOver: workspaceDrag === null || hoverWorkspace === void 0 ? void 0 : (e) => {`)
+  return immediateDrop(source)
+}
+
+function immediateDrop(source) {
   return source
+    .replaceAll('workspaceDrag === null || hoverWorkspace === void 0 ? void 0 : (e) => {', 'hoverWorkspace === void 0 ? void 0 : (e) => { if (!workspaceFeedback.current.current()) return;')
+    .replace('workspaceDrag === null || dropWorkspace === void 0 ? void 0 : (e) => {', 'dropWorkspace === void 0 ? void 0 : (e) => { if (!workspaceFeedback.current.current()) return;')
+    .replace('if (workspaceDrag === null) return;', 'const currentDrag = workspaceFeedback.current.current(); if (!currentDrag) return;')
+    .replace('commitWorkspaceDrag(workspaceDrag, {', 'commitWorkspaceDrag(currentDrag, {')
 }
