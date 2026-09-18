@@ -20,6 +20,10 @@ for rp in title.findall('.//a:rPr', NS):
 assert not check_title_paint(title)
 title.find('.//a:srgbClr',NS).set('val','000000')
 assert 'title-color-mismatch' in check_title_paint(title)
+bad = ET.fromstring('<a:rPr xmlns:a="'+NS['a']+'"><a:latin typeface="Arial"/><a:solidFill><a:srgbClr val="005096"/></a:solidFill></a:rPr>')
+assert has_misordered_text_fill(bad)
+fill=bad.find('a:solidFill',NS);bad.remove(fill);bad.insert(0,fill)
+assert not has_misordered_text_fill(bad)
 # Actual source TOC retains theme banding, even though its screenshot can look fine.
 r = xml_root(p, logical_slide_part(p,7)); source=copy.deepcopy(r)
 page={'tocLayout':{'sourceTableId':'5'},'tocRows':[{'tableId':'5','rowIndex':0}]}

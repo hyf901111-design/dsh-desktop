@@ -14,6 +14,12 @@ V6 目录数字沿用源稿 `1EB9E1`，不能用通用品牌青替换；列宽�
 
 原生表格显式关闭 firstRow/lastRow/firstCol/lastCol/bandRow/bandCol；每个单元格写白色 RGB 填充，关闭左/右/上/对角线，仅保留下边 `w=6350`（0.5pt）、`CCCCCC`、`dash`。不能留下主题样式决定填充、顶边和条纹，否则 PowerPoint 与 PDF 可能不同。仅调整表格总高度、删行或把表格标成“非文本视觉”不能豁免样式校验。用户提供不同源稿时先增加源配置，不能修改检查器来适配错误成品。独立文本框目录当前返回待检查错误，需补齐真实对象样式检查后才能通过；不得静默跳过。
 
+## XML 可解析不代表 PowerPoint 可打开
+
+禁止对 rPr/defRPr/endParaRPr 无序 append solidFill。DrawingML 中 fill 必须位于效果、下划线、latin/ea/cs 字体和超链接之前；优先使用编辑库的颜色 setter/get_or_add_solidFill 等保持序列的方法。本次旧成品把目录颜色 append 到字体后，PowerPoint 提示修复并删除部分内容，目录首行消失、其余变黑，而 LibreOffice 仍能渲染。门禁新增 text-properties-child-order-invalid，检查重复填充和错误子节点顺序。这是针对已知缺陷的检查，不是全量 OOXML Schema 验证。
+
+参考：[python-pptx 的颜色节点后继顺序](https://github.com/scanny/python-pptx/blob/master/src/pptx/oxml/text.py)。任何 PowerPoint 修复提示都意味着失败；不得接受修复后页面作为原文件通过证据。
+
 ## 两种交付格式都要看
 
 结构零错误、PDF 字体嵌入、像素存在性检查均不能证明视觉正确。PPTX 必须在目标演示软件实际打开检查，PDF 必须单独渲染并逐页看图；同一个 PDF 的 PNG 不能充当 PPTX 原生外观验证。记录渲染器与版本。检查标题颜色、无阴影、目录样式、溢出及品牌家具；非目录页的 tocStyle 表示已确认无目录对象，无需伪造检查内容。
