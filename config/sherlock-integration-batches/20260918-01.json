@@ -9,35 +9,67 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "消息宽度和窗口热区最终修正",
+        "featureName": "对话网页读取与过程图片浏览",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "ab97b154a249d87e176a61c3298010f5e403c652",
-        "tipCommit": "529fa4148286375523024979a40d1c3e2f633ee8",
+        "baseCommit": "529fa4148286375523024979a40d1c3e2f633ee8",
+        "tipCommit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
         "commits": [
           {
-            "commit": "529fa4148286375523024979a40d1c3e2f633ee8",
+            "commit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
             "parents": [
-              "ab97b154a249d87e176a61c3298010f5e403c652"
+              "529fa4148286375523024979a40d1c3e2f633ee8"
             ],
-            "subject": "保留窗口热区并统一引用消息气泡宽度"
+            "subject": "统一对话网页读取登录态并恢复过程图片缩略浏览"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/window-resize.ts"
+            "path": "packages/dsh-web-search-session-model/index.js"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-final-shell.css"
+            "path": "scripts/lib/canvas-use-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/window-resize.ts"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "test/window-resize.test.ts"
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/search/browser-page-reader.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-page-reader.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/local-search-bridge.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/session-model-web-search.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/tool-image-links.test.ts"
           }
         ],
         "checks": [
@@ -46,14 +78,17 @@
               "npx",
               "vitest",
               "run",
-              "test/window-resize.test.ts",
-              "test/canvas-task-conversation.test.js",
-              "test/figma-reading-layout.test.ts"
+              "test/browser-page-reader.test.ts",
+              "test/local-search-bridge.test.ts",
+              "test/local-search-runtime.test.ts",
+              "test/session-model-web-search.test.js",
+              "test/tool-image-links.test.ts",
+              "test/canvas-task-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "18 项聚焦验证通过，类型检查通过",
-            "verifiedCommit": "529fa4148286375523024979a40d1c3e2f633ee8",
-            "completedAt": "2026-09-18T08:08:29.014773+00:00",
+            "summary": "42 项聚焦验证与类型检查通过",
+            "verifiedCommit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
+            "completedAt": "2026-09-18T08:30:12.512246+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -62,63 +97,12 @@
           "summary": "功能 worktree 不构建共享客户端；将在集成产物中检查全局展开。"
         },
         "acceptanceCriteria": [
-          "应用挂载后缩放热区仍保留",
-          "引用消息宽度统一70%"
+          "网址读取复用研究链接的浏览器会话",
+          "图片附件使用缩略图库",
+          "过程与正文增加间距"
         ],
         "risks": [],
         "generatedAt": "2026-09-18T07:35:00.942880+00:00"
-      },
-      "merged": {
-        "mergeCommit": "579824467f62bdf341b5e6a4576d98935835b05f",
-        "verificationCommit": "579824467f62bdf341b5e6a4576d98935835b05f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "579824467f62bdf341b5e6a4576d98935835b05f",
-            "completedAt": "2026-09-18T08:09:02.641Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "579824467f62bdf341b5e6a4576d98935835b05f",
-            "completedAt": "2026-09-18T08:09:02.641Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "579824467f62bdf341b5e6a4576d98935835b05f",
-            "completedAt": "2026-09-18T08:09:02.641Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T08:09:02.641Z"
       }
     }
   ],
