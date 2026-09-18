@@ -15,7 +15,7 @@ export function sharedTaskNativeSlice(order, nodes, task) {
 
 // Inject these thin adapters into the existing conversation bundle. Rendering,
 // streaming, tool details, markdown and final-message actions remain native.
-function SharedResearchMessage({ message, nativeProps }) {
+function SharedResearchMessage({ message, nativeProps, ongoing=false }) {
   const { t, openFile, loadImage } = nativeProps
   const self = message.role === 'user' && !!nativeProps.currentUserId && (message.author?.userId ?? message.authorId) === nativeProps.currentUserId
   const author = message.author?.username ?? message.authorName ?? '成员'
@@ -25,7 +25,7 @@ function SharedResearchMessage({ message, nativeProps }) {
       ? react.createElement(UserStyleBubble, { content: [{ type:'text', text:message.text ?? '' }], t, openFile, imageLoader:loadImage, actions:text=>react.createElement(MessageIconActions, { text, time:message.createdAt, clock:self?'start':'end', t }) })
       : react.createElement(react.Fragment, null,
         react.createElement(AssistantMarkdown, { blocks: [{ kind: 'text', text: message.text ?? '' }], streaming: false, interrupted: false, openFile, loadImage, t }),
-        react.createElement(MessageIconActions, { text: message.text ?? '', t })))
+        !ongoing&&react.createElement(MessageIconActions, { text: message.text ?? '', t })))
 }
 function SharedResearchRequest({ group, tasks, nativeProps }) {
   const { t, sharedSnapshot: { order, nodeStore, timeline, selectedCallId, cwd } } = nativeProps
@@ -40,10 +40,16 @@ function SharedResearchRequest({ group, tasks, nativeProps }) {
   const replies = group.rows.filter(message => message !== request)
   const nextRequest=sherlockBoardsAdapter?.getView(nativeProps.sessionId)?.messages?.filter(m=>m.role==='user'&&m.createdAt>request?.createdAt).sort((a,b)=>a.createdAt-b.createdAt)[0]
 
+  const canvasTasks=typeof useAllCanvasTasks==='function'?useAllCanvasTasks(nativeProps.sessionId):[]
+  const continuations=canvasTasks.filter(t=>request&&t.createdAt>=request.createdAt&&t.createdAt<(nextRequest?.createdAt??Infinity))
+  const continued=typeof continueCanvasTaskFlow==='function'?continueCanvasTaskFlow(flow,nodeStore,continuations):flow
+  const reports=continued.filter(e=>e.kind==='canvas-task'),tails=continued.filter(e=>e.kind==='node'&&nodeStore.get(e.key)?.kind==='turn-tail')
+  const body=continued.filter(e=>!reports.includes(e)&&!tails.includes(e))
+  const ongoing=continuations.some(t=>['running','waiting'].includes(t.state))
   return react.createElement('div', { 'data-shared-native-task': task?.taskId },
     request && react.createElement(SharedResearchMessage, { message: request, nativeProps }),
     (flow.length > 0 || running) && react.createElement('small', { className:'srb-native-author', 'data-shared-agent-author':true }, (request?.author?.username ?? request?.authorName ?? '成员') + '的智能助理'),
-    ...flow.map(entry => {
+    ...body.map(entry => {
       if (entry.kind === 'node') return react.createElement(ChatNodeSeat, { ...seatProps, nodeKey: entry.key, key: entry.key })
       const turn = entry.turn === null ? undefined : timeline.turns.get(entry.turn)
       return react.createElement(ExecutionStatusGroup, { key: entry.key, entry,
@@ -56,8 +62,10 @@ function SharedResearchRequest({ group, tasks, nativeProps }) {
         ? react.createElement(AssistantMarkdown,{key:index,blocks:[{kind:'text',text:event.text??''}],streaming:false,interrupted:false,openFile:nativeProps.openFile,loadImage:nativeProps.loadImage,t})
         : react.createElement('div',{key:index},event.type==='tool-started'?(event.tool||'处理资料')+(event.detail?' · '+event.detail:''):event.failed?'工具执行未成功，正在处理':'工具执行完成')),
       !task.progress?.events?.length&&react.createElement('span',null,'等待执行者同步进度…')),
-    ...replies.filter(message => !nativeFinal || message.taskId !== task?.taskId).map(message => react.createElement(SharedResearchMessage, { key: message.id, message, nativeProps })),
-    typeof CanvasUseConversation==='function'&&request&&react.createElement(CanvasUseConversation,{sessionId:nativeProps.sessionId,active:true,t,from:request.createdAt,to:nextRequest?.createdAt??Infinity}))
+    ...replies.filter(message => !nativeFinal || message.taskId !== task?.taskId).map(message => react.createElement(SharedResearchMessage, { key: message.id, message, nativeProps, ongoing:continuations.length>0 })),
+    ...reports.map(entry=>react.createElement(CanvasUseTaskMessage,{key:entry.key,task:entry.task,showExecution:entry.showExecution,t})),
+    ...tails.map(entry=>react.createElement(ChatNodeSeat,{...seatProps,nodeKey:entry.key,key:entry.key})),
+    !ongoing&&continuations.length>0&&!tails.length&&react.createElement(MessageIconActions,{text:continuations.at(-1).reason??'',t}))
 }
 function SharedResearchChatView(props) {
   if (!sherlockShared(props.sessionId) || !sherlockBoardsAdapter) return react.createElement(ChatView, props)

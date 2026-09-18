@@ -5,9 +5,9 @@ function installCanvasUseClient(sessionId,workspace,root) {
   const receipts=new Map(),surfaces=new WeakMap()
   const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return(h>>>0).toString(36)}
   const check=(write=false)=>{
-    if(stopped||!root.isConnected||document.hidden||!root.getBoundingClientRect().width)throw Error('画板已离开前台，任务已暂停。')
-    if(write&&sherlockShared(sessionId)){const v=sherlockBoardsAdapter?.getView(sessionId);if(!v?.permissions.edit||v.connection!=='online')throw Error('画板只读或连接中断。')}
-    if(root.hasAttribute('data-research-operation')||root.querySelector('[data-research-marquee]'))throw Error('用户正在操作画布，请稍后恢复任务。')
+    if(stopped||!root.isConnected||document.hidden||!root.getBoundingClientRect().width)throw Error('画板暂不可见，等待恢复后重新观察。')
+    if(write&&sherlockShared(sessionId)){const v=sherlockBoardsAdapter?.getView(sessionId);if(v?.connection!=='online')throw Error('画板连接暂不可用。');if(!v?.permissions.edit)throw Error('[CANVAS_FATAL] 画板编辑权限已撤销。')}
+    if(root.hasAttribute('data-research-operation')||root.querySelector('[data-research-marquee]'))throw Error('用户正在操作画布，等待操作结束后重新观察。')
   }
   const card=id=>[...root.querySelectorAll('[data-research-node-id]')].find(el=>el.getAttribute('data-research-node-id')===id)
   const rpc=(frame,args)=>new Promise((resolve,reject)=>{
@@ -40,7 +40,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
     const key=JSON.stringify([basic.revision,state.viewport,state.selection])
     if(key!==last){revision=crypto.randomUUID();last=key}
     const screenshot=args.screenshot?await window.dshDesktop?.researchLinkFrame?.captureCanvas({x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(r.width,innerWidth-Math.max(0,r.x)),height:Math.min(r.height,innerHeight-Math.max(0,r.y))}):undefined
-    return {...basic,revision,canvasRevision:basic.revision,fingerprint,nodeFingerprints,observedNodeIds:args.nodeIds??[],viewport:state.viewport,size:{width:r.width,height:r.height},surfaces:details.filter(d=>!args.nodeIds||args.nodeIds.includes(d.id)),screenshot,scope:'entire-canvas',writable:basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')}
+    return {...basic,revision,canvasRevision:basic.revision,fingerprint,nodeFingerprints,observedNodeIds:args.nodeIds??[],viewport:state.viewport,size:{width:r.width,height:r.height},surfaces:details.filter(d=>!args.nodeIds||args.nodeIds.includes(d.id)),screenshot,scope:'entire-canvas',blockedReason:!basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')?'permission':undefined,writable:basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')}
   }
   const ensureCursor=()=>{
     if(cursor?.isConnected)return
@@ -144,9 +144,8 @@ function installCanvasUseClient(sessionId,workspace,root) {
   // Renew only while this exact canvas remains mounted. Leaving it invalidates
   // interaction; persisted tasks always restart paused.
   const renew=setInterval(()=>{if(!stopped&&!document.hidden)void window.dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:workspace.getSnapshot().selection.selectedNodeIds}).catch(()=>{})},10000)
-  const takeover=e=>{if(e.isTrusted&&e.altKey)void fetch('/api/research/canvas-tasks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId})}).then(r=>r.json()).then(v=>Promise.all((v.tasks??[]).filter(t=>['running','waiting'].includes(t.state)).map(t=>fetch('/api/research/canvas-tasks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId,taskId:t.id,action:'takeover'})})))).catch(()=>{})}
-  root.addEventListener('pointerdown',takeover,true)
-  return ()=>{stopped=true;clearInterval(renew);clearTimeout(wakeTimer);removeCursor();unsubscribeTasks();unsubscribeWorkspace();window.removeEventListener('message',changed);root.removeEventListener('pointerdown',takeover,true);if(canvasUseOwners.get(sessionId)===use)canvasUseOwners.delete(sessionId)}
+  document.addEventListener('visibilitychange',wake)
+  return ()=>{stopped=true;clearInterval(renew);clearTimeout(wakeTimer);removeCursor();unsubscribeTasks();unsubscribeWorkspace();window.removeEventListener('message',changed);document.removeEventListener('visibilitychange',wake);if(canvasUseOwners.get(sessionId)===use)canvasUseOwners.delete(sessionId)}
 }
 
 // One store per session connects reports, the existing composer and conversation flow.
@@ -168,8 +167,8 @@ export function canvasTaskStore(sessionId) {
     if(store.users===1){const poll=()=>{if(pending)return;pending=store.call().catch(()=>{}).finally(()=>pending=null)};poll();timer=setInterval(poll,1000)}
     return()=>{if(--store.users===0)clearInterval(timer)}
   },async stop(){
-    // Cancel every local live/paused task before dropping the stop affordance.
-    const ids=store.value.filter(t=>['running','waiting','paused'].includes(t.state)).map(t=>t.id)
+    // Stop only the active chain; historical paused tasks retain their state.
+    const ids=store.value.filter(t=>['running','waiting'].includes(t.state)).map(t=>t.id)
     await Promise.all(ids.map(taskId=>store.call({taskId,action:'stop'})))
   }}
   canvasTaskStores.set(sessionId,store);return store
@@ -180,34 +179,54 @@ function useCanvasTasks(sessionId) {
   react.useEffect(()=>sessionId?store.retain():undefined,[store,sessionId])
   return {tasks,stop:store.stop}
 }
+// Keep one execution header and defer the native final actions to the end of
+// the durable task, even after the starter model call has already returned.
+export function continueCanvasTaskFlow(flow,nodes,tasks) {
+  if(!tasks.length)return flow
+  const sorted=[...tasks].sort((a,b)=>a.createdAt-b.createdAt),task=sorted.at(-1)
+  const executions=flow.filter(e=>e.kind==='execution'),tails=flow.filter(e=>e.kind==='node'&&nodes.get(e.key)?.kind==='turn-tail')
+  const first=executions[0],active=tasks.some(t=>['running','waiting'].includes(t.state))
+  const result=flow.flatMap(e=>{
+    if(tails.includes(e))return []
+    if(e.kind!=='execution')return [e]
+    return e===first?[{...e,nodeKeys:executions.flatMap(v=>v.nodeKeys),canvasTask:task,running:active}]:[]
+  })
+  for(const item of sorted)result.push({kind:'canvas-task',key:'canvas-task:'+item.id,task:item,showExecution:!first})
+  if(!active)result.push(...tails)
+  return result
+}
 // Attach by the initiating user message time, never append old tasks to the live tail.
 export function mergeCanvasTaskFlow(flow,nodes,tasks) {
   const users=flow.map((entry,index)=>({entry,index,node:entry.kind==='node'?nodes.get(entry.key):null})).filter(v=>v.node?.kind==='user'&&Number.isFinite(v.node.data?.time))
-  const slots=new Map()
-  for(const task of tasks) {
-    const owner=users.filter(v=>v.node.data.time<=task.createdAt).at(-1)
-    if(!owner)continue // Its message is outside the loaded history page.
-    const next=users.find(v=>v.index>owner.index),index=(next?.index??flow.length)-1
-    const list=slots.get(index)??[];list.push({kind:'canvas-task',key:'canvas-task:'+task.id,task});slots.set(index,list)
+  if(!users.length)return flow
+  const result=flow.slice(0,users[0].index)
+  for(let i=0;i<users.length;i++) {
+    const owner=users[i],next=users[i+1],end=next?.index??flow.length
+    const scoped=tasks.filter(t=>t.createdAt>=owner.node.data.time&&t.createdAt<(next?.node.data.time??Infinity))
+    result.push(...continueCanvasTaskFlow(flow.slice(owner.index,end),nodes,scoped))
   }
-  return flow.flatMap((entry,index)=>[entry,...(slots.get(index)??[]).sort((a,b)=>a.task.createdAt-b.task.createdAt)])
+  return result
 }
-function CanvasUseTaskMessage({task,t}) {
+function CanvasUseTaskMessage({task,t,showExecution=true}) {
   return react.createElement('div',{'data-canvas-task-message':task.id,className:'odyssey-canvas-task-message'},
-    react.createElement(ExecutionStatusGroup,{entry:{key:'canvas-task:'+task.id,running:['running','waiting'].includes(task.state),canvasTask:task},activityNodes:[],startTime:task.createdAt??task.updatedAt,endTime:['running','waiting'].includes(task.state)?null:task.updatedAt,seatProps:{},t}),
+    showExecution&&react.createElement(ExecutionStatusGroup,{entry:{key:'canvas-task:'+task.id,running:['running','waiting'].includes(task.state),canvasTask:task},activityNodes:[],startTime:task.createdAt??task.updatedAt,endTime:['running','waiting'].includes(task.state)?null:task.updatedAt,seatProps:{},t}),
     react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:task.reason||'正在观察画布'}],streaming:false,interrupted:false,t}))
 }
-function CanvasUseConversation({sessionId,active,t,from=0,to=Infinity}) {
+function useAllCanvasTasks(sessionId) {
   const {tasks}=useCanvasTasks(sessionId)
   react.useSyncExternalStore(sherlockBoardsAdapter?.subscribe??(()=>()=>{}),sherlockBoardsAdapter?.version??(()=>0))
+  const shared=sherlockBoardsAdapter?.getView(sessionId),remote=(shared?.activities??[]).filter(a=>a.kind==='canvas'&&!tasks.some(t=>t.id===a.id)).map(t=>({...t,remote:true,state:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'waiting':t.state,reason:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'正在等待执行端恢复连接并同步进展':t.reason}))
+  return [...tasks,...remote]
+}
+function CanvasUseConversation({sessionId,active,t,from=0,to=Infinity}) {
+  const tasks=useAllCanvasTasks(sessionId)
   if(!active)return null
-  const shared=sherlockBoardsAdapter?.getView(sessionId),remote=(shared?.activities??[]).filter(a=>a.kind==='canvas'&&!tasks.some(t=>t.id===a.id)).map(t=>({...t,remote:true,state:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'paused':t.state,reason:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'执行端连接中断，等待更新':t.reason}))
-  return react.createElement(react.Fragment,null,...[...tasks,...remote].filter(task=>task.createdAt>=from&&task.createdAt<to).sort((a,b)=>a.createdAt-b.createdAt).map(task=>react.createElement(CanvasUseTaskMessage,{key:task.id,task,t})))
+  return react.createElement(react.Fragment,null,...tasks.filter(task=>task.createdAt>=from&&task.createdAt<to).sort((a,b)=>a.createdAt-b.createdAt).map(task=>react.createElement(CanvasUseTaskMessage,{key:task.id,task,t})))
 }
 
 export function patchCanvasUseClient(source) {
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
-  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasTaskStore,useCanvasTasks,mergeCanvasTaskFlow,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
+  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
   const inlineTasks=value=>{
     // Migrate the former global tail into the native chronological flow.
     value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),','')
@@ -223,6 +242,15 @@ export function patchCanvasUseClient(source) {
     value=value.replace('renderFlow.map((entry) => {',"renderFlow.map((entry) => { if(entry.kind==='canvas-task')return react.createElement(CanvasUseTaskMessage,{key:entry.key,task:entry.task,t});")
     return value
   }
+  const continuousFlow=value=>{
+    value=value.replace('task:entry.task,t});','task:entry.task,t,showExecution:entry.showExecution});')
+    if(value.includes('/* CANVAS_CONTINUOUS_EXECUTION */'))return value
+    const anchor='const [expanded, setExpanded] = (0, react.useState)(false);'
+    const start=value.indexOf('function ExecutionStatusGroup('),at=value.indexOf(anchor,start)
+    if(start<0||at<0)throw Error('Canvas continuous execution anchor missing')
+    const timing="/* CANVAS_CONTINUOUS_EXECUTION */ if(entry.canvasTask){startTime=entry.canvasTask.createdAt??startTime;endTime=entry.running?null:entry.canvasTask.updatedAt;}\n"
+    return value.slice(0,at)+timing+value.slice(at)
+  }
   const connectConversation=value=>{
     if(value.includes('/* CANVAS_TASK_COMPOSER */'))return value
     const replace=(a,b)=>{if(!value.includes(a))throw Error('Canvas task conversation anchor missing: '+a);value=value.replace(a,b)}
@@ -237,12 +265,12 @@ export function patchCanvasUseClient(source) {
     replace('open && progressSurface.detailGroups.length > 0', "open && entry.canvasTask && react.createElement('div',{className:ChatView_module_css_default.executionDetails},...(entry.canvasTask.history?.length?entry.canvasTask.history:[{reason:entry.canvasTask.reason}]).map((row,index)=>react.createElement(AssistantMarkdown,{key:index,blocks:[{kind:'text',text:row.reason}],streaming:false,interrupted:false,t}))), open && progressSurface.detailGroups.length > 0")
     return value
   }
-  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return connectConversation(inlineTasks(source.slice(0,a)+defs+source.slice(b+end.length+1)))}
+  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return continuousFlow(connectConversation(inlineTasks(source.slice(0,a)+defs+source.slice(b+end.length+1))))}
   const once=(a,b)=>{if(!source.includes(a))throw Error('Canvas use anchor missing: '+a.slice(0,100));source=source.replace(a,b)}
   once('function createResearchWorkspaceSession(storage, sessionId) {',defs+'function createResearchWorkspaceSession(storage, sessionId) {')
-  once('const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});',`if(request.method==='use'){const use=canvasUseOwners.get(request.sessionId);if(!use)throw Error('画板未打开，任务已暂停。');return use(request.args,{isCancelled:request.isCancelled});}
+  once('const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});',`if(request.method==='use'){const use=canvasUseOwners.get(request.sessionId);if(!use)throw Error('画板暂未打开，等待返回后重新观察。');return use(request.args,{isCancelled:request.isCancelled});}
           const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});`)
   once('const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);',`const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);
       react.useEffect(()=>installCanvasUseClient(sessionId,workspace,rootRef.current),[sessionId,workspace]);`)
-  return connectConversation(inlineTasks(source))
+  return continuousFlow(connectConversation(inlineTasks(source)))
 }

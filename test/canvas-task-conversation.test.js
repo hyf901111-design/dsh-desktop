@@ -55,3 +55,24 @@ it('adds readable research sidebar spacing without changing the main conversatio
  expect(w.getComputedStyle(w.document.querySelector('p')).marginBottom).toBe('14px')
  await w.happyDOM.abort()
 })
+
+
+it('keeps one continuous execution header and releases final actions only at the actual task end',async()=>{
+ const {mergeCanvasTaskFlow,continueCanvasTaskFlow}=await import('../scripts/lib/canvas-use-client.mjs')
+ const nodes=new Map([['u',{kind:'user',data:{time:100}}],['tail',{kind:'turn-tail'}],['v',{kind:'user',data:{time:400}}]])
+ const flow=[{kind:'node',key:'u'},{kind:'execution',key:'execution:1',nodeKeys:['tool']},{kind:'node',key:'report'},{kind:'execution',key:'execution:1:1',nodeKeys:['tool2']},{kind:'node',key:'tail'},{kind:'node',key:'v'}]
+ const task={id:'t',createdAt:200,state:'waiting'}
+ const during=mergeCanvasTaskFlow(flow,nodes,[task])
+ expect(during.filter(e=>e.kind==='execution')).toHaveLength(1)
+ expect(during.find(e=>e.kind==='execution')).toMatchObject({running:true,nodeKeys:['tool','tool2'],canvasTask:task})
+ expect(during.map(e=>e.key)).toEqual(['u','execution:1','report','canvas-task:t','v'])
+ expect(during.find(e=>e.kind==='canvas-task').showExecution).toBe(false)
+ for(const state of ['stopped','completed','paused']){
+  const ended=mergeCanvasTaskFlow(flow,nodes,[{...task,state}]);expect(ended.map(e=>e.key)).toEqual(['u','execution:1','report','canvas-task:t','tail','v'])
+  expect(ended.find(e=>e.kind==='execution').running).toBe(false)
+ }
+ // Shared groups already render their user message separately.
+ const shared=continueCanvasTaskFlow(flow.slice(1,-1),nodes,[task])
+ expect(shared.map(e=>e.key)).toEqual(['execution:1','report','canvas-task:t'])
+ expect(flow).toHaveLength(6) // Never mutate the canonical native timeline.
+})
