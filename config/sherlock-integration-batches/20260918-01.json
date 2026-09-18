@@ -9,94 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "全局会话展开、持续反馈、动态超时与输入框高度",
+        "featureName": "补全构建幂等与插件任务通知同步",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
-        "tipCommit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
+        "baseCommit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
+        "tipCommit": "73ed268b7ed95b0fd69c94bdd779ec9c5c044b5c",
         "commits": [
           {
-            "commit": "b621ea09e82b903282fc39f4b1148dea7074374b",
+            "commit": "73ed268b7ed95b0fd69c94bdd779ec9c5c044b5c",
             "parents": [
-              "c649d8e86fcf38c91d2a1e9652c2967c310b17c0"
+              "405f4d1a52e48255f94ff9f57a54aee61fe72d23"
             ],
-            "subject": "修复：全局执行详情向下展开并保留阅读位置，增加正文间距"
-          },
-          {
-            "commit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
-            "parents": [
-              "b621ea09e82b903282fc39f4b1148dea7074374b"
-            ],
-            "subject": "优化：持续任务动态超时与状态反馈，归并结束操作栏并自适应输入高度"
+            "subject": "修复：会话补丁重复构建兼容并同步插件任务通知逻辑"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-task-executor.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/canvas-task-timing.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/conversation-disclosure.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/conversation-disclosure.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/canvas-task-notices.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/canvas-use-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "scripts/lib/profile-runtime-patches.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-reading.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-conversation-follow.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/canvas-task-conversation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/canvas-task-executor.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/canvas-task-notices.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/canvas-task-timing.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/compact-execution-status.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/conversation-disclosure.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-conversation-follow.test.ts"
+            "path": "test/profile-runtime-patches.test.js"
           }
         ],
         "checks": [
@@ -113,26 +50,13 @@
               "test/canvas-task-notices.test.js",
               "test/canvas-task-timing.test.js",
               "test/canvas-task-recovery.test.js",
-              "test/canvas-use.test.js"
+              "test/canvas-use.test.js",
+              "test/profile-runtime-patches.test.js"
             ],
             "outcome": "passed",
-            "summary": "82 项聚焦验证通过，涵盖展开定位、消息归并、通知去重、连续上下文与动态超时",
-            "verifiedCommit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
-            "completedAt": "2026-09-18T04:52:38.316870+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "405f4d1a52e48255f94ff9f57a54aee61fe72d23",
-            "completedAt": "2026-09-18T04:52:38.316870+00:00",
+            "summary": "83 项聚焦验证通过，包括独立插件运行环境通知去重",
+            "verifiedCommit": "73ed268b7ed95b0fd69c94bdd779ec9c5c044b5c",
+            "completedAt": "2026-09-18T04:56:23.234812+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -149,59 +73,7 @@
           "模型等待及恢复时限结合近期耗时动态调整"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T04:52:38.316870+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9c007c034ab43e3845b49ecab6fcb9a5c78e3ead",
-        "verificationCommit": "9c007c034ab43e3845b49ecab6fcb9a5c78e3ead",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "9c007c034ab43e3845b49ecab6fcb9a5c78e3ead",
-            "completedAt": "2026-09-18T04:53:16.129Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "9c007c034ab43e3845b49ecab6fcb9a5c78e3ead",
-            "completedAt": "2026-09-18T04:53:16.129Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "9c007c034ab43e3845b49ecab6fcb9a5c78e3ead",
-            "completedAt": "2026-09-18T04:53:16.129Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T04:53:16.129Z"
+        "generatedAt": "2026-09-18T04:56:23.234812+00:00"
       }
     }
   ],
