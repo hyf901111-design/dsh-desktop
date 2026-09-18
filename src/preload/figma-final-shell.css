@@ -4,7 +4,7 @@
   --odyssey-font-ui: "Noto Sans SC", sans-serif;
   --odyssey-workspace: rgb(241.715 241.715 241.715);
   --odyssey-canvas: rgb(238.43 238.43 238.43);
-  --odyssey-shell: rgb(228.79 228.79 228.79 / .67);
+  --odyssey-shell: rgb(228.79 228.79 228.79 / .70);
   --odyssey-glass: rgb(255 255 255 / .62);
   --odyssey-glass-border: rgb(255 255 255 / .6);
   --odyssey-panel-shadow: -4px 0 20px rgb(0 0 0 / .07);
@@ -20,7 +20,7 @@
 [data-ds-dark-theme] {
   --odyssey-workspace: rgb(30.503 30.503 30.503);
   --odyssey-canvas: rgb(36.29 36.29 36.29);
-  --odyssey-shell: rgb(8.574 8.574 8.574 / .78);
+  --odyssey-shell: rgb(8.574 8.574 8.574 / .70);
   --odyssey-glass: rgb(16.575 17.85 19.125 / .62);
   --odyssey-glass-border: rgb(255 255 255 / .1);
   --odyssey-panel-shadow: -4px 0 20px rgb(0 0 0 / .16);
