@@ -9,23 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一智能助理光标标签",
+        "featureName": "修正智能助理标签垂直对齐",
         "branch": "codex/feat/web-content-composer-20260918",
-        "baseCommit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
-        "tipCommit": "af7755e73915d887eb10282f10c127e976b6db58",
+        "baseCommit": "af7755e73915d887eb10282f10c127e976b6db58",
+        "tipCommit": "e48ae277f9d400a51060d7e181f739383a03ba45",
         "commits": [
           {
-            "commit": "af7755e73915d887eb10282f10c127e976b6db58",
+            "commit": "e48ae277f9d400a51060d7e181f739383a03ba45",
             "parents": [
-              "e828026e94608b258c1bfd7cb65c7bbbf9074c44"
+              "af7755e73915d887eb10282f10c127e976b6db58"
             ],
-            "subject": "优化：统一智能助理灰色标签并居中白色文字"
+            "subject": "修复：智能助理光标标签文字垂直居中"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/agent-cursor.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-use-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/conversation-browser.ts"
           }
         ],
         "checks": [
@@ -39,77 +47,20 @@
             ],
             "outcome": "passed",
             "summary": "25 项光标与画布检查通过",
-            "verifiedCommit": "af7755e73915d887eb10282f10c127e976b6db58",
-            "completedAt": "2026-09-18T14:21:18.438502+00:00",
+            "verifiedCommit": "e48ae277f9d400a51060d7e181f739383a03ba45",
+            "completedAt": "2026-09-18T14:38:08.182011+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Electron 网页验证统一灰色标签和居中文案，宽窄自适应与结束淡出仍通过。"
+          "summary": "真实 Electron 渲染核验标签上下留白及光标生命周期，25项聚焦检查通过。"
         },
         "acceptanceCriteria": [
           "画板及浏览器使用光标同色灰底、白字、水平垂直居中标签"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T14:21:18.438502+00:00"
-      },
-      "merged": {
-        "mergeCommit": "093575036aab4257fe2707c14740408d25b22819",
-        "verificationCommit": "093575036aab4257fe2707c14740408d25b22819",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "093575036aab4257fe2707c14740408d25b22819",
-            "completedAt": "2026-09-18T14:21:50.740Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/conversation-browser.test.ts",
-              "test/canvas-use.test.js",
-              "test/canvas-use-tool-observation.test.js",
-              "test/workspace-drag-feedback.test.js",
-              "test/browser-page-reader.test.ts",
-              "test/rendered-page-content.test.ts",
-              "test/sidebar-scroll-fade.test.ts",
-              "test/local-search-bridge.test.ts",
-              "test/figma-reading-layout.test.ts",
-              "test/figma-reading-column.test.js",
-              "test/research-board-navigation-final.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/conversation-browser.test.ts test/canvas-use.test.js test/canvas-use-tool-observation.test.js test/workspace-drag-feedback.test.js test/browser-page-reader.test.ts test/rendered-page-content.test.ts test/sidebar-scroll-fade.test.ts test/local-search-bridge.test.ts test/figma-reading-layout.test.ts test/figma-reading-column.test.js test/research-board-navigation-final.test.ts",
-            "verifiedCommit": "093575036aab4257fe2707c14740408d25b22819",
-            "completedAt": "2026-09-18T14:21:50.740Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "093575036aab4257fe2707c14740408d25b22819",
-            "completedAt": "2026-09-18T14:21:50.740Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T14:21:50.740Z"
+        "generatedAt": "2026-09-18T14:38:08.182011+00:00"
       }
     }
   ],
