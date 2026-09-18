@@ -1,7 +1,19 @@
+/** Record the DOM target before Electron dispatches its native context menu. */
+export const contextMenuCaptureScript = `(() => {
+  if (window.__sherlockContextCaptureInstalled) return;
+  window.__sherlockContextCaptureInstalled = true;
+  document.addEventListener('contextmenu', event => {
+    window.__sherlockContextTarget = { element: event.target, time: performance.now() };
+  }, true);
+})()`
+
 /** Capture only the right-clicked target, never a surrounding preview panel. */
 export function contextMenuTargetScript(x: number, y: number): string {
   return `(() => {
-      const origin = document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
+      const captured = window.__sherlockContextTarget;
+      window.__sherlockContextTarget = undefined;
+      const origin = captured && performance.now() - captured.time < 2000 && captured.element?.isConnected
+        ? captured.element : document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
       if (!(origin instanceof Element)) return { values: [] };
       const values = [];
       // Use only the clicked file/link owner. Parent panels and stale text

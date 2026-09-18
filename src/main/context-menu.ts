@@ -1,4 +1,4 @@
-import { contextMenuTargetScript } from './context-menu-target'
+import { contextMenuCaptureScript, contextMenuTargetScript } from './context-menu-target'
 import { generatedFileFinderPath } from './generated-file-finder'
 import { buildNativeFileMenu } from './native-file-menu'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
@@ -31,6 +31,11 @@ export function installContextMenu(
   locale: () => 'en' | 'zh',
   resolveRoot?: (sessionId: string) => Promise<string | null>
 ): void {
+  const installCapture = (): void => {
+    if (!window.isDestroyed()) void window.webContents.executeJavaScript(contextMenuCaptureScript).catch(() => {})
+  }
+  window.webContents.on('dom-ready', installCapture)
+  installCapture()
   ipcMain.removeHandler('ui:file-context-menu')
   registerTrustedMainWindowHandler(ipcMain, 'ui:file-context-menu', () => window,
     (_event, items: unknown) => new Promise<string | null>((resolve) => {
