@@ -6,7 +6,7 @@ import {syncProfileRuntimePatches,verifyProfileRuntimePatches} from '../scripts/
 it('ships patched runtime into the independent plugin profile and verifies parity',async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),'profile-patches-'))
  try{
-  for(const name of ['dsh-llm','dsh-tool-fs']){
+  for(const name of ['dsh-llm','dsh-tool-fs','dsh-subagent']){
    const source=JSON.parse(await readFile(`node_modules/@deepseek-ai/${name}/package.json`,'utf8'))
    const dir=path.join(root,'node_modules/@deepseek-ai',name)
    await mkdir(path.join(dir,'lib'),{recursive:true})
@@ -15,6 +15,7 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   }
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow()
   const digest=await syncProfileRuntimePatches(process.cwd(),root)
+  expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-subagent/lib/index.js'),'utf8')).toContain('CANVAS_TASK_OWNED_SETTLEMENT')
   expect(digest).toMatch(/^[a-f0-9]{64}$/)
   await verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))
   await rm(path.join(root,'node_modules/@deepseek-ai/dsh-tool-fs'),{recursive:true})

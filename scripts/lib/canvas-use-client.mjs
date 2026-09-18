@@ -229,7 +229,7 @@ function CanvasUseConversation({sessionId,active,t,from=0,to=Infinity}) {
 
 export function patchCanvasUseClient(source) {
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
-  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
+  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[anchorConversationDisclosures,canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
   const inlineTasks=value=>{
     // Migrate the former global tail into the native chronological flow.
     value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),','')
@@ -246,9 +246,8 @@ export function patchCanvasUseClient(source) {
     return value
   }
   const continuousFlow=value=>{
-    if (!value.includes('/* CONVERSATION_DISCLOSURE_ANCHOR */')) {
-      const replace=(a,b)=>{if(!value.includes(a))throw Error('Disclosure scroll anchor missing: '+a);value=value.replace(a,b)}
-      replace('function ChatView({', anchorConversationDisclosures.toString()+'\n/* CONVERSATION_DISCLOSURE_ANCHOR */\nfunction ChatView({')
+    { // Idempotent even when other build patches regenerate surrounding helpers.
+      const replace=(a,b)=>{if(value.includes(b))return;if(!value.includes(a))throw Error('Disclosure scroll anchor missing: '+a);value=value.replace(a,b)}
       replace('const toBottom = (el) => {', 'const toBottom = (el) => { delete el.dataset.conversationReading;')
       replace('const settle = () => {\n\t\t\t\tel.scrollTop = el.scrollHeight;', 'const settle = () => {\n        if(el.dataset?.conversationReading)return;\n\t\t\t\tel.scrollTop = el.scrollHeight;')
       replace('const floor = Math.max(0, el.scrollHeight - el.clientHeight);', 'if(el.dataset.conversationAnchoring){observedTopRef.current=el.scrollTop;return;}\n        const floor = Math.max(0, el.scrollHeight - el.clientHeight);')
