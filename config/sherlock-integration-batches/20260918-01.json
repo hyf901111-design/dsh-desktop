@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "队列编辑删除与运行时响应优化",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
-        "tipCommit": "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68",
+        "baseCommit": "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68",
+        "tipCommit": "290f9e7befc0e37e226567009aca979d24163808",
         "commits": [
           {
-            "commit": "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68",
+            "commit": "290f9e7befc0e37e226567009aca979d24163808",
             "parents": [
-              "46bd58b28db2e60f84e6e2cb9a0907130c5a0826"
+              "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68"
             ],
-            "subject": "隔离智能体光标动画并让框选优先响应，收紧会话间距"
+            "subject": "修复仅含画布引用时持续任务停止按钮状态"
           }
         ],
         "files": [
@@ -29,15 +29,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/figma-reading.css"
-          },
-          {
-            "status": "M",
             "path": "test/canvas-task-conversation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/canvas-use.test.js"
           }
         ],
         "checks": [
@@ -50,9 +42,9 @@
               "test/canvas-task-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "29 项交互及会话聚焦验证通过",
-            "verifiedCommit": "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68",
-            "completedAt": "2026-09-18T07:20:20.885225+00:00",
+            "summary": "30 项交互及会话聚焦验证通过",
+            "verifiedCommit": "290f9e7befc0e37e226567009aca979d24163808",
+            "completedAt": "2026-09-18T07:35:00.942880+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -67,59 +59,7 @@
           "主动停止仍立即生效"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T07:20:20.885225+00:00"
-      },
-      "merged": {
-        "mergeCommit": "830b4f2c3d954bbeb681902be3673ee7a2da98b1",
-        "verificationCommit": "830b4f2c3d954bbeb681902be3673ee7a2da98b1",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "830b4f2c3d954bbeb681902be3673ee7a2da98b1",
-            "completedAt": "2026-09-18T07:20:47.080Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "830b4f2c3d954bbeb681902be3673ee7a2da98b1",
-            "completedAt": "2026-09-18T07:20:47.080Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "830b4f2c3d954bbeb681902be3673ee7a2da98b1",
-            "completedAt": "2026-09-18T07:20:47.080Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T07:20:47.080Z"
+        "generatedAt": "2026-09-18T07:35:00.942880+00:00"
       }
     }
   ],
