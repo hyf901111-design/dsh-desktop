@@ -11,21 +11,25 @@
         "schemaVersion": 1,
         "featureName": "队列编辑删除与运行时响应优化",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
-        "tipCommit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
+        "baseCommit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
+        "tipCommit": "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68",
         "commits": [
           {
-            "commit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
+            "commit": "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68",
             "parents": [
-              "869adbc81e7b00f293dfdb0ec19e55b40d7e8478"
+              "46bd58b28db2e60f84e6e2cb9a0907130c5a0826"
             ],
-            "subject": "修复队列编辑与完整界面补丁链兼容性"
+            "subject": "隔离智能体光标动画并让框选优先响应，收紧会话间距"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
+            "path": "scripts/lib/canvas-use-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
@@ -33,7 +37,7 @@
           },
           {
             "status": "M",
-            "path": "test/figma-final-shell-patch.test.ts"
+            "path": "test/canvas-use.test.js"
           }
         ],
         "checks": [
@@ -42,20 +46,13 @@
               "npx",
               "vitest",
               "run",
-              "test/canvas-task-routing.test.js",
-              "test/canvas-task-conversation.test.js",
-              "test/canvas-task-executor.test.js",
-              "test/canvas-task-recovery.test.js",
-              "test/canvas-task-timing.test.js",
               "test/canvas-use.test.js",
-              "test/ui-localization.test.ts",
-              "test/figma-resize-feedback.test.ts",
-              "test/figma-final-shell-patch.test.ts"
+              "test/canvas-task-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "70 项聚焦验证通过",
-            "verifiedCommit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
-            "completedAt": "2026-09-18T07:00:30.825939+00:00",
+            "summary": "29 项交互及会话聚焦验证通过",
+            "verifiedCommit": "b1f0c0a9efc11d8efb6da65b3b6e47bc6df04e68",
+            "completedAt": "2026-09-18T07:20:20.885225+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -70,59 +67,7 @@
           "主动停止仍立即生效"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T07:00:30.825939+00:00"
-      },
-      "merged": {
-        "mergeCommit": "098a21e2094aaf74da63606a040096a080e731a0",
-        "verificationCommit": "098a21e2094aaf74da63606a040096a080e731a0",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "098a21e2094aaf74da63606a040096a080e731a0",
-            "completedAt": "2026-09-18T07:01:00.168Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "098a21e2094aaf74da63606a040096a080e731a0",
-            "completedAt": "2026-09-18T07:01:00.168Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "098a21e2094aaf74da63606a040096a080e731a0",
-            "completedAt": "2026-09-18T07:01:00.168Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T07:01:00.168Z"
+        "generatedAt": "2026-09-18T07:20:20.885225+00:00"
       }
     }
   ],
