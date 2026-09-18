@@ -11,45 +11,45 @@
         "schemaVersion": 1,
         "featureName": "Computer Use 接入与长网址断行修复",
         "branch": "codex/feat/computer-use-evaluation-20260918",
-        "baseCommit": "eec959980ac118311fd7f9e7b2f86ab21c7385f9",
-        "tipCommit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
+        "baseCommit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
+        "tipCommit": "b845518ad31af33913f71da09e224b44653219ba",
         "commits": [
           {
-            "commit": "8e63807ff5a4c7af2ba61baa04ce5f7bd9472fef",
+            "commit": "b845518ad31af33913f71da09e224b44653219ba",
             "parents": [
-              "eec959980ac118311fd7f9e7b2f86ab21c7385f9"
+              "197ad495c78b240704c89e5ec01c704b29f1d3c0"
             ],
-            "subject": "修复：包校验兼容仅提供 ESM 入口的桌面控制驱动"
-          },
-          {
-            "commit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
-            "parents": [
-              "8e63807ff5a4c7af2ba61baa04ce5f7bd9472fef"
-            ],
-            "subject": "修复：侧栏短消息靠右收窄并消除任务卡片上方重复留白"
+            "subject": "修复：桌面操作前核验当前模型的图片输入能力"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/verify-packaged-macos.mjs"
+            "path": "docs/research/computer-use-integration.md"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-reading.css"
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "A",
+            "path": "test/computer-vision.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "node",
-              "--check",
-              "scripts/verify-packaged-macos.mjs"
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-vision.test.js",
+              "test/computer-controller.test.ts",
+              "test/local-search-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "ESM包校验语法检查通过",
-            "verifiedCommit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
-            "completedAt": "2026-09-18T15:41:25.144833+00:00",
+            "summary": "22项桌面控制聚焦检查通过",
+            "verifiedCommit": "b845518ad31af33913f71da09e224b44653219ba",
+            "completedAt": "2026-09-18T15:48:22.321870+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -67,53 +67,7 @@
         "risks": [
           "原生权限和 Photoshop 端到端仍待集成客户端实测"
         ],
-        "generatedAt": "2026-09-18T15:41:25.144833+00:00"
-      },
-      "merged": {
-        "mergeCommit": "51dd21443ec9a70ad3ccbbe072c3e96507818ed8",
-        "verificationCommit": "51dd21443ec9a70ad3ccbbe072c3e96507818ed8",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "51dd21443ec9a70ad3ccbbe072c3e96507818ed8",
-            "completedAt": "2026-09-18T15:41:57.413Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "51dd21443ec9a70ad3ccbbe072c3e96507818ed8",
-            "completedAt": "2026-09-18T15:41:57.413Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
-            "verifiedCommit": "51dd21443ec9a70ad3ccbbe072c3e96507818ed8",
-            "completedAt": "2026-09-18T15:41:57.413Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T15:41:57.413Z"
+        "generatedAt": "2026-09-18T15:48:22.321870+00:00"
       }
     }
   ],
