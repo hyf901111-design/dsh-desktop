@@ -3,6 +3,7 @@ import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
 import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
 import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
 import { patchCanvasUseClient } from './lib/canvas-use-client.mjs'
+import { patchCanvasTaskNotices } from './lib/canvas-task-notices.mjs'
 import { patchComponentWheelZoom } from './lib/component-wheel-zoom.mjs'
 import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
@@ -188,6 +189,8 @@ writeFileSync(conversationPath, patchComponentWheelZoom(readFileSync(conversatio
 
 writeFileSync(conversationPath, patchCanvasActionsClient(readFileSync(conversationPath, 'utf8')))
 writeFileSync(conversationPath, patchCanvasUseClient(readFileSync(conversationPath, 'utf8')))
+const subagentRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-subagent/lib/index.js')
+writeFileSync(subagentRuntimePath, patchCanvasTaskNotices(readFileSync(subagentRuntimePath, 'utf8')))
 
 writeFileSync(conversationPath, patchCanvasRefresh(readFileSync(conversationPath, 'utf8')))
 

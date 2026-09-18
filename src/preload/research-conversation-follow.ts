@@ -1,3 +1,5 @@
+import { anchorConversationDisclosures } from '../../packages/dsh-research-task-runtime/conversation-disclosure.js'
+
 /** Follow the actual Research scrollports, including the portaled native chat. */
 export function followResearchConversation(panel: HTMLElement) {
   const win = panel.ownerDocument.defaultView!
@@ -20,6 +22,7 @@ export function followResearchConversation(panel: HTMLElement) {
   const scroll = (event: Event) => {
     const port = event.target as HTMLElement
     if (!ports().includes(port)) return
+    if (port.dataset.conversationAnchoring) { positions.set(port, port.scrollTop); return }
     const previous = positions.get(port) ?? port.scrollTop
     if (port.scrollTop < previous - 2) following = false
     else if (port.scrollHeight - port.clientHeight - port.scrollTop < 40) following = true
@@ -43,11 +46,13 @@ export function followResearchConversation(panel: HTMLElement) {
   panel.addEventListener('scroll', scroll, true)
   panel.addEventListener('wheel', wheel, { passive: true })
   panel.addEventListener('keydown', key)
+  const stopAnchoring = anchorConversationDisclosures(panel, ports, () => { following = false })
   observeSizes()
   settle()
   schedule()
   return () => {
     disposed = true
+    stopAnchoring()
     win.cancelAnimationFrame(frame)
     observer.disconnect()
     resize?.disconnect()

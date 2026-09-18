@@ -7,17 +7,17 @@ body .uV2eYG_card, body[data-ds-dark-theme] .uV2eYG_card {
   box-shadow:none!important; border:0; border-radius:10.5px;
 }
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_card {
-  min-height:126px; max-height:160px; padding:0; gap:0;
+  min-height:126px; max-height:min(368px,50vh); padding:0; gap:0;
 }
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_scroll {
-  min-height:78px; max-height:112px; flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain;
+  min-height:78px; max-height:min(320px,calc(50vh - 48px)); flex:0 1 auto; overflow-y:auto; overscroll-behavior:contain;
 }
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) { padding:15px 17px 0; font-size:16px; line-height:24px; }
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_row { min-height:48px; flex:0 0 48px; box-sizing:border-box; padding:8px 11px 8px 8px; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] {
   position:relative; inset:auto; flex:0 0 auto; background:var(--odyssey-workspace); pointer-events:auto; padding:12px 0;
 }
-body .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_composerSeat { position:relative; bottom:auto; background:var(--odyssey-workspace); --dsh-composer-text-max-height:112px; }
+body .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_composerSeat { position:relative; bottom:auto; background:var(--odyssey-workspace); --dsh-composer-text-max-height:min(320px,calc(50vh - 48px)); }
 body .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody { flex:1 1 0; min-height:0; overflow-x:hidden; overflow-y:auto; scroll-padding-bottom:0; }
 body .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody::after { display:none!important; }
 /* Figma 749:27899/28129, 750:27915/28185: main reading and input share a column.
@@ -36,7 +36,7 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .uV2eYG_root:not(:has([data-odyssey-continuable-composer])) :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) { padding:16px 17px 0; font-size:15px; line-height:24px; }
 body .sRp_messages { overflow-x:hidden; overscroll-behavior-y:contain; }
 body .sRp_composer { background:var(--odyssey-right-surface); }
-body .sRp_composer .wSkVaW_composerSeat { --dsh-composer-text-max-height:112px; }
+body .sRp_composer .wSkVaW_composerSeat { --dsh-composer-text-max-height:min(320px,calc(50vh - 48px)); }
 body [data-odyssey-reading-status] { position:relative; z-index:2; flex:0 0 0; height:0; min-height:0; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:0; transform:translateY(-44px); background:transparent; pointer-events:none; }
 body [data-odyssey-reading-status]:empty { display:none; }
 /* The zero-height overlay leaves the reader visible and scrollable beneath it. */
@@ -119,3 +119,14 @@ body .sRp_messages .srb-discussion { gap:24px; }
 body .sRp_messages [data-shared-native-task] { display:flex; flex-direction:column; gap:18px; }
 body .odyssey-canvas-task-message { display:flex; flex-direction:column; gap:12px; margin-block:4px 8px; min-width:0; }
 body .odyssey-canvas-task-message .Md3f7G_executionDetails { display:flex; flex-direction:column; gap:12px; }
+
+/* Shared by ordinary chat, research panels and collaboration message flows. */
+body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:14px; }
+body .Md3f7G_executionGroup > .Md3f7G_executionProgress { gap:16px; margin-bottom:12px; }
+body .Md3f7G_executionGroup > .Md3f7G_executionDetails { gap:12px; padding-block:6px; }
+
+body [data-conversation-anchoring] { overflow-anchor:none; }
+body .odyssey-canvas-live-status { margin:8px 0 2px 23px; font:400 14px/24px var(--odyssey-font-ui); color:transparent; background:linear-gradient(90deg,var(--dsw-alias-label-tertiary) 0%,var(--dsw-alias-label-tertiary) 38%,var(--dsw-alias-label-primary) 50%,var(--dsw-alias-label-tertiary) 62%,var(--dsw-alias-label-tertiary) 100%); background-size:250% 100%; background-clip:text; -webkit-background-clip:text; animation:odyssey-canvas-status-shimmer 1.8s linear infinite; }
+body .Md3f7G_executionGroup[data-expanded=true] > .odyssey-canvas-live-status { margin-top:0; margin-bottom:12px; }
+@keyframes odyssey-canvas-status-shimmer { from { background-position:100% 0; } to { background-position:0 0; } }
+@media(prefers-reduced-motion:reduce) { body .odyssey-canvas-live-status { animation:none; background:none; color:var(--dsw-alias-label-secondary); } }

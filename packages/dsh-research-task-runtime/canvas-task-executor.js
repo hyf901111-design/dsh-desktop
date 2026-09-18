@@ -8,13 +8,15 @@ const creating = new AsyncLocalStorage()
 export class CanvasTaskExecutor {
   constructor(ctx) { this.ctx=ctx;this.children=new Map() }
   async execute(taskId,request) {
-    const {ctx}=this,{parent,signal,guard,taskSessionId,...options}=request
+    const {ctx}=this,{parent,signal,guard,taskSessionId,onProgress,...options}=request
     signal.throwIfAborted()
     let childId=this.children.get(taskId),agent,unbind,closed=false,output=[],stream='',settled=false
     const owner={},disposers=[]
     let resolve,reject
     const result=new Promise((yes,no)=>{resolve=yes;reject=no});result.catch(()=>{})
     const bind=child=>{
+      // The owning canvas task publishes each round and its terminal state.
+      child[Symbol.for('sherlock.canvas-task-owned')]=true
       agent=child;childId=child.id;this.children.set(taskId,childId)
       unbind?.();unbind=bindCanvasChild(childId,taskSessionId,async(method,args)=>{
         signal.throwIfAborted();if(closed)throw Error('本轮执行已结束，请重新观察。');return guard(method,args)
@@ -25,6 +27,7 @@ export class CanvasTaskExecutor {
     }))
     disposers.push(ctx.on('session/event',(session,event)=>{
       if(session.id!==childId||settled)return
+      if(event.type==='assistant/chunk'||event.type==='assistant/message')onProgress?.()
       if(event.type==='assistant/message')output=event.data.message.content??[]
       if(event.type==='assistant/chunk'&&event.data.chunk?.type==='text-delta')stream+=event.data.chunk.text??event.data.chunk.delta??''
       if(event.type==='turn/end'){
