@@ -64,3 +64,14 @@ it('detaches an interrupted parent turn while the durable task continues until e
   expect((await attached).state).toBe('stopped')
  } finally {await tasks.dispose()}
 })
+
+it('cancellation before task admission cannot leave an unseen goal running',async()=>{
+ let finish
+ const execute=vi.fn(),tasks=new CanvasUseTasks({observe:()=>new Promise(r=>finish=r),execute})
+ const abort=new AbortController()
+ const started=tasks.start({sessionId:'board',goal:'持续响应',completion:'用户停止',signal:abort.signal})
+ for(let i=0;i<4;i++)await Promise.resolve()
+ abort.abort(new Error('cancel before admission'));finish({writable:true,fingerprint:'a'})
+ await expect(started).rejects.toThrow('cancel before admission')
+ expect(tasks.list('board')).toEqual([]);expect(execute).not.toHaveBeenCalled();await tasks.dispose()
+})
