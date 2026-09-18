@@ -204,3 +204,9 @@ body[data-dsh-sidebar-dragging] :is(
   :root[data-odyssey-motion-ready="true"] .t8lSSG_panel,
   :root[data-odyssey-motion-ready="true"] .t8lSSG_panel>:is(.t8lSSG_tabBar,.t8lSSG_panelBody) { transition:none !important; }
 }
+
+/* Native window edges follow the drag immediately. Do not repeatedly retarget
+   panel geometry transitions for each intermediate window size. */
+:root[data-odyssey-window-resizing] :is(.t8lSSG_panel,.t8lSSG_bottomPanel,.pI_x6G_sidebarCol,.pI_x6G_centerCol,.wSkVaW_composerHero,.wSkVaW_header,.t8lSSG_toggleCluster,[data-pane="conversation"]) {
+  transition: none !important;
+}

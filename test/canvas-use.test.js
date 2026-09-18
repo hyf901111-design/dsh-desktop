@@ -145,7 +145,7 @@ it('keeps the named small cursor during waiting, follows a curved path and remov
  const cleanup=w.testInstall('cursor',{getSnapshot:()=>state,canvasAction:async()=>({revision:'r',writable:true}),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)}},root)
  try {
   const task={id:'t',state:'waiting',updatedAt:1,createdAt:1};w.testStore('cursor').update([task])
-  let cursor=root.querySelector('[data-canvas-use-cursor]');expect(cursor.textContent).toBe('hyf90的智能助理');expect(cursor.querySelector('svg').getAttribute('width')).toBe('17')
+  let cursor=root.querySelector('[data-canvas-use-cursor]');expect(cursor.textContent).toBe('hyf90的智能助理');expect(cursor.querySelector('svg').getAttribute('width')).toBe('18')
   await new Promise(r=>setTimeout(r,1300));expect(cursor.isConnected).toBe(true)
   const use=w.testUse.get('cursor')
   root.setAttribute('data-research-operation','pan')
@@ -175,4 +175,17 @@ it('accepts a valid task decision surrounded by commentary, but never infers com
  expect(parseCanvasTaskDecision('保存已确认。\n```json\n{"status":"wait","reason":"等待用户停止"}\n```')).toEqual({status:'wait',reason:'等待用户停止'})
  expect(()=>parseCanvasTaskDecision('已完成')).toThrow(/有效/)
  expect(()=>parseCanvasTaskDecision('{"status":"wait","reason":"a"}{"status":"complete","reason":"b"}')).toThrow(/唯一/)
+})
+
+it('polls shared canvas state without encoding pictures and keeps observation/action revisions consistent',async()=>{
+ const {dom,w}=surface('<canvas></canvas>'),canvas=w.document.querySelector('canvas');let state={revision:1,state:{count:0},connected:true}
+ const encode=vi.fn(()=> 'data:image/png;base64,AA==');canvas.toDataURL=encode
+ w.shared=()=>state
+ const use=w.eval('('+createCanvasUseSurface.toString()+')(document.body,window.shared)')
+ try {
+  const light=await use({op:'observe',images:false});expect(encode).not.toHaveBeenCalled();expect(light.elements[0].image).toBeUndefined()
+  const visual=await use({op:'observe'});expect(encode).toHaveBeenCalledTimes(1);expect(visual.revision).toBe(light.revision)
+  state={...state,revision:2,state:{count:1}}
+  const changed=await use({op:'observe',images:false});expect(changed.revision).not.toBe(light.revision);expect(encode).toHaveBeenCalledTimes(1)
+ }finally{dom.window.close()}
 })

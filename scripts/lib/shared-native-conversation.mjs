@@ -41,7 +41,7 @@ function SharedResearchRequest({ group, tasks, nativeProps }) {
   const nextRequest=sherlockBoardsAdapter?.getView(nativeProps.sessionId)?.messages?.filter(m=>m.role==='user'&&m.createdAt>request?.createdAt).sort((a,b)=>a.createdAt-b.createdAt)[0]
 
   const canvasTasks=typeof useAllCanvasTasks==='function'?useAllCanvasTasks(nativeProps.sessionId):[]
-  const continuations=canvasTasks.filter(t=>request&&t.createdAt>=request.createdAt&&t.createdAt<(nextRequest?.createdAt??Infinity))
+  const continuations=canvasTasks.filter(t=>request&&(t.resumedAt??t.createdAt)>=request.createdAt&&(t.resumedAt??t.createdAt)<(nextRequest?.createdAt??Infinity))
   const continued=typeof continueCanvasTaskFlow==='function'?continueCanvasTaskFlow(flow,nodeStore,continuations):flow
   const reports=continued.filter(e=>e.kind==='canvas-task'),tails=continued.filter(e=>e.kind==='node'&&nodeStore.get(e.key)?.kind==='turn-tail')
   const body=continued.filter(e=>!reports.includes(e)&&!tails.includes(e))

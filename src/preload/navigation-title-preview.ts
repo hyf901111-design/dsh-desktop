@@ -31,11 +31,22 @@ export function mountNavigationTitlePreview(doc: Document): () => void {
   const measure = (s: Title) => {
     const distance = Math.max(0, s.text.scrollWidth - s.port.clientWidth)
     if (Math.abs(distance - s.distance) > 1) { stop(s); s.distance = distance }
-    s.port.dataset.odysseyTitleOverflow = String(distance > 1)
+    const overflow = String(distance > 1)
+    if (s.port.dataset.odysseyTitleOverflow !== overflow) s.port.dataset.odysseyTitleOverflow = overflow
     if (s.port.clientWidth > 0) start(s)
     else stop(s)
   }
-  const resize = new win.ResizeObserver(() => { for (const s of titles.values()) measure(s) })
+  const resize = new win.ResizeObserver(entries => {
+    const changed = new Set(entries.map(entry => entry.target))
+    // Read all affected dimensions before changing overflow attributes/animations.
+    const measurements = [...titles.values()].filter(s => changed.has(s.port) || changed.has(s.text)).map(s => ({s, width:s.port.clientWidth, distance:Math.max(0,s.text.scrollWidth-s.port.clientWidth)}))
+    for (const {s,width,distance} of measurements) {
+      if (Math.abs(distance-s.distance)>1) {stop(s);s.distance=distance}
+      const overflow=String(distance>1)
+      if(s.port.dataset.odysseyTitleOverflow!==overflow)s.port.dataset.odysseyTitleOverflow=overflow
+      if(width>0)start(s);else stop(s)
+    }
+  })
   const remove = (s: Title) => {
     stop(s); resize.unobserve(s.port); resize.unobserve(s.text)
     delete s.port.dataset.odysseyTitleOverflow; titles.delete(s.port)

@@ -9,7 +9,7 @@ it('renders ongoing and terminal reports with the native execution flow and no t
  Object.assign(globalThis,{window:w,document:w.document,IS_REACT_ACT_ENVIRONMENT:true})
  let module;w.__ModuleLoader__={load:value=>module=value}
  const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- const source=patchCanvasUseClient(raw).replace('exports.apply = apply;','exports.__Conversation=CanvasUseConversation; exports.__Store=canvasTaskStore;exports.apply=apply;')
+ const source=patchCanvasUseClient(raw).replace('exports.apply = apply;','exports.__Execution=ExecutionStatusGroup;exports.__Conversation=CanvasUseConversation; exports.__Store=canvasTaskStore;exports.apply=apply;')
  runInNewContext(source,{window:w,document:w.document,navigator:w.navigator,localStorage:w.localStorage,sessionStorage:w.sessionStorage,setTimeout,clearTimeout,setInterval,clearInterval,queueMicrotask,console,AbortController,TextEncoder,TextDecoder,fetch:async()=>({ok:true,json:async()=>({tasks:[]})})})
  const empty=()=>null,fallback=new Proxy(function(){},{get:(target,key)=>key==='prototype'?target.prototype:fallback,construct:()=>({})})
  const primitives=new Proxy({MarkdownText:({text})=>React.createElement('p',null,text),Tooltip:({children})=>children},{get:(target,key)=>target[key]??empty})
@@ -25,6 +25,17 @@ it('renders ongoing and terminal reports with the native execution flow and no t
   await React.act(async()=>host.querySelector('button').click());expect(host.textContent).toContain('已确认表单保存成功。')
   await React.act(async()=>store.update([{...task,state:'stopped',reason:'用户已停止',updatedAt:Date.now()+1}]))
   expect(host.textContent).toContain('执行过程 · 已停止');expect(host.textContent).toContain('用户已停止')
+  // The ordinary conversation uses this same component, without any canvas task.
+  await React.act(async()=>root.render(React.createElement(exports.__Execution,{entry:{key:'normal',running:false},activityNodes:[{key:'p',kind:'assistant-step',data:{status:'complete',blocks:[{kind:'text',text:'过程中的正文回报'}]}},{key:'call',kind:'tool-call',data:{root:{name:'research_canvas_use',argsRaw:'{}'}}}],startTime:100,endTime:1100,seatProps:{useSession:()=>undefined},t:key=>key})))
+  expect(host.textContent).not.toContain('过程中的正文回报')
+  await React.act(async()=>host.querySelector('button').click())
+  expect(host.textContent).toContain('过程中的正文回报')
+  const section=host.querySelector('[data-chat-flow-kind="execution"]')
+  expect(section.firstElementChild.tagName).toBe('BUTTON')
+  expect(section.querySelector('[role="log"]').previousElementSibling.tagName).toBe('BUTTON')
+  await React.act(async()=>host.querySelector('button').click())
+  expect(host.textContent).not.toContain('过程中的正文回报')
+
  }finally{await React.act(async()=>root.unmount());await w.happyDOM.abort();Object.assign(globalThis,old)}
 })
 
@@ -75,4 +86,13 @@ it('keeps one continuous execution header and releases final actions only at the
  const shared=continueCanvasTaskFlow(flow.slice(1,-1),nodes,[task])
  expect(shared.map(e=>e.key)).toEqual(['execution:1','report','canvas-task:t'])
  expect(flow).toHaveLength(6) // Never mutate the canonical native timeline.
+})
+
+it('anchors resumed tasks to the resume request instead of the old completed reply',async()=>{
+ const {mergeCanvasTaskFlow}=await import('../scripts/lib/canvas-use-client.mjs')
+ const nodes=new Map([['old',{kind:'user',data:{time:100}}],['resume',{kind:'user',data:{time:500}}],['tail',{kind:'turn-tail'}]])
+ const flow=[{kind:'node',key:'old'},{kind:'node',key:'resume'},{kind:'execution',key:'e',nodeKeys:[]},{kind:'node',key:'tail'}]
+ const result=mergeCanvasTaskFlow(flow,nodes,[{id:'t',createdAt:200,resumedAt:600,state:'waiting'}])
+ expect(result.map(e=>e.key)).toEqual(['old','resume','e','canvas-task:t'])
+ expect(result.find(e=>e.key==='e').running).toBe(true)
 })
