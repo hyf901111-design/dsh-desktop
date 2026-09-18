@@ -9,62 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "网页自适应、统一光标与链接组件悬停操作",
+        "featureName": "修复组件菜单悬停遮挡选中描边",
         "branch": "codex/feat/web-content-composer-20260918",
-        "baseCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
-        "tipCommit": "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7",
+        "baseCommit": "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7",
+        "tipCommit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
         "commits": [
           {
-            "commit": "7d18e43d366cf665fc0b5feca5af9637be4f5306",
+            "commit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
             "parents": [
-              "019a2ca0d3e382795ac9b7675185023ed40dd82d"
+              "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7"
             ],
-            "subject": "修复：网页自适应与光标结束淡出并补齐链接悬停操作"
-          },
-          {
-            "commit": "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7",
-            "parents": [
-              "7d18e43d366cf665fc0b5feca5af9637be4f5306"
-            ],
-            "subject": "测试：补全浏览器前端补丁模块的类型边界"
+            "subject": "修复：悬停更多菜单时完整显示组件选中描边"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/agent-cursor.js"
-          },
-          {
             "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-use-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/conversation-browser-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/search/conversation-browser.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/canvas-use.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-canvas-gestures-ui.test.ts"
+            "path": "src/preload/figma-canvas-gestures.css"
           }
         ],
         "checks": [
@@ -73,102 +34,24 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/conversation-browser.test.ts",
-              "test/canvas-use.test.js",
-              "test/canvas-use-tool-observation.test.js"
+              "test/figma-canvas-gestures-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "39 项聚焦检查通过",
-            "verifiedCommit": "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7",
-            "completedAt": "2026-09-18T14:08:06.498296+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "ff1ae55bfc3e1bad21cdbdc9545586f1129398c7",
-            "completedAt": "2026-09-18T14:08:06.498296+00:00",
+            "summary": "12 项画布交互检查通过",
+            "verifiedCommit": "e828026e94608b258c1bfd7cb65c7bbbf9074c44",
+            "completedAt": "2026-09-18T14:17:26.231054+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "独立 Electron 真实 WebContentsView 验证固定页面适配、响应式布局、宽窄切换、缩放后输入与任务结束淡出；链接操作由已挂载 React 组件验证。集成客户端随后验证。"
+          "summary": "已在集成客户端复现标题栏悬停时遮挡上边框，确认标题层10高于旧描边层5；本次将描边提升至20，保持菜单层3000及非交互描边。新包随后核验。"
         },
         "acceptanceCriteria": [
-          "右侧网页适配栏宽",
-          "浏览器与画板使用同一光标样式，任务结束后淡出",
-          "链接草稿具备放大、改名、移除操作且保留输入"
+          "智能容器与链接组件在更多菜单打开及hover时保留完整蓝色外框"
         ],
-        "risks": [
-          "不支持响应式布局的网站会整体缩小以显示完整宽度"
-        ],
-        "generatedAt": "2026-09-18T14:08:06.498296+00:00"
-      },
-      "merged": {
-        "mergeCommit": "365f28f154d78c1f44dc89e1a4a27a65fa8ea184",
-        "verificationCommit": "365f28f154d78c1f44dc89e1a4a27a65fa8ea184",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "365f28f154d78c1f44dc89e1a4a27a65fa8ea184",
-            "completedAt": "2026-09-18T14:08:33.444Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/conversation-browser.test.ts",
-              "test/canvas-use.test.js",
-              "test/canvas-use-tool-observation.test.js",
-              "test/workspace-drag-feedback.test.js",
-              "test/browser-page-reader.test.ts",
-              "test/rendered-page-content.test.ts",
-              "test/sidebar-scroll-fade.test.ts",
-              "test/local-search-bridge.test.ts",
-              "test/figma-reading-layout.test.ts",
-              "test/figma-reading-column.test.js",
-              "test/research-board-navigation-final.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/conversation-browser.test.ts test/canvas-use.test.js test/canvas-use-tool-observation.test.js test/workspace-drag-feedback.test.js test/browser-page-reader.test.ts test/rendered-page-content.test.ts test/sidebar-scroll-fade.test.ts test/local-search-bridge.test.ts test/figma-reading-layout.test.ts test/figma-reading-column.test.js test/research-board-navigation-final.test.ts",
-            "verifiedCommit": "365f28f154d78c1f44dc89e1a4a27a65fa8ea184",
-            "completedAt": "2026-09-18T14:08:33.444Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "365f28f154d78c1f44dc89e1a4a27a65fa8ea184",
-            "completedAt": "2026-09-18T14:08:33.444Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T14:08:33.444Z"
+        "risks": [],
+        "generatedAt": "2026-09-18T14:17:26.231054+00:00"
       }
     }
   ],
