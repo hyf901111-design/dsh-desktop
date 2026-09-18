@@ -34,6 +34,8 @@ def check_portable_slide(package, part):
         root = xml_root(package, name)
         for element in root.iter():
             tag = element.tag.split('}')[-1]
+            if tag in ('rPr', 'defRPr', 'endParaRPr') and has_misordered_text_fill(element):
+                errors.add('text-properties-child-order-invalid')
             if tag in ('outerShdw', 'innerShdw', 'prstShdw', 'glow'):
                 errors.add('render-shadow-or-glow')
             if tag == 'effectRef' and element.get('idx', '0') != '0':
@@ -99,3 +101,22 @@ def check_toc_style(root, source, page):
     except (KeyError, AttributeError, IndexError, TypeError, ValueError):
         errors.add('toc-style-unresolved')
     return sorted(errors)
+
+
+def has_misordered_text_fill(properties):
+    # DrawingML fill must precede effects, underline, fonts and hyperlinks.
+    # Appending solidFill after a:latin/ea/cs makes PowerPoint repair the run.
+    fills = {'noFill','solidFill','gradFill','blipFill','pattFill','grpFill'}
+    successors = {'effectLst','effectDag','highlight','uLnTx','uLn','uFillTx','uFill',
+                  'latin','ea','cs','sym','hlinkClick','hlinkMouseOver','rtl','extLst'}
+    seen_successor = False
+    fill_count = 0
+    for child in properties:
+        tag = child.tag.split('}')[-1]
+        if tag in successors:
+            seen_successor = True
+        if tag in fills:
+            fill_count += 1
+            if seen_successor or fill_count > 1:
+                return True
+    return False
