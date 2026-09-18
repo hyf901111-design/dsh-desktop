@@ -9,23 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "持续任务会话与虚拟鼠标体验优化",
+        "featureName": "持续任务消息顺序与会话阅读布局",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
-        "tipCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
+        "baseCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
+        "tipCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
         "commits": [
           {
-            "commit": "a01258bc687f92562304b55a7398b3cfee909ac6",
+            "commit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
             "parents": [
-              "a06b15e497428be2d4d74ae0401c35e25ae932c1"
+              "a01258bc687f92562304b55a7398b3cfee909ac6"
             ],
-            "subject": "优化：持续任务融入会话执行过程并统一停止与助理指针"
+            "subject": "修复：持续任务按发起消息归位并改善会话留白和指针样式"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
+            "path": "packages/dsh-research-collaboration/activity.js"
           },
           {
             "status": "M",
@@ -33,19 +33,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-tools.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/canvas-use-client.mjs"
           },
           {
-            "status": "A",
-            "path": "test/canvas-task-conversation.test.js"
+            "status": "M",
+            "path": "scripts/lib/shared-native-conversation.mjs"
           },
           {
-            "status": "A",
-            "path": "test/canvas-use-tool-observation.test.js"
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "test/canvas-task-conversation.test.js"
           },
           {
             "status": "M",
@@ -65,9 +65,9 @@
               "test/shared-native-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "32 项相关验证通过",
-            "verifiedCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
-            "completedAt": "2026-09-18T02:42:33.431548+00:00",
+            "summary": "36 项相关验证通过",
+            "verifiedCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
+            "completedAt": "2026-09-18T03:00:06.244937+00:00",
             "timeoutMs": 120000
           },
           {
@@ -80,8 +80,19 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
-            "completedAt": "2026-09-18T02:42:33.431548+00:00",
+            "verifiedCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
+            "completedAt": "2026-09-18T03:00:06.244937+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-canvas-activity-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "实际 D1/DO/WS 进度、重连及权限验证通过",
+            "verifiedCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
+            "completedAt": "2026-09-18T03:00:06.244937+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -90,67 +101,15 @@
           "summary": "功能 worktree 不构建共享客户端；真实 UI 在集成批次验证。"
         },
         "acceptanceCriteria": [
-          "持续任务使用会话原生执行过程和回报，输入框停止按钮结束",
-          "指针显示用户名、保持可见并沿曲线移动",
-          "组件变化触发即时观察，操作结果附新观察减少模型往返"
+          "旧任务回报归入发起它的对话，不追加到新消息后",
+          "侧栏左右留白、消息及段落间距舒适",
+          "小号白色描边指针，保留命名和动态反馈"
         ],
         "risks": [
           "模型网络和推理延迟仍取决于提供方",
           "离开画板、权限改变和达到任务上限仍会暂停"
         ],
-        "generatedAt": "2026-09-18T02:42:33.431548+00:00"
-      },
-      "merged": {
-        "mergeCommit": "94a000d6e2f02f1e00e82075400cefe4e1a4d5b3",
-        "verificationCommit": "94a000d6e2f02f1e00e82075400cefe4e1a4d5b3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "94a000d6e2f02f1e00e82075400cefe4e1a4d5b3",
-            "completedAt": "2026-09-18T02:42:58.748Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "94a000d6e2f02f1e00e82075400cefe4e1a4d5b3",
-            "completedAt": "2026-09-18T02:42:58.748Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "94a000d6e2f02f1e00e82075400cefe4e1a4d5b3",
-            "completedAt": "2026-09-18T02:42:58.748Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T02:42:58.748Z"
+        "generatedAt": "2026-09-18T03:00:06.244937+00:00"
       }
     }
   ],
