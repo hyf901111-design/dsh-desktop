@@ -3,7 +3,7 @@ import { runInNewContext } from 'node:vm'
 import { it, expect } from 'vitest'
 import { FsError } from '@deepseek-ai/dsh-fs'
 import { apply as applyObservationPolicy } from '@deepseek-ai/dsh-fs-observation-policy'
-import { patchTodoRecovery, patchFileRecovery } from '../scripts/lib/tool-recovery-guidance.mjs'
+import { patchTodoRecovery, patchFileRecovery, recoverUnobservedFile } from '../scripts/lib/tool-recovery-guidance.mjs'
 
 it('patches both installed tool modules idempotently', () => {
   for (const [name, patch] of [['todo', patchTodoRecovery], ['fs', patchFileRecovery]]) {
@@ -61,4 +61,44 @@ it('keeps observation guards scoped to the current session and latest observed v
   await expect(hooks['fs/edit-intent'](target, other)).rejects.toMatchObject({ code: 'FS_NOT_OBSERVED' })
   hooks['fs/observed'](target, { kind: 'present', version: 'v2' }, actor)
   expect(await hooks['fs/edit-intent'](target, actor)).toEqual({ version: 'v2' })
+})
+
+it('returns a bounded read result for inspection without replaying the blocked mutation', async () => {
+  const exec = { agent: { session: {} }, signal: new AbortController().signal }
+  const calls = []
+  const read = {
+    async execute(args, actor) { calls.push({args, actor}); return { text: '1: current file content' } },
+    output: { render: (_args, value) => [{ type: 'text', text: value.text }] }
+  }
+  const original = new FsError('edit requires reading', 'FS_NOT_OBSERVED')
+  const result = await recoverUnobservedFile(original, read, '/tmp/report.py', exec)
+  expect(result).toBe(original)
+  expect(result.code).toBe('FS_NOT_OBSERVED')
+  expect(result.message).toContain('no file was changed')
+  expect(result.message).toContain('1: current file content')
+  expect(result.message).toContain('read further ranges if needed')
+  expect(calls).toEqual([{args:{file_path:'/tmp/report.py'},actor:exec}])
+})
+
+it('does not auto-read on stale versions, permissions, missing actors or cancellation', async () => {
+  const read = { execute: () => { throw Error('must not run') } }
+  for (const code of ['FS_STALE_VERSION', 'FS_PERMISSION_DENIED']) {
+    const error = new FsError('original guard', code)
+    expect(await recoverUnobservedFile(error, read, '/tmp/test', {agent:{}})).toBe(error)
+    expect(error.message).toBe('original guard')
+  }
+  for (const exec of [{}, {agent:{},signal:AbortSignal.abort()}]) {
+    const error = new FsError('original guard', 'FS_NOT_OBSERVED')
+    expect(await recoverUnobservedFile(error, read, '/tmp/test', exec)).toBe(error)
+    expect(error.message).toBe('original guard')
+  }
+})
+
+it('keeps the original guard when the recovery read is denied', async () => {
+  let count = 0
+  const read = { execute: async () => { count++; throw new FsError('denied', 'FS_PERMISSION_DENIED') } }
+  const error = new FsError('read required', 'FS_NOT_OBSERVED')
+  expect(await recoverUnobservedFile(error, read, '/tmp/test', {agent:{}})).toBe(error)
+  expect(error.message).toBe('read required')
+  expect(count).toBe(1)
 })
