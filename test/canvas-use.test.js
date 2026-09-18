@@ -9,7 +9,7 @@ import {Script} from 'node:vm'
 function surface(html){
  const dom=new JSDOM(html,{url:'https://example.test',runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window
  w.PointerEvent=w.MouseEvent
- w.HTMLElement.prototype.getBoundingClientRect=function(){return {x:10,y:20,width:200,height:100,right:210,bottom:120}}
+ w.HTMLElement.prototype.getBoundingClientRect=function(){return {x:10,y:20,left:10,top:20,width:200,height:100,right:210,bottom:120}}
  const use=w.eval('('+createCanvasUseSurface.toString()+')(document.body)')
  return {dom,w,use}
 }
@@ -118,4 +118,48 @@ it('scoped waits ignore unrelated activity and wake within one poll when the tar
   await vi.advanceTimersByTimeAsync(4000);expect(execute).toHaveBeenCalledTimes(1)
   target='b';await vi.advanceTimersByTimeAsync(750);expect(execute).toHaveBeenCalledTimes(2)
  }finally{await tasks.dispose();vi.useRealTimers()}
+})
+
+it('wakes immediately on a generic change signal and still ignores unchanged content',async()=>{
+ vi.useFakeTimers();let value='a'
+ const execute=vi.fn(async()=>({status:'wait',reason:'等待内容变化'}))
+ const tasks=new CanvasUseTasks({pollMs:5000,observe:async()=>({writable:true,fingerprint:value}),execute})
+ try {
+  const task=await tasks.start({sessionId:'wake',goal:'跟踪变化',completion:'完成'})
+  await vi.advanceTimersByTimeAsync(1);expect(execute).toHaveBeenCalledTimes(1)
+  tasks.wake('different');tasks.wake('wake');await vi.advanceTimersByTimeAsync(1);expect(execute).toHaveBeenCalledTimes(1)
+  value='b';tasks.wake('wake');await vi.advanceTimersByTimeAsync(1);expect(execute).toHaveBeenCalledTimes(2)
+  await tasks.control('wake',task.id,'stop');value='c';tasks.wake('wake');await vi.advanceTimersByTimeAsync(6000);expect(execute).toHaveBeenCalledTimes(2)
+ } finally {await tasks.dispose();vi.useRealTimers()}
+})
+
+it('keeps the named small cursor during waiting, follows a curved path and removes it on stop',async()=>{
+ const {dom,w}=surface('<main><article data-research-node-id="n"><div class="rScV5Q_previewBody"><button>加一</button></div></article></main>')
+ const raw=patchCanvasUseClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const code=raw.slice(raw.indexOf('/* CANVAS_USE_CLIENT_START */'),raw.indexOf('/* CANVAS_USE_CLIENT_END */'))
+ w.eval(code.replace(/__vite_ssr_import_\d+__\.createCanvasUseSurface/g,'createCanvasUseSurface')+';window.testStore=canvasTaskStore;window.testInstall=installCanvasUseClient;window.testUse=canvasUseOwners;')
+ w.eval('var sherlockShared=()=>false;var sherlockBoardsAdapter={getState:()=>({account:{user:{username:"hyf90"}}})};')
+ w.fetch=vi.fn(async()=>({ok:true,json:async()=>({tasks:[]})}))
+ const state={files:[],artifacts:[{id:'n'}],viewport:{x:0,y:0,scale:1},selection:{selectedNodeIds:[]}}
+ const root=w.document.querySelector('main'),listeners=new Set()
+ const cleanup=w.testInstall('cursor',{getSnapshot:()=>state,canvasAction:async()=>({revision:'r',writable:true}),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)}},root)
+ try {
+  const task={id:'t',state:'waiting',updatedAt:1,createdAt:1};w.testStore('cursor').update([task])
+  let cursor=root.querySelector('[data-canvas-use-cursor]');expect(cursor.textContent).toBe('hyf90的智能助理');expect(cursor.querySelector('svg').getAttribute('width')).toBe('17')
+  await new Promise(r=>setTimeout(r,1300));expect(cursor.isConnected).toBe(true)
+  const use=w.testUse.get('cursor'),observation=await use({op:'observe'}),s=observation.surfaces[0];expect(s.error).toBeUndefined()
+  const positions=[];const raf=w.requestAnimationFrame.bind(w);w.requestAnimationFrame=fn=>raf(t=>{positions.push([cursor.style.left,cursor.style.top]);fn(t)})
+  await use({op:'click',requestId:'click',revision:observation.revision,nodeId:'n',surfaceRevision:s.revision,ref:s.elements[0].ref})
+  expect(positions.length).toBeGreaterThan(2);expect(new Set(positions.map(p=>p.join())).size).toBeGreaterThan(2)
+  expect(root.querySelectorAll('[data-canvas-use-cursor]')).toHaveLength(1)
+  w.testStore('cursor').update([{...task,state:'stopped',updatedAt:2}]);expect(root.querySelector('[data-canvas-use-cursor]')).toBeNull()
+ } finally {cleanup();dom.window.close()}
+})
+
+it('rejects delayed older task responses after the composer has stopped the task',async()=>{
+ const {canvasTaskStore}=await import('../scripts/lib/canvas-use-client.mjs')
+ const {runInNewContext}=await import('node:vm');const calls=[]
+ const create=runInNewContext('('+canvasTaskStore.toString()+')',{canvasTaskStores:new Map(),setInterval,clearInterval,fetch:async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({tasks:[{id:'t',state:'stopped',updatedAt:3}]})}}})
+ const store=create('s');store.update([{id:'t',state:'waiting',updatedAt:2}]);await store.stop()
+ store.update([{id:'t',state:'running',updatedAt:1}]);expect(store.value[0].state).toBe('stopped');expect(calls).toEqual([{sessionId:'s',taskId:'t',action:'stop'}])
 })
