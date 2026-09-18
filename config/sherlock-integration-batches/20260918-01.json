@@ -12,7 +12,7 @@
         "featureName": "持续任务单上下文与全局执行过程和窗口性能优化",
         "branch": "codex/feat/canvas-use-tasks-20260917",
         "baseCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
-        "tipCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
+        "tipCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
         "commits": [
           {
             "commit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
@@ -20,6 +20,13 @@
               "43c5b70ab9595f0b51d50e5ff1554de48206953b"
             ],
             "subject": "优化：持续任务复用执行上下文并统一全局过程展开与窗口缩放反馈"
+          },
+          {
+            "commit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
+            "parents": [
+              "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e"
+            ],
+            "subject": "测试：补全全局过程渲染验证的脚本类型边界"
           }
         ],
         "files": [
@@ -116,8 +123,8 @@
             ],
             "outcome": "passed",
             "summary": "95 项聚焦验证通过，包含同一执行上下文接续、主调用持续等待、取消以及全局折叠顺序",
-            "verifiedCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
-            "completedAt": "2026-09-18T04:19:14.570046+00:00",
+            "verifiedCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
+            "completedAt": "2026-09-18T04:21:25.996902+00:00",
             "timeoutMs": 120000
           },
           {
@@ -130,8 +137,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
-            "completedAt": "2026-09-18T04:19:14.570046+00:00",
+            "verifiedCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
+            "completedAt": "2026-09-18T04:21:25.996902+00:00",
             "timeoutMs": 120000
           },
           {
@@ -141,8 +148,8 @@
             ],
             "outcome": "passed",
             "summary": "实际 D1/DO/WS 进度、重连及权限验证通过",
-            "verifiedCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
-            "completedAt": "2026-09-18T04:19:14.570046+00:00",
+            "verifiedCommit": "c649d8e86fcf38c91d2a1e9652c2967c310b17c0",
+            "completedAt": "2026-09-18T04:21:25.996902+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -159,7 +166,7 @@
           "模型请求延迟仍受提供方影响",
           "真实客户端退出需重新启动任务；不具备离线云端执行能力"
         ],
-        "generatedAt": "2026-09-18T04:19:14.570046+00:00"
+        "generatedAt": "2026-09-18T04:21:25.996902+00:00"
       }
     }
   ],
