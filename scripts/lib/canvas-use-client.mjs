@@ -51,7 +51,7 @@ function installCanvasUseClient(sessionId,workspace,root,cursorMarkup) {
     cursor.style.cssText='position:absolute;left:0;top:0;z-index:60;pointer-events:none;will-change:transform;contain:layout style;isolation:isolate;color:#0d99ff;font:11px/16px system-ui;white-space:nowrap;'
     cursor.innerHTML=cursorMarkup()
     const name=sherlockBoardsAdapter?.getState()?.account?.user?.username
-    cursor.querySelector('[data-canvas-cursor-label]').textContent=name?name+'的智能助理':'智能助理'
+    cursor.querySelector('[data-canvas-cursor-text]').textContent=name?name+'的智能助理':'智能助理'
     root.append(cursor)
     if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)animation=cursor.querySelector('[data-canvas-pointer]').animate?.([{transform:'rotate(-5deg)'},{transform:'rotate(5deg)'},{transform:'rotate(-5deg)'}],{duration:1800,iterations:Infinity,easing:'ease-in-out'})
     position??={x:Math.min(80,root.clientWidth/2),y:64}
