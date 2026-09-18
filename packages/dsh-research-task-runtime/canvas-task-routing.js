@@ -3,7 +3,14 @@
 export function ongoingCanvasRequest(session) {
   const message=[...(session?.events??[])].reverse().find(e=>e.type==='user/message'&&e.data?.source?.kind==='user')?.data
   if(!message)return null
-  const text=(message.content??[]).filter(p=>p.type==='text').map(p=>p.text).join('\n')
+  let text=(message.content??[]).filter(p=>p.type==='text').map(p=>p.text).join('\n')
+  const prefix='␞SHERLOCK_RESEARCH_FILES_V1 '
+  if(text.startsWith(prefix)){
+    const end=text.indexOf('␟',prefix.length)
+    if(end<0)return null
+    try {JSON.parse(text.slice(prefix.length,end))}catch{return null}
+    text=text.slice(end+1)
+  }
   const request=text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'').replace(/[“「][^”」]*[”」]/g,'')
   if(/(?:不要|不用|不需要|停止|结束)(?:再)?(?:持续|一直|陪|监控|跟踪)|(?:只|仅).{0,10}(?:一次|一步)|\b(?:stop|don't|do not)\b/i.test(request))return null
   if(/陪(?:我|着我)|(?:请|帮我|^|[。\n])\s*(?:持续|一直)(?:观察|监控|跟踪|执行|操作|等待|响应)|盯着|每(?:次|当)[^。\n]{0,60}(?:自动|就|都)|直到我(?:说停|停止|点击停止)|\bkeep (?:watching|monitoring|playing|responding|interacting)\b|\buntil I (?:stop|cancel)\b/i.test(request))return {messageId:message.id,text}

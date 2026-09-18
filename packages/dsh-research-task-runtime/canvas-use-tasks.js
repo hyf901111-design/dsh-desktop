@@ -199,7 +199,7 @@ export async function registerCanvasUseTasks(ctx,{filePath,isTrustedRequest,read
   }})
   const currentTasks=id=>tasks.list(id).filter(live)
   const disposeGoalGuard=registerCanvasGoalGuard((exec,method,args)=>canvasTaskRoutingGuard(exec,method,args,currentTasks(canvasSession(exec))))
-  const disposeGuidance=ctx.get?.('systemPrompt')?.section({name:'sherlock:canvas-ongoing-goal',order:150,text:({agent})=>{
+  const disposeGuidance=ctx.systemPrompt.section({name:'sherlock:canvas-ongoing-goal',order:150,text:({agent})=>{
     if(!agent||agent[Symbol.for('sherlock.canvas-task-owned')])return ''
     const active=currentTasks(canvasSession({agent}))
     if(!active.length&&!ongoingCanvasRequest(agent.session))return ''

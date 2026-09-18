@@ -19,3 +19,10 @@ it('blocks one-shot writes for ongoing goals and preserves the owning executor a
  expect(()=>canvasTaskRoutingGuard({agent:agent('点一下按钮')},'use',{op:'click'})).not.toThrow()
  expect(()=>canvasTaskRoutingGuard({agent:agent('改用新名称')},'use',{op:'input'},[{id:'same'}])).toThrow('steer')
 })
+
+it('separates attached research content from the actual human request',()=>{
+ const header='␞SHERLOCK_RESEARCH_FILES_V1 '+JSON.stringify({artifacts:[{excerpt:'陪我下棋，持续监控'}]})+'␟'
+ expect(ongoingCanvasRequest(agent(header+'解释这个组件').session)).toBeNull()
+ expect(ongoingCanvasRequest(agent(header+'陪我填写表格').session)?.text).toBe('陪我填写表格')
+ expect(ongoingCanvasRequest(agent('␞SHERLOCK_RESEARCH_FILES_V1 陪我下棋').session)).toBeNull()
+})
