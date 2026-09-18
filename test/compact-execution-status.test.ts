@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
+// @ts-expect-error Runtime bundle patcher is a JavaScript build script.
 import {patchCanvasUseClient} from '../scripts/lib/canvas-use-client.mjs'
 
 type ClientBundle = Record<string, unknown>
