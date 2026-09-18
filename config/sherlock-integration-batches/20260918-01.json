@@ -57,6 +57,58 @@
           "真实模型链路与界面待集成验收"
         ],
         "generatedAt": "2026-09-18T01:03:13.934775+00:00"
+      },
+      "merged": {
+        "mergeCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
+        "verificationCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
+            "completedAt": "2026-09-18T01:03:37.274Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/canvas-use.test.js",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-canvas-action-bridge.test.ts",
+              "test/research-canvas-actions.test.js",
+              "test/component-interaction-state.test.js",
+              "test/research-native-web.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
+            "verifiedCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
+            "completedAt": "2026-09-18T01:03:37.274Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "-p",
+              "tsconfig.node.json",
+              "--noEmit"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
+            "verifiedCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
+            "completedAt": "2026-09-18T01:03:37.274Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-18T01:03:37.274Z"
       }
     }
   ],
