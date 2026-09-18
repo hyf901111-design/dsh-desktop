@@ -163,3 +163,10 @@ it('rejects delayed older task responses after the composer has stopped the task
  const store=create('s');store.update([{id:'t',state:'waiting',updatedAt:2}]);await store.stop()
  store.update([{id:'t',state:'running',updatedAt:1}]);expect(store.value[0].state).toBe('stopped');expect(calls).toEqual([{sessionId:'s',taskId:'t',action:'stop'}])
 })
+
+it('accepts a valid task decision surrounded by commentary, but never infers completion from prose',async()=>{
+ const {parseCanvasTaskDecision}=await import('../packages/dsh-research-task-runtime/canvas-use-tasks.js')
+ expect(parseCanvasTaskDecision('保存已确认。\n```json\n{"status":"wait","reason":"等待用户停止"}\n```')).toEqual({status:'wait',reason:'等待用户停止'})
+ expect(()=>parseCanvasTaskDecision('已完成')).toThrow(/有效/)
+ expect(()=>parseCanvasTaskDecision('{"status":"wait","reason":"a"}{"status":"complete","reason":"b"}')).toThrow(/唯一/)
+})

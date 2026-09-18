@@ -5,6 +5,7 @@ import {defineTool} from '@deepseek-ai/dsh-tools'
 import {callCanvas,canvasSession,bindCanvasChild,CANVAS_TOOL_NAMES} from './canvas-tools.js'
 import {CANVAS_USE_TOOL} from './canvas-use-tools.js'
 import {startComponentAgent} from './component-agent-scope.js'
+import {extractArtifactObjects} from './artifact-output.js'
 
 const live = t => ['running','waiting'].includes(t.state)
 const copy = v => JSON.parse(JSON.stringify(v))
@@ -16,6 +17,11 @@ export function taskModelSelection(models) {
   const supported=models.groups?.find(g=>g.id===current.provider)?.models?.find(m=>m.id===current.model)?.reasoning?.efforts??[]
   const effort=['low','minimal','medium'].find(id=>supported.some(e=>e.id===id))
   return {...current,...(effort?{reasoningEffort:effort}:{})}
+}
+export function parseCanvasTaskDecision(text) {
+  const values=extractArtifactObjects(text).filter(v=>['wait','complete','pause'].includes(v.status)&&typeof v.reason==='string')
+  if(values.length!==1)throw Error('执行器未给出唯一有效的任务状态，已暂停；请恢复任务重新观察。')
+  return values[0]
 }
 export class CanvasUseTasks {
   constructor({observe,execute,save=async()=>{},now=Date.now,pollMs=750}) {Object.assign(this,{observe,execute,save,now,pollMs});this.tasks=new Map();this.runs=new Map();this.operations=new Map();this.saving=Promise.resolve();this.closed=false}
@@ -141,7 +147,7 @@ export async function registerCanvasUseTasks(ctx,{filePath,isTrustedRequest,read
       })])
       if(controller.signal.aborted)throw Error('本轮执行超时或被中断，已暂停。')
       const text=(result.output??[]).filter(p=>p.type==='text').map(p=>p.text).join('\n').trim().replace(/^```(?:json)?\s*|\s*```$/g,'')
-      return JSON.parse(text)
+      return parseCanvasTaskDecision(text)
     } finally {clearTimeout(timer);signal.removeEventListener('abort',abort);controller.abort();unbind?.();await run?.dispose().catch(()=>{})}
   }})
   let stored=[];try{stored=JSON.parse(await readFile(filePath,'utf8'))}catch(error){if(error.code!=='ENOENT')throw error}await tasks.restore(stored)
