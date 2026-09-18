@@ -161,3 +161,17 @@ body .Md3f7G_executionTrigger > .Md3f7G_executionLeading {
   width:14px;
   justify-items:start;
 }
+
+/* Sidebar messages share the assistant's readable column until the bubble cap. */
+body .sRp_messages .gdEzaW_userStack {
+  width:100% !important;
+  max-width:560px;
+}
+body .sRp_messages .gdEzaW_userStack > .gdEzaW_bubble {
+  width:100% !important;
+}
+body .sRp_messages .srb-message[data-role=user]:not([data-execution-kind=component]) {
+  width:100%;
+  max-width:560px;
+  box-sizing:border-box;
+}
