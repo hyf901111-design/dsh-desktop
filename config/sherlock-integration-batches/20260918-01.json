@@ -11,44 +11,29 @@
         "schemaVersion": 1,
         "featureName": "队列编辑删除与运行时响应优化",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "fad433941ca4988114f7bfa855f2a3f7ada17c07",
-        "tipCommit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
+        "baseCommit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
+        "tipCommit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
         "commits": [
           {
-            "commit": "f2ec4cb294d02ced22f5ae61a0a2196ce4af56e8",
+            "commit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
             "parents": [
-              "fad433941ca4988114f7bfa855f2a3f7ada17c07"
+              "869adbc81e7b00f293dfdb0ec19e55b40d7e8478"
             ],
-            "subject": "修复：引用队列文字编辑与重复删除反馈并降低运行时界面扫描开销"
-          },
-          {
-            "commit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
-            "parents": [
-              "f2ec4cb294d02ced22f5ae61a0a2196ce4af56e8"
-            ],
-            "subject": "修复：队列引用编辑补丁的字符串引号"
+            "subject": "修复队列编辑与完整界面补丁链兼容性"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/canvas-use-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-reading.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/ui-localization.ts"
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
           },
           {
             "status": "M",
             "path": "test/canvas-task-conversation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-final-shell-patch.test.ts"
           }
         ],
         "checks": [
@@ -64,12 +49,13 @@
               "test/canvas-task-timing.test.js",
               "test/canvas-use.test.js",
               "test/ui-localization.test.ts",
-              "test/figma-resize-feedback.test.ts"
+              "test/figma-resize-feedback.test.ts",
+              "test/figma-final-shell-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "58 项聚焦验证通过",
-            "verifiedCommit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
-            "completedAt": "2026-09-18T06:51:09.453661+00:00",
+            "summary": "70 项聚焦验证通过",
+            "verifiedCommit": "46bd58b28db2e60f84e6e2cb9a0907130c5a0826",
+            "completedAt": "2026-09-18T07:00:30.825939+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -84,59 +70,7 @@
           "主动停止仍立即生效"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T06:51:09.453661+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9aad98d47a558f5ea3955a08820b71662c5d1ab4",
-        "verificationCommit": "9aad98d47a558f5ea3955a08820b71662c5d1ab4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "9aad98d47a558f5ea3955a08820b71662c5d1ab4",
-            "completedAt": "2026-09-18T06:52:34.495Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "9aad98d47a558f5ea3955a08820b71662c5d1ab4",
-            "completedAt": "2026-09-18T06:52:34.495Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "9aad98d47a558f5ea3955a08820b71662c5d1ab4",
-            "completedAt": "2026-09-18T06:52:34.495Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T06:52:34.495Z"
+        "generatedAt": "2026-09-18T07:00:30.825939+00:00"
       }
     }
   ],
