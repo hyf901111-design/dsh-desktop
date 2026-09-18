@@ -76,7 +76,12 @@ await cp(
   { recursive: true }
 )
 const sherlockAgentPath = path.join(sherlockPresetRoot, 'standard', 'agent.cordis.yml')
-const sherlockAgent = await readFile(sherlockAgentPath, 'utf8')
+const sherlockAgent = replaceRequired(
+  await readFile(sherlockAgentPath, 'utf8'),
+  "- id: tool-web\n  name: '@deepseek-ai/dsh-tool-web'\n  config:\n    fetch: false",
+  "- id: tool-web\n  name: '@deepseek-ai/dsh-tool-web'\n  config:\n    fetch: true",
+  sherlockAgentPath
+)
 await writeFile(
   sherlockAgentPath,
   replaceRequired(

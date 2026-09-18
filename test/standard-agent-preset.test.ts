@@ -339,3 +339,13 @@ describe('Sherlock standard agent preset policy', () => {
     })
   })
 })
+
+
+it('exposes webpage reading in both packaged desktop conversation modes', async () => {
+  const install = spawnSync(process.execPath, ['scripts/install-brand-assets.mjs'], {encoding:'utf8'})
+  expect(install.status, install.stderr).toBe(0)
+  for (const mode of ['standard','build']) {
+    const preset = parse(await readFile(`node_modules/@deepseek-ai/dsh/config/sherlock-agent-presets/${mode}/agent.cordis.yml`, 'utf8'))
+    expect(preset.find((row: any) => row.id === 'tool-web')?.config?.fetch).toBe(true)
+  }
+})
