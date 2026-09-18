@@ -9,6 +9,7 @@ const MAX_RESULTS = 8
 
 export interface LocalSearchBridgeOptions {
   readPage?(url: string, signal: AbortSignal): Promise<unknown>
+  browserUse?(input: unknown, signal: AbortSignal): Promise<unknown>
   search(
     query: string,
     maxResults: number,
@@ -70,7 +71,7 @@ export class LocalSearchBridge {
       return
     }
     const requestUrl = new URL(request.url ?? '/', 'http://127.0.0.1')
-    if (requestUrl.pathname !== '/search' && !(requestUrl.pathname === '/fetch' && this.options.readPage)) {
+    if (requestUrl.pathname !== '/search' && !(requestUrl.pathname === '/fetch' && this.options.readPage) && !(requestUrl.pathname === '/browser' && this.options.browserUse)) {
       sendJson(response, 404, { error: 'Not found.' })
       return
     }
@@ -99,8 +100,9 @@ export class LocalSearchBridge {
       return
     }
     const isFetch = requestUrl.pathname === '/fetch'
+    const isBrowser = requestUrl.pathname === '/browser'
     const query = typeof parsed.query === 'string' ? parsed.query.trim() : ''
-    if (!isFetch && (query.length === 0 || query.length > MAX_QUERY_LENGTH)) {
+    if (!isFetch && !isBrowser && (query.length === 0 || query.length > MAX_QUERY_LENGTH)) {
       sendJson(response, 400, { error: 'Query must contain 1 to 512 characters.' })
       return
     }
@@ -118,7 +120,9 @@ export class LocalSearchBridge {
     request.once('aborted', abort)
     response.once('close', abort)
     try {
-      const result = isFetch
+      const result = isBrowser
+        ? await this.options.browserUse!(parsed, controller.signal)
+        : isFetch
         ? await this.options.readPage!(typeof parsed.url === 'string' ? parsed.url : '', controller.signal)
         : await this.options.search(query, maxResults, controller.signal)
       if (!response.destroyed) sendJson(response, 200, result)

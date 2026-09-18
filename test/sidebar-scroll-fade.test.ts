@@ -3,15 +3,16 @@ import { Window } from 'happy-dom'
 import { sidebarHeadingMask, installSidebarScrollFade } from '../src/preload/sidebar-scroll-fade'
 it('does not mask rows clear of the headings', () => {
   expect(sidebarHeadingMask(200, 600, [{ top: 100, bottom: 136 }])).toBe('')
+  expect(sidebarHeadingMask(136, 600, [{ top: 100, bottom: 136 }])).toBe('')
 })
-it('fades into and out of each sticky title without a colored background', () => {
+it('keeps fading inside each heading so the following row stays fully visible', () => {
   const mask = sidebarHeadingMask(0, 600, [{ top: 100, bottom: 136 }, { top: 300, bottom: 336 }])
-  expect(mask).toContain('#000 88px, transparent 100px, transparent 136px, #000 148px')
-  expect(mask).toContain('#000 288px, transparent 300px, transparent 336px, #000 348px')
+  expect(mask).toContain('#000 100px, transparent 106px, transparent 130px, #000 136px')
+  expect(mask).toContain('#000 300px, transparent 306px, transparent 330px, #000 336px')
 })
 it('merges touching sticky headings and tracks content scrolling', () => {
   const mask = sidebarHeadingMask(-200, 900, [{ top: 100, bottom: 136 }, { top: 136, bottom: 172 }])
-  expect(mask).toContain('transparent 300px, transparent 372px')
+  expect(mask).toContain('transparent 306px, transparent 366px')
   expect(mask).not.toContain('transparent 336px')
 })
 
@@ -28,7 +29,7 @@ it('updates the mask in the same event as a fast wheel delta', () => {
   list.dispatchEvent(event as unknown as Event)
   expect(event.defaultPrevented).toBe(true)
   expect(root.scrollTop).toBe(400)
-  expect(list.style.maskImage).toContain('transparent 364px, transparent 400px')
+  expect(list.style.maskImage).toContain('transparent 370px, transparent 394px')
   const handled = new w.WheelEvent('wheel', { deltaY: 400, bubbles: true, cancelable: true })
   handled.preventDefault(); list.dispatchEvent(handled as unknown as Event)
   expect(root.scrollTop).toBe(400)

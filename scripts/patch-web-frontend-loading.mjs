@@ -1,3 +1,5 @@
+import { patchConversationBrowser } from './lib/conversation-browser-client.mjs'
+import { patchWorkspaceDragFeedback } from './lib/workspace-drag-feedback.mjs'
 import { patchResearchNativeWeb } from './lib/research-native-web-client.mjs'
 import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
 import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
@@ -145,7 +147,7 @@ for (const [name, patch] of [
   ['dsh-client-ui-user-questions', patchQuestionCountdown],
   ['dsh-client-ui-model-selection', patchFigmaModelMenu],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
-  ['dsh-client-ui-workspace', source => patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source))],
+  ['dsh-client-ui-workspace', source => patchWorkspaceDragFeedback(patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source)))],
   ['dsh-client-ui-conversation', source => patchDesktopResearchDefaults(patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaCanvasContextMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))))))],
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', source => patchFigmaProviderMenu(patchFigmaSettingsModels(source))],
@@ -215,3 +217,5 @@ writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversatio
     writeFileSync(path, source)
   }
 }
+
+writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversationPath, 'utf8')))

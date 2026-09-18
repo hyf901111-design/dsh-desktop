@@ -1,17 +1,17 @@
 /** Fade scrolling rows out beneath the transparent sticky section headings. */
 export function sidebarHeadingMask(top: number, height: number, headings: Array<{ top: number; bottom: number }>): string {
   const bands = headings.map(h => ({ start: h.top - top, end: h.bottom - top }))
-    .filter(h => h.end > -12 && h.start < height + 12).sort((a, b) => a.start - b.start)
+    .filter(h => h.end > 0 && h.start < height).sort((a, b) => a.start - b.start)
   if (!bands.length || height <= 0) return ''
   const merged: typeof bands = []
   for (const band of bands) {
     const last = merged.at(-1)
-    if (last && band.start - 12 <= last.end + 12) last.end = Math.max(last.end, band.end)
+    if (last && band.start <= last.end) last.end = Math.max(last.end, band.end)
     else merged.push({ ...band })
   }
   const clamp = (n: number) => Math.round(Math.max(0, Math.min(height, n)) * 100) / 100
   const stops = ['#000 0px']
-  for (const b of merged) stops.push(`#000 ${clamp(b.start - 12)}px`, `transparent ${clamp(b.start)}px`, `transparent ${clamp(b.end)}px`, `#000 ${clamp(b.end + 12)}px`)
+  for (const b of merged) stops.push(`#000 ${clamp(b.start)}px`, `transparent ${clamp(Math.min(b.start + 6, (b.start + b.end) / 2))}px`, `transparent ${clamp(Math.max(b.end - 6, (b.start + b.end) / 2))}px`, `#000 ${clamp(b.end)}px`)
   return `linear-gradient(to bottom, ${stops.join(', ')}, #000 100%)`
 }
 const installed = new WeakSet<Document>()

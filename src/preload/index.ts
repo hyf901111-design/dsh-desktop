@@ -209,6 +209,14 @@ contextBridge.exposeInMainWorld(
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
+    conversationBrowser: Object.freeze({
+      layout: (value: unknown) => ipcRenderer.invoke('conversation:browser:layout',value),
+      subscribe: (callback: (value: unknown) => void) => {
+        const listener=(_event: unknown,value: unknown)=>callback(value)
+        ipcRenderer.on('conversation:browser',listener)
+        return ()=>ipcRenderer.removeListener('conversation:browser',listener)
+      }
+    }),
     researchBoards: createResearchBoardsBridge(ipcRenderer),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
