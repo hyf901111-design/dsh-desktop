@@ -77,7 +77,7 @@ it('adds readable research sidebar spacing without changing the main conversatio
  w.document.head.innerHTML='<style>'+css+'</style>'
  w.document.body.innerHTML='<div class="sRp_conversation"><div class="sRp_messages"><div class="Md3f7G_column"><div class="odyssey-canvas-task-message"><div>执行过程</div><div class="_markdown_test"><p>第一段</p><p>第二段</p></div></div></div></div></div>'
  expect(w.getComputedStyle(w.document.querySelector('.sRp_conversation')).paddingLeft).toBe('24px')
- expect(w.getComputedStyle(w.document.querySelector('.odyssey-canvas-task-message')).gap).toBe('12px')
+ expect(w.getComputedStyle(w.document.querySelector('.odyssey-canvas-task-message')).gap).toBe('8px')
  expect(w.getComputedStyle(w.document.querySelector('p')).marginBottom).toBe('14px')
  await w.happyDOM.abort()
 })

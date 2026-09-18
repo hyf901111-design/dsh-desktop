@@ -142,6 +142,7 @@ it('keeps the named small cursor during waiting, follows a curved path and remov
  w.fetch=vi.fn(async()=>({ok:true,json:async()=>({tasks:[]})}))
  const state={files:[],artifacts:[{id:'n'}],viewport:{x:0,y:0,scale:1},selection:{selectedNodeIds:[]}}
  const root=w.document.querySelector('main'),listeners=new Set()
+ let physicalDown;const add=root.addEventListener.bind(root);root.addEventListener=(type,fn,options)=>{if(type==='pointerdown')physicalDown=fn;add(type,fn,options)}
  const cleanup=w.testInstall('cursor',{getSnapshot:()=>state,canvasAction:async()=>({revision:'r',writable:true}),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)}},root)
  try {
   const task={id:'t',state:'waiting',updatedAt:1,createdAt:1};w.testStore('cursor').update([task])
@@ -153,8 +154,9 @@ it('keeps the named small cursor during waiting, follows a curved path and remov
   root.removeAttribute('data-research-operation')
   root.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true,altKey:true}))
   expect(w.fetch).not.toHaveBeenCalled();expect(w.testStore('cursor').value[0].state).toBe('waiting')
+  physicalDown({isTrusted:true,button:0});await expect(use({op:'observe'})).rejects.toThrow(/用户正在操作/);expect(cursor.isConnected).toBe(true);w.dispatchEvent(new w.MouseEvent('pointerup'));
   const observation=await use({op:'observe'}),s=observation.surfaces[0];expect(s.error).toBeUndefined()
-  const positions=[];const raf=w.requestAnimationFrame.bind(w);w.requestAnimationFrame=fn=>raf(t=>{positions.push([cursor.style.left,cursor.style.top]);fn(t)})
+  const positions=[];const raf=w.requestAnimationFrame.bind(w);w.requestAnimationFrame=fn=>raf(t=>{positions.push([cursor.style.transform]);fn(t)})
   await use({op:'click',requestId:'click',revision:observation.revision,nodeId:'n',surfaceRevision:s.revision,ref:s.elements[0].ref})
   expect(positions.length).toBeGreaterThan(2);expect(new Set(positions.map(p=>p.join())).size).toBeGreaterThan(2)
   expect(root.querySelectorAll('[data-canvas-use-cursor]')).toHaveLength(1)
