@@ -47,3 +47,9 @@ body[data-ds-dark-theme] [data-research-snap-guides]>i{background:#76a4ff}
 [data-research-canvas] [data-research-compact-chrome]:has(:is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand):is(:hover,:focus-visible)){z-index:100!important}
 [data-research-compact-chrome]:has(:is(.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand):is(:hover,:focus-visible)) > .rScV5Q_nodeTitle{z-index:10!important;overflow:visible!important}
 [data-research-compact-chrome] .rScV5Q_nodeTitleActions{z-index:11!important;overflow:visible!important}
+
+/* Header tooltips raise the title to layer 10. Keep the complete selection
+   stroke above that background without intercepting controls or portal menus. */
+body [data-research-canvas] [data-research-node-id][data-research-compact-chrome][data-selected=true]::after{
+  z-index:20;
+}
