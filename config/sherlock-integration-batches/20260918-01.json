@@ -9,23 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "持续任务消息顺序与会话阅读布局",
+        "featureName": "长程画布任务恢复与连续执行过程",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
-        "tipCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
+        "baseCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
+        "tipCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
         "commits": [
           {
-            "commit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
+            "commit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
             "parents": [
-              "a01258bc687f92562304b55a7398b3cfee909ac6"
+              "00ce1467ae7ca782040f700a182b40d2fedbb2d0"
             ],
-            "subject": "修复：持续任务按发起消息归位并改善会话留白和指针样式"
+            "subject": "修复：长程画布任务自动恢复并保持连续会话执行过程"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-collaboration/activity.js"
+            "status": "A",
+            "path": "docs/canvas-continuous-task-lifecycle.md"
           },
           {
             "status": "M",
@@ -41,11 +41,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/figma-reading.css"
+            "path": "test/canvas-task-conversation.test.js"
           },
           {
-            "status": "M",
-            "path": "test/canvas-task-conversation.test.js"
+            "status": "A",
+            "path": "test/canvas-task-recovery.test.js"
           },
           {
             "status": "M",
@@ -62,12 +62,13 @@
               "test/canvas-task-conversation.test.js",
               "test/canvas-use-tool-observation.test.js",
               "test/component-interaction-state.test.js",
-              "test/shared-native-conversation.test.js"
+              "test/shared-native-conversation.test.js",
+              "test/canvas-task-recovery.test.js"
             ],
             "outcome": "passed",
-            "summary": "36 项相关验证通过",
-            "verifiedCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
-            "completedAt": "2026-09-18T03:00:06.244937+00:00",
+            "summary": "44 项相关验证通过，包含人工介入、超时恢复、显式停止与连续会话",
+            "verifiedCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
+            "completedAt": "2026-09-18T03:37:21.408335+00:00",
             "timeoutMs": 120000
           },
           {
@@ -80,8 +81,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
-            "completedAt": "2026-09-18T03:00:06.244937+00:00",
+            "verifiedCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
+            "completedAt": "2026-09-18T03:37:21.408335+00:00",
             "timeoutMs": 120000
           },
           {
@@ -91,8 +92,8 @@
             ],
             "outcome": "passed",
             "summary": "实际 D1/DO/WS 进度、重连及权限验证通过",
-            "verifiedCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
-            "completedAt": "2026-09-18T03:00:06.244937+00:00",
+            "verifiedCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
+            "completedAt": "2026-09-18T03:37:21.408335+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -101,67 +102,15 @@
           "summary": "功能 worktree 不构建共享客户端；真实 UI 在集成批次验证。"
         },
         "acceptanceCriteria": [
-          "旧任务回报归入发起它的对话，不追加到新消息后",
-          "侧栏左右留白、消息及段落间距舒适",
-          "小号白色描边指针，保留命名和动态反馈"
+          "短暂用户操作、失焦和超时自动重新观察恢复",
+          "持续任务保持一条执行过程，中间不出现结束操作栏",
+          "显式停止立即撤销操作，连续5分钟无法恢复时暂停"
         ],
         "risks": [
-          "模型网络和推理延迟仍取决于提供方",
-          "离开画板、权限改变和达到任务上限仍会暂停"
+          "模型请求延迟仍受提供方影响",
+          "真实客户端退出需重新启动任务；不具备离线云端执行能力"
         ],
-        "generatedAt": "2026-09-18T03:00:06.244937+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8c2de55d94508c443c68af4bba85298f7eca9d1f",
-        "verificationCommit": "8c2de55d94508c443c68af4bba85298f7eca9d1f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "8c2de55d94508c443c68af4bba85298f7eca9d1f",
-            "completedAt": "2026-09-18T03:01:10.519Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "8c2de55d94508c443c68af4bba85298f7eca9d1f",
-            "completedAt": "2026-09-18T03:01:10.519Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "8c2de55d94508c443c68af4bba85298f7eca9d1f",
-            "completedAt": "2026-09-18T03:01:10.519Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T03:01:10.519Z"
+        "generatedAt": "2026-09-18T03:37:21.408335+00:00"
       }
     }
   ],
