@@ -1,6 +1,15 @@
 export function patchConversationBrowser(source) {
-  const marker='/* odyssey:conversation-browser:v1 */'
+  const marker='/* odyssey:conversation-browser:v2 */'
   if(source.includes(marker))return source
+  if(source.includes('/* odyssey:conversation-browser:v1 */')){
+    const start=source.indexOf('/* odyssey:conversation-browser:v1 */'),end=source.indexOf('class ResearchSidebarCoordinator {',start);
+    if(end<0)throw Error('Conversation browser v1 migration missing class');
+    source=source.slice(0,start)+source.slice(end);
+    const a=source.indexOf('const unregisterBrowser=service.registerTab('),b=source.indexOf('const unregisterGenerated=service.registerTab(',a);
+    if(a<0||b<a)throw Error('Conversation browser v1 migration missing registration');
+    source=source.slice(0,a)+source.slice(b);
+    source=source.replace('unregisterBrowser?.();unsubscribeBrowser?.();','');
+  }
   const exact=(from,to)=>{if(!source.includes(from))throw Error('Conversation browser anchor missing: '+from.slice(0,80));source=source.replace(from,to)}
   exact('class ResearchSidebarCoordinator {',`${marker}
 function OdysseyBrowserTab({tab,scope}) {
@@ -29,13 +38,29 @@ function OdysseyBrowserTab({tab,scope}) {
 }
 class ResearchSidebarCoordinator {`)
   exact('const unregisterGenerated=service.registerTab(',`const unregisterBrowser=service.registerTab({id:'sherlock-conversation-browser',title:()=> '浏览器',hidden:true,single:false,component:props=>react_jsx_runtime.jsx(OdysseyBrowserTab,props)});
+    const browserSessions=new Map();
+    const syncBrowserActivity=()=>{
+      const byId=sessions.list.getSnapshot().byId;
+      const name=sherlockBoardsAdapter?.getState()?.account?.user?.username;
+      for(const [sessionId,watch] of browserSessions){
+        const active=byId[sessionId]?.running===true||watch.tasks.value.some(t=>['running','waiting'].includes(t.state));
+        const value={sessionId,active,name:name?name+'的智能助理':'智能助理'},signature=JSON.stringify(value);
+        if(watch.last!==signature){watch.last=signature;window.dshDesktop?.conversationBrowser?.activity(value).catch(()=>{})}
+      }
+    };
+    const unsubscribeBrowserActivity=sessions.list.subscribe(syncBrowserActivity);
     const unsubscribeBrowser=window.dshDesktop?.conversationBrowser?.subscribe(event=>{
+      if(!browserSessions.has(event.sessionId)){
+        const tasks=canvasTaskStore(event.sessionId),release=tasks.retain(),unsubscribe=tasks.subscribe(syncBrowserActivity);
+        browserSessions.set(event.sessionId,{tasks,release,unsubscribe,last:''});
+      }
+      syncBrowserActivity();
       if(!event.open)return;
       const scope={sessionId:event.sessionId};
       service.openTab({id:'browser:'+event.sessionId,type:'sherlock-conversation-browser',title:'浏览器',meta:{sherlockPanel:'right',...event}},scope);
       service.setPanelState({open:true},scope);
     });
     const unregisterGenerated=service.registerTab(`)
-  exact('unregisterGenerated?.();','unregisterGenerated?.();unregisterBrowser?.();unsubscribeBrowser?.();')
+  exact('unregisterGenerated?.();','unregisterGenerated?.();unregisterBrowser?.();unsubscribeBrowser?.();unsubscribeBrowserActivity?.();for(const watch of browserSessions.values()){watch.unsubscribe();watch.release()}')
   return source
 }

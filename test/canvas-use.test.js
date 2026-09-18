@@ -137,7 +137,7 @@ it('keeps the named small cursor during waiting, follows a curved path and remov
  const {dom,w}=surface('<main><article data-research-node-id="n"><div class="rScV5Q_previewBody"><button>加一</button></div></article></main>')
  const raw=patchCanvasUseClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const code=raw.slice(raw.indexOf('/* CANVAS_USE_CLIENT_START */'),raw.indexOf('/* CANVAS_USE_CLIENT_END */'))
- w.eval(code.replace(/__vite_ssr_import_\d+__\.createCanvasUseSurface/g,'createCanvasUseSurface')+';window.testStore=canvasTaskStore;window.testInstall=installCanvasUseClient;window.testUse=canvasUseOwners;')
+ w.eval(code.replace(/__vite_ssr_import_\d+__\.createCanvasUseSurface/g,'createCanvasUseSurface')+';window.testStore=canvasTaskStore;window.testInstall=(id,workspace,root)=>installCanvasUseClient(id,workspace,root,agentCursorMarkup);window.testUse=canvasUseOwners;')
  w.eval('var sherlockShared=()=>false;var sherlockBoardsAdapter={getState:()=>({account:{user:{username:"hyf90"}}})};')
  w.fetch=vi.fn(async()=>({ok:true,json:async()=>({tasks:[]})}))
  const state={files:[],artifacts:[{id:'n'}],viewport:{x:0,y:0,scale:1},selection:{selectedNodeIds:[]}}
