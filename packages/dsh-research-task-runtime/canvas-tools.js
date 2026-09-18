@@ -1,5 +1,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 const children = new Map()
+const goalGuards = new Set()
+export function registerCanvasGoalGuard(guard){goalGuards.add(guard);return()=>goalGuards.delete(guard)}
 export function bindCanvasChild(childId, parentId, guard) {
   const binding={parentId,guard};children.set(childId,binding)
   return () => { if(children.get(childId)===binding)children.delete(childId) }
@@ -11,7 +13,7 @@ export async function callCanvas(sessionId,method,args,signal,{env=process.env,f
   const response=await request(`${url.origin}/canvas-actions`,{method:'POST',redirect:'error',signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(45000)]),headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({sessionId,method,args})})
   const result=await response.json();if(!response.ok)throw Error(result.error??'画布操作失败。');return result
 }
-export async function guardCanvas(exec,method,args){return children.get(exec.agent?.session?.id)?.guard?.(method,args)}
+export async function guardCanvas(exec,method,args){const child=children.get(exec.agent?.session?.id);if(!child?.guard)for(const guard of goalGuards)await guard(exec,method,args);return child?.guard?.(method,args)}
 export const CANVAS_TOOL_NAMES=['research_canvas_inspect','research_canvas_apply','research_canvas_undo']
 export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThis.fetch}={}) {
   const disposers=[],controllers=new Set()
