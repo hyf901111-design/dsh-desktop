@@ -2,6 +2,30 @@ import { Window } from 'happy-dom'
 import { expect, it } from 'vitest'
 import { followResearchConversation } from '../src/preload/research-conversation-follow'
 
+it('expands down from the current header instead of following the enlarged bottom', async () => {
+  const w = new Window()
+  w.document.body.innerHTML = '<section><div data-conversation-scroll><div data-chat-flow><button aria-expanded="false">执行过程</button><div></div></div></div></section>'
+  const panel = w.document.querySelector('section')!, port = panel.firstElementChild! as any
+  let height = 1200
+  Object.defineProperties(port, {clientHeight: {get: () => 300}, scrollHeight: {get: () => height}})
+  const stop = followResearchConversation(panel as unknown as HTMLElement)
+  await w.happyDOM.waitUntilComplete()
+  const before = port.scrollTop
+  panel.querySelector('button')!.dispatchEvent(new w.MouseEvent('click', {bubbles:true}))
+  height = 2200
+  panel.querySelector('[data-chat-flow]')!.lastElementChild!.innerHTML = '<p>展开的中途反馈</p>'
+  await w.happyDOM.waitUntilComplete()
+  expect(port.scrollTop).toBe(before)
+  port.scrollTop = 1900
+  port.dispatchEvent(new w.Event('scroll'))
+  height = 2400
+  panel.querySelector('[data-chat-flow]')!.lastElementChild!.innerHTML += '<p>新的反馈</p>'
+  await w.happyDOM.waitUntilComplete()
+  expect(port.scrollTop).toBe(2400)
+  stop()
+  await w.happyDOM.close()
+})
+
 it('follows entry and delayed history, preserves manual reading, and resets on re-entry', async () => {
   const w = new Window()
   w.document.body.innerHTML = '<section><div data-conversation-scroll><div data-research-conversation-host></div></div></section>'

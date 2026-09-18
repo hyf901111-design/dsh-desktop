@@ -1,4 +1,5 @@
 import {createCanvasUseSurface,installCanvasUseSurface} from '../../packages/dsh-research-task-runtime/canvas-use-surface.js'
+import {anchorConversationDisclosures} from '../../packages/dsh-research-task-runtime/conversation-disclosure.js'
 
 function installCanvasUseClient(sessionId,workspace,root) {
   let stopped=false,busy=false,revision='',fingerprint='',last='',cursor,timer,activeTask,position,animation,anchor,frame,wakeTimer,cancelMove
@@ -243,6 +244,16 @@ export function patchCanvasUseClient(source) {
     return value
   }
   const continuousFlow=value=>{
+    if (!value.includes('/* CONVERSATION_DISCLOSURE_ANCHOR */')) {
+      const replace=(a,b)=>{if(!value.includes(a))throw Error('Disclosure scroll anchor missing: '+a);value=value.replace(a,b)}
+      replace('function ChatView({', anchorConversationDisclosures.toString()+'\n/* CONVERSATION_DISCLOSURE_ANCHOR */\nfunction ChatView({')
+      replace('const toBottom = (el) => {', 'const toBottom = (el) => { delete el.dataset.conversationReading;')
+      replace('const settle = () => {\n\t\t\t\tel.scrollTop = el.scrollHeight;', 'const settle = () => {\n        if(el.dataset?.conversationReading)return;\n\t\t\t\tel.scrollTop = el.scrollHeight;')
+      replace('const floor = Math.max(0, el.scrollHeight - el.clientHeight);', 'if(el.dataset.conversationAnchoring){observedTopRef.current=el.scrollTop;return;}\n        const floor = Math.max(0, el.scrollHeight - el.clientHeight);')
+      replace('el.addEventListener("scroll", onScroll, { passive: true });', `el.addEventListener("scroll", onScroll, { passive: true });
+        const stopAnchoring=anchorConversationDisclosures(local,()=>[el],()=>{atBottomRef.current=false;setAtBottom(false);observedTopRef.current=el.scrollTop;});`)
+      replace('el.removeEventListener("scroll", onScroll);', 'el.removeEventListener("scroll", onScroll); stopAnchoring();')
+    }
     if(!value.includes('/* EXECUTION_HEADER_FIRST */')) {
       const start=value.indexOf('function ExecutionStatusGroup(')
       const a=value.indexOf('children: [progressSurface.showProgress',start)

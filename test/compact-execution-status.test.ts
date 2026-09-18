@@ -412,6 +412,18 @@ describe('compact execution status', () => {
     expect(observed).toEqual([120, 280])
   })
 
+  it('cancels a queued bottom settle when the reader opens a disclosure', async () => {
+    const client = await loadConversationBundle()
+    if (typeof client.settleConversationScrollBottom !== 'function') throw Error('missing settle')
+    const port = {scrollTop:0, scrollHeight:120, dataset:{} as Record<string,string>}
+    const scheduled: Array<() => void> = []
+    client.settleConversationScrollBottom(port, (callback: () => void) => scheduled.push(callback))
+    port.dataset.conversationReading = 'true'
+    port.scrollHeight = 500
+    scheduled[0]!()
+    expect(port.scrollTop).toBe(120)
+  })
+
   it('preserves the reading position when a remote turn starts while reading history', async () => {
     const client = await loadConversationBundle()
     expect(client.shouldFollowConversationBottom).toBeTypeOf('function')
