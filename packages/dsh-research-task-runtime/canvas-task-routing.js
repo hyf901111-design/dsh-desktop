@@ -38,6 +38,9 @@ export function canvasTaskRoutingGuard(exec,method,args,activeTasks=[]) {
 export function registerCanvasTaskAdmission(ctx,tasks) {
   const admitted=new Set()
   return ctx.on('session/event',(session,event)=>{
+    if(!session.header?.parentSession&&event.type==='agent/inbox/spliced'&&event.data?.inserted?.some(m=>m.source?.kind==='user')){
+      tasks.notifyInput(session.id);return
+    }
     if(event.type!=='user/message'||event.data?.source?.kind!=='user'||session.header?.parentSession)return
     const human=canvasHumanRequest(session)
     if(!human?.messageId||admitted.has(human.messageId))return
