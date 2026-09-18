@@ -73,6 +73,52 @@
           "原生权限和 Photoshop 端到端仍待集成客户端实测"
         ],
         "generatedAt": "2026-09-18T15:22:45.753428+00:00"
+      },
+      "merged": {
+        "mergeCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
+        "verificationCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
+            "completedAt": "2026-09-18T15:23:06.589Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
+            "completedAt": "2026-09-18T15:23:06.589Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/local-search-bridge.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
+            "verifiedCommit": "12fdfb606251d499176db01f4eb4b4c9ee01c7be",
+            "completedAt": "2026-09-18T15:23:06.589Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-18T15:23:06.589Z"
       }
     }
   ],
