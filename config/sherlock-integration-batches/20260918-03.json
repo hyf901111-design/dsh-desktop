@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260918-03",
+  "branch": "codex/integration/20260918-03",
+  "baseMainCommit": "7c381daedef553aef5f154e6be9289bf1cbb594f",
+  "expectedMainCommit": "7c381daedef553aef5f154e6be9289bf1cbb594f",
+  "createdAt": "2026-09-18T15:21:11.953Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "Computer Use 接入与长网址断行修复",
+        "branch": "codex/feat/computer-use-evaluation-20260918",
+        "baseCommit": "7c381daedef553aef5f154e6be9289bf1cbb594f",
+        "tipCommit": "a400b9d361c41d89bfab06b4fb92665d4aa7651b",
+        "commits": [
+          {
+            "commit": "893af0a5a259a938dd99211ec171c84b146597cd",
+            "parents": [
+              "7c381daedef553aef5f154e6be9289bf1cbb594f"
+            ],
+            "subject": "文档：评估桌面控制开源驱动并验证Electron加载兼容性"
+          },
+          {
+            "commit": "d412991f6df96626a7883e73f6cc76a72b99edc0",
+            "parents": [
+              "893af0a5a259a938dd99211ec171c84b146597cd"
+            ],
+            "subject": "修复：窄侧栏用户消息中的长网址自动换行"
+          },
+          {
+            "commit": "a400b9d361c41d89bfab06b4fb92665d4aa7651b",
+            "parents": [
+              "d412991f6df96626a7883e73f6cc76a72b99edc0"
+            ],
+            "subject": "功能：接入 Cua 桌面控制与权限配置、会话隔离和停止入口"
+          }
+        ],
+        "files": [
+          {
+            "status": "C097",
+            "path": "docs/licenses/cua-driver-MIT.txt",
+            "previousPath": "LICENSE"
+          },
+          {
+            "status": "A",
+            "path": "docs/research/computer-use-integration.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/prepare-computer-driver.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/computer/desktop-computer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "A",
+            "path": "test/computer-controller.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "a400b9d361c41d89bfab06b4fb92665d4aa7651b",
+            "completedAt": "2026-09-18T15:21:01.978491+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/local-search-bridge.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "18项聚焦检查通过",
+            "verifiedCommit": "a400b9d361c41d89bfab06b4fb92665d4aa7651b",
+            "completedAt": "2026-09-18T15:21:01.978491+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 不构建共享客户端；气泡 Chromium 多宽度布局已验证，原生权限与 Photoshop 验收将在集成包执行。"
+        },
+        "acceptanceCriteria": [
+          "对话中调用 computer_use 完成 Photoshop 五角星操作",
+          "权限缺失有明确入口，停止取消可用，光标一致且结束淡出",
+          "长网址在窄侧栏完整换行"
+        ],
+        "risks": [
+          "原生权限和 Photoshop 端到端仍待集成客户端实测"
+        ],
+        "generatedAt": "2026-09-18T15:21:01.978491+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/computer-controller.test.ts",
+        "test/local-search-bridge.test.ts"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
