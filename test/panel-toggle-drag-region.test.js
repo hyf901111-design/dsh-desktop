@@ -41,3 +41,17 @@ it('temporarily releases native header dragging while the mode menu is open', as
   expect(await header.evaluate(e=>getComputedStyle(e).webkitAppRegion)).toBe('drag')
  } finally {await page.close()}
 })
+
+it('makes only the reserved macOS sidebar strip draggable and keeps logo cursor neutral', async () => {
+ const page=await browser.newPage()
+ try {
+  await page.setContent('<div id="dsh-desktop-drag-region"></div><aside class="hHd-Xa_root" style="width:306px;height:900px"><button class="hHd-Xa_brand" style="cursor:pointer"><span>Logo</span></button><button class="hHd-Xa_iconButton" style="cursor:pointer">搜索</button></aside>')
+  await page.addScriptTag({content:script})
+  expect(await page.locator('aside').evaluate(e=>{const s=getComputedStyle(e,'::before');return [s.webkitAppRegion,s.left,s.top,s.height]})).toEqual(['drag','80px','10px','34px'])
+  await page.locator('.hHd-Xa_brand').hover()
+  expect(await page.locator('.hHd-Xa_brand span').evaluate(e=>getComputedStyle(e).cursor)).toBe('default')
+  expect(await page.locator('.hHd-Xa_iconButton').evaluate(e=>getComputedStyle(e).cursor)).toBe('pointer')
+  await page.locator('aside').evaluate(e=>e.classList.add('hHd-Xa_collapsed'))
+  expect(await page.locator('aside').evaluate(e=>getComputedStyle(e,'::before').content)).toBe('none')
+ } finally {await page.close()}
+})
