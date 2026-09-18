@@ -109,7 +109,7 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
 /* Research conversation: one chronological flow with comfortable reading space. */
 body .sRp_conversation { padding:18px 24px 14px; gap:14px; }
 body .sRp_messages { padding-inline:2px; box-sizing:border-box; }
-body .sRp_messages .Md3f7G_column { gap:22px; padding-block:8px 24px; }
+body .sRp_messages .Md3f7G_column { gap:14px; padding-block:8px 24px; }
 body .sRp_messages [class*="_markdown_"] { line-height:1.8 !important; overflow-wrap:anywhere; }
 body .sRp_messages [class*="_markdown_"] > :is(p,ul,ol,blockquote) { margin-top:0; margin-bottom:14px; }
 body .sRp_messages [class*="_markdown_"] > :last-child { margin-bottom:0; }
@@ -117,13 +117,13 @@ body .sRp_messages [class*="_markdown_"] li + li { margin-top:6px; }
 body .sRp_messages .gdEzaW_bubble { padding:14px 16px; }
 body .sRp_messages .srb-discussion { gap:24px; }
 body .sRp_messages [data-shared-native-task] { display:flex; flex-direction:column; gap:18px; }
-body .odyssey-canvas-task-message { display:flex; flex-direction:column; gap:12px; margin-block:4px 8px; min-width:0; }
+body .odyssey-canvas-task-message { display:flex; flex-direction:column; gap:8px; margin-block:0; min-width:0; }
 body .odyssey-canvas-task-message .Md3f7G_executionDetails { display:flex; flex-direction:column; gap:12px; }
 
 /* Shared by ordinary chat, research panels and collaboration message flows. */
 body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:14px; }
-body .Md3f7G_executionGroup > .Md3f7G_executionProgress { gap:16px; margin-bottom:12px; }
-body .Md3f7G_executionGroup > .Md3f7G_executionDetails { gap:12px; padding-block:6px; }
+body .Md3f7G_executionGroup > .Md3f7G_executionProgress { gap:12px; margin-bottom:4px; }
+body .Md3f7G_executionGroup > .Md3f7G_executionDetails { gap:10px; padding-block:2px; }
 
 body [data-conversation-anchoring] { overflow-anchor:none; }
 body .odyssey-canvas-live-status { margin:8px 0 2px 23px; font:400 14px/24px var(--odyssey-font-ui); color:transparent; background:linear-gradient(90deg,var(--dsw-alias-label-tertiary) 0%,var(--dsw-alias-label-tertiary) 38%,var(--dsw-alias-label-primary) 50%,var(--dsw-alias-label-tertiary) 62%,var(--dsw-alias-label-tertiary) 100%); background-size:250% 100%; background-clip:text; -webkit-background-clip:text; animation:odyssey-canvas-status-shimmer 1.8s linear infinite; }
@@ -134,7 +134,11 @@ body .Md3f7G_executionGroup[data-expanded=true] > .odyssey-canvas-live-status { 
 /* Keep status and prose distinct, and reveal process records directly below. */
 body .Md3f7G_executionGroup > .Md3f7G_executionTrigger { margin-bottom:0; }
 body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:0; }
-body .Md3f7G_executionGroup > .Md3f7G_executionDetails { margin-top:16px; gap:12px; max-height:none; overflow:visible; }
+body .Md3f7G_executionGroup > .Md3f7G_executionDetails { margin-top:6px; gap:10px; max-height:none; overflow:visible; }
 
-body .Md3f7G_executionGroup:has(> .Md3f7G_executionProgress) > .Md3f7G_executionTrigger { margin-bottom:10px; }
-body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:10px; }
+body .Md3f7G_executionGroup:has(> .Md3f7G_executionProgress) > .Md3f7G_executionTrigger { margin-bottom:6px; }
+body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:6px; }
+
+/* Keep adjacent execution reports compact on both conversation surfaces. */
+body .Md3f7G_flowItem:has(> .Md3f7G_executionGroup) + .odyssey-canvas-task-message { margin-top:-6px; }
+body .odyssey-canvas-task-message + .Md3f7G_flowItem:has(.gdEzaW_userRow) { margin-top:-4px; }

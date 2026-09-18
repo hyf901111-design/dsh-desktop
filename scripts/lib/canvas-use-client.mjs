@@ -2,14 +2,14 @@ import {createCanvasUseSurface,installCanvasUseSurface} from '../../packages/dsh
 import {anchorConversationDisclosures} from '../../packages/dsh-research-task-runtime/conversation-disclosure.js'
 
 function installCanvasUseClient(sessionId,workspace,root) {
-  let stopped=false,busy=false,revision='',fingerprint='',last='',cursor,timer,activeTask,position,animation,anchor,frame,wakeTimer,cancelMove
+  let stopped=false,busy=false,revision='',fingerprint='',last='',cursor,timer,activeTask,position,animation,anchor,frame,wakeTimer,cancelMove,userPointer=false
   const receipts=new Map(),surfaces=new WeakMap()
   const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return(h>>>0).toString(36)}
   const check=(write=false)=>{
     if(stopped||!root.isConnected||document.hidden||!root.getBoundingClientRect().width)throw Error('画板暂不可见，等待恢复后重新观察。')
     if(document.documentElement.hasAttribute('data-odyssey-window-resizing'))throw Error('窗口正在调整尺寸，稍后重新观察。')
     if(write&&sherlockShared(sessionId)){const v=sherlockBoardsAdapter?.getView(sessionId);if(v?.connection!=='online')throw Error('画板连接暂不可用。');if(!v?.permissions.edit)throw Error('[CANVAS_FATAL] 画板编辑权限已撤销。')}
-    if(root.hasAttribute('data-research-operation')||root.querySelector('[data-research-marquee]'))throw Error('用户正在操作画布，等待操作结束后重新观察。')
+    if(userPointer||root.hasAttribute('data-research-operation')||root.querySelector('[data-research-marquee]'))throw Error('用户正在操作画布，等待操作结束后重新观察。')
   }
   const card=id=>[...root.querySelectorAll('[data-research-node-id]')].find(el=>el.getAttribute('data-research-node-id')===id)
   const rpc=(frame,args)=>new Promise((resolve,reject)=>{
@@ -47,14 +47,14 @@ function installCanvasUseClient(sessionId,workspace,root) {
   const ensureCursor=()=>{
     if(cursor?.isConnected)return
     cursor=document.createElement('div');cursor.setAttribute('data-canvas-use-cursor','');cursor.setAttribute('aria-hidden','true')
-    cursor.style.cssText='position:absolute;z-index:60;pointer-events:none;color:#0d99ff;font:11px/16px system-ui;white-space:nowrap;'
-    cursor.innerHTML='<svg width="18" height="19" viewBox="0 0 20 22" style="overflow:visible;transform-origin:3px 3px;filter:drop-shadow(0 1px 1px #0005) drop-shadow(0 2px 5px #0007)"><path d="M3 2.5L16.7 8.7Q17.5 9.1 16.6 9.5L10.8 11.5L8.4 17.8Q8 18.7 7.6 17.7Z" fill="rgba(135,135,135,.5)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/></svg><span style="background:#0d99ff;color:white;border-radius:4px;padding:2px 5px"></span>'
+    cursor.style.cssText='position:absolute;left:0;top:0;z-index:60;pointer-events:none;will-change:transform;contain:layout style;isolation:isolate;color:#0d99ff;font:11px/16px system-ui;white-space:nowrap;'
+    cursor.innerHTML='<span data-canvas-pointer style="display:inline-block;vertical-align:middle;will-change:transform;transform:translateZ(0);transform-origin:3px 3px"><svg width="18" height="19" viewBox="0 0 20 22" style="overflow:visible;transform-origin:3px 3px;filter:drop-shadow(0 1px 1px #0005) drop-shadow(0 2px 5px #0007)"><path d="M3 2.5L16.7 8.7Q17.5 9.1 16.6 9.5L10.8 11.5L8.4 17.8Q8 18.7 7.6 17.7Z" fill="rgba(135,135,135,.5)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/></svg></span><span data-canvas-cursor-label style="background:#0d99ff;color:white;border-radius:4px;padding:2px 5px"></span>'
     const name=sherlockBoardsAdapter?.getState()?.account?.user?.username
-    cursor.querySelector('span').textContent=name?name+'的智能助理':'智能助理'
+    cursor.querySelector('[data-canvas-cursor-label]').textContent=name?name+'的智能助理':'智能助理'
     root.append(cursor)
-    if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)animation=cursor.querySelector('svg').animate?.([{transform:'rotate(-5deg)'},{transform:'rotate(5deg)'},{transform:'rotate(-5deg)'}],{duration:1800,iterations:Infinity,easing:'ease-in-out'})
+    if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)animation=cursor.querySelector('[data-canvas-pointer]').animate?.([{transform:'rotate(-5deg)'},{transform:'rotate(5deg)'},{transform:'rotate(-5deg)'}],{duration:1800,iterations:Infinity,easing:'ease-in-out'})
     position??={x:Math.min(80,root.clientWidth/2),y:64}
-    cursor.style.left=position.x+'px';cursor.style.top=position.y+'px'
+    cursor.style.transform='translate3d('+position.x+'px,'+position.y+'px,0)'
   }
   const removeCursor=()=>{clearTimeout(timer);cancelAnimationFrame(frame);cancelMove?.();cancelMove=null;animation?.cancel();cursor?.remove();cursor=null;anchor=null}
   const targetPoint=(node,args)=>{
@@ -76,7 +76,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
         if(stopped||!cursor?.isConnected){resolve();return}
         const t=duration?Math.min(1,(now-start)/duration):1,u=t*t*(3-2*t),bend=Math.sin(Math.PI*u)*curve
         position={x:from.x+(to.x-from.x)*u+(distance?-(to.y-from.y)/distance*bend:0),y:from.y+(to.y-from.y)*u+(distance?(to.x-from.x)/distance*bend:0)}
-        cursor.style.left=position.x+'px';cursor.style.top=position.y+'px'
+        cursor.style.transform='translate3d('+position.x+'px,'+position.y+'px,0)'
         if(t<1)frame=requestAnimationFrame(step);else {cancelMove=null;resolve()}
       };step(start)
     })
@@ -88,11 +88,13 @@ function installCanvasUseClient(sessionId,workspace,root) {
   }
   const unsubscribeTasks=canvasTaskStore(sessionId).subscribe(taskUpdate);taskUpdate()
   const wake=()=>{
-    if(!activeTask||wakeTimer)return
+    if(!activeTask||wakeTimer||userPointer)return
     wakeTimer=setTimeout(()=>{wakeTimer=null;if(!stopped&&activeTask)void fetch('/api/research/canvas-tasks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId,action:'wake'})}).catch(()=>{})},60)
   }
+  const pointerDown=e=>{if(e.isTrusted&&e.button===0){userPointer=true;animation?.pause();cancelAnimationFrame(frame);cancelMove?.();cancelMove=null}},pointerUp=()=>{if(userPointer){userPointer=false;animation?.play();wake()}}
+  root.addEventListener('pointerdown',pointerDown,true);window.addEventListener('pointerup',pointerUp,true);window.addEventListener('pointercancel',pointerUp,true);window.addEventListener('blur',pointerUp)
   const unsubscribeWorkspace=workspace.subscribe(()=>{
-    if(anchor&&cursor?.isConnected){const p=targetPoint(anchor.node,anchor.args);if(p){position=p;cursor.style.left=p.x+'px';cursor.style.top=p.y+'px'}}
+    if(anchor&&cursor?.isConnected){const p=targetPoint(anchor.node,anchor.args);if(p){position=p;cursor.style.transform='translate3d('+p.x+'px,'+p.y+'px,0)'}}
     wake()
   })
   const changed=e=>{if(e.data?.type==='sherlock-canvas-use-changed'&&[...root.querySelectorAll('iframe')].some(f=>f.contentWindow===e.source))wake()}
@@ -147,7 +149,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
   // interaction; persisted tasks always restart paused.
   const renew=setInterval(()=>{if(!stopped&&!document.hidden)void window.dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:workspace.getSnapshot().selection.selectedNodeIds}).catch(()=>{})},10000)
   document.addEventListener('visibilitychange',wake)
-  return ()=>{stopped=true;clearInterval(renew);clearTimeout(wakeTimer);removeCursor();unsubscribeTasks();unsubscribeWorkspace();window.removeEventListener('message',changed);document.removeEventListener('visibilitychange',wake);if(canvasUseOwners.get(sessionId)===use)canvasUseOwners.delete(sessionId)}
+  return ()=>{stopped=true;root.removeEventListener('pointerdown',pointerDown,true);window.removeEventListener('pointerup',pointerUp,true);window.removeEventListener('pointercancel',pointerUp,true);window.removeEventListener('blur',pointerUp);clearInterval(renew);clearTimeout(wakeTimer);removeCursor();unsubscribeTasks();unsubscribeWorkspace();window.removeEventListener('message',changed);document.removeEventListener('visibilitychange',wake);if(canvasUseOwners.get(sessionId)===use)canvasUseOwners.delete(sessionId)}
 }
 
 // One store per session connects reports, the existing composer and conversation flow.
