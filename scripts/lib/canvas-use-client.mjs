@@ -230,6 +230,10 @@ function CanvasUseConversation({sessionId,active,t,from=0,to=Infinity}) {
   return react.createElement(react.Fragment,null,...tasks.filter(task=>(task.resumedAt??task.createdAt)>=from&&(task.resumedAt??task.createdAt)<to).sort((a,b)=>a.createdAt-b.createdAt).map(task=>react.createElement(CanvasUseTaskMessage,{key:task.id,task,t})))
 }
 
+export function canvasComposerEmpty(draft,attachments=[]) {
+  return !draft.replace(/\uFFFC/g,'').trim() && attachments.length===0
+}
+
 export function canvasQueueEditContent(row,text,serialize) {
   const context=row?.canvasQueuedContext
   const body=context?serialize(context.files,text,[],context.artifacts??[],[],context.canvasContext):text
@@ -238,7 +242,7 @@ export function canvasQueueEditContent(row,text,serialize) {
 
 export function patchCanvasUseClient(source) {
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
-  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasQueueEditContent,anchorConversationDisclosures,canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
+  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasComposerEmpty,canvasQueueEditContent,anchorConversationDisclosures,canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
   const inlineTasks=value=>{
     // Migrate the former global tail into the native chronological flow.
     value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),','')
@@ -301,6 +305,7 @@ export function patchCanvasUseClient(source) {
     value=value.replace('keyboard.submit(resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));', 'keyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));')
     value=value.replace('canvasRunning && subagent === null ? \"steer\" : resolveSubmitMode','canvasRunning && subagent === null ? \"queue\" : resolveSubmitMode')
     value=value.replace('const primaryStops = canvasRunning || running && subagent === null;', 'const primaryStops = empty && (canvasRunning || running && subagent === null);')
+    value=value.replace('const primaryStops = empty && (canvasRunning || running && subagent === null);', 'const primaryStops = (canvasRunning ? canvasComposerEmpty(draft,attachments) : empty) && (canvasRunning || running && subagent === null);')
     if(value.includes('/* CANVAS_TASK_COMPOSER */'))return value
     const replace=(a,b)=>{if(!value.includes(a))throw Error('Canvas task conversation anchor missing: '+a);value=value.replace(a,b)}
     replace('const primaryStops = running && subagent === null;', `/* CANVAS_TASK_COMPOSER */
@@ -308,7 +313,7 @@ export function patchCanvasUseClient(source) {
       const canvasRunning=canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));
       const ordinaryStop=stop;
       stop=()=>{if(canvasRunning)void canvasExecution.stop().catch(error=>showToast(error.message));ordinaryStop?.()};
-      const primaryStops = empty && (canvasRunning || running && subagent === null);`)
+      const primaryStops = (canvasRunning ? canvasComposerEmpty(draft,attachments) : empty) && (canvasRunning || running && subagent === null);`)
     replace('const expandable = detailGroups.length > 0;', 'const expandable = !!entry.canvasTask || detailGroups.length > 0;')
     replace('const status = executionSummaryStatus(activityNodes, entry.running, t);', "const status = entry.canvasTask ? '执行过程 · '+({running:'正在执行',waiting:'等待变化',paused:'已暂停',completed:'已完成',stopped:'已停止'})[entry.canvasTask.state] : executionSummaryStatus(activityNodes, entry.running, t);")
     replace('open && progressSurface.detailGroups.length > 0', "open && entry.canvasTask && react.createElement('div',{className:ChatView_module_css_default.executionDetails},...(entry.canvasTask.history?.length?entry.canvasTask.history:[{reason:entry.canvasTask.reason}]).map((row,index)=>react.createElement(AssistantMarkdown,{key:index,blocks:[{kind:'text',text:row.reason}],streaming:false,interrupted:false,t}))), open && progressSurface.detailGroups.length > 0")
