@@ -193,7 +193,7 @@ export function continueCanvasTaskFlow(flow,nodes,tasks) {
     return e===first?[{...e,nodeKeys:executions.flatMap(v=>v.nodeKeys),canvasTask:task,running:active}]:[]
   })
   for(const item of sorted)result.push({kind:'canvas-task',key:'canvas-task:'+item.id,task:item,showExecution:!first})
-  if(!active)result.push(...tails)
+  if(!active&&tails.length)result.push(tails.at(-1))
   return result
 }
 // Attach by the initiating user message time, never append old tasks to the live tail.
@@ -209,9 +209,11 @@ export function mergeCanvasTaskFlow(flow,nodes,tasks) {
   return result
 }
 function CanvasUseTaskMessage({task,t,showExecution=true}) {
+  const transient=['running','waiting'].includes(task.state)&&/^正在/.test(task.reason??'')
+  if(transient&&!showExecution)return null
   return react.createElement('div',{'data-canvas-task-message':task.id,className:'odyssey-canvas-task-message'},
     showExecution&&react.createElement(ExecutionStatusGroup,{entry:{key:'canvas-task:'+task.id,running:['running','waiting'].includes(task.state),canvasTask:task},activityNodes:[],startTime:task.createdAt??task.updatedAt,endTime:['running','waiting'].includes(task.state)?null:task.updatedAt,seatProps:{},t}),
-    react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:task.reason||'正在观察画布'}],streaming:false,interrupted:false,t}))
+    !transient&&react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:task.reason||'正在观察画布'}],streaming:false,interrupted:false,t}))
 }
 function useAllCanvasTasks(sessionId) {
   const {tasks}=useCanvasTasks(sessionId)
@@ -263,6 +265,12 @@ export function patchCanvasUseClient(source) {
       const progress=value.slice(a+'children: ['.length,b+2)
       const button=value.slice(b+4,c+2)
       value=value.slice(0,a)+'/* EXECUTION_HEADER_FIRST */children: ['+button+', '+progress+value.slice(c+2)
+    }
+    if(!value.includes('/* CANVAS_TASK_LIVE_STATUS */')) {
+      const anchor=', progressSurface.showProgress'
+      const start=value.indexOf('function ExecutionStatusGroup('),at=value.indexOf(anchor,start)
+      if(at<0)throw Error('Canvas live status anchor missing')
+      value=value.slice(0,at)+`, /* CANVAS_TASK_LIVE_STATUS */ entry.canvasTask && entry.running && react.createElement('div',{className:'odyssey-canvas-live-status',role:'status'}, /^正在/.test(entry.canvasTask.reason??'') ? entry.canvasTask.reason : entry.canvasTask.state==='waiting'?'正在等待内容变化':'正在观察画布')`+value.slice(at)
     }
 
     value=value.replace('task:entry.task,t});','task:entry.task,t,showExecution:entry.showExecution});')

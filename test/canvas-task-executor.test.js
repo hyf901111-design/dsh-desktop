@@ -21,6 +21,7 @@ it('reuses one durable child and registers canvas authority before any turn is a
  for(let round=0;round<3;round++){
   const request=f.request(signal),run=f.executor.execute('task',request);await f.ready()
   expect(canvasSession({agent:f.agent})).toBe('board')
+  expect(f.agent[Symbol.for('sherlock.canvas-task-owned')]).toBe(true)
   await guardCanvas({agent:f.agent},'use',{op:'click'});expect(request.guard).toHaveBeenCalledTimes(1)
   f.finish('round '+round);expect((await run).output[0].text).toBe('round '+round)
  }

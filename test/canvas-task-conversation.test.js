@@ -20,11 +20,14 @@ it('renders ongoing and terminal reports with the native execution flow and no t
   store.update([task]);await React.act(async()=>root.render(React.createElement(exports.__Conversation,{sessionId:'flow',active:true,t:key=>key})))
   expect(host.querySelector('[data-chat-flow-kind="execution"]')).not.toBeNull()
   expect(host.textContent).toContain('执行过程 · 等待变化');expect(host.textContent).toContain(task.reason)
+  expect(host.querySelector('.odyssey-canvas-live-status').previousElementSibling.tagName).toBe('BUTTON')
+  expect(host.querySelector('.odyssey-canvas-live-status').textContent).toBe('正在等待内容变化')
   expect(host.querySelector('[data-canvas-use-tasks]')).toBeNull()
   expect(host.textContent).not.toContain('画布持续任务');expect(host.textContent).not.toContain('接管')
   await React.act(async()=>host.querySelector('button').click());expect(host.textContent).toContain('已确认表单保存成功。')
   await React.act(async()=>store.update([{...task,state:'stopped',reason:'用户已停止',updatedAt:Date.now()+1}]))
   expect(host.textContent).toContain('执行过程 · 已停止');expect(host.textContent).toContain('用户已停止')
+  expect(host.querySelector('.odyssey-canvas-live-status')).toBeNull()
   // The ordinary conversation uses this same component, without any canvas task.
   await React.act(async()=>root.render(React.createElement(exports.__Execution,{entry:{key:'normal',running:false},activityNodes:[{key:'p',kind:'assistant-step',data:{status:'complete',blocks:[{kind:'text',text:'过程中的正文回报'}]}},{key:'call',kind:'tool-call',data:{root:{name:'research_canvas_use',argsRaw:'{}'}}}],startTime:100,endTime:1100,seatProps:{useSession:()=>undefined},t:key=>key})))
   expect(host.textContent).not.toContain('过程中的正文回报')
@@ -37,6 +40,18 @@ it('renders ongoing and terminal reports with the native execution flow and no t
   expect(host.textContent).not.toContain('过程中的正文回报')
 
  }finally{await React.act(async()=>root.unmount());await w.happyDOM.abort();Object.assign(globalThis,old)}
+})
+
+it('renders a single terminal toolbar for historical tasks with multiple round tails', async()=>{
+ const {continueCanvasTaskFlow}=await import('../scripts/lib/canvas-use-client.mjs')
+ const nodes=new Map([['t1',{kind:'turn-tail'}],['t2',{kind:'turn-tail'}],['t3',{kind:'turn-tail'}]])
+ const flow=['report','t1','t2','t3'].map(key=>({kind:'node',key}))
+ for(const state of ['stopped','completed','paused']){
+  const rendered=continueCanvasTaskFlow(flow,nodes,[{id:'task',state,createdAt:1}])
+  expect(rendered.filter(e=>nodes.get(e.key)?.kind==='turn-tail').map(e=>e.key)).toEqual(['t3'])
+  expect(rendered.some(e=>e.key==='report')).toBe(true)
+ }
+ expect(continueCanvasTaskFlow(flow,nodes,[{id:'task',state:'waiting',createdAt:1}]).some(e=>nodes.get(e.key)?.kind==='turn-tail')).toBe(false)
 })
 
 it('keeps every task report with its initiating message across new replies and older-page loading',async()=>{
