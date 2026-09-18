@@ -15,3 +15,15 @@ describe('desktop window resize bounds', () => {
     expect(resizeWindowBounds(start, 'n', 50, 90, 800, 640)).toEqual({ ...start, y: 170, height: 710 })
   })
 })
+
+it('keeps edge handles alive when the app replaces body contents, and removes them on cleanup', async () => {
+  const { Window } = await import('happy-dom')
+  const { mountWindowResize } = await import('../src/preload/window-resize')
+  const win = new Window()
+  const dispose = mountWindowResize(win.document as unknown as Document, () => {})
+  win.document.body.innerHTML = '<main>Application mount</main>'
+  expect(win.document.querySelector('[data-odyssey-window-resize]')?.parentElement).toBe(win.document.documentElement)
+  dispose()
+  expect(win.document.querySelector('[data-odyssey-window-resize]')).toBeNull()
+  await win.happyDOM.abort()
+})

@@ -25,6 +25,7 @@ export function mountWindowResize(doc: Document, send: (edge: string | null) => 
   win.addEventListener('pointerup', stop, true)
   win.addEventListener('pointercancel', stop, true)
   win.addEventListener('blur', stop)
-  doc.body.append(host)
+  // The application can replace body children during its initial React mount.
+  doc.documentElement.append(host)
   return () => { stop(); host.remove(); win.removeEventListener('pointerup', stop, true); win.removeEventListener('pointercancel', stop, true); win.removeEventListener('blur', stop) }
 }
