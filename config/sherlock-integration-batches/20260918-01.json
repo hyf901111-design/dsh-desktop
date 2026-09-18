@@ -11,65 +11,25 @@
         "schemaVersion": 1,
         "featureName": "对话网页读取与过程图片浏览",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "529fa4148286375523024979a40d1c3e2f633ee8",
-        "tipCommit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
+        "baseCommit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
+        "tipCommit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
         "commits": [
           {
-            "commit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
+            "commit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
             "parents": [
-              "529fa4148286375523024979a40d1c3e2f633ee8"
+              "24db40764eeb4eeb44ed3783270aa3b373813a77"
             ],
-            "subject": "统一对话网页读取登录态并恢复过程图片缩略浏览"
+            "subject": "在标准和构建模式启用客户端网页读取工具"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-web-search-session-model/index.js"
+            "path": "scripts/install-brand-assets.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/canvas-use-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/runtime/harness-runtime.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/search/browser-page-reader.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/search/local-search-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/search/local-search-runtime.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-reading.css"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-page-reader.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/local-search-bridge.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/session-model-web-search.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/tool-image-links.test.ts"
+            "path": "test/standard-agent-preset.test.ts"
           }
         ],
         "checks": [
@@ -78,17 +38,13 @@
               "npx",
               "vitest",
               "run",
-              "test/browser-page-reader.test.ts",
-              "test/local-search-bridge.test.ts",
-              "test/local-search-runtime.test.ts",
-              "test/session-model-web-search.test.js",
-              "test/tool-image-links.test.ts",
-              "test/canvas-task-conversation.test.js"
+              "test/standard-agent-preset.test.ts",
+              "test/session-model-web-search.test.js"
             ],
             "outcome": "passed",
-            "summary": "42 项聚焦验证与类型检查通过",
-            "verifiedCommit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
-            "completedAt": "2026-09-18T08:30:12.512246+00:00",
+            "summary": "23 项模式与网页工具检查通过",
+            "verifiedCommit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
+            "completedAt": "2026-09-18T08:41:30.892113+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -103,58 +59,6 @@
         ],
         "risks": [],
         "generatedAt": "2026-09-18T07:35:00.942880+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9c805198cc7a9c9eb947c09214ea2d1f02f1900c",
-        "verificationCommit": "9c805198cc7a9c9eb947c09214ea2d1f02f1900c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "9c805198cc7a9c9eb947c09214ea2d1f02f1900c",
-            "completedAt": "2026-09-18T08:30:35.464Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "9c805198cc7a9c9eb947c09214ea2d1f02f1900c",
-            "completedAt": "2026-09-18T08:30:35.464Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "9c805198cc7a9c9eb947c09214ea2d1f02f1900c",
-            "completedAt": "2026-09-18T08:30:35.464Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T08:30:35.464Z"
       }
     }
   ],
