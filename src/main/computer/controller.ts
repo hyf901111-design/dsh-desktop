@@ -60,6 +60,7 @@ export class ComputerController {
     const controller = new AbortController()
     this.abort = controller
     const combined = AbortSignal.any([signal, controller.signal, AbortSignal.timeout(80000)])
+    let failed = false
     try {
       const driver = await this.options.driver()
       combined.throwIfAborted()
@@ -138,9 +139,11 @@ export class ComputerController {
       this.observation = undefined // Never replay a gesture against the old snapshot, including on failure.
       if (point) this.options.pointer({ ...point, drag: v.op === 'drag' })
       const result = await call(tool, args)
-      this.options.pointer(point ? { ...point, drag: false } : undefined)
+      const finalPoint = v.op === 'drag' ? this.options.screenPoint(observed.target, observed.data, v.to_x, v.to_y) : point
+      this.options.pointer(finalPoint ? { ...finalPoint, drag: false } : undefined)
       return { action: result.data, ...await observe(observed.target) }
     } catch (error) {
+      failed = true
       this.observation = undefined
       this.options.pointer()
       if (combined.aborted) this.stopped.add(id)
@@ -152,7 +155,7 @@ export class ComputerController {
       if (combined.aborted && v.op === 'drag') await new Promise(resolve => setTimeout(resolve, 1200))
       this.busy = false
       this.abort = undefined
-      if (combined.aborted || this.stopped.has(id)) await this.endLease().catch(() => {})
+      if (failed || combined.aborted || this.stopped.has(id)) await this.endLease().catch(() => {})
       else if (this.owner) this.idle = setTimeout(() => { void this.stop().catch(() => {}) }, 5 * 60 * 1000)
     }
   }

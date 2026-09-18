@@ -85,6 +85,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
         const area = screen.getPrimaryDisplay().workArea
         controls!.setPosition(area.x + area.width - 262, area.y + 8)
         controls!.showInactive()
+        if (!pointer!.isVisible()) { const p = screen.getCursorScreenPoint(); move(p.x, p.y) }
         if (!globalShortcut.isRegistered(shortcut)) globalShortcut.register(shortcut, stop)
         void pointer!.webContents.executeJavaScript("document.body.style.opacity='1'").catch(() => {})
       } else {
