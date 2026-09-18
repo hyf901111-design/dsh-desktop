@@ -278,8 +278,18 @@ export function patchCanvasUseClient(source) {
       const button=value.slice(b+4,c+2)
       value=value.slice(0,a)+'/* EXECUTION_HEADER_FIRST */children: ['+button+', '+progress+value.slice(c+2)
     }
+    if(!value.includes('/* EXECUTION_REPORT_AFTER_DETAILS */')) {
+      const start=value.indexOf('function ExecutionStatusGroup(')
+      const a=value.indexOf('progressSurface.showProgress &&',start)
+      const b=value.indexOf('}), open &&',a)
+      const tail=value.indexOf('loadImage: seatProps.loadImage, t })]',b)
+      if(a<0||b<0||tail<0)throw Error('Execution report ordering anchor missing')
+      const progress=value.slice(a,b+2)
+      const end=tail+'loadImage: seatProps.loadImage, t })'.length
+      value=value.slice(0,a)+value.slice(b+4,end)+', /* EXECUTION_REPORT_AFTER_DETAILS */ '+progress+value.slice(end)
+    }
     // Move the transient action into the existing shimmering header.
-    value=value.replace(/, \/\* CANVAS_TASK_LIVE_STATUS \*\/ entry\.canvasTask[\s\S]*?(?=, progressSurface.showProgress)/,'')
+    value=value.replace(/, \/\* CANVAS_TASK_LIVE_STATUS \*\/ entry\.canvasTask[\s\S]*?(?=, (?:progressSurface.showProgress|open &&))/,'')
     value=value.replace("'执行过程 · '+({running:'正在执行',waiting:'等待变化',paused:'已暂停',completed:'已完成',stopped:'已停止'})[entry.canvasTask.state]", "'执行过程 · '+(entry.running ? (/^正在/.test(entry.canvasTask.reason??'') ? entry.canvasTask.reason : entry.canvasTask.state==='waiting'?'等待内容变化':'正在观察画布') : ({paused:'已暂停',completed:'已完成',stopped:'已停止'})[entry.canvasTask.state])")
 
 
