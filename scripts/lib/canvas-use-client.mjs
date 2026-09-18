@@ -281,6 +281,9 @@ export function patchCanvasUseClient(source) {
     return value.slice(0,at)+timing+value.slice(at)
   }
   const connectConversation=value=>{
+    // Ongoing goals do not have a near-term queue boundary. Deliver new input
+    // as steering, without invoking the explicit goal-stop control.
+    value=value.replace('keyboard.submit(resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));', 'keyboard.submit(canvasRunning && subagent === null ? "steer" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));')
     if(value.includes('/* CANVAS_TASK_COMPOSER */'))return value
     const replace=(a,b)=>{if(!value.includes(a))throw Error('Canvas task conversation anchor missing: '+a);value=value.replace(a,b)}
     replace('const primaryStops = running && subagent === null;', `/* CANVAS_TASK_COMPOSER */
