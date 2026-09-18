@@ -93,3 +93,29 @@ describe('persistent whole-canvas tasks',()=>{
   const f=setup(async()=>({status:'complete',reason:'全部完成'}));await f.start();await flush();expect(f.tasks.list('board')[0].state).toBe('completed');await f.tasks.dispose()
  })
 })
+
+it('uses supported low latency reasoning without changing provider/model or inventing unsupported effort',async()=>{
+ const {taskModelSelection}=await import('../packages/dsh-research-task-runtime/canvas-use-tasks.js')
+ const current={provider:'p',model:'m',reasoningEffort:'high'}
+ expect(taskModelSelection({current,groups:[{id:'p',models:[{id:'m',reasoning:{efforts:[{id:'high'},{id:'low'}]}}]}]})).toEqual({...current,reasoningEffort:'low'})
+ expect(taskModelSelection({current,groups:[]})).toEqual(current)
+})
+it('watches relevant components without waking for unrelated timers and still detects removal',async()=>{
+ const {taskFingerprint}=await import('../packages/dsh-research-task-runtime/canvas-use-tasks.js')
+ const a={fingerprint:'all1',nodeFingerprints:{target:'stable',timer:'1'}},b={fingerprint:'all2',nodeFingerprints:{target:'stable',timer:'2'}}
+ expect(taskFingerprint(a,['target'])).toBe(taskFingerprint(b,['target']))
+ expect(taskFingerprint(a,[])).not.toBe(taskFingerprint(b,[]))
+ expect(taskFingerprint(b,['target'])).not.toBe(taskFingerprint({...b,nodeFingerprints:{}},['target']))
+})
+
+it('scoped waits ignore unrelated activity and wake within one poll when the target changes',async()=>{
+ vi.useFakeTimers();let tick=0,target='a'
+ const observe=vi.fn(async()=>({writable:true,fingerprint:String(++tick),nodeFingerprints:{target,timer:String(tick)}}))
+ const execute=vi.fn(async()=>({status:'wait',reason:'等目标变化',watchNodeIds:['target']}))
+ const tasks=new CanvasUseTasks({observe,execute})
+ try {
+  await tasks.start({sessionId:'scoped',goal:'跟踪目标',completion:'目标完成'})
+  await vi.advanceTimersByTimeAsync(4000);expect(execute).toHaveBeenCalledTimes(1)
+  target='b';await vi.advanceTimersByTimeAsync(750);expect(execute).toHaveBeenCalledTimes(2)
+ }finally{await tasks.dispose();vi.useRealTimers()}
+})

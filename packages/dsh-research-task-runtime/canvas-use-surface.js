@@ -1,6 +1,6 @@
 // Serialized into generated sandboxes and isolated webpage worlds. No model code
 // is evaluated: callers can only use this finite observation/interaction API.
-export function createCanvasUseSurface(root = document.body, shared = () => null) {
+export function createCanvasUseSurface(root = document.body, shared = () => null, dispatch = (el, event) => el.dispatchEvent(event)) {
   const refs = new Map(), ids = new WeakMap(); let sequence = 0, previous = ''
   const id = el => { if (!ids.has(el)) ids.set(el, 'e' + ++sequence); const key = ids.get(el); refs.set(key, el); return key }
   const hash = text => { let h = 2166136261; for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619); return (h >>> 0).toString(36) }
@@ -42,23 +42,23 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
     const pointer = (name, p, down=false) => {
       const opts={...point(p),bubbles:true,cancelable:true,view:window,button:0,buttons:down?1:0,pointerId:1,pointerType:'mouse',isPrimary:true}
       mark(p)
-      el.dispatchEvent(new PointerEvent('pointer'+name,opts)); el.dispatchEvent(new MouseEvent('mouse'+name,opts))
+      dispatch(el,new PointerEvent('pointer'+name,opts)); dispatch(el,new MouseEvent('mouse'+name,opts))
     }
     if (args.op === 'click' || args.op === 'drag') {
       const p=args.point || {x:.5,y:.5}; point(p); if(args.op==='drag')point(args.to)
       el.focus?.({preventScroll:true}); pointer('move',p); pointer('down',p,true)
       try { if(args.op==='drag')for(let i=1;i<=12;i++){pointer('move',{x:p.x+(args.to.x-p.x)*i/12,y:p.y+(args.to.y-p.y)*i/12},true);await new Promise(resolve=>setTimeout(resolve,12))} }
       finally { pointer('up',args.op==='drag'?args.to:p) }
-      if(args.op==='click')el.dispatchEvent(new MouseEvent('click',{...point(p),bubbles:true,cancelable:true,view:window,button:0}))
+      if(args.op==='click')dispatch(el,new MouseEvent('click',{...point(p),bubbles:true,cancelable:true,view:window,button:0}))
     } else if(args.op==='input') {
       if(typeof args.text!=='string'||args.text.length>10000||!el.matches('input,textarea,[contenteditable=true]'))throw Error('输入目标或文本无效。')
       el.focus({preventScroll:true})
       if(el.isContentEditable)el.textContent=args.text
       else Object.getOwnPropertyDescriptor(el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype,'value').set.call(el,args.text)
-      el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))
+      dispatch(el,new Event('input',{bubbles:true}));dispatch(el,new Event('change',{bubbles:true}))
     } else if(args.op==='select') {
       if(el.tagName!=='SELECT'||![...el.options].some(o=>o.value===args.value))throw Error('选项无效。')
-      el.value=args.value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))
+      el.value=args.value;dispatch(el,new Event('input',{bubbles:true}));dispatch(el,new Event('change',{bubbles:true}))
     } else if(args.op==='scroll') {
       if(![args.x??0,args.y??0].every(n=>Number.isFinite(n)&&Math.abs(n)<=4000))throw Error('滚动距离无效。')
       const scrollTarget=el===document.body?window:el
@@ -66,20 +66,20 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
     } else if(args.op==='key') {
       if(typeof args.key!=='string'||!(/^[a-zA-Z0-9 ]$/.test(args.key)||['Enter','Escape','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Backspace','Delete'].includes(args.key)))throw Error('按键无效。')
       el.focus?.({preventScroll:true});const opts={key:args.key,code:args.key.length===1?'Key'+args.key.toUpperCase():args.key,bubbles:true,cancelable:true}
-      el.dispatchEvent(new KeyboardEvent('keydown',opts));el.dispatchEvent(new KeyboardEvent('keyup',opts))
+      dispatch(el,new KeyboardEvent('keydown',opts));dispatch(el,new KeyboardEvent('keyup',opts))
     } else throw Error('不支持的交互。')
     previous=''
     return {status:'dispatched',message:'已发送交互；必须重新观察确认结果，不能据此宣称任务完成。'}
   }
 }
 
-export function installCanvasUseSurface(create) {
+export function installCanvasUseSurface(create, dispatch) {
   let use
   addEventListener('message',async event=>{
     const d=event.data
     if(event.source!==parent||d?.type!=='sherlock-canvas-use-request'||typeof d.id!=='string')return
     try {
-      use??=create(document.body,()=>window.sherlockShared?.inspect?.()??null)
+      use??=create(document.body,()=>window.sherlockShared?.inspect?.()??null, dispatch)
       const result=await use(d.args)
       parent.postMessage({type:'sherlock-canvas-use-result',id:d.id,result},'*')
     } catch(error) {parent.postMessage({type:'sherlock-canvas-use-result',id:d.id,error:error.message},'*')}

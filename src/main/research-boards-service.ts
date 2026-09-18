@@ -1,3 +1,4 @@
+import { cleanActivity } from 'dsh-research-collaboration/activity'
 import { componentVersion, validateComponentMessage } from 'dsh-research-collaboration/component-state'
 import {
   normalizeRequestContext,
@@ -192,6 +193,7 @@ export type ResearchBoardHooks = {
 }
 type Revision = { bytes: Uint8Array; canvas: Canvas }
 type RuntimeBoard = {
+  activities?: Array<Record<string, any>>
   abort: AbortController
   snapshot: BoardSnapshot
   doc: Y.Doc
@@ -644,6 +646,7 @@ export class ResearchBoardsService {
       connection: r.connection,
       permissions: permission,
       canvas,
+      activities: read ? copy(r.activities ?? []) : [],
       canvasRevision: r.materializedRevision ?? r.revision,
       seq: r.snapshot.seq,
       epoch: r.snapshot.board.sharingEpoch,
@@ -658,7 +661,7 @@ export class ResearchBoardsService {
               contextSnapshot: _context,
               ...safe
             } = t
-            const progress = this.localTaskProgress.get(`${id}:${boardId}:${t.taskId}`)
+            const progress = this.localTaskProgress.get(`${id}:${boardId}:${t.taskId}`) ?? r.activities?.find(v=>v.kind==='conversation'&&v.id===t.taskId)?.progress
             return copy({ ...safe, ...(progress ? { progress } : {}) }) as typeof t
           })
         : [],
@@ -2588,6 +2591,13 @@ export class ResearchBoardsService {
         this.emitState()
         return this.store.account(ctx.userId).notifications
       }
+      case 'activity.publish': {
+        const p=exact(input,['boardId','activity']), boardId=safeId(p.boardId)
+        this.requireBoard(boardId,undefined,true)
+        if(boardId!==this.currentBoard)throw new ResearchBoardsError('INVALID_REQUEST')
+        this.client.sendActivity(boardId,cleanActivity(p.activity))
+        return {ok:true}
+      }
       case 'component.send': {
         const p = exact(input, ['boardId', 'message'])
         const boardId = safeId(p.boardId), message = p.message as any
@@ -2764,8 +2774,16 @@ export class ResearchBoardsService {
           access
         )
         this.checkBoard(access)
+        if(event.type==='welcome'&&Array.isArray(event.activities)){this.requireBoard(boardId).activities=event.activities;this.emitBoard(boardId,'progress')}
         if (event.presence) this.updatePresence(boardId, event.presence)
         void this.flush()
+      } else if (event.type === 'activity') {
+        const r=this.requireBoard(boardId), value=event.activity as Record<string, any>
+        if(!value||!value.userId)return
+        const list=r.activities??[], previous=list.find(v=>v.id===value.id&&v.userId===value.userId&&v.kind===value.kind)
+        if(previous&&previous.sequence>=value.sequence)return
+        r.activities=[...list.filter(v=>v!==previous),value].slice(-100)
+        this.emitBoard(boardId,'progress')
       } else if (event.type === 'component') {
         this.emit({ type: 'component', boardId, localSessionId: this.localSession(boardId), message: event })
       } else if (event.type === 'presence')
@@ -2871,6 +2889,7 @@ export class ResearchBoardsService {
     }
     if (JSON.stringify(this.localTaskProgress.get(key)) === JSON.stringify(value)) return
     this.localTaskProgress.set(key, copy(value))
+    try { this.client.sendActivity(boardId,cleanActivity({kind:'conversation',id:taskId,sequence:Date.now(),progress:value})) } catch {}
     if (this.localTaskProgress.size > 100) this.localTaskProgress.delete(this.localTaskProgress.keys().next().value!)
     if (!this.progressTimers.has(boardId)) {
       const timer = setTimeout(() => {

@@ -48,7 +48,12 @@ function SharedResearchRequest({ group, tasks, nativeProps }) {
         activityNodes: entry.nodeKeys.map(key => nodeStore.get(key)).filter(Boolean),
         startTime: turn?.start?.time ?? task?.progress?.startedAt ?? null, endTime: turn?.end?.time ?? null, seatProps, t })
     }),
-    running && !flow.length && react.createElement(ExecutionStatusGroup, { entry: { key: task.taskId, running: true, nodeKeys: [] }, activityNodes: [], startTime: task.progress?.startedAt ?? null, endTime: null, seatProps, t }),
+    running && !flow.length && react.createElement('div', {'data-shared-progress':true,role:'status'},
+      react.createElement('small',null,'正在执行'),
+      ...(task.progress?.events??[]).map((event,index)=>event.type==='assistant-delta'
+        ? react.createElement(AssistantMarkdown,{key:index,blocks:[{kind:'text',text:event.text??''}],streaming:false,interrupted:false,openFile:nativeProps.openFile,loadImage:nativeProps.loadImage,t})
+        : react.createElement('div',{key:index},event.type==='tool-started'?(event.tool||'处理资料')+(event.detail?' · '+event.detail:''):event.failed?'工具执行未成功，正在处理':'工具执行完成')),
+      !task.progress?.events?.length&&react.createElement('span',null,'等待执行者同步进度…')),
     ...replies.filter(message => !nativeFinal || message.taskId !== task?.taskId).map(message => react.createElement(SharedResearchMessage, { key: message.id, message, nativeProps })))
 }
 function SharedResearchChatView(props) {

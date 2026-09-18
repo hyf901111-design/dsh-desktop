@@ -428,6 +428,11 @@ export class CollaborationClient {
     void connect()
     return dispose
   }
+  sendActivity(boardId: string, activity: unknown) {
+    const socket = this.sockets.get(boardId)
+    if (socket?.readyState !== 1) throw new ResearchBoardsError('COMPONENT_OFFLINE')
+    socket.send(JSON.stringify({type:'activity',activity}))
+  }
   sendComponent(boardId: string, message: unknown) {
     const socket = this.sockets.get(boardId)
     if (socket?.readyState !== 1) throw new ResearchBoardsError('COMPONENT_OFFLINE')

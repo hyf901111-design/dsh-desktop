@@ -1648,7 +1648,10 @@ export function createSharedBoardExecutor(ctx) {
           outputPrefix = (outputPrefix + value.text).slice(0, 600)
           const building = /\{\s*"(?:version|type|title)"|<html|```/i.test(outputPrefix)
           const previous = progress.events.at(-1)
-          if (!previous || previous.type !== 'assistant-delta' || previous.text !== (building ? '{"type":"component"}' : '正在整理已取得的信息'))
+          if (request.kind === 'board' && !building) {
+            if (previous?.type === 'assistant-delta') { previous.text=(previous.text+value.text).slice(-6000);previous.at=now }
+            else progress.events.push({seq:++progressSeq,at:now,type:'assistant-delta',text:value.text.slice(-6000)})
+          } else if (!previous || previous.type !== 'assistant-delta' || previous.text !== (building ? '{"type":"component"}' : '正在整理已取得的信息'))
             progress.events.push({ seq: ++progressSeq, at: now, type: 'assistant-delta', text: building ? '{"type":"component"}' : '正在整理已取得的信息' })
         } else if (value) {
           progress.lastActivityAt = now
