@@ -146,3 +146,18 @@ body .odyssey-canvas-task-message + .Md3f7G_flowItem:has(.gdEzaW_userRow) { marg
 /* Give expanded details and image previews a clear boundary above the report. */
 body .Md3f7G_executionGroup > :is(.Md3f7G_executionDetails,[data-tool-image-outputs]) + .Md3f7G_executionProgress { margin-top:16px; }
 body .Md3f7G_executionGroup > [data-tool-image-outputs] { max-width:100%; overflow-x:auto; flex-wrap:nowrap!important; }
+
+/* Process disclosures read as part of the prose, without a hover pill. Keep
+   keyboard focus feedback; compensate for the chevron's internal left inset. */
+body .Md3f7G_executionGroup > .Md3f7G_executionTrigger {
+  padding-inline:0;
+  margin-inline-start:-4px;
+  border-radius:0;
+}
+body .Md3f7G_executionGroup > .Md3f7G_executionTrigger:not(:disabled):hover {
+  background:transparent;
+}
+body .Md3f7G_executionTrigger > .Md3f7G_executionLeading {
+  width:14px;
+  justify-items:start;
+}
