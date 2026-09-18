@@ -9,41 +9,52 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "工具报错恢复提示与执行标题样式",
+        "featureName": "侧栏气泡宽度与文件补读恢复及外框透明度",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
-        "tipCommit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
+        "baseCommit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
+        "tipCommit": "fe05f0fa27d2f7c53b98d0c323bc66d1dfc0672f",
         "commits": [
           {
-            "commit": "a4dafb110e812c925e1207e41b241ad0f8a832b9",
+            "commit": "c70a9ce36a8c85078acc1a33b0970ba5e484ebf7",
             "parents": [
-              "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe"
+              "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec"
             ],
-            "subject": "明确文件读取前置条件并改善任务清单参数恢复提示"
+            "subject": "调整右侧会话用户气泡为正文等宽并限制最大宽度"
           },
           {
-            "commit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
+            "commit": "215048bf0811e0af13a752bbeb45002d1869d75d",
             "parents": [
-              "a4dafb110e812c925e1207e41b241ad0f8a832b9"
+              "c70a9ce36a8c85078acc1a33b0970ba5e484ebf7"
             ],
-            "subject": "移除会话执行过程悬停底色并对齐展开箭头"
+            "subject": "未读文件修改被拦截后补读内容供模型核对重试"
+          },
+          {
+            "commit": "fe05f0fa27d2f7c53b98d0c323bc66d1dfc0672f",
+            "parents": [
+              "215048bf0811e0af13a752bbeb45002d1869d75d"
+            ],
+            "subject": "将客户端外框背景填充不透明度统一为百分之七十"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/tool-recovery-guidance.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-home.css"
           },
           {
             "status": "M",
             "path": "src/preload/figma-reading.css"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/tool-recovery-guidance.test.js"
           }
         ],
@@ -58,9 +69,9 @@
               "test/tool-image-links.test.ts"
             ],
             "outcome": "passed",
-            "summary": "15 项聚焦检查通过",
-            "verifiedCommit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
-            "completedAt": "2026-09-18T09:05:01.950356+00:00",
+            "summary": "18 项聚焦检查通过",
+            "verifiedCommit": "fe05f0fa27d2f7c53b98d0c323bc66d1dfc0672f",
+            "completedAt": "2026-09-18T09:29:04.281522+00:00",
             "timeoutMs": 120000
           },
           {
@@ -71,8 +82,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
-            "completedAt": "2026-09-18T09:05:01.950356+00:00",
+            "verifiedCommit": "fe05f0fa27d2f7c53b98d0c323bc66d1dfc0672f",
+            "completedAt": "2026-09-18T09:29:04.281522+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -81,63 +92,12 @@
           "summary": "在集成测试包核对标题布局。"
         },
         "acceptanceCriteria": [
-          "文件保护与任务参数校验保留，增加准确恢复说明",
-          "过程标题无 hover 底色，箭头对齐正文"
+          "右侧用户气泡满正文列且最大560px",
+          "未读文件拦截后补读供核对，不自动写入",
+          "外框填充70%不透明度保留模糊"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T09:05:01.950356+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4be4b3ef476f61735419a63964afb263b664ba76",
-        "verificationCommit": "4be4b3ef476f61735419a63964afb263b664ba76",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "4be4b3ef476f61735419a63964afb263b664ba76",
-            "completedAt": "2026-09-18T09:05:25.667Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "4be4b3ef476f61735419a63964afb263b664ba76",
-            "completedAt": "2026-09-18T09:05:25.667Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "4be4b3ef476f61735419a63964afb263b664ba76",
-            "completedAt": "2026-09-18T09:05:25.667Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T09:05:25.667Z"
+        "generatedAt": "2026-09-18T09:29:04.281522+00:00"
       }
     }
   ],
