@@ -9,23 +9,95 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "全画布持续任务与通用交互",
+        "featureName": "组件协作同步与持续任务性能修复",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "5191728fcd361156c0258374cc66d1ecdabf471e",
-        "tipCommit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
+        "baseCommit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
+        "tipCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
         "commits": [
           {
-            "commit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
+            "commit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
             "parents": [
-              "5191728fcd361156c0258374cc66d1ecdabf471e"
+              "e938b95ec79fea229d0a10a9cf0699abb79ea205"
             ],
-            "subject": "修复：持续任务卡随会话消息滚动，取消分栏布局"
+            "subject": "修复：同步代理组件操作与协作任务进度并降低持续任务响应延迟"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "docs/research/canvas-use.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-collaboration/activity.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-collaboration/activity.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-collaboration/package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/canvas-use-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/shared-native-conversation.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/test-canvas-activity-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/PROTOCOL.md"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/room.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/collaboration-client.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/research-boards.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/canvas-use.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-interaction-state.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-native-conversation.test.js"
           }
         ],
         "checks": [
@@ -35,62 +107,27 @@
               "vitest",
               "run",
               "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js"
+              "test/component-interaction-state.test.js",
+              "test/component-shared-state.test.js",
+              "test/shared-native-conversation.test.js",
+              "test/collaboration-client.test.ts",
+              "test/research-boards-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "18 项相关检查通过，含客户端补丁幂等与语法",
-            "verifiedCommit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
-            "completedAt": "2026-09-18T01:03:13.934775+00:00",
+            "summary": "90 项相关验证通过",
+            "verifiedCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
+            "completedAt": "2026-09-18T02:01:12.342842+00:00",
             "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "功能 worktree 不构建共享客户端；真实界面和会话执行链将在集成批次验证。"
-        },
-        "acceptanceCriteria": [
-          "持续任务卡与消息共用滚动区域，暂停接管等操作保留"
-        ],
-        "risks": [
-          "当前画板前台执行；不含云端离线任务",
-          "受信任硬件输入和系统交互需要用户接管",
-          "真实模型链路与界面待集成验收"
-        ],
-        "generatedAt": "2026-09-18T01:03:13.934775+00:00"
-      },
-      "merged": {
-        "mergeCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
-        "verificationCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
-            "completedAt": "2026-09-18T01:03:37.274Z",
-            "timeoutMs": 240000
           },
           {
             "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
+              "node",
+              "scripts/test-canvas-activity-worker.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
-            "completedAt": "2026-09-18T01:03:37.274Z",
+            "summary": "实际 D1/DO/WebSocket 双端进度、重连、乱序和权限通过",
+            "verifiedCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
+            "completedAt": "2026-09-18T02:01:12.342842+00:00",
             "timeoutMs": 120000
           },
           {
@@ -102,13 +139,27 @@
               "--noEmit"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "edef2533735f18fa22316ae89211063ca52d6ecc",
-            "completedAt": "2026-09-18T01:03:37.274Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
+            "completedAt": "2026-09-18T02:01:12.342842+00:00",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-09-18T01:03:37.274Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 不构建共享客户端；真实 UI 验证在集成批次完成。"
+        },
+        "acceptanceCriteria": [
+          "代理点击与人工操作跨端一致且不重复回放",
+          "共享任务过程与结束状态可见并重连恢复",
+          "相关组件变化唤醒及低思考档位减少等待"
+        ],
+        "risks": [
+          "协作进度新通道需要配套服务端更新，本轮只做本地服务验证",
+          "旧动态组件需使用共享状态 SDK；不自动改写用户组件",
+          "模型网络延迟仍由提供方决定"
+        ],
+        "generatedAt": "2026-09-18T02:01:12.342842+00:00"
       }
     }
   ],
