@@ -1,3 +1,4 @@
+import { installWindowResize } from './window-resize'
 import { registerResearchNativeWeb } from './state/research-native-web'
 import { registerCanvasUseWeb } from './state/canvas-use-web'
 import { copyResearchFile } from './state/research-owned-files'
@@ -554,6 +555,7 @@ function createWindow(): BrowserWindow {
     }
   })
   if (process.platform === 'darwin') {
+    installWindowResize(window)
     window.setWindowButtonVisibility(true)
     window.setWindowButtonPosition({ x: 12, y: 9 })
   } else if (isWindows) {
