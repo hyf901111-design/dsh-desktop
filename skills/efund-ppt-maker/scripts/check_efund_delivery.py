@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import xml.etree.ElementTree as ET
+from check_efund_portability import check_portable_slide, check_title_paint, check_toc_style
 from check_efund_cover import (open_package, logical_slide_part, linked_layout_part,
                               xml_root, object_id, element_geometry, NS)
 
@@ -203,6 +204,7 @@ def audit(pptx, source, mapping):
             number = page['outputSlide']
             part = logical_slide_part(output, number)
             root = xml_root(output, part)
+            for code in check_portable_slide(output, part): add(code, number)
             for code in check_layout_choice(page): add(code, number)
             if page.get('pageKind') == 'toc':
                 for code in check_toc_rules(root, page): add(code, number)
@@ -232,6 +234,8 @@ def audit(pptx, source, mapping):
                 else:
                     ref_part = logical_slide_part(reference, anchor['sourceSlide'])
                     if anchor.get('sourceScope') == 'layout': ref_part = linked_layout_part(reference, ref_part)
+                    raw_title = find_shape(root, anchor['outputShapeId'])
+                    for code in check_title_paint(raw_title): add(code, number)
                     ref_shape = resolved_shape(reference, ref_part, find_shape(xml_root(reference, ref_part), anchor['sourceShapeId']))
                     actual = resolved_shape(output, part, find_shape(root, anchor['outputShapeId']))
                     for code in check_title(element_geometry(actual) if actual is not None else None,
@@ -250,6 +254,7 @@ def audit(pptx, source, mapping):
                 else:
                     source_root = xml_root(reference, logical_slide_part(reference, layout['sourceSlide']))
                     for code in check_toc_spacing(root, source_root, page, output.canvas[0]/1920): add(code, number)
+                    for code in check_toc_style(root, source_root, page): add(code, number)
                 for row, chapter in zip(rows,chapters):
                     try:
                         shape, _ = toc_item(root, row)
