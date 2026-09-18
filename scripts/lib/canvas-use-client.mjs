@@ -287,7 +287,7 @@ export function patchCanvasUseClient(source) {
   }
   const connectConversation=value=>{
     if(!value.includes('if (action.kind === "remove" && result.error.code === "queue-item-not-found")'))value=value.replace('if (action.kind === "steer" && (result.error.code === "steer-unavailable" || result.error.code === "queue-item-not-found")) return;', 'if (action.kind === "remove" && result.error.code === "queue-item-not-found") return; if (action.kind === "steer" && (result.error.code === "steer-unavailable" || result.error.code === "queue-item-not-found")) return;')
-    value=value.replace('text: null, preview: research.text', 'text: row.content?.some(part=>part.type!=='text') ? null : research.text, canvasQueuedContext: research, preview: research.text')
+    value=value.replace('text: null, preview: research.text', 'text: row.content?.some(part=>part.type!=="text") ? null : research.text, canvasQueuedContext: research, preview: research.text')
     value=value.replace('title: row.frozenCanvasContext ? t(\"research.context.queueEdit\") : row.text === null ?', 'title: row.text === null ?')
     const queueStart=value.indexOf('function NativeQueueDock(')
     if(queueStart>=0){
