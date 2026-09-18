@@ -122,3 +122,13 @@ it('edits queued human wording without losing frozen canvas references or image 
  expect(passed).toEqual([context.files,'修改后的要求',[],context.artifacts,[],context.canvasContext])
  expect(content).toEqual([{type:'text',text:'preserved-context:修改后的要求'},image])
 })
+
+it('preserves editable canvas queue text when the full shell build patch is reapplied',async()=>{
+ const {patchFigmaFinalConversation}=await import('../scripts/lib/patch-figma-final-shell.mjs')
+ const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const patched=patchCanvasUseClient(raw)
+ const rebuilt=patchFigmaFinalConversation(patched)
+ expect(rebuilt).toContain('canvasQueuedContext: research')
+ expect(rebuilt).toContain('canvasQueueEditContent(queue.find(')
+ expect(patchCanvasUseClient(rebuilt)).toBe(rebuilt)
+})

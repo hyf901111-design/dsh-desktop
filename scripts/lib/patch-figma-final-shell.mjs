@@ -73,8 +73,8 @@ export function patchFigmaFinalConversation(source) {
     '\t\t\t\t\t\t\tchildren: t("research.context.sent", { total: research.canvasContext.totalSources, initial: research.canvasContext.initialSourceIds.length })',
     '\t\t\t\t\t\t}), rest.map'
   ].join('\n'), 'children: [projectResearchUserText(research, openFile), rest.map')
-  // QueueDock projects only visible input; automatic canvas context remains frozen in the payload.
-  source = exact(source,
+  // The canvas task patch now permits editing the visible text while preserving context.
+  if (!source.includes('canvasQueuedContext: research')) source = exact(source,
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };',
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || (Array.isArray(row.content) && contentParts(row.content).images.length > 0 ? t("image.pending") + " · " + contentParts(row.content).images.length : ""), frozenCanvasContext: true };')
   source = patchFigmaSessionTitle(source)
