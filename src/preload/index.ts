@@ -1,3 +1,4 @@
+import { mountWindowResize } from './window-resize'
 import { createCanvasActionsBridge } from './canvas-actions'
 import { mountUiLocalization } from './ui-localization'
 import { mountFloatingSurfaces } from './floating-surfaces'
@@ -163,6 +164,7 @@ function initializeUi(): void {
     window.addEventListener('unload', mountFigmaMotionController(document), { once: true })
     window.addEventListener('unload', mountHomeFlow(document), { once: true })
     window.addEventListener('unload', mountFigmaResizeFeedback(document), { once: true })
+    if (process.platform === 'darwin') window.addEventListener('unload', mountWindowResize(document, edge => ipcRenderer.send('desktop-window:resize', edge)), { once: true })
     window.addEventListener('unload', mountFigmaResponsiveHeader(document), { once: true })
     window.addEventListener('unload', mountNavigationTitlePreview(document), { once: true })
     window.addEventListener('unload', mountFigmaTaskScrollbar(document), { once: true })
