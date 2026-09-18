@@ -35,7 +35,8 @@ it('renders ongoing and terminal reports with the native execution flow and no t
   expect(host.textContent).toContain('过程中的正文回报')
   const section=host.querySelector('[data-chat-flow-kind="execution"]')
   expect(section.firstElementChild.tagName).toBe('BUTTON')
-  expect(section.querySelector('[role="log"]').previousElementSibling.tagName).toBe('BUTTON')
+  expect(section.lastElementChild).toBe(section.querySelector('[role="log"]'))
+  expect(section.querySelector('[role="group"]').compareDocumentPosition(section.querySelector('[role="log"]')) & 4).toBe(4)
   await React.act(async()=>host.querySelector('button').click())
   expect(host.textContent).not.toContain('过程中的正文回报')
 
