@@ -12,7 +12,7 @@
         "featureName": "队列编辑删除与运行时响应优化",
         "branch": "codex/feat/canvas-use-tasks-20260917",
         "baseCommit": "fad433941ca4988114f7bfa855f2a3f7ada17c07",
-        "tipCommit": "f2ec4cb294d02ced22f5ae61a0a2196ce4af56e8",
+        "tipCommit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
         "commits": [
           {
             "commit": "f2ec4cb294d02ced22f5ae61a0a2196ce4af56e8",
@@ -20,6 +20,13 @@
               "fad433941ca4988114f7bfa855f2a3f7ada17c07"
             ],
             "subject": "修复：引用队列文字编辑与重复删除反馈并降低运行时界面扫描开销"
+          },
+          {
+            "commit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
+            "parents": [
+              "f2ec4cb294d02ced22f5ae61a0a2196ce4af56e8"
+            ],
+            "subject": "修复：队列引用编辑补丁的字符串引号"
           }
         ],
         "files": [
@@ -61,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "58 项聚焦验证通过",
-            "verifiedCommit": "f2ec4cb294d02ced22f5ae61a0a2196ce4af56e8",
-            "completedAt": "2026-09-18T06:49:17.814758+00:00",
+            "verifiedCommit": "869adbc81e7b00f293dfdb0ec19e55b40d7e8478",
+            "completedAt": "2026-09-18T06:51:09.453661+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -77,7 +84,7 @@
           "主动停止仍立即生效"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T06:49:17.814758+00:00"
+        "generatedAt": "2026-09-18T06:51:09.453661+00:00"
       }
     }
   ],
