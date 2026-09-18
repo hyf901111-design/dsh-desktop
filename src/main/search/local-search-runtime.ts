@@ -9,6 +9,7 @@ import {
 } from './local-search-bridge'
 
 export interface LocalSearchRuntimeOptions {
+  readPage?(url: string, signal: AbortSignal): Promise<unknown>
   createWindow(options: BrowserWindowConstructorOptions): BrowserSearchWindow
 }
 
@@ -22,7 +23,8 @@ export async function startLocalSearchRuntime(
 ): Promise<LocalSearchRuntime> {
   const browser = new BrowserSearchController({ createWindow: options.createWindow })
   const bridge = new LocalSearchBridge({
-    search: (query, maxResults, signal) => browser.search(query, maxResults, signal)
+    search: (query, maxResults, signal) => browser.search(query, maxResults, signal),
+    readPage: options.readPage
   })
   try {
     const endpoint = await bridge.start()

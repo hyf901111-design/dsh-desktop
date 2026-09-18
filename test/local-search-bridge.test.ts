@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { LocalSearchBridge } from '../src/main/search/local-search-bridge'
 
 async function postSearch(
@@ -189,4 +189,18 @@ describe('LocalSearchBridge', () => {
 
     await expect(postSearch(endpoint, { query: 'test' })).rejects.toBeInstanceOf(TypeError)
   })
+})
+
+it('routes authenticated fetch requests to the rendered browser reader', async () => {
+  const readPage = vi.fn(async (url: string) => ({ url, statusCode:200, body:{kind:'text',content:'已登录页面正文'},truncated:false }))
+  const bridge = new LocalSearchBridge({ search: async () => ({sources:[],truncated:false}), readPage })
+  const endpoint = await bridge.start()
+  try {
+    const response = await fetch(`${endpoint.url}/fetch`, {method:'POST',headers:{authorization:`Bearer ${endpoint.token}`,'content-type':'application/json'},body:JSON.stringify({url:'https://example.com/document'})})
+    expect(response.status).toBe(200)
+    expect((await response.json()).body.content).toBe('已登录页面正文')
+    expect(readPage).toHaveBeenCalledOnce()
+    const unauthorized = await fetch(`${endpoint.url}/fetch`, {method:'POST'})
+    expect(unauthorized.status).toBe(401)
+  } finally { await bridge.stop() }
 })

@@ -259,6 +259,10 @@ export function patchCanvasUseClient(source) {
     return value
   }
   const continuousFlow=value=>{
+    // Attachment-backed local images belong in the same thumbnail gallery as screenshots.
+    value=value.replace('if (localImage) {', 'if (localImage && refs.length === 0) {')
+    value=value.replace('flexDirection: "column", alignItems: "flex-start", gap: 8, marginTop: 8', 'flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 8, marginTop: 8')
+
     { // Idempotent even when other build patches regenerate surrounding helpers.
       const replace=(a,b)=>{if(value.includes(b))return;if(!value.includes(a))throw Error('Disclosure scroll anchor missing: '+a);value=value.replace(a,b)}
       replace('const toBottom = (el) => {', 'const toBottom = (el) => { delete el.dataset.conversationReading;')
