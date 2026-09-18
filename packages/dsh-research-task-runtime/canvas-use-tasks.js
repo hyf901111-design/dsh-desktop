@@ -79,13 +79,13 @@ export class CanvasUseTasks {
     // A tool caller can be interrupted by a new message. It does not own the
     // durable goal; explicit stop is delivered through control/API instead.
     const run=this.runs.get(id)
-    let onInput
-    const input=new Promise(resolve=>{onInput=resolve})
+    let onInput,pendingInput=false
+    const input=new Promise(resolve=>{onInput=()=>{pendingInput=true;resolve()}})
     if(run)(run.inputWaiters??=new Set()).add(onInput)
     let detach
     const interrupted=new Promise((_,reject)=>{detach=()=>reject(signal.reason??new Error('会话已更新，持续任务仍在执行。'))})
     signal?.addEventListener('abort',detach,{once:true})
-    try {if(signal?.aborted)detach();await Promise.race([run?.done,interrupted,input]);return copy(t)}
+    try {if(signal?.aborted)detach();await Promise.race([run?.done,interrupted,input]);return {...copy(t),...(pendingInput?{pendingUserInput:true,message:'用户消息已进入队列。请结束当前模型回合让队列接续；持续任务仍运行，不要停止或重建它。处理新消息后用 steer 或 wait 接续。'}:{})}}
     finally {signal?.removeEventListener('abort',detach);run?.inputWaiters?.delete(onInput)}
   }
   steer(sessionId,id,instruction) {

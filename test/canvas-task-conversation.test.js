@@ -19,9 +19,9 @@ it('renders ongoing and terminal reports with the native execution flow and no t
  try {
   store.update([task]);await React.act(async()=>root.render(React.createElement(exports.__Conversation,{sessionId:'flow',active:true,t:key=>key})))
   expect(host.querySelector('[data-chat-flow-kind="execution"]')).not.toBeNull()
-  expect(host.textContent).toContain('执行过程 · 等待变化');expect(host.textContent).toContain(task.reason)
-  expect(host.querySelector('.odyssey-canvas-live-status').previousElementSibling.tagName).toBe('BUTTON')
-  expect(host.querySelector('.odyssey-canvas-live-status').textContent).toBe('正在等待内容变化')
+  expect(host.textContent).toContain('执行过程 · 等待内容变化');expect(host.textContent).toContain(task.reason)
+  expect(host.querySelector('.odyssey-canvas-live-status')).toBeNull()
+  expect(host.querySelector('button').textContent).toContain('等待内容变化')
   expect(host.querySelector('[data-canvas-use-tasks]')).toBeNull()
   expect(host.textContent).not.toContain('画布持续任务');expect(host.textContent).not.toContain('接管')
   await React.act(async()=>host.querySelector('button').click());expect(host.textContent).toContain('已确认表单保存成功。')
