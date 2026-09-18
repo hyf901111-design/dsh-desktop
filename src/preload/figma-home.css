@@ -1,12 +1,12 @@
 /* Home atmosphere is computed by home-flow.ts; no background image assets. */
 body:has([data-odyssey-page="home"]) {
-  --odyssey-shell: rgb(228 229 229 / .67);
+  --odyssey-shell: rgb(228 229 229 / .70);
   --odyssey-home-input: rgb(255 255 255 / .49);
   --odyssey-home-title: #15181b;
   --odyssey-home-control: #f5f6f7;
 }
 body[data-ds-dark-theme]:has([data-odyssey-page="home"]) {
-  --odyssey-shell: rgb(7 9 9 / .78);
+  --odyssey-shell: rgb(7 9 9 / .70);
   --odyssey-home-input: rgb(0 0 0 / .49);
   --odyssey-home-title: #e7e9e8;
   --odyssey-home-control: rgb(255 255 255 / .09);
