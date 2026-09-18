@@ -43,11 +43,13 @@ export function mountUiLocalization(doc:Document=document):()=>void {
  const textState=new WeakMap<Text,{source:string;rendered:string}>()
  const attrState=new WeakMap<Element,Map<string,{source:string;rendered:string}>>()
  const roots=new Set<Element>([doc.body])
- let pending=false,disposed=false
+ let pending=false,disposed=false,frame=0,translated=false
  const update=()=>{
   pending=false;if(disposed)return
   const english=doc.documentElement.dataset.odysseyLocale==='en'
-  const changed=[...roots].filter(root=>root.isConnected);roots.clear()
+  if(!english&&!translated){roots.clear();return}
+  translated=english
+  const changed=[...roots].filter(root=>root.isConnected&&![...roots].some(parent=>parent!==root&&parent.contains(root)));roots.clear()
   for(const root of changed){
   const walker=doc.createTreeWalker(root,win.NodeFilter.SHOW_TEXT)
   while(walker.nextNode()){
@@ -72,7 +74,7 @@ export function mountUiLocalization(doc:Document=document):()=>void {
   }
   }
  }
- const schedule=()=>{if(!pending&&!disposed){pending=true;win.queueMicrotask(update)}}
+ const schedule=()=>{if(!pending&&!disposed){pending=true;frame=win.requestAnimationFrame(update)}}
  const observer=new win.MutationObserver(records=>{
   for(const record of records){
    const target=record.target.nodeType===1?record.target as Element:record.target.parentElement
@@ -83,5 +85,5 @@ export function mountUiLocalization(doc:Document=document):()=>void {
  })
  observer.observe(doc.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-odyssey-locale','placeholder','aria-label','title']})
  update()
- return()=>{disposed=true;observer.disconnect()}
+ return()=>{disposed=true;win.cancelAnimationFrame(frame);observer.disconnect()}
 }
