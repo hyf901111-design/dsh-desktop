@@ -41,7 +41,7 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
     }
     const pointer = (name, p, down=false) => {
       const opts={...point(p),bubbles:true,cancelable:true,view:window,button:0,buttons:down?1:0,pointerId:1,pointerType:'mouse',isPrimary:true}
-      mark(p)
+      if(!args.externalCursor)mark(p)
       dispatch(el,new PointerEvent('pointer'+name,opts)); dispatch(el,new MouseEvent('mouse'+name,opts))
     }
     if (args.op === 'click' || args.op === 'drag') {
@@ -74,7 +74,13 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
 }
 
 export function installCanvasUseSurface(create, dispatch) {
-  let use
+  let use,changedTimer
+  const changed=()=>{if(changedTimer)return;changedTimer=setTimeout(()=>{changedTimer=null;parent.postMessage({type:'sherlock-canvas-use-changed'},'*')},60)}
+  // General form/DOM signals supplement shared-state and journal notifications.
+  // Canvas-only/timer changes still have the scheduler's polling fallback.
+  for(const type of ['input','change','click','keyup'])addEventListener(type,changed,true)
+  const watch=()=>new MutationObserver(changed).observe(document.body,{subtree:true,childList:true,characterData:true})
+  if(document.body)watch();else addEventListener('DOMContentLoaded',watch,{once:true})
   addEventListener('message',async event=>{
     const d=event.data
     if(event.source!==parent||d?.type!=='sherlock-canvas-use-request'||typeof d.id!=='string')return
