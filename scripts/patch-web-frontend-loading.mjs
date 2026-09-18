@@ -195,9 +195,12 @@ writeFileSync(subagentRuntimePath, patchCanvasTaskNotices(readFileSync(subagentR
 writeFileSync(conversationPath, patchCanvasRefresh(readFileSync(conversationPath, 'utf8')))
 
 import { patchTaskProgressRuntime } from './lib/task-progress-runtime.mjs'
+import { patchTodoRecovery, patchFileRecovery } from './lib/tool-recovery-guidance.mjs'
 import { patchTaskProgressClient } from './lib/task-progress-client.mjs'
 const todoRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js')
-writeFileSync(todoRuntimePath, patchTaskProgressRuntime(readFileSync(todoRuntimePath, 'utf8')))
+writeFileSync(todoRuntimePath, patchTodoRecovery(patchTaskProgressRuntime(readFileSync(todoRuntimePath, 'utf8'))))
+const fsRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-fs/lib/index.js')
+writeFileSync(fsRuntimePath, patchFileRecovery(readFileSync(fsRuntimePath, 'utf8')))
 writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversationPath, 'utf8')))
 
 // Dedicated new boards take their durable name from the first task, not an empty component.
