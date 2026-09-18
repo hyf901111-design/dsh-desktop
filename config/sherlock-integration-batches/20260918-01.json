@@ -9,27 +9,42 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对话网页读取与过程图片浏览",
+        "featureName": "工具报错恢复提示与执行标题样式",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "24db40764eeb4eeb44ed3783270aa3b373813a77",
-        "tipCommit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
+        "baseCommit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
+        "tipCommit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
         "commits": [
           {
-            "commit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
+            "commit": "a4dafb110e812c925e1207e41b241ad0f8a832b9",
             "parents": [
-              "24db40764eeb4eeb44ed3783270aa3b373813a77"
+              "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe"
             ],
-            "subject": "在标准和构建模式启用客户端网页读取工具"
+            "subject": "明确文件读取前置条件并改善任务清单参数恢复提示"
+          },
+          {
+            "commit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
+            "parents": [
+              "a4dafb110e812c925e1207e41b241ad0f8a832b9"
+            ],
+            "subject": "移除会话执行过程悬停底色并对齐展开箭头"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "scripts/install-brand-assets.mjs"
+            "status": "A",
+            "path": "scripts/lib/tool-recovery-guidance.mjs"
           },
           {
             "status": "M",
-            "path": "test/standard-agent-preset.test.ts"
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "A",
+            "path": "test/tool-recovery-guidance.test.js"
           }
         ],
         "checks": [
@@ -38,79 +53,39 @@
               "npx",
               "vitest",
               "run",
-              "test/standard-agent-preset.test.ts",
-              "test/session-model-web-search.test.js"
+              "test/tool-recovery-guidance.test.js",
+              "test/task-progress-runtime.test.js",
+              "test/tool-image-links.test.ts"
             ],
             "outcome": "passed",
-            "summary": "23 项模式与网页工具检查通过",
-            "verifiedCommit": "41d7dfea4f628fbdf2c6a6c5c6270327fd12eefe",
-            "completedAt": "2026-09-18T08:41:30.892113+00:00",
+            "summary": "15 项聚焦检查通过",
+            "verifiedCommit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
+            "completedAt": "2026-09-18T09:05:01.950356+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "779ee90fb5157dc3fea7fe2b07ba3b17817f22ec",
+            "completedAt": "2026-09-18T09:05:01.950356+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能 worktree 不构建共享客户端；将在集成产物中检查全局展开。"
+          "summary": "在集成测试包核对标题布局。"
         },
         "acceptanceCriteria": [
-          "网址读取复用研究链接的浏览器会话",
-          "图片附件使用缩略图库",
-          "过程与正文增加间距"
+          "文件保护与任务参数校验保留，增加准确恢复说明",
+          "过程标题无 hover 底色，箭头对齐正文"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T07:35:00.942880+00:00"
-      },
-      "merged": {
-        "mergeCommit": "348ed3838d1553d667e0d77e7aebbb6af670d09c",
-        "verificationCommit": "348ed3838d1553d667e0d77e7aebbb6af670d09c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "348ed3838d1553d667e0d77e7aebbb6af670d09c",
-            "completedAt": "2026-09-18T08:41:56.785Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "348ed3838d1553d667e0d77e7aebbb6af670d09c",
-            "completedAt": "2026-09-18T08:41:56.785Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "348ed3838d1553d667e0d77e7aebbb6af670d09c",
-            "completedAt": "2026-09-18T08:41:56.785Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T08:41:56.785Z"
+        "generatedAt": "2026-09-18T09:05:01.950356+00:00"
       }
     }
   ],
