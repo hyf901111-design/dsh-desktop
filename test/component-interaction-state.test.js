@@ -65,3 +65,29 @@ it('replays coordinate clicks on a resized canvas in another client and after re
  expect(validResearchInteractionEvent({...event,x:NaN})).toBe(false);
  expect(validResearchInteractionEvent({...event,y:2})).toBe(false);
 });
+
+it('journals authorized agent clicks across two independent legacy closures but never loops remote replay',async()=>{
+ const {JSDOM}=await import('jsdom');const {createCanvasUseSurface}=await import('../packages/dsh-research-task-runtime/canvas-use-surface.js');let serial=0
+ const runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1]
+ function client(width){
+  const dom=new JSDOM('<canvas></canvas><output>0</output>',{runScripts:'outside-only',url:'https://local.test',pretendToBeVisual:true}),w=dom.window,out=[],moves=[]
+  w.PointerEvent=w.MouseEvent;const canvas=w.document.querySelector('canvas');canvas.toDataURL=()=>null
+  w.HTMLElement.prototype.getBoundingClientRect=()=>({x:0,y:0,left:0,top:0,width,height:width,right:width,bottom:width})
+  canvas.onclick=e=>{moves.push([Math.round(e.clientX/width*14),Math.round(e.clientY/width*14)]);w.document.querySelector('output').textContent=String(moves.length)}
+  const allowed=new WeakSet(),parent={postMessage:m=>out.push(m)}
+  vm.runInNewContext('('+runtime+')(allowed)',{document:w.document,parent,allowed,addEventListener:w.addEventListener.bind(w),Element:w.Element,Event:w.Event,MouseEvent:w.MouseEvent,KeyboardEvent:w.KeyboardEvent,HTMLInputElement:w.HTMLInputElement,HTMLSelectElement:w.HTMLSelectElement,HTMLTextAreaElement:w.HTMLTextAreaElement,crypto:{randomUUID:()=>`move-${++serial}`}})
+  w.dispatchAuthorized=(el,event)=>{allowed.add(event);try{return el.dispatchEvent(event)}finally{allowed.delete(event)}}
+  const use=w.eval('('+createCanvasUseSurface.toString()+')(document.body,()=>null,window.dispatchAuthorized)')
+  const receive=events=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events},readOnly:false}}));receive({})
+  return {dom,w,out,moves,receive,click:async point=>{const view=await use({op:'observe'});await use({op:'click',ref:view.elements[0].ref,revision:view.revision,point})}}
+ }
+ const a=client(400),b=client(280),journal={}
+ try {
+  for(let i=0;i<8;i++){
+   const from=i%2?a:b,to=i%2?b:a;await from.click({x:(3+i)/14,y:5/14});const event=from.out.at(-1).event;journal[event.id]=event
+   const before=to.out.length;to.receive(journal);to.receive(journal);expect(to.out).toHaveLength(before);expect(a.moves).toEqual(b.moves)
+  }
+  expect(a.moves).toHaveLength(8)
+  const before=a.out.length;a.w.document.querySelector('canvas').dispatchEvent(new a.w.MouseEvent('click',{bubbles:true}));expect(a.out).toHaveLength(before)
+ }finally{a.dom.window.close();b.dom.window.close()}
+})

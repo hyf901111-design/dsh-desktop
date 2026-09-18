@@ -142,6 +142,7 @@ export type AccountView = {
   user: PublicUser | null
 }
 export type BoardView = {
+  activities?: Array<Record<string, any>>
   boardId: string
   localSessionId: string | null
   board: Board

@@ -69,6 +69,10 @@ it('mounts the actual native execution group and streams real commentary instead
  nodeStore.set('a',{...nodeStore.get('a'),data:{status:'running',blocks:[{kind:'text',text:'资料已核对，正在整理结果'}]}})
  await React.act(async()=>root.render(React.createElement(exports.__NativeRequest,{group,tasks:[task],nativeProps:{...props,sharedSnapshot:{...snapshot,nodeStore:new Map(nodeStore)}}})))
  expect(host.textContent).toContain('资料已核对，正在整理结果')
+ task.progress={events:[{type:'assistant-delta',text:'远端已完成观察，正在执行下一步'},{type:'tool-started',tool:'观察画布'}]}
+ await React.act(async()=>root.render(React.createElement(exports.__NativeRequest,{group,tasks:[task],nativeProps:{...props,sharedSnapshot:{...snapshot,order:[],nodeStore:new Map()}}})))
+ expect(host.querySelector('[data-shared-progress]').textContent).toContain('远端已完成观察，正在执行下一步')
+ expect(host.querySelector('[data-shared-progress]').textContent).toContain('观察画布')
  } finally {await React.act(async()=>root.unmount());await w.happyDOM.abort();Object.assign(globalThis,old)}
 })
 

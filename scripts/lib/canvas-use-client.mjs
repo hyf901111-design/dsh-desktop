@@ -29,17 +29,18 @@ function installCanvasUseClient(sessionId,workspace,root) {
     check();const state=workspace.getSnapshot(),basic=await workspace.canvasAction('inspect',{})
     const nodes=[...state.files,...state.artifacts]
     const viewportRect=root.getBoundingClientRect()
-    const details=await Promise.all(nodes.map(async n=>{
+    const details=await Promise.all(nodes.filter(n=>!args.nodeIds?.length||args.nodeIds.includes(n.id)).map(async n=>{
       const element=card(n.id),rect=element?.getBoundingClientRect()
       if(!rect||rect.right<viewportRect.left||rect.left>viewportRect.right||rect.bottom<viewportRect.top||rect.top>viewportRect.bottom)return {id:n.id,available:false}
       try{return {id:n.id,...await surface(n,{op:'observe'})}}catch(error){return {id:n.id,error:error.message}}
     }))
     check();const r=root.getBoundingClientRect()
-    fingerprint=hash(JSON.stringify([basic.revision,details.map(d=>[d.id,d.revision,d.error])]))
+    const nodeFingerprints=Object.fromEntries(details.map(d=>[d.id,hash(JSON.stringify([d.revision,d.error,d.available]))]));
+    fingerprint=hash(JSON.stringify([args.nodeIds?.length?null:basic.revision,nodeFingerprints]))
     const key=JSON.stringify([basic.revision,state.viewport,state.selection])
     if(key!==last){revision=crypto.randomUUID();last=key}
     const screenshot=args.screenshot?await window.dshDesktop?.researchLinkFrame?.captureCanvas({x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(r.width,innerWidth-Math.max(0,r.x)),height:Math.min(r.height,innerHeight-Math.max(0,r.y))}):undefined
-    return {...basic,revision,canvasRevision:basic.revision,fingerprint,viewport:state.viewport,size:{width:r.width,height:r.height},surfaces:details.filter(d=>!args.nodeIds||args.nodeIds.includes(d.id)),screenshot,scope:'entire-canvas',writable:basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')}
+    return {...basic,revision,canvasRevision:basic.revision,fingerprint,nodeFingerprints,observedNodeIds:args.nodeIds??[],viewport:state.viewport,size:{width:r.width,height:r.height},surfaces:details.filter(d=>!args.nodeIds||args.nodeIds.includes(d.id)),screenshot,scope:'entire-canvas',writable:basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')}
   }
   const showCursor=(node,args)=>{
     cursor?.remove();const el=card(node.id),body=el?.querySelector('[data-research-native-web],iframe,.rScV5Q_previewBody')??el
@@ -55,6 +56,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
   }
   const use=async(args,{isCancelled=()=>false}={})=>{
     if(args.op==='observe')return observe(args)
+    if(args.op==='report'){check();if(sherlockShared(sessionId)){const v=sherlockBoardsAdapter?.getView(sessionId);await sherlockBoardsAdapter.call('activity.publish',{boardId:v.boardId,activity:args.activity})}return {ok:true}}
     const requestId=args.requestId,key=JSON.stringify(args)
     if(typeof requestId!=='string'||!requestId||requestId.length>128)throw Error('操作缺少 requestId。')
     const prior=receipts.get(requestId);if(prior){if(prior.key!==key)throw Error('requestId 已用于不同操作。');if(prior.error)throw Error(prior.error);return prior.result}
@@ -110,11 +112,14 @@ function CanvasUseTaskPanel({sessionId,active}) {
   const [tasks,setTasks]=react.useState([]),[error,setError]=react.useState('')
   const call=async(extra={})=>{const r=await fetch('/api/research/canvas-tasks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId,...extra})});const v=await r.json();if(!r.ok)throw Error(v.error);setTasks(v.tasks??[])}
   react.useEffect(()=>{if(!active)return;let current=true;const read=()=>{if(current)call().catch(()=>{})};read();const timer=setInterval(read,1500);return()=>{current=false;clearInterval(timer)}},[sessionId,active])
+  react.useSyncExternalStore(sherlockBoardsAdapter?.subscribe??(()=>()=>{}),sherlockBoardsAdapter?.version??(()=>0))
   if(!active)return null
-  const visible=tasks.filter(t=>!['stopped','completed'].includes(t.state)).concat(tasks.filter(t=>['stopped','completed'].includes(t.state)).slice(-1)).slice(-4)
+  const shared=sherlockBoardsAdapter?.getView(sessionId),remote=(shared?.activities??[]).filter(a=>a.kind==='canvas'&&!tasks.some(t=>t.id===a.id)).map(t=>({...t,remote:true,state:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'paused':t.state,reason:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'执行端连接中断，等待更新':t.reason}))
+  const all=[...tasks,...remote]
+  const visible=all.filter(t=>!['stopped','completed'].includes(t.state)).concat(all.filter(t=>['stopped','completed'].includes(t.state)).slice(-1)).slice(-4)
   if(!visible.length)return null
   const h=react_jsx_runtime.jsx,hs=react_jsx_runtime.jsxs,labels={running:'正在执行',waiting:'等待变化',paused:'已暂停',stopped:'已停止',completed:'已完成'}
-  return hs('div',{'data-canvas-use-tasks':'',style:{padding:'12px 0 4px'},children:[...visible.map(t=>hs('div',{style:{border:'1px solid var(--dsw-alias-border-default,#8884)',borderRadius:10,padding:12,marginBottom:8,fontSize:12,lineHeight:'18px'},children:[h('strong',{children:'画布持续任务 · '+labels[t.state]}),h('div',{children:t.title||'持续执行画布任务',style:{marginTop:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}),h('div',{children:t.reason,style:{opacity:.65,marginTop:4,maxHeight:54,overflow:'hidden'}}),h('div',{children:`${t.actions}/${t.maxActions} 次操作 · 截止 ${new Date(t.deadline).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`,style:{opacity:.6,marginTop:4}}),hs('div',{style:{display:'flex',gap:12,marginTop:8},children:(['running','waiting'].includes(t.state)?[['pause','暂停'],['takeover','接管'],['stop','停止']]:t.state==='paused'?[['resume','恢复'],['stop','停止']]:[]).map(([action,label])=>h('button',{type:'button',style:{border:0,background:'transparent',color:'inherit',padding:0,cursor:'pointer',font:'inherit'},children:label,onClick:async()=>{try{setError('');await call({taskId:t.id,action})}catch(e){setError(e.message)}}},action))})]},t.id)),error?h('p',{role:'alert',children:error}):null]})
+  return hs('div',{'data-canvas-use-tasks':'',style:{padding:'12px 0 4px'},children:[...visible.map(t=>hs('div',{style:{border:'1px solid var(--dsw-alias-border-default,#8884)',borderRadius:10,padding:12,marginBottom:8,fontSize:12,lineHeight:'18px'},children:[h('strong',{children:'画布持续任务 · '+labels[t.state]}),h('div',{children:(t.title||'持续执行画布任务')+(t.remote?' · '+(t.username||'其他成员')+'执行':''),style:{marginTop:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}),h('div',{children:t.reason,style:{opacity:.65,marginTop:4,maxHeight:54,overflow:'hidden'}}),h('div',{children:`${t.actions}/${t.maxActions} 次操作 · 截止 ${new Date(t.deadline).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`,style:{opacity:.6,marginTop:4}}),hs('div',{style:{display:'flex',gap:12,marginTop:8},children:(t.remote?[]:['running','waiting'].includes(t.state)?[['pause','暂停'],['takeover','接管'],['stop','停止']]:t.state==='paused'?[['resume','恢复'],['stop','停止']]:[]).map(([action,label])=>h('button',{type:'button',style:{border:0,background:'transparent',color:'inherit',padding:0,cursor:'pointer',font:'inherit'},children:label,onClick:async()=>{try{setError('');await call({taskId:t.id,action})}catch(e){setError(e.message)}}},action))})]},t.id)),error?h('p',{role:'alert',children:error}):null]})
 }
 
 export function patchCanvasUseClient(source) {

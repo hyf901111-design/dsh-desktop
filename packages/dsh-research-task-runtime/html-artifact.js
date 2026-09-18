@@ -406,7 +406,7 @@ export function validResearchInteractionState(s) {
     s.events && typeof s.events==='object' && !Array.isArray(s.events) && Object.keys(s.events).length<=2048 &&
     Object.entries(s.events).every(([id,e])=>validResearchInteractionEvent(e)&&e.id===id) && JSON.stringify(s).length<=256*1024;
 }
-const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractionRuntime() {
+const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractionRuntime(authorizedEvents = new WeakSet()) {
   let initialized=false, replaying=false, readOnly=true, clock=0;
   let applied=[];
   const pathOf=el=>{const p=[];while(el&&el!==document.body){const parent=el.parentElement;if(!parent)return null;p.unshift([...parent.children].indexOf(el));el=parent;}return p;};
@@ -439,7 +439,7 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     try {for(const e of events.slice(applied.length)){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {replaying=false;initialized=true;}
   });
   for(const type of ['click','input','change','keydown']) document.addEventListener(type,event=>{
-    if(!event.isTrusted || replaying || document.documentElement.hasAttribute('data-sherlock-shared-state'))return;
+    if((!event.isTrusted && !authorizedEvents.has(event)) || replaying || document.documentElement.hasAttribute('data-sherlock-shared-state'))return;
     if(!initialized||readOnly){event.preventDefault();event.stopImmediatePropagation();return;}
     let el=event.target;
     if(!(el instanceof Element))return;
@@ -579,7 +579,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME})();` : ''}(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})();` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()});</script>`
+  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME})();` : ''}(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.

@@ -1,3 +1,4 @@
+import { cleanActivity } from '../../packages/dsh-research-collaboration/activity.js'
 import { ComponentRooms } from './component-room.js'
 import { componentVersion } from '../../packages/dsh-research-collaboration/component-state.js'
 import { assertConversationClaim, mutateQueuedConversation, conversationContext } from '../../packages/dsh-research-collaboration/conversation-queue.js'
@@ -1379,11 +1380,34 @@ export class ResearchBoardRoom {
         type: 'welcome',
         scope: 'board',
         ...(await this.snapshot(boardId, user)),
-        presence: await this.presence()
+        presence: await this.presence(),
+        activities: await this.activitySnapshot(epoch)
       })
     )
     await this.sendPresence()
     return new Response(null, { status: 101, webSocket: pair[0] })
+  }
+  async activitySnapshot(epoch) {
+    return [...(await this.ctx.storage.list({prefix:`activity:${epoch}:`,limit:100})).values()]
+  }
+  async publishActivity(message, authority, a) {
+    if(authority.member.role==='viewer'||authority.current.board.lifecycle!=='active')fail('ACCESS_DENIED',403)
+    const value=cleanActivity(message)
+    if(value.kind==='conversation') {
+      const task=authority.current.tasks.find(t=>t.taskId===value.id)
+      if(!task||task.initiatorId!==a.user.id||task.sessionHash!==a.user.session_hash||task.status!=='running')fail('TASK_INITIATOR_REQUIRED',403)
+    }
+    const key=`activity:${a.epoch}:${a.user.id}:${value.kind}:${value.id}`
+    const previous=await this.ctx.storage.get(key)
+    if(previous&&previous.sequence>=value.sequence)return
+    const activity={...value,userId:a.user.id,username:a.user.username,updatedAt:now()}
+    await this.ctx.storage.put(key,activity)
+    // Bound persisted history and restore the latest reports on reconnect.
+    const all=await this.ctx.storage.list({prefix:'activity:'})
+    if(all.size>100)await this.ctx.storage.delete([...all].sort((a,b)=>a[1].updatedAt-b[1].updatedAt).slice(0,all.size-100).map(([key])=>key))
+    for(const peer of this.ctx.getWebSockets()) {
+      try {const p=peer.deserializeAttachment();if(p.epoch!==a.epoch)continue;await authorize(this.env,p.boardId,p.user,{epoch:p.epoch});peer.send(JSON.stringify({type:'activity',activity}))}catch{try{peer.close(4003,'ACCESS_REVOKED')}catch{}}
+    }
   }
   async webSocketMessage(socket, data) {
     await this.ctx.blockConcurrencyWhile(async () => {
@@ -1405,6 +1429,11 @@ export class ResearchBoardRoom {
         if (message.type === 'ping') {
           socket.send(JSON.stringify({ type: 'pong' }))
           await this.sendPresence()
+        } else if (message.type === 'activity') {
+          if(now()-(a.activityWindow??0)>=1000){a.activityWindow=now();a.activityCount=0}
+          if((a.activityCount=(a.activityCount??0)+1)>20)fail('RATE_LIMITED',429)
+          socket.serializeAttachment(a)
+          await this.publishActivity(message.activity,authority,a)
         } else if (message.type === 'component') {
           const packet = componentPacket = message.message
           const canvas = projectDocument(decodeDocument(fromBase64(authority.current.documentUpdate)))
