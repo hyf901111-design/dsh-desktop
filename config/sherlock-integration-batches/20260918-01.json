@@ -9,54 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "消息宽度与窗口边缘拖拽",
+        "featureName": "展开过程正文顺序",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "290f9e7befc0e37e226567009aca979d24163808",
-        "tipCommit": "8faa99fb79603dbf2e791e7b513a9d62eb044546",
+        "baseCommit": "8faa99fb79603dbf2e791e7b513a9d62eb044546",
+        "tipCommit": "ab97b154a249d87e176a61c3298010f5e403c652",
         "commits": [
           {
-            "commit": "9ddac8cb21eba0cb57f37fa4fc9126a501328ed2",
+            "commit": "ab97b154a249d87e176a61c3298010f5e403c652",
             "parents": [
-              "290f9e7befc0e37e226567009aca979d24163808"
+              "8faa99fb79603dbf2e791e7b513a9d62eb044546"
             ],
-            "subject": "收窄用户消息气泡并保留左侧留白"
-          },
-          {
-            "commit": "8faa99fb79603dbf2e791e7b513a9d62eb044546",
-            "parents": [
-              "9ddac8cb21eba0cb57f37fa4fc9126a501328ed2"
-            ],
-            "subject": "扩大客户端边缘缩放热区并按方向显示拖拽光标"
+            "subject": "将会话回报正文统一放在展开过程详情之后"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/window-resize.ts"
+            "path": "scripts/lib/canvas-use-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/window-resize.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/window-resize.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/window-resize.test.ts"
+            "path": "test/canvas-task-conversation.test.js"
           }
         ],
         "checks": [
@@ -65,13 +38,12 @@
               "npx",
               "vitest",
               "run",
-              "test/window-resize.test.ts",
-              "test/figma-reading-layout.test.ts"
+              "test/canvas-task-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "7 项边缘尺寸和阅读布局检查通过",
-            "verifiedCommit": "8faa99fb79603dbf2e791e7b513a9d62eb044546",
-            "completedAt": "2026-09-18T07:51:12.239884+00:00",
+            "summary": "10 项会话渲染检查通过",
+            "verifiedCommit": "ab97b154a249d87e176a61c3298010f5e403c652",
+            "completedAt": "2026-09-18T08:01:58.002972+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -80,63 +52,10 @@
           "summary": "功能 worktree 不构建共享客户端；将在集成产物中检查全局展开。"
         },
         "acceptanceCriteria": [
-          "主对话和研究侧栏用户消息右对齐，最大占内容宽度70%",
-          "四边及角落扩大缩放热区并显示方向光标"
+          "执行标题、展开详情、回报正文按顺序显示"
         ],
         "risks": [],
         "generatedAt": "2026-09-18T07:35:00.942880+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cd081a33f1bd21f41f3489cc9c0558055afc6d35",
-        "verificationCommit": "cd081a33f1bd21f41f3489cc9c0558055afc6d35",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "cd081a33f1bd21f41f3489cc9c0558055afc6d35",
-            "completedAt": "2026-09-18T07:52:12.962Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "cd081a33f1bd21f41f3489cc9c0558055afc6d35",
-            "completedAt": "2026-09-18T07:52:12.962Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "cd081a33f1bd21f41f3489cc9c0558055afc6d35",
-            "completedAt": "2026-09-18T07:52:12.962Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T07:52:12.962Z"
       }
     }
   ],
