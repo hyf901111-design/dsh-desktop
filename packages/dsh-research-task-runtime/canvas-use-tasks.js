@@ -1,8 +1,9 @@
+import {ongoingCanvasRequest,CANVAS_ONGOING_GUIDANCE,canvasTaskRoutingGuard} from './canvas-task-routing.js'
 import {randomUUID} from 'node:crypto'
 import {readFile,writeFile,mkdir,rename} from 'node:fs/promises'
 import {dirname} from 'node:path'
 import {defineTool} from '@deepseek-ai/dsh-tools'
-import {callCanvas,canvasSession,CANVAS_TOOL_NAMES} from './canvas-tools.js'
+import {callCanvas,canvasSession,registerCanvasGoalGuard,CANVAS_TOOL_NAMES} from './canvas-tools.js'
 import {CANVAS_USE_TOOL} from './canvas-use-tools.js'
 import {CanvasTaskExecutor} from './canvas-task-executor.js'
 import {canvasTaskTiming,canvasRoundWatchdog} from './canvas-task-timing.js'
@@ -42,7 +43,7 @@ export class CanvasUseTasks {
     if(!['goal','until-stopped'].includes(completionMode))throw Error('任务结束模式无效。')
     if(typeof goal!=='string'||!goal.trim()||goal.length>8000||typeof completion!=='string'||!completion.trim()||completion.length>2000)throw Error('需要明确的任务目标和结束条件。')
     if(!Number.isInteger(maxMinutes)||maxMinutes<1||maxMinutes>480||!Number.isInteger(maxActions)||maxActions<1||maxActions>2000)throw Error('任务时长或操作上限无效。')
-    if(this.list(sessionId).some(live))throw Error('当前画板已有持续任务，请先暂停或停止，避免争抢操作。')
+    if(this.list(sessionId).some(live))throw Error('当前画板已有持续任务。请用 list 查看，并用 steer 补充原任务或 wait 继续等待；不要因为新消息停止并重建。')
     signal?.throwIfAborted()
     const observation=await this.observe(sessionId,signal)
     signal?.throwIfAborted()
@@ -196,6 +197,14 @@ export async function registerCanvasUseTasks(ctx,{filePath,isTrustedRequest,read
       return parseCanvasTaskDecision(text)
     } finally {watchdog.dispose();signal.removeEventListener('abort',abort);controller.abort()}
   }})
+  const currentTasks=id=>tasks.list(id).filter(live)
+  const disposeGoalGuard=registerCanvasGoalGuard((exec,method,args)=>canvasTaskRoutingGuard(exec,method,args,currentTasks(canvasSession(exec))))
+  const disposeGuidance=ctx.get?.('systemPrompt')?.section({name:'sherlock:canvas-ongoing-goal',order:150,text:({agent})=>{
+    if(!agent||agent[Symbol.for('sherlock.canvas-task-owned')])return ''
+    const active=currentTasks(canvasSession({agent}))
+    if(!active.length&&!ongoingCanvasRequest(agent.session))return ''
+    return CANVAS_ONGOING_GUIDANCE+'\n当前持续任务：'+JSON.stringify(active.map(t=>({id:t.id,state:t.state})))
+  }})
   let stored=[];try{stored=JSON.parse(await readFile(filePath,'utf8'))}catch(error){if(error.code!=='ENOENT')throw error}await tasks.restore(stored)
   const reports=setInterval(()=>{for(const t of tasks.tasks.values())if(live(t)&&Date.now()-(reported.get(t.id)?.at??0)>=5000)void report(t)},5000);reports.unref?.()
   const disposeTool=ctx.tools.register(defineTool({name:'research_canvas_task',description:'通过当前画板右侧会话管理持续任务。陪伴、协作、反复响应、持续观察等自然语言要求本身就授权持续任务，无需用户说工具名。这类目标必须start（completionMode=until-stopped），不能只做一次操作后要求用户逐次发消息。补充消息不停止原任务：有新要求时steer更新同一任务；只问进度时list。不要停掉旧任务再创建替代任务。start 适用于用户明确要求持续跟踪、等待其他用户或状态变化并反复操作整个画布的任务；先与用户目标对应，指定清晰结束条件。start/resume 会持续等待整条任务结束，主会话始终处于执行中；中间进展自动回报，输入框停止按钮结束任务。不要为每次变化创建新任务或新子代理。任务支持 list/pause/resume/takeover/stop，用户操作不结束任务。短暂离开、断线或单轮超时会等待并重新观察恢复，恢复等待时限结合近期模型耗时动态调整，正常等待用户操作不算失败；显式停止、权限撤销、重启及达到任务上限会停止或暂停。不可见时不执行操作。不能声称离线或云端持续运行。一次性操作用 research_canvas_use。不要针对某种游戏硬编码。',parameters:{action:{type:'string',required:true,enum:['start','list','steer','wait','pause','resume','takeover','stop']},title:{type:'string',description:'简短的中文任务名称，面向用户，不含工具名、技术说明或执行步骤。'},goal:{type:'string'},completion:{type:'string'},completionMode:{type:'string',enum:['until-stopped','goal'],description:'默认until-stopped，陪伴或持续响应直到用户明确停止；仅用户指定可完成的整体目标时用goal。'},instruction:{type:'string',description:'steer时传入用户的新要求，保留原目标及上下文。'},taskId:{type:'string'},maxMinutes:{type:'integer',description:'仅在用户明确指定整体任务时长时填写；不要擅自设置5分钟等短时限。未指定默认8小时，输入框停止按钮随时结束；模型单轮超时单独动态判断。'},maxActions:{type:'integer'}},output:{schema:{type:'string'},render:(_a,r)=>[{type:'text',text:r}]},execute:async(args,exec)=>{
@@ -209,5 +218,5 @@ export async function registerCanvasUseTasks(ctx,{filePath,isTrustedRequest,read
     if(req.method!=='POST'||!isTrustedRequest(req,true))return send(403,{error:'请求无效'})
     try{const b=await readJsonBody(req);if(typeof b.sessionId!=='string')throw Error('会话无效');if(b.action==='wake')tasks.wake(b.sessionId);else if(b.action)await tasks.control(b.sessionId,b.taskId,b.action);send(200,{tasks:tasks.list(b.sessionId)})}catch(error){send(400,{error:error.message})}
   }})
-  return async()=>{clearInterval(reports);disposeTool();disposeRoute();await tasks.dispose()}
+  return async()=>{clearInterval(reports);disposeGoalGuard();disposeGuidance?.();disposeTool();disposeRoute();await tasks.dispose()}
 }
