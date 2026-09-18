@@ -9,27 +9,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "长程画布任务恢复与连续执行过程",
+        "featureName": "持续任务单上下文与全局执行过程和窗口性能优化",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "00ce1467ae7ca782040f700a182b40d2fedbb2d0",
-        "tipCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
+        "baseCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
+        "tipCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
         "commits": [
           {
-            "commit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
+            "commit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
             "parents": [
-              "00ce1467ae7ca782040f700a182b40d2fedbb2d0"
+              "43c5b70ab9595f0b51d50e5ff1554de48206953b"
             ],
-            "subject": "修复：长程画布任务自动恢复并保持连续会话执行过程"
+            "subject": "优化：持续任务复用执行上下文并统一全局过程展开与窗口缩放反馈"
           }
         ],
         "files": [
           {
+            "status": "M",
+            "path": "packages/dsh-research-collaboration/activity.js"
+          },
+          {
             "status": "A",
-            "path": "docs/canvas-continuous-task-lifecycle.md"
+            "path": "packages/dsh-research-task-runtime/canvas-task-executor.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-agent-scope.js"
           },
           {
             "status": "M",
@@ -41,15 +53,47 @@
           },
           {
             "status": "M",
+            "path": "src/preload/figma-motion.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-resize-feedback.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-responsive-header.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-scrollbars.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/navigation-title-preview.ts"
+          },
+          {
+            "status": "M",
             "path": "test/canvas-task-conversation.test.js"
           },
           {
             "status": "A",
-            "path": "test/canvas-task-recovery.test.js"
+            "path": "test/canvas-task-executor.test.js"
           },
           {
             "status": "M",
             "path": "test/canvas-use.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/compact-execution-status.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-resize-feedback.test.ts"
           }
         ],
         "checks": [
@@ -58,17 +102,22 @@
               "npx",
               "vitest",
               "run",
+              "test/canvas-task-executor.test.js",
               "test/canvas-use.test.js",
+              "test/canvas-task-recovery.test.js",
               "test/canvas-task-conversation.test.js",
+              "test/shared-native-conversation.test.js",
               "test/canvas-use-tool-observation.test.js",
               "test/component-interaction-state.test.js",
-              "test/shared-native-conversation.test.js",
-              "test/canvas-task-recovery.test.js"
+              "test/figma-resize-feedback.test.ts",
+              "test/figma-responsive-header.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/compact-execution-status.test.ts"
             ],
             "outcome": "passed",
-            "summary": "44 项相关验证通过，包含人工介入、超时恢复、显式停止与连续会话",
-            "verifiedCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
-            "completedAt": "2026-09-18T03:37:21.408335+00:00",
+            "summary": "95 项聚焦验证通过，包含同一执行上下文接续、主调用持续等待、取消以及全局折叠顺序",
+            "verifiedCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
+            "completedAt": "2026-09-18T04:19:14.570046+00:00",
             "timeoutMs": 120000
           },
           {
@@ -81,8 +130,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
-            "completedAt": "2026-09-18T03:37:21.408335+00:00",
+            "verifiedCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
+            "completedAt": "2026-09-18T04:19:14.570046+00:00",
             "timeoutMs": 120000
           },
           {
@@ -92,8 +141,8 @@
             ],
             "outcome": "passed",
             "summary": "实际 D1/DO/WS 进度、重连及权限验证通过",
-            "verifiedCommit": "43c5b70ab9595f0b51d50e5ff1554de48206953b",
-            "completedAt": "2026-09-18T03:37:21.408335+00:00",
+            "verifiedCommit": "cc0af084643d2d2c392f6ca99a9bd8bf10c9130e",
+            "completedAt": "2026-09-18T04:19:14.570046+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -102,67 +151,15 @@
           "summary": "功能 worktree 不构建共享客户端；真实 UI 在集成批次验证。"
         },
         "acceptanceCriteria": [
-          "短暂用户操作、失焦和超时自动重新观察恢复",
-          "持续任务保持一条执行过程，中间不出现结束操作栏",
-          "显式停止立即撤销操作，连续5分钟无法恢复时暂停"
+          "整条任务保持主会话执行状态并复用同一执行上下文",
+          "普通对话和研究画板的过程标题均在展开正文之前",
+          "光标形状和阴影符合参考，窗口调整即时响应"
         ],
         "risks": [
           "模型请求延迟仍受提供方影响",
           "真实客户端退出需重新启动任务；不具备离线云端执行能力"
         ],
-        "generatedAt": "2026-09-18T03:37:21.408335+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5a2753f997a2e8a14dd215f83309181ec6262d97",
-        "verificationCommit": "5a2753f997a2e8a14dd215f83309181ec6262d97",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "5a2753f997a2e8a14dd215f83309181ec6262d97",
-            "completedAt": "2026-09-18T03:37:53.036Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "5a2753f997a2e8a14dd215f83309181ec6262d97",
-            "completedAt": "2026-09-18T03:37:53.036Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "5a2753f997a2e8a14dd215f83309181ec6262d97",
-            "completedAt": "2026-09-18T03:37:53.036Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T03:37:53.036Z"
+        "generatedAt": "2026-09-18T04:19:14.570046+00:00"
       }
     }
   ],
