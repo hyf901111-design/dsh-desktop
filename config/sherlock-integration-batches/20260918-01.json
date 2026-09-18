@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "用户消息气泡宽度",
+        "featureName": "消息宽度与窗口边缘拖拽",
         "branch": "codex/feat/canvas-use-tasks-20260917",
         "baseCommit": "290f9e7befc0e37e226567009aca979d24163808",
-        "tipCommit": "9ddac8cb21eba0cb57f37fa4fc9126a501328ed2",
+        "tipCommit": "8faa99fb79603dbf2e791e7b513a9d62eb044546",
         "commits": [
           {
             "commit": "9ddac8cb21eba0cb57f37fa4fc9126a501328ed2",
@@ -20,12 +20,43 @@
               "290f9e7befc0e37e226567009aca979d24163808"
             ],
             "subject": "收窄用户消息气泡并保留左侧留白"
+          },
+          {
+            "commit": "8faa99fb79603dbf2e791e7b513a9d62eb044546",
+            "parents": [
+              "9ddac8cb21eba0cb57f37fa4fc9126a501328ed2"
+            ],
+            "subject": "扩大客户端边缘缩放热区并按方向显示拖拽光标"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/window-resize.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/window-resize.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/window-resize.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/window-resize.test.ts"
           }
         ],
         "checks": [
@@ -34,12 +65,13 @@
               "npx",
               "vitest",
               "run",
+              "test/window-resize.test.ts",
               "test/figma-reading-layout.test.ts"
             ],
             "outcome": "passed",
-            "summary": "4 项阅读布局检查通过",
-            "verifiedCommit": "9ddac8cb21eba0cb57f37fa4fc9126a501328ed2",
-            "completedAt": "2026-09-18T07:48:17.866834+00:00",
+            "summary": "7 项边缘尺寸和阅读布局检查通过",
+            "verifiedCommit": "8faa99fb79603dbf2e791e7b513a9d62eb044546",
+            "completedAt": "2026-09-18T07:51:12.239884+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -48,7 +80,8 @@
           "summary": "功能 worktree 不构建共享客户端；将在集成产物中检查全局展开。"
         },
         "acceptanceCriteria": [
-          "主对话和研究侧栏用户消息右对齐，最大占内容宽度70%"
+          "主对话和研究侧栏用户消息右对齐，最大占内容宽度70%",
+          "四边及角落扩大缩放热区并显示方向光标"
         ],
         "risks": [],
         "generatedAt": "2026-09-18T07:35:00.942880+00:00"
