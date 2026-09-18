@@ -11,33 +11,21 @@
         "schemaVersion": 1,
         "featureName": "全画布持续任务与通用交互",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "7d730a540905c0ababfb98e0d50b943f96accb90",
-        "tipCommit": "5191728fcd361156c0258374cc66d1ecdabf471e",
+        "baseCommit": "5191728fcd361156c0258374cc66d1ecdabf471e",
+        "tipCommit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
         "commits": [
           {
-            "commit": "5191728fcd361156c0258374cc66d1ecdabf471e",
+            "commit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
             "parents": [
-              "7d730a540905c0ababfb98e0d50b943f96accb90"
+              "5191728fcd361156c0258374cc66d1ecdabf471e"
             ],
-            "subject": "修复：支持组件本地表单提交并收紧持续任务控制卡片"
+            "subject": "修复：持续任务卡随会话消息滚动，取消分栏布局"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/canvas-use-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/canvas-use.test.js"
           }
         ],
         "checks": [
@@ -47,30 +35,12 @@
               "vitest",
               "run",
               "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
+              "test/research-canvas-actions-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "36 项直接相关检查通过，含本地表单提交与客户端预览构建回归",
-            "verifiedCommit": "5191728fcd361156c0258374cc66d1ecdabf471e",
-            "completedAt": "2026-09-17T16:44:13.528144+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "5191728fcd361156c0258374cc66d1ecdabf471e",
-            "completedAt": "2026-09-17T16:44:13.528144+00:00",
+            "summary": "18 项相关检查通过，含客户端补丁幂等与语法",
+            "verifiedCommit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
+            "completedAt": "2026-09-18T01:03:13.934775+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -79,68 +49,14 @@
           "summary": "功能 worktree 不构建共享客户端；真实界面和会话执行链将在集成批次验证。"
         },
         "acceptanceCriteria": [
-          "右侧会话创建全画布持续任务，支持跨组件操作",
-          "观察版本保护、虚拟光标、暂停接管恢复停止",
-          "无变化时不调用模型，离开或重启暂停"
+          "持续任务卡与消息共用滚动区域，暂停接管等操作保留"
         ],
         "risks": [
           "当前画板前台执行；不含云端离线任务",
           "受信任硬件输入和系统交互需要用户接管",
           "真实模型链路与界面待集成验收"
         ],
-        "generatedAt": "2026-09-17T16:44:13.528144+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2a1e833857dcfa7d21478f1c00ad2044080f471d",
-        "verificationCommit": "2a1e833857dcfa7d21478f1c00ad2044080f471d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "2a1e833857dcfa7d21478f1c00ad2044080f471d",
-            "completedAt": "2026-09-17T16:44:39.863Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "2a1e833857dcfa7d21478f1c00ad2044080f471d",
-            "completedAt": "2026-09-17T16:44:39.863Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "2a1e833857dcfa7d21478f1c00ad2044080f471d",
-            "completedAt": "2026-09-17T16:44:39.863Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-17T16:44:39.863Z"
+        "generatedAt": "2026-09-18T01:03:13.934775+00:00"
       }
     }
   ],
