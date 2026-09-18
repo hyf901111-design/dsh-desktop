@@ -1,5 +1,20 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
+export async function requireComputerVision(ctx, exec) {
+  const route = exec.agent?.session?.requestHeader?.()?.config
+  const provider = route?.provider ?? exec.agent?.options?.provider
+  const model = route?.model ?? exec.agent?.options?.model
+  const llm = ctx.get?.('llm')
+  if (!provider || !model || !llm || !ctx.get?.('attachments')) {
+    throw Error('无法确认当前会话的图片输入能力，未执行桌面操作。请先选择支持图片输入的模型。')
+  }
+  const info = await llm.resolveModelInfo(provider, model, exec.signal)
+  if (!info?.inputModalities?.includes('image')) {
+    throw Error(`当前模型 ${model} 不支持图片输入，无法查看桌面截图，未执行桌面操作。请切换支持图片输入的模型后重试；不要通过 read_image、搜索临时截图或脚本绕过。`)
+  }
+  exec.signal?.throwIfAborted()
+}
+
 export function registerComputerUseTool(ctx) {
   const active = new Set()
   async function request(input, signal) {
@@ -40,6 +55,15 @@ export function registerComputerUseTool(ctx) {
     execute: async (args, exec) => {
       const sessionId = exec.agent?.session?.id
       if (!sessionId) throw Error('桌面操作需要当前执行会话。')
+      // Model routes can change between turns. Check the exact active route before
+      // taking a screenshot or delivering any input, not after an invisible action.
+      if (!['apps', 'windows', 'finish'].includes(args.op)) {
+        try { await requireComputerVision(ctx, exec) }
+        catch (error) {
+          if (active.delete(sessionId)) await request({ op: 'release', sessionId }).catch(() => {})
+          throw error
+        }
+      }
       active.add(sessionId)
       const result = await request({ ...args, sessionId }, exec.signal)
       const attachments = ctx.get?.('attachments')
