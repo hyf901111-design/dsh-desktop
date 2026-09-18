@@ -9,7 +9,7 @@ export function installWindowResize(window: BrowserWindow) {
   const listener = (event: Electron.IpcMainEvent, edge: unknown) => {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) return
     stop()
-    if (typeof edge !== 'string' || !/^(n|s|e|w|ne|nw|se|sw)$/.test(edge) || window.isMaximized() || window.isFullScreen()) return
+    if (typeof edge !== 'string' || !/^(n|s|e|w|ne|nw|se|sw)$/.test(edge) || window.isFullScreen()) return
     const origin = screen.getCursorScreenPoint(), bounds = window.getBounds()
     const [minWidth = 800, minHeight = 640] = window.getMinimumSize()
     let last = bounds
