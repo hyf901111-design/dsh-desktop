@@ -265,12 +265,10 @@ export function patchCanvasUseClient(source) {
       const button=value.slice(b+4,c+2)
       value=value.slice(0,a)+'/* EXECUTION_HEADER_FIRST */children: ['+button+', '+progress+value.slice(c+2)
     }
-    if(!value.includes('/* CANVAS_TASK_LIVE_STATUS */')) {
-      const anchor=', progressSurface.showProgress'
-      const start=value.indexOf('function ExecutionStatusGroup('),at=value.indexOf(anchor,start)
-      if(at<0)throw Error('Canvas live status anchor missing')
-      value=value.slice(0,at)+`, /* CANVAS_TASK_LIVE_STATUS */ entry.canvasTask && entry.running && react.createElement('div',{className:'odyssey-canvas-live-status',role:'status'}, /^正在/.test(entry.canvasTask.reason??'') ? entry.canvasTask.reason : entry.canvasTask.state==='waiting'?'正在等待内容变化':'正在观察画布')`+value.slice(at)
-    }
+    // Move the transient action into the existing shimmering header.
+    value=value.replace(/, \/\* CANVAS_TASK_LIVE_STATUS \*\/ entry\.canvasTask[\s\S]*?(?=, progressSurface.showProgress)/,'')
+    value=value.replace("'执行过程 · '+({running:'正在执行',waiting:'等待变化',paused:'已暂停',completed:'已完成',stopped:'已停止'})[entry.canvasTask.state]", "'执行过程 · '+(entry.running ? (/^正在/.test(entry.canvasTask.reason??'') ? entry.canvasTask.reason : entry.canvasTask.state==='waiting'?'等待内容变化':'正在观察画布') : ({paused:'已暂停',completed:'已完成',stopped:'已停止'})[entry.canvasTask.state])")
+
 
     value=value.replace('task:entry.task,t});','task:entry.task,t,showExecution:entry.showExecution});')
     if(value.includes('/* CANVAS_CONTINUOUS_EXECUTION */'))return value
@@ -283,7 +281,9 @@ export function patchCanvasUseClient(source) {
   const connectConversation=value=>{
     // Ongoing goals do not have a near-term queue boundary. Deliver new input
     // as steering, without invoking the explicit goal-stop control.
-    value=value.replace('keyboard.submit(resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));', 'keyboard.submit(canvasRunning && subagent === null ? "steer" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));')
+    value=value.replace('keyboard.submit(resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));', 'keyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));')
+    value=value.replace('canvasRunning && subagent === null ? \"steer\" : resolveSubmitMode','canvasRunning && subagent === null ? \"queue\" : resolveSubmitMode')
+    value=value.replace('const primaryStops = canvasRunning || running && subagent === null;', 'const primaryStops = empty && (canvasRunning || running && subagent === null);')
     if(value.includes('/* CANVAS_TASK_COMPOSER */'))return value
     const replace=(a,b)=>{if(!value.includes(a))throw Error('Canvas task conversation anchor missing: '+a);value=value.replace(a,b)}
     replace('const primaryStops = running && subagent === null;', `/* CANVAS_TASK_COMPOSER */
@@ -291,7 +291,7 @@ export function patchCanvasUseClient(source) {
       const canvasRunning=canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));
       const ordinaryStop=stop;
       stop=()=>{if(canvasRunning)void canvasExecution.stop().catch(error=>showToast(error.message));ordinaryStop?.()};
-      const primaryStops = canvasRunning || running && subagent === null;`)
+      const primaryStops = empty && (canvasRunning || running && subagent === null);`)
     replace('const expandable = detailGroups.length > 0;', 'const expandable = !!entry.canvasTask || detailGroups.length > 0;')
     replace('const status = executionSummaryStatus(activityNodes, entry.running, t);', "const status = entry.canvasTask ? '执行过程 · '+({running:'正在执行',waiting:'等待变化',paused:'已暂停',completed:'已完成',stopped:'已停止'})[entry.canvasTask.state] : executionSummaryStatus(activityNodes, entry.running, t);")
     replace('open && progressSurface.detailGroups.length > 0', "open && entry.canvasTask && react.createElement('div',{className:ChatView_module_css_default.executionDetails},...(entry.canvasTask.history?.length?entry.canvasTask.history:[{reason:entry.canvasTask.reason}]).map((row,index)=>react.createElement(AssistantMarkdown,{key:index,blocks:[{kind:'text',text:row.reason}],streaming:false,interrupted:false,t}))), open && progressSurface.detailGroups.length > 0")

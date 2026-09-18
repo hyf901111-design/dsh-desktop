@@ -130,3 +130,8 @@ body .odyssey-canvas-live-status { margin:8px 0 2px 23px; font:400 14px/24px var
 body .Md3f7G_executionGroup[data-expanded=true] > .odyssey-canvas-live-status { margin-top:0; margin-bottom:12px; }
 @keyframes odyssey-canvas-status-shimmer { from { background-position:100% 0; } to { background-position:0 0; } }
 @media(prefers-reduced-motion:reduce) { body .odyssey-canvas-live-status { animation:none; background:none; color:var(--dsw-alias-label-secondary); } }
+
+/* Keep status and prose distinct, and reveal process records directly below. */
+body .Md3f7G_executionGroup > .Md3f7G_executionTrigger { margin-bottom:20px; }
+body .Md3f7G_executionGroup[data-expanded=true] > .Md3f7G_executionTrigger { margin-bottom:20px; }
+body .Md3f7G_executionGroup > .Md3f7G_executionDetails { margin-top:16px; gap:12px; max-height:none; overflow:visible; }
