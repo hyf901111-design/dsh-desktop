@@ -49,6 +49,7 @@ it('fits desktop overflow while retaining responsive page scale and stable fitte
 })
 
 it('follows session completion even while another tab is selected and keeps persistent tasks visible',async()=>{
+  // @ts-ignore Frontend patch module is plain JavaScript.
   const {patchConversationBrowser}=await import('../scripts/lib/conversation-browser-client.mjs')
   const source=patchConversationBrowser('class ResearchSidebarCoordinator { attach(){ const unregisterGenerated=service.registerTab({}); return()=>{unregisterGenerated?.();}; }}')
   let receive:any,changed:any,taskChanged:any
