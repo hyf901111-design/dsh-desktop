@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260918-02",
+  "branch": "codex/integration/20260918-02",
+  "baseMainCommit": "1d49421894972f252e4bce7f984008067bcefdbb",
+  "expectedMainCommit": "1d49421894972f252e4bce7f984008067bcefdbb",
+  "createdAt": "2026-09-18T13:15:32.019Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话浏览器与持续光标、网页全文和侧栏交互",
+        "branch": "codex/feat/web-content-composer-20260918",
+        "baseCommit": "1d49421894972f252e4bce7f984008067bcefdbb",
+        "tipCommit": "0ce2189e77f227131f60ad559e0ded7ea62693e4",
+        "commits": [
+          {
+            "commit": "0ce2189e77f227131f60ad559e0ded7ea62693e4",
+            "parents": [
+              "1d49421894972f252e4bce7f984008067bcefdbb"
+            ],
+            "subject": "功能：支持对话浏览器与持续光标并修复网页全文和侧栏交互"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/browser-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-web-search-session-model/index.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-browser-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/workspace-drag-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/browser-page-reader.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/search/conversation-browser.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-runtime.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/search/rendered-page-content.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-scroll-fade.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-reader.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/local-search-bridge.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/rendered-page-content.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-scroll-fade.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workspace-drag-feedback.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/conversation-browser.test.ts",
+              "test/canvas-use.test.js",
+              "test/canvas-use-tool-observation.test.js",
+              "test/workspace-drag-feedback.test.js",
+              "test/browser-page-reader.test.ts",
+              "test/rendered-page-content.test.ts",
+              "test/sidebar-scroll-fade.test.ts",
+              "test/local-search-bridge.test.ts",
+              "test/figma-reading-layout.test.ts",
+              "test/figma-reading-column.test.js",
+              "test/research-board-navigation-final.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "67项聚焦测试及类型检查通过",
+            "verifiedCommit": "0ce2189e77f227131f60ad559e0ded7ea62693e4",
+            "completedAt": "2026-09-18T13:15:30.983994+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "-p",
+              "tsconfig.node.json",
+              "--noEmit"
+            ],
+            "outcome": "passed",
+            "summary": "67项聚焦测试及类型检查通过",
+            "verifiedCommit": "0ce2189e77f227131f60ad559e0ded7ea62693e4",
+            "completedAt": "2026-09-18T13:15:30.983994+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离 Electron 真实百度输入、回车搜索、结果页观察及光标截图通过；共享客户端集成后验证面板与登录态。"
+        },
+        "acceptanceCriteria": [
+          "对话模式右侧浏览器支持搜索操作并持续显示光标",
+          "虚拟文档滚动汇总且不冒充全文",
+          "遮挡与侧栏拖拽及时反馈"
+        ],
+        "risks": [
+          "图片内文字未执行OCR，读取状态会明确标注"
+        ],
+        "generatedAt": "2026-09-18T13:15:30.983994+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/conversation-browser.test.ts",
+        "test/canvas-use.test.js",
+        "test/canvas-use-tool-observation.test.js",
+        "test/workspace-drag-feedback.test.js",
+        "test/browser-page-reader.test.ts",
+        "test/rendered-page-content.test.ts",
+        "test/sidebar-scroll-fade.test.ts",
+        "test/local-search-bridge.test.ts",
+        "test/figma-reading-layout.test.ts",
+        "test/figma-reading-column.test.js",
+        "test/research-board-navigation-final.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "tsc",
+        "-p",
+        "tsconfig.node.json",
+        "--noEmit"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
