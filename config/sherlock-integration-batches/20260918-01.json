@@ -9,34 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "持续交互自然语言入口与执行约束",
+        "featureName": "持续目标系统指令与引用边界",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "2bd71d4f057f41280643d35f14b88948091ed4c1",
-        "tipCommit": "6ce3e10b0af40cdb8cf0082f1ed8a7df65867f32",
+        "baseCommit": "6ce3e10b0af40cdb8cf0082f1ed8a7df65867f32",
+        "tipCommit": "8bc118deb571e34e23f7fc1b9db0fb44f27785ff",
         "commits": [
           {
-            "commit": "6ce3e10b0af40cdb8cf0082f1ed8a7df65867f32",
+            "commit": "8bc118deb571e34e23f7fc1b9db0fb44f27785ff",
             "parents": [
-              "2bd71d4f057f41280643d35f14b88948091ed4c1"
+              "6ce3e10b0af40cdb8cf0082f1ed8a7df65867f32"
             ],
-            "subject": "修复：持续交互意图必须进入任务执行器并阻止单步回复替代"
+            "subject": "修复：持续目标指令明确依赖并排除引用组件内容的干扰"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
+            "status": "M",
+            "path": "docs/research/canvas-use.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
             "path": "test/canvas-task-routing.test.js"
           }
         ],
@@ -54,9 +58,9 @@
               "test/canvas-use.test.js"
             ],
             "outcome": "passed",
-            "summary": "48 项聚焦验证通过",
-            "verifiedCommit": "6ce3e10b0af40cdb8cf0082f1ed8a7df65867f32",
-            "completedAt": "2026-09-18T05:46:19.189716+00:00",
+            "summary": "49 项聚焦验证通过",
+            "verifiedCommit": "8bc118deb571e34e23f7fc1b9db0fb44f27785ff",
+            "completedAt": "2026-09-18T05:51:08.706643+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -71,59 +75,7 @@
           "主动停止仍立即生效"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T05:46:19.189716+00:00"
-      },
-      "merged": {
-        "mergeCommit": "461386ac1d1bac5f270cedab913893e6894aa9d6",
-        "verificationCommit": "461386ac1d1bac5f270cedab913893e6894aa9d6",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "461386ac1d1bac5f270cedab913893e6894aa9d6",
-            "completedAt": "2026-09-18T05:46:47.164Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "461386ac1d1bac5f270cedab913893e6894aa9d6",
-            "completedAt": "2026-09-18T05:46:47.164Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "461386ac1d1bac5f270cedab913893e6894aa9d6",
-            "completedAt": "2026-09-18T05:46:47.164Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T05:46:47.164Z"
+        "generatedAt": "2026-09-18T05:51:08.706643+00:00"
       }
     }
   ],
