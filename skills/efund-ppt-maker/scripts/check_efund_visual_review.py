@@ -9,7 +9,8 @@ import hashlib
 import json
 from pathlib import Path
 
-CHECKS = ('titleColor', 'noShadow', 'tocStyle', 'overflow', 'brandFurniture')
+CHECKS = ('titleColor', 'noShadow', 'tocStyle', 'overflow', 'brandFurniture', 'textGraphicSpacing', 'whitespaceBalance',
+          'lineBreaks', 'glyphs', 'nativeOpen')
 
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()

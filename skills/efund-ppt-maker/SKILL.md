@@ -7,9 +7,9 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 以三份经过审计的成品 PPT 为品牌证据，把模板视为完整品牌系统，把案例页视为视觉语法和质量标尺，不视为正文布局答案。选择一个最匹配的源稿作为唯一品牌来源；先根据内容关系自主设计正文几何，再决定在品牌壳内原创或受控重组。整页复用只用于固定标准页、明确续写或结构完全匹配的少数页面。用户已确认或亲自修改的页面优先于内置案例。不得只取色值后自由发挥，也不得把多个源稿的页面或图标混入同一输出文件。
 
-## 1.1.0 成品要求
+## 1.1.1 成品要求
 
-必须先读取 [delivery-110.md](references/delivery-110.md)。本版新增成品标题显式白色、主题效果引用、目录真实样式和最终视觉验收检查。此前版本的“零错误”不代表新门禁通过。
+必须先读取 [delivery-111.md](references/delivery-111.md) 和 [delivery-110.md](references/delivery-110.md)。本版统一封面副标题为 18pt，增加实际换行、文图间距、流程留白与原生字体检查；继续执行标题白色、主题效果、目录样式和最终视觉验收门禁。此前版本的“零错误”不代表新门禁通过。
 
 先读取 [delivery-109.md](references/delivery-109.md)：封面副标题统一常规不加粗；目录首行上方无横线，其他行分隔保留；逐页声明 `layoutChoice`，适用正文默认采用左侧标题与正文、右侧图表。
 
@@ -100,7 +100,7 @@ description: 按照易方达 PPT 规范创建、续写、改版或统一 PowerPo
 
 不得在任一硬错误未解决时交付。
 
-先运行 1.1.0 成品校验（字段定义见 delivery-107.md）：
+先运行 1.1.1 成品校验（字段定义见 delivery-107.md）：
 
 ```bash
 python "$SKILL_DIR/scripts/check_efund_delivery.py" "$FINAL_PPTX" --source "$SOURCE_PPTX" --map "$QA_DIR/template-frame-map.json" --json-output "$QA_DIR/efund-delivery.json"

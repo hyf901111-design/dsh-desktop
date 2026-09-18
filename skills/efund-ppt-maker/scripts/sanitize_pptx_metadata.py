@@ -30,7 +30,7 @@ CORE_CLEAR = {
 }
 CORE_REMOVE: set[str] = set()
 APP_CLEAR = {"Manager", "HyperlinkBase", "Template", "Company"}
-APP_REMOVE: set[str] = set()
+APP_REMOVE: set[str] = {"AppVersion"}  # Optional; empty value makes native PowerPoint repair the file.
 APP_ZERO = {"TotalTime"}
 LOCAL_TARGET_RE = re.compile(r"^(?:file:|/?[A-Za-z]:[\\/]|/Users/|/home/)", re.I)
 LOCAL_PATH_RE = re.compile(r"(?:file:/{0,3})?(?:[A-Za-z]:[\\/]|/Users/|/home/)", re.I)

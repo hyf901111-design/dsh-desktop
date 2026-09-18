@@ -4,6 +4,7 @@ These checks deliberately reject ambiguous theme effects even when one renderer
 honors a local empty effectLst: PowerPoint and PDF exporters can disagree.
 """
 import xml.etree.ElementTree as ET
+from efund_text_properties import invalid_text_properties
 from check_efund_cover import NS, object_id, xml_root, relationships, resolve_target
 
 
@@ -34,7 +35,7 @@ def check_portable_slide(package, part):
         root = xml_root(package, name)
         for element in root.iter():
             tag = element.tag.split('}')[-1]
-            if tag in ('rPr', 'defRPr', 'endParaRPr') and has_misordered_text_fill(element):
+            if tag in ('rPr', 'defRPr', 'endParaRPr') and invalid_text_properties(element):
                 errors.add('text-properties-child-order-invalid')
             if tag in ('outerShdw', 'innerShdw', 'prstShdw', 'glow'):
                 errors.add('render-shadow-or-glow')
