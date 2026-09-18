@@ -132,3 +132,11 @@ it('preserves editable canvas queue text when the full shell build patch is reap
  expect(rebuilt).toContain('canvasQueueEditContent(queue.find(')
  expect(patchCanvasUseClient(rebuilt)).toBe(rebuilt)
 })
+
+
+it('keeps Stop for a canvas reference without text and Send for text or files',async()=>{
+ const {canvasComposerEmpty}=await import('../scripts/lib/canvas-use-client.mjs')
+ expect(canvasComposerEmpty(' \uFFFC ')).toBe(true)
+ expect(canvasComposerEmpty('\uFFFC 继续观察')).toBe(false)
+ expect(canvasComposerEmpty('',[{name:'file.png'}])).toBe(false)
+})
