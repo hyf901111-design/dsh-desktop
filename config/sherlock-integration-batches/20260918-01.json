@@ -80,6 +80,58 @@
         ],
         "risks": [],
         "generatedAt": "2026-09-18T09:33:59.078695+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
+        "verificationCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
+            "completedAt": "2026-09-18T09:34:25.510Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/canvas-use.test.js",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-canvas-action-bridge.test.ts",
+              "test/research-canvas-actions.test.js",
+              "test/component-interaction-state.test.js",
+              "test/research-native-web.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
+            "verifiedCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
+            "completedAt": "2026-09-18T09:34:25.510Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "-p",
+              "tsconfig.node.json",
+              "--noEmit"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
+            "verifiedCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
+            "completedAt": "2026-09-18T09:34:25.510Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-18T09:34:25.510Z"
       }
     }
   ],
