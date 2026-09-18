@@ -11,37 +11,25 @@
         "schemaVersion": 1,
         "featureName": "对话浏览器与持续光标、网页全文和侧栏交互",
         "branch": "codex/feat/web-content-composer-20260918",
-        "baseCommit": "0ce2189e77f227131f60ad559e0ded7ea62693e4",
-        "tipCommit": "741733d3e9db3142fff480d7145e6c7faabc487d",
+        "baseCommit": "741733d3e9db3142fff480d7145e6c7faabc487d",
+        "tipCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
         "commits": [
           {
-            "commit": "741733d3e9db3142fff480d7145e6c7faabc487d",
+            "commit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
             "parents": [
-              "0ce2189e77f227131f60ad559e0ded7ea62693e4"
+              "741733d3e9db3142fff480d7145e6c7faabc487d"
             ],
-            "subject": "修复：窗口缩放同步浏览器光标并防止加载壳误判全文"
+            "subject": "修复：拖拽起步立即响应并避免窄栏光标标签裁切"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-web-search-session-model/index.js"
+            "path": "scripts/lib/workspace-drag-feedback.mjs"
           },
           {
             "status": "M",
             "path": "src/main/search/conversation-browser.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/search/rendered-page-content.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/rendered-page-content.test.ts"
           }
         ],
         "checks": [
@@ -51,12 +39,12 @@
               "vitest",
               "run",
               "test/conversation-browser.test.ts",
-              "test/rendered-page-content.test.ts"
+              "test/workspace-drag-feedback.test.js"
             ],
             "outcome": "passed",
-            "summary": "5项光标边缘与加载壳聚焦测试通过",
-            "verifiedCommit": "741733d3e9db3142fff480d7145e6c7faabc487d",
-            "completedAt": "2026-09-18T13:25:32.821410+00:00",
+            "summary": "光标边缘与拖拽反馈聚焦检查通过",
+            "verifiedCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
+            "completedAt": "2026-09-18T13:41:49.956006+00:00",
             "timeoutMs": 120000
           },
           {
@@ -69,14 +57,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "741733d3e9db3142fff480d7145e6c7faabc487d",
-            "completedAt": "2026-09-18T13:25:32.821410+00:00",
+            "verifiedCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
+            "completedAt": "2026-09-18T13:41:49.956006+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已通过真实百度操作及光标截图；集成客户端登录态读取获得飞书第3章、3.2.6和文末正文。"
+          "summary": "已在真实客户端从会话输入框跑通百度打开、输入、搜索与观察；原工作区顺序已恢复，光标持续可见。"
         },
         "acceptanceCriteria": [
           "对话模式右侧浏览器支持搜索操作并持续显示光标",
@@ -86,64 +74,7 @@
         "risks": [
           "图片内文字未执行OCR，读取状态会明确标注"
         ],
-        "generatedAt": "2026-09-18T13:25:32.821410+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6d2b89138be0414b7651269d8ba69f077218dbad",
-        "verificationCommit": "6d2b89138be0414b7651269d8ba69f077218dbad",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "6d2b89138be0414b7651269d8ba69f077218dbad",
-            "completedAt": "2026-09-18T13:25:57.237Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/conversation-browser.test.ts",
-              "test/canvas-use.test.js",
-              "test/canvas-use-tool-observation.test.js",
-              "test/workspace-drag-feedback.test.js",
-              "test/browser-page-reader.test.ts",
-              "test/rendered-page-content.test.ts",
-              "test/sidebar-scroll-fade.test.ts",
-              "test/local-search-bridge.test.ts",
-              "test/figma-reading-layout.test.ts",
-              "test/figma-reading-column.test.js",
-              "test/research-board-navigation-final.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/conversation-browser.test.ts test/canvas-use.test.js test/canvas-use-tool-observation.test.js test/workspace-drag-feedback.test.js test/browser-page-reader.test.ts test/rendered-page-content.test.ts test/sidebar-scroll-fade.test.ts test/local-search-bridge.test.ts test/figma-reading-layout.test.ts test/figma-reading-column.test.js test/research-board-navigation-final.test.ts",
-            "verifiedCommit": "6d2b89138be0414b7651269d8ba69f077218dbad",
-            "completedAt": "2026-09-18T13:25:57.237Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "6d2b89138be0414b7651269d8ba69f077218dbad",
-            "completedAt": "2026-09-18T13:25:57.237Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T13:25:57.237Z"
+        "generatedAt": "2026-09-18T13:41:49.956006+00:00"
       }
     }
   ],
