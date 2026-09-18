@@ -15,9 +15,9 @@ body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_scr
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) { padding:15px 17px 0; font-size:16px; line-height:24px; }
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_row { min-height:48px; flex:0 0 48px; box-sizing:border-box; padding:8px 11px 8px 8px; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] {
-  position:relative; inset:auto; flex:0 0 auto; background:var(--odyssey-workspace); pointer-events:auto; padding:12px 0;
+  position:relative; inset:auto; flex:0 0 auto; background:transparent; pointer-events:auto; padding:4px 0 12px;
 }
-body .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_composerSeat { position:relative; bottom:auto; background:var(--odyssey-workspace); --dsh-composer-text-max-height:min(320px,calc(50vh - 48px)); }
+body .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_composerSeat { position:relative; bottom:auto; background:transparent!important; --dsh-composer-text-max-height:min(320px,calc(50vh - 48px)); }
 body .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody { flex:1 1 0; min-height:0; overflow-x:hidden; overflow-y:auto; scroll-padding-bottom:0; }
 body .wSkVaW_root[data-odyssey-page=conversation] > .wSkVaW_scrollBody::after { display:none!important; }
 /* Figma 749:27899/28129, 750:27915/28185: main reading and input share a column.
@@ -35,7 +35,8 @@ body .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_composerStack { gap:8p
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .uV2eYG_root:not(:has([data-odyssey-continuable-composer])) { padding-bottom:0; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .uV2eYG_root:not(:has([data-odyssey-continuable-composer])) :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) { padding:16px 17px 0; font-size:15px; line-height:24px; }
 body .sRp_messages { overflow-x:hidden; overscroll-behavior-y:contain; }
-body .sRp_composer { background:var(--odyssey-right-surface); }
+/* Only the input card paints a surface; no full-width cover above it. */
+body .sRp_composer, body .sRp_composer .wSkVaW_composerSeat { background:transparent!important; }
 body .sRp_composer .wSkVaW_composerSeat { --dsh-composer-text-max-height:min(320px,calc(50vh - 48px)); }
 body [data-odyssey-reading-status] { position:relative; z-index:2; flex:0 0 0; height:0; min-height:0; box-sizing:border-box; display:flex; align-items:flex-start; justify-content:center; padding:0; transform:translateY(-44px); background:transparent; pointer-events:none; }
 body [data-odyssey-reading-status]:empty { display:none; }

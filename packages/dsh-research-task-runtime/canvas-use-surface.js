@@ -1,12 +1,12 @@
 // Serialized into generated sandboxes and isolated webpage worlds. No model code
 // is evaluated: callers can only use this finite observation/interaction API.
-export function createCanvasUseSurface(root = document.body, shared = () => null, dispatch = (el, event) => el.dispatchEvent(event)) {
+export function createCanvasUseSurface(root = document.body, shared = () => null, dispatch = (el, event) => el.dispatchEvent(event), options = {}) {
   const refs = new Map(), ids = new WeakMap(); let sequence = 0, previous = ''
   const id = el => { if (!ids.has(el)) ids.set(el, 'e' + ++sequence); const key = ids.get(el); refs.set(key, el); return key }
   const hash = text => { let h = 2166136261; for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619); return (h >>> 0).toString(36) }
   const box = el => el===document.body ? {x:0,y:0,width:innerWidth,height:innerHeight} : el.getBoundingClientRect()
   const rect = el => { const r = box(el), b = box(root); return { x: (r.x - b.x) / b.width, y: (r.y - b.y) / b.height, width: r.width / b.width, height: r.height / b.height } }
-  const visible = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && !el.closest('[data-canvas-use-cursor]') }
+  const visible = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && !el.closest('[data-canvas-use-cursor]') && (!options.viewport || (r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth)) }
   const observe = (images=true) => {
     const state = shared()
     refs.clear()
@@ -63,7 +63,8 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
       el.value=args.value;dispatch(el,new Event('input',{bubbles:true}));dispatch(el,new Event('change',{bubbles:true}))
     } else if(args.op==='scroll') {
       if(![args.x??0,args.y??0].every(n=>Number.isFinite(n)&&Math.abs(n)<=4000))throw Error('滚动距离无效。')
-      const scrollTarget=el===document.body?window:el
+      let scrollTarget=el===document.body?window:el
+      if(options.viewport){let candidate=el===document.body?document.elementFromPoint(innerWidth/2,innerHeight/2):el;while(candidate&&candidate!==document.body&&!(candidate.scrollHeight>candidate.clientHeight+8&&/auto|scroll/.test(getComputedStyle(candidate).overflowY)))candidate=candidate.parentElement;if(candidate&&candidate!==document.body)scrollTarget=candidate}
       scrollTarget.scrollBy({left:args.x||0,top:args.y||0,behavior:'instant'})
     } else if(args.op==='key') {
       if(typeof args.key!=='string'||!(/^[a-zA-Z0-9 ]$/.test(args.key)||['Enter','Escape','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Backspace','Delete'].includes(args.key)))throw Error('按键无效。')

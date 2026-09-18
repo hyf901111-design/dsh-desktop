@@ -204,3 +204,16 @@ it('routes authenticated fetch requests to the rendered browser reader', async (
     expect(unauthorized.status).toBe(401)
   } finally { await bridge.stop() }
 })
+
+it('only forwards authenticated browser operations with their execution session', async () => {
+  const browserUse = vi.fn(async (input: unknown) => ({observation:{url:'https://www.baidu.com'},input}))
+  const bridge = new LocalSearchBridge({search:async()=>({sources:[],truncated:false}),browserUse})
+  const endpoint=await bridge.start()
+  try {
+    const denied=await fetch(`${endpoint.url}/browser`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({op:'open',sessionId:'s',url:'https://www.baidu.com'})})
+    expect(denied.status).toBe(401);expect(browserUse).not.toHaveBeenCalled()
+    const response=await fetch(`${endpoint.url}/browser`,{method:'POST',headers:{authorization:`Bearer ${endpoint.token}`,'content-type':'application/json'},body:JSON.stringify({op:'open',sessionId:'s',url:'https://www.baidu.com'})})
+    expect(response.status).toBe(200)
+    expect(browserUse.mock.calls[0]?.[0]).toEqual({op:'open',sessionId:'s',url:'https://www.baidu.com'})
+  }finally{await bridge.stop()}
+})

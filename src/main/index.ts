@@ -1,3 +1,4 @@
+import { registerConversationBrowser } from './search/conversation-browser'
 import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
 import { registerResearchNativeWeb } from './state/research-native-web'
@@ -1233,9 +1234,11 @@ async function bootstrap(): Promise<void> {
   )
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
+  const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
-    readPage: readBrowserPage
+    readPage: readBrowserPage,
+    browserUse: (input,signal)=>conversationBrowser.run(input,signal)
   })
   runtime = new HarnessRuntime({
     dshEntryPath: dshEntryPath(),
