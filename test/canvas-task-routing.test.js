@@ -49,3 +49,22 @@ it('admits a real continuous goal without waiting for the parent model to choose
  }finally{dispose();await tasks.dispose()}
  expect(unbound).toBe(true)
 })
+
+it('human inbox steering releases only the parent wait and preserves the durable executor',async()=>{
+ const {registerCanvasTaskAdmission}=await import('../packages/dsh-research-task-runtime/canvas-task-routing.js')
+ const {CanvasUseTasks}=await import('../packages/dsh-research-task-runtime/canvas-use-tasks.js')
+ let handler
+ const tasks=new CanvasUseTasks({observe:async()=>({writable:true,fingerprint:'a'}),execute:async()=>({status:'wait',reason:'等待变化'})})
+ registerCanvasTaskAdmission({on:(_name,fn)=>{handler=fn;return()=>{}}},tasks)
+ try {
+  const task=await tasks.start({sessionId:'board',goal:'持续观察',completion:'用户停止',completionMode:'until-stopped'})
+  let settled=false;const waiting=tasks.wait('board',task.id).then(()=>settled=true)
+  handler({id:'board',header:{}},{type:'agent/inbox/spliced',data:{inserted:[{source:{kind:'plugin'}}]}})
+  await Promise.resolve();expect(settled).toBe(false)
+  handler({id:'board',header:{}},{type:'agent/inbox/spliced',data:{inserted:[{source:{kind:'user'}}]}})
+  await waiting
+  expect(['running','waiting']).toContain(tasks.list('board')[0].state)
+  expect(tasks.runs.get(task.id).abort.signal.aborted).toBe(false)
+  expect(tasks.runs.get(task.id).inputWaiters.size).toBe(0)
+ }finally{await tasks.dispose()}
+})

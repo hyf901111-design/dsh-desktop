@@ -70,15 +70,23 @@ export class CanvasUseTasks {
     }
     return copy(t)
   }
+  notifyInput(sessionId) {
+    for(const t of this.tasks.values())if(t.sessionId===sessionId&&live(t))
+      for(const wake of this.runs.get(t.id)?.inputWaiters??[])wake()
+  }
   async wait(sessionId,id,signal) {
     const t=this.tasks.get(id);if(!t||t.sessionId!==sessionId)throw Error('任务不存在。')
     // A tool caller can be interrupted by a new message. It does not own the
     // durable goal; explicit stop is delivered through control/API instead.
+    const run=this.runs.get(id)
+    let onInput
+    const input=new Promise(resolve=>{onInput=resolve})
+    if(run)(run.inputWaiters??=new Set()).add(onInput)
     let detach
     const interrupted=new Promise((_,reject)=>{detach=()=>reject(signal.reason??new Error('会话已更新，持续任务仍在执行。'))})
     signal?.addEventListener('abort',detach,{once:true})
-    try {if(signal?.aborted)detach();await Promise.race([this.runs.get(id)?.done,interrupted]);return copy(t)}
-    finally {signal?.removeEventListener('abort',detach)}
+    try {if(signal?.aborted)detach();await Promise.race([run?.done,interrupted,input]);return copy(t)}
+    finally {signal?.removeEventListener('abort',detach);run?.inputWaiters?.delete(onInput)}
   }
   steer(sessionId,id,instruction) {
     return this.serial(sessionId,async()=>{
