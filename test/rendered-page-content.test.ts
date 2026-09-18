@@ -35,3 +35,11 @@ it('reports missing outline chapters and a bounded incomplete traversal', async 
   expect(result.missingHeadings).toBe(1)
   expect(result.sourceText).toContain('首章正文')
 })
+
+it('does not certify a loading Feishu shell as the full document', async () => {
+  window = new Window({url:'https://efund.feishu.cn/wiki/document'})
+  window.document.body.innerHTML = '<main>' + '正在载入文档'.repeat(40) + '</main>'
+  const result = await window.eval(renderedPageContentScript(400))
+  expect(result.complete).toBe(false)
+  expect(result.sourceText).toBe('')
+})

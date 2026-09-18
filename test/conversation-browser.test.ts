@@ -15,5 +15,8 @@ it('keeps one visible non-intercepting cursor without adding its label to source
   expect(cursor.style.pointerEvents).toBe('none')
   expect(cursor.style.left).toBe('400px')
   expect(win.document.body.textContent).toBe('原网页正文')
+  win.eval(browserCursorScript(.99,.99,'Agent · 点击'))
+  expect(cursor.style.left).toBe('792px')
+  expect(cursor.style.top).toBe('594px')
   await win.happyDOM.abort()
 })

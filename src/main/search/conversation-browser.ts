@@ -126,7 +126,7 @@ export function registerConversationBrowser(options: { ipcMain: IpcMain; getMain
     if(!['x','y','width','height'].every(k=>Number.isFinite(r[k])))return false
     const rect={x:Math.round(r.x*zoom),y:Math.round(r.y*zoom),width:Math.round(r.width*zoom),height:Math.round(r.height*zoom)}
     const visible=v.visible===true&&rect.width>0&&rect.height>0&&rect.x>=0&&rect.y>=0&&rect.x+rect.width<=(width??0)&&rect.y+rect.height<=(height??0)
-    if(visible){e.view.setBounds(rect);e.view.webContents.setZoomFactor(zoom)}
+    if(visible){e.view.setBounds(rect);e.view.webContents.setZoomFactor(zoom);void cursor(e,e.label)}
     e.view.setVisible(visible);e.visible=visible;return true
   })
   main().once('closed',()=>{for(const id of entries.keys())close(id)})
