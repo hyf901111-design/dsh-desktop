@@ -210,6 +210,7 @@ contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
     conversationBrowser: Object.freeze({
+      activity: (value: unknown) => ipcRenderer.invoke('conversation:browser:activity',value),
       layout: (value: unknown) => ipcRenderer.invoke('conversation:browser:layout',value),
       subscribe: (callback: (value: unknown) => void) => {
         const listener=(_event: unknown,value: unknown)=>callback(value)

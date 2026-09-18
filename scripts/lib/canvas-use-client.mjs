@@ -1,7 +1,8 @@
+import {agentCursorMarkup} from '../../packages/dsh-research-task-runtime/agent-cursor.js'
 import {createCanvasUseSurface,installCanvasUseSurface} from '../../packages/dsh-research-task-runtime/canvas-use-surface.js'
 import {anchorConversationDisclosures} from '../../packages/dsh-research-task-runtime/conversation-disclosure.js'
 
-function installCanvasUseClient(sessionId,workspace,root) {
+function installCanvasUseClient(sessionId,workspace,root,cursorMarkup) {
   let stopped=false,busy=false,revision='',fingerprint='',last='',cursor,timer,activeTask,position,animation,anchor,frame,wakeTimer,cancelMove,userPointer=false
   const receipts=new Map(),surfaces=new WeakMap()
   const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return(h>>>0).toString(36)}
@@ -48,7 +49,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
     if(cursor?.isConnected)return
     cursor=document.createElement('div');cursor.setAttribute('data-canvas-use-cursor','');cursor.setAttribute('aria-hidden','true')
     cursor.style.cssText='position:absolute;left:0;top:0;z-index:60;pointer-events:none;will-change:transform;contain:layout style;isolation:isolate;color:#0d99ff;font:11px/16px system-ui;white-space:nowrap;'
-    cursor.innerHTML='<span data-canvas-pointer style="display:inline-block;vertical-align:middle;will-change:transform;transform:translateZ(0);transform-origin:3px 3px"><svg width="18" height="19" viewBox="0 0 20 22" style="overflow:visible;transform-origin:3px 3px;filter:drop-shadow(0 1px 1px #0005) drop-shadow(0 2px 5px #0007)"><path d="M3 2.5L16.7 8.7Q17.5 9.1 16.6 9.5L10.8 11.5L8.4 17.8Q8 18.7 7.6 17.7Z" fill="rgba(135,135,135,.5)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/></svg></span><span data-canvas-cursor-label style="background:#0d99ff;color:white;border-radius:4px;padding:2px 5px"></span>'
+    cursor.innerHTML=cursorMarkup()
     const name=sherlockBoardsAdapter?.getState()?.account?.user?.username
     cursor.querySelector('[data-canvas-cursor-label]').textContent=name?name+'的智能助理':'智能助理'
     root.append(cursor)
@@ -241,8 +242,9 @@ export function canvasQueueEditContent(row,text,serialize) {
 }
 
 export function patchCanvasUseClient(source) {
+  source=source.replace('installCanvasUseClient(sessionId,workspace,rootRef.current)', 'installCanvasUseClient(sessionId,workspace,rootRef.current,agentCursorMarkup)')
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
-  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasComposerEmpty,canvasQueueEditContent,anchorConversationDisclosures,canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
+  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+agentCursorMarkup.toString()+'\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasComposerEmpty,canvasQueueEditContent,anchorConversationDisclosures,canvasTaskStore,useCanvasTasks,continueCanvasTaskFlow,mergeCanvasTaskFlow,useAllCanvasTasks,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
   const inlineTasks=value=>{
     // Migrate the former global tail into the native chronological flow.
     value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),','')
@@ -339,6 +341,6 @@ export function patchCanvasUseClient(source) {
   once('const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});',`if(request.method==='use'){const use=canvasUseOwners.get(request.sessionId);if(!use)throw Error('画板暂未打开，等待返回后重新观察。');return use(request.args,{isCancelled:request.isCancelled});}
           const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});`)
   once('const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);',`const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);
-      react.useEffect(()=>installCanvasUseClient(sessionId,workspace,rootRef.current),[sessionId,workspace]);`)
+      react.useEffect(()=>installCanvasUseClient(sessionId,workspace,rootRef.current,agentCursorMarkup),[sessionId,workspace]);`)
   return continuousFlow(connectConversation(inlineTasks(source)))
 }

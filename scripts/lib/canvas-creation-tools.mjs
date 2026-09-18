@@ -10,7 +10,7 @@ export function patchCanvasCreationTools(source) {
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
   source = patchComponentMarquee(source)
   source = patchComponentDraftFocus(source)
-  source = patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source))))
+  source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
@@ -54,7 +54,7 @@ export function patchCanvasCreationTools(source) {
   replace('title: "语音 · 双击 Fn 开始，单按结束发送；长按 Fn 说话，松开发送",', '')
   replace('children: "输入网页地址" }),', 'children: "输入网页地址" }), (0,react_jsx_runtime.jsx)("button",{type:"button",className:"odyssey-link-close","aria-label":"关闭链接输入",onClick:()=>setLinkPopoverOpen(false),children:"×"}),')
   // Labels are kept in markup for older patch compatibility but visually hidden.
-  source = patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source))))
+  source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   source = installCreationStyle(source)
   return source
 }
@@ -225,3 +225,25 @@ body [data-research-compact-chrome].odyssey-link-draft[data-selected=true]::afte
 [data-research-canvas] [data-research-node-id]:not([data-selected=true]){box-shadow:none!important}
 [data-research-canvas] [data-research-marquee]{z-index:25!important;pointer-events:none}
 `
+
+// Draft links share the exact frame, hover actions, modal and resize handles.
+function patchLinkDraftActions(source) {
+  const start=source.indexOf('function ResearchLinkDraftCard('),end=source.indexOf('function ResearchContainerDraft(',start);
+  if(start<0)return source;
+  if(end<0)throw Error('Link draft frame anchor missing');
+  return source.slice(0,start)+`function ResearchLinkDraftCard({node,workspace,selected,readOnly}) {
+    const [url,setUrl]=react.useState(''),[error,setError]=react.useState(null),[editing,setEditing]=react.useState(false);
+    const submit=()=>{if(readOnly)return;if(!workspace.completeLinkDraft(node.id,url))setError('请输入有效的网页链接');};
+    const onFrameAction=(target,action)=>{if(readOnly)return;if(action==='rename')setEditing(true);else if(action==='remove')workspace.removeNodes([target.id]);};
+    return react_jsx_runtime.jsx(ResearchCanvasRichNodeFrame,{
+      node,selected,onFrameAction:readOnly?undefined:onFrameAction,className:'odyssey-link-draft',titleText:node.title||'添加链接',
+      'data-research-artifact-card':node.id,'data-research-link-draft':'',
+      title:editing?react_jsx_runtime.jsx(ResearchCanvasInlineTitleEditor,{nodeId:node.id,value:node.title,onCommit:title=>{if(!readOnly)workspace.renameNode(node.id,title);setEditing(false)},onCancel:()=>setEditing(false)}):node.title||'添加链接',
+      onFocusCapture:()=>{if(!selected)workspace.updateSelection([node.id],'replace');},
+      children:react_jsx_runtime.jsxs('div',{className:'rScV5Q_containerDraft','data-research-preview-interactive':'',children:[
+        react_jsx_runtime.jsx('textarea',{'aria-label':'输入链接',placeholder:'输入网页链接，例如 https://example.com',rows:1,inputMode:'url',value:url,disabled:readOnly,onInput:event=>{setUrl(event.currentTarget.value);setError(null)},onKeyDown:event=>{event.stopPropagation();if(event.key==='Enter'){event.preventDefault();submit()}}}),
+        react_jsx_runtime.jsx('div',{className:'rScV5Q_containerDraftFooter',children:react_jsx_runtime.jsx('button',{'data-research-link-submit':'',disabled:readOnly||!url.trim(),onClick:submit,children:'创建'})}),
+        error&&react_jsx_runtime.jsx('span',{role:'alert',children:error})]})});
+  }
+  `+source.slice(end);
+}
