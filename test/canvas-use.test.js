@@ -80,10 +80,10 @@ describe('persistent whole-canvas tasks',()=>{
  })
  it('requires observation after actions before accepting completion',async()=>{
   const f=setup(async(_t,_o,_s,guard)=>{await guard('use',{op:'click'});return {status:'complete',reason:'已点击'}});await f.start();await flush()
-  expect(f.tasks.list('board')[0]).toMatchObject({state:'paused',actions:1});await f.tasks.dispose()
+  expect(f.tasks.list('board')[0]).toMatchObject({state:'waiting',actions:1});await f.tasks.dispose()
  })
- it('pauses on canvas removal and restores persisted tasks paused',async()=>{
-  const f=setup();await f.start();await flush();f.leave();await vi.advanceTimersByTimeAsync(1100);expect(f.tasks.list('board')[0].state).toBe('paused')
+ it('waits on temporary canvas removal and restores persisted tasks paused',async()=>{
+  const f=setup();await f.start();await flush();f.leave();await vi.advanceTimersByTimeAsync(1100);expect(f.tasks.list('board')[0].state).toBe('waiting')
   const stored=f.tasks.list('board');stored[0].state='running';await f.tasks.dispose();const next=setup();await next.tasks.restore(stored);expect(next.tasks.list('board')[0].state).toBe('paused');expect(next.run).not.toHaveBeenCalled();await next.tasks.dispose()
  })
  it('binds controls to their board and prevents two executors on one board',async()=>{
@@ -147,7 +147,13 @@ it('keeps the named small cursor during waiting, follows a curved path and remov
   const task={id:'t',state:'waiting',updatedAt:1,createdAt:1};w.testStore('cursor').update([task])
   let cursor=root.querySelector('[data-canvas-use-cursor]');expect(cursor.textContent).toBe('hyf90的智能助理');expect(cursor.querySelector('svg').getAttribute('width')).toBe('17')
   await new Promise(r=>setTimeout(r,1300));expect(cursor.isConnected).toBe(true)
-  const use=w.testUse.get('cursor'),observation=await use({op:'observe'}),s=observation.surfaces[0];expect(s.error).toBeUndefined()
+  const use=w.testUse.get('cursor')
+  root.setAttribute('data-research-operation','pan')
+  await expect(use({op:'observe'})).rejects.toThrow(/用户正在操作/)
+  root.removeAttribute('data-research-operation')
+  root.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true,altKey:true}))
+  expect(w.fetch).not.toHaveBeenCalled();expect(w.testStore('cursor').value[0].state).toBe('waiting')
+  const observation=await use({op:'observe'}),s=observation.surfaces[0];expect(s.error).toBeUndefined()
   const positions=[];const raf=w.requestAnimationFrame.bind(w);w.requestAnimationFrame=fn=>raf(t=>{positions.push([cursor.style.left,cursor.style.top]);fn(t)})
   await use({op:'click',requestId:'click',revision:observation.revision,nodeId:'n',surfaceRevision:s.revision,ref:s.elements[0].ref})
   expect(positions.length).toBeGreaterThan(2);expect(new Set(positions.map(p=>p.join())).size).toBeGreaterThan(2)
