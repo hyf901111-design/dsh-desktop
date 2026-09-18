@@ -11,33 +11,21 @@
         "schemaVersion": 1,
         "featureName": "PPT技能1.1.0与右键目标捕获",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
-        "tipCommit": "19240c07e81e732b072d2ff45b143cb16cb0106f",
+        "baseCommit": "19240c07e81e732b072d2ff45b143cb16cb0106f",
+        "tipCommit": "02ccc1edc8ebc90896ab49dc6fffb438cbd3c4bd",
         "commits": [
           {
-            "commit": "19240c07e81e732b072d2ff45b143cb16cb0106f",
+            "commit": "02ccc1edc8ebc90896ab49dc6fffb438cbd3c4bd",
             "parents": [
-              "54b54c99a9ec400c563b462fd6e807ec270343f0"
+              "19240c07e81e732b072d2ff45b143cb16cb0106f"
             ],
-            "subject": "补充PowerPoint修复导致目录变色的XML顺序门禁"
+            "subject": "记录目录颜色节点顺序的PowerPoint对照验证"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/efund-ppt-110-audit.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/delivery-110.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/check_efund_portability.py"
-          },
-          {
-            "status": "M",
-            "path": "test/efund-ppt-110.test.js"
           }
         ],
         "checks": [
@@ -54,8 +42,8 @@
             ],
             "outcome": "passed",
             "summary": "6项PPT聚焦检查通过，新增XML顺序失败用例",
-            "verifiedCommit": "19240c07e81e732b072d2ff45b143cb16cb0106f",
-            "completedAt": "2026-09-18T10:00:21.309267+00:00",
+            "verifiedCommit": "02ccc1edc8ebc90896ab49dc6fffb438cbd3c4bd",
+            "completedAt": "2026-09-18T10:04:18.231804+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -68,59 +56,7 @@
           "右键事件目标优先于坐标回查"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T10:00:21.309267+00:00"
-      },
-      "merged": {
-        "mergeCommit": "078e4b96747d139824d2840fc586c9a5366503f4",
-        "verificationCommit": "078e4b96747d139824d2840fc586c9a5366503f4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "078e4b96747d139824d2840fc586c9a5366503f4",
-            "completedAt": "2026-09-18T10:01:37.606Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "078e4b96747d139824d2840fc586c9a5366503f4",
-            "completedAt": "2026-09-18T10:01:37.606Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "078e4b96747d139824d2840fc586c9a5366503f4",
-            "completedAt": "2026-09-18T10:01:37.606Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T10:01:37.606Z"
+        "generatedAt": "2026-09-18T10:04:18.231804+00:00"
       }
     }
   ],
