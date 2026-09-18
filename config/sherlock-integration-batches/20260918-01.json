@@ -9,35 +9,78 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "正文文件Finder精确定位",
+        "featureName": "PPT技能1.1.0与右键目标捕获",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "fe05f0fa27d2f7c53b98d0c323bc66d1dfc0672f",
-        "tipCommit": "695778edbe2ec4cb5142886ba3f92e28b0104dba",
+        "baseCommit": "695778edbe2ec4cb5142886ba3f92e28b0104dba",
+        "tipCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
         "commits": [
           {
-            "commit": "695778edbe2ec4cb5142886ba3f92e28b0104dba",
+            "commit": "9ea6781095fd697fe22af9f5e4b2aafe9d76d89f",
             "parents": [
-              "fe05f0fa27d2f7c53b98d0c323bc66d1dfc0672f"
+              "695778edbe2ec4cb5142886ba3f92e28b0104dba"
             ],
-            "subject": "修复正文文件在Finder中定位误用父容器和旧选区路径"
+            "subject": "升级PPT技能至1.1.0并补齐颜色阴影目录与视觉验收门禁"
+          },
+          {
+            "commit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
+            "parents": [
+              "9ea6781095fd697fe22af9f5e4b2aafe9d76d89f"
+            ],
+            "subject": "按真实右键事件锁定文件目标避免缩放坐标误选"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "src/main/context-menu-target.ts"
+            "path": "docs/efund-ppt-110-audit.md"
           },
           {
             "status": "M",
-            "path": "src/main/context-menu-template.ts"
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/delivery-110.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_delivery.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_portability.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_visual_review.py"
+          },
+          {
+            "status": "M",
+            "path": "src/main/context-menu-target.ts"
           },
           {
             "status": "M",
             "path": "src/main/context-menu.ts"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "test/bundled-ppt-skill.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/context-menu-target.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/efund-ppt-107.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-110.test.js"
           }
         ],
         "checks": [
@@ -46,15 +89,20 @@
               "npx",
               "vitest",
               "run",
+              "test/efund-ppt-110.test.js",
+              "test/efund-ppt-109.test.js",
+              "test/efund-ppt-108.test.js",
+              "test/efund-ppt-107.test.js",
+              "test/bundled-ppt-skill.test.ts",
               "test/context-menu-target.test.js",
               "test/context-menu-template.test.ts",
               "test/context-menu.test.ts",
               "test/generated-file-finder.test.ts"
             ],
             "outcome": "passed",
-            "summary": "14 项路径与菜单聚焦检查通过",
-            "verifiedCommit": "695778edbe2ec4cb5142886ba3f92e28b0104dba",
-            "completedAt": "2026-09-18T09:33:59.078695+00:00",
+            "summary": "PPT 6项与文件菜单15项聚焦检查分别通过",
+            "verifiedCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
+            "completedAt": "2026-09-18T09:55:24.054770+00:00",
             "timeoutMs": 120000
           },
           {
@@ -65,73 +113,21 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "695778edbe2ec4cb5142886ba3f92e28b0104dba",
-            "completedAt": "2026-09-18T09:33:59.078695+00:00",
+            "verifiedCommit": "54b54c99a9ec400c563b462fd6e807ec270343f0",
+            "completedAt": "2026-09-18T09:55:24.054770+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "在集成测试包核对标题布局。"
+          "summary": "集成包启动后核验真实Finder目标与技能版本"
         },
         "acceptanceCriteria": [
-          "定位右键目标本身",
-          "不使用父容器或旧选区文件路径"
+          "技能版本1.1.0拦截旧成品样式缺陷",
+          "右键事件目标优先于坐标回查"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T09:33:59.078695+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
-        "verificationCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
-            "completedAt": "2026-09-18T09:34:25.510Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
-            "completedAt": "2026-09-18T09:34:25.510Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "8044089d32bb607fe7c5ec97309a93d17c254c6b",
-            "completedAt": "2026-09-18T09:34:25.510Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T09:34:25.510Z"
+        "generatedAt": "2026-09-18T09:55:24.054770+00:00"
       }
     }
   ],
