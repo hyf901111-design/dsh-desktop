@@ -9,39 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "持续任务保留目标及补充消息恢复",
+        "featureName": "持续任务补充消息立即投递",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "73ed268b7ed95b0fd69c94bdd779ec9c5c044b5c",
-        "tipCommit": "540e63a444694c34fc37eb80503741042d5be78b",
+        "baseCommit": "540e63a444694c34fc37eb80503741042d5be78b",
+        "tipCommit": "2bd71d4f057f41280643d35f14b88948091ed4c1",
         "commits": [
           {
-            "commit": "540e63a444694c34fc37eb80503741042d5be78b",
+            "commit": "2cf424e5ea9e516ccd77c817aafbbfe98e25b047",
             "parents": [
-              "73ed268b7ed95b0fd69c94bdd779ec9c5c044b5c"
+              "540e63a444694c34fc37eb80503741042d5be78b"
             ],
-            "subject": "修复：持续画布目标不随补充消息中断并复用任务接收新要求"
+            "subject": "修复：持续画布任务中的补充消息立即进入当前执行会话"
+          },
+          {
+            "commit": "2bd71d4f057f41280643d35f14b88948091ed4c1",
+            "parents": [
+              "2cf424e5ea9e516ccd77c817aafbbfe98e25b047"
+            ],
+            "subject": "修复：任务尚未启动时取消不得遗留隐藏执行"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/research/canvas-use.md"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-tools.js"
+            "path": "scripts/lib/canvas-use-client.mjs"
           },
           {
             "status": "M",
             "path": "test/canvas-task-executor.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/canvas-task-recovery.test.js"
           }
         ],
         "checks": [
@@ -50,15 +49,16 @@
               "npx",
               "vitest",
               "run",
+              "test/canvas-task-conversation.test.js",
               "test/canvas-task-executor.test.js",
               "test/canvas-task-recovery.test.js",
               "test/canvas-task-timing.test.js",
               "test/canvas-use.test.js"
             ],
             "outcome": "passed",
-            "summary": "37 项直接相关聚焦验证通过",
-            "verifiedCommit": "540e63a444694c34fc37eb80503741042d5be78b",
-            "completedAt": "2026-09-18T05:23:53.613881+00:00",
+            "summary": "45 项聚焦验证通过",
+            "verifiedCommit": "2bd71d4f057f41280643d35f14b88948091ed4c1",
+            "completedAt": "2026-09-18T05:31:28.879448+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -73,59 +73,7 @@
           "主动停止仍立即生效"
         ],
         "risks": [],
-        "generatedAt": "2026-09-18T05:23:53.613881+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f0c7a5347019d7308af7543496f95cd7faec3194",
-        "verificationCommit": "f0c7a5347019d7308af7543496f95cd7faec3194",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "f0c7a5347019d7308af7543496f95cd7faec3194",
-            "completedAt": "2026-09-18T05:24:15.862Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "f0c7a5347019d7308af7543496f95cd7faec3194",
-            "completedAt": "2026-09-18T05:24:15.862Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "f0c7a5347019d7308af7543496f95cd7faec3194",
-            "completedAt": "2026-09-18T05:24:15.862Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T05:24:15.862Z"
+        "generatedAt": "2026-09-18T05:31:28.879448+00:00"
       }
     }
   ],
