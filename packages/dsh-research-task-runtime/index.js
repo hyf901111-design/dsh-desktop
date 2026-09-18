@@ -21,7 +21,7 @@ import { selectedResearchExcerpt } from './context-index.js'
 import { MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR } from './html-artifact.js'
 
 export const name = 'sherlock-research-task-runtime'
-export const inject = ['agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy']
+export const inject = ['systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy']
 
 export const MAX_ACTIVE_PER_PARENT = 10
 export const MAX_SOURCES = 24
