@@ -9,36 +9,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件协作同步与持续任务性能修复",
+        "featureName": "持续任务会话与虚拟鼠标体验优化",
         "branch": "codex/feat/canvas-use-tasks-20260917",
-        "baseCommit": "e938b95ec79fea229d0a10a9cf0699abb79ea205",
-        "tipCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
+        "baseCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
+        "tipCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
         "commits": [
           {
-            "commit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
+            "commit": "a01258bc687f92562304b55a7398b3cfee909ac6",
             "parents": [
-              "e938b95ec79fea229d0a10a9cf0699abb79ea205"
+              "a06b15e497428be2d4d74ae0401c35e25ae932c1"
             ],
-            "subject": "修复：同步代理组件操作与协作任务进度并降低持续任务响应延迟"
+            "subject": "优化：持续任务融入会话执行过程并统一停止与助理指针"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/research/canvas-use.md"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/activity.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/activity.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-collaboration/package.json"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
@@ -49,55 +33,23 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/canvas-use-tools.js"
           },
           {
             "status": "M",
             "path": "scripts/lib/canvas-use-client.mjs"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/shared-native-conversation.mjs"
+            "status": "A",
+            "path": "test/canvas-task-conversation.test.js"
           },
           {
             "status": "A",
-            "path": "scripts/test-canvas-activity-worker.mjs"
-          },
-          {
-            "status": "M",
-            "path": "services/collaboration/PROTOCOL.md"
-          },
-          {
-            "status": "M",
-            "path": "services/collaboration/room.js"
-          },
-          {
-            "status": "M",
-            "path": "src/main/collaboration-client.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/research-boards-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/research-boards.ts"
+            "path": "test/canvas-use-tool-observation.test.js"
           },
           {
             "status": "M",
             "path": "test/canvas-use.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-interaction-state.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/shared-native-conversation.test.js"
           }
         ],
         "checks": [
@@ -107,27 +59,15 @@
               "vitest",
               "run",
               "test/canvas-use.test.js",
+              "test/canvas-task-conversation.test.js",
+              "test/canvas-use-tool-observation.test.js",
               "test/component-interaction-state.test.js",
-              "test/component-shared-state.test.js",
-              "test/shared-native-conversation.test.js",
-              "test/collaboration-client.test.ts",
-              "test/research-boards-service.test.ts"
+              "test/shared-native-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "90 项相关验证通过",
-            "verifiedCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
-            "completedAt": "2026-09-18T02:01:12.342842+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-canvas-activity-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "实际 D1/DO/WebSocket 双端进度、重连、乱序和权限通过",
-            "verifiedCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
-            "completedAt": "2026-09-18T02:01:12.342842+00:00",
+            "summary": "32 项相关验证通过",
+            "verifiedCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
+            "completedAt": "2026-09-18T02:42:33.431548+00:00",
             "timeoutMs": 120000
           },
           {
@@ -140,78 +80,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a06b15e497428be2d4d74ae0401c35e25ae932c1",
-            "completedAt": "2026-09-18T02:01:12.342842+00:00",
+            "verifiedCommit": "a01258bc687f92562304b55a7398b3cfee909ac6",
+            "completedAt": "2026-09-18T02:42:33.431548+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能 worktree 不构建共享客户端；真实 UI 验证在集成批次完成。"
+          "summary": "功能 worktree 不构建共享客户端；真实 UI 在集成批次验证。"
         },
         "acceptanceCriteria": [
-          "代理点击与人工操作跨端一致且不重复回放",
-          "共享任务过程与结束状态可见并重连恢复",
-          "相关组件变化唤醒及低思考档位减少等待"
+          "持续任务使用会话原生执行过程和回报，输入框停止按钮结束",
+          "指针显示用户名、保持可见并沿曲线移动",
+          "组件变化触发即时观察，操作结果附新观察减少模型往返"
         ],
         "risks": [
-          "协作进度新通道需要配套服务端更新，本轮只做本地服务验证",
-          "旧动态组件需使用共享状态 SDK；不自动改写用户组件",
-          "模型网络延迟仍由提供方决定"
+          "模型网络和推理延迟仍取决于提供方",
+          "离开画板、权限改变和达到任务上限仍会暂停"
         ],
-        "generatedAt": "2026-09-18T02:01:12.342842+00:00"
-      },
-      "merged": {
-        "mergeCommit": "85c39c4802abede3679e69db5afedeba9f49de97",
-        "verificationCommit": "85c39c4802abede3679e69db5afedeba9f49de97",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "85c39c4802abede3679e69db5afedeba9f49de97",
-            "completedAt": "2026-09-18T02:01:15.687Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/canvas-use.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/research-canvas-actions.test.js",
-              "test/component-interaction-state.test.js",
-              "test/research-native-web.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
-            "verifiedCommit": "85c39c4802abede3679e69db5afedeba9f49de97",
-            "completedAt": "2026-09-18T02:01:15.687Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "85c39c4802abede3679e69db5afedeba9f49de97",
-            "completedAt": "2026-09-18T02:01:15.687Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T02:01:15.687Z"
+        "generatedAt": "2026-09-18T02:42:33.431548+00:00"
       }
     }
   ],
