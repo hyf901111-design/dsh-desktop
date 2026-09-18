@@ -167,6 +167,58 @@
           "真实客户端退出需重新启动任务；不具备离线云端执行能力"
         ],
         "generatedAt": "2026-09-18T04:21:25.996902+00:00"
+      },
+      "merged": {
+        "mergeCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
+        "verificationCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
+            "completedAt": "2026-09-18T04:21:51.461Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/canvas-use.test.js",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-canvas-action-bridge.test.ts",
+              "test/research-canvas-actions.test.js",
+              "test/component-interaction-state.test.js",
+              "test/research-native-web.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/canvas-use.test.js test/research-canvas-actions-client.test.js test/research-canvas-action-bridge.test.ts test/research-canvas-actions.test.js test/component-interaction-state.test.js test/research-native-web.test.ts",
+            "verifiedCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
+            "completedAt": "2026-09-18T04:21:51.461Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "-p",
+              "tsconfig.node.json",
+              "--noEmit"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
+            "verifiedCommit": "847fa3c2f6075340578bb830285ef60f5dcc7f4b",
+            "completedAt": "2026-09-18T04:21:51.461Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-18T04:21:51.461Z"
       }
     }
   ],
