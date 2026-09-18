@@ -114,19 +114,29 @@ function CanvasUseTaskPanel({sessionId,active}) {
   const visible=tasks.filter(t=>!['stopped','completed'].includes(t.state)).concat(tasks.filter(t=>['stopped','completed'].includes(t.state)).slice(-1)).slice(-4)
   if(!visible.length)return null
   const h=react_jsx_runtime.jsx,hs=react_jsx_runtime.jsxs,labels={running:'正在执行',waiting:'等待变化',paused:'已暂停',stopped:'已停止',completed:'已完成'}
-  return hs('div',{'data-canvas-use-tasks':'',style:{padding:'10px 14px',maxHeight:240,overflow:'auto',flexShrink:0},children:[...visible.map(t=>hs('div',{style:{border:'1px solid var(--dsw-alias-border-default,#8884)',borderRadius:10,padding:12,marginBottom:8,fontSize:12,lineHeight:'18px'},children:[h('strong',{children:'画布持续任务 · '+labels[t.state]}),h('div',{children:t.title||'持续执行画布任务',style:{marginTop:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}),h('div',{children:t.reason,style:{opacity:.65,marginTop:4,maxHeight:54,overflow:'hidden'}}),h('div',{children:`${t.actions}/${t.maxActions} 次操作 · 截止 ${new Date(t.deadline).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`,style:{opacity:.6,marginTop:4}}),hs('div',{style:{display:'flex',gap:12,marginTop:8},children:(['running','waiting'].includes(t.state)?[['pause','暂停'],['takeover','接管'],['stop','停止']]:t.state==='paused'?[['resume','恢复'],['stop','停止']]:[]).map(([action,label])=>h('button',{type:'button',style:{border:0,background:'transparent',color:'inherit',padding:0,cursor:'pointer',font:'inherit'},children:label,onClick:async()=>{try{setError('');await call({taskId:t.id,action})}catch(e){setError(e.message)}}},action))})]},t.id)),error?h('p',{role:'alert',children:error}):null]})
+  return hs('div',{'data-canvas-use-tasks':'',style:{padding:'12px 0 4px'},children:[...visible.map(t=>hs('div',{style:{border:'1px solid var(--dsw-alias-border-default,#8884)',borderRadius:10,padding:12,marginBottom:8,fontSize:12,lineHeight:'18px'},children:[h('strong',{children:'画布持续任务 · '+labels[t.state]}),h('div',{children:t.title||'持续执行画布任务',style:{marginTop:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}),h('div',{children:t.reason,style:{opacity:.65,marginTop:4,maxHeight:54,overflow:'hidden'}}),h('div',{children:`${t.actions}/${t.maxActions} 次操作 · 截止 ${new Date(t.deadline).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`,style:{opacity:.6,marginTop:4}}),hs('div',{style:{display:'flex',gap:12,marginTop:8},children:(['running','waiting'].includes(t.state)?[['pause','暂停'],['takeover','接管'],['stop','停止']]:t.state==='paused'?[['resume','恢复'],['stop','停止']]:[]).map(([action,label])=>h('button',{type:'button',style:{border:0,background:'transparent',color:'inherit',padding:0,cursor:'pointer',font:'inherit'},children:label,onClick:async()=>{try{setError('');await call({taskId:t.id,action})}catch(e){setError(e.message)}}},action))})]},t.id)),error?h('p',{role:'alert',children:error}):null]})
 }
 
 export function patchCanvasUseClient(source) {
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
   const defs=start+'\nconst canvasUseOwners = new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+CanvasUseTaskPanel.toString()+'\n'+end+'\n'
-  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return source.slice(0,a)+defs+source.slice(b+end.length+1)}
+  const inlineTasks=(value)=>{
+    // Keep task controls in the message scroller, including on already-patched clients.
+    value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),','')
+    if(value.includes('/* CANVAS_USE_INLINE_TASKS */'))return value
+    const portalStart='const researchConversationPortal = research && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)('
+    const portalEnd=', researchSidebarSnapshot.conversationHost) : null;'
+    const a=value.indexOf(portalStart),b=value.indexOf(portalEnd,a)
+    if(a<0||b<0)throw Error('Canvas use conversation portal anchor missing')
+    const childStart=a+portalStart.length
+    return value.slice(0,childStart)+'/* CANVAS_USE_INLINE_TASKS */react_jsx_runtime.jsxs(react_jsx_runtime.Fragment,{children:['+value.slice(childStart,b)+',react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active:research})]})'+value.slice(b)
+  }
+  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return inlineTasks(source.slice(0,a)+defs+source.slice(b+end.length+1))}
   const once=(a,b)=>{if(!source.includes(a))throw Error('Canvas use anchor missing: '+a.slice(0,100));source=source.replace(a,b)}
   once('function createResearchWorkspaceSession(storage, sessionId) {',defs+'function createResearchWorkspaceSession(storage, sessionId) {')
   once('const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});',`if(request.method==='use'){const use=canvasUseOwners.get(request.sessionId);if(!use)throw Error('画板未打开，任务已暂停。');return use(request.args,{isCancelled:request.isCancelled});}
           const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});`)
   once('const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);',`const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);
       react.useEffect(()=>installCanvasUseClient(sessionId,workspace,rootRef.current),[sessionId,workspace]);`)
-  once('children: [(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\tclassName: "sRp_body sRp_conversation",','children: [react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\tclassName: "sRp_body sRp_conversation",')
-  return source
+  return inlineTasks(source)
 }
