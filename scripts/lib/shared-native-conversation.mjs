@@ -38,6 +38,8 @@ function SharedResearchRequest({ group, tasks, nativeProps }) {
   const nativeFinal = slice.hasClosing && task?.status !== 'failed' && task?.status !== 'interrupted'
   const request = group.rows.find(message => message.role === 'user')
   const replies = group.rows.filter(message => message !== request)
+  const nextRequest=sherlockBoardsAdapter?.getView(nativeProps.sessionId)?.messages?.filter(m=>m.role==='user'&&m.createdAt>request?.createdAt).sort((a,b)=>a.createdAt-b.createdAt)[0]
+
   return react.createElement('div', { 'data-shared-native-task': task?.taskId },
     request && react.createElement(SharedResearchMessage, { message: request, nativeProps }),
     (flow.length > 0 || running) && react.createElement('small', { className:'srb-native-author', 'data-shared-agent-author':true }, (request?.author?.username ?? request?.authorName ?? '成员') + '的智能助理'),
@@ -54,7 +56,8 @@ function SharedResearchRequest({ group, tasks, nativeProps }) {
         ? react.createElement(AssistantMarkdown,{key:index,blocks:[{kind:'text',text:event.text??''}],streaming:false,interrupted:false,openFile:nativeProps.openFile,loadImage:nativeProps.loadImage,t})
         : react.createElement('div',{key:index},event.type==='tool-started'?(event.tool||'处理资料')+(event.detail?' · '+event.detail:''):event.failed?'工具执行未成功，正在处理':'工具执行完成')),
       !task.progress?.events?.length&&react.createElement('span',null,'等待执行者同步进度…')),
-    ...replies.filter(message => !nativeFinal || message.taskId !== task?.taskId).map(message => react.createElement(SharedResearchMessage, { key: message.id, message, nativeProps })))
+    ...replies.filter(message => !nativeFinal || message.taskId !== task?.taskId).map(message => react.createElement(SharedResearchMessage, { key: message.id, message, nativeProps })),
+    typeof CanvasUseConversation==='function'&&request&&react.createElement(CanvasUseConversation,{sessionId:nativeProps.sessionId,active:true,t,from:request.createdAt,to:nextRequest?.createdAt??Infinity}))
 }
 function SharedResearchChatView(props) {
   if (!sherlockShared(props.sessionId) || !sherlockBoardsAdapter) return react.createElement(ChatView, props)

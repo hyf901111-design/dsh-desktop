@@ -105,3 +105,17 @@ body .odyssey-table-dialog { box-sizing:border-box; max-width:calc(100vw - 48px)
 body .odyssey-table-dialog>button { display:block; margin:0 0 12px auto; }
 body .odyssey-table-dialog table { width:max-content; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] > [data-composer-portal-host] { pointer-events:auto; }
+
+/* Research conversation: one chronological flow with comfortable reading space. */
+body .sRp_conversation { padding:18px 24px 14px; gap:14px; }
+body .sRp_messages { padding-inline:2px; box-sizing:border-box; }
+body .sRp_messages .Md3f7G_column { gap:22px; padding-block:8px 24px; }
+body .sRp_messages [class*="_markdown_"] { line-height:1.8 !important; overflow-wrap:anywhere; }
+body .sRp_messages [class*="_markdown_"] > :is(p,ul,ol,blockquote) { margin-top:0; margin-bottom:14px; }
+body .sRp_messages [class*="_markdown_"] > :last-child { margin-bottom:0; }
+body .sRp_messages [class*="_markdown_"] li + li { margin-top:6px; }
+body .sRp_messages .gdEzaW_bubble { padding:14px 16px; }
+body .sRp_messages .srb-discussion { gap:24px; }
+body .sRp_messages [data-shared-native-task] { display:flex; flex-direction:column; gap:18px; }
+body .odyssey-canvas-task-message { display:flex; flex-direction:column; gap:12px; margin-block:4px 8px; min-width:0; }
+body .odyssey-canvas-task-message .Md3f7G_executionDetails { display:flex; flex-direction:column; gap:12px; }

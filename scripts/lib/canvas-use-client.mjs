@@ -46,7 +46,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
     if(cursor?.isConnected)return
     cursor=document.createElement('div');cursor.setAttribute('data-canvas-use-cursor','');cursor.setAttribute('aria-hidden','true')
     cursor.style.cssText='position:absolute;z-index:60;pointer-events:none;color:#0d99ff;filter:drop-shadow(0 1px 2px #0006);font:11px/16px system-ui;white-space:nowrap;'
-    cursor.innerHTML='<svg width="17" height="20" viewBox="0 0 24 28" style="transform-origin:4px 3px"><path d="M3 2L21 16L12 17L8 25Z" fill="currentColor" stroke="white" stroke-width="1.5"/></svg><span style="background:#0d99ff;color:white;border-radius:4px;padding:2px 5px"></span>'
+    cursor.innerHTML='<svg width="17" height="20" viewBox="0 0 24 28" style="transform-origin:4px 3px"><path d="M3 2L21 16L12 17L8 25Z" fill="rgba(255,255,255,.22)" stroke="white" stroke-width="1.6" stroke-linejoin="round"/></svg><span style="background:#0d99ff;color:white;border-radius:4px;padding:2px 5px"></span>'
     const name=sherlockBoardsAdapter?.getState()?.account?.user?.username
     cursor.querySelector('span').textContent=name?name+'的智能助理':'智能助理'
     root.append(cursor)
@@ -180,30 +180,48 @@ function useCanvasTasks(sessionId) {
   react.useEffect(()=>sessionId?store.retain():undefined,[store,sessionId])
   return {tasks,stop:store.stop}
 }
-function CanvasUseConversation({sessionId,active,t}) {
+// Attach by the initiating user message time, never append old tasks to the live tail.
+export function mergeCanvasTaskFlow(flow,nodes,tasks) {
+  const users=flow.map((entry,index)=>({entry,index,node:entry.kind==='node'?nodes.get(entry.key):null})).filter(v=>v.node?.kind==='user'&&Number.isFinite(v.node.data?.time))
+  const slots=new Map()
+  for(const task of tasks) {
+    const owner=users.filter(v=>v.node.data.time<=task.createdAt).at(-1)
+    if(!owner)continue // Its message is outside the loaded history page.
+    const next=users.find(v=>v.index>owner.index),index=(next?.index??flow.length)-1
+    const list=slots.get(index)??[];list.push({kind:'canvas-task',key:'canvas-task:'+task.id,task});slots.set(index,list)
+  }
+  return flow.flatMap((entry,index)=>[entry,...(slots.get(index)??[]).sort((a,b)=>a.task.createdAt-b.task.createdAt)])
+}
+function CanvasUseTaskMessage({task,t}) {
+  return react.createElement('div',{'data-canvas-task-message':task.id,className:'odyssey-canvas-task-message'},
+    react.createElement(ExecutionStatusGroup,{entry:{key:'canvas-task:'+task.id,running:['running','waiting'].includes(task.state),canvasTask:task},activityNodes:[],startTime:task.createdAt??task.updatedAt,endTime:['running','waiting'].includes(task.state)?null:task.updatedAt,seatProps:{},t}),
+    react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:task.reason||'正在观察画布'}],streaming:false,interrupted:false,t}))
+}
+function CanvasUseConversation({sessionId,active,t,from=0,to=Infinity}) {
   const {tasks}=useCanvasTasks(sessionId)
   react.useSyncExternalStore(sherlockBoardsAdapter?.subscribe??(()=>()=>{}),sherlockBoardsAdapter?.version??(()=>0))
   if(!active)return null
   const shared=sherlockBoardsAdapter?.getView(sessionId),remote=(shared?.activities??[]).filter(a=>a.kind==='canvas'&&!tasks.some(t=>t.id===a.id)).map(t=>({...t,remote:true,state:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'paused':t.state,reason:['running','waiting'].includes(t.state)&&(shared.connection!=='online'||Date.now()-t.updatedAt>20000)?'执行端连接中断，等待更新':t.reason}))
-  return react.createElement(react.Fragment,null,...[...tasks,...remote].slice(-20).map(task=>react.createElement(react.Fragment,{key:task.id},
-    react.createElement(ExecutionStatusGroup,{entry:{key:'canvas-task:'+task.id,running:['running','waiting'].includes(task.state),canvasTask:task},activityNodes:[],startTime:task.createdAt??task.updatedAt,endTime:['running','waiting'].includes(task.state)?null:task.updatedAt,seatProps:{},t}),
-    react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:task.reason||'正在观察画布'}],streaming:false,interrupted:false,t}))))
+  return react.createElement(react.Fragment,null,...[...tasks,...remote].filter(task=>task.createdAt>=from&&task.createdAt<to).sort((a,b)=>a.createdAt-b.createdAt).map(task=>react.createElement(CanvasUseTaskMessage,{key:task.id,task,t})))
 }
 
 export function patchCanvasUseClient(source) {
   const start='/* CANVAS_USE_CLIENT_START */',end='/* CANVAS_USE_CLIENT_END */'
-  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasTaskStore,useCanvasTasks,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
-  const inlineTasks=(value)=>{
-    // Keep task controls in the message scroller, including on already-patched clients.
+  const defs=start+'\nconst canvasUseOwners = new Map(),canvasTaskStores=new Map();\n'+createCanvasUseSurface.toString()+'\n'+installCanvasUseSurface.toString()+'\n'+installCanvasUseClient.toString()+'\n'+[canvasTaskStore,useCanvasTasks,mergeCanvasTaskFlow,CanvasUseTaskMessage,CanvasUseConversation].map(fn=>fn.toString()).join('\n')+'\n'+end+'\n'
+  const inlineTasks=value=>{
+    // Migrate the former global tail into the native chronological flow.
     value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active}),','')
-    value=value.replace('react_jsx_runtime.jsx(CanvasUseTaskPanel,{sessionId,active:research})','react_jsx_runtime.jsx(CanvasUseConversation,{sessionId,active:research,t})')
-    if(value.includes('/* CANVAS_USE_INLINE_TASKS */'))return value
-    const portalStart='const researchConversationPortal = research && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)('
-    const portalEnd=', researchSidebarSnapshot.conversationHost) : null;'
-    const a=value.indexOf(portalStart),b=value.indexOf(portalEnd,a)
-    if(a<0||b<0)throw Error('Canvas use conversation portal anchor missing')
-    const childStart=a+portalStart.length
-    return value.slice(0,childStart)+'/* CANVAS_USE_INLINE_TASKS */react_jsx_runtime.jsxs(react_jsx_runtime.Fragment,{children:['+value.slice(childStart,b)+',react_jsx_runtime.jsx(CanvasUseConversation,{sessionId,active:research,t})]})'+value.slice(b)
+    value=value.replace('/* CANVAS_USE_INLINE_TASKS */react_jsx_runtime.jsxs(react_jsx_runtime.Fragment,{children:[','')
+    for(const name of ['CanvasUseConversation,{sessionId,active:research,t}','CanvasUseTaskPanel,{sessionId,active:research}'])value=value.replace(',react_jsx_runtime.jsx('+name+')]})','')
+    if(value.includes('/* CANVAS_TASK_CHRONOLOGY */'))return value
+    const anchor='const renderFlow = (0, react.useMemo)(() => mergePendingSteeringFlow(compactFlow, pendingSteering, nodeStore), [compactFlow, pendingSteering, nodeStore]);'
+    if(!value.includes(anchor))throw Error('Canvas task flow anchor missing')
+    value=value.replace(anchor,`/* CANVAS_TASK_CHRONOLOGY */
+      const canvasTasks=useCanvasTasks(sessionId).tasks;
+      const nativeRenderFlow = react.useMemo(() => mergePendingSteeringFlow(compactFlow,pendingSteering,nodeStore),[compactFlow,pendingSteering,nodeStore]);
+      const renderFlow=react.useMemo(()=>mergeCanvasTaskFlow(nativeRenderFlow,nodeStore,canvasTasks),[nativeRenderFlow,nodeStore,canvasTasks]);`)
+    value=value.replace('renderFlow.map((entry) => {',"renderFlow.map((entry) => { if(entry.kind==='canvas-task')return react.createElement(CanvasUseTaskMessage,{key:entry.key,task:entry.task,t});")
+    return value
   }
   const connectConversation=value=>{
     if(value.includes('/* CANVAS_TASK_COMPOSER */'))return value

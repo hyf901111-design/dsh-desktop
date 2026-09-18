@@ -27,3 +27,31 @@ it('renders ongoing and terminal reports with the native execution flow and no t
   expect(host.textContent).toContain('执行过程 · 已停止');expect(host.textContent).toContain('用户已停止')
  }finally{await React.act(async()=>root.unmount());await w.happyDOM.abort();Object.assign(globalThis,old)}
 })
+
+it('keeps every task report with its initiating message across new replies and older-page loading',async()=>{
+ const {mergeCanvasTaskFlow}=await import('../scripts/lib/canvas-use-client.mjs')
+ const flow=['u1','a1','u2','a2'].map(key=>({kind:'node',key}))
+ const nodes=new Map([['u1',{kind:'user',data:{time:100}}],['a1',{kind:'assistant-step'}],['u2',{kind:'user',data:{time:300}}],['a2',{kind:'assistant-step'}]])
+ const tasks=[{id:'second',createdAt:350},{id:'first',createdAt:150},{id:'unloaded',createdAt:50}]
+ expect(mergeCanvasTaskFlow(flow,nodes,tasks).map(e=>e.key)).toEqual(['u1','a1','canvas-task:first','u2','a2','canvas-task:second'])
+ expect(mergeCanvasTaskFlow(flow.slice(2),nodes,tasks).map(e=>e.key)).toEqual(['u2','a2','canvas-task:second'])
+ nodes.set('u0',{kind:'user',data:{time:25}})
+ expect(mergeCanvasTaskFlow([{kind:'node',key:'u0'},...flow],nodes,tasks).map(e=>e.key)).toEqual(['u0','canvas-task:unloaded','u1','a1','canvas-task:first','u2','a2','canvas-task:second'])
+})
+
+it('keeps shared task creation time while stripping nonpublic fields',async()=>{
+ const {cleanActivity}=await import('../packages/dsh-research-collaboration/activity.js')
+ const value=cleanActivity({kind:'canvas',id:'t',sequence:1,state:'waiting',createdAt:123,goal:'private',history:[{reason:'private'}]})
+ expect(value.createdAt).toBe(123);expect(value.goal).toBeUndefined();expect(value.history).toBeUndefined()
+})
+
+it('adds readable research sidebar spacing without changing the main conversation',async()=>{
+ const {Window}=await import('happy-dom'),w=new Window()
+ const css=await readFile('src/preload/figma-reading.css','utf8')
+ w.document.head.innerHTML='<style>'+css+'</style>'
+ w.document.body.innerHTML='<div class="sRp_conversation"><div class="sRp_messages"><div class="Md3f7G_column"><div class="odyssey-canvas-task-message"><div>执行过程</div><div class="_markdown_test"><p>第一段</p><p>第二段</p></div></div></div></div></div>'
+ expect(w.getComputedStyle(w.document.querySelector('.sRp_conversation')).paddingLeft).toBe('24px')
+ expect(w.getComputedStyle(w.document.querySelector('.odyssey-canvas-task-message')).gap).toBe('12px')
+ expect(w.getComputedStyle(w.document.querySelector('p')).marginBottom).toBe('14px')
+ await w.happyDOM.abort()
+})
