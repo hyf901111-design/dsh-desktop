@@ -1,6 +1,6 @@
 // Only direct human input can establish an ongoing goal. Observations, tool
 // results and injected document context never provide this authority.
-export function ongoingCanvasRequest(session) {
+export function canvasHumanRequest(session) {
   const message=[...(session?.events??[])].reverse().find(e=>e.type==='user/message'&&e.data?.source?.kind==='user')?.data
   if(!message)return null
   let text=(message.content??[]).filter(p=>p.type==='text').map(p=>p.text).join('\n')
@@ -11,9 +11,15 @@ export function ongoingCanvasRequest(session) {
     try {JSON.parse(text.slice(prefix.length,end))}catch{return null}
     text=text.slice(end+1)
   }
+  return {messageId:message.id,text:text.trim()}
+}
+
+export function ongoingCanvasRequest(session) {
+  const human=canvasHumanRequest(session);if(!human)return null
+  const {text}=human
   const request=text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'').replace(/[“「][^”」]*[”」]/g,'')
   if(/(?:不要|不用|不需要|停止|结束)(?:再)?(?:持续|一直|陪|监控|跟踪)|(?:只|仅).{0,10}(?:一次|一步)|\b(?:stop|don't|do not)\b/i.test(request))return null
-  if(/陪(?:我|着我)|(?:请|帮我|^|[。\n])\s*(?:持续|一直)(?:观察|监控|跟踪|执行|操作|等待|响应)|盯着|每(?:次|当)[^。\n]{0,60}(?:自动|就|都)|直到我(?:说停|停止|点击停止)|\bkeep (?:watching|monitoring|playing|responding|interacting)\b|\buntil I (?:stop|cancel)\b/i.test(request))return {messageId:message.id,text}
+  if(/陪(?:我|着我)|(?:请|帮我|^|[。\n])\s*(?:持续|一直)(?:观察|监控|跟踪|执行|操作|等待|响应)|盯着|每(?:次|当)[^。\n]{0,60}(?:自动|就|都)|直到我(?:说停|停止|点击停止)|\bkeep (?:watching|monitoring|playing|responding|interacting)\b|\buntil I (?:stop|cancel)\b/i.test(request))return human
   return null
 }
 
@@ -25,4 +31,22 @@ export function canvasTaskRoutingGuard(exec,method,args,activeTasks=[]) {
   throw Error(activeTasks.length
     ? '[CANVAS_ONGOING_TASK] 当前目标由同一持续任务执行。请用 research_canvas_task steer 补充要求或 wait 等待，不要另行操作或停止重建。'
     : '[CANVAS_CONTINUOUS_TASK_REQUIRED] 用户请求持续陪伴或反复响应，单次操作不能完成目标。请调用 research_canvas_task start，completionMode=until-stopped，保留用户原目标；不要求用户每一步再发消息。')
+}
+
+// Admission belongs to the runtime, not to the model's choice of a one-shot
+// tool. A single user request creates one durable goal before model execution.
+export function registerCanvasTaskAdmission(ctx,tasks) {
+  const admitted=new Set()
+  return ctx.on('session/event',(session,event)=>{
+    if(event.type!=='user/message'||event.data?.source?.kind!=='user'||session.header?.parentSession)return
+    const human=canvasHumanRequest(session)
+    if(!human?.messageId||admitted.has(human.messageId))return
+    admitted.add(human.messageId);if(admitted.size>1000)admitted.delete(admitted.values().next().value)
+    const active=tasks.list(session.id).find(t=>['running','waiting'].includes(t.state))
+    if(active)return // The parent can steer or stop the same goal; never replace it.
+    if(!ongoingCanvasRequest(session))return
+    void tasks.start({sessionId:session.id,title:human.text.slice(0,60),goal:human.text,
+      completion:'持续执行用户目标；单次操作或一轮交互结束后继续等待，直到用户明确停止。',completionMode:'until-stopped',initiatingMessageId:human.messageId
+    }).catch(()=>{}) // No writable/open canvas: let the normal task tool report it.
+  })
 }
