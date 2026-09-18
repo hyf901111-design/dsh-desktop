@@ -82,8 +82,8 @@ export function isExternalWebUrl(rawUrl: string): boolean {
 /**
  * Resolve the first existing absolute filesystem path carried by the native
  * context event or by metadata on the clicked rendered element. Relative
- * display labels are intentionally ignored: the renderer's title/aria-label
- * must supply their absolute backing path before Finder is offered.
+ * display labels resolve against the owning session workspace, never the
+ * currently previewed document or another conversation's directory.
  */
 export function resolveFinderPath(
   values: readonly string[],
@@ -110,6 +110,9 @@ export function resolveFinderPath(
     if (slash > 0) candidates.push(value.slice(slash))
 
     for (const candidate of candidates) {
+      // A closing parenthesis, quote or space can be part of a real filename.
+      // Only try prose punctuation cleanup after checking the exact target.
+      if (isAbsolute(candidate) && exists(candidate)) return candidate
       const normalized = candidate.trim().replace(/[\s\])}>，。；：、'"”’]+$/u, '')
       if (isAbsolute(normalized) && exists(normalized)) return normalized
     }
