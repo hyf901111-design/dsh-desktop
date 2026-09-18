@@ -52,6 +52,63 @@
         ],
         "risks": [],
         "generatedAt": "2026-09-18T14:17:26.231054+00:00"
+      },
+      "merged": {
+        "mergeCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
+        "verificationCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
+            "completedAt": "2026-09-18T14:18:40.435Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/conversation-browser.test.ts",
+              "test/canvas-use.test.js",
+              "test/canvas-use-tool-observation.test.js",
+              "test/workspace-drag-feedback.test.js",
+              "test/browser-page-reader.test.ts",
+              "test/rendered-page-content.test.ts",
+              "test/sidebar-scroll-fade.test.ts",
+              "test/local-search-bridge.test.ts",
+              "test/figma-reading-layout.test.ts",
+              "test/figma-reading-column.test.js",
+              "test/research-board-navigation-final.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/conversation-browser.test.ts test/canvas-use.test.js test/canvas-use-tool-observation.test.js test/workspace-drag-feedback.test.js test/browser-page-reader.test.ts test/rendered-page-content.test.ts test/sidebar-scroll-fade.test.ts test/local-search-bridge.test.ts test/figma-reading-layout.test.ts test/figma-reading-column.test.js test/research-board-navigation-final.test.ts",
+            "verifiedCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
+            "completedAt": "2026-09-18T14:18:40.435Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "-p",
+              "tsconfig.node.json",
+              "--noEmit"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
+            "verifiedCommit": "9e1d7c6e6bf8b40d06a8be5e73bb068d031a43ab",
+            "completedAt": "2026-09-18T14:18:40.435Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-18T14:18:40.435Z"
       }
     }
   ],
