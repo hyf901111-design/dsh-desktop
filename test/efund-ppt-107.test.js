@@ -33,7 +33,7 @@ def write(path,x):
  with zipfile.ZipFile(path,'w') as z:
   z.writestr('ppt/presentation.xml',f'<p:presentation xmlns:p="{p}" xmlns:r="{r}"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst><p:sldSz cx="9144000" cy="5143500"/></p:presentation>')
   z.writestr('ppt/_rels/presentation.xml.rels',f'<Relationships xmlns="{pr}"><Relationship Id="rId1" Target="slides/slide1.xml"/></Relationships>')
-  z.writestr('ppt/slides/slide1.xml',f'<p:sld xmlns:p="{p}" xmlns:a="{a}"><p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="2" name="title"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="{x}" y="300000"/><a:ext cx="5000000" cy="500000"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor="ctr"/><a:p><a:r><a:t>正文</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>')
+  z.writestr('ppt/slides/slide1.xml',f'<p:sld xmlns:p="{p}" xmlns:a="{a}"><p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="2" name="title"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="{x}" y="300000"/><a:ext cx="5000000" cy="500000"/></a:xfrm></p:spPr><p:txBody><a:bodyPr anchor="ctr"/><a:p><a:r><a:rPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>正文</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>')
 with tempfile.TemporaryDirectory() as temp:
  source=Path(temp)/'source.pptx';output=Path(temp)/'output.pptx'
  mapping={'chapters':[{'id':'a','title':'正文'}],'outputSlides':[{'outputSlide':1,'pageKind':'content','chapterId':'a','layoutChoice':{'eligible':False,'selected':'full-width','reason':'此页仅用于题名几何验证'},'titleAnchor':{'sourceSlide':1,'sourceShapeId':'2','outputShapeId':'2'}}]}
