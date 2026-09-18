@@ -9,27 +9,55 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对话浏览器与持续光标、网页全文和侧栏交互",
+        "featureName": "网页自适应、统一光标与链接组件悬停操作",
         "branch": "codex/feat/web-content-composer-20260918",
-        "baseCommit": "741733d3e9db3142fff480d7145e6c7faabc487d",
-        "tipCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
+        "baseCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
+        "tipCommit": "7d18e43d366cf665fc0b5feca5af9637be4f5306",
         "commits": [
           {
-            "commit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
+            "commit": "7d18e43d366cf665fc0b5feca5af9637be4f5306",
             "parents": [
-              "741733d3e9db3142fff480d7145e6c7faabc487d"
+              "019a2ca0d3e382795ac9b7675185023ed40dd82d"
             ],
-            "subject": "修复：拖拽起步立即响应并避免窄栏光标标签裁切"
+            "subject": "修复：网页自适应与光标结束淡出并补齐链接悬停操作"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/agent-cursor.js"
+          },
+          {
             "status": "M",
-            "path": "scripts/lib/workspace-drag-feedback.mjs"
+            "path": "scripts/lib/canvas-creation-tools.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-use-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-browser-client.mjs"
           },
           {
             "status": "M",
             "path": "src/main/search/conversation-browser.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/canvas-use.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-canvas-gestures-ui.test.ts"
           }
         ],
         "checks": [
@@ -38,13 +66,15 @@
               "npx",
               "vitest",
               "run",
+              "test/figma-canvas-gestures-ui.test.ts",
               "test/conversation-browser.test.ts",
-              "test/workspace-drag-feedback.test.js"
+              "test/canvas-use.test.js",
+              "test/canvas-use-tool-observation.test.js"
             ],
             "outcome": "passed",
-            "summary": "光标边缘与拖拽反馈聚焦检查通过",
-            "verifiedCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
-            "completedAt": "2026-09-18T13:41:49.956006+00:00",
+            "summary": "39 项聚焦检查通过",
+            "verifiedCommit": "7d18e43d366cf665fc0b5feca5af9637be4f5306",
+            "completedAt": "2026-09-18T14:05:42.646392+00:00",
             "timeoutMs": 120000
           },
           {
@@ -57,81 +87,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "019a2ca0d3e382795ac9b7675185023ed40dd82d",
-            "completedAt": "2026-09-18T13:41:49.956006+00:00",
+            "verifiedCommit": "7d18e43d366cf665fc0b5feca5af9637be4f5306",
+            "completedAt": "2026-09-18T14:05:42.646392+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已在真实客户端从会话输入框跑通百度打开、输入、搜索与观察；原工作区顺序已恢复，光标持续可见。"
+          "summary": "独立 Electron 真实 WebContentsView 验证固定页面适配、响应式布局、宽窄切换、缩放后输入与任务结束淡出；链接操作由已挂载 React 组件验证。集成客户端随后验证。"
         },
         "acceptanceCriteria": [
-          "对话模式右侧浏览器支持搜索操作并持续显示光标",
-          "虚拟文档滚动汇总且不冒充全文",
-          "遮挡与侧栏拖拽及时反馈"
+          "右侧网页适配栏宽",
+          "浏览器与画板使用同一光标样式，任务结束后淡出",
+          "链接草稿具备放大、改名、移除操作且保留输入"
         ],
         "risks": [
-          "图片内文字未执行OCR，读取状态会明确标注"
+          "不支持响应式布局的网站会整体缩小以显示完整宽度"
         ],
-        "generatedAt": "2026-09-18T13:41:49.956006+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4fc2f75df260b479bb8f11c30d59792d184ba94e",
-        "verificationCommit": "4fc2f75df260b479bb8f11c30d59792d184ba94e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "4fc2f75df260b479bb8f11c30d59792d184ba94e",
-            "completedAt": "2026-09-18T13:42:04.551Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/conversation-browser.test.ts",
-              "test/canvas-use.test.js",
-              "test/canvas-use-tool-observation.test.js",
-              "test/workspace-drag-feedback.test.js",
-              "test/browser-page-reader.test.ts",
-              "test/rendered-page-content.test.ts",
-              "test/sidebar-scroll-fade.test.ts",
-              "test/local-search-bridge.test.ts",
-              "test/figma-reading-layout.test.ts",
-              "test/figma-reading-column.test.js",
-              "test/research-board-navigation-final.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/conversation-browser.test.ts test/canvas-use.test.js test/canvas-use-tool-observation.test.js test/workspace-drag-feedback.test.js test/browser-page-reader.test.ts test/rendered-page-content.test.ts test/sidebar-scroll-fade.test.ts test/local-search-bridge.test.ts test/figma-reading-layout.test.ts test/figma-reading-column.test.js test/research-board-navigation-final.test.ts",
-            "verifiedCommit": "4fc2f75df260b479bb8f11c30d59792d184ba94e",
-            "completedAt": "2026-09-18T13:42:04.551Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "-p",
-              "tsconfig.node.json",
-              "--noEmit"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc -p tsconfig.node.json --noEmit",
-            "verifiedCommit": "4fc2f75df260b479bb8f11c30d59792d184ba94e",
-            "completedAt": "2026-09-18T13:42:04.551Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T13:42:04.551Z"
+        "generatedAt": "2026-09-18T14:05:42.646392+00:00"
       }
     }
   ],
