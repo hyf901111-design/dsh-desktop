@@ -26,3 +26,26 @@ it('separates attached research content from the actual human request',()=>{
  expect(ongoingCanvasRequest(agent(header+'陪我填写表格').session)?.text).toBe('陪我填写表格')
  expect(ongoingCanvasRequest(agent('␞SHERLOCK_RESEARCH_FILES_V1 陪我下棋').session)).toBeNull()
 })
+
+it('admits a real continuous goal without waiting for the parent model to choose a task tool',async()=>{
+ const {registerCanvasTaskAdmission}=await import('../packages/dsh-research-task-runtime/canvas-task-routing.js')
+ const {CanvasUseTasks}=await import('../packages/dsh-research-task-runtime/canvas-use-tasks.js')
+ let handler,unbound=false
+ const ctx={on:(_name,fn)=>{handler=fn;return()=>unbound=true}}
+ const tasks=new CanvasUseTasks({observe:async()=>({writable:true,fingerprint:'a'}),execute:async()=>({status:'wait',reason:'等待操作'})})
+ const dispose=registerCanvasTaskAdmission(ctx,tasks)
+ const user=event('陪我填写表格'),session={id:'board',events:[user],header:{}}
+ try {
+  handler(session,user)
+  await new Promise(r=>setTimeout(r,20))
+  expect(tasks.list('board')).toHaveLength(1)
+  expect(tasks.list('board')[0]).toMatchObject({state:'waiting',completionMode:'until-stopped',goal:'陪我填写表格'})
+  handler(session,user)
+  const next=event('陪我继续');next.data.id='m2';session.events.push(next);handler(session,next)
+  await new Promise(r=>setTimeout(r,20));expect(tasks.list('board')).toHaveLength(1)
+  const foreign=event('陪我执行','plugin');handler({id:'foreign',events:[foreign],header:{}},foreign)
+  const child=event('陪我操作');handler({id:'child',events:[child],header:{parentSession:'board'}},child)
+  expect(tasks.list('foreign')).toEqual([]);expect(tasks.list('child')).toEqual([])
+ }finally{dispose();await tasks.dispose()}
+ expect(unbound).toBe(true)
+})
