@@ -79,8 +79,10 @@ function currentBootFailureText(): string | undefined {
   // containers on Harness's boot-failure page. Reading only the title's
   // parent drops exactly the evidence Desktop needs to identify the second
   // conflicting plugin, so capture the full failure page instead.
+  // Most mutations are streamed chat text. Do not force a whole-document layout
+  // just to establish that this is not the loader failure page.
+  if (!root.textContent?.includes('Failed to load plugins')) return undefined
   const text = document.body?.innerText || root.textContent
-  if (!text?.includes('Failed to load plugins')) return undefined
   return text
     ?.split(/\r?\n/)
     .map((value) => value.trim())
@@ -137,7 +139,8 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
 function initializeUi(): void {
   // Native window controls do not scale with the web content zoom level.
   const syncAuthNativeScale = (): void => {
-    document.documentElement.style.setProperty('--auth-native-scale', String(1 / webFrame.getZoomFactor()))
+    const value = String(1 / webFrame.getZoomFactor())
+    if (document.documentElement.style.getPropertyValue('--auth-native-scale') !== value) document.documentElement.style.setProperty('--auth-native-scale', value)
   }
   syncAuthNativeScale()
   window.addEventListener('resize', syncAuthNativeScale)

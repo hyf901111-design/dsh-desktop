@@ -7,7 +7,8 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
   const box = el => el===document.body ? {x:0,y:0,width:innerWidth,height:innerHeight} : el.getBoundingClientRect()
   const rect = el => { const r = box(el), b = box(root); return { x: (r.x - b.x) / b.width, y: (r.y - b.y) / b.height, width: r.width / b.width, height: r.height / b.height } }
   const visible = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && !el.closest('[data-canvas-use-cursor]') }
-  const observe = () => {
+  const observe = (images=true) => {
+    const state = shared()
     refs.clear()
     const elements = [...root.querySelectorAll('button,a,input,textarea,select,[role],[tabindex],canvas,svg,[contenteditable=true]')].filter(visible).slice(0,200).map(el => ({
       ref: id(el), tag: el.tagName.toLowerCase(), role: el.getAttribute('role'), label: (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.innerText || el.textContent || '').slice(0,240),
@@ -16,15 +17,16 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
       ...(el.tagName==='SELECT' ? {options:[...el.options].slice(0,100).map(o=>({value:o.value,label:o.label,disabled:o.disabled}))} : {}),
       ...(el.hasAttribute('aria-checked')?{checked:el.getAttribute('aria-checked')}:{}),
       disabled: el.disabled === true, bounds: rect(el),
-      ...(el.tagName === 'CANVAS' ? {image: (()=>{try{return el.toDataURL('image/png')}catch{return null}})()} : {})
+      ...(el.tagName === 'CANVAS' && (images || !state) ? {image: (()=>{try{return el.toDataURL('image/png')}catch{return null}})()} : {})
     }))
-    const state = shared(), text = (root.innerText || root.textContent || '').slice(0,20000)
-    const revision = hash(JSON.stringify({url:location.href,text,elements,state}))
+    const text = (root.innerText || root.textContent || '').slice(0,20000)
+    const revision = hash(JSON.stringify({url:location.href,text,elements:state?elements.map(({image,...element})=>element):elements,state}))
+    if(!images)for(const element of elements)delete element.image
     previous = revision
     return {revision,text,elements,state,size:{width:box(root).width,height:box(root).height},url:location.href}
   }
   return async function use(args) {
-    if (args.op === 'observe') return observe()
+    if (args.op === 'observe') return observe(args.images!==false)
     const authority=shared();if(authority&&(!authority.connected||authority.readOnly))throw Error('组件未连接或为只读，无法操作。')
     if (!previous || args.revision !== previous || observe().revision !== args.revision) throw Error('组件状态已变化，请重新观察。')
     let el = args.ref ? refs.get(args.ref) : root

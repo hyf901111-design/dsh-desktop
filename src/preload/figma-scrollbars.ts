@@ -68,8 +68,8 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     port.addEventListener('focusin', show); port.addEventListener('focusout', show)
     port.addEventListener('scroll', show, { passive: true }); resize.observe(port); bars.set(port, bar); update()
   }
-  const scan = () => {
-    for (const root of doc.querySelectorAll<HTMLElement>(scope)) {
+  const scan = (roots: Iterable<HTMLElement> = doc.querySelectorAll<HTMLElement>(scope)) => {
+    for (const root of roots) {
       install(root)
       for (const port of root.querySelectorAll<HTMLElement>('div,section,ul,nav,main,article')) install(port)
     }
@@ -81,9 +81,24 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     schedule()
   }
   let scanTimer = 0
+  const pendingRoots = new Set<HTMLElement>()
   const mutations = new win.MutationObserver(records => {
-    if (!records.some(r => r.type === 'attributes' || !((r.target as Element).closest?.('.odyssey-scroll-track')) && [...r.addedNodes,...r.removedNodes].some(n => n.nodeType === 1 && !(n as Element).classList.contains('odyssey-scroll-track')))) { schedule(); return }
-    if (!scanTimer) scanTimer = win.setTimeout(() => { scanTimer = 0; scan() }, 100)
+    for (const record of records) {
+      if (record.type === 'attributes') for (const root of doc.querySelectorAll<HTMLElement>(scope)) pendingRoots.add(root)
+      for (const node of record.addedNodes) {
+        if (node.nodeType !== 1) continue
+        const element = node as HTMLElement
+        if (element.closest('.odyssey-scroll-track')) continue
+        if (element.matches(scope) || element.closest(scope)) pendingRoots.add(element)
+        else for (const root of element.querySelectorAll<HTMLElement>(scope)) pendingRoots.add(root)
+      }
+    }
+    schedule()
+    if (pendingRoots.size && !scanTimer) scanTimer = win.setTimeout(() => {
+      scanTimer = 0
+      const roots = [...pendingRoots].filter(root => root.isConnected && ![...pendingRoots].some(parent => parent !== root && parent.contains(root)))
+      pendingRoots.clear(); scan(roots)
+    }, 100)
   })
   const edge = (e: PointerEvent) => {
     for (const bar of bars.values()) {

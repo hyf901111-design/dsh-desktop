@@ -4,6 +4,13 @@ const handles = '.pI_x6G_handle[data-side="sidebar"], .t8lSSG_panelResize'
 export function mountFigmaResizeFeedback(doc: Document): () => void {
   const win = doc.defaultView
   if (!win) return () => {}
+  let windowResizeTimer = 0
+  const windowResize = () => {
+    if (!doc.documentElement.hasAttribute('data-odyssey-window-resizing')) doc.documentElement.dataset.odysseyWindowResizing = ''
+    win.clearTimeout(windowResizeTimer)
+    windowResizeTimer = win.setTimeout(() => { delete doc.documentElement.dataset.odysseyWindowResizing }, 120)
+  }
+  win.addEventListener('resize', windowResize, {passive:true})
   let handle: HTMLElement | null = null
   let pointer: number | null = null
   let pointerY = 0
@@ -87,6 +94,9 @@ export function mountFigmaResizeFeedback(doc: Document): () => void {
   doc.addEventListener('visibilitychange', visibility)
   win.addEventListener('blur', clear)
   return () => {
+    win.removeEventListener('resize', windowResize)
+    win.clearTimeout(windowResizeTimer)
+    delete doc.documentElement.dataset.odysseyWindowResizing
     clear()
     doc.removeEventListener('pointerover', over, true)
     doc.removeEventListener('pointerout', out, true)

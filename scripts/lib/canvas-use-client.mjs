@@ -32,7 +32,7 @@ function installCanvasUseClient(sessionId,workspace,root) {
     const details=await Promise.all(nodes.filter(n=>!args.nodeIds?.length||args.nodeIds.includes(n.id)).map(async n=>{
       const element=card(n.id),rect=element?.getBoundingClientRect()
       if(!rect||rect.right<viewportRect.left||rect.left>viewportRect.right||rect.bottom<viewportRect.top||rect.top>viewportRect.bottom)return {id:n.id,available:false}
-      try{return {id:n.id,...await surface(n,{op:'observe'})}}catch(error){return {id:n.id,error:error.message}}
+      try{return {id:n.id,...await surface(n,{op:'observe',images:args.screenshot===true})}}catch(error){return {id:n.id,error:error.message}}
     }))
     check();const r=root.getBoundingClientRect()
     const nodeFingerprints=Object.fromEntries(details.map(d=>[d.id,hash(JSON.stringify([d.revision,d.error,d.available]))]));
@@ -40,13 +40,13 @@ function installCanvasUseClient(sessionId,workspace,root) {
     const key=JSON.stringify([basic.revision,state.viewport,state.selection])
     if(key!==last){revision=crypto.randomUUID();last=key}
     const screenshot=args.screenshot?await window.dshDesktop?.researchLinkFrame?.captureCanvas({x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(r.width,innerWidth-Math.max(0,r.x)),height:Math.min(r.height,innerHeight-Math.max(0,r.y))}):undefined
-    return {...basic,revision,canvasRevision:basic.revision,fingerprint,nodeFingerprints,observedNodeIds:args.nodeIds??[],viewport:state.viewport,size:{width:r.width,height:r.height},surfaces:details.filter(d=>!args.nodeIds||args.nodeIds.includes(d.id)),screenshot,scope:'entire-canvas',blockedReason:!basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')?'permission':undefined,writable:basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')}
+    return {nodes:basic.nodes?.map(({id,title,kind,bounds})=>({id,title,kind,bounds})),selectedIds:basic.selectedIds,revision,canvasRevision:basic.revision,fingerprint,nodeFingerprints,observedNodeIds:args.nodeIds??[],viewport:state.viewport,size:{width:r.width,height:r.height},surfaces:details.filter(d=>!args.nodeIds?.length||args.nodeIds.includes(d.id)),screenshot,scope:'entire-canvas',blockedReason:!basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')?'permission':undefined,writable:basic.writable&&(!sherlockShared(sessionId)||sherlockBoardsAdapter.getView(sessionId)?.connection==='online')}
   }
   const ensureCursor=()=>{
     if(cursor?.isConnected)return
     cursor=document.createElement('div');cursor.setAttribute('data-canvas-use-cursor','');cursor.setAttribute('aria-hidden','true')
-    cursor.style.cssText='position:absolute;z-index:60;pointer-events:none;color:#0d99ff;filter:drop-shadow(0 1px 2px #0006);font:11px/16px system-ui;white-space:nowrap;'
-    cursor.innerHTML='<svg width="17" height="20" viewBox="0 0 24 28" style="transform-origin:4px 3px"><path d="M3 2L21 16L12 17L8 25Z" fill="rgba(255,255,255,.22)" stroke="white" stroke-width="1.6" stroke-linejoin="round"/></svg><span style="background:#0d99ff;color:white;border-radius:4px;padding:2px 5px"></span>'
+    cursor.style.cssText='position:absolute;z-index:60;pointer-events:none;color:#0d99ff;font:11px/16px system-ui;white-space:nowrap;'
+    cursor.innerHTML='<svg width="18" height="19" viewBox="0 0 20 22" style="overflow:visible;transform-origin:3px 3px;filter:drop-shadow(0 1px 1px #0005) drop-shadow(0 2px 5px #0007)"><path d="M3 2.5L16.7 8.7Q17.5 9.1 16.6 9.5L10.8 11.5L8.4 17.8Q8 18.7 7.6 17.7Z" fill="rgba(135,135,135,.5)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/></svg><span style="background:#0d99ff;color:white;border-radius:4px;padding:2px 5px"></span>'
     const name=sherlockBoardsAdapter?.getState()?.account?.user?.username
     cursor.querySelector('span').textContent=name?name+'的智能助理':'智能助理'
     root.append(cursor)
@@ -202,7 +202,7 @@ export function mergeCanvasTaskFlow(flow,nodes,tasks) {
   const result=flow.slice(0,users[0].index)
   for(let i=0;i<users.length;i++) {
     const owner=users[i],next=users[i+1],end=next?.index??flow.length
-    const scoped=tasks.filter(t=>t.createdAt>=owner.node.data.time&&t.createdAt<(next?.node.data.time??Infinity))
+    const scoped=tasks.filter(t=>(t.resumedAt??t.createdAt)>=owner.node.data.time&&(t.resumedAt??t.createdAt)<(next?.node.data.time??Infinity))
     result.push(...continueCanvasTaskFlow(flow.slice(owner.index,end),nodes,scoped))
   }
   return result
@@ -221,7 +221,7 @@ function useAllCanvasTasks(sessionId) {
 function CanvasUseConversation({sessionId,active,t,from=0,to=Infinity}) {
   const tasks=useAllCanvasTasks(sessionId)
   if(!active)return null
-  return react.createElement(react.Fragment,null,...tasks.filter(task=>task.createdAt>=from&&task.createdAt<to).sort((a,b)=>a.createdAt-b.createdAt).map(task=>react.createElement(CanvasUseTaskMessage,{key:task.id,task,t})))
+  return react.createElement(react.Fragment,null,...tasks.filter(task=>(task.resumedAt??task.createdAt)>=from&&(task.resumedAt??task.createdAt)<to).sort((a,b)=>a.createdAt-b.createdAt).map(task=>react.createElement(CanvasUseTaskMessage,{key:task.id,task,t})))
 }
 
 export function patchCanvasUseClient(source) {
@@ -243,6 +243,17 @@ export function patchCanvasUseClient(source) {
     return value
   }
   const continuousFlow=value=>{
+    if(!value.includes('/* EXECUTION_HEADER_FIRST */')) {
+      const start=value.indexOf('function ExecutionStatusGroup(')
+      const a=value.indexOf('children: [progressSurface.showProgress',start)
+      const b=value.indexOf('}), (0, react_jsx_runtime.jsxs)("button", {',a)
+      const c=value.indexOf('}), open &&',b)
+      if(a<0||b<0||c<0)throw Error('Execution header ordering anchor missing')
+      const progress=value.slice(a+'children: ['.length,b+2)
+      const button=value.slice(b+4,c+2)
+      value=value.slice(0,a)+'/* EXECUTION_HEADER_FIRST */children: ['+button+', '+progress+value.slice(c+2)
+    }
+
     value=value.replace('task:entry.task,t});','task:entry.task,t,showExecution:entry.showExecution});')
     if(value.includes('/* CANVAS_CONTINUOUS_EXECUTION */'))return value
     const anchor='const [expanded, setExpanded] = (0, react.useState)(false);'

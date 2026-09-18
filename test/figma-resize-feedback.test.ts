@@ -69,3 +69,15 @@ it('centers feedback in the 10px parallel-panel gutter, without a width label, a
   dispose()
   await win.happyDOM.close()
 })
+
+it('disables geometry interpolation throughout native window resizing and restores it afterward',async()=>{
+ const win=new Window(),doc=win.document
+ const dispose=mountFigmaResizeFeedback(doc as unknown as Document)
+ win.dispatchEvent(new win.Event('resize'))
+ expect(doc.documentElement.hasAttribute('data-odyssey-window-resizing')).toBe(true)
+ await new Promise(resolve=>setTimeout(resolve,80));win.dispatchEvent(new win.Event('resize'))
+ await new Promise(resolve=>setTimeout(resolve,80));expect(doc.documentElement.hasAttribute('data-odyssey-window-resizing')).toBe(true)
+ await new Promise(resolve=>setTimeout(resolve,70));expect(doc.documentElement.hasAttribute('data-odyssey-window-resizing')).toBe(false)
+ dispose();win.dispatchEvent(new win.Event('resize'));expect(doc.documentElement.hasAttribute('data-odyssey-window-resizing')).toBe(false)
+ await win.happyDOM.close()
+})

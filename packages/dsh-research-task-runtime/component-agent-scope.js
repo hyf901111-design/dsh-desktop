@@ -22,3 +22,8 @@ export function isComponentAgent(agent, agents) {
   }
   return false
 }
+
+// Continuations share the same component ownership during fresh and cold activation.
+export function withComponentAgentCreation(fn) {
+  return creatingComponent.run(true, fn)
+}

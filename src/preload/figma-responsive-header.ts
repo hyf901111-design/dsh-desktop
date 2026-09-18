@@ -17,8 +17,12 @@ export function mountFigmaResponsiveHeader(doc: Document): () => void {
       observed.add(header); resize.observe(header); sync(header)
     }
   }
-  const mutations = new win.MutationObserver(scan)
+  let frame = 0
+  const mutations = new win.MutationObserver(records => {
+    if (frame || !records.some(r => [...r.addedNodes, ...r.removedNodes].some(n => n.nodeType === 1 && ((n as Element).matches('.wSkVaW_header') || (n as Element).querySelector('.wSkVaW_header'))))) return
+    frame = win.requestAnimationFrame(() => { frame = 0; scan() })
+  })
   mutations.observe(doc.documentElement, { childList:true, subtree:true })
   scan()
-  return () => { mutations.disconnect(); resize.disconnect(); observed.forEach(header => delete header.dataset.odysseyHeaderLayout) }
+  return () => { win.cancelAnimationFrame(frame); mutations.disconnect(); resize.disconnect(); observed.forEach(header => delete header.dataset.odysseyHeaderLayout) }
 }

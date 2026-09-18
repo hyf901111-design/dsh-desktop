@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
+import {patchCanvasUseClient} from '../scripts/lib/canvas-use-client.mjs'
 
 type ClientBundle = Record<string, unknown>
 
@@ -21,24 +22,24 @@ function fakeModule(): unknown {
 }
 
 async function loadConversationBundle(styleTexts?: string[]): Promise<ClientBundle> {
-  const source = await readFile(
+  const source = patchCanvasUseClient(await readFile(
     'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
     'utf8'
-  )
+  ))
   const requireModule = createRequire(import.meta.url)
   const react = requireModule('react')
   const jsxRuntime = requireModule('react/jsx-runtime')
   let descriptor: BundleDescriptor | undefined
 
-  const document = styleTexts === undefined
-    ? undefined
-    : {
+  const document = {
         querySelector: () => null,
+        getElementById: () => null,
         createElement: () => ({ dataset: {}, textContent: '', setAttribute() {} }),
-        documentElement: { appendChild(tag: {textContent?: string}) { styleTexts.push(tag.textContent ?? '') } },
+        documentElement: { appendChild(tag: {textContent?: string}) { styleTexts?.push(tag.textContent ?? '') } },
         head: {
+          append(tag: {textContent?: string}) { styleTexts?.push(tag.textContent ?? '') },
           appendChild(tag: { textContent?: string }) {
-            styleTexts.push(tag.textContent ?? '')
+            styleTexts?.push(tag.textContent ?? '')
           }
         }
       }
