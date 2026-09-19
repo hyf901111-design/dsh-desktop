@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { ComputerController } from '../src/main/computer/controller'
+import { ComputerController, sameObservedElements } from '../src/main/computer/controller'
 
 const controllers: ComputerController[] = []
 afterEach(async () => { for (const c of controllers.splice(0)) await c.stop(); vi.useRealTimers() })
@@ -150,4 +150,23 @@ it.each([true, false])('only delegates a confirmed-focus ordering partial to ind
   const action = run({ op: 'stroke', revision: o.revision, strokes: [[{ x: 50, y: 50 }, { x: 200, y: 150 }]] })
   if (partial) { await action; expect(stroke).toHaveBeenCalledOnce() }
   else { await expect(action).rejects.toThrow('permission denied'); expect(stroke).not.toHaveBeenCalled() }
+})
+
+it('ignores only snapshot tokens when comparing actionable controls', () => {
+  const a = [{ element_token: 's1:0', label: 'Save', focused: true, frame: { x: 1, y: 2 } }]
+  expect(sameObservedElements(a, [{ ...a[0], element_token: 's2:0' }])).toBe(true)
+  expect(sameObservedElements(a, [{ ...a[0], focused: false }])).toBe(false)
+  expect(sameObservedElements(a, [{ ...a[0], label: 'Delete' }])).toBe(false)
+  expect(sameObservedElements(undefined, undefined)).toBe(false)
+})
+it.each([true, false])('rebinds an aged token only after stable semantics and pixels (%s)', async stable => {
+  let snapshot = 0
+  const { run, callTool } = setup({ unchanged: () => true, prepareObservation: r => ({ ...r, data: { ...r.data, elements: [{ element_token: `s${++snapshot}:0`, label: snapshot > 1 && !stable ? 'Delete' : 'Save' }] } }) })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const now = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 40000)
+  const result = await run({ op: 'click', revision: o.revision, element_token: 's1:0' })
+  const clicks = callTool.mock.calls.filter(([n]) => n === 'click')
+  if (stable) expect(JSON.parse(clicks[0]![1]).element_token).toBe('s2:0')
+  else { expect(clicks).toHaveLength(0); expect(result.action.performed).toBe(false) }
+  now.mockRestore()
 })

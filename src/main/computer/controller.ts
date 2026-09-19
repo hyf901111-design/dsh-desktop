@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { setTimeout as settle } from 'node:timers/promises'
 
 export interface DriverResult {
   isError: boolean
@@ -11,6 +12,13 @@ export interface ComputerDriver {
 }
 type RecordValue = Record<string, any>
 type Observation = { revision: string; target: RecordValue; data: RecordValue; screenshots: DriverResult["images"]; at: number }
+
+/** Tokens identify one snapshot, not an enduring control. All semantic fields
+ * (including focus, value and geometry) must still match before rebinding. */
+export function sameObservedElements(a: unknown, b: unknown): boolean {
+  const semantic = (value: unknown) => JSON.stringify(value, (key, item) => key === 'element_token' ? undefined : item)
+  return Array.isArray(a) && Array.isArray(b) && semantic(a) === semantic(b)
+}
 
 /** The host, not a model argument, owns the desktop lease and driver session. */
 export class ComputerController {
@@ -130,19 +138,25 @@ export class ComputerController {
       let observed = this.observation
       if (!observed || v.revision !== observed.revision) throw Error('观察已过期，请先 observe，再使用新 revision 操作。')
       if ((v.pid !== undefined && v.pid !== observed.target.pid) || (v.window_id !== undefined && v.window_id !== observed.target.window_id) || (v.scope && v.scope !== observed.target.kind)) throw Error('操作目标与最近观察不一致，请重新 observe。')
+      let token = v.element_token
       if (Date.now() - observed.at > 30000) {
         const previous = observed
         const fresh = await observe(previous.target)
         observed = this.observation!
         // Slow model responses do not invalidate an unchanged target. Revalidate
         // pixels and geometry before input, and return changed views without input.
-        if (!this.options.unchanged?.(previous, observed, v)) {
+        if (!this.options.unchanged?.(previous, observed, v) || (token !== undefined && !sameObservedElements(previous.data.elements, observed.data.elements))) {
           budget.failures = 0
           return { ...fresh, action: { performed: false, reason: '界面发生变化或无法确认；未执行输入，请根据本次截图重新规划。' } }
         }
+        if (token !== undefined) {
+          const index = previous.data.elements?.findIndex((e: RecordValue) => e.element_token === token)
+          if (index === undefined || index < 0) throw Error('控件不在最近一次观察中，请重新 observe。')
+          token = observed.data.elements[index]?.element_token
+          if (!token) throw Error('刷新后的控件不可操作，请重新 observe。')
+        }
       }
       const args: RecordValue = { target: observed.target, session: this.runId, delivery_mode: 'foreground' }
-      const token = v.element_token
       let point: { x: number; y: number } | undefined
       if (token !== undefined) {
         const element = observed.data.elements?.find((e: RecordValue) => e.element_token === token)
@@ -210,6 +224,9 @@ export class ComputerController {
       budget.failures = 0
       const finalPoint = v.op === 'drag' ? this.options.screenPoint(observed.target, observed.data, v.to_x, v.to_y) : point
       this.options.pointer(finalPoint ? { ...finalPoint, drag: false } : undefined)
+      // Let the application's event/render queue consume the input before the
+      // screenshot. Otherwise a successful tool selection looks unchanged.
+      await settle(150, undefined, { signal: combined })
       return { action: result.data, ...await observe(observed.target) }
     } catch (error) {
       failed = true

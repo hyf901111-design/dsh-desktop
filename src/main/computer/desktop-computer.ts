@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, globalShortcut, nativeImage, screen, shell, systemPreferences } from 'electron'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
-import { ComputerController, type ComputerDriver } from './controller'
+import { ComputerController, sameObservedElements, type ComputerDriver } from './controller'
 import type { CuaDriverLike, EmbeddedCuaDriverHostLike } from '@trycua/cua-driver'
 
 export function createDesktopComputer(getMainWindow: () => BrowserWindow | null | undefined) {
@@ -104,7 +104,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
         const y = Math.max(0, Math.floor(Math.min(...points.map((p: any) => p.y)) - 64))
         rect = { x, y, width: Math.min(a.screenshot_width, Math.ceil(Math.max(...points.map((p: any) => p.x)) + 64)) - x,
           height: Math.min(a.screenshot_height, Math.ceil(Math.max(...points.map((p: any) => p.y)) + 64)) - y }
-      } else if (JSON.stringify(a.elements) !== JSON.stringify(b.elements)) return false
+      } else if (!sameObservedElements(a.elements, b.elements)) return false
       if (rect.width <= 0 || rect.height <= 0) return false
       const pixels = (observation: typeof before) => nativeImage.createFromBuffer(Buffer.from(observation.screenshots[0]!.dataBase64, 'base64')).crop(rect).toBitmap()
       return pixels(before).equals(pixels(after))

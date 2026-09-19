@@ -12,7 +12,7 @@
 
 struct StrokeJob {
   napi_async_work work; napi_deferred deferred;
-  pid_t pid; uint32_t window; CGRect frame; CGRect ink;
+  pid_t pid; uint32_t window; CGRect frame; CGRect ink; CGPoint probe;
   std::vector<std::vector<CGPoint>> strokes;
   double duration; std::atomic<bool> cancelled{false}; std::string error;
 };
@@ -23,6 +23,14 @@ static double number(napi_env env,napi_value obj,const char* key) {
   if(napi_get_named_property(env,obj,key,&v)!=napi_ok || napi_get_value_double(env,v,&d)!=napi_ok) return NAN;
   return d;
 }
+static bool hitTarget(StrokeJob* j, CGPoint point) {
+  AXUIElementRef system=AXUIElementCreateSystemWide(), element=nullptr;
+  AXError error=AXUIElementCopyElementAtPosition(system,point.x,point.y,&element);
+  CFRelease(system);
+  if(error!=kAXErrorSuccess || !element)return false;
+  pid_t pid=0; AXUIElementGetPid(element,&pid); CFRelease(element);
+  return pid==j->pid;
+}
 static bool sameWindow(StrokeJob* j) {
   // Check the actual drawing envelope in WindowServer order. Some Electron
   // apps place small helper/header windows above their main window; those must
@@ -32,6 +40,9 @@ static bool sameWindow(StrokeJob* j) {
     if(([w[(id)kCGWindowOwnerPID] intValue]==getpid() && [w[(id)kCGWindowLayer] intValue]>=25) || [w[(id)kCGWindowAlpha] doubleValue]<=0) continue;
     CGRect b; if(!CGRectMakeWithDictionaryRepresentation((__bridge CFDictionaryRef)w[(id)kCGWindowBounds],&b))continue;
     if(!CGRectIntersectsRect(b,j->ink))continue;
+    // Remote desktop cursor surfaces may span a display without receiving
+    // input. Verify the actual OS hit target; never whitelist their owner.
+    if([w[(id)kCGWindowLayer] intValue]>=CGWindowLevelForKey(kCGCursorWindowLevelKey) && hitTarget(j,j->probe))continue;
     if([w[(id)kCGWindowOwnerPID] intValue]!=j->pid || [w[(id)kCGWindowNumber] unsignedIntValue]!=j->window){j->error="绘制区域被窗口 " + std::to_string([w[(id)kCGWindowNumber] unsignedIntValue]) + " 遮挡，未继续输入";return false;}
     return std::abs(b.origin.x-j->frame.origin.x)<2 && std::abs(b.origin.y-j->frame.origin.y)<2 && std::abs(b.size.width-j->frame.size.width)<2 && std::abs(b.size.height-j->frame.size.height)<2;
   }
@@ -50,11 +61,13 @@ static void execute(napi_env,void* raw) {
     size_t segments=0;for(auto& s:j->strokes)segments+=s.size()-1;
     const double stepMs=j->duration/std::max<size_t>(segments,1);
     for(auto& s:j->strokes) {
+      j->probe=s.front();
       if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || !sameWindow(j))throw std::runtime_error(j->error.empty()?"绘制已取消或目标窗口发生变化":j->error);
       last=s.front();post(kCGEventMouseMoved,last);post(kCGEventLeftMouseDown,last);down=true;
       for(size_t i=1;i<s.size();i++) {
         const CGPoint from=last,to=s[i]; const int steps=std::max(1,(int)std::ceil(stepMs/8.0));
         for(int k=1;k<=steps;k++) {
+          j->probe=CGPointMake(from.x+(to.x-from.x)*k/steps,from.y+(to.y-from.y)*k/steps);
           if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || (++emitted % 12 == 0 && !sameWindow(j)))throw std::runtime_error(j->error.empty()?"绘制已停止或用户切换了应用":j->error);
           last=CGPointMake(from.x+(to.x-from.x)*k/steps,from.y+(to.y-from.y)*k/steps);
           post(kCGEventLeftMouseDragged,last);
