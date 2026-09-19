@@ -130,7 +130,7 @@ export class ComputerController {
         result = this.options.prepareObservation?.(result) ?? result
         const revision = `view-${++this.sequence}`
         this.observation = { revision, target, data: result.data, screenshots: result.screenshots, at: Date.now() }
-        return { ...result, revision, target, coordinateSpace: '返回图片的像素坐标；窗口图以窗口左上角为原点，桌面图以主显示器左上角为原点。' }
+        return { revision, target, coordinateSpace: '返回图片的像素坐标；窗口图以窗口左上角为原点，桌面图以主显示器左上角为原点。', ...result }
       }
       if (v.op === 'observe') return await observe(v.scope === 'desktop'
         ? { kind: 'desktop', display_id: 'primary' }

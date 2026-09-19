@@ -28,8 +28,28 @@ static bool hitTarget(StrokeJob* j, CGPoint point) {
   AXError error=AXUIElementCopyElementAtPosition(system,point.x,point.y,&element);
   CFRelease(system);
   if(error!=kAXErrorSuccess || !element)return false;
-  pid_t pid=0; AXUIElementGetPid(element,&pid); CFRelease(element);
-  return pid==j->pid;
+  pid_t pid=0; AXUIElementGetPid(element,&pid);
+  if(pid!=j->pid){CFRelease(element);return false;}
+  CFTypeRef window=nullptr;
+  if(AXUIElementCopyAttributeValue(element,kAXWindowAttribute,&window)!=kAXErrorSuccess || !window) {
+    CFTypeRef role=nullptr;
+    AXUIElementCopyAttributeValue(element,kAXRoleAttribute,&role);
+    const bool isWindow=role && CFEqual(role,kAXWindowRole);
+    if(role)CFRelease(role);
+    if(isWindow)window=CFRetain(element);
+  }
+  CFRelease(element);
+  if(!window)return false;
+  CFTypeRef position=nullptr,size=nullptr;
+  AXUIElementCopyAttributeValue((AXUIElementRef)window,kAXPositionAttribute,&position);
+  AXUIElementCopyAttributeValue((AXUIElementRef)window,kAXSizeAttribute,&size);
+  CGPoint p; CGSize s;
+  const bool valid=position && size && CFGetTypeID(position)==AXValueGetTypeID() && CFGetTypeID(size)==AXValueGetTypeID()
+    && AXValueGetValue((AXValueRef)position,static_cast<AXValueType>(kAXValueCGPointType),&p) && AXValueGetValue((AXValueRef)size,static_cast<AXValueType>(kAXValueCGSizeType),&s)
+    && std::abs(p.x-j->frame.origin.x)<2 && std::abs(p.y-j->frame.origin.y)<2
+    && std::abs(s.width-j->frame.size.width)<2 && std::abs(s.height-j->frame.size.height)<2;
+  if(position)CFRelease(position);if(size)CFRelease(size);CFRelease(window);
+  return valid;
 }
 static bool sameWindow(StrokeJob* j) {
   // Check the actual drawing envelope in WindowServer order. Some Electron
@@ -40,9 +60,9 @@ static bool sameWindow(StrokeJob* j) {
     if(([w[(id)kCGWindowOwnerPID] intValue]==getpid() && [w[(id)kCGWindowLayer] intValue]>=25) || [w[(id)kCGWindowAlpha] doubleValue]<=0) continue;
     CGRect b; if(!CGRectMakeWithDictionaryRepresentation((__bridge CFDictionaryRef)w[(id)kCGWindowBounds],&b))continue;
     if(!CGRectIntersectsRect(b,j->ink))continue;
-    // Remote desktop cursor surfaces may span a display without receiving
+    // Dock and remote cursor surfaces may span a display without receiving
     // input. Verify the actual OS hit target; never whitelist their owner.
-    if([w[(id)kCGWindowLayer] intValue]>=CGWindowLevelForKey(kCGCursorWindowLevelKey) && hitTarget(j,j->probe))continue;
+    if([w[(id)kCGWindowLayer] intValue]>CGWindowLevelForKey(kCGNormalWindowLevelKey) && hitTarget(j,j->probe))continue;
     if([w[(id)kCGWindowOwnerPID] intValue]!=j->pid || [w[(id)kCGWindowNumber] unsignedIntValue]!=j->window){j->error="绘制区域被窗口 " + std::to_string([w[(id)kCGWindowNumber] unsignedIntValue]) + " 遮挡，未继续输入";return false;}
     return std::abs(b.origin.x-j->frame.origin.x)<2 && std::abs(b.origin.y-j->frame.origin.y)<2 && std::abs(b.size.width-j->frame.size.width)<2 && std::abs(b.size.height-j->frame.size.height)<2;
   }
