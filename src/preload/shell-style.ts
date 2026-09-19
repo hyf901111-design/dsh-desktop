@@ -30,4 +30,18 @@ export function mountDesktopShellStyles(document: Document): void {
   style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles + figmaReadingStyles + figmaWelcomeStyles + focusStyles
   document.documentElement.appendChild(style)
   document.getElementById('odyssey-figma-final-shell')?.remove()
+  // Native draggable regions need a real element. Keep it inside the current
+  // React sidebar so its width follows the panel and remounts stay draggable.
+  const ensureDragStrip = () => {
+    if (!document.getElementById('dsh-desktop-drag-region')) return
+    const sidebar = document.querySelector('.hHd-Xa_root')
+    if (!sidebar || sidebar.querySelector(':scope > .dsh-sidebar-drag-region')) return
+    const strip = document.createElement('div')
+    strip.className = 'dsh-sidebar-drag-region'
+    strip.setAttribute('aria-hidden', 'true')
+    sidebar.appendChild(strip)
+  }
+  ensureDragStrip()
+  const Observer = document.defaultView?.MutationObserver
+  if (Observer) new Observer(ensureDragStrip).observe(document.documentElement, { childList: true, subtree: true })
 }
