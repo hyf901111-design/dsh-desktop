@@ -12,7 +12,7 @@
         "featureName": "PPT技能1.1.1与桌面连续画笔优化",
         "branch": "codex/feat/computer-use-evaluation-20260918",
         "baseCommit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
-        "tipCommit": "1dd22e1ca013d56c879bca893706e2fc5920f010",
+        "tipCommit": "5f5817522f26c935ff268691f9c3214226526098",
         "commits": [
           {
             "commit": "1dd22e1ca013d56c879bca893706e2fc5920f010",
@@ -20,6 +20,13 @@
               "647b9e96c07514dcaad601343fa96cff9ace2c19"
             ],
             "subject": "根据实测补齐窗口进程绑定并精简桌面目标发现"
+          },
+          {
+            "commit": "5f5817522f26c935ff268691f9c3214226526098",
+            "parents": [
+              "1dd22e1ca013d56c879bca893706e2fc5920f010"
+            ],
+            "subject": "修复辅助窗口影响连续画笔前台校验的问题"
           }
         ],
         "files": [
@@ -30,6 +37,10 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/macos/computer-stroke.mm"
           },
           {
             "status": "M",
@@ -51,9 +62,9 @@
               "test/local-search-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "34项桌面控制聚焦检查通过",
-            "verifiedCommit": "1dd22e1ca013d56c879bca893706e2fc5920f010",
-            "completedAt": "2026-09-19T00:26:31.483818+00:00",
+            "summary": "36项桌面控制聚焦检查通过",
+            "verifiedCommit": "5f5817522f26c935ff268691f9c3214226526098",
+            "completedAt": "2026-09-19T00:31:58.329548+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -70,7 +81,7 @@
         "risks": [
           "Boardmix真实任务与签名包仍待集成验证，模型响应速度取决于当前提供商"
         ],
-        "generatedAt": "2026-09-19T00:26:31.483818+00:00"
+        "generatedAt": "2026-09-19T00:31:58.329548+00:00"
       }
     }
   ],
