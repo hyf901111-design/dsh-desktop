@@ -38,9 +38,10 @@
 .hHd-Xa_root { background:transparent !important; }
 /* Keep the reserved macOS sidebar titlebar draggable in its own stacking
    context. The global strip sits below the sidebar and only covers 24px. */
+.dsh-sidebar-drag-region { display:none; }
 body:has(#dsh-desktop-drag-region) .hHd-Xa_root { position:relative; }
-body:has(#dsh-desktop-drag-region) .hHd-Xa_root:not(.hHd-Xa_collapsed)::before {
-  content:""; position:absolute; top:10px; left:80px; right:0; height:34px;
+body:has(#dsh-desktop-drag-region) .hHd-Xa_root:not(.hHd-Xa_collapsed) > .dsh-sidebar-drag-region {
+  display:block; position:absolute; top:10px; left:80px; right:0; height:34px;
   z-index:19; background:transparent; pointer-events:auto;
   -webkit-app-region:drag; user-select:none;
 }
