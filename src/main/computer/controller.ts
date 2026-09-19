@@ -195,7 +195,14 @@ export class ComputerController {
       if (point) this.options.pointer({ ...point, drag: v.op === 'drag' || v.op === 'stroke' })
       const result = strokes
         ? await (async () => {
-          await call('bring_to_front', { pid: observed!.target.pid, window_id: observed!.target.window_id })
+          try { await call('bring_to_front', { pid: observed!.target.pid, window_id: observed!.target.window_id }) }
+          catch (error) {
+            // Electron helper windows can make Cua's whole-window ordering test
+            // fail after focus was confirmed. Only this exact partial result is
+            // eligible; native stroke still independently verifies foreground,
+            // geometry and that no foreign window covers the entire ink region.
+            if (!(error instanceof Error) || !error.message.includes('focused=true, frontmost_ordinary=false')) throw error
+          }
           await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined)
           return { data: { performed: true, strokes: strokes!.length } }
         })()

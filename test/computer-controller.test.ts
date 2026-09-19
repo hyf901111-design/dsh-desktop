@@ -141,3 +141,13 @@ it('binds discovered windows to their owning process and hides off-screen utilit
   await run({ op: 'release' })
   await expect(run({ op: 'observe', window_id: 10 })).rejects.toThrow()
 })
+it.each([true, false])('only delegates a confirmed-focus ordering partial to independently verified native ink (%s)', async partial => {
+  const stroke = vi.fn(async () => {})
+  const { run, callTool } = setup({ stroke })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'bring_to_front' ? { isError: true, images: [], structuredJson: '{}', text: partial ? 'bring_to_front: exact window was not verified (focused=true, frontmost_ordinary=false)' : 'permission denied' } : original(name, raw, options))
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const action = run({ op: 'stroke', revision: o.revision, strokes: [[{ x: 50, y: 50 }, { x: 200, y: 150 }]] })
+  if (partial) { await action; expect(stroke).toHaveBeenCalledOnce() }
+  else { await expect(action).rejects.toThrow('permission denied'); expect(stroke).not.toHaveBeenCalled() }
+})
