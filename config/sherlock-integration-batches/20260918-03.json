@@ -11,21 +11,37 @@
         "schemaVersion": 1,
         "featureName": "PPT技能1.1.1与桌面连续画笔优化",
         "branch": "codex/feat/computer-use-evaluation-20260918",
-        "baseCommit": "5f5817522f26c935ff268691f9c3214226526098",
-        "tipCommit": "378a74cf2f09c83253561d2af34fda0df86dd351",
+        "baseCommit": "378a74cf2f09c83253561d2af34fda0df86dd351",
+        "tipCommit": "ad52ea370c6c2f11565fcaa21198411938773f50",
         "commits": [
           {
-            "commit": "378a74cf2f09c83253561d2af34fda0df86dd351",
+            "commit": "ad52ea370c6c2f11565fcaa21198411938773f50",
             "parents": [
-              "5f5817522f26c935ff268691f9c3214226526098"
+              "378a74cf2f09c83253561d2af34fda0df86dd351"
             ],
-            "subject": "精简重复桌面观察内容并同步截图格式说明"
+            "subject": "修复远程光标表面误判与桌面观察控件失效"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "docs/research/computer-use-integration.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/macos/computer-stroke.mm"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "M",
             "path": "src/main/computer/desktop-computer.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-controller.test.ts"
           }
         ],
         "checks": [
@@ -36,9 +52,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "桌面观察精简后的类型检查通过，前一提交36项桌面聚焦检查通过",
-            "verifiedCommit": "378a74cf2f09c83253561d2af34fda0df86dd351",
-            "completedAt": "2026-09-19T00:34:15.810199+00:00",
+            "summary": "类型检查、39项桌面聚焦检查与原生模块构建通过",
+            "verifiedCommit": "ad52ea370c6c2f11565fcaa21198411938773f50",
+            "completedAt": "2026-09-19T00:55:45.502280+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -55,53 +71,7 @@
         "risks": [
           "Boardmix真实任务与签名包仍待集成验证，模型响应速度取决于当前提供商"
         ],
-        "generatedAt": "2026-09-19T00:34:15.810199+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6e9d137e5df6dd16a3a2f6ed76a1946407123ca0",
-        "verificationCommit": "6e9d137e5df6dd16a3a2f6ed76a1946407123ca0",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "6e9d137e5df6dd16a3a2f6ed76a1946407123ca0",
-            "completedAt": "2026-09-19T00:35:52.397Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6e9d137e5df6dd16a3a2f6ed76a1946407123ca0",
-            "completedAt": "2026-09-19T00:35:52.397Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
-            "verifiedCommit": "6e9d137e5df6dd16a3a2f6ed76a1946407123ca0",
-            "completedAt": "2026-09-19T00:35:52.397Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-19T00:35:52.397Z"
+        "generatedAt": "2026-09-19T00:55:45.502280+00:00"
       }
     }
   ],
