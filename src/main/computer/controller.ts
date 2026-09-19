@@ -10,19 +10,24 @@ export interface ComputerDriver {
   callTool(name: string, args: string, options?: { signal: AbortSignal }): Promise<DriverResult>
 }
 type RecordValue = Record<string, any>
-type Observation = { revision: string; target: RecordValue; data: RecordValue; at: number }
+type Observation = { revision: string; target: RecordValue; data: RecordValue; screenshots: DriverResult["images"]; at: number }
 
 /** The host, not a model argument, owns the desktop lease and driver session. */
 export class ComputerController {
   private owner?: string
   private runId = ''
   private observation?: Observation
+  private sequence = 0
+  private budgets = new Map<string, { started: number; actions: number; failures: number }>()
   private busy = false
   private abort?: AbortController
   private stopped = new Set<string>()
   private idle?: ReturnType<typeof setTimeout>
   constructor(private options: {
     driver(): Promise<ComputerDriver>
+    prepareObservation?(result: { data: RecordValue; screenshots: DriverResult['images'] }): { data: RecordValue; screenshots: DriverResult['images'] }
+    unchanged?(before: Observation, after: Observation, input: RecordValue): boolean
+    stroke?(target: RecordValue, data: RecordValue, strokes: { x: number; y: number }[][], duration: number, signal: AbortSignal): Promise<void>
     pointer(data?: { x: number; y: number; drag: boolean }): void
     visibility(active: boolean): void
     screenPoint(target: RecordValue, data: RecordValue, x: number, y: number): { x: number; y: number }
@@ -31,7 +36,7 @@ export class ComputerController {
   async stop(sessionId = this.owner, block = true): Promise<void> {
     if (!sessionId) return
     if (block) this.stopped.add(sessionId)
-    else this.stopped.delete(sessionId)
+    else { this.stopped.delete(sessionId); this.budgets.delete(sessionId) }
     if (sessionId !== this.owner) return
     this.abort?.abort(new Error('桌面控制已停止。'))
     this.observation = undefined
@@ -52,9 +57,16 @@ export class ComputerController {
     const v = input as RecordValue, id = v.sessionId
     if (typeof id !== 'string' || !id || id.length > 256) throw Error('缺少当前会话身份。')
     if (v.op === 'release' || v.op === 'finish') { await this.stop(id, v.op !== 'release'); return { stopped: true } }
-    if (!['apps','windows','open','observe','click','type','key','hotkey','scroll','drag'].includes(v.op)) throw Error('不支持的桌面操作。')
+    if (!['apps','windows','open','observe','click','type','key','hotkey','scroll','drag','stroke'].includes(v.op)) throw Error('不支持的桌面操作。')
     if (this.stopped.has(id)) throw Error('本轮桌面控制已停止，请等待下一轮用户指令。')
     if (this.busy || (this.owner && this.owner !== id)) throw Error('其他桌面操作正在进行，请等待当前会话结束。')
+    const budget = this.budgets.get(id) ?? { started: Date.now(), actions: 0, failures: 0 }
+    this.budgets.set(id, budget)
+    if (Date.now() - budget.started >= 10 * 60 * 1000 || budget.actions >= 60 || budget.failures >= 3) {
+      await this.stop(id)
+      throw Error('本轮桌面任务已达到 10 分钟、60 次操作或连续 3 次失败限制，已停止；请检查模型延迟或应用状态后再试。')
+    }
+    budget.actions++
     signal.throwIfAborted()
     this.busy = true
     const controller = new AbortController()
@@ -86,20 +98,32 @@ export class ComputerController {
       }
       const observe = async (target: RecordValue) => {
         this.observation = undefined
-        const result = target.kind === 'desktop'
+        let result = target.kind === 'desktop'
           ? await call('get_desktop_state', { session: this.runId })
           : await call('get_window_state', { pid: target.pid, window_id: target.window_id, session: this.runId, max_elements: 500, max_depth: 15 })
         if (!result.screenshots.length) throw Error('没有获得有效桌面截图，停止操作；请检查屏幕录制权限。')
-        const revision = randomUUID()
-        this.observation = { revision, target, data: result.data, at: Date.now() }
-        return { ...result, revision, target, coordinateSpace: '截图原始像素；窗口截图以窗口左上角为原点，桌面截图以主显示器左上角为原点。' }
+        result = this.options.prepareObservation?.(result) ?? result
+        const revision = `view-${++this.sequence}`
+        this.observation = { revision, target, data: result.data, screenshots: result.screenshots, at: Date.now() }
+        return { ...result, revision, target, coordinateSpace: '返回图片的像素坐标；窗口图以窗口左上角为原点，桌面图以主显示器左上角为原点。' }
       }
       if (v.op === 'observe') return await observe(v.scope === 'desktop'
         ? { kind: 'desktop', display_id: 'primary' }
         : { kind: 'window', pid: positiveInteger(v.pid), window_id: positiveInteger(v.window_id) })
-      const observed = this.observation
-      if (!observed || v.revision !== observed.revision || Date.now() - observed.at > 120000) throw Error('观察已过期，请先 observe，再使用新 revision 操作。')
+      let observed = this.observation
+      if (!observed || v.revision !== observed.revision) throw Error('观察已过期，请先 observe，再使用新 revision 操作。')
       if ((v.pid !== undefined && v.pid !== observed.target.pid) || (v.window_id !== undefined && v.window_id !== observed.target.window_id) || (v.scope && v.scope !== observed.target.kind)) throw Error('操作目标与最近观察不一致，请重新 observe。')
+      if (Date.now() - observed.at > 30000) {
+        const previous = observed
+        const fresh = await observe(previous.target)
+        observed = this.observation!
+        // Slow model responses do not invalidate an unchanged target. Revalidate
+        // pixels and geometry before input, and return changed views without input.
+        if (!this.options.unchanged?.(previous, observed, v)) {
+          budget.failures = 0
+          return { ...fresh, action: { performed: false, reason: '界面发生变化或无法确认；未执行输入，请根据本次截图重新规划。' } }
+        }
+      }
       const args: RecordValue = { target: observed.target, session: this.runId, delivery_mode: 'foreground' }
       const token = v.element_token
       let point: { x: number; y: number } | undefined
@@ -110,9 +134,11 @@ export class ComputerController {
         if (element.frame) point = { x: element.frame.x + element.frame.w / 2, y: element.frame.y + element.frame.h / 2 }
       } else if (v.x !== undefined || v.y !== undefined) {
         this.validatePoint(observed, v.x, v.y)
-        args.x = v.x; args.y = v.y
+        args.x = this.driverX(observed, v.x); args.y = this.driverY(observed, v.y)
         point = this.options.screenPoint(observed.target, observed.data, v.x, v.y)
       }
+      let strokes: { x: number; y: number }[][] | undefined
+      let duration = 2000
       let tool: string = v.op
       switch (v.op) {
         case 'click':
@@ -129,21 +155,41 @@ export class ComputerController {
         case 'scroll':
           if (!['up','down','left','right'].includes(v.direction)) throw Error('无效滚动方向。')
           args.direction = v.direction; args.amount = v.amount === undefined ? 3 : positiveInteger(v.amount, 30); break
+        case 'stroke':
+          if (observed.target.kind !== 'window' || !this.options.stroke) throw Error('连续画笔需要先观察目标应用窗口。')
+          if (!Array.isArray(v.strokes) || !v.strokes.length || v.strokes.length > 12) throw Error('每批画笔需 1 至 12 条笔画。')
+          let total = 0
+          strokes = v.strokes.map((stroke: unknown) => {
+            if (!Array.isArray(stroke) || stroke.length < 2 || stroke.length > 256 || (total += stroke.length) > 768) throw Error('笔画点数超限。')
+            return stroke.map(p => { this.validatePoint(observed!, p?.x, p?.y); return { x: p.x, y: p.y } })
+          })
+          duration = v.duration_ms === undefined ? 2000 : positiveInteger(v.duration_ms, 8000)
+          if (duration < 100) throw Error('笔画时长应为 100 至 8000 毫秒。')
+          point = this.options.screenPoint(observed.target, observed.data, strokes[0]![0]!.x, strokes[0]![0]!.y)
+          break
         case 'drag':
           this.validatePoint(observed, v.x, v.y); this.validatePoint(observed, v.to_x, v.to_y)
           delete args.x; delete args.y; delete args.element_token
-          Object.assign(args, { from_x: v.x, from_y: v.y, to_x: v.to_x, to_y: v.to_y, duration_ms: 700, steps: 45 })
+          Object.assign(args, { from_x: this.driverX(observed, v.x), from_y: this.driverY(observed, v.y), to_x: this.driverX(observed, v.to_x), to_y: this.driverY(observed, v.to_y), duration_ms: 700, steps: 45 })
           if (v.modifiers) args.modifier = modifiers(v.modifiers)
           break
       }
       this.observation = undefined // Never replay a gesture against the old snapshot, including on failure.
-      if (point) this.options.pointer({ ...point, drag: v.op === 'drag' })
-      const result = await call(tool, args)
+      if (point) this.options.pointer({ ...point, drag: v.op === 'drag' || v.op === 'stroke' })
+      const result = strokes
+        ? await (async () => {
+          await call('bring_to_front', { pid: observed!.target.pid, window_id: observed!.target.window_id })
+          await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined)
+          return { data: { performed: true, strokes: strokes!.length } }
+        })()
+        : await call(tool, args)
+      budget.failures = 0
       const finalPoint = v.op === 'drag' ? this.options.screenPoint(observed.target, observed.data, v.to_x, v.to_y) : point
       this.options.pointer(finalPoint ? { ...finalPoint, drag: false } : undefined)
       return { action: result.data, ...await observe(observed.target) }
     } catch (error) {
       failed = true
+      budget.failures++
       this.observation = undefined
       this.options.pointer()
       if (combined.aborted) this.stopped.add(id)
@@ -159,6 +205,8 @@ export class ComputerController {
       else if (this.owner) this.idle = setTimeout(() => { void this.stop().catch(() => {}) }, 5 * 60 * 1000)
     }
   }
+  private driverX(o: Observation, x: number) { return x * (o.data.original_screenshot_width ?? o.data.screenshot_width) / o.data.screenshot_width }
+  private driverY(o: Observation, y: number) { return y * (o.data.original_screenshot_height ?? o.data.screenshot_height) / o.data.screenshot_height }
   private validatePoint(o: Observation, x: unknown, y: unknown) {
     const width = o.data.screenshot_width, height = o.data.screenshot_height
     if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y) || !(width > 0) || !(height > 0) || x < 0 || y < 0 || x >= width || y >= height) throw Error('坐标超出当前截图，请重新观察。')
