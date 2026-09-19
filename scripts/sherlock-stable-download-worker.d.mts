@@ -6,7 +6,7 @@ export function proxyStableDownload(
 ): Promise<Response>
 
 declare const worker: {
-  fetch(request: Request): Promise<Response>
+  fetch(request: Request, env?: { SHERLOCK_RELEASES?: unknown }): Promise<Response>
 }
 
 export default worker

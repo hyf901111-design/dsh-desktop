@@ -13,7 +13,9 @@ export async function proxyStableDownload(request, fetchOrigin = fetch) {
 }
 
 export default {
-  fetch(request) {
+  fetch(request, env) {
+    if (env?.SHERLOCK_RELEASES) return serveReleaseDownload(request, env.SHERLOCK_RELEASES)
     return proxyStableDownload(request)
   }
 }
+import { serveReleaseDownload } from './sherlock-release-download.mjs'

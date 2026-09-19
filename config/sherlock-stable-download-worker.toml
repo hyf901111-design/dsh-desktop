@@ -7,3 +7,11 @@ preview_urls = false
 [[routes]]
 pattern = "updates.evanarts.com/download/sherlock-mac-arm64.dmg"
 zone_id = "6f467b786713bdf33ed46e8a89d780d9"
+
+[[routes]]
+pattern = "updates.evanarts.com/releases/*"
+zone_id = "6f467b786713bdf33ed46e8a89d780d9"
+
+[[r2_buckets]]
+binding = "SHERLOCK_RELEASES"
+bucket_name = "sherlock-releases"
