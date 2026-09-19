@@ -87,6 +87,52 @@
           "Boardmix真实任务与签名包仍待集成验证，模型响应速度取决于当前提供商"
         ],
         "generatedAt": "2026-09-19T01:11:58.354383+00:00"
+      },
+      "merged": {
+        "mergeCommit": "41119e7f293cc4b79294867bef15e8448da90d51",
+        "verificationCommit": "41119e7f293cc4b79294867bef15e8448da90d51",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
+            "verifiedCommit": "41119e7f293cc4b79294867bef15e8448da90d51",
+            "completedAt": "2026-09-19T01:12:33.214Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "41119e7f293cc4b79294867bef15e8448da90d51",
+            "completedAt": "2026-09-19T01:12:33.214Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/local-search-bridge.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
+            "verifiedCommit": "41119e7f293cc4b79294867bef15e8448da90d51",
+            "completedAt": "2026-09-19T01:12:33.214Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-19T01:12:33.214Z"
       }
     }
   ],
