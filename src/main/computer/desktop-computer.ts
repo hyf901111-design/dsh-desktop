@@ -79,7 +79,11 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
       const ratio = Math.min(1, 1600 / Math.max(size.width, size.height))
       const resized = ratio < 1 ? original.resize({ width: Math.round(size.width * ratio), height: Math.round(size.height * ratio), quality: 'best' }) : original
       const shown = resized.getSize()
-      return { data: { ...result.data, original_screenshot_width: result.data.screenshot_width,
+      // The driver includes the same AX tree in structured and Markdown forms.
+      // Keep actionable structured elements; duplicate legacy text wastes vision
+      // context and lengthens every subsequent model response.
+      const { tree_markdown: _tree, _note, background_input: _background, ...view } = result.data
+      return { data: { ...view, screenshot_mime_type: 'image/jpeg', original_screenshot_width: result.data.screenshot_width,
         original_screenshot_height: result.data.screenshot_height, original_scale_factor: result.data.scale_factor,
         screenshot_width: shown.width, screenshot_height: shown.height,
         ...(result.data.scale_factor ? { scale_factor: result.data.scale_factor * shown.width / size.width } : {}) },
