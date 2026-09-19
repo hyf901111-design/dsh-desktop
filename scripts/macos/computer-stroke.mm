@@ -12,7 +12,7 @@
 
 struct StrokeJob {
   napi_async_work work; napi_deferred deferred;
-  pid_t pid; uint32_t window; CGRect frame;
+  pid_t pid; uint32_t window; CGRect frame; CGRect ink;
   std::vector<std::vector<CGPoint>> strokes;
   double duration; std::atomic<bool> cancelled{false}; std::string error;
 };
@@ -24,10 +24,15 @@ static double number(napi_env env,napi_value obj,const char* key) {
   return d;
 }
 static bool sameWindow(StrokeJob* j) {
-  NSArray* list=CFBridgingRelease(CGWindowListCopyWindowInfo(kCGWindowListOptionIncludingWindow,j->window));
+  // Check the actual drawing envelope in WindowServer order. Some Electron
+  // apps place small helper/header windows above their main window; those must
+  // not prevent drawing in an unobscured canvas far from the helper window.
+  NSArray* list=CFBridgingRelease(CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,kCGNullWindowID));
   for(NSDictionary* w in list) {
-    if([w[(id)kCGWindowOwnerPID] intValue]!=j->pid) continue;
+    if(([w[(id)kCGWindowOwnerPID] intValue]==getpid() && [w[(id)kCGWindowLayer] intValue]>=25) || [w[(id)kCGWindowAlpha] doubleValue]<=0) continue;
     CGRect b; if(!CGRectMakeWithDictionaryRepresentation((__bridge CFDictionaryRef)w[(id)kCGWindowBounds],&b))continue;
+    if(!CGRectIntersectsRect(b,j->ink))continue;
+    if([w[(id)kCGWindowOwnerPID] intValue]!=j->pid || [w[(id)kCGWindowNumber] unsignedIntValue]!=j->window){j->error="绘制区域被窗口 " + std::to_string([w[(id)kCGWindowNumber] unsignedIntValue]) + " 遮挡，未继续输入";return false;}
     return std::abs(b.origin.x-j->frame.origin.x)<2 && std::abs(b.origin.y-j->frame.origin.y)<2 && std::abs(b.size.width-j->frame.size.width)<2 && std::abs(b.size.height-j->frame.size.height)<2;
   }
   return false;
@@ -41,15 +46,16 @@ static void execute(napi_env,void* raw) {
   auto* j=static_cast<StrokeJob*>(raw); bool down=false; CGPoint last=CGPointZero;
   try {
     if(!AXIsProcessTrusted())throw std::runtime_error("需要 EWork 辅助功能权限");
+    size_t emitted=0;
     size_t segments=0;for(auto& s:j->strokes)segments+=s.size()-1;
     const double stepMs=j->duration/std::max<size_t>(segments,1);
     for(auto& s:j->strokes) {
-      if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || !sameWindow(j))throw std::runtime_error("绘制已取消或目标窗口发生变化");
+      if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || !sameWindow(j))throw std::runtime_error(j->error.empty()?"绘制已取消或目标窗口发生变化":j->error);
       last=s.front();post(kCGEventMouseMoved,last);post(kCGEventLeftMouseDown,last);down=true;
       for(size_t i=1;i<s.size();i++) {
         const CGPoint from=last,to=s[i]; const int steps=std::max(1,(int)std::ceil(stepMs/8.0));
         for(int k=1;k<=steps;k++) {
-          if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || (k % 12 == 0 && !sameWindow(j)))throw std::runtime_error("绘制已停止或用户切换了应用");
+          if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || (++emitted % 12 == 0 && !sameWindow(j)))throw std::runtime_error(j->error.empty()?"绘制已停止或用户切换了应用":j->error);
           last=CGPointMake(from.x+(to.x-from.x)*k/steps,from.y+(to.y-from.y)*k/steps);
           post(kCGEventLeftMouseDragged,last);
           std::this_thread::sleep_for(std::chrono::microseconds((int)(stepMs*1000/steps)));
@@ -84,14 +90,15 @@ static napi_value draw(napi_env env,napi_callback_info info) {
  if(!std::isfinite(j->frame.origin.x)||!std::isfinite(j->frame.origin.y)||!std::isfinite(j->frame.size.width)||!std::isfinite(j->frame.size.height)||j->frame.size.width<=0||j->frame.size.height<=0)return fail("无效窗口范围");
  uint32_t count=0;bool arr=false;napi_is_array(env,strokes,&arr);
  if(!arr||napi_get_array_length(env,strokes,&count)!=napi_ok||!count||count>12)return fail("笔画数量应为 1 至 12");
- uint32_t total=0;
+ uint32_t total=0; double minX=INFINITY,minY=INFINITY,maxX=-INFINITY,maxY=-INFINITY;
  for(uint32_t i=0;i<count;i++) {
   napi_value stroke;napi_get_element(env,strokes,i,&stroke);uint32_t n=0;napi_is_array(env,stroke,&arr);
   if(!arr||napi_get_array_length(env,stroke,&n)!=napi_ok||n<2||n>256||(total+=n)>768)return fail("笔画点数超限");
   std::vector<CGPoint> points;
-  for(uint32_t k=0;k<n;k++) {napi_value p;napi_get_element(env,stroke,k,&p);CGPoint pt=CGPointMake(number(env,p,"x"),number(env,p,"y"));if(!std::isfinite(pt.x)||!std::isfinite(pt.y)||!CGRectContainsPoint(j->frame,pt))return fail("绘制点超出目标窗口");points.push_back(pt);}
+  for(uint32_t k=0;k<n;k++) {napi_value p;napi_get_element(env,stroke,k,&p);CGPoint pt=CGPointMake(number(env,p,"x"),number(env,p,"y"));if(!std::isfinite(pt.x)||!std::isfinite(pt.y)||!CGRectContainsPoint(j->frame,pt))return fail("绘制点超出目标窗口");minX=std::min(minX,pt.x);minY=std::min(minY,pt.y);maxX=std::max(maxX,pt.x);maxY=std::max(maxY,pt.y);points.push_back(pt);}
   j->strokes.push_back(points);
  }
+ j->ink=CGRectMake(minX-2,minY-2,maxX-minX+4,maxY-minY+4);
  {std::lock_guard<std::mutex> guard(lock);if(active)return fail("已有笔画正在执行");active=j;}
  napi_value promise,name;napi_create_promise(env,&j->deferred,&promise);napi_create_string_utf8(env,"ework.stroke",NAPI_AUTO_LENGTH,&name);
  napi_create_async_work(env,nullptr,name,execute,complete,j,&j->work);napi_queue_async_work(env,j->work);return promise;

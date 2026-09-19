@@ -17,6 +17,7 @@ export class ComputerController {
   private owner?: string
   private runId = ''
   private observation?: Observation
+  private windows = new Map<string, Map<number, number>>()
   private sequence = 0
   private budgets = new Map<string, { started: number; actions: number; failures: number }>()
   private busy = false
@@ -36,7 +37,7 @@ export class ComputerController {
   async stop(sessionId = this.owner, block = true): Promise<void> {
     if (!sessionId) return
     if (block) this.stopped.add(sessionId)
-    else { this.stopped.delete(sessionId); this.budgets.delete(sessionId) }
+    else { this.stopped.delete(sessionId); this.budgets.delete(sessionId); this.windows.delete(sessionId) }
     if (sessionId !== this.owner) return
     this.abort?.abort(new Error('桌面控制已停止。'))
     this.observation = undefined
@@ -90,7 +91,23 @@ export class ComputerController {
       clearTimeout(this.idle)
       this.options.visibility(true)
       if (v.op === 'apps') return await call('list_apps')
-      if (v.op === 'windows') return await call('list_windows', v.pid === undefined ? {} : { pid: positiveInteger(v.pid) })
+      if (v.op === 'windows') {
+        let pid = v.pid
+        if (pid === undefined && (v.bundle_id || v.name)) {
+          const apps = await call('list_apps')
+          const matches = (apps.data.apps ?? []).filter((a: RecordValue) => a.running && (v.bundle_id ? a.bundle_id === v.bundle_id : a.name === v.name))
+          if (matches.length !== 1) throw Error('应用未运行或名称不唯一，请先 apps/open 获取准确的应用。')
+          pid = matches[0].pid
+        }
+        const result = await call('list_windows', pid === undefined ? {} : { pid: positiveInteger(pid) })
+        const windows = (result.data.windows ?? []) as RecordValue[]
+        const known = this.windows.get(id) ?? new Map<number, number>()
+        for (const w of windows) if (Number.isSafeInteger(w.pid) && Number.isSafeInteger(w.window_id)) known.set(w.window_id, w.pid)
+        this.windows.set(id, known)
+        const useful = windows.filter(w => w.is_on_screen !== false && (!w.bounds || w.bounds.width > 40 && w.bounds.height > 40))
+        return { ...result, data: { ...result.data, windows: useful, hiddenWindowCount: windows.length - useful.length },
+          next: useful.map(w => ({ op: 'observe', pid: w.pid, window_id: w.window_id })) }
+      }
       if (v.op === 'open') {
         this.observation = undefined
         if (typeof v.bundle_id !== 'string' && typeof v.name !== 'string') throw Error('请提供已发现的应用名称或 bundle_id。')
@@ -109,7 +126,7 @@ export class ComputerController {
       }
       if (v.op === 'observe') return await observe(v.scope === 'desktop'
         ? { kind: 'desktop', display_id: 'primary' }
-        : { kind: 'window', pid: positiveInteger(v.pid), window_id: positiveInteger(v.window_id) })
+        : { kind: 'window', pid: positiveInteger(v.pid ?? this.windows.get(id)?.get(v.window_id)), window_id: positiveInteger(v.window_id) })
       let observed = this.observation
       if (!observed || v.revision !== observed.revision) throw Error('观察已过期，请先 observe，再使用新 revision 操作。')
       if ((v.pid !== undefined && v.pid !== observed.target.pid) || (v.window_id !== undefined && v.window_id !== observed.target.window_id) || (v.scope && v.scope !== observed.target.kind)) throw Error('操作目标与最近观察不一致，请重新 observe。')
@@ -178,7 +195,14 @@ export class ComputerController {
       if (point) this.options.pointer({ ...point, drag: v.op === 'drag' || v.op === 'stroke' })
       const result = strokes
         ? await (async () => {
-          await call('bring_to_front', { pid: observed!.target.pid, window_id: observed!.target.window_id })
+          try { await call('bring_to_front', { pid: observed!.target.pid, window_id: observed!.target.window_id }) }
+          catch (error) {
+            // Electron helper windows can make Cua's whole-window ordering test
+            // fail after focus was confirmed. Only this exact partial result is
+            // eligible; native stroke still independently verifies foreground,
+            // geometry and that no foreign window covers the entire ink region.
+            if (!(error instanceof Error) || !error.message.includes('focused=true, frontmost_ordinary=false')) throw error
+          }
           await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined)
           return { data: { performed: true, strokes: strokes!.length } }
         })()
