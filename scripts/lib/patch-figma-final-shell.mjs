@@ -86,6 +86,46 @@ export function patchFigmaFinalConversation(source) {
 }
 
 export function patchFigmaFinalLayout(source) {
+  // Reserve canvas space on smaller windows, using the native layout store so
+  // the sidebar width, resize handles and user toggle all stay in sync.
+  if (!source.includes('/* ODYSSEY_RESEARCH_SIDEBAR_POLICY */')) {
+    source = exact(source, 'const narrow = viewport < SIDEBAR_AUTO_COLLAPSE;',
+      `/* ODYSSEY_RESEARCH_SIDEBAR_POLICY */
+      const RESEARCH_SIDEBAR_AUTO_COLLAPSE = 1280;
+      const [researchPage, setResearchPage] = (0, react.useState)(false);
+      (0, react.useLayoutEffect)(() => {
+        const frame = frameRef.current;
+        if (!frame) return;
+        const sync = () => setResearchPage(Array.from(frame.querySelectorAll('[data-odyssey-page="research"]')).some(page => !page.closest('[data-odyssey-subagent-panel]')));
+        const observer = new window.MutationObserver(sync);
+        observer.observe(frame, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-odyssey-page"] });
+        sync();
+        return () => observer.disconnect();
+      }, []);
+      (0, react.useLayoutEffect)(() => {
+        if (researchPage && viewport < RESEARCH_SIDEBAR_AUTO_COLLAPSE) actions.collapseSidebarForResearch();
+      }, [researchPage, viewport, actions]);
+      const narrow = viewport < SIDEBAR_AUTO_COLLAPSE;`)
+    source = exact(source, 'narrowExpanded: false\n', 'narrowExpanded: false,\n                    sidebarManuallyExpanded: false\n')
+    source = exact(source,
+      'if (d.narrow) d.narrowExpanded = !d.narrowExpanded;\n\t\t\t\t\t\telse d.sidebar = d.sidebar === 0 ? 280 : 0;',
+      `if (d.narrow) {
+                          d.narrowExpanded = !d.narrowExpanded;
+                          d.sidebarManuallyExpanded = d.narrowExpanded;
+                          if (d.narrowExpanded && d.sidebar === 0) d.sidebar = 280;
+                        } else {
+                          d.sidebar = d.sidebar === 0 ? 280 : 0;
+                          d.sidebarManuallyExpanded = d.sidebar !== 0;
+                        }`)
+    source = exact(source, 'd.narrowExpanded = false;', 'd.narrowExpanded = d.sidebarManuallyExpanded;')
+    source = exact(source, 'setNarrow: (d, narrow) => {',
+      `collapseSidebarForResearch: (d) => {
+                        if (d.sidebarManuallyExpanded) return;
+                        d.sidebar = 0;
+                        d.narrowExpanded = false;
+                    },
+                    setNarrow: (d, narrow) => {`)
+  }
   // At the desktop minimum, reopening the auto-collapsed rail is an overlay.
   // Keep the grid track and mounted canvas stable; only the sidebar paints wider.
   if (!source.includes('/* ODYSSEY_LEFT_SIDEBAR_OVERLAY */')) {
