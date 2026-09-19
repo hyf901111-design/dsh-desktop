@@ -9,17 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Computer Use 接入与长网址断行修复",
+        "featureName": "PPT技能1.1.1与桌面连续画笔优化",
         "branch": "codex/feat/computer-use-evaluation-20260918",
-        "baseCommit": "197ad495c78b240704c89e5ec01c704b29f1d3c0",
-        "tipCommit": "b845518ad31af33913f71da09e224b44653219ba",
+        "baseCommit": "b845518ad31af33913f71da09e224b44653219ba",
+        "tipCommit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
         "commits": [
           {
-            "commit": "b845518ad31af33913f71da09e224b44653219ba",
+            "commit": "5d846e36978aa12b38663d2491e0c1ab6b44410f",
             "parents": [
-              "197ad495c78b240704c89e5ec01c704b29f1d3c0"
+              "b845518ad31af33913f71da09e224b44653219ba"
             ],
-            "subject": "修复：桌面操作前核验当前模型的图片输入能力"
+            "subject": "修复左上角窗口拖动区域并统一标志鼠标样式"
+          },
+          {
+            "commit": "99dee4a32772ac1ee000638b7c442339afcb4319",
+            "parents": [
+              "5d846e36978aa12b38663d2491e0c1ab6b44410f"
+            ],
+            "subject": "升级PPT技能至1.1.1并修复原生修复弹窗与阅读校验缺口"
+          },
+          {
+            "commit": "554a3300e65a445a51a0bcc51a255449e68c0d8d",
+            "parents": [
+              "99dee4a32772ac1ee000638b7c442339afcb4319"
+            ],
+            "subject": "记录PPT原生修复弹窗与封底字体回归证据"
+          },
+          {
+            "commit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
+            "parents": [
+              "554a3300e65a445a51a0bcc51a255449e68c0d8d"
+            ],
+            "subject": "优化桌面操作截图与等待预算并支持原生连续画笔"
           }
         ],
         "files": [
@@ -29,11 +50,107 @@
           },
           {
             "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
           },
           {
             "status": "A",
+            "path": "scripts/build-computer-stroke.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/macos/computer-stroke.mm"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/assets/efund-ai-platform-v21.pptx"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/assets/efund-template-v6.pptx"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/cover-contract.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/delivery-111.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_portability.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_readability.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_visual_review.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/efund_text_properties.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/normalize_efund_text.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/qa_efund_pptx.py"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/sanitize_pptx_metadata.py"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/desktop-computer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-ppt-skill.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-controller.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/computer-vision.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/efund-ppt-111.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/panel-toggle-drag-region.test.js"
           }
         ],
         "checks": [
@@ -42,78 +159,31 @@
               "npx",
               "vitest",
               "run",
-              "test/computer-vision.test.js",
               "test/computer-controller.test.ts",
+              "test/computer-vision.test.js",
               "test/local-search-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "22项桌面控制聚焦检查通过",
-            "verifiedCommit": "b845518ad31af33913f71da09e224b44653219ba",
-            "completedAt": "2026-09-18T15:48:22.321870+00:00",
+            "summary": "33项桌面控制聚焦检查通过",
+            "verifiedCommit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
+            "completedAt": "2026-09-19T00:11:51.684138+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "Chromium已验证280/320/420/560/800px侧栏宽度，短气泡60px、长网址无溢出；任务卡片有无时底部间隔均6px。实际集成客户端验收待进行。"
+          "summary": "PPT原生PowerPoint兼容性已验证，拖动与Boardmix画笔待集成客户端验收"
         },
         "acceptanceCriteria": [
-          "对话中调用 computer_use 完成 Photoshop 五角星操作",
-          "权限缺失有明确入口，停止取消可用，光标一致且结束淡出",
-          "长网址在窄侧栏完整换行",
-          "短消息靠右随内容收窄，长消息最大560px且网址换行",
-          "任务卡片展开/折叠时正文与底部卡片间只有6px间隔"
+          "内置PPT技能1.1.1且与源文件一致",
+          "左上角可拖动且Logo使用默认光标",
+          "Boardmix新画布真实画笔绘制并核验耗时",
+          "桌面连续画笔可停止，任务结束光标淡出"
         ],
         "risks": [
-          "原生权限和 Photoshop 端到端仍待集成客户端实测"
+          "Boardmix真实任务与签名包仍待集成验证，模型响应速度取决于当前提供商"
         ],
-        "generatedAt": "2026-09-18T15:48:22.321870+00:00"
-      },
-      "merged": {
-        "mergeCommit": "48434fb69f962aabe42a9c05628de652cd576605",
-        "verificationCommit": "48434fb69f962aabe42a9c05628de652cd576605",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "48434fb69f962aabe42a9c05628de652cd576605",
-            "completedAt": "2026-09-18T15:48:42.963Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "48434fb69f962aabe42a9c05628de652cd576605",
-            "completedAt": "2026-09-18T15:48:42.963Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
-            "verifiedCommit": "48434fb69f962aabe42a9c05628de652cd576605",
-            "completedAt": "2026-09-18T15:48:42.963Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-18T15:48:42.963Z"
+        "generatedAt": "2026-09-19T00:11:51.684138+00:00"
       }
     }
   ],
