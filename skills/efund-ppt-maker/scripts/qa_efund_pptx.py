@@ -305,6 +305,11 @@ def analyze(path: Path) -> dict[str, Any]:
     try:
         with ZipFile(path) as zf:
             presentation = ET.fromstring(zf.read("ppt/presentation.xml"))
+            if "docProps/app.xml" in zf.namelist():
+                app_props = ET.fromstring(zf.read("docProps/app.xml"))
+                for prop in app_props:
+                    if prop.tag.endswith("}AppVersion") and not re.fullmatch(r"[0-9]+\.[0-9]{4}", prop.text or ""):
+                        issues.append(issue("error", "invalid-app-version", "AppVersion 为空或格式非法会触发 PowerPoint 修复；删除可选属性，不要写空值"))
             size = presentation.find("p:sldSz", NS)
             if size is None:
                 issues.append(issue("error", "missing-slide-size", "presentation.xml 缺少 p:sldSz"))

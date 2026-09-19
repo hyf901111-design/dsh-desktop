@@ -3,12 +3,12 @@ import { ComputerController } from '../src/main/computer/controller'
 
 const controllers: ComputerController[] = []
 afterEach(async () => { for (const c of controllers.splice(0)) await c.stop(); vi.useRealTimers() })
-function setup() {
+function setup(options: Partial<ConstructorParameters<typeof ComputerController>[0]> = {}) {
   const callTool = vi.fn(async (name: string, raw: string, _options?: { signal: AbortSignal }) => ({
     isError: false, text: '', structuredJson: JSON.stringify(name === 'get_window_state' ? { screenshot_width: 800, screenshot_height: 600, window_bounds: { x: 20, y: 30, width: 400, height: 300 }, elements: [{ element_token: 'verified-token', frame: { x: 20, y: 30, w: 10, h: 10 } }] } : { name, ...JSON.parse(raw) }),
     images: name === 'get_window_state' ? [{ mimeType: 'image/png', dataBase64: 'AA==' }] : []
   }))
-  const c = new ComputerController({ driver: async () => ({ callTool }), pointer: vi.fn(), visibility: vi.fn(), screenPoint: (_t, _d, x, y) => ({ x, y }) })
+  const c = new ComputerController({ driver: async () => ({ callTool }), pointer: vi.fn(), visibility: vi.fn(), screenPoint: (_t, _d, x, y) => ({ x, y }), ...options })
   controllers.push(c)
   const run = (input: object, signal = new AbortController().signal) => c.run({ sessionId: 'a', ...input }, signal) as Promise<any>
   return { c, run, callTool }
@@ -58,4 +58,70 @@ it('stop cancels an in-flight gesture and releases the lease only after it unwin
   expect(callTool.mock.calls.some(([n]) => n === 'end_session')).toBe(true)
   await run({ op: 'release' })
   await run({ op: 'apps' })
+})
+
+it('maps displayed screenshot coordinates back to driver pixels', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, original_screenshot_width: 1600, original_screenshot_height: 1200 } }) })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  await run({ op: 'drag', revision: o.revision, x: 100, y: 100, to_x: 300, to_y: 200 })
+  expect(JSON.parse(callTool.mock.calls.find(([n]) => n === 'drag')![1])).toMatchObject({ from_x: 200, from_y: 200, to_x: 600, to_y: 400 })
+})
+it.each([true, false])('refreshes delayed model observations and only inputs on unchanged targets (%s)', async unchanged => {
+  const compare = vi.fn(() => unchanged)
+  const { run, callTool } = setup({ unchanged: compare })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const now = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 180000)
+  const result = await run({ op: 'click', revision: o.revision, x: 100, y: 100 })
+  expect(compare).toHaveBeenCalledOnce()
+  expect(callTool.mock.calls.some(([n]) => n === 'click')).toBe(unchanged)
+  if (!unchanged) expect(result.action.performed).toBe(false)
+  now.mockRestore()
+})
+it('batches continuous strokes and returns one post-gesture observation', async () => {
+  const stroke = vi.fn(async () => {})
+  const { run, callTool } = setup({ stroke })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const paths = [[{ x: 40, y: 60 }, { x: 80, y: 100 }, { x: 120, y: 60 }], [{ x: 50, y: 80 }, { x: 100, y: 80 }]]
+  const result = await run({ op: 'stroke', revision: o.revision, strokes: paths, duration_ms: 1600 })
+  expect(stroke).toHaveBeenCalledWith(o.target, expect.anything(), paths, 1600, expect.any(AbortSignal))
+  expect(callTool.mock.calls.filter(([n]) => n === 'get_window_state')).toHaveLength(2)
+  expect(result.action).toEqual({ performed: true, strokes: 2 })
+  expect(result.revision).not.toBe(o.revision)
+})
+it.each([[], [[{ x: -1, y: 2 }, { x: 20, y: 20 }]], Array.from({ length: 13 }, () => [{ x: 1, y: 1 }, { x: 2, y: 2 }])])('rejects malformed stroke batches without delivering input', async strokes => {
+  const stroke = vi.fn(async () => {})
+  const { run, callTool } = setup({ stroke })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  await expect(run({ op: 'stroke', revision: o.revision, strokes })).rejects.toThrow()
+  expect(stroke).not.toHaveBeenCalled()
+  expect(callTool.mock.calls.some(([n]) => n === 'bring_to_front')).toBe(false)
+})
+it('retains the gesture lease until native cancellation releases the mouse', async () => {
+  let release!: () => void
+  const stroke = vi.fn(async (_t, _d, _s, _duration, signal: AbortSignal) => {
+    await new Promise<void>(resolve => { release = resolve })
+    signal.throwIfAborted()
+  })
+  const { run, c, callTool } = setup({ stroke })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const pending = run({ op: 'stroke', revision: o.revision, strokes: [[{ x: 1, y: 1 }, { x: 2, y: 2 }]] })
+  const rejected = expect(pending).rejects.toThrow('停止')
+  await vi.waitFor(() => expect(stroke).toHaveBeenCalledOnce())
+  await c.stop()
+  expect(callTool.mock.calls.some(([n]) => n === 'end_session')).toBe(false)
+  release(); await rejected
+  expect(callTool.mock.calls.some(([n]) => n === 'end_session')).toBe(true)
+})
+it('stops repeated failures across lease restarts and resets only on a new turn', async () => {
+  const { run } = setup()
+  for (let n = 0; n < 3; n++) await expect(run({ op: 'click', x: 10, y: 10 })).rejects.toThrow('观察已过期')
+  await expect(run({ op: 'apps' })).rejects.toThrow('限制')
+  await run({ op: 'release' }); await expect(run({ op: 'apps' })).resolves.toBeDefined()
+})
+it('enforces an absolute task budget even while model responses are slow', async () => {
+  const { run } = setup()
+  await run({ op: 'apps' })
+  const now = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 600001)
+  await expect(run({ op: 'apps' })).rejects.toThrow('10 分钟')
+  now.mockRestore()
 })

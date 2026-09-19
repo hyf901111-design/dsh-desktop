@@ -63,7 +63,7 @@
     "sync:plugins:to-formal": "node scripts/sync-plugin-profile.mjs dev-to-formal",
     "build:native:voice": "node scripts/build-research-voice.mjs",
     "fund-service:capabilities": "node scripts/check-fund-research-capabilities.mjs",
-    "build:native:computer": "node scripts/prepare-computer-driver.mjs"
+    "build:native:computer": "node scripts/prepare-computer-driver.mjs && node scripts/build-computer-stroke.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis-plugin-group": "1.0.1",
@@ -181,6 +181,7 @@
         "to": "native",
         "filter": [
           "research-voice.node",
+          "computer-stroke.node",
           "cua-driver",
           "cua-driver-version.json",
           "cua-driver-MIT.txt"

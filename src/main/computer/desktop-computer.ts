@@ -1,5 +1,6 @@
-import { app, BrowserWindow, dialog, globalShortcut, screen, shell, systemPreferences } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, nativeImage, screen, shell, systemPreferences } from 'electron'
 import { join } from 'node:path'
+import { createRequire } from 'node:module'
 import { ComputerController, type ComputerDriver } from './controller'
 import type { CuaDriverLike, EmbeddedCuaDriverHostLike } from '@trycua/cua-driver'
 
@@ -12,6 +13,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
   let pointer: BrowserWindow | undefined, controls: BrowserWindow | undefined
   let pointerTimer: ReturnType<typeof setInterval> | undefined
   let fadeTimer: ReturnType<typeof setTimeout> | undefined
+  let strokeDriver: { draw(args: unknown): Promise<void>; cancel(): void } | undefined
   const shortcut = 'CommandOrControl+Shift+Escape'
   const stop = () => { void controller.stop().catch(error => console.warn('[computer] stop failed', error)) }
   function overlay(html: string, width: number, height: number, mouse: boolean) {
@@ -68,6 +70,54 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
         } catch (error) { await host.stop(); host = undefined; throw error }
       })().finally(() => { starting = undefined })
       return starting
+    },
+    prepareObservation: result => {
+      const image = result.screenshots[0]!
+      const original = nativeImage.createFromBuffer(Buffer.from(image.dataBase64, 'base64'))
+      if (original.isEmpty()) throw Error('桌面截图解码失败。')
+      const size = original.getSize()
+      const ratio = Math.min(1, 1600 / Math.max(size.width, size.height))
+      const resized = ratio < 1 ? original.resize({ width: Math.round(size.width * ratio), height: Math.round(size.height * ratio), quality: 'best' }) : original
+      const shown = resized.getSize()
+      return { data: { ...result.data, original_screenshot_width: result.data.screenshot_width,
+        original_screenshot_height: result.data.screenshot_height, original_scale_factor: result.data.scale_factor,
+        screenshot_width: shown.width, screenshot_height: shown.height,
+        ...(result.data.scale_factor ? { scale_factor: result.data.scale_factor * shown.width / size.width } : {}) },
+        screenshots: [{ mimeType: 'image/jpeg', dataBase64: resized.toJPEG(78).toString('base64') }] }
+    },
+    unchanged: (before, after, input) => {
+      const a = before.data, b = after.data
+      if (JSON.stringify(before.target) !== JSON.stringify(after.target) || JSON.stringify(a.window_bounds) !== JSON.stringify(b.window_bounds)
+        || a.screenshot_width !== b.screenshot_width || a.screenshot_height !== b.screenshot_height || a.scale_factor !== b.scale_factor) return false
+      // Keyboard/focus operations and element tokens require a stable whole view.
+      // Pointer operations additionally compare the entire gesture envelope.
+      const points = input.op === 'stroke' ? input.strokes?.flat() : input.op === 'drag' ? [{ x: input.x, y: input.y }, { x: input.to_x, y: input.to_y }]
+        : input.op === 'click' && !input.element_token ? [{ x: input.x, y: input.y }] : undefined
+      let rect = { x: 0, y: 0, width: a.screenshot_width, height: a.screenshot_height }
+      if (points?.length) {
+        if (points.some((p: any) => !Number.isFinite(p?.x) || !Number.isFinite(p?.y))) return false
+        const x = Math.max(0, Math.floor(Math.min(...points.map((p: any) => p.x)) - 64))
+        const y = Math.max(0, Math.floor(Math.min(...points.map((p: any) => p.y)) - 64))
+        rect = { x, y, width: Math.min(a.screenshot_width, Math.ceil(Math.max(...points.map((p: any) => p.x)) + 64)) - x,
+          height: Math.min(a.screenshot_height, Math.ceil(Math.max(...points.map((p: any) => p.y)) + 64)) - y }
+      } else if (JSON.stringify(a.elements) !== JSON.stringify(b.elements)) return false
+      if (rect.width <= 0 || rect.height <= 0) return false
+      const pixels = (observation: typeof before) => nativeImage.createFromBuffer(Buffer.from(observation.screenshots[0]!.dataBase64, 'base64')).crop(rect).toBitmap()
+      return pixels(before).equals(pixels(after))
+    },
+    stroke: async (target, data, strokes, duration, signal) => {
+      if (!strokeDriver) strokeDriver = createRequire(import.meta.url)(join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'computer-stroke.node'))
+      const native = strokeDriver!
+      const b = data.window_bounds
+      if (!b || !(b.width > 0) || !(b.height > 0)) throw Error('缺少画笔目标窗口边界。')
+      const cancel = () => native.cancel()
+      signal.throwIfAborted()
+      signal.addEventListener('abort', cancel, { once: true })
+      try {
+        await native.draw({ pid: target.pid, window_id: target.window_id, frame: b, duration_ms: duration,
+          strokes: strokes.map(path => path.map(p => ({ x: b.x + p.x * b.width / data.screenshot_width, y: b.y + p.y * b.height / data.screenshot_height }))) })
+        signal.throwIfAborted()
+      } finally { signal.removeEventListener('abort', cancel) }
     },
     pointer: data => {
       clearInterval(pointerTimer); pointerTimer = undefined
