@@ -42,6 +42,15 @@ describe('macOS package runtime verification', () => {
       try {
         mkdirSync(runtimeRoot, { recursive: true })
         mkdirSync(packagedSkillRoot, { recursive: true })
+        // Include the real desktop-control resources checked in every macOS package.
+        for (const script of ['prepare-computer-driver.mjs', 'build-computer-stroke.mjs']) {
+          const prepared = spawnSync(process.execPath, [path.join(projectRoot, 'scripts', script)], {
+            cwd: projectRoot,
+            encoding: 'utf8'
+          })
+          expect(prepared.status, prepared.stderr).toBe(0)
+        }
+        symlinkSync(path.join(projectRoot, 'build', 'native'), path.join(resourcesPath, 'native'))
         copyFileSync(
           path.join(projectRoot, 'scripts', 'macos', 'update-recovery.cjs'),
           path.join(resourcesPath, 'update-recovery.cjs')
