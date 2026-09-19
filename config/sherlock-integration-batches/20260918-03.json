@@ -11,60 +11,34 @@
         "schemaVersion": 1,
         "featureName": "PPT技能1.1.1与桌面连续画笔优化",
         "branch": "codex/feat/computer-use-evaluation-20260918",
-        "baseCommit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
-        "tipCommit": "5f5817522f26c935ff268691f9c3214226526098",
+        "baseCommit": "5f5817522f26c935ff268691f9c3214226526098",
+        "tipCommit": "378a74cf2f09c83253561d2af34fda0df86dd351",
         "commits": [
           {
-            "commit": "1dd22e1ca013d56c879bca893706e2fc5920f010",
+            "commit": "378a74cf2f09c83253561d2af34fda0df86dd351",
             "parents": [
-              "647b9e96c07514dcaad601343fa96cff9ace2c19"
+              "5f5817522f26c935ff268691f9c3214226526098"
             ],
-            "subject": "根据实测补齐窗口进程绑定并精简桌面目标发现"
-          },
-          {
-            "commit": "5f5817522f26c935ff268691f9c3214226526098",
-            "parents": [
-              "1dd22e1ca013d56c879bca893706e2fc5920f010"
-            ],
-            "subject": "修复辅助窗口影响连续画笔前台校验的问题"
+            "subject": "精简重复桌面观察内容并同步截图格式说明"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/research/computer-use-integration.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/macos/computer-stroke.mm"
-          },
-          {
-            "status": "M",
-            "path": "src/main/computer/controller.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/computer-controller.test.ts"
+            "path": "src/main/computer/desktop-computer.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npx",
-              "vitest",
+              "npm",
               "run",
-              "test/computer-controller.test.ts",
-              "test/computer-vision.test.js",
-              "test/local-search-bridge.test.ts"
+              "typecheck"
             ],
             "outcome": "passed",
-            "summary": "36项桌面控制聚焦检查通过",
-            "verifiedCommit": "5f5817522f26c935ff268691f9c3214226526098",
-            "completedAt": "2026-09-19T00:31:58.329548+00:00",
+            "summary": "桌面观察精简后的类型检查通过，前一提交36项桌面聚焦检查通过",
+            "verifiedCommit": "378a74cf2f09c83253561d2af34fda0df86dd351",
+            "completedAt": "2026-09-19T00:34:15.810199+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -81,53 +55,7 @@
         "risks": [
           "Boardmix真实任务与签名包仍待集成验证，模型响应速度取决于当前提供商"
         ],
-        "generatedAt": "2026-09-19T00:31:58.329548+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cd17f4f24cbc1bfe91a315a8d88614142e7dd019",
-        "verificationCommit": "cd17f4f24cbc1bfe91a315a8d88614142e7dd019",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "cd17f4f24cbc1bfe91a315a8d88614142e7dd019",
-            "completedAt": "2026-09-19T00:32:57.323Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "cd17f4f24cbc1bfe91a315a8d88614142e7dd019",
-            "completedAt": "2026-09-19T00:32:57.323Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
-            "verifiedCommit": "cd17f4f24cbc1bfe91a315a8d88614142e7dd019",
-            "completedAt": "2026-09-19T00:32:57.323Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-19T00:32:57.323Z"
+        "generatedAt": "2026-09-19T00:34:15.810199+00:00"
       }
     }
   ],
