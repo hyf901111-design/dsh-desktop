@@ -1,4 +1,4 @@
-/** Fade scrolling rows out beneath the transparent sticky section headings. */
+/** Keep scrolling rows fully hidden beneath the transparent sticky headings. */
 export function sidebarHeadingMask(top: number, height: number, headings: Array<{ top: number; bottom: number }>): string {
   const bands = headings.map(h => ({ start: h.top - top, end: h.bottom - top }))
     .filter(h => h.end > 0 && h.start < height).sort((a, b) => a.start - b.start)
@@ -6,12 +6,17 @@ export function sidebarHeadingMask(top: number, height: number, headings: Array<
   const merged: typeof bands = []
   for (const band of bands) {
     const last = merged.at(-1)
-    if (last && band.start <= last.end) last.end = Math.max(last.end, band.end)
+    // Close headings share one mask so their fade ramps cannot overlap or
+    // expose a thin strip while the workspace heading approaches the board one.
+    if (last && band.start <= last.end + 12) last.end = Math.max(last.end, band.end)
     else merged.push({ ...band })
   }
-  const clamp = (n: number) => Math.round(Math.max(0, Math.min(height, n)) * 100) / 100
+  const clamp = (n: number) => Math.max(0, Math.min(height, n))
   const stops = ['#000 0px']
-  for (const b of merged) stops.push(`#000 ${clamp(b.start)}px`, `transparent ${clamp(Math.min(b.start + 6, (b.start + b.end) / 2))}px`, `transparent ${clamp(Math.max(b.end - 6, (b.start + b.end) / 2))}px`, `#000 ${clamp(b.end)}px`)
+  // Fade outside the heading, never inside it: an inner fade exposes fragments
+  // of the scrolling text at both edges. Keep fractional bounds unrounded so
+  // zoomed headings do not leave a subpixel seam.
+  for (const b of merged) stops.push(`#000 ${clamp(b.start - 6)}px`, `transparent ${clamp(b.start)}px`, `transparent ${clamp(b.end)}px`, `#000 ${clamp(b.end + 6)}px`)
   return `linear-gradient(to bottom, ${stops.join(', ')}, #000 100%)`
 }
 const installed = new WeakSet<Document>()
@@ -30,6 +35,11 @@ export function installSidebarScrollFade(doc: Document): void {
       targets.add(root)
       const headings = [...root.querySelectorAll<HTMLElement>('[data-srb-section-header]')]
       const bounds = headings.map(h => { targets.add(h); return h.getBoundingClientRect() }).filter(b => b.height > 0)
+        .map(b => ({ top: b.top, bottom: b.bottom }))
+      // The first sticky heading can sit below the scrollport's padding. Mask
+      // that leading strip too, otherwise rows reappear above the title.
+      const first = bounds[0]
+      if (first) first.top = Math.min(first.top, root.getBoundingClientRect().top)
       for (const list of root.querySelectorAll<HTMLElement>(lists)) {
         // Nested list wrappers should not apply the same mask twice.
         if (list.parentElement?.closest(lists)) continue

@@ -5,15 +5,28 @@ it('does not mask rows clear of the headings', () => {
   expect(sidebarHeadingMask(200, 600, [{ top: 100, bottom: 136 }])).toBe('')
   expect(sidebarHeadingMask(136, 600, [{ top: 100, bottom: 136 }])).toBe('')
 })
-it('keeps fading inside each heading so the following row stays fully visible', () => {
+it('fully masks each heading and keeps the fade outside its edges', () => {
   const mask = sidebarHeadingMask(0, 600, [{ top: 100, bottom: 136 }, { top: 300, bottom: 336 }])
-  expect(mask).toContain('#000 100px, transparent 106px, transparent 130px, #000 136px')
-  expect(mask).toContain('#000 300px, transparent 306px, transparent 330px, #000 336px')
+  expect(mask).toContain('#000 94px, transparent 100px, transparent 136px, #000 142px')
+  expect(mask).toContain('#000 294px, transparent 300px, transparent 336px, #000 342px')
 })
 it('merges touching sticky headings and tracks content scrolling', () => {
   const mask = sidebarHeadingMask(-200, 900, [{ top: 100, bottom: 136 }, { top: 136, bottom: 172 }])
-  expect(mask).toContain('transparent 306px, transparent 366px')
+  expect(mask).toContain('transparent 300px, transparent 372px')
   expect(mask).not.toContain('transparent 336px')
+})
+
+it('preserves fractional heading edges when zoomed and clips bands to the list', () => {
+  expect(sidebarHeadingMask(0, 200, [{ top: 35.125, bottom: 71.375 }]))
+    .toContain('transparent 35.125px, transparent 71.375px')
+  expect(sidebarHeadingMask(100, 20, [{ top: 90, bottom: 136 }]))
+    .toContain('transparent 0px, transparent 20px')
+})
+
+it('closes the narrow gap as the second heading approaches its sticky position', () => {
+  const mask = sidebarHeadingMask(0, 600, [{ top: 100, bottom: 136 }, { top: 141.5, bottom: 177.5 }])
+  expect(mask).toContain('transparent 100px, transparent 177.5px')
+  expect(mask).not.toContain('#000 142px')
 })
 
 it('updates the mask in the same event as a fast wheel delta', () => {
@@ -22,6 +35,7 @@ it('updates the mask in the same event as a fast wheel delta', () => {
   const root = w.document.querySelector('[data-srb-navigation-scroll]')! as unknown as HTMLElement
   const list = w.document.querySelector('.srb-board-list')! as unknown as HTMLElement
   Object.defineProperties(root, { scrollHeight: { value: 1000 }, clientHeight: { value: 200 } })
+  root.getBoundingClientRect = () => new w.DOMRect(0, 92, 200, 200)
   list.getBoundingClientRect = () => ({ top: 136 - root.scrollTop, height: 1000 } as DOMRect)
   w.document.querySelector('[data-srb-section-header]')!.getBoundingClientRect = () => new w.DOMRect(0, 100, 200, 36)
   installSidebarScrollFade(w.document as unknown as Document)
@@ -29,7 +43,8 @@ it('updates the mask in the same event as a fast wheel delta', () => {
   list.dispatchEvent(event as unknown as Event)
   expect(event.defaultPrevented).toBe(true)
   expect(root.scrollTop).toBe(400)
-  expect(list.style.maskImage).toContain('transparent 370px, transparent 394px')
+  // Include the 8px scrollport padding above the first sticky heading.
+  expect(list.style.maskImage).toContain('transparent 356px, transparent 400px')
   const handled = new w.WheelEvent('wheel', { deltaY: 400, bubbles: true, cancelable: true })
   handled.preventDefault(); list.dispatchEvent(handled as unknown as Event)
   expect(root.scrollTop).toBe(400)
