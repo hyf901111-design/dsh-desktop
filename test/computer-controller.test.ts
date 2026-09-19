@@ -125,3 +125,19 @@ it('enforces an absolute task budget even while model responses are slow', async
   await expect(run({ op: 'apps' })).rejects.toThrow('10 分钟')
   now.mockRestore()
 })
+it('binds discovered windows to their owning process and hides off-screen utility windows', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_windows' ? {
+    isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 10, is_on_screen: true, bounds: { width: 800, height: 600 } },
+      { pid: 9, window_id: 11, is_on_screen: false, bounds: { width: 1080, height: 30 } }
+    ] }) } : original(name, raw, options))
+  const list = await run({ op: 'windows', pid: 9 })
+  expect(list.data.windows).toHaveLength(1)
+  expect(list.next).toEqual([{ op: 'observe', pid: 9, window_id: 10 }])
+  const o = await run({ op: 'observe', window_id: 10 })
+  expect(o.target).toEqual({ kind: 'window', pid: 9, window_id: 10 })
+  await run({ op: 'release' })
+  await expect(run({ op: 'observe', window_id: 10 })).rejects.toThrow()
+})
