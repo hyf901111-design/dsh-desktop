@@ -11,36 +11,15 @@
         "schemaVersion": 1,
         "featureName": "PPT技能1.1.1与桌面连续画笔优化",
         "branch": "codex/feat/computer-use-evaluation-20260918",
-        "baseCommit": "b845518ad31af33913f71da09e224b44653219ba",
-        "tipCommit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
+        "baseCommit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
+        "tipCommit": "1dd22e1ca013d56c879bca893706e2fc5920f010",
         "commits": [
           {
-            "commit": "5d846e36978aa12b38663d2491e0c1ab6b44410f",
+            "commit": "1dd22e1ca013d56c879bca893706e2fc5920f010",
             "parents": [
-              "b845518ad31af33913f71da09e224b44653219ba"
+              "647b9e96c07514dcaad601343fa96cff9ace2c19"
             ],
-            "subject": "修复左上角窗口拖动区域并统一标志鼠标样式"
-          },
-          {
-            "commit": "99dee4a32772ac1ee000638b7c442339afcb4319",
-            "parents": [
-              "5d846e36978aa12b38663d2491e0c1ab6b44410f"
-            ],
-            "subject": "升级PPT技能至1.1.1并修复原生修复弹窗与阅读校验缺口"
-          },
-          {
-            "commit": "554a3300e65a445a51a0bcc51a255449e68c0d8d",
-            "parents": [
-              "99dee4a32772ac1ee000638b7c442339afcb4319"
-            ],
-            "subject": "记录PPT原生修复弹窗与封底字体回归证据"
-          },
-          {
-            "commit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
-            "parents": [
-              "554a3300e65a445a51a0bcc51a255449e68c0d8d"
-            ],
-            "subject": "优化桌面操作截图与等待预算并支持原生连续画笔"
+            "subject": "根据实测补齐窗口进程绑定并精简桌面目标发现"
           }
         ],
         "files": [
@@ -50,75 +29,7 @@
           },
           {
             "status": "M",
-            "path": "package.json"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/build-computer-stroke.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/macos/computer-stroke.mm"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-packaged-macos.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/assets/efund-ai-platform-v21.pptx"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/assets/efund-template-v6.pptx"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/cover-contract.md"
-          },
-          {
-            "status": "A",
-            "path": "skills/efund-ppt-maker/references/delivery-111.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/check_efund_portability.py"
-          },
-          {
-            "status": "A",
-            "path": "skills/efund-ppt-maker/scripts/check_efund_readability.py"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/check_efund_visual_review.py"
-          },
-          {
-            "status": "A",
-            "path": "skills/efund-ppt-maker/scripts/efund_text_properties.py"
-          },
-          {
-            "status": "A",
-            "path": "skills/efund-ppt-maker/scripts/normalize_efund_text.py"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/qa_efund_pptx.py"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/sanitize_pptx_metadata.py"
           },
           {
             "status": "M",
@@ -126,31 +37,7 @@
           },
           {
             "status": "M",
-            "path": "src/main/computer/desktop-computer.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-ppt-skill.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/computer-controller.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/computer-vision.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/efund-ppt-111.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/panel-toggle-drag-region.test.js"
           }
         ],
         "checks": [
@@ -164,9 +51,9 @@
               "test/local-search-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "33项桌面控制聚焦检查通过",
-            "verifiedCommit": "647b9e96c07514dcaad601343fa96cff9ace2c19",
-            "completedAt": "2026-09-19T00:11:51.684138+00:00",
+            "summary": "34项桌面控制聚焦检查通过",
+            "verifiedCommit": "1dd22e1ca013d56c879bca893706e2fc5920f010",
+            "completedAt": "2026-09-19T00:26:31.483818+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -183,53 +70,7 @@
         "risks": [
           "Boardmix真实任务与签名包仍待集成验证，模型响应速度取决于当前提供商"
         ],
-        "generatedAt": "2026-09-19T00:11:51.684138+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9d54b942db770d9e8af314b07c5af6e6a3654c65",
-        "verificationCommit": "9d54b942db770d9e8af314b07c5af6e6a3654c65",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "9d54b942db770d9e8af314b07c5af6e6a3654c65",
-            "completedAt": "2026-09-19T00:12:48.241Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9d54b942db770d9e8af314b07c5af6e6a3654c65",
-            "completedAt": "2026-09-19T00:12:48.241Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
-            "verifiedCommit": "9d54b942db770d9e8af314b07c5af6e6a3654c65",
-            "completedAt": "2026-09-19T00:12:48.241Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-19T00:12:48.241Z"
+        "generatedAt": "2026-09-19T00:26:31.483818+00:00"
       }
     }
   ],
