@@ -20,7 +20,7 @@
 10. 已安装 0.6.3 的用户长期走旧证书兼容 feed；新下载用户走 Developer ID 公证 feed。每次发布都必须维护两套签名 ZIP，除非未来另行实现并真实验证签名迁移安装器。
 11. R2 采用滚动版本保留：新版本全部公开验证成功后，只删除 `releases/v*` 中版本号最早的一个目录。禁止删除 `latest/`、`notarized/latest/`、`download/`、当前版本或一次删除多个旧版本；发布或公开验证失败时禁止清理旧版本。
 
-对外稳定下载地址为 `https://updates.evanarts.com/download/Ework-Odyssey-mac-arm64.dmg`，下载文件名为 `Ework-Odyssey-mac-arm64.dmg`。下载 Worker 将此地址直接映射到现有 R2 对象 `download/sherlock-mac-arm64.dmg`，保留旧 URL 兼容；两个地址都跟随同一对象更新，不需要双份上传。发布与回滚脚本继续操作原 R2 key，版本资源和自动更新元数据命名不变。每次发布需检查新地址的 HEAD、Range/206、文件名及 no-store 缓存策略。
+对外稳定下载地址为 `https://updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg`，下载文件名为 `EWork-Odyssey-mac-arm64.dmg`。下载 Worker 将此地址直接映射到现有 R2 对象 `download/sherlock-mac-arm64.dmg`，保留旧 URL 兼容；两个地址都跟随同一对象更新，不需要双份上传。发布与回滚脚本继续操作原 R2 key，版本资源和自动更新元数据命名不变。每次发布需检查新地址的 HEAD、Range/206、文件名及 no-store 缓存策略。
 
 ## 升级验证范围（用户要求，2026-09-07）
 
@@ -225,7 +225,7 @@ DSH 共存必须使用两个不同哨兵：DSH Desktop 保持 `dsh-desktop`，Sh
 
 ```bash
 public_dmg="$sherlock_release_tmp/public-sherlock-0.6.4.dmg"
-curl -fL https://updates.evanarts.com/download/Ework-Odyssey-mac-arm64.dmg \
+curl -fL https://updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg \
   -o "$public_dmg"
 xattr -w com.apple.quarantine '0081;00000000;Safari;' "$public_dmg"
 xcrun stapler validate "$public_dmg"

@@ -47,7 +47,7 @@ describe('Sherlock stable download Worker', () => {
       'pattern = "updates.evanarts.com/download/sherlock-mac-arm64.dmg"'
     )
     expect(config).toContain(
-      'pattern = "updates.evanarts.com/download/Ework-Odyssey-mac-arm64.dmg"'
+      'pattern = "updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg"'
     )
     expect(config).toContain('zone_id = "6f467b786713bdf33ed46e8a89d780d9"')
     expect(config).toContain('workers_dev = false')

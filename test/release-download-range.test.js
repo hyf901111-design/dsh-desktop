@@ -41,7 +41,7 @@ it.each(['bytes=10-20', 'bytes=4-2', 'bytes=0-1,3-4', 'bytes=-0', 'bytes=9007199
   expect(result.headers.get('content-range')).toBe('bytes */10')
   expect(bucket.get).not.toHaveBeenCalled()
 })
-it.each(['sherlock-mac-arm64.dmg', 'Ework-Odyssey-mac-arm64.dmg'])('preserves mutable-alias cache policy and conditional reads for %s', async name => {
+it.each(['sherlock-mac-arm64.dmg', 'EWork-Odyssey-mac-arm64.dmg'])('preserves mutable-alias cache policy and conditional reads for %s', async name => {
   const { fetch, bucket } = fixture()
   const alias = 'https://updates.evanarts.com/download/' + name
   const result = await fetch(new Request(alias, { headers: { range: 'bytes=0-1' } }))
@@ -49,8 +49,8 @@ it.each(['sherlock-mac-arm64.dmg', 'Ework-Odyssey-mac-arm64.dmg'])('preserves mu
   expect(result.headers.get('cache-control')).toContain('no-store')
   expect(bucket.head).toHaveBeenCalledWith('download/sherlock-mac-arm64.dmg')
   expect(bucket.get).toHaveBeenCalledWith('download/sherlock-mac-arm64.dmg', expect.anything())
-  if (name.startsWith('Ework')) {
-    expect(result.headers.get('content-disposition')).toBe('attachment; filename="Ework-Odyssey-mac-arm64.dmg"')
+  if (name.startsWith('EWork')) {
+    expect(result.headers.get('content-disposition')).toBe('attachment; filename="EWork-Odyssey-mac-arm64.dmg"')
   }
   const cached = await fetch(new Request(alias, { headers: { 'if-none-match': '"test"' } }))
   expect(cached.status).toBe(304)

@@ -34,7 +34,7 @@
 
 - 标准更新源：https://updates.evanarts.com/notarized/latest/latest-mac.yml
 - 兼容更新源：https://updates.evanarts.com/latest/latest-mac.yml
-- 稳定安装包：https://updates.evanarts.com/download/Ework-Odyssey-mac-arm64.dmg
-- 旧下载地址继续兼容；新旧地址读取同一份已公证安装包，新地址下载文件名为 `Ework-Odyssey-mac-arm64.dmg`。
+- 稳定安装包：https://updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg
+- 旧下载地址继续兼容；新旧地址读取同一份已公证安装包，新地址下载文件名为 `EWork-Odyssey-mac-arm64.dmg`。
 
 源码同步目标为既有私有仓库 `awake-ai-lab/sherlock-desktop` 的 `hyf` 与 `main`；不推送版本标签，不发布到旧公共上游。

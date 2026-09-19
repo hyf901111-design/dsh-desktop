@@ -1,6 +1,6 @@
 // Serve public release objects directly from R2 so HEAD cannot poison a later Range response.
 const STABLE = 'download/sherlock-mac-arm64.dmg'
-const BRANDED_DOWNLOAD = 'download/Ework-Odyssey-mac-arm64.dmg'
+const BRANDED_DOWNLOAD = 'download/EWork-Odyssey-mac-arm64.dmg'
 const IMMUTABLE = /^releases\/v\d+\.\d+\.\d+(?:-[\w.-]+)?\/sherlock-[\w.-]+\.(?:zip(?:\.blockmap)?|dmg(?:\.blockmap)?|exe(?:\.blockmap)?)$/
 const NO_CACHE = 'no-store, no-cache, max-age=0, must-revalidate'
 
@@ -39,7 +39,7 @@ export async function serveReleaseDownload(request, bucket) {
   headers.set('accept-ranges', 'bytes')
   headers.set('cache-control', key === STABLE ? NO_CACHE : 'public, max-age=31536000, immutable')
   if (requestedKey === BRANDED_DOWNLOAD) {
-    headers.set('content-disposition', 'attachment; filename="Ework-Odyssey-mac-arm64.dmg"')
+    headers.set('content-disposition', 'attachment; filename="EWork-Odyssey-mac-arm64.dmg"')
   }
   const ifNoneMatch = request.headers.get('if-none-match')
   if (ifNoneMatch?.split(',').some(tag => tag.trim() === '*' || tag.trim().replace(/^W\//, '') === info.httpEtag)) {
