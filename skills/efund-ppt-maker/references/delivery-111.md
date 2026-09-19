@@ -35,3 +35,9 @@ DrawingML 文本属性顺序为：线条 → 填充 → 效果 → 高亮/下划
 成品清理曾把 `docProps/app.xml` 的 AppVersion 写成空字符串。XML 可解析且通过通用 XSD，原生 PowerPoint 仍弹出修复和删除内容两个警告。仅删除这个空属性后，同一文件无修复打开。清理时删除可选 AppVersion 节点，禁止清空节点文本或自行杜撰办公软件版本；结构门禁新增 invalid-app-version。使用技能自带 sanitize_pptx_metadata.py，禁止生成另一个简化脱敏脚本后跳过最终文件复验。
 
 在导出 PDF 前运行 `normalize_efund_text.py "$DRAFT_PPTX" "$FINAL_PPTX"`（新输出路径），随后清理元数据、重跑封面/结构/布局等门禁并渲染。此工具处理已知文本属性与空 AppVersion，不保证所有任意 PPTX 自动修复。
+
+### 1.1.1 原生故障回归记录
+
+用户 15 页 EWork 交付件的 `docProps/app.xml` 存在空 `AppVersion`。只修字体和 XML 子节点顺序仍会弹修复提示；在同一副本中仅删除空 `AppVersion` 后，原生 PowerPoint 能直接打开，未出现修复及删除内容的两个提示。空字符串能通过通用 XML schema 校验，因此必须保留本技能的额外语义检查。
+
+封底原文仍是“谢谢”，并未变成问号；其字体属性混用 Arial / 华文黑体_易方达、zh-TW 及旧字体属性。归一化品牌中文运行字体后，原生 PowerPoint 中“谢谢”正常显示。测试副本与原始交付件分开保存，未覆盖用户原文件。
