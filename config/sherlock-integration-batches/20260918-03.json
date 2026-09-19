@@ -11,21 +11,32 @@
         "schemaVersion": 1,
         "featureName": "PPT技能1.1.1与桌面连续画笔优化",
         "branch": "codex/feat/computer-use-evaluation-20260918",
-        "baseCommit": "378a74cf2f09c83253561d2af34fda0df86dd351",
-        "tipCommit": "ad52ea370c6c2f11565fcaa21198411938773f50",
+        "baseCommit": "ad52ea370c6c2f11565fcaa21198411938773f50",
+        "tipCommit": "96d4eee2ace29a6aeaef758361590d0e1bed8ce8",
         "commits": [
           {
-            "commit": "ad52ea370c6c2f11565fcaa21198411938773f50",
+            "commit": "50a435b5288c93f0abca9a895a5b6004556efb71",
             "parents": [
-              "378a74cf2f09c83253561d2af34fda0df86dd351"
+              "ad52ea370c6c2f11565fcaa21198411938773f50"
             ],
-            "subject": "修复远程光标表面误判与桌面观察控件失效"
+            "subject": "使用真实原生拖动区域修复左侧标题栏拖拽"
+          },
+          {
+            "commit": "96d4eee2ace29a6aeaef758361590d0e1bed8ce8",
+            "parents": [
+              "50a435b5288c93f0abca9a895a5b6004556efb71"
+            ],
+            "subject": "按实际窗口命中识别系统穿透层并减少桌面调用误用"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/research/computer-use-integration.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
           },
           {
             "status": "M",
@@ -37,11 +48,15 @@
           },
           {
             "status": "M",
-            "path": "src/main/computer/desktop-computer.ts"
+            "path": "src/preload/figma-final-shell.css"
           },
           {
             "status": "M",
-            "path": "test/computer-controller.test.ts"
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/panel-toggle-drag-region.test.js"
           }
         ],
         "checks": [
@@ -52,9 +67,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查、39项桌面聚焦检查与原生模块构建通过",
-            "verifiedCommit": "ad52ea370c6c2f11565fcaa21198411938773f50",
-            "completedAt": "2026-09-19T00:55:45.502280+00:00",
+            "summary": "类型检查、39项桌面与4项标题栏聚焦检查及原生编译通过",
+            "verifiedCommit": "96d4eee2ace29a6aeaef758361590d0e1bed8ce8",
+            "completedAt": "2026-09-19T01:11:58.354383+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -71,53 +86,7 @@
         "risks": [
           "Boardmix真实任务与签名包仍待集成验证，模型响应速度取决于当前提供商"
         ],
-        "generatedAt": "2026-09-19T00:55:45.502280+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9fb36fb44cdcd8755d4bc2b334dcea07fe0adccc",
-        "verificationCommit": "9fb36fb44cdcd8755d4bc2b334dcea07fe0adccc",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --no-audit --no-fund",
-            "verifiedCommit": "9fb36fb44cdcd8755d4bc2b334dcea07fe0adccc",
-            "completedAt": "2026-09-19T00:56:14.984Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9fb36fb44cdcd8755d4bc2b334dcea07fe0adccc",
-            "completedAt": "2026-09-19T00:56:14.984Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/local-search-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/local-search-bridge.test.ts",
-            "verifiedCommit": "9fb36fb44cdcd8755d4bc2b334dcea07fe0adccc",
-            "completedAt": "2026-09-19T00:56:14.984Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-19T00:56:14.984Z"
+        "generatedAt": "2026-09-19T01:11:58.354383+00:00"
       }
     }
   ],
