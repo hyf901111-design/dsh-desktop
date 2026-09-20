@@ -26,8 +26,12 @@ describe('Figma sidebar update states', () => {
     expect(panel(document).hidden).toBe(false)
     expect(panel(document).textContent).toContain('已更新至 0.9.6')
     expect(panel(document).textContent).toContain('知道了')
+    expect(document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.hidden).toBe(true)
     panel(document).querySelector<HTMLButtonElement>('.ework-notice-actions button')!.click()
     expect(panel(document).hidden).toBe(true)
+    expect(document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.hidden).toBe(true)
+    control.render({...available, currentVersion:'0.9.6', availableVersion:'0.9.7'})
+    expect(document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.hidden).toBe(false)
     expect(callbacks.download).not.toHaveBeenCalled();expect(callbacks.retry).not.toHaveBeenCalled()
   })
   it('mounts once and keeps the compact footer control hidden in expanded navigation', () => {

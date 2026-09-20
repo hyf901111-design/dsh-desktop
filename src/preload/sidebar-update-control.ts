@@ -114,7 +114,8 @@ export class SidebarUpdateControl {
     button.setAttribute('aria-label', updateMessage(status, this.locale) || (zh ? '查看更新' : 'View update'))
     button.title = button.getAttribute('aria-label')!
     const collapsed = !!doc.querySelector('[data-sidebar-collapsed=true]') && !doc.querySelector('.VOzbGW_panel')
-    button.hidden = action.kind === 'hidden'
+    // Completion has its own acknowledgement; it is no longer a download action.
+    button.hidden = action.kind === 'hidden' || action.kind === 'completed'
     panel.dataset.phase = status.phase
     panel.dataset.installStage = status.installStage ?? ''
     panel.dataset.collapsed = String(collapsed)
