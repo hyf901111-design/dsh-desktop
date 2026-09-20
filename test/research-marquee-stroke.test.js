@@ -6,8 +6,8 @@ const installed = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversa
 const base = installed.match(/\.rScV5Q_marquee\{[^}]+\}/)[0]
 let browser
 beforeAll(async () => {
-  const { chromium } = await import(/* @vite-ignore */ pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
-  browser = await chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
+  const { chromium } = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
+  browser = await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 })
 afterAll(async () => { await browser?.close() })
 it('updates installed and fresh marquee renderers idempotently', () => {
