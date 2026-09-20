@@ -5,10 +5,37 @@ export function componentPlacement(rect, viewport) {
   const height = Math.max(220, rect.height / viewport.scale)
   return { x: (rect.left - viewport.x) / viewport.scale + width / 2, y: (rect.top - viewport.y) / viewport.scale + height / 2, width, height, sizeMode: 'manual' }
 }
+// Snap both edges in screen space, including fractional panel offsets. Otherwise
+// a thin border can land between device pixels and fade on only one or two sides.
+export function marqueeScreenStyle(rect, root) {
+  const origin = root?.getBoundingClientRect() ?? { left: 0, top: 0 }
+  const dpr = root?.ownerDocument?.defaultView?.devicePixelRatio || 1
+  const snap = value => Math.round(value * dpr) / dpr
+  const left = snap(origin.left + rect.left), top = snap(origin.top + rect.top)
+  const right = snap(origin.left + rect.left + rect.width), bottom = snap(origin.top + rect.top + rect.height)
+  return { left: left - origin.left, top: top - origin.top,
+    width: Math.max(0, right - left), height: Math.max(0, bottom - top),
+    // Chromium quantizes CSS borders before rasterizing fractional display scales.
+    // Give those scales an opaque inner pixel instead of an entirely blended line.
+    '--odyssey-marquee-stroke': Number.isInteger(dpr) ? '1px' : '2px' }
+}
+function patchMarqueeScreenStyle(source) {
+  const marker = '/* ODYSSEY_MARQUEE_SCREEN_PIXELS */'
+  const replacement = `${marker} style: (${marqueeScreenStyle.toString()})(marquee, rootRef.current)`
+  if (source.includes(marker)) {
+    const start = source.indexOf(marker), suffix = ')(marquee, rootRef.current)'
+    const end = source.indexOf(suffix, start)
+    if (end < 0) throw Error('Incomplete marquee screen geometry')
+    return source.slice(0, start) + replacement + source.slice(end + suffix.length)
+  }
+  const anchor = 'style: { left: `${marquee.left}px`, top: `${marquee.top}px`, width: `${marquee.width}px`, height: `${marquee.height}px` }'
+  if (!source.includes(anchor)) throw Error('Missing marquee screen geometry')
+  return source.replace(anchor, replacement)
+}
 export function patchCanvasCreationTools(source) {
   source = source.replace('// Resizing a placeholder must not lock the first finished artifact.', '// Explicit user dimensions remain authoritative after generation.')
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
-  source = patchComponentMarquee(source)
+  source = patchMarqueeScreenStyle(patchComponentMarquee(source))
   source = patchComponentDraftFocus(source)
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
@@ -181,10 +208,11 @@ function patchComponentMarquee(source) {
 }
 function installCreationStyle(source) {
   source = source.replace(/\n;\(\(\)=>\{const id='odyssey-creation-tools-style';[^\n]+\n/g, '\n')
-  return source + `\n;(()=>{const id='odyssey-creation-tools-style';document.getElementById(id)?.remove();const style=document.createElement('style');style.id=id;style.textContent=${JSON.stringify(css)};document.head.append(style)})();\n`
+  return source.trimEnd() + `\n;(()=>{const id='odyssey-creation-tools-style';document.getElementById(id)?.remove();const style=document.createElement('style');style.id=id;style.textContent=${JSON.stringify(creationToolsCss)};document.head.append(style)})();\n`
 }
-const css = `
-[data-research-component-marquee]{border:1px solid #0d99ff!important;background:transparent!important;overflow:visible!important;pointer-events:none!important;border-radius:0!important}
+export const creationToolsCss = `
+[data-research-canvas] [data-research-marquee]{border-width:var(--odyssey-marquee-stroke,1px)!important;border-color:#0d99ff!important}
+[data-research-component-marquee]{border-style:solid!important;background:transparent!important;overflow:visible!important;pointer-events:none!important;border-radius:0!important}
 [data-research-component-marquee] .odyssey-frame-label{position:absolute;left:-1px;bottom:calc(100% + 5px);color:#64c5ff;font:12px/16px sans-serif;white-space:nowrap}
 [data-frame-corner]{position:absolute;width:7px;height:7px;box-sizing:border-box;background:white;border:1px solid #0d99ff;pointer-events:none}
 [data-frame-corner=nw]{left:-4px;top:-4px}[data-frame-corner=ne]{right:-4px;top:-4px}[data-frame-corner=sw]{left:-4px;bottom:-4px}[data-frame-corner=se]{right:-4px;bottom:-4px}
