@@ -1461,3 +1461,60 @@ it('refreshes referenced webpage text before a shared chat request', async () =>
     expect(f.registry.for('shared').getSnapshot().artifacts[0].sourceText).toBe(inspection.sourceText)
   } finally {f.dispose()}
 })
+
+
+it('opens a pinned board before the remote read and shares repeated activation while loading', async () => {
+  const f = await pageFixture()
+  vi.stubGlobal('document', f.window.document)
+  vi.stubGlobal('Event', f.window.Event)
+  let finish
+  f.bridge.invoke.mockImplementation(action => action === 'board.activate'
+    ? new Promise(resolve => { finish = resolve }) : Promise.resolve({ok: true}))
+  try {
+    const first = f.page.openBoard('board')
+    expect(f.sessions.open).toHaveBeenCalledWith('shared')
+    expect(f.window.document.documentElement.dataset.srbSelectedSession).toBe('shared')
+    expect(f.page.isLoading('shared')).toBe(true)
+    const second = f.page.openBoard('board')
+    await Promise.resolve()
+    expect(f.bridge.invoke.mock.calls.filter(([action]) => action === 'board.activate')).toHaveLength(1)
+    expect(f.bridge.invoke.mock.calls.some(([action]) => action === 'board.open')).toBe(false)
+    finish({ok: true, value: {...f.view, canvasRevision: 'fresh'}})
+    await Promise.all([first, second])
+    expect(f.page.isLoading('shared')).toBe(false)
+    expect(f.page.getView('shared').canvasRevision).toBe('fresh')
+  } finally { f.dispose(); vi.unstubAllGlobals() }
+})
+
+it('ends loading on failure and can retry the board without leaving it', async () => {
+  const f = await pageFixture()
+  try {
+    f.bridge.invoke.mockResolvedValueOnce({ok: false, error: {code:'NETWORK_ERROR', message:'网络不可用'}})
+    await f.page.activate('shared', true)
+    expect(f.page.isLoading('shared')).toBe(false)
+    expect(f.page.activationError('shared')).toBeTruthy()
+    await f.page.activate('shared', true)
+    expect(f.page.activationError('shared')).toBeUndefined()
+    expect(f.page.getView('shared').permissions.read).toBe(true)
+  } finally { f.dispose() }
+})
+
+it('keeps the latest loading flight when a previous activation resolves after a round trip', async () => {
+  const f = await pageFixture(), waiting = []
+  f.bridge.invoke.mockImplementation(action => action === 'board.activate'
+    ? new Promise(resolve => waiting.push(resolve)) : Promise.resolve({ok:true}))
+  try {
+    const a = f.page.activate('shared', true)
+    const b = f.page.activate('other', true)
+    const c = f.page.activate('shared', true)
+    await Promise.resolve()
+    waiting[0]({ok:true, value:{...f.view, canvasRevision:'stale'}})
+    await a
+    expect(f.page.isLoading('shared')).toBe(true)
+    expect(f.page.getView('shared').canvasRevision).toBe('base')
+    waiting[1]({ok:true, value:null}); waiting[2]({ok:true, value:{...f.view, canvasRevision:'latest'}})
+    await Promise.all([b,c])
+    expect(f.page.isLoading('shared')).toBe(false)
+    expect(f.page.getView('shared').canvasRevision).toBe('latest')
+  } finally { f.dispose() }
+})

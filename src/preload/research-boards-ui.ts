@@ -137,6 +137,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     revision = 0,
     activeSession: string | null = null,
     navigation = 0
+  const activations = new Map<string, Promise<void>>()
+  const activationErrors = new Map<string, string>()
   const listeners = new Set<() => void>(),
     editors = new Map<string, EditState>(),
     activeResearch = new Set<string>(),
@@ -688,6 +690,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (next.account.generation !== state.account.generation) {
       clearEditors()
       activeSession = null
+      activations.clear()
+      activationErrors.clear()
       navigation++
     }
     // Identity arrives after loading/null at the same generation. Keep the last
@@ -813,6 +817,20 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     return id
   }
   async function openBoard(boardId: string) {
+    // The account-scoped directory already identifies pinned local sessions.
+    // Open the shell now; activate remains the authoritative fresh permission read.
+    const known = state.account.status === 'ready' && state.account.user &&
+      state.boards.find(board => board.boardId === boardId && board.pinned && board.localSessionId)
+    if (known && known.localSessionId) {
+      const id = known.localSessionId, generation = state.account.generation
+      prime(id)
+      deps.sessions.open(id)
+      selectBoardSession(id)
+      await activate(id, true)
+      if (!disposed && generation === state.account.generation && current() === id && !activationErrors.has(id))
+        await call('local.directory', { mode: 'ensure', sessionId: id })
+      return id
+    }
     const turn = ++navigation,
       generation = state.account.generation
     let pending = opening.get(boardId)
@@ -841,6 +859,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         return id
       prime(id)
       deps.sessions.open(id)
+      selectBoardSession(id)
       await activate(id, true)
       return id
     } finally {
@@ -864,7 +883,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
     if (activeSession === wanted) {
       notify()
-      return
+      return wanted ? activations.get(wanted) : undefined
     }
     if (activeSession) clearPresence(activeSession)
     activeSession = wanted
@@ -872,25 +891,37 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const generation = state.account.generation, accountId = state.account.user?.userId
     const valid = () => !disposed && turn === navigation &&
       generation === state.account.generation && accountId === state.account.user?.userId
-    try {
-      const v = await call<BoardView | null>('board.activate', {
-        localSessionId: wanted
-      })
-      if (valid() && v) acceptView(v)
-    } catch (error) {
-      if (valid() && wanted) {
-        // Permit a later explicit activation or fresh state to retry this read.
-        activeSession = null
-        const e = editors.get(wanted)
-        if (e) {
-          e.workspace.setCollaborationAccess(false)
-          e.error = (error as Error).message
-        }
-        notify()
-      }
-    }
+    if (wanted) activationErrors.delete(wanted)
+    // Publish loading before IPC. Repeated activations share this flight;
+    // stale replies cannot clear a newer board's loading UI.
+    let complete!: () => void
+    const pending = new Promise<void>(resolve => { complete = resolve })
+    if (wanted) activations.set(wanted, pending)
     notify()
+    void (async () => {
+      try {
+        const v = await call<BoardView | null>('board.activate', {
+          localSessionId: wanted
+        })
+        if (valid() && v) acceptView(v)
+      } catch (error) {
+        if (valid() && wanted) {
+          activeSession = null
+          activationErrors.set(wanted, (error as Error).message)
+          const e = editors.get(wanted)
+          if (e) {
+            e.workspace.setCollaborationAccess(false)
+          }
+        }
+      } finally {
+        if (wanted && activations.get(wanted) === pending) activations.delete(wanted)
+        complete()
+        if (!disposed) notify()
+      }
+    })()
+    await pending
   }
+
   function saveDraft(id: string, text: string) {
     if (clearingEditors) return
     const v = view(id)
@@ -1272,6 +1303,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     isBoardOnly: (id: string) => boardOnlySession(state, id),
     call,
     activate,
+    isLoading: (id: string) => activations.has(id),
+    activationError: (id: string) => activationErrors.get(id),
     openBoard,
     submitShared,
     flushCanvas,
@@ -2788,6 +2821,14 @@ export function ResearchBoardCanvasOverlay({
     return () => clearInterval(timer)
   }, [])
   const v = page.getView(sessionId)
+  if (page.isLoading(sessionId)) return h('div',
+    { className: 'srb-canvas-loading', role: 'status', 'aria-live': 'polite', 'aria-busy': true },
+    h('span', { className: 'srb-canvas-loading-spinner', 'aria-hidden': true }),
+    h('span', null, '正在加载画板…'))
+  if (page.activationError(sessionId)) return h('div',
+    { className: 'srb-canvas-loading', role: 'alert' },
+    h('span', null, '画板加载失败，请重试'),
+    h('button', { onClick: () => void page.activate(sessionId, true) }, '重新加载'))
   if (!v?.permissions.read)
     return h(
       'div',
