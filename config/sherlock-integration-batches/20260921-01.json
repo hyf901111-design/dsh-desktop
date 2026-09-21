@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260921-01",
+  "branch": "codex/integration/20260921-01",
+  "baseMainCommit": "529bfe05b8deec4605f9b8b86508caa44577411c",
+  "expectedMainCommit": "529bfe05b8deec4605f9b8b86508caa44577411c",
+  "createdAt": "2026-09-21T01:24:03.844Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "全局定时任务与 Figma 侧栏入口",
+        "branch": "codex/feat/global-scheduled-tasks-20260921",
+        "baseCommit": "529bfe05b8deec4605f9b8b86508caa44577411c",
+        "tipCommit": "5b79c381a4ecac1ea256c27f5fd9b2ea2d1832a2",
+        "commits": [
+          {
+            "commit": "5b79c381a4ecac1ea256c27f5fd9b2ea2d1832a2",
+            "parents": [
+              "529bfe05b8deec4605f9b8b86508caa44577411c"
+            ],
+            "subject": "功能：按设计稿还原侧栏入口并实现全局定时任务"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/verification/global-scheduled-tasks-20260921.md"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-sidebar+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/scheduled/task-runner.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/scheduled/task-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/scheduled-tasks.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/scheduled-task-view.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/scheduled-tasks.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查及45项聚焦测试通过",
+            "verifiedCommit": "5b79c381a4ecac1ea256c27f5fd9b2ea2d1832a2",
+            "completedAt": "2026-09-21T01:23:26.941048+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/sidebar-new-session-actions.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查及45项聚焦测试通过",
+            "verifiedCommit": "5b79c381a4ecac1ea256c27f5fd9b2ea2d1832a2",
+            "completedAt": "2026-09-21T01:23:26.941048+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "现用Harness页面载入生产UI与独立测试存储，真实模型执行及浅深色、窄屏交互通过；原生打包验收待进行"
+        },
+        "acceptanceCriteria": [
+          "更多只包含定时任务",
+          "新建编辑暂停恢复立即运行删除可用",
+          "专属对话与运行记录持久化",
+          "不包含组件内跟踪任务"
+        ],
+        "risks": [
+          "尚未替换共享客户端，原生IPC与系统通知待集成客户端验收",
+          "应用运行时调度，关闭后恢复补跑一次"
+        ],
+        "generatedAt": "2026-09-21T01:23:26.941048+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/scheduled-tasks.test.ts",
+        "test/scheduled-task-view.test.ts",
+        "test/sidebar-new-session-actions.test.ts"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
