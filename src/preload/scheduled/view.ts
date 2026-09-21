@@ -1,0 +1,641 @@
+import {
+  nextRun,
+  scheduleLabel,
+  timezoneLabel,
+  type Schedule,
+  type ScheduledTask,
+  type ScheduledTaskBridge,
+  type TaskInput,
+  type WorkspaceChoice,
+} from '../../shared/scheduled-tasks'
+import { icons } from './icons'
+import { scheduledStyles } from './style'
+const escape = (s: unknown) =>
+  String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
+        c
+      ]!,
+  )
+const icon = (name: keyof typeof icons) =>
+  `<i class="st-icon" aria-hidden="true" style="--icon:url('${icons[name]}')"></i>`
+const stateLabel = (t: ScheduledTask) =>
+  t.runs[0]?.status === 'running'
+    ? '运行中'
+    : t.state === 'paused'
+      ? '已暂停'
+      : t.state === 'completed'
+        ? '已完成'
+        : t.runs[0]?.status === 'failed'
+          ? '需要处理'
+          : '已开启'
+export class ScheduledTaskView {
+  private root?: HTMLElement
+  private menu?: HTMLElement
+  private more?: HTMLButtonElement
+  private tasks: ScheduledTask[] = []
+  private workspaces: WorkspaceChoice[] = []
+  private selected?: string
+  private draft?: TaskInput
+  private draftId?: string
+  private detailOpen = false
+  private filter = 'all'
+  private query = ''
+  private listSignature = ''
+  private historySignature = ''
+  private error = ''
+  private busy = false
+  private poll?: ReturnType<typeof setInterval>
+  private observer?: MutationObserver
+  private background?: HTMLElement
+  private backgroundWasInert = false
+  constructor(
+    private document: Document,
+    private bridge: ScheduledTaskBridge,
+  ) {}
+  mount() {
+    if (this.document.getElementById('sherlock-scheduled-style')) return
+    const style = this.document.createElement('style')
+    style.id = 'sherlock-scheduled-style'
+    style.textContent = scheduledStyles
+    this.document.head.append(style)
+    this.observer = new MutationObserver(() => {
+      this.mountMore()
+      this.position()
+    })
+    this.observer.observe(this.document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'class'],
+    })
+    this.document.addEventListener('pointerdown', this.outside)
+    this.document.addEventListener('keydown', this.keyboard)
+    this.document.addEventListener('click', this.navigateAway, true)
+    this.document.defaultView?.addEventListener('resize', this.position)
+    this.mountMore()
+  }
+  private navigateAway = (event: MouseEvent) => {
+    const target = event.target as Element
+    if (
+      target.closest('.hHd-Xa_newSession') ||
+      (target.closest('[data-dsh-sidebar-root]') &&
+        !target.closest('.st-more-zone') &&
+        !target.closest('.hHd-Xa_toggle') &&
+        target.closest('button,a,[role=button]'))
+    )
+      this.close()
+  }
+  private outside = (e: Event) => {
+    if (
+      this.menu &&
+      !this.menu.contains(e.target as Node) &&
+      !this.more?.contains(e.target as Node)
+    )
+      this.closeMenu()
+  }
+  private keyboard = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && this.menu) {
+      e.preventDefault()
+      this.closeMenu()
+      this.more?.focus()
+    } else if (
+      this.menu &&
+      ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)
+    ) {
+      e.preventDefault()
+      const buttons = Array.from(
+        this.menu.querySelectorAll<HTMLButtonElement>('button'),
+      )
+      const at = buttons.indexOf(
+        this.document.activeElement as HTMLButtonElement,
+      )
+      buttons[
+        e.key === 'Home'
+          ? 0
+          : e.key === 'End'
+            ? buttons.length - 1
+            : (at + (e.key === 'ArrowUp' ? -1 : 1) + buttons.length) %
+              buttons.length
+      ]?.focus()
+    }
+  }
+  private dark() {
+    const el = this.document.documentElement
+    const color =
+      this.document.defaultView?.getComputedStyle(this.document.body).color ||
+      ''
+    const channels = color.match(/\d+/g)?.map(Number)
+    return (
+      el.dataset.theme === 'dark' ||
+      el.classList.contains('dark') ||
+      !!(channels && channels[0]! > 180)
+    )
+  }
+  private mountMore() {
+    const group = this.document.querySelector('.hHd-Xa_newSessionGroup')
+    if (!group || group.querySelector('.st-more-zone')) return
+    const zone = this.document.createElement('span')
+    zone.className = 'st-more-zone'
+    const more = this.document.createElement('button')
+    more.type = 'button'
+    more.className = 'st-more'
+    more.setAttribute('aria-label', '更多')
+    more.setAttribute('aria-haspopup', 'menu')
+    more.setAttribute('aria-expanded', 'false')
+    more.innerHTML = icon('more')
+    more.onclick = () =>
+      this.menu
+        ? this.closeMenu()
+        : this.showMenu(more, [
+            { label: '定时任务', icon: 'clock', run: () => void this.open() },
+          ])
+    zone.append(more)
+    group.append(zone)
+    this.more = more
+  }
+  private position = () => {
+    if (!this.root) return
+    const sidebar = this.document
+      .querySelector('[data-dsh-sidebar-root]')
+      ?.getBoundingClientRect()
+    const left = Math.max(10, sidebar?.right || 10) + 'px'
+    if (this.root.style.left !== left) this.root.style.left = left
+    const dark = String(this.dark())
+    if (this.root.dataset.dark !== dark) this.root.dataset.dark = dark
+  }
+  async open() {
+    this.closeMenu()
+    if (!this.root) {
+      this.root = this.document.createElement('section')
+      this.root.className = 'st-root'
+      this.root.setAttribute('aria-label', '定时任务')
+      this.document.body.append(this.root)
+    }
+    if (!this.background) {
+      this.background =
+        this.document.querySelector<HTMLElement>('.pI_x6G_centerCol') ||
+        undefined
+      if (this.background) {
+        this.backgroundWasInert = this.background.inert
+        this.background.inert = true
+        this.background.dataset.scheduledHidden = 'true'
+      }
+    }
+    this.position()
+    this.render()
+    await this.refresh()
+    clearInterval(this.poll)
+    this.poll = setInterval(() => void this.refresh(), 5000)
+  }
+  close() {
+    if (this.background && !this.backgroundWasInert)
+      this.background.inert = false
+    if (this.background) delete this.background.dataset.scheduledHidden
+    this.background = undefined
+    this.closeMenu()
+    this.root?.remove()
+    this.root = undefined
+    clearInterval(this.poll)
+  }
+  private async refresh() {
+    if (!this.root) return
+    try {
+      const [tasks, workspaces] = await Promise.all([
+        this.bridge.list(),
+        this.bridge.workspaces(),
+      ])
+      this.tasks = tasks
+      this.workspaces = workspaces
+      this.renderList()
+      this.updateStatus()
+    } catch (e) {
+      this.showError(e)
+    }
+  }
+  private showError(e: unknown) {
+    this.error = e instanceof Error ? e.message : String(e)
+    const box = this.root?.querySelector<HTMLElement>('.st-error')
+    if (box) box.textContent = this.error
+  }
+  private time(t: number | null, s: Schedule) {
+    return t === null
+      ? '—'
+      : new Intl.DateTimeFormat('zh-CN', {
+          timeZone: s.timezone,
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hourCycle: 'h23',
+        }).format(t)
+  }
+  private render() {
+    if (!this.root) return
+    this.listSignature = ''
+    this.root.dataset.detail = String(this.detailOpen)
+    this.root.innerHTML = `<main class="st-center"><button class="st-icon-button st-back" aria-label="返回工作区">${icon('back')}</button><button class="st-icon-button st-panel-toggle" aria-label="展开右侧栏">${icon('panel')}</button><h1>定时任务</h1><p class="st-subtitle">安排任务、定期跟踪，或在重要变化时收到提醒</p><label class="st-search">${icon('search')}<input aria-label="搜索已安排任务" placeholder="搜索已安排任务" value="${escape(this.query)}"></label><div class="st-toolbar" role="tablist" aria-label="任务状态">${[
+      ['all', '全部'],
+      ['enabled', '已开启'],
+      ['paused', '已暂停'],
+      ['completed', '已完成'],
+    ]
+      .map(
+        ([s, l]) =>
+          `<button role="tab" data-filter="${s}" aria-selected="${this.filter === s}">${l}</button>`,
+      )
+      .join(
+        '',
+      )}<select aria-label="任务类型"><option>全部类型</option><option>全局任务</option></select><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></main>`
+    this.root.querySelector<HTMLButtonElement>('.st-back')!.onclick = () =>
+      this.close()
+    this.root.querySelector<HTMLButtonElement>('.st-panel-toggle')!.onclick =
+      () => {
+        this.detailOpen = !this.detailOpen
+        if (this.detailOpen && !this.draft) this.newDraft()
+        else this.render()
+      }
+    this.root.querySelector<HTMLInputElement>('.st-search input')!.oninput = (
+      e,
+    ) => {
+      this.query = (e.target as HTMLInputElement).value
+      this.renderList()
+    }
+    this.root.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach(
+      (b) =>
+        (b.onclick = () => {
+          this.filter = b.dataset.filter!
+          this.root!.querySelectorAll('[data-filter]').forEach((x) =>
+            x.setAttribute(
+              'aria-selected',
+              String((x as HTMLElement).dataset.filter === this.filter),
+            ),
+          )
+          this.renderList()
+        }),
+    )
+    this.root.querySelector<HTMLButtonElement>('.st-new')!.onclick = () =>
+      this.newDraft()
+    this.renderList()
+    if (this.detailOpen) this.renderDetail()
+  }
+  private renderList() {
+    const list = this.root?.querySelector('.st-list')
+    if (!list) return
+    const tasks = this.tasks.filter(
+      (t) =>
+        (this.filter === 'all' || t.state === this.filter) &&
+        `${t.title} ${t.prompt}`
+          .toLowerCase()
+          .includes(this.query.toLowerCase()),
+    )
+    const signature = JSON.stringify([
+      this.selected,
+      this.query,
+      this.filter,
+      tasks,
+      this.tasks.length,
+    ])
+    if (this.listSignature === signature) return
+    this.listSignature = signature
+    list.innerHTML = tasks.length
+      ? tasks
+          .map(
+            (t) =>
+              `<div class="st-row" data-id="${escape(t.id)}" data-selected="${this.selected === t.id}"><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-ring"></span><span class="st-task-info"><span class="st-task-title"><span class="st-badge">全局任务</span><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? '下次运行 ' + this.time(t.nextRun, t.schedule) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
+          )
+          .join('')
+      : `<div class="st-empty"><h2>${this.tasks.length ? '没有符合条件的任务' : '让重复的工作按计划完成'}</h2><p>${this.tasks.length ? '试试其他关键词或状态筛选。' : '定期整理资讯、跟踪指标或汇总资料。<br>新建任务，让重复的工作按计划完成。'}</p>${this.tasks.length ? '' : '<button class="st-primary st-first">＋ 新建第一个任务</button>'}</div>`
+    list
+      .querySelector<HTMLButtonElement>('.st-first')
+      ?.addEventListener('click', () => this.newDraft())
+    list.querySelectorAll<HTMLElement>('.st-row').forEach((row) => {
+      const t = this.tasks.find((t) => t.id === row.dataset.id)!
+      row.querySelector<HTMLButtonElement>('.st-row-main')!.onclick = () => {
+        this.selected = t.id
+        this.draftId = t.id
+        this.draft = structuredClone(t)
+        this.detailOpen = true
+        this.render()
+      }
+      row.querySelector<HTMLButtonElement>('.st-row-more')!.onclick = (e) =>
+        this.taskMenu(e.currentTarget as HTMLElement, t)
+    })
+  }
+  private newDraft() {
+    if (!this.draft || this.draftId) {
+      this.draft = {
+        title: '',
+        prompt: '',
+        workspaceId: this.workspaces[0]?.workspaceId || '',
+        schedule: {
+          frequency: 'daily',
+          time: '09:00',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          weekday: 1,
+          date: new Date().toISOString().slice(0, 10),
+        },
+        notification: 'always',
+      }
+    }
+    this.draftId = undefined
+    this.selected = undefined
+    this.detailOpen = true
+    this.error = ''
+    this.render()
+    this.root?.querySelector<HTMLInputElement>('.st-detail-title')?.focus()
+  }
+  private renderDetail() {
+    if (!this.root || !this.draft) return
+    this.root.querySelector('.st-detail')?.remove()
+    this.historySignature = ''
+    const d = this.draft,
+      t = this.tasks.find((t) => t.id === this.draftId)
+    const detail = this.document.createElement('aside')
+    detail.className = 'st-detail'
+    detail.setAttribute('aria-label', '任务详情')
+    detail.innerHTML = `<div class="st-detail-top"><span class="st-status">全局任务 · ${t ? stateLabel(t) : '新建任务'}</span>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button><button class="st-secondary st-pause">${t.state === 'paused' ? '恢复' : '暂停'}</button>` : ''}<button class="st-icon-button st-collapse" aria-label="收起右侧屏">${icon('panel')}</button></div><input class="st-detail-title" aria-label="任务名称" placeholder="为任务起个名字" maxlength="120" value="${escape(d.title)}"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span>${icon('chevron')}</button><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+      ['always', '每次完成'],
+      ['changes', '重要变化'],
+      ['never', '不通知'],
+    ]
+      .map(
+        ([v, l]) =>
+          `<option value="${v}" ${d.notification === v ? 'selected' : ''}>${l}</option>`,
+      )
+      .join(
+        '',
+      )}</select></label><div class="st-history-wrap"></div><div class="st-detail-footer"><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
+    this.root.append(detail)
+    detail.querySelector<HTMLInputElement>('.st-detail-title')!.oninput = (e) =>
+      (d.title = (e.target as HTMLInputElement).value)
+    const promptField = detail.querySelector<HTMLTextAreaElement>('.st-prompt')!
+    const resizePrompt = () => {
+      promptField.style.height = 'auto'
+      promptField.style.height =
+        Math.max(82, promptField.scrollHeight + 2) + 'px'
+    }
+    promptField.oninput = () => {
+      d.prompt = promptField.value
+      resizePrompt()
+    }
+    resizePrompt()
+    detail.querySelector<HTMLSelectElement>('.st-workspace')!.onchange = (e) =>
+      (d.workspaceId = (e.target as HTMLSelectElement).value)
+    detail.querySelector<HTMLSelectElement>('.st-notification')!.onchange = (
+      e,
+    ) =>
+      (d.notification = (e.target as HTMLSelectElement)
+        .value as TaskInput['notification'])
+    detail.querySelector<HTMLButtonElement>('.st-collapse')!.onclick = () => {
+      this.detailOpen = false
+      this.render()
+    }
+    detail.querySelector<HTMLButtonElement>('.st-repeat')!.onclick = () =>
+      this.editSchedule()
+    detail.querySelector<HTMLButtonElement>('.st-save')!.onclick = () =>
+      void this.save()
+    detail
+      .querySelector<HTMLButtonElement>('.st-detail-more')
+      ?.addEventListener('click', (e) =>
+        this.taskMenu(e.currentTarget as HTMLElement, t!),
+      )
+    detail
+      .querySelector<HTMLButtonElement>('.st-pause')
+      ?.addEventListener(
+        'click',
+        () => void this.action(t!, t!.state === 'paused' ? 'resume' : 'pause'),
+      )
+    detail
+      .querySelector<HTMLButtonElement>('.st-open-result')
+      ?.addEventListener('click', () => {
+        this.document.defaultView?.dispatchEvent(
+          new CustomEvent('sherlock:scheduled-open-session', {
+            detail: { sessionId: t!.sessionId },
+          }),
+        )
+        this.close()
+      })
+    this.updateStatus()
+  }
+  private updateStatus() {
+    if (!this.draft) return
+    const t = this.tasks.find((t) => t.id === this.draftId),
+      detail = this.root?.querySelector('.st-detail')
+    if (!detail) return
+    const status = detail.querySelector('.st-status')!
+    status.textContent = `全局任务 · ${t ? stateLabel(t) : '新建任务'}`
+    const pause = detail.querySelector<HTMLButtonElement>('.st-pause')
+    if (pause) pause.textContent = t?.state === 'paused' ? '恢复' : '暂停'
+    let next: number | null = null
+    try {
+      next = nextRun(this.draft.schedule)
+    } catch {}
+    detail.querySelector('.st-next')!.textContent =
+      `${timezoneLabel(this.draft.schedule.timezone)} · ${t?.state === 'paused' ? '已暂停' : '下次运行 ' + this.time(next, this.draft.schedule)}`
+    const history = detail.querySelector('.st-history-wrap')!
+    const wasOpen = history.querySelector('details')?.open
+    const runSignature = JSON.stringify(t?.runs)
+    if (t?.runs.length && this.historySignature !== runSignature)
+      history.innerHTML = `<details class="st-history" ${wasOpen ? 'open' : ''}><summary>运行记录（${t.runs.length}）</summary>${t.runs.map((r) => `<div class="st-run"><strong>${r.status === 'running' ? '运行中' : r.status === 'success' ? '已完成' : '执行失败'}</strong> · ${this.time(r.startedAt, t.schedule)}${r.error ? `<p class="st-error">${escape(r.error)}</p>` : ''}</div>`).join('')}</details>`
+    this.historySignature = runSignature
+    if (t?.sessionId && !detail.querySelector('.st-open-result')) {
+      const b = this.document.createElement('button')
+      b.className = 'st-secondary st-open-result'
+      b.textContent = '打开对话 ↗'
+      b.onclick = () => {
+        this.document.defaultView?.dispatchEvent(
+          new CustomEvent('sherlock:scheduled-open-session', {
+            detail: { sessionId: t.sessionId },
+          }),
+        )
+        this.close()
+      }
+      detail.querySelector('.st-footer-actions')?.prepend(b)
+    }
+    const save = detail.querySelector<HTMLButtonElement>('.st-save')
+    if (save) save.disabled = this.busy || t?.runs[0]?.status === 'running'
+  }
+  private async save() {
+    if (this.busy || !this.draft) return
+    this.busy = true
+    this.updateStatus()
+    try {
+      const task = await this.bridge.save(this.draft, this.draftId)
+      this.draftId = task.id
+      this.selected = task.id
+      this.draft = structuredClone(task)
+      this.error = ''
+      await this.refresh()
+      this.render()
+    } catch (e) {
+      this.showError(e)
+    } finally {
+      this.busy = false
+      this.updateStatus()
+    }
+  }
+  private async action(
+    t: ScheduledTask,
+    action: 'run' | 'pause' | 'resume' | 'delete',
+  ) {
+    try {
+      await this.bridge.action(t.id, action)
+      this.error = ''
+      if (action === 'delete' && this.draftId === t.id) {
+        this.draft = undefined
+        this.draftId = undefined
+        this.selected = undefined
+        this.detailOpen = false
+      }
+      await this.refresh()
+      this.render()
+    } catch (e) {
+      this.showError(e)
+    }
+  }
+  private taskMenu(anchor: HTMLElement, t: ScheduledTask) {
+    this.showMenu(anchor, [
+      {
+        label: '立即运行',
+        run: () => void this.action(t, 'run'),
+        disabled: t.runs[0]?.status === 'running',
+      },
+      {
+        label: t.state === 'paused' ? '恢复任务' : '暂停任务',
+        run: () =>
+          void this.action(t, t.state === 'paused' ? 'resume' : 'pause'),
+      },
+      { label: '删除任务', danger: true, run: () => this.confirmDelete(t) },
+    ])
+  }
+  private showMenu(
+    anchor: HTMLElement,
+    items: {
+      label: string
+      icon?: keyof typeof icons
+      danger?: boolean
+      disabled?: boolean
+      run: () => void
+    }[],
+  ) {
+    this.closeMenu()
+    const menu = this.document.createElement('div')
+    menu.className = 'st-menu'
+    menu.dataset.dark = String(this.dark())
+    menu.role = 'menu'
+    menu.innerHTML = items
+      .map(
+        (i) =>
+          `<button role="menuitem" ${i.disabled ? 'disabled' : ''} class="${i.danger ? 'st-danger' : ''}">${i.icon ? icon(i.icon) : ''}${i.label}</button>`,
+      )
+      .join('')
+    this.document.body.append(menu)
+    this.menu = menu
+    const r = anchor.getBoundingClientRect()
+    menu.style.left =
+      Math.max(
+        8,
+        Math.min(
+          r.right - 240,
+          (this.document.defaultView?.innerWidth || 1380) - 248,
+        ),
+      ) + 'px'
+    menu.style.top =
+      Math.min(
+        r.bottom + 6,
+        (this.document.defaultView?.innerHeight || 900) - menu.offsetHeight - 8,
+      ) + 'px'
+    if (anchor === this.more) this.more.setAttribute('aria-expanded', 'true')
+    menu.querySelectorAll<HTMLButtonElement>('button').forEach(
+      (b, i) =>
+        (b.onclick = () => {
+          this.closeMenu()
+          items[i]!.run()
+        }),
+    )
+    menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+  }
+  private closeMenu() {
+    this.menu?.remove()
+    this.menu = undefined
+    this.more?.setAttribute('aria-expanded', 'false')
+  }
+  private dialog(html: string) {
+    const d = this.document.createElement('dialog')
+    d.className = 'st-dialog'
+    d.dataset.dark = String(this.dark())
+    d.innerHTML = html
+    this.document.body.append(d)
+    d.addEventListener('close', () => d.remove())
+    d.showModal()
+    return d
+  }
+  private confirmDelete(t: ScheduledTask) {
+    const d = this.dialog(
+      `<h2>删除这个定时任务？</h2><p>「${escape(t.title)}」将不再按计划执行。<br>已生成内容与历史运行记录会保留。</p><div class="st-dialog-actions"><button class="st-secondary" data-cancel>取消</button><button class="st-primary" data-delete>删除任务</button></div>`,
+    )
+    d.querySelector<HTMLButtonElement>('[data-cancel]')!.onclick = () =>
+      d.close()
+    d.querySelector<HTMLButtonElement>('[data-delete]')!.onclick = () => {
+      d.close()
+      void this.action(t, 'delete')
+    }
+  }
+  private editSchedule() {
+    if (!this.draft) return
+    const s = { ...this.draft.schedule }
+    const d = this.dialog(
+      `<h2>编辑执行时间</h2><p>选择重复频率、时间和时区</p><div class="st-dialog-fields"><label>重复<select name="frequency">${[
+        ['daily', '每天'],
+        ['weekdays', '工作日'],
+        ['weekly', '每周'],
+        ['once', '仅一次'],
+      ]
+        .map(
+          ([v, l]) =>
+            `<option value="${v}" ${s.frequency === v ? 'selected' : ''}>${l}</option>`,
+        )
+        .join(
+          '',
+        )}</select></label><label>时间<input name="time" type="time" value="${s.time}"></label><label>时区<select name="timezone">${[...new Set(['Asia/Shanghai', s.timezone, 'UTC', 'Asia/Hong_Kong', 'Asia/Tokyo', 'America/New_York', 'Europe/London'])].map((v) => `<option value="${escape(v)}" ${s.timezone === v ? 'selected' : ''}>${timezoneLabel(v)}</option>`).join('')}</select></label><label data-weekday>星期<select name="weekday">${[1, 2, 3, 4, 5, 6, 0].map((v) => `<option value="${v}" ${s.weekday === v ? 'selected' : ''}>星期${'日一二三四五六'[v]}</option>`).join('')}</select></label><label data-date>日期<input name="date" type="date" value="${escape(s.date)}"></label></div><footer><div class="st-schedule-preview"></div><div class="st-error" role="alert"></div><div class="st-dialog-actions"><button class="st-secondary" data-cancel>取消</button><button class="st-primary" data-save>保存</button></div></footer>`,
+    )
+    const update = () => {
+      s.frequency = d.querySelector<HTMLSelectElement>('[name=frequency]')!
+        .value as Schedule['frequency']
+      s.time = d.querySelector<HTMLInputElement>('[name=time]')!.value
+      s.timezone = d.querySelector<HTMLSelectElement>('[name=timezone]')!.value
+      s.weekday = Number(
+        d.querySelector<HTMLSelectElement>('[name=weekday]')!.value,
+      )
+      s.date = d.querySelector<HTMLInputElement>('[name=date]')!.value
+      d.querySelector<HTMLElement>('[data-weekday]')!.style.display =
+        s.frequency === 'weekly' ? 'flex' : 'none'
+      d.querySelector<HTMLElement>('[data-date]')!.style.display =
+        s.frequency === 'once' ? 'flex' : 'none'
+      try {
+        const next = nextRun(s)
+        if (!next) throw new Error('请选择未来的执行时间')
+        d.querySelector('.st-schedule-preview')!.textContent =
+          `下次运行：${this.time(next, s)} · ${timezoneLabel(s.timezone)}`
+        d.querySelector('.st-error')!.textContent = ''
+        d.querySelector<HTMLButtonElement>('[data-save]')!.disabled = false
+      } catch (e) {
+        d.querySelector('.st-error')!.textContent =
+          e instanceof Error ? e.message : String(e)
+        d.querySelector<HTMLButtonElement>('[data-save]')!.disabled = true
+      }
+    }
+    d.addEventListener('change', update)
+    update()
+    d.querySelector<HTMLButtonElement>('[data-cancel]')!.onclick = () =>
+      d.close()
+    d.querySelector<HTMLButtonElement>('[data-save]')!.onclick = () => {
+      this.draft!.schedule = s
+      d.close()
+      this.renderDetail()
+      if (this.draftId) void this.save()
+    }
+  }
+}

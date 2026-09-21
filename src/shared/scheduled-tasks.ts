@@ -1,0 +1,181 @@
+export type Schedule = {
+  frequency: 'once' | 'daily' | 'weekdays' | 'weekly'
+  time: string
+  timezone: string
+  weekday: number
+  date: string
+}
+export type TaskInput = {
+  title: string
+  prompt: string
+  workspaceId: string
+  schedule: Schedule
+  notification: 'always' | 'changes' | 'never'
+}
+export type TaskRun = {
+  id: string
+  startedAt: number
+  finishedAt?: number
+  status: 'running' | 'success' | 'failed'
+  error?: string
+  sessionId?: string
+  rpcId?: string
+}
+export type ScheduledTask = TaskInput & {
+  id: string
+  state: 'enabled' | 'paused' | 'completed'
+  nextRun: number | null
+  createdAt: number
+  sessionId?: string
+  deletedAt?: number
+  runs: TaskRun[]
+}
+export type WorkspaceChoice = {
+  workspaceId: string
+  title?: string
+  path: string
+}
+export interface ScheduledTaskBridge {
+  list(): Promise<ScheduledTask[]>
+  save(input: TaskInput, id?: string): Promise<ScheduledTask>
+  action(
+    id: string,
+    action: 'pause' | 'resume' | 'run' | 'delete',
+  ): Promise<void>
+  workspaces(): Promise<WorkspaceChoice[]>
+}
+export function validateTask(value: unknown): TaskInput {
+  const v = value as TaskInput
+  if (
+    !v ||
+    typeof v.title !== 'string' ||
+    !v.title.trim() ||
+    v.title.length > 120
+  )
+    throw new Error('请输入 1–120 字的任务名称')
+  if (
+    typeof v.prompt !== 'string' ||
+    !v.prompt.trim() ||
+    v.prompt.length > 20000
+  )
+    throw new Error('请输入执行指令（最多 20000 字）')
+  if (
+    typeof v.workspaceId !== 'string' ||
+    !v.workspaceId ||
+    v.workspaceId.length > 512
+  )
+    throw new Error('请选择工作区')
+  if (!['always', 'changes', 'never'].includes(v.notification))
+    throw new Error('通知方式无效')
+  validateSchedule(v.schedule)
+  return {
+    title: v.title.trim(),
+    prompt: v.prompt.trim(),
+    workspaceId: v.workspaceId,
+    schedule: { ...v.schedule },
+    notification: v.notification,
+  }
+}
+export function validateSchedule(s: Schedule): void {
+  if (
+    !s ||
+    !['once', 'daily', 'weekdays', 'weekly'].includes(s.frequency) ||
+    !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.time)
+  )
+    throw new Error('执行时间无效')
+  if (!Number.isInteger(s.weekday) || s.weekday < 0 || s.weekday > 6)
+    throw new Error('请选择星期')
+  if (typeof s.timezone !== 'string' || !s.timezone)
+    throw new Error('请选择时区')
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: s.timezone }).format()
+  } catch {
+    throw new Error('时区无效')
+  }
+  if (
+    s.frequency === 'once' &&
+    (!/^\d{4}-\d{2}-\d{2}$/.test(s.date) ||
+      new Date(s.date + 'T00:00:00Z').toISOString().slice(0, 10) !== s.date)
+  )
+    throw new Error('请选择有效日期')
+}
+// Search actual instants in the chosen zone. This skips nonexistent DST wall times
+// and chooses the first future occurrence during a repeated hour.
+export function nextRun(s: Schedule, after = Date.now()): number | null {
+  validateSchedule(s)
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: s.timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    weekday: 'short',
+  })
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  let limit = after + 9 * 86400000
+  if (s.frequency === 'once') {
+    const date = Date.parse(s.date + 'T00:00:00Z')
+    if (date + 2 * 86400000 < after) return null
+    after = Math.max(after, date - 86400000)
+    limit = date + 2 * 86400000
+  }
+  for (
+    let t = Math.floor(after / 60000) * 60000 + 60000;
+    t <= limit;
+    t += 60000
+  ) {
+    const p = Object.fromEntries(
+      formatter.formatToParts(t).map((x) => [x.type, x.value]),
+    )
+    if (`${p.hour}:${p.minute}` !== s.time) continue
+    const day = days.indexOf(p.weekday!)
+    if (s.frequency === 'weekdays' && (day === 0 || day === 6)) continue
+    if (s.frequency === 'weekly' && day !== s.weekday) continue
+    if (s.frequency === 'once' && `${p.year}-${p.month}-${p.day}` !== s.date)
+      continue
+    if (s.frequency !== 'once') {
+      // A repeated fall-back clock time belongs to the same calendar run.
+      let repeated = false
+      for (let offset = 15; offset <= 180; offset += 15) {
+        const previous = Object.fromEntries(
+          formatter
+            .formatToParts(t - offset * 60000)
+            .map((x) => [x.type, x.value]),
+        )
+        if (
+          previous.year === p.year &&
+          previous.month === p.month &&
+          previous.day === p.day &&
+          previous.hour === p.hour &&
+          previous.minute === p.minute
+        ) {
+          repeated = true
+          break
+        }
+      }
+      if (repeated) continue
+    }
+    return t
+  }
+  return null
+}
+export function scheduleLabel(s: Schedule): string {
+  return `${s.frequency === 'once' ? s.date : s.frequency === 'weekly' ? '每周' + '日一二三四五六'[s.weekday] : s.frequency === 'weekdays' ? '工作日' : '每天'} ${s.time}`
+}
+
+export function timezoneLabel(zone: string): string {
+  return (
+    (
+      {
+        'Asia/Shanghai': '北京时间',
+        'Asia/Hong_Kong': '香港时间',
+        'Asia/Tokyo': '东京时间',
+        'America/New_York': '纽约时间',
+        'Europe/London': '伦敦时间',
+        UTC: 'UTC',
+      } as Record<string, string>
+    )[zone] || zone
+  )
+}

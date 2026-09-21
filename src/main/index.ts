@@ -1,3 +1,5 @@
+import { TaskStore } from './scheduled/task-store'
+import { TaskRunner, harnessRpc } from './scheduled/task-runner'
 import { createDesktopComputer } from './computer/desktop-computer'
 import { registerConversationBrowser } from './search/conversation-browser'
 import { readBrowserPage } from './search/browser-page-reader'
@@ -32,6 +34,7 @@ import {
   ipcMain,
   Menu,
   nativeTheme,
+  Notification,
   systemPreferences,
   net,
   protocol,
@@ -678,6 +681,8 @@ function restartHarness(): Promise<void> {
   return launchHarness()
 }
 
+let scheduledRunner: TaskRunner | undefined
+
 function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): void {
   ipcMain.removeHandler('harness:restart')
   ipcMain.handle('harness:restart', async (event) => {
@@ -1270,6 +1275,29 @@ async function bootstrap(): Promise<void> {
     }
   })
   registerHarnessHandlers(researchCanvasStorage)
+  const scheduledStore = new TaskStore(join(app.getPath('userData'), 'scheduled-tasks.json'))
+  let scheduledLoadError: unknown
+  try { await scheduledStore.load() } catch (error) { scheduledLoadError = error; console.error('[scheduled-tasks]', error) }
+  const taskRpc = harnessRpc(() => runtime.snapshot().url)
+  scheduledRunner = new TaskRunner(scheduledStore, taskRpc, () => !scheduledLoadError && runtime.snapshot().phase === 'ready', (task, run) => {
+    if (Notification.isSupported()) new Notification({ title: task.title, body: run.status === 'success' ? '定时任务已完成，打开专属对话查看结果' : `定时任务需要处理：${run.error}` }).show()
+  })
+  ipcMain.handle('scheduled-tasks:request', async (event, method: unknown, payload: any) => {
+    assertTrustedMainWindowEvent(event, mainWindow)
+    if (scheduledLoadError) throw new Error('定时任务数据读取失败，原数据已保留，请检查日志')
+    if (method === 'list') return scheduledStore.list()
+    if (method === 'workspaces') return (await taskRpc('workspace.list', {})).items
+    if (method === 'save') {
+      const workspaces = (await taskRpc('workspace.list', {})).items
+      if (!workspaces.some((w: any) => w.workspaceId === payload?.input?.workspaceId)) throw new Error('工作区不存在')
+      return scheduledStore.save(payload.input, payload.id)
+    }
+    if (typeof payload?.id !== 'string') throw new Error('任务标识无效')
+    if (method === 'run') return scheduledRunner!.run(payload.id)
+    if (method === 'pause' || method === 'resume' || method === 'delete') return scheduledStore.action(payload.id, method)
+    throw new Error('未知任务操作')
+  })
+  scheduledRunner.start()
   ipcMain.handle('developer-mode:set-enabled', (event, enabled: unknown) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (typeof enabled !== 'boolean') {
@@ -1357,6 +1385,7 @@ if (!singleInstance) {
     disposeResearchBoardsHandlers?.()
     researchBoardsService?.stop()
     accountService?.stop()
+    scheduledRunner?.stop()
     researchVoiceController.dispose()
     if (quitting) return
     event.preventDefault()
