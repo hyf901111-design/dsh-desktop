@@ -9,27 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "暂停任务与箭头样式优化、恢复左侧栏拖动",
+        "featureName": "统一任务页与全局左侧栏箭头",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
-        "tipCommit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
+        "baseCommit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
+        "tipCommit": "a9ab91b87025d7d9cf6db09040b9fd1cb17ea42f",
         "commits": [
           {
-            "commit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
+            "commit": "a9ab91b87025d7d9cf6db09040b9fd1cb17ea42f",
             "parents": [
-              "ea8b6f3109b6fd8c7f55c35939327c7568299216"
+              "2731a933356d7b1cc81a65fee8cf3e0c52d79818"
             ],
-            "subject": "修复：任务页面与全局侧栏拖拽条保持同一布局层级"
+            "subject": "样式：任务类型与运行记录直接复用左侧栏箭头资源"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
+            "path": "src/preload/scheduled/style.ts"
           }
         ],
         "checks": [
@@ -40,29 +36,15 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查与17项定时任务聚焦测试通过",
-            "verifiedCommit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
-            "completedAt": "2026-09-21T02:53:00.949867+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-task-view.test.ts",
-              "test/scheduled-tasks.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查与17项定时任务聚焦测试通过",
-            "verifiedCommit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
-            "completedAt": "2026-09-21T02:53:00.949867+00:00",
+            "summary": "类型检查通过；箭头直接引用既有侧栏SVG资源及14px尺寸",
+            "verifiedCommit": "a9ab91b87025d7d9cf6db09040b9fd1cb17ea42f",
+            "completedAt": "2026-09-21T03:06:05.596472+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "验证任务页与原生拖动条同级、监听原生宽度变化并清理观察器；客户端拖动待最终包验证"
+          "summary": "前一集成包已原生拖动验证侧栏约262到330像素并同步任务页；本次仅将箭头改为侧栏同一资源"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -73,41 +55,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T02:53:00.949867+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c9665a0006341621b83d79dc4ef090e0c2a3189b",
-        "verificationCommit": "c9665a0006341621b83d79dc4ef090e0c2a3189b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c9665a0006341621b83d79dc4ef090e0c2a3189b",
-            "completedAt": "2026-09-21T02:57:13.114Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "c9665a0006341621b83d79dc4ef090e0c2a3189b",
-            "completedAt": "2026-09-21T02:57:13.114Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T02:57:13.114Z"
+        "generatedAt": "2026-09-21T03:06:05.596472+00:00"
       }
     }
   ],
