@@ -34,7 +34,7 @@ it('provides only scheduled tasks in More, closes on Escape, and preserves the w
   await view.open()
   expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(true)
   doc.querySelector<HTMLButtonElement>('.st-new')!.click()
-  const name = doc.querySelector<HTMLInputElement>('.st-detail-title')!
+  const name = doc.querySelector<HTMLTextAreaElement>('.st-prompt')!
   name.value = '保留未提交任务'
   name.dispatchEvent(
     new w.Event('input', { bubbles: true }) as unknown as Event,
@@ -43,7 +43,7 @@ it('provides only scheduled tasks in More, closes on Escape, and preserves the w
   expect(doc.querySelector('.st-collapse')).toBeNull()
   expect(name.closest('[data-scheduled-panel-slot]')).not.toBeNull()
   for (const open of [false, true]) w.dispatchEvent(new w.CustomEvent('sherlock:scheduled-panel-toggle', {detail:{open}}))
-  expect(doc.querySelector<HTMLInputElement>('.st-detail-title')!.value).toBe(
+  expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')!.value).toBe(
     '保留未提交任务',
   )
   view.close()
@@ -97,5 +97,59 @@ it('shows relative next-run copy and updates the distinct running status after r
   expect(doc.querySelector('.st-status')!.getAttribute('data-state')).toBe('running')
   expect(doc.querySelector('.st-status-label')!.textContent).toBe('运行中')
   expect(doc.querySelector('.st-task-kind')!.textContent).toBe('全局任务')
+  view.close()
+})
+
+it('toggles task menus, retains menu-row highlight, pauses without selection, and derives titles from content', async () => {
+  vi.useFakeTimers()
+  const w = new Window()
+  windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver)
+  vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+  const task: import('../src/shared/scheduled-tasks').ScheduledTask = {id:'one',title:'新闻',prompt:'整理新闻',workspaceId:'work',notification:'always',schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai'},state:'enabled',nextRun:Date.now()+3600000,createdAt:Date.now(),runs:[]}
+  let finish!: () => void
+  const action = vi.fn(async (_id: string, state: string) => { await new Promise<void>(resolve => {finish = resolve}); task.state = state === 'pause' ? 'paused' : 'enabled' })
+  const save = vi.fn(async input => ({...task,...input}))
+  const view = new ScheduledTaskView(doc, {list:async()=>[task],workspaces:async()=>[],save,action})
+  view.mount()
+  await view.open()
+  const more = doc.querySelector<HTMLButtonElement>('.st-row-more')!
+  more.click()
+  expect(more.closest('.st-row')!.getAttribute('data-menu-open')).toBe('true')
+  doc.querySelector('[role=menuitem]')!.dispatchEvent(new w.Event('pointerdown',{bubbles:true}) as unknown as Event)
+  expect(doc.querySelector('.st-row[data-menu-open=true]')).not.toBeNull()
+  more.dispatchEvent(new w.Event('pointerdown',{bubbles:true}) as unknown as Event)
+  more.click()
+  expect(doc.querySelector('.st-menu')).toBeNull()
+  expect(doc.querySelector('.st-row[data-menu-open]')).toBeNull()
+  doc.querySelector<HTMLButtonElement>('.st-quick-toggle')!.click()
+  doc.querySelector<HTMLButtonElement>('.st-quick-toggle')!.click()
+  expect(action).toHaveBeenCalledExactlyOnceWith('one','pause')
+  expect(doc.querySelector('.st-detail')).toBeNull()
+  finish()
+  await vi.advanceTimersByTimeAsync(0)
+  expect(doc.querySelector('.st-quick-toggle')!.getAttribute('aria-label')).toContain('继续任务')
+  doc.querySelector<HTMLButtonElement>('.st-quick-toggle')!.click()
+  expect(action).toHaveBeenLastCalledWith('one','resume')
+  finish()
+  await vi.advanceTimersByTimeAsync(0)
+  doc.querySelector<HTMLButtonElement>('.st-row-main')!.click()
+  expect(doc.querySelector('input.st-detail-title')).toBeNull()
+  expect(doc.querySelector('.st-pause')).toBeNull()
+  const prompt = doc.querySelector<HTMLTextAreaElement>('.st-prompt')!
+  expect(prompt.value).toBe('整理新闻')
+  prompt.value = '技术趋势早报\n整理最新开源项目'
+  prompt.dispatchEvent(new w.Event('input',{bubbles:true}) as unknown as Event)
+  expect(doc.querySelector('.st-detail-title')!.textContent).toBe('技术趋势早报')
+  const detailMore = doc.querySelector<HTMLButtonElement>('.st-detail-more')!
+  detailMore.click()
+  detailMore.dispatchEvent(new w.Event('pointerdown',{bubbles:true}) as unknown as Event)
+  detailMore.click()
+  expect(doc.querySelector('.st-menu')).toBeNull()
+  doc.querySelector<HTMLButtonElement>('.st-save')!.click()
+  await vi.advanceTimersByTimeAsync(0)
+  expect(save.mock.calls[0]![0]).toMatchObject({title:'技术趋势早报',prompt:'技术趋势早报\n整理最新开源项目'})
   view.close()
 })

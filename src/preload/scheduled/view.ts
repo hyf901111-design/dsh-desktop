@@ -39,10 +39,18 @@ const upcomingRun = (time: number | null) => {
   if (remaining < 86_400_000) return `下次运行 ${Math.floor(remaining / 3_600_000)} 小时后`
   return `下次运行 ${Math.floor(remaining / 86_400_000)} 天后`
 }
+const titleFromPrompt = (prompt: string) => {
+  const line = prompt.trim().split(/\r?\n/).find(line => line.trim()) || ''
+  const text = line.replace(/^\s*(?:#{1,6}\s+|[-*]\s+)/, '').replace(/\s+/g, ' ').trim()
+  const characters = Array.from(text)
+  return characters.length > 48 ? characters.slice(0, 48).join('') + '…' : text
+}
 export class ScheduledTaskView {
   private detail?: HTMLElement
   private root?: HTMLElement
   private menu?: HTMLElement
+  private menuAnchor?: HTMLElement
+  private pendingActions = new Set<string>()
   private more?: HTMLButtonElement
   private tasks: ScheduledTask[] = []
   private workspaces: WorkspaceChoice[] = []
@@ -111,7 +119,7 @@ export class ScheduledTaskView {
     if (
       this.menu &&
       !this.menu.contains(e.target as Node) &&
-      !this.more?.contains(e.target as Node)
+      !this.menuAnchor?.contains(e.target as Node)
     )
       this.closeMenu()
   }
@@ -119,8 +127,9 @@ export class ScheduledTaskView {
     if (this.root && e.key === 'Enter' && (e.target as Element)?.closest?.('[data-dsh-sidebar-root] [role=row][aria-selected], [data-dsh-sidebar-root] [class*="_sessionRow"]')) this.close()
     if (e.key === 'Escape' && this.menu) {
       e.preventDefault()
+      const anchor = this.menuAnchor
       this.closeMenu()
-      this.more?.focus()
+      anchor?.focus()
     } else if (
       this.menu &&
       ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)
@@ -320,7 +329,7 @@ export class ScheduledTaskView {
   }
   private renderList() {
     const list = this.root?.querySelector('.st-list')
-    if (!list) return
+    if (!list || this.menuAnchor?.closest('.st-row')) return
     const tasks = this.tasks.filter(
       (t) =>
         (this.filter === 'all' || t.state === this.filter) &&
@@ -342,7 +351,7 @@ export class ScheduledTaskView {
       ? tasks
           .map(
             (t) =>
-              `<div class="st-row" data-id="${escape(t.id)}" data-selected="${this.selected === t.id}"><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-ring"></span><span class="st-task-info"><span class="st-task-title"><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
+              `<div class="st-row" data-id="${escape(t.id)}" data-selected="${this.selected === t.id}"><button class="st-quick-toggle" data-state="${t.state}" aria-label="${t.state === 'paused' ? '继续' : '暂停'}任务 ${escape(t.title)}" title="${t.state === 'paused' ? '继续任务' : '暂停任务'}" ${t.state === 'completed' || this.pendingActions.has(t.id) ? 'disabled' : ''}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path class="st-quick-pause" d="M8 7v6m4-6v6"/><path class="st-quick-play" d="m8 6 6 4-6 4z"/></svg></button><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-task-info"><span class="st-task-title"><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
           )
           .join('')
       : `<div class="st-empty"><h2>${this.tasks.length ? '没有符合条件的任务' : '让重复的工作按计划完成'}</h2><p>${this.tasks.length ? '试试其他关键词或状态筛选。' : '定期整理资讯、跟踪指标或汇总资料。<br>新建任务，让重复的工作按计划完成。'}</p>${this.tasks.length ? '' : '<button class="st-primary st-first">＋ 新建第一个任务</button>'}</div>`
@@ -351,6 +360,7 @@ export class ScheduledTaskView {
       ?.addEventListener('click', () => this.newDraft())
     list.querySelectorAll<HTMLElement>('.st-row').forEach((row) => {
       const t = this.tasks.find((t) => t.id === row.dataset.id)!
+      row.querySelector<HTMLButtonElement>('.st-quick-toggle')!.onclick = () => void this.action(t, t.state === 'paused' ? 'resume' : 'pause')
       row.querySelector<HTMLButtonElement>('.st-row-main')!.onclick = () => {
         this.selected = t.id
         this.draftId = t.id
@@ -383,7 +393,7 @@ export class ScheduledTaskView {
     this.detailOpen = true
     this.error = ''
     this.render()
-    this.detail?.querySelector<HTMLInputElement>('.st-detail-title')?.focus()
+    this.detail?.querySelector<HTMLTextAreaElement>('.st-prompt')?.focus()
   }
   private renderDetail() {
     if (!this.root || !this.draft) return
@@ -394,7 +404,7 @@ export class ScheduledTaskView {
     const detail = this.document.createElement('aside')
     detail.className = 'st-detail'
     detail.setAttribute('aria-label', '任务详情')
-    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">全局任务</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button><button class="st-secondary st-pause">${t.state === 'paused' ? '恢复' : '暂停'}</button>` : ''}</div><input class="st-detail-title" aria-label="任务名称" placeholder="为任务起个名字" maxlength="120" value="${escape(d.title)}"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span>${icon('chevron')}</button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">全局任务</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button>` : ''}</div><h2 class="st-detail-title" title="${escape(d.title)}">${escape(d.title || '新建任务')}</h2><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span>${icon('chevron')}</button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
       ['always', '每次完成'],
       ['changes', '重要变化'],
       ['never', '不通知'],
@@ -409,8 +419,6 @@ export class ScheduledTaskView {
     this.detail = detail
     detail.dataset.dark = String(this.dark())
     this.attachDetail()
-    detail.querySelector<HTMLInputElement>('.st-detail-title')!.oninput = (e) =>
-      (d.title = (e.target as HTMLInputElement).value)
     const promptField = detail.querySelector<HTMLTextAreaElement>('.st-prompt')!
     const resizePrompt = () => {
       promptField.style.height = 'auto'
@@ -419,6 +427,10 @@ export class ScheduledTaskView {
     }
     promptField.oninput = () => {
       d.prompt = promptField.value
+      d.title = titleFromPrompt(d.prompt)
+      const heading = detail.querySelector<HTMLElement>('.st-detail-title')!
+      heading.textContent = d.title || '新建任务'
+      heading.title = d.title
       resizePrompt()
     }
     resizePrompt()
@@ -437,12 +449,6 @@ export class ScheduledTaskView {
       .querySelector<HTMLButtonElement>('.st-detail-more')
       ?.addEventListener('click', (e) =>
         this.taskMenu(e.currentTarget as HTMLElement, t!),
-      )
-    detail
-      .querySelector<HTMLButtonElement>('.st-pause')
-      ?.addEventListener(
-        'click',
-        () => void this.action(t!, t!.state === 'paused' ? 'resume' : 'pause'),
       )
     detail
       .querySelector<HTMLButtonElement>('.st-open-result')
@@ -465,8 +471,6 @@ export class ScheduledTaskView {
     const label = t ? stateLabel(t) : '新建任务'
     status.dataset.state = label === '运行中' ? 'running' : label === '需要处理' ? 'failed' : label === '已开启' ? 'enabled' : 'idle'
     status.querySelector('.st-status-label')!.textContent = label
-    const pause = detail.querySelector<HTMLButtonElement>('.st-pause')
-    if (pause) pause.textContent = t?.state === 'paused' ? '恢复' : '暂停'
     let next: number | null = null
     try {
       next = nextRun(this.draft.schedule)
@@ -501,6 +505,7 @@ export class ScheduledTaskView {
     this.busy = true
     this.updateStatus()
     try {
+      if (!this.draft.title) this.draft.title = titleFromPrompt(this.draft.prompt)
       const task = await this.bridge.save(this.draft, this.draftId)
       this.draftId = task.id
       this.selected = task.id
@@ -519,6 +524,10 @@ export class ScheduledTaskView {
     t: ScheduledTask,
     action: 'run' | 'pause' | 'resume' | 'delete',
   ) {
+    if (this.pendingActions.has(t.id)) return
+    this.pendingActions.add(t.id)
+    this.listSignature = ''
+    this.renderList()
     try {
       await this.bridge.action(t.id, action)
       this.error = ''
@@ -532,6 +541,10 @@ export class ScheduledTaskView {
       this.render()
     } catch (e) {
       this.showError(e)
+    } finally {
+      this.pendingActions.delete(t.id)
+      this.listSignature = ''
+      this.renderList()
     }
   }
   private taskMenu(anchor: HTMLElement, t: ScheduledTask) {
@@ -559,7 +572,15 @@ export class ScheduledTaskView {
       run: () => void
     }[],
   ) {
+    if (this.menu && this.menuAnchor === anchor) {
+      this.closeMenu()
+      anchor.focus()
+      return
+    }
     this.closeMenu()
+    this.menuAnchor = anchor
+    anchor.setAttribute('aria-expanded', 'true')
+    anchor.closest<HTMLElement>('.st-row')?.setAttribute('data-menu-open', 'true')
     const menu = this.document.createElement('div')
     menu.className = 'st-menu'
     menu.dataset.dark = String(this.dark())
@@ -599,6 +620,9 @@ export class ScheduledTaskView {
   private closeMenu() {
     this.menu?.remove()
     this.menu = undefined
+    this.menuAnchor?.setAttribute('aria-expanded', 'false')
+    this.menuAnchor?.closest('.st-row')?.removeAttribute('data-menu-open')
+    this.menuAnchor = undefined
     this.more?.setAttribute('aria-expanded', 'false')
   }
   private dialog(html: string) {
