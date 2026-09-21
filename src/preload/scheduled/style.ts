@@ -46,6 +46,7 @@ export const scheduledStyles = `
 .st-root[data-detail=true] .st-center{padding:58px 24px}.st-root[data-detail=true] .st-subtitle{display:none}.st-root[data-detail=true] h1{font-size:24px;margin-bottom:26px}
 
 /* One shell, one toggle and the existing native resize handle. */
+body[data-scheduled-page] .pI_x6G_handle[data-side=sidebar]{z-index:902;pointer-events:auto;-webkit-app-region:no-drag}
 body[data-scheduled-page] [data-dsh-panel-host]{position:fixed;inset:0;z-index:901;pointer-events:none}
 body[data-scheduled-page] [data-dsh-panel-host] .t8lSSG_toggleCluster{pointer-events:auto}
 [data-scheduled-panel] .t8lSSG_panel>.t8lSSG_panelBody{display:none}

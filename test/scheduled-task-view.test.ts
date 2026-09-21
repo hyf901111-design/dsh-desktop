@@ -153,3 +153,28 @@ it('toggles task menus, retains menu-row highlight, pauses without selection, an
   expect(save.mock.calls[0]![0]).toMatchObject({title:'技术趋势早报',prompt:'技术趋势早报\n整理最新开源项目'})
   view.close()
 })
+
+it('follows native sidebar resizing and disconnects when management closes', async () => {
+  const w = new Window()
+  windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver)
+  vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<aside class="pI_x6G_sidebarCol"><div data-dsh-sidebar-root></div></aside><main class="pI_x6G_centerCol"></main>'
+  let notify!: () => void
+  const observe = vi.fn(), disconnect = vi.fn()
+  Object.defineProperty(w, 'ResizeObserver', {value:class {constructor(callback: () => void){notify=callback} observe=observe;disconnect=disconnect},configurable:true})
+  const sidebar = doc.querySelector('[data-dsh-sidebar-root]')!
+  let right = 300
+  vi.spyOn(sidebar,'getBoundingClientRect').mockImplementation(() => ({right}) as DOMRect)
+  const view = new ScheduledTaskView(doc,{list:async()=>[],workspaces:async()=>[],save:vi.fn(),action:vi.fn()})
+  view.mount()
+  await view.open()
+  expect(observe).toHaveBeenCalledWith(doc.querySelector('.pI_x6G_sidebarCol'))
+  expect(doc.querySelector<HTMLElement>('.st-root')!.style.left).toBe('300px')
+  right = 385
+  notify()
+  expect(doc.querySelector<HTMLElement>('.st-root')!.style.left).toBe('385px')
+  view.close()
+  expect(disconnect).toHaveBeenCalledOnce()
+})
