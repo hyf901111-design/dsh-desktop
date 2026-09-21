@@ -97,6 +97,50 @@
           "未改变系统锁屏和电源策略"
         ],
         "generatedAt": "2026-09-21T05:31:26.948797+00:00"
+      },
+      "merged": {
+        "mergeCommit": "efca348691f6bdfd6f6db48397274873b7cb4342",
+        "verificationCommit": "efca348691f6bdfd6f6db48397274873b7cb4342",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "efca348691f6bdfd6f6db48397274873b7cb4342",
+            "completedAt": "2026-09-21T05:32:00.441Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "efca348691f6bdfd6f6db48397274873b7cb4342",
+            "completedAt": "2026-09-21T05:32:00.441Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/build-computer-stroke.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/build-computer-stroke.mjs",
+            "verifiedCommit": "efca348691f6bdfd6f6db48397274873b7cb4342",
+            "completedAt": "2026-09-21T05:32:00.441Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T05:32:00.441Z"
       }
     }
   ],
