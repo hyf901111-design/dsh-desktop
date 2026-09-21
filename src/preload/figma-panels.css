@@ -371,7 +371,7 @@ body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag
   padding-inline:min(8px, calc(24px / var(--odyssey-tab-count, 1)))!important;
   gap:4px; position:relative;
 }
-.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 1 16px; min-width:0; }
+.t8lSSG_panel [data-odyssey-panel-tab] > svg { flex:0 0 16px; min-width:16px; }
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabTitle { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { display:flex!important; flex-shrink:0; visibility:visible; pointer-events:auto; }
 .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] { min-width:36px; }
@@ -392,3 +392,6 @@ body:has(.wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],.srb-member
 .t8lSSG_panel [data-odyssey-panel-tab]{flex:0 1 auto;min-width:32px;max-width:160px}
 .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true]{flex:0 0 auto;max-width:min(160px,70%)}
 .t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"]{gap:4px}
+
+/* Inactive tabs retain their icon when the available title space runs out. */
+.t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose{display:none!important}
