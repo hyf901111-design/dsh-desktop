@@ -11,33 +11,18 @@
         "schemaVersion": 1,
         "featureName": "组件定时任务与右侧页签",
         "branch": "codex/feat/component-scheduled-tasks-20260921",
-        "baseCommit": "c5babbf1a11e3de62f8a36109e25854b68bad00f",
-        "tipCommit": "39b05e6fe91e27f3337c1d15277b6dec3855814c",
+        "baseCommit": "39b05e6fe91e27f3337c1d15277b6dec3855814c",
+        "tipCommit": "cb5d79fe1be8b253debdc3a0833ec003930ca00c",
         "commits": [
           {
-            "commit": "d24e43f2a793dc4d21c6f79eb3df31610638343c",
+            "commit": "cb5d79fe1be8b253debdc3a0833ec003930ca00c",
             "parents": [
-              "c5babbf1a11e3de62f8a36109e25854b68bad00f"
+              "39b05e6fe91e27f3337c1d15277b6dec3855814c"
             ],
-            "subject": "将组件定时任务操作恢复为统一更多菜单"
-          },
-          {
-            "commit": "39b05e6fe91e27f3337c1d15277b6dec3855814c",
-            "parents": [
-              "d24e43f2a793dc4d21c6f79eb3df31610638343c"
-            ],
-            "subject": "仅从对话进入研究时播放工具栏入场动效"
+            "subject": "优化定时任务更多图标的圆点间距与悬停状态"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "src/preload/figma-motion-controller.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-motion.css"
-          },
           {
             "status": "M",
             "path": "src/preload/scheduled/style.ts"
@@ -45,14 +30,6 @@
           {
             "status": "M",
             "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-motion-controller.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
           }
         ],
         "checks": [
@@ -63,9 +40,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "16项界面和模式动效检查及类型检查通过",
-            "verifiedCommit": "39b05e6fe91e27f3337c1d15277b6dec3855814c",
-            "completedAt": "2026-09-21T11:34:25.867870+00:00",
+            "summary": "10项任务界面检查及类型检查通过",
+            "verifiedCommit": "cb5d79fe1be8b253debdc3a0833ec003930ca00c",
+            "completedAt": "2026-09-21T11:39:58.582512+00:00",
             "timeoutMs": 120000
           },
           {
@@ -73,13 +50,12 @@
               "npm",
               "test",
               "--",
-              "test/figma-motion-controller.test.ts",
               "test/scheduled-task-view.test.ts"
             ],
             "outcome": "passed",
-            "summary": "16项界面和模式动效检查及类型检查通过",
-            "verifiedCommit": "39b05e6fe91e27f3337c1d15277b6dec3855814c",
-            "completedAt": "2026-09-21T11:34:25.867870+00:00",
+            "summary": "10项任务界面检查及类型检查通过",
+            "verifiedCommit": "cb5d79fe1be8b253debdc3a0833ec003930ca00c",
+            "completedAt": "2026-09-21T11:39:58.582512+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -96,42 +72,7 @@
         "risks": [
           "共享画板失去编辑权限时任务失败并保留原内容"
         ],
-        "generatedAt": "2026-09-21T11:34:25.867870+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3437ac8809bc939e96bd791a449fef85bdc52d4a",
-        "verificationCommit": "3437ac8809bc939e96bd791a449fef85bdc52d4a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3437ac8809bc939e96bd791a449fef85bdc52d4a",
-            "completedAt": "2026-09-21T11:34:28.401Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-canvas-actions-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/component-scheduled-tasks.test.ts test/research-canvas-actions-client.test.js",
-            "verifiedCommit": "3437ac8809bc939e96bd791a449fef85bdc52d4a",
-            "completedAt": "2026-09-21T11:34:28.401Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T11:34:28.401Z"
+        "generatedAt": "2026-09-21T11:39:58.582512+00:00"
       }
     }
   ],
