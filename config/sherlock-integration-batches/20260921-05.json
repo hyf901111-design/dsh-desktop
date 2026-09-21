@@ -11,55 +11,34 @@
         "schemaVersion": 1,
         "featureName": "组件任务右侧栏关闭与页签缩略",
         "branch": "codex/feat/component-panel-close-20260921",
-        "baseCommit": "9affb9c1d9f52f0061b0c0ca89ecd6b1b8d22cb5",
-        "tipCommit": "47073410c0fd91a5a8724c8002384503f196c462",
+        "baseCommit": "47073410c0fd91a5a8724c8002384503f196c462",
+        "tipCommit": "3cacb2e9a4fc5632ce375dfe5f8f9e1efa3d683c",
         "commits": [
           {
-            "commit": "47073410c0fd91a5a8724c8002384503f196c462",
+            "commit": "3cacb2e9a4fc5632ce375dfe5f8f9e1efa3d683c",
             "parents": [
-              "9affb9c1d9f52f0061b0c0ca89ecd6b1b8d22cb5"
+              "47073410c0fd91a5a8724c8002384503f196c462"
             ],
-            "subject": "修复：组件定时任务收起整个右侧栏并支持页签文字缩略"
+            "subject": "优化：页签缩略时保留时钟与关闭按钮的显示空间"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
+              "git",
+              "diff",
+              "--check"
             ],
             "outcome": "passed",
-            "summary": "11项界面回归与类型检查通过",
-            "verifiedCommit": "47073410c0fd91a5a8724c8002384503f196c462",
-            "completedAt": "2026-09-21T14:32:21.379325+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-task-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "11项界面回归与类型检查通过",
-            "verifiedCommit": "47073410c0fd91a5a8724c8002384503f196c462",
-            "completedAt": "2026-09-21T14:32:21.379534+00:00",
+            "summary": "仅调整页签最小宽度以保留图标空间",
+            "verifiedCommit": "3cacb2e9a4fc5632ce375dfe5f8f9e1efa3d683c",
+            "completedAt": "2026-09-21T14:34:11.831399+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -73,39 +52,7 @@
           "页签拥挤时文字省略"
         ],
         "risks": [],
-        "generatedAt": "2026-09-21T14:32:33.087357+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a1a3e0b0813687772f5609394cd568e31d658453",
-        "verificationCommit": "a1a3e0b0813687772f5609394cd568e31d658453",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a1a3e0b0813687772f5609394cd568e31d658453",
-            "completedAt": "2026-09-21T14:33:08.320Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-task-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-task-view.test.ts",
-            "verifiedCommit": "a1a3e0b0813687772f5609394cd568e31d658453",
-            "completedAt": "2026-09-21T14:33:08.320Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T14:33:08.320Z"
+        "generatedAt": "2026-09-21T14:34:11.831399+00:00"
       }
     }
   ],
