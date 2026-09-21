@@ -39,6 +39,7 @@ it('memoizes card content across resize and always invokes the latest callback',
 })
 
 it('keeps the gesture patch intact when repaint batching is applied and built again', async () => {
+  // @ts-expect-error Legacy JavaScript patch module has no declaration file.
   const { patchFigmaCanvasGestures } = await import('../scripts/lib/figma-canvas-gestures.mjs')
   const { patchCanvasCreationTools } = await import('../scripts/lib/canvas-creation-tools.mjs')
   const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
