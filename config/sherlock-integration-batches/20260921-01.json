@@ -9,23 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一重复计划与其他设置箭头颜色",
+        "featureName": "统一侧栏展开收起图标与设置箭头颜色",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
-        "tipCommit": "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3",
+        "baseCommit": "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3",
+        "tipCommit": "e492b0c5c4d67a677b2dea74f27e5f0a6d61659d",
         "commits": [
           {
-            "commit": "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3",
+            "commit": "e492b0c5c4d67a677b2dea74f27e5f0a6d61659d",
             "parents": [
-              "e7a6c247f9087bfe892f1a859d94d0e906d91478"
+              "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3"
             ],
-            "subject": "样式：重复计划箭头统一使用侧栏图标与灰色标记"
+            "subject": "样式：统一展开与收起侧栏图标的线宽尺寸及颜色"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/scheduled/view.ts"
+            "path": "src/preload/figma-final-shell.css"
           }
         ],
         "checks": [
@@ -36,15 +36,29 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；重复计划改用共享st-chevron，与两侧选择器相同资源及颜色变量",
-            "verifiedCommit": "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3",
-            "completedAt": "2026-09-21T03:26:54.453829+00:00",
+            "summary": "类型检查及侧栏入口、定时任务页面相关交互测试通过",
+            "verifiedCommit": "e492b0c5c4d67a677b2dea74f27e5f0a6d61659d",
+            "completedAt": "2026-09-21T03:31:32.858224+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/scheduled-task-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "侧栏入口与定时任务页面交互通过",
+            "verifiedCommit": "e492b0c5c4d67a677b2dea74f27e5f0a6d61659d",
+            "completedAt": "2026-09-21T03:31:32.858224+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "核对执行于、重复、通知均使用figma-sidebar-chevron.svg、14px与同一tertiary颜色变量；客户端视觉待构建"
+          "summary": "常用侧栏图标统一16px、1.25px线宽和主题灰度；文件夹展开语义保留；原生双状态视觉待构建"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -55,41 +69,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T03:26:54.453829+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e5305b8659465f5940266a1e00c505184f609c00",
-        "verificationCommit": "e5305b8659465f5940266a1e00c505184f609c00",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e5305b8659465f5940266a1e00c505184f609c00",
-            "completedAt": "2026-09-21T03:27:10.447Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "e5305b8659465f5940266a1e00c505184f609c00",
-            "completedAt": "2026-09-21T03:27:10.447Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T03:27:10.447Z"
+        "generatedAt": "2026-09-21T03:31:32.858224+00:00"
       }
     }
   ],
