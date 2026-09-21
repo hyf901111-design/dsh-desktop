@@ -90,6 +90,44 @@
           "标题服务暂不可用时使用本地短标题，完整执行指令不变"
         ],
         "generatedAt": "2026-09-21T08:11:39.614852+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8282640df0eab0043a376ef1f70fc84151422e17",
+        "verificationCommit": "8282640df0eab0043a376ef1f70fc84151422e17",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8282640df0eab0043a376ef1f70fc84151422e17",
+            "completedAt": "2026-09-21T08:27:59.974Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-canvas-render-performance.test.ts",
+              "test/research-board-activity.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-marquee-stroke.test.js",
+              "test/figma-scrollbars.test.ts",
+              "test/figma-task-scrollbar.test.ts",
+              "test/research-canvas-deferred-html-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-canvas-render-performance.test.ts test/research-board-activity.test.ts test/research-task-runtime.test.js test/research-marquee-stroke.test.js test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/research-canvas-deferred-html-patch.test.ts",
+            "verifiedCommit": "8282640df0eab0043a376ef1f70fc84151422e17",
+            "completedAt": "2026-09-21T08:27:59.974Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T08:27:59.974Z"
       }
     }
   ],
