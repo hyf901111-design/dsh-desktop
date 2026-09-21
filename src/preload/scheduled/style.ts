@@ -42,6 +42,10 @@ export const scheduledStyles = `
 .st-prompt-wrap:focus-within{outline:1px solid var(--st-muted);outline-offset:-1px}
 .st-prompt-resize{position:absolute;right:4px;bottom:4px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--st-muted);background:var(--st-field);border-radius:4px;cursor:ns-resize;touch-action:none;user-select:none}
 .st-prompt-resize:focus-visible{outline:1px solid var(--st-muted)}
+.st-detail-more{padding:5px!important;color:var(--st-muted);transition:background-color .12s ease,color .12s ease}
+.st-detail-more-icon{display:block;width:18px;height:18px;flex:none}
+.st-detail-more:hover,.st-detail-more[aria-expanded="true"]{background:var(--st-field)!important;color:var(--st-ink)}
+.st-detail-more:focus-visible{outline:2px solid var(--st-muted);outline-offset:2px}
 body[data-scheduled-component="true"] .st-detail-top{padding-right:0}
 body[data-scheduled-component="true"] .st-detail-more{position:static;flex:none;margin-left:auto;color:var(--st-muted)}
 .st-dialog-close{position:absolute;top:16px;right:16px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;color:var(--st-muted)}
