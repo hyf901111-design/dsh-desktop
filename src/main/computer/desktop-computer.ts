@@ -109,7 +109,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
       const pixels = (observation: typeof before) => nativeImage.createFromBuffer(Buffer.from(observation.screenshots[0]!.dataBase64, 'base64')).crop(rect).toBitmap()
       return pixels(before).equals(pixels(after))
     },
-    stroke: async (target, data, strokes, duration, signal, modifiers) => {
+    stroke: async (target, data, strokes, duration, signal, modifiers, click) => {
       if (!strokeDriver) strokeDriver = createRequire(import.meta.url)(join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'computer-stroke.node'))
       const native = strokeDriver!
       const b = data.window_bounds
@@ -118,7 +118,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
       signal.throwIfAborted()
       signal.addEventListener('abort', cancel, { once: true })
       try {
-        await native.draw({ pid: target.pid, window_id: target.window_id, frame: b, duration_ms: duration,
+        await native.draw({ pid: target.pid, window_id: target.window_id, frame: b, duration_ms: duration, clicks: click?.count ?? 0, button: click ? { left: 0, right: 1, middle: 2 }[click.button] : 0,
           flags: modifiers.reduce((flags, key) => flags | ({ shift: 1 << 17, ctrl: 1 << 18, alt: 1 << 19, option: 1 << 19, cmd: 1 << 20 }[key] ?? 0), 0),
           strokes: strokes.map(path => path.map(p => ({ x: b.x + p.x * b.width / data.screenshot_width, y: b.y + p.y * b.height / data.screenshot_height }))) })
         signal.throwIfAborted()

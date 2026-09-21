@@ -15,7 +15,7 @@ struct StrokeJob {
   napi_async_work work; napi_deferred deferred;
   pid_t pid; uint32_t window; CGRect frame;
   std::vector<std::vector<CGPoint>> strokes;
-  CGEventFlags flags=0; int64_t group=0;
+  CGEventFlags flags=0; int64_t group=0; int clicks=0; int clickState=1; CGMouseButton button=kCGMouseButtonLeft;
   double duration; std::atomic<bool> cancelled{false}; std::string error;
 };
 static std::mutex lock;
@@ -63,13 +63,13 @@ static bool sameWindow(StrokeJob* j) {
 }
 static void post(StrokeJob* j,CGEventType type,CGPoint p) {
   CGEventSourceRef source=CGEventSourceCreate(kCGEventSourceStatePrivate);
-  CGEventRef e=CGEventCreateMouseEvent(source,type,p,kCGMouseButtonLeft);
+  CGEventRef e=CGEventCreateMouseEvent(source,type,p,j->button);
   if(source)CFRelease(source);
   if(!e)throw std::runtime_error("无法创建后台鼠标事件");
   CGEventSetFlags(e,j->flags);
   transport.field(e,0,type==kCGEventMouseMoved?2:3);
-  transport.field(e,1,type==kCGEventMouseMoved?0:1);
-  transport.field(e,3,0);
+  transport.field(e,1,type==kCGEventMouseMoved?0:j->clickState);
+  transport.field(e,3,j->button);
   transport.field(e,7,3);
   transport.field(e,40,j->pid);
   transport.field(e,51,j->window);
@@ -84,9 +84,24 @@ static void post(StrokeJob* j,CGEventType type,CGPoint p) {
 static void execute(napi_env,void* raw) {
  @autoreleasepool {
   auto* j=static_cast<StrokeJob*>(raw); bool down=false; CGPoint last=CGPointZero;
+  const CGEventType downType=j->button==kCGMouseButtonLeft?kCGEventLeftMouseDown:j->button==kCGMouseButtonRight?kCGEventRightMouseDown:kCGEventOtherMouseDown;
+  const CGEventType upType=j->button==kCGMouseButtonLeft?kCGEventLeftMouseUp:j->button==kCGMouseButtonRight?kCGEventRightMouseUp:kCGEventOtherMouseUp;
   try {
     if(!AXIsProcessTrusted())throw std::runtime_error("需要 EWork 辅助功能权限");
     if(!transport.available())throw std::runtime_error("当前系统不支持后台绘制，未切换到前台输入");
+    if(j->clicks) {
+      last=j->strokes.front().front();
+      for(int pair=1;pair<=j->clicks;pair++) {
+        if(j->cancelled || !sameWindow(j))throw std::runtime_error("点击已取消或目标窗口发生变化");
+        j->clickState=pair;
+        post(j,kCGEventMouseMoved,last);
+        post(j,downType,last);down=true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+        post(j,upType,last);down=false;
+        if(pair<j->clicks)std::this_thread::sleep_for(std::chrono::milliseconds(80));
+      }
+      return;
+    }
     size_t segments=0;for(auto& s:j->strokes)segments+=s.size()-1;
     const double stepMs=j->duration/std::max<size_t>(segments,1);
     for(auto& s:j->strokes) {
@@ -107,7 +122,7 @@ static void execute(napi_env,void* raw) {
   // Every exit, including stop and focus loss, releases the held button.
   if(down) {
     // Release only to the original target, never to the window under the cursor.
-    try {post(j,kCGEventLeftMouseUp,last);} catch(const std::exception&) {}
+    try {post(j,upType,last);} catch(const std::exception&) {}
   }
  }
 }
@@ -145,6 +160,12 @@ static napi_value draw(napi_env env,napi_callback_info info) {
  if(!std::isfinite(flags)||flags<0||floor(flags)!=flags || flags>UINT32_MAX)return fail("无效修饰键");
  const uint64_t allowed=kCGEventFlagMaskShift|kCGEventFlagMaskControl|kCGEventFlagMaskAlternate|kCGEventFlagMaskCommand;
  if(static_cast<uint64_t>(flags)&~allowed)return fail("不支持的修饰键");
+ double clicks=number(env,args[0],"clicks"),button=number(env,args[0],"button");
+ if(!std::isfinite(clicks)||clicks<0||clicks>2||floor(clicks)!=clicks)return fail("无效点击次数");
+ if(!std::isfinite(button)||button<0||button>2||floor(button)!=button)return fail("无效鼠标按键");
+ if(clicks && (j->strokes.size()!=1 || j->strokes.front().size()!=2 || !CGPointEqualToPoint(j->strokes.front()[0],j->strokes.front()[1])))return fail("点击只能包含一个落点");
+ if(!clicks && button!=0)return fail("后台拖拽只支持左键");
+ j->clicks=static_cast<int>(clicks);j->button=static_cast<CGMouseButton>(button);
  j->flags=static_cast<CGEventFlags>(flags);
  j->group=std::chrono::steady_clock::now().time_since_epoch().count();
  {std::lock_guard<std::mutex> guard(lock);if(active)return fail("已有笔画正在执行");active=j;hasProgress=false;}
