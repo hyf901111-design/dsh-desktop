@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "定时任务复用全局右侧屏及自适应修正",
+        "featureName": "定时任务列表详情优化与会话跳转修复",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "5b79c381a4ecac1ea256c27f5fd9b2ea2d1832a2",
-        "tipCommit": "a43f9e5f71ad3424a1164a96cc81cabaada2e33a",
+        "baseCommit": "a43f9e5f71ad3424a1164a96cc81cabaada2e33a",
+        "tipCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
         "commits": [
           {
-            "commit": "a43f9e5f71ad3424a1164a96cc81cabaada2e33a",
+            "commit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
             "parents": [
-              "5b79c381a4ecac1ea256c27f5fd9b2ea2d1832a2"
+              "a43f9e5f71ad3424a1164a96cc81cabaada2e33a"
             ],
-            "subject": "修复：定时任务复用全局右侧屏并完善自适应布局"
+            "subject": "优化：定时任务列表详情样式并修复会话跳转"
           }
         ],
         "files": [
@@ -29,19 +29,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "M",
             "path": "src/preload/scheduled/style.ts"
           },
           {
             "status": "M",
             "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-panel-motion-runtime.test.ts"
           },
           {
             "status": "M",
@@ -56,9 +48,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查及39项相关聚焦测试通过",
-            "verifiedCommit": "a43f9e5f71ad3424a1164a96cc81cabaada2e33a",
-            "completedAt": "2026-09-21T01:49:34.383186+00:00",
+            "summary": "类型检查及9项页面和全局面板相关测试通过",
+            "verifiedCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
+            "completedAt": "2026-09-21T02:11:21.589885+00:00",
             "timeoutMs": 120000
           },
           {
@@ -67,19 +59,18 @@
               "vitest",
               "run",
               "test/scheduled-task-view.test.ts",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
+              "test/figma-panel-motion-runtime.test.ts"
             ],
             "outcome": "passed",
-            "summary": "类型检查及39项相关聚焦测试通过",
-            "verifiedCommit": "a43f9e5f71ad3424a1164a96cc81cabaada2e33a",
-            "completedAt": "2026-09-21T01:49:34.383186+00:00",
+            "summary": "类型检查及9项页面和全局面板相关测试通过",
+            "verifiedCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
+            "completedAt": "2026-09-21T02:11:21.589885+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产React面板的内容槽、无会话打开、原状态恢复、宽度提交和任务草稿DOM交互通过；打包视觉验证将在集成后进行"
+          "summary": "DOM交互验证了侧栏会话点击与回车退出、运行状态刷新、相对时间文案及时间提示位置；原生视觉验证待集成打包"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -90,41 +81,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T01:49:34.383186+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1bd7a1f2099e01d6aa2dc27031f8a3740696f4f1",
-        "verificationCommit": "1bd7a1f2099e01d6aa2dc27031f8a3740696f4f1",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1bd7a1f2099e01d6aa2dc27031f8a3740696f4f1",
-            "completedAt": "2026-09-21T01:50:14.316Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "1bd7a1f2099e01d6aa2dc27031f8a3740696f4f1",
-            "completedAt": "2026-09-21T01:50:14.316Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T01:50:14.316Z"
+        "generatedAt": "2026-09-21T02:11:21.589885+00:00"
       }
     }
   ],
