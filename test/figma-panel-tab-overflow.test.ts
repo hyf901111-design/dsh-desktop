@@ -7,7 +7,7 @@ import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-s
 
 const source = await readFile(new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
 const patched = patchBetterSidebarClient(source)
-const start = patched.indexOf('\t\tfunction TabBar(props) {')
+const start = patched.indexOf('function systemTabTitle(')
 const end = patched.indexOf('\n\t\t//#endregion', start)
 
 const requireModule = createRequire(import.meta.url)
@@ -48,6 +48,7 @@ describe('Figma panel tab overflow', () => {
       'parseDrag',
       'serializeDrag',
       'TAB_DRAG_TYPE',
+      'MutationObserver',
       'ResizeObserver',
       'window',
       'document',
@@ -65,6 +66,7 @@ describe('Figma panel tab overflow', () => {
       () => null,
       () => '',
       'application/x-tab',
+      browserWindow.MutationObserver,
       ResizeObserverStub,
       browserWindow,
       browserWindow.document,
@@ -111,6 +113,18 @@ describe('Figma panel tab overflow', () => {
           newTabOptions: []
         }))
       })
+      expect(host.querySelectorAll('[role=tab][aria-selected=true]')).toHaveLength(1)
+      await act(async () => {
+        browserWindow.document.body.dataset.scheduledComponent = 'true'
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel'))
+      })
+      expect(host.querySelectorAll('[role=tab][aria-selected=true]')).toHaveLength(0)
+      expect(host.querySelector('.t8lSSG_tabActive')).toBeNull()
+      await act(async () => {
+        delete browserWindow.document.body.dataset.scheduledComponent
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel'))
+      })
+      expect(host.querySelectorAll('[role=tab][aria-selected=true]')).toHaveLength(1)
       const list = host.querySelector('.t8lSSG_tabList') as unknown as HTMLElement
       Object.defineProperty(list, 'clientWidth', { configurable: true, value: 226 })
       for (const [index, tab] of Array.from(host.querySelectorAll('[data-odyssey-panel-tab]')).entries()) {

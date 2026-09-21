@@ -1012,7 +1012,26 @@ function patchFigmaCompactPanel(source) {
 
 // Scheduled tasks occupy the existing global panel shell. Only visibility is
 // temporary; resizing keeps the native geometry writer and persisted width.
+function patchComponentNativeTabSelection(source) {
+  const marker = '/* SHERLOCK_COMPONENT_NATIVE_SELECTION */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('function TabBar(props) {')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  if (start < 0 || end < 0) throw new Error('Component schedule native tab boundary missing')
+  let part = source.slice(start, end)
+  part = part.replace('function TabBar(props) {', `function TabBar(props) {
+    ${marker}
+    const [componentScheduleActive, setComponentScheduleActive] = react.useState(() => document.body.dataset.scheduledComponent === 'true');
+    react.useEffect(() => {
+      const update = () => setComponentScheduleActive(document.body.dataset.scheduledComponent === 'true');
+      window.addEventListener('sherlock:scheduled-panel', update);
+      return () => window.removeEventListener('sherlock:scheduled-panel', update);
+    }, []);`)
+  part = part.replaceAll('active === tab.id', '(!componentScheduleActive && active === tab.id)')
+  return source.slice(0, start) + part + source.slice(end)
+}
 function patchScheduledGlobalPanel(source) {
+  source = patchComponentNativeTabSelection(source)
   const marker = '/* sherlock:scheduled-global-panel:v1 */'
   if (source.includes(marker)) return source.replaceAll("inert: scheduledPanel.active ? '' : void 0", "inert: scheduledPanel.active && !document.body.hasAttribute('data-scheduled-component') ? '' : void 0")
   const start = source.indexOf('function Sidebar(props) {')
