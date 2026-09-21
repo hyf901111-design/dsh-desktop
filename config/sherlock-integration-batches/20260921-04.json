@@ -11,28 +11,21 @@
         "schemaVersion": 1,
         "featureName": "组件定时任务与右侧页签",
         "branch": "codex/feat/component-scheduled-tasks-20260921",
-        "baseCommit": "f484d136fb8f39084838c106f9734db97acd7cf7",
-        "tipCommit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
+        "baseCommit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
+        "tipCommit": "c5babbf1a11e3de62f8a36109e25854b68bad00f",
         "commits": [
           {
-            "commit": "26f9af208e84439224627ba08aa72ca29a79cbdf",
+            "commit": "c5babbf1a11e3de62f8a36109e25854b68bad00f",
             "parents": [
-              "f484d136fb8f39084838c106f9734db97acd7cf7"
+              "36cfe87f753f354152cb730845a1d5fe15ed8774"
             ],
-            "subject": "修复：切换页签后移除定时任务的选中背景"
-          },
-          {
-            "commit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
-            "parents": [
-              "26f9af208e84439224627ba08aa72ca29a79cbdf"
-            ],
-            "subject": "样式：组件任务图标采用更轻的十八像素线框风格"
+            "subject": "为研究画板底部工具栏增加上滑淡入动效"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
+            "path": "src/preload/figma-motion.css"
           }
         ],
         "checks": [
@@ -43,9 +36,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "10项任务界面聚焦检查及类型检查通过",
-            "verifiedCommit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
-            "completedAt": "2026-09-21T11:21:38.942875+00:00",
+            "summary": "15项界面与动效聚焦检查及类型检查通过",
+            "verifiedCommit": "c5babbf1a11e3de62f8a36109e25854b68bad00f",
+            "completedAt": "2026-09-21T11:25:56.519493+00:00",
             "timeoutMs": 120000
           },
           {
@@ -53,12 +46,13 @@
               "npm",
               "test",
               "--",
+              "test/figma-motion-controller.test.ts",
               "test/scheduled-task-view.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10项任务界面聚焦检查及类型检查通过",
-            "verifiedCommit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
-            "completedAt": "2026-09-21T11:21:38.942875+00:00",
+            "summary": "15项界面与动效聚焦检查及类型检查通过",
+            "verifiedCommit": "c5babbf1a11e3de62f8a36109e25854b68bad00f",
+            "completedAt": "2026-09-21T11:25:56.519493+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -75,42 +69,7 @@
         "risks": [
           "共享画板失去编辑权限时任务失败并保留原内容"
         ],
-        "generatedAt": "2026-09-21T11:21:38.942875+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7a24349d07edb2a40e998448e9bfb4203ee90c84",
-        "verificationCommit": "7a24349d07edb2a40e998448e9bfb4203ee90c84",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7a24349d07edb2a40e998448e9bfb4203ee90c84",
-            "completedAt": "2026-09-21T11:21:51.698Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-canvas-actions-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/component-scheduled-tasks.test.ts test/research-canvas-actions-client.test.js",
-            "verifiedCommit": "7a24349d07edb2a40e998448e9bfb4203ee90c84",
-            "completedAt": "2026-09-21T11:21:51.698Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T11:21:51.698Z"
+        "generatedAt": "2026-09-21T11:25:56.519493+00:00"
       }
     }
   ],
