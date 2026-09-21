@@ -58,6 +58,29 @@ export function mountFigmaMotionController(targetDocument: Document = document):
     if (panel.inert !== closed) panel.inert = closed
   }
   const Observer = targetWindow?.MutationObserver ?? MutationObserver
+  // Keep page history across canvas remounts: switching boards stays in research.
+  const currentPage = () => targetDocument.querySelector('[data-odyssey-page]')?.getAttribute('data-odyssey-page')
+  let previousPage = currentPage()
+  let pendingToolbarEntry = false
+  let animatedToolbar: HTMLElement | null = null
+  const syncToolbarEntry = () => {
+    const page = currentPage()
+    if (!page) return
+    if (page !== previousPage) {
+      pendingToolbarEntry = page === 'research' && (previousPage === 'conversation' || previousPage === 'home')
+      animatedToolbar?.removeAttribute('data-odyssey-toolbar-enter')
+      animatedToolbar = null
+      previousPage = page
+    }
+    if (!pendingToolbarEntry) return
+    const toolbar = targetDocument.querySelector<HTMLElement>('[data-odyssey-page="research"] [data-research-global-toolbar]')
+    if (!toolbar) return
+    toolbar.setAttribute('data-odyssey-toolbar-enter', '')
+    animatedToolbar = toolbar
+    pendingToolbarEntry = false
+  }
+  const toolbarObserver = new Observer(syncToolbarEntry)
+  toolbarObserver.observe(targetDocument.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page'] })
   const panelFocusObserver = new Observer(syncPanelFocus)
   panelFocusObserver.observe(targetDocument.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['data-odyssey-panel-right'] })
   syncPanelFocus()
@@ -70,6 +93,8 @@ export function mountFigmaMotionController(targetDocument: Document = document):
     cancelled = true
     observer.disconnect()
     panelFocusObserver.disconnect()
+    toolbarObserver.disconnect()
+    animatedToolbar?.removeAttribute('data-odyssey-toolbar-enter')
     targetDocument.querySelector<HTMLElement>('.t8lSSG_panel')?.removeAttribute('inert')
     targetDocument.removeEventListener('visibilitychange', syncHomeMotion)
     cancelFrame(firstFrame)

@@ -37,6 +37,35 @@ describe('Figma panel motion supplement', () => {
     await browserWindow.happyDOM.close()
   })
 
+  it('animates conversation entry but not research board remounts', async () => {
+    const w = new Window()
+    const doc = w.document
+    doc.body.innerHTML = '<div data-odyssey-page="research"><div data-research-global-toolbar></div></div>'
+    const dispose = mountFigmaMotionController(doc as unknown as Document)
+    const flush = async () => { await new Promise(resolve => setTimeout(resolve, 0)) }
+    expect(doc.querySelector('[data-odyssey-toolbar-enter]')).toBeNull()
+    doc.body.innerHTML = '<div data-odyssey-page="research"><div data-research-global-toolbar></div></div>'
+    await flush()
+    expect(doc.querySelector('[data-odyssey-toolbar-enter]')).toBeNull()
+    const root = doc.querySelector('[data-odyssey-page]')!
+    root.setAttribute('data-odyssey-page', 'conversation')
+    await flush()
+    root.setAttribute('data-odyssey-page', 'research')
+    await flush()
+    expect(doc.querySelector('[data-odyssey-toolbar-enter]')).not.toBeNull()
+    root.innerHTML = '<div data-research-global-toolbar></div>'
+    await flush()
+    expect(doc.querySelector('[data-odyssey-toolbar-enter]')).toBeNull()
+    root.setAttribute('data-odyssey-page', 'conversation')
+    await flush()
+    root.setAttribute('data-odyssey-page', 'research')
+    await flush()
+    expect(doc.querySelector('[data-odyssey-toolbar-enter]')).not.toBeNull()
+    dispose()
+    expect(doc.querySelector('[data-odyssey-toolbar-enter]')).toBeNull()
+    await w.happyDOM.close()
+  })
+
   it('is idempotent for a document', () => {
     const browserWindow = new Window()
     const first = mountFigmaMotionController(browserWindow.document as unknown as Document)

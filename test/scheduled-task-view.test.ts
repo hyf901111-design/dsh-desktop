@@ -250,7 +250,7 @@ it('does not resurrect a closed component tab or replace a newer component draft
   expect(doc.body.hasAttribute('data-scheduled-component')).toBe(false)
 })
 
-it('offers direct component actions with live pause state and keyboard-resizable description', async () => {
+it('uses the shared task menu with live pause state and keyboard-resizable description', async () => {
   const w=new Window();windows.push(w);vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
   const doc=w.document as unknown as Document
   doc.body.innerHTML='<div data-dsh-panel-host><div class="native_tabBar"><div class="native_tabList"></div><button data-odyssey-tab-overflow-trigger>页签菜单</button><button data-odyssey-tab-overflow-option="chat">对话</button></div><div data-scheduled-panel-slot></div></div>'
@@ -259,12 +259,17 @@ it('offers direct component actions with live pause state and keyboard-resizable
   const action=vi.fn(async(_id:string,action:string)=>{if(action==='pause')task.state='paused';if(action==='resume')task.state='enabled'})
   const view=new ScheduledTaskView(doc,{list:async()=>[task],workspaces:async()=>[],save:vi.fn(),action})
   view.mount();await view.openComponent(component)
-  expect(doc.querySelector('.st-detail-more')).toBeNull()
-  expect(doc.querySelectorAll('.st-detail-actions button')).toHaveLength(3)
-  doc.querySelector<HTMLButtonElement>('[aria-label="暂停运行"]')!.click()
+  expect(doc.querySelectorAll('.st-detail-actions button')).toHaveLength(0)
+  const menuAction = (label: string) => {
+    doc.querySelector<HTMLButtonElement>('.st-detail-more')!.click()
+    const items = [...doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]')]
+    expect(items.map(item => item.textContent)).toEqual(['立即运行', task.state === 'paused' ? '恢复任务' : '暂停任务', '删除任务'])
+    items.find(item => item.textContent === label)!.click()
+  }
+  menuAction('暂停任务')
   await new Promise(r=>setTimeout(r,10))
   expect(action).toHaveBeenCalledWith('component','pause')
-  doc.querySelector<HTMLButtonElement>('[aria-label="恢复运行"]')!.click()
+  menuAction('恢复任务')
   await new Promise(r=>setTimeout(r,10))
   expect(action).toHaveBeenCalledWith('component','resume')
   doc.querySelector<HTMLButtonElement>('.st-repeat')!.click()
@@ -281,7 +286,7 @@ it('offers direct component actions with live pause state and keyboard-resizable
   const before=Number(handle.getAttribute('aria-valuenow'))
   handle.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}) as unknown as Event)
   expect(Number(handle.getAttribute('aria-valuenow'))).toBe(before+24)
-  doc.querySelector<HTMLButtonElement>('[aria-label="立即运行"]')!.click()
+  menuAction('立即运行')
   await new Promise(r=>setTimeout(r,10))
   expect(action).toHaveBeenCalledWith('component','run')
   doc.querySelector<HTMLButtonElement>('[data-odyssey-tab-overflow-trigger]')!.click()

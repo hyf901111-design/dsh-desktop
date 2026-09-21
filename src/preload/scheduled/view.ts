@@ -21,10 +21,8 @@ const escape = (s: unknown) =>
   )
 const icon = (name: keyof typeof icons) =>
   `<i class="st-icon" aria-hidden="true" style="--icon:url('${icons[name]}')"></i>`
-const actionIcon = (name: 'run' | 'pause' | 'resume' | 'delete' | 'resize') => {
-  const paths = {run:'M6 4l11 6-11 6V4Z',resume:'M3 9a7 7 0 1 1 4 7M1 7l2 3 3-2M9 6l5 4-5 4V6Z',pause:'M7 4v12M13 4v12',delete:'M4 6h12M8 3h4M6 6l1 11h6l1-11M9 9v5M11 9v5',resize:'M5 15 15 5M10 15l5-5'}
-  return `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name]}"/></svg>`
-}
+const resizeIcon = () =>
+  `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 15 5M10 15l5-5"/></svg>`
 const stateLabel = (t: ScheduledTask) =>
   t.runs[0]?.status === 'running'
     ? '运行中'
@@ -487,7 +485,7 @@ export class ScheduledTaskView {
     const detail = this.document.createElement('aside')
     detail.className = 'st-detail'
     detail.setAttribute('aria-label', '任务详情')
-    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">${d.component ? '组件任务' : '全局任务'}</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t && d.component && this.componentMode ? `<div class="st-detail-actions" aria-label="组件任务操作"><button class="st-icon-button" data-task-action="run"></button><button class="st-icon-button" data-task-action="toggle"></button><button class="st-icon-button" data-task-action="delete"></button></div>` : t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button>` : ''}</div><h2 class="st-detail-title" title="${escape(t ? d.title : '新建任务')}">${escape(t ? d.title : '新建任务')}</h2><div class="st-prompt-wrap"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><div class="st-prompt-resize" role="separator" tabindex="0" aria-label="调整任务描述高度" aria-orientation="horizontal" title="拖动调整高度，或使用上下方向键">${actionIcon('resize')}</div></div>${d.component ? `<div class="st-setting st-component-target"><span>执行于</span><span title="${escape(d.component.boardTitle + ' · ' + d.component.title)}">${escape(d.component.boardTitle)} · ${escape(d.component.title)}</span></div>` : `<label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label>`}<button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">${d.component ? '组件任务' : '全局任务'}</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button>` : ''}</div><h2 class="st-detail-title" title="${escape(t ? d.title : '新建任务')}">${escape(t ? d.title : '新建任务')}</h2><div class="st-prompt-wrap"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><div class="st-prompt-resize" role="separator" tabindex="0" aria-label="调整任务描述高度" aria-orientation="horizontal" title="拖动调整高度，或使用上下方向键">${resizeIcon()}</div></div>${d.component ? `<div class="st-setting st-component-target"><span>执行于</span><span title="${escape(d.component.boardTitle + ' · ' + d.component.title)}">${escape(d.component.boardTitle)} · ${escape(d.component.title)}</span></div>` : `<label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label>`}<button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
       ['always', '每次完成'],
       ['changes', '重要变化'],
       ['never', '不通知'],
@@ -553,7 +551,7 @@ export class ScheduledTaskView {
     detail
       .querySelector<HTMLButtonElement>('.st-detail-more')
       ?.addEventListener('click', (e) =>
-        this.taskMenu(e.currentTarget as HTMLElement, t!),
+        this.taskMenu(e.currentTarget as HTMLElement, this.tasks.find((task) => task.id === t!.id) ?? t!),
       )
     detail
       .querySelector<HTMLButtonElement>('.st-open-result')
@@ -576,20 +574,6 @@ export class ScheduledTaskView {
       this.draft.title = t.title
       const heading = detail.querySelector<HTMLElement>('.st-detail-title')
       if (heading) { heading.textContent = t.title; heading.title = t.title }
-    }
-    if (t?.component) {
-      for (const button of detail.querySelectorAll<HTMLButtonElement>('[data-task-action]')) {
-        const key = button.dataset.taskAction
-        const action = key === 'toggle' ? (t.state === 'paused' ? 'resume' : 'pause') : key as 'run' | 'delete'
-        const label = {run:'立即运行',pause:'暂停运行',resume:'恢复运行',delete:'删除任务'}[action]
-        if (button.dataset.actionState !== action) {
-          button.innerHTML = actionIcon(action) + `<span class="st-action-tooltip" role="tooltip">${label}</span>`
-          button.dataset.actionState = action
-        }
-        button.setAttribute('aria-label', label)
-        button.disabled = this.pendingActions.has(t.id) || (action === 'run' && t.runs[0]?.status === 'running')
-        button.onclick = () => action === 'delete' ? this.confirmDelete(t) : void this.action(t, action)
-      }
     }
     const status = detail.querySelector<HTMLElement>('.st-status')!
     const label = t ? stateLabel(t) : '新建任务'

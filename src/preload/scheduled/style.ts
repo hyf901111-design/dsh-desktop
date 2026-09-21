@@ -42,13 +42,8 @@ export const scheduledStyles = `
 .st-prompt-wrap:focus-within{outline:1px solid var(--st-muted);outline-offset:-1px}
 .st-prompt-resize{position:absolute;right:4px;bottom:4px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--st-muted);background:var(--st-field);border-radius:4px;cursor:ns-resize;touch-action:none;user-select:none}
 .st-prompt-resize:focus-visible{outline:1px solid var(--st-muted)}
-.st-detail-top:has(.st-detail-actions){padding-right:0}
-.st-detail-actions{display:flex;gap:6px;flex:none;margin-left:auto}
-.st-detail-actions .st-icon-button{position:relative;display:flex;align-items:center;justify-content:center;width:28px;height:28px;color:var(--st-muted)}
-.st-detail-actions .st-icon-button>svg{width:18px;height:18px;flex:none;stroke-width:1.35}
-.st-detail-actions .st-icon-button:disabled{opacity:.35;cursor:default}
-.st-action-tooltip{position:absolute;top:calc(100% + 7px);right:0;z-index:3;padding:6px 9px;border-radius:6px;white-space:nowrap;font-size:12px;line-height:18px;font-weight:400;color:var(--st-ink);background:var(--st-panel);border:1px solid var(--st-line);box-shadow:0 3px 12px #0003;pointer-events:none;visibility:hidden;opacity:0;transition:opacity .12s ease}
-.st-detail-actions .st-icon-button:hover .st-action-tooltip,.st-detail-actions .st-icon-button:focus-visible .st-action-tooltip{visibility:visible;opacity:1}
+body[data-scheduled-component="true"] .st-detail-top{padding-right:0}
+body[data-scheduled-component="true"] .st-detail-more{position:static;flex:none;margin-left:auto;color:var(--st-muted)}
 .st-dialog-close{position:absolute;top:16px;right:16px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;color:var(--st-muted)}
 .st-dialog:has(.st-dialog-close) h2{padding-right:32px}
 .st-setting{border:1px solid var(--st-line)!important;background:var(--st-field)!important;border-radius:6px!important;display:flex;align-items:center;gap:8px;padding:12px!important;min-height:46px;width:100%;margin-bottom:28px;text-align:left}.st-setting span:first-child{margin-right:auto}.st-setting:has(>select){position:relative}.st-setting:has(>select)::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;background:var(--dsw-alias-label-tertiary,#888);mask:url(/figma-sidebar-chevron.svg) center/contain no-repeat;pointer-events:none}.st-setting select{appearance:none;-webkit-appearance:none;max-width:73%;text-align:right;border:0;background:transparent;min-width:0;padding-right:22px;cursor:pointer}.st-setting .st-icon{width:12px;height:12px}
