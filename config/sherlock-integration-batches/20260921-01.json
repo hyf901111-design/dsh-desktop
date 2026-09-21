@@ -11,29 +11,18 @@
         "schemaVersion": 1,
         "featureName": "暂停任务与箭头样式优化、恢复左侧栏拖动",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
-        "tipCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
+        "baseCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
+        "tipCommit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
         "commits": [
           {
-            "commit": "870ce87cb4e441bcb18c549e9f43ad6360b0b37a",
+            "commit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
             "parents": [
-              "e7b83546501fbed21f99f8784ff0216e8adc5d05"
+              "ea8b6f3109b6fd8c7f55c35939327c7568299216"
             ],
-            "subject": "修复：定时任务页面恢复全局左侧栏拖动与宽度同步"
-          },
-          {
-            "commit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
-            "parents": [
-              "870ce87cb4e441bcb18c549e9f43ad6360b0b37a"
-            ],
-            "subject": "样式：详情更多按钮沿用全局展开控件的尺寸"
+            "subject": "修复：任务页面与全局侧栏拖拽条保持同一布局层级"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
           {
             "status": "M",
             "path": "src/preload/scheduled/view.ts"
@@ -51,9 +40,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查与17项定时任务聚焦测试通过；其后仅同步按钮为全局控件28px尺寸",
-            "verifiedCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
-            "completedAt": "2026-09-21T02:50:45.251408+00:00",
+            "summary": "类型检查与17项定时任务聚焦测试通过",
+            "verifiedCommit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
+            "completedAt": "2026-09-21T02:53:00.949867+00:00",
             "timeoutMs": 120000
           },
           {
@@ -65,15 +54,15 @@
               "test/scheduled-tasks.test.ts"
             ],
             "outcome": "passed",
-            "summary": "类型检查与17项定时任务聚焦测试通过；其后仅同步按钮为全局控件28px尺寸",
-            "verifiedCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
-            "completedAt": "2026-09-21T02:50:45.251408+00:00",
+            "summary": "类型检查与17项定时任务聚焦测试通过",
+            "verifiedCommit": "2731a933356d7b1cc81a65fee8cf3e0c52d79818",
+            "completedAt": "2026-09-21T02:53:00.949867+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "交互验证原生侧栏宽度变更同步与退出清理；静态样式对照全局28px按钮；客户端视觉待打包"
+          "summary": "验证任务页与原生拖动条同级、监听原生宽度变化并清理观察器；客户端拖动待最终包验证"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -84,41 +73,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T02:50:45.251408+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cefc26f8b9a331193b9f069850a86b72bbf7dae0",
-        "verificationCommit": "cefc26f8b9a331193b9f069850a86b72bbf7dae0",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "cefc26f8b9a331193b9f069850a86b72bbf7dae0",
-            "completedAt": "2026-09-21T02:50:47.542Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "cefc26f8b9a331193b9f069850a86b72bbf7dae0",
-            "completedAt": "2026-09-21T02:50:47.542Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T02:50:47.542Z"
+        "generatedAt": "2026-09-21T02:53:00.949867+00:00"
       }
     }
   ],
