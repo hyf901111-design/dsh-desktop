@@ -102,7 +102,8 @@ export class ScheduledTaskView {
       if (this.detailOpen && !this.draft) this.newDraft()
       else {
         if (this.root) this.root.dataset.detail = String(this.detailOpen)
-        if (this.componentMode) this.componentVisible = this.detailOpen
+        // Collapsing the shell must preserve its selected tab; otherwise the
+        // native panel snapshot becomes active again and reveals the old pane.
         this.syncPanel()
       }
     }) as EventListener)
@@ -285,7 +286,8 @@ export class ScheduledTaskView {
     if (!this.componentTab) {
       const tab = this.document.createElement('button')
       tab.type = 'button'; tab.className = 'st-component-tab'; tab.role = 'tab'
-      tab.innerHTML = `${icon('clock')}<span>定时任务</span><span class="st-component-close" aria-label="关闭定时任务">×</span>`
+      tab.title = '定时任务'; tab.setAttribute('aria-label', '定时任务')
+      tab.innerHTML = `${icon('clock')}<span class="st-component-tab-label">定时任务</span><span class="st-component-close" aria-label="关闭定时任务">×</span>`
       tab.onclick = e => { if ((e.target as Element).closest('.st-component-close')) this.close(); else { this.componentVisible = true; this.detailOpen = true; this.syncPanel() } }
       this.componentTab = tab
     }
