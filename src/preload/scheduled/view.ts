@@ -275,7 +275,7 @@ export class ScheduledTaskView {
       this.syncPanel()
       this.renderDetail()
       this.poll = setInterval(() => void this.refresh(), 5000)
-    } catch (e) { this.showError(e) }
+    } catch (e) { if (revision === this.viewRevision) this.showError(e) }
   }
   private attachComponentTab() {
     const tabs = this.document.querySelector<HTMLElement>('[data-dsh-panel-host] [class*="_tabList"]')

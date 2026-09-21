@@ -52,8 +52,11 @@ body[data-scheduled-page] [data-dsh-panel-host] .t8lSSG_toggleCluster{pointer-ev
 [data-scheduled-panel] .t8lSSG_panel>.t8lSSG_panelBody{display:none}
 body[data-scheduled-component] [data-scheduled-panel] .t8lSSG_panel>.t8lSSG_panelBody{display:flex}
 body[data-scheduled-component=true] [data-scheduled-panel-slot]{top:58px}
+body[data-scheduled-component=true] .t8lSSG_panel .t8lSSG_paneContent{visibility:hidden}
+body[data-scheduled-component] [class*="_tabList"]{position:relative}
+.st-component-tab{position:sticky;right:0;z-index:1;background:var(--dsw-alias-bg-layer-1,#252525)!important}
 .st-component-tab{display:flex;align-items:center;gap:6px;border:0;border-radius:8px;padding:6px 10px;white-space:nowrap;color:inherit;background:transparent;font:inherit;font-size:12px;cursor:pointer;flex:none}
-.st-component-tab[aria-selected=true]{background:var(--dsw-alias-interactive-bg-hover,#8882)}
+.st-component-tab[aria-selected=true]{box-shadow:inset 0 0 0 100px var(--dsw-alias-interactive-bg-hover,#8882)}
 .st-component-close{margin-left:4px;padding:0 3px}
 .st-component-target span:last-child{max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-detail .st-detail-error:empty{display:none}
