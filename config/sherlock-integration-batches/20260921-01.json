@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一侧栏箭头并缩小快捷入口下方间距",
+        "featureName": "执行工作区与通知选择器统一侧栏箭头",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "a9ab91b87025d7d9cf6db09040b9fd1cb17ea42f",
-        "tipCommit": "ae17a1527647b1fa4729a96d5f0deb879d2f5b9e",
+        "baseCommit": "ae17a1527647b1fa4729a96d5f0deb879d2f5b9e",
+        "tipCommit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
         "commits": [
           {
-            "commit": "ae17a1527647b1fa4729a96d5f0deb879d2f5b9e",
+            "commit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
             "parents": [
-              "a9ab91b87025d7d9cf6db09040b9fd1cb17ea42f"
+              "ae17a1527647b1fa4729a96d5f0deb879d2f5b9e"
             ],
-            "subject": "样式：缩小侧栏快捷入口与看板区的间距"
+            "subject": "样式：执行工作区与通知选择器统一侧栏箭头"
           }
         ],
         "files": [
@@ -36,15 +36,15 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "仅将快捷入口下间距14px调为6px；集成阶段执行类型检查",
-            "verifiedCommit": "ae17a1527647b1fa4729a96d5f0deb879d2f5b9e",
-            "completedAt": "2026-09-21T03:06:50.211864+00:00",
+            "summary": "类型检查通过；两个原生选择器隐藏默认箭头并复用侧栏14px图标",
+            "verifiedCommit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
+            "completedAt": "2026-09-21T03:19:40.202549+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "静态核对同一侧栏箭头资源与快捷入口6px下间距；最终客户端待构建核对"
+          "summary": "样式复用侧栏SVG；保留原生select与点击区域，预留22px防止文字覆盖箭头；客户端视觉待构建"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -55,41 +55,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T03:06:50.211864+00:00"
-      },
-      "merged": {
-        "mergeCommit": "88e72fae3dbac2223ea80bc7720b45751fe4c694",
-        "verificationCommit": "88e72fae3dbac2223ea80bc7720b45751fe4c694",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "88e72fae3dbac2223ea80bc7720b45751fe4c694",
-            "completedAt": "2026-09-21T03:07:26.068Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "88e72fae3dbac2223ea80bc7720b45751fe4c694",
-            "completedAt": "2026-09-21T03:07:26.068Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T03:07:26.068Z"
+        "generatedAt": "2026-09-21T03:19:40.202549+00:00"
       }
     }
   ],
