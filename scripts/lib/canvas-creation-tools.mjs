@@ -37,8 +37,7 @@ function patchMarqueeScreenStyle(source) {
 export function patchMarqueeInteraction(source) {
   if (source.includes('/* ODYSSEY_MARQUEE_FRAME */')) return source
   const change = (from, to) => { if (!source.includes(from)) throw Error('Missing marquee interaction: ' + from); source = source.replace(from, to) }
-  change('let fileDragDepth = 0;', `let fileDragDepth = 0;
-    /* ODYSSEY_MARQUEE_FRAME */
+  change('let fileDragDepth = 0;', `/* ODYSSEY_MARQUEE_FRAME */
     let marqueeFrame=0;
     const paintMarquee=()=>{
       marqueeFrame=0;const op=operationRef.current,element=root.querySelector('[data-research-marquee]');
@@ -47,7 +46,8 @@ export function patchMarqueeInteraction(source) {
       const style=(${marqueeScreenStyle.toString()})(rect,root);
       for(const [key,value] of Object.entries(style))key.startsWith('--')?element.style.setProperty(key,value):element.style[key]=value+'px';
     };
-    const scheduleMarquee=()=>{if(!marqueeFrame)marqueeFrame=window.requestAnimationFrame(paintMarquee);};`)
+    const scheduleMarquee=()=>{if(!marqueeFrame)marqueeFrame=window.requestAnimationFrame(paintMarquee);};
+    let fileDragDepth = 0;`)
   change('setMarquee(normalizeResearchRect({ x: operation.startX, y: operation.startY }, { x: operation.currentX, y: operation.currentY }));', 'scheduleMarquee();')
   change('if (commitMarquee && operation.kind === "marquee") {', `if(marqueeFrame){window.cancelAnimationFrame(marqueeFrame);marqueeFrame=0;}
     if(commitMarquee && operation.kind==='marquee' && event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)){
