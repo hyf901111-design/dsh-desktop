@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260921-03",
+  "branch": "codex/integration/20260921-03",
+  "baseMainCommit": "6f098197b8ad4693703a2d68e0ccd182330c6f62",
+  "expectedMainCommit": "6f098197b8ad4693703a2d68e0ccd182330c6f62",
+  "createdAt": "2026-09-21T07:19:13.392Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "画板交互性能与生成稳定性",
+        "branch": "codex/feat/board-performance-20260921",
+        "baseCommit": "6f098197b8ad4693703a2d68e0ccd182330c6f62",
+        "tipCommit": "c2bb495e2031cf1b16289093a5e97e266597e436",
+        "commits": [
+          {
+            "commit": "c2bb495e2031cf1b16289093a5e97e266597e436",
+            "parents": [
+              "6f098197b8ad4693703a2d68e0ccd182330c6f62"
+            ],
+            "subject": "修复：优化画板框选性能、任务状态和组件生成恢复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-creation-tools.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-canvas-render-performance.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-canvas-render-performance.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-scrollbars.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-task-scrollbar.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-board-activity.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-activity.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-render-performance.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查通过",
+            "verifiedCommit": "c2bb495e2031cf1b16289093a5e97e266597e436",
+            "completedAt": "2026-09-21T07:19:04.039400+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-canvas-render-performance.test.ts",
+              "test/research-board-activity.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-marquee-stroke.test.js",
+              "test/figma-scrollbars.test.ts",
+              "test/figma-task-scrollbar.test.ts",
+              "test/research-canvas-deferred-html-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查通过",
+            "verifiedCommit": "c2bb495e2031cf1b16289093a5e97e266597e436",
+            "completedAt": "2026-09-21T07:19:04.039400+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能分支不构建共享客户端，集成后执行真实界面检查"
+        },
+        "acceptanceCriteria": [
+          "会话图标无遮挡且输入框边距保持",
+          "框选与窗口调整流畅",
+          "个人看板主代理和子代理运行显示圆环",
+          "组件生成限制并发并恢复短暂服务错误"
+        ],
+        "risks": [
+          "外部数据源不可用仍会明确显示失败",
+          "旧邀请汇总测试和旧默认尺寸测试存在基线不一致，未修改相关功能"
+        ],
+        "generatedAt": "2026-09-21T07:19:04.039400+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/research-canvas-render-performance.test.ts",
+        "test/research-board-activity.test.ts",
+        "test/research-task-runtime.test.js",
+        "test/research-marquee-stroke.test.js",
+        "test/figma-scrollbars.test.ts",
+        "test/figma-task-scrollbar.test.ts",
+        "test/research-canvas-deferred-html-patch.test.ts"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
