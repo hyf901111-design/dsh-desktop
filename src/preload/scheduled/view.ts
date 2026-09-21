@@ -107,6 +107,10 @@ export class ScheduledTaskView {
         this.syncPanel()
       }
     }) as EventListener)
+    this.document.defaultView?.addEventListener('sherlock:component-schedule-select', () => {
+      if (!this.componentMode) return
+      this.componentVisible = true; this.detailOpen = true; this.syncPanel()
+    })
     this.document.defaultView?.addEventListener('sherlock:component-schedule-open', ((event: CustomEvent<ComponentTarget & {prompt?: string}>) => {
       void this.openComponent(event.detail)
     }) as EventListener)
@@ -286,8 +290,9 @@ export class ScheduledTaskView {
     if (!this.componentTab) {
       const tab = this.document.createElement('button')
       tab.type = 'button'; tab.className = 'st-component-tab'; tab.role = 'tab'
+      tab.dataset.odysseyPanelTab = 'true'; tab.dataset.odysseyPanelTabId = 'sherlock-component-schedule'
       tab.title = '定时任务'; tab.setAttribute('aria-label', '定时任务')
-      tab.innerHTML = `${icon('clock')}<span class="st-component-tab-label">定时任务</span><span class="st-component-close" aria-label="关闭定时任务">×</span>`
+      tab.innerHTML = `${icon('clock')}<span class="st-component-tab-label t8lSSG_tabTitle">定时任务</span><span class="st-component-close t8lSSG_tabClose" aria-label="关闭定时任务">×</span>`
       tab.onclick = e => { if ((e.target as Element).closest('.st-component-close')) this.close(); else { this.componentVisible = true; this.detailOpen = true; this.syncPanel() } }
       this.componentTab = tab
     }
