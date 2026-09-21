@@ -299,7 +299,7 @@ export class ScheduledTaskView {
       )
       .join(
         '',
-      )}<select aria-label="任务类型"><option>全部类型</option><option>全局任务</option></select><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></main>`
+      )}<label class="st-type-filter"><select aria-label="任务类型"><option>全部类型</option><option>全局任务</option></select><span class="st-chevron" aria-hidden="true"></span></label><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></main>`
     this.root.querySelector<HTMLButtonElement>('.st-back')!.onclick = () =>
       this.close()
     this.root.querySelector<HTMLInputElement>('.st-search input')!.oninput = (
@@ -351,7 +351,7 @@ export class ScheduledTaskView {
       ? tasks
           .map(
             (t) =>
-              `<div class="st-row" data-id="${escape(t.id)}" data-selected="${this.selected === t.id}"><button class="st-quick-toggle" data-state="${t.state}" aria-label="${t.state === 'paused' ? '继续' : '暂停'}任务 ${escape(t.title)}" title="${t.state === 'paused' ? '继续任务' : '暂停任务'}" ${t.state === 'completed' || this.pendingActions.has(t.id) ? 'disabled' : ''}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path class="st-quick-pause" d="M8 7v6m4-6v6"/><path class="st-quick-play" d="m8 6 6 4-6 4z"/></svg></button><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-task-info"><span class="st-task-title"><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
+              `<div class="st-row" data-id="${escape(t.id)}" data-state="${t.state}" data-selected="${this.selected === t.id}"><button class="st-quick-toggle" data-state="${t.state}" aria-label="${t.state === 'paused' ? '继续' : '暂停'}任务 ${escape(t.title)}" title="${t.state === 'paused' ? '继续任务' : '暂停任务'}" ${t.state === 'completed' || this.pendingActions.has(t.id) ? 'disabled' : ''}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path class="st-quick-pause" d="M8 7v6m4-6v6"/><path class="st-quick-play" d="m8 6 6 4-6 4z"/></svg></button><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-task-info"><span class="st-task-title"><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
           )
           .join('')
       : `<div class="st-empty"><h2>${this.tasks.length ? '没有符合条件的任务' : '让重复的工作按计划完成'}</h2><p>${this.tasks.length ? '试试其他关键词或状态筛选。' : '定期整理资讯、跟踪指标或汇总资料。<br>新建任务，让重复的工作按计划完成。'}</p>${this.tasks.length ? '' : '<button class="st-primary st-first">＋ 新建第一个任务</button>'}</div>`
@@ -481,7 +481,7 @@ export class ScheduledTaskView {
     const wasOpen = history.querySelector('details')?.open
     const runSignature = JSON.stringify(t?.runs)
     if (t?.runs.length && this.historySignature !== runSignature)
-      history.innerHTML = `<details class="st-history" ${wasOpen ? 'open' : ''}><summary>运行记录（${t.runs.length}）</summary>${t.runs.map((r) => `<div class="st-run"><strong>${r.status === 'running' ? '运行中' : r.status === 'success' ? '已完成' : '执行失败'}</strong> · ${this.time(r.startedAt, t.schedule)}${r.error ? `<p class="st-error">${escape(r.error)}</p>` : ''}</div>`).join('')}</details>`
+      history.innerHTML = `<details class="st-history" ${wasOpen ? 'open' : ''}><summary><span class="st-chevron" aria-hidden="true"></span>运行记录（${t.runs.length}）</summary>${t.runs.map((r) => `<div class="st-run"><strong>${r.status === 'running' ? '运行中' : r.status === 'success' ? '已完成' : '执行失败'}</strong> · ${this.time(r.startedAt, t.schedule)}${r.error ? `<p class="st-error">${escape(r.error)}</p>` : ''}</div>`).join('')}</details>`
     this.historySignature = runSignature
     if (t?.sessionId && !detail.querySelector('.st-open-result')) {
       const b = this.document.createElement('button')
