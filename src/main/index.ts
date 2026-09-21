@@ -1,3 +1,4 @@
+import { generateTaskTitle } from './scheduled/task-title'
 import { TaskStore } from './scheduled/task-store'
 import { TaskRunner, harnessRpc } from './scheduled/task-runner'
 import { createDesktopComputer } from './computer/desktop-computer'
@@ -1275,7 +1276,7 @@ async function bootstrap(): Promise<void> {
     }
   })
   registerHarnessHandlers(researchCanvasStorage)
-  const scheduledStore = new TaskStore(join(app.getPath('userData'), 'scheduled-tasks.json'))
+  const scheduledStore = new TaskStore(join(app.getPath('userData'), 'scheduled-tasks.json'), Date.now, prompt => generateTaskTitle(runtime.snapshot().url, prompt))
   let scheduledLoadError: unknown
   try { await scheduledStore.load() } catch (error) { scheduledLoadError = error; console.error('[scheduled-tasks]', error) }
   const taskRpc = harnessRpc(() => runtime.snapshot().url)

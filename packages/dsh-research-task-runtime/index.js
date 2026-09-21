@@ -1,3 +1,4 @@
+import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
@@ -23,7 +24,7 @@ import { selectedResearchExcerpt } from './context-index.js'
 import { MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR } from './html-artifact.js'
 
 export const name = 'sherlock-research-task-runtime'
-export const inject = ['systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy']
+export const inject = ['llm', 'agentDefaultModel', 'systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy']
 
 export const MAX_ACTIVE_PER_PARENT = 10
 export const MAX_ACTIVE_CONTAINERS_PER_PARENT = 3
@@ -1816,6 +1817,7 @@ export async function apply(ctx) {
   const disposeWorkbench = await registerWorkbench(ctx, runtime, { filePath: join(dshHome(), 'sherlock-workbenches.json'), isTrustedRequest, readJsonBody })
   ctx.effect(() => {
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
+    const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     let context
     try {
@@ -1823,6 +1825,7 @@ export async function apply(ctx) {
     } catch (error) {
       disposeCanvasTools()
       disposeRoutes()
+      disposeScheduledTitle()
       throw error
     }
     return async () => {
@@ -1835,6 +1838,7 @@ export async function apply(ctx) {
       disposeCanvasTools()
       await context.dispose()
       disposeRoutes()
+      disposeScheduledTitle()
       await runtime.dispose()
     }
   })

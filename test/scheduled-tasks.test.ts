@@ -227,3 +227,21 @@ it('bundles nonempty original Figma vectors', async () => {
       '<svg',
     )
 })
+
+it('persists a summarized title separately from the full instruction and retains it on schedule-only edits', async () => {
+  const {file} = await fixture()
+  let calls = 0
+  const store = new TaskStore(file, () => now, async () => { calls++; return '新闻与开源项目精选' })
+  await store.load()
+  const prompt = '扫描最新新闻及github有没有什么牛逼的项目可以结合到目前的项目里的'
+  const task = await store.save({...input,title:'定时任务',prompt})
+  expect(task.title).toBe('新闻与开源项目精选')
+  expect(task.prompt).toBe(prompt)
+  const reopened = new TaskStore(file, () => now)
+  await reopened.load()
+  expect(reopened.list()[0]!.title).toBe(task.title)
+  await store.save({...task,notification:'never'}, task.id)
+  expect(calls).toBe(1)
+  await store.save({...task,prompt:'整理项目周报'}, task.id)
+  expect(calls).toBe(2)
+})

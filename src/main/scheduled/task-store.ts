@@ -13,6 +13,7 @@ export class TaskStore {
   constructor(
     private file: string,
     private now = Date.now,
+    private summarizeTitle?: (prompt: string) => Promise<string>,
   ) {}
   async load(): Promise<void> {
     try {
@@ -54,8 +55,13 @@ export class TaskStore {
     this.queue = pending.catch(() => {})
     return pending
   }
-  save(value: unknown, id?: string): Promise<ScheduledTask> {
+  async save(value: unknown, id?: string): Promise<ScheduledTask> {
     const input = validateTask(value)
+    const previous = id ? this.tasks.find(task => task.id === id && !task.deletedAt) : undefined
+    if (this.summarizeTitle && (!previous || previous.prompt !== input.prompt || previous.title === previous.prompt)) {
+      input.title = await this.summarizeTitle(input.prompt)
+      validateTask(input)
+    }
     return this.change((tasks) => {
       let task = id ? tasks.find((t) => t.id === id && !t.deletedAt) : undefined
       if (id && !task) throw new Error('任务不存在')

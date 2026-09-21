@@ -29,6 +29,9 @@ function replaceAllExact(source, anchor, replacement, expected, label) {
  * history loading, table selection and detail inspection stay in the package.
  */
 export function patchFigmaTrajectory(source) {
+  if (!source.includes('"data-odyssey-trajectory-details": true')) source = replaceExact(source,
+    'className: TrajectoryTable_module_css_default.details,',
+    'className: TrajectoryTable_module_css_default.details, "data-odyssey-trajectory-details": true,', 'details border hook')
   // Also upgrade already-patched installations without reapplying the structural transform.
   source = source.replace('children: "No timing data"', 'children: laneLabels?.[0] === "输入" ? "暂无执行时长数据" : "No timing data"')
   if (source.includes(FIGMA_TRAJECTORY_MARKER)) return patchTrajectoryTurnLabels(source.replace('"toolbar.searchPlaceholder": "搜索"', '"toolbar.searchPlaceholder": "搜索轨迹"'))

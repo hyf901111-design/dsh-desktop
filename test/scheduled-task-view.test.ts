@@ -39,6 +39,7 @@ it('provides only scheduled tasks in More, closes on Escape, and preserves the w
   name.dispatchEvent(
     new w.Event('input', { bubbles: true }) as unknown as Event,
   )
+  expect(doc.querySelector('.st-detail-title')!.textContent).toBe('新建任务')
   expect(doc.querySelector('.st-panel-toggle')).toBeNull()
   expect(doc.querySelector('.st-collapse')).toBeNull()
   expect(name.closest('[data-scheduled-panel-slot]')).not.toBeNull()
@@ -142,7 +143,7 @@ it('toggles task menus, retains menu-row highlight, pauses without selection, an
   expect(prompt.value).toBe('整理新闻')
   prompt.value = '技术趋势早报\n整理最新开源项目'
   prompt.dispatchEvent(new w.Event('input',{bubbles:true}) as unknown as Event)
-  expect(doc.querySelector('.st-detail-title')!.textContent).toBe('技术趋势早报')
+  expect(doc.querySelector('.st-detail-title')!.textContent).toBe('新闻')
   const detailMore = doc.querySelector<HTMLButtonElement>('.st-detail-more')!
   detailMore.click()
   detailMore.dispatchEvent(new w.Event('pointerdown',{bubbles:true}) as unknown as Event)
@@ -150,7 +151,7 @@ it('toggles task menus, retains menu-row highlight, pauses without selection, an
   expect(doc.querySelector('.st-menu')).toBeNull()
   doc.querySelector<HTMLButtonElement>('.st-save')!.click()
   await vi.advanceTimersByTimeAsync(0)
-  expect(save.mock.calls[0]![0]).toMatchObject({title:'技术趋势早报',prompt:'技术趋势早报\n整理最新开源项目'})
+  expect(save.mock.calls[0]![0]).toMatchObject({title:'新闻',prompt:'技术趋势早报\n整理最新开源项目'})
   view.close()
 })
 
