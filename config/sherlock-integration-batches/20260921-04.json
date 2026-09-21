@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "组件定时任务与右侧页签",
         "branch": "codex/feat/component-scheduled-tasks-20260921",
-        "baseCommit": "614f536f4d95fa64e063d5ec8adb7585601e6fcd",
-        "tipCommit": "bee188e5858231588928f0270dfee8da1b76d789",
+        "baseCommit": "bee188e5858231588928f0270dfee8da1b76d789",
+        "tipCommit": "f812bde24b93e6346a47835cf4581598b8cc72f0",
         "commits": [
           {
-            "commit": "bee188e5858231588928f0270dfee8da1b76d789",
+            "commit": "e0454f1fc120a90694acab98ff7abf478228c06f",
             "parents": [
-              "614f536f4d95fa64e063d5ec8adb7585601e6fcd"
+              "bee188e5858231588928f0270dfee8da1b76d789"
             ],
-            "subject": "优化：组件任务操作气泡与恢复图标及时间编辑器关闭入口"
+            "subject": "修复：任务管理页保留更多菜单仅画布页签展示快捷图标"
+          },
+          {
+            "commit": "f812bde24b93e6346a47835cf4581598b8cc72f0",
+            "parents": [
+              "e0454f1fc120a90694acab98ff7abf478228c06f"
+            ],
+            "subject": "样式：放大画布组件任务操作图标与点击区域"
           }
         ],
         "files": [
@@ -45,8 +52,8 @@
             ],
             "outcome": "passed",
             "summary": "10项任务界面聚焦检查及类型检查通过",
-            "verifiedCommit": "bee188e5858231588928f0270dfee8da1b76d789",
-            "completedAt": "2026-09-21T10:47:49.299024+00:00",
+            "verifiedCommit": "f812bde24b93e6346a47835cf4581598b8cc72f0",
+            "completedAt": "2026-09-21T10:53:55.821272+00:00",
             "timeoutMs": 120000
           },
           {
@@ -58,8 +65,8 @@
             ],
             "outcome": "passed",
             "summary": "10项任务界面聚焦检查及类型检查通过",
-            "verifiedCommit": "bee188e5858231588928f0270dfee8da1b76d789",
-            "completedAt": "2026-09-21T10:47:49.299024+00:00",
+            "verifiedCommit": "f812bde24b93e6346a47835cf4581598b8cc72f0",
+            "completedAt": "2026-09-21T10:53:55.821272+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -76,42 +83,7 @@
         "risks": [
           "共享画板失去编辑权限时任务失败并保留原内容"
         ],
-        "generatedAt": "2026-09-21T10:47:49.299024+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ed85fa2af34d2464d7092abcc73804e13de24bbd",
-        "verificationCommit": "ed85fa2af34d2464d7092abcc73804e13de24bbd",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ed85fa2af34d2464d7092abcc73804e13de24bbd",
-            "completedAt": "2026-09-21T10:47:59.841Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-canvas-actions-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/component-scheduled-tasks.test.ts test/research-canvas-actions-client.test.js",
-            "verifiedCommit": "ed85fa2af34d2464d7092abcc73804e13de24bbd",
-            "completedAt": "2026-09-21T10:47:59.841Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T10:47:59.841Z"
+        "generatedAt": "2026-09-21T10:53:55.821272+00:00"
       }
     }
   ],
