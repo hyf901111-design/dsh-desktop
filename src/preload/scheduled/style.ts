@@ -44,7 +44,8 @@ export const scheduledStyles = `
 .st-prompt-resize:focus-visible{outline:1px solid var(--st-muted)}
 .st-detail-top:has(.st-detail-actions){padding-right:0}
 .st-detail-actions{display:flex;gap:6px;flex:none;margin-left:auto}
-.st-detail-actions .st-icon-button{position:relative;display:flex;align-items:center;justify-content:center;width:28px;height:28px;color:var(--st-muted)}
+.st-detail-actions .st-icon-button{position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;color:var(--st-muted)}
+.st-detail-actions .st-icon-button>svg{width:20px;height:20px;flex:none}
 .st-detail-actions .st-icon-button:disabled{opacity:.35;cursor:default}
 .st-action-tooltip{position:absolute;top:calc(100% + 7px);right:0;z-index:3;padding:6px 9px;border-radius:6px;white-space:nowrap;font-size:12px;line-height:18px;font-weight:400;color:var(--st-ink);background:var(--st-panel);border:1px solid var(--st-line);box-shadow:0 3px 12px #0003;pointer-events:none;visibility:hidden;opacity:0;transition:opacity .12s ease}
 .st-detail-actions .st-icon-button:hover .st-action-tooltip,.st-detail-actions .st-icon-button:focus-visible .st-action-tooltip{visibility:visible;opacity:1}
