@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "侧栏图标统一恢复较粗线条",
+        "featureName": "恢复侧栏原始图标轮廓并统一视觉重量",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "e492b0c5c4d67a677b2dea74f27e5f0a6d61659d",
-        "tipCommit": "723bf5b0ade421b202265ef964f579d88b5c5519",
+        "baseCommit": "723bf5b0ade421b202265ef964f579d88b5c5519",
+        "tipCommit": "e02f0c2dcc9baa1a5c2c4ea54efe7d41504af608",
         "commits": [
           {
-            "commit": "723bf5b0ade421b202265ef964f579d88b5c5519",
+            "commit": "e02f0c2dcc9baa1a5c2c4ea54efe7d41504af608",
             "parents": [
-              "e492b0c5c4d67a677b2dea74f27e5f0a6d61659d"
+              "723bf5b0ade421b202265ef964f579d88b5c5519"
             ],
-            "subject": "样式：侧栏统一加粗图标恢复清晰视觉重量"
+            "subject": "修复：恢复侧栏原始图标轮廓并校准颜色与细线条"
           }
         ],
         "files": [
@@ -36,15 +36,29 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；11个共享图标统一1.5px线宽，更多圆点同步加粗",
-            "verifiedCommit": "723bf5b0ade421b202265ef964f579d88b5c5519",
-            "completedAt": "2026-09-21T03:40:02.207100+00:00",
+            "summary": "类型检查与39项侧栏、任务页面聚焦测试通过",
+            "verifiedCommit": "e02f0c2dcc9baa1a5c2c4ea54efe7d41504af608",
+            "completedAt": "2026-09-21T03:41:56.004993+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/scheduled-task-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查与39项侧栏、任务页面聚焦测试通过",
+            "verifiedCommit": "e02f0c2dcc9baa1a5c2c4ea54efe7d41504af608",
+            "completedAt": "2026-09-21T03:41:56.004993+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "共享图标16px尺寸与主题灰度保持一致，展开收起均使用较粗线条；原生视觉待构建"
+          "summary": "撤销重绘轮廓，恢复原始Figma图标；同一主题色、16px尺寸，仅校准原版偏细加号；客户端视觉待构建"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -55,41 +69,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T03:40:02.207100+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f01f785f985f87aeed08a0a49c802b7bef909e41",
-        "verificationCommit": "f01f785f985f87aeed08a0a49c802b7bef909e41",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f01f785f985f87aeed08a0a49c802b7bef909e41",
-            "completedAt": "2026-09-21T03:40:17.623Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "f01f785f985f87aeed08a0a49c802b7bef909e41",
-            "completedAt": "2026-09-21T03:40:17.623Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T03:40:17.623Z"
+        "generatedAt": "2026-09-21T03:41:56.004993+00:00"
       }
     }
   ],
