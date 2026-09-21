@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "组件定时任务与右侧页签",
         "branch": "codex/feat/component-scheduled-tasks-20260921",
-        "baseCommit": "b00bd3f7a35622b1ff6212c757232c604b409599",
-        "tipCommit": "614f536f4d95fa64e063d5ec8adb7585601e6fcd",
+        "baseCommit": "614f536f4d95fa64e063d5ec8adb7585601e6fcd",
+        "tipCommit": "bee188e5858231588928f0270dfee8da1b76d789",
         "commits": [
           {
-            "commit": "614f536f4d95fa64e063d5ec8adb7585601e6fcd",
+            "commit": "bee188e5858231588928f0270dfee8da1b76d789",
             "parents": [
-              "b00bd3f7a35622b1ff6212c757232c604b409599"
+              "614f536f4d95fa64e063d5ec8adb7585601e6fcd"
             ],
-            "subject": "修复：定时任务菜单遮挡并改用组件操作图标和内嵌拖动手柄"
+            "subject": "优化：组件任务操作气泡与恢复图标及时间编辑器关闭入口"
           }
         ],
         "files": [
@@ -44,9 +44,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "11项定时页签与操作图标聚焦检查及类型检查通过",
-            "verifiedCommit": "614f536f4d95fa64e063d5ec8adb7585601e6fcd",
-            "completedAt": "2026-09-21T10:16:31.104308+00:00",
+            "summary": "10项任务界面聚焦检查及类型检查通过",
+            "verifiedCommit": "bee188e5858231588928f0270dfee8da1b76d789",
+            "completedAt": "2026-09-21T10:47:49.299024+00:00",
             "timeoutMs": 120000
           },
           {
@@ -54,19 +54,18 @@
               "npm",
               "test",
               "--",
-              "test/scheduled-task-view.test.ts",
-              "test/figma-panel-tab-overflow.test.ts"
+              "test/scheduled-task-view.test.ts"
             ],
             "outcome": "passed",
-            "summary": "11项定时页签与操作图标聚焦检查及类型检查通过",
-            "verifiedCommit": "614f536f4d95fa64e063d5ec8adb7585601e6fcd",
-            "completedAt": "2026-09-21T10:16:31.104308+00:00",
+            "summary": "10项任务界面聚焦检查及类型检查通过",
+            "verifiedCommit": "bee188e5858231588928f0270dfee8da1b76d789",
+            "completedAt": "2026-09-21T10:47:49.299024+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "DOM验证组件操作图标、状态切换、描述框调整及页签菜单切换；新版包待真实客户端复验"
+          "summary": "DOM验证操作状态及关闭时间编辑器不保存修改；新版包待客户端复验"
         },
         "acceptanceCriteria": [
           "组件更多菜单设定定时任务",
@@ -77,42 +76,7 @@
         "risks": [
           "共享画板失去编辑权限时任务失败并保留原内容"
         ],
-        "generatedAt": "2026-09-21T10:16:31.104308+00:00"
-      },
-      "merged": {
-        "mergeCommit": "981f853d73ea51feb6d9783e5d08c06e7fe2e7a7",
-        "verificationCommit": "981f853d73ea51feb6d9783e5d08c06e7fe2e7a7",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "981f853d73ea51feb6d9783e5d08c06e7fe2e7a7",
-            "completedAt": "2026-09-21T10:16:48.119Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-canvas-actions-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/component-scheduled-tasks.test.ts test/research-canvas-actions-client.test.js",
-            "verifiedCommit": "981f853d73ea51feb6d9783e5d08c06e7fe2e7a7",
-            "completedAt": "2026-09-21T10:16:48.119Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T10:16:48.119Z"
+        "generatedAt": "2026-09-21T10:47:49.299024+00:00"
       }
     }
   ],
