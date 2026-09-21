@@ -12,7 +12,7 @@
         "featureName": "画板交互性能与生成稳定性",
         "branch": "codex/feat/board-performance-20260921",
         "baseCommit": "46a506a20af19e73ae4cdebe0895ca22c25b05ed",
-        "tipCommit": "6c59387649f889f45923e745b68a3ffca3899699",
+        "tipCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
         "commits": [
           {
             "commit": "6c59387649f889f45923e745b68a3ffca3899699",
@@ -20,6 +20,20 @@
               "46a506a20af19e73ae4cdebe0895ca22c25b05ed"
             ],
             "subject": "修复：避免框选优化破坏重复构建的手势补丁锚点"
+          },
+          {
+            "commit": "7172525acc953e3620a78bb2106336779484134d",
+            "parents": [
+              "6c59387649f889f45923e745b68a3ffca3899699"
+            ],
+            "subject": "修复：在原生画布补丁完成后应用卡片复用"
+          },
+          {
+            "commit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
+            "parents": [
+              "7172525acc953e3620a78bb2106336779484134d"
+            ],
+            "subject": "测试：标注旧画布补丁模块的类型边界"
           }
         ],
         "files": [
@@ -36,15 +50,33 @@
           {
             "argv": [
               "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "干净依赖和两次完整补丁验证后161项聚焦测试与类型检查通过",
+            "verifiedCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
+            "completedAt": "2026-09-21T07:40:38.721187+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
               "test",
               "--",
               "test/research-canvas-render-performance.test.ts",
+              "test/research-board-activity.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-marquee-stroke.test.js",
+              "test/figma-scrollbars.test.ts",
+              "test/figma-task-scrollbar.test.ts",
+              "test/research-canvas-deferred-html-patch.test.ts",
               "test/figma-reading-column.test.js"
             ],
             "outcome": "passed",
-            "summary": "两次组合补丁语法和幂等检查通过，全部生产样式边距通过，共9项",
-            "verifiedCommit": "6c59387649f889f45923e745b68a3ffca3899699",
-            "completedAt": "2026-09-21T07:38:04.608024+00:00",
+            "summary": "干净依赖和两次完整补丁验证后161项聚焦测试与类型检查通过",
+            "verifiedCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
+            "completedAt": "2026-09-21T07:40:38.721187+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -62,7 +94,7 @@
           "外部数据源不可用仍会明确显示失败",
           "旧邀请汇总测试和旧默认尺寸测试存在基线不一致，未修改相关功能"
         ],
-        "generatedAt": "2026-09-21T07:38:04.608024+00:00"
+        "generatedAt": "2026-09-21T07:40:38.721187+00:00"
       }
     }
   ],
