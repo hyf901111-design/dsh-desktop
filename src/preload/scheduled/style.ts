@@ -1,7 +1,7 @@
 import { icons } from './icons'
 export const scheduledStyles = `
 [data-scheduled-hidden=true]{visibility:hidden!important}
-[data-dsh-sidebar-root] .hHd-Xa_newSessionGroup{display:flex!important;gap:8px!important;align-items:center!important;padding:0 2px!important;margin:0 0 14px!important;min-height:36px!important;background:transparent!important;border:0!important}
+[data-dsh-sidebar-root] .hHd-Xa_newSessionGroup{display:flex!important;gap:8px!important;align-items:center!important;padding:0 2px!important;margin:0 0 6px!important;min-height:36px!important;background:transparent!important;border:0!important}
 [data-dsh-sidebar-root] .hHd-Xa_newSessionGroup .hHd-Xa_newSession{flex:1 1 0!important;min-width:0!important;height:32px!important;margin:0!important;padding:0!important;gap:6px!important;background:transparent!important;border:0!important;border-radius:8px!important;box-shadow:none!important;font-weight:400!important;font-size:14px!important}
 [data-dsh-sidebar-root] .hHd-Xa_newSessionGroup .hHd-Xa_newSession:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.05))!important}
 [data-dsh-sidebar-root] .hHd-Xa_newSessionGroup .hHd-Xa_newSession>svg,[data-dsh-sidebar-root] .hHd-Xa_researchIcon{display:none!important}
