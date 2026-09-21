@@ -34,6 +34,7 @@ export class ComputerController {
   private idle?: ReturnType<typeof setTimeout>
   constructor(private options: {
     driver(): Promise<ComputerDriver>
+    assertAvailable?(): void
     prepareObservation?(result: { data: RecordValue; screenshots: DriverResult['images'] }): { data: RecordValue; screenshots: DriverResult['images'] }
     unchanged?(before: Observation, after: Observation, input: RecordValue): boolean
     stroke?(target: RecordValue, data: RecordValue, strokes: { x: number; y: number }[][], duration: number, signal: AbortSignal, modifiers: string[], click?: { count: number; button: 'left' | 'right' | 'middle' }): Promise<void>
@@ -77,6 +78,7 @@ export class ComputerController {
     }
     budget.actions++
     signal.throwIfAborted()
+    this.options.assertAvailable?.()
     this.busy = true
     const controller = new AbortController()
     this.abort = controller
@@ -87,7 +89,20 @@ export class ComputerController {
       combined.throwIfAborted()
       const call = async (name: string, args: RecordValue = {}) => {
         combined.throwIfAborted()
-        const result = await driver.callTool(name, JSON.stringify(args), { signal: combined })
+        this.options.assertAvailable?.()
+        let result: DriverResult
+        try {
+          // Discovery must share the explicitly started lifecycle. Omitting
+          // session creates a second implicit session which can expire while
+          // named observations keep working.
+          result = await driver.callTool(name, JSON.stringify({ ...args, session: this.runId }), { signal: combined })
+        } catch (error) {
+          const detail = (error as { inner?: { message?: string; errorCode?: string } })?.inner
+          if (typeof detail?.message === 'string') {
+            throw new Error(`${name}: ${detail.message}${detail.errorCode ? ` (${detail.errorCode})` : ''}`, { cause: error })
+          }
+          throw error
+        }
         const data = result.structuredJson ? JSON.parse(result.structuredJson) : { text: result.text }
         if (result.isError || data.refusal || data.effect === 'refused') throw Error(result.text || JSON.stringify(data))
         return { data, screenshots: result.images }
@@ -245,6 +260,7 @@ export class ComputerController {
       throw error
     } finally {
       // Native gestures settle only after releasing the target's held button.
+      if (!failed && !combined.aborted) budget.failures = 0
       this.busy = false
       this.abort = undefined
       if (failed || combined.aborted || this.stopped.has(id)) await this.endLease().catch(() => {})

@@ -27,7 +27,7 @@ it('refuses unobserved and stale actions; post-action observation replaces the r
 it('never forwards model-selected session, scripts, launch arguments, or output paths', async () => {
   const { run, callTool } = setup()
   await run({ op: 'open', bundle_id: 'com.example.app', additional_arguments: ['--danger'], urls: ['/private'], session: 'other' })
-  expect(JSON.parse(callTool.mock.calls.find(([n]) => n === 'launch_app')![1])).toEqual({ bundle_id: 'com.example.app' })
+  expect(JSON.parse(callTool.mock.calls.find(([n]) => n === 'launch_app')![1])).toEqual({ bundle_id: 'com.example.app', session: expect.stringMatching(/^ework-/) })
   await expect(run({ op: 'shell', command: 'anything' })).rejects.toThrow('不支持')
 })
 it.each([{ x: 800, y: 1 }, { x: -1, y: 1 }, { x: NaN, y: 1 }, { x: 1, y: 1, pid: 12 }, { element_token: 'guessed' }])('rejects out of frame and mismatched targets %j', async bad => {
@@ -198,4 +198,51 @@ it.each([{ count: 1, button: 'left' }, { count: 2, button: 'left' }, { count: 1,
   expect(stroke).toHaveBeenCalledWith(o.target, expect.anything(), [[{ x: 30, y: 40 }, { x: 30, y: 40 }]], 100, expect.any(AbortSignal), ['shift'], click)
   expect(callTool.mock.calls.some(([n]) => n === 'click' || n === 'bring_to_front')).toBe(false)
   expect(result.action).toMatchObject({ route: 'window_pointer', delivery_mode: 'background' })
+})
+
+it('keeps discovery, launch and observation on the same explicit lifecycle across turns', async () => {
+  const { run, callTool } = setup()
+  await run({ op: 'apps' })
+  await run({ op: 'windows' })
+  await run({ op: 'open', bundle_id: 'com.example.test' })
+  await run({ op: 'observe', pid: 9, window_id: 10 })
+  await run({ op: 'release' })
+  await run({ op: 'windows' })
+  const calls = callTool.mock.calls.map(([name, raw]) => ({ name, ...JSON.parse(raw) }))
+  const sessions = calls.filter(c => c.name === 'start_session').map(c => c.session)
+  expect(sessions).toHaveLength(2)
+  expect(sessions[0]).not.toBe(sessions[1])
+  let current: string | undefined
+  for (const call of calls) {
+    if (call.name === 'start_session') current = call.session
+    expect(call.session).toBe(current)
+  }
+})
+it('resets consecutive failures after a successful observation', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'list_apps') throw Error('temporary discovery failure')
+    return original(name, raw, options)
+  })
+  await expect(run({ op: 'apps' })).rejects.toThrow('temporary')
+  await expect(run({ op: 'apps' })).rejects.toThrow('temporary')
+  await run({ op: 'observe', pid: 9, window_id: 10 })
+  await expect(run({ op: 'apps' })).rejects.toThrow('temporary')
+  await expect(run({ op: 'windows' })).resolves.toBeDefined()
+})
+it('preserves SDK tool error details instead of only DriverError.Tool', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'list_apps') throw Object.assign(Error('DriverError.Tool'), { inner: { message: 'session has ended', errorCode: 'session_ended' } })
+    return original(name, raw, options)
+  })
+  await expect(run({ op: 'apps' })).rejects.toThrow('list_apps: session has ended (session_ended)')
+})
+it('rejects locked-screen operations before connecting and still permits release', async () => {
+  const { run, callTool } = setup({ assertAvailable: () => { throw Error('Mac 已锁屏') } })
+  await expect(run({ op: 'apps' })).rejects.toThrow('Mac 已锁屏')
+  expect(callTool).not.toHaveBeenCalled()
+  await expect(run({ op: 'release' })).resolves.toEqual({ stopped: true })
 })
