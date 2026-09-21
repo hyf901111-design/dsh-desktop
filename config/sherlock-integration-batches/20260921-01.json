@@ -9,23 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "执行工作区与通知选择器统一侧栏箭头",
+        "featureName": "统一重复计划与其他设置箭头颜色",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "ae17a1527647b1fa4729a96d5f0deb879d2f5b9e",
-        "tipCommit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
+        "baseCommit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
+        "tipCommit": "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3",
         "commits": [
           {
-            "commit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
+            "commit": "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3",
             "parents": [
-              "ae17a1527647b1fa4729a96d5f0deb879d2f5b9e"
+              "e7a6c247f9087bfe892f1a859d94d0e906d91478"
             ],
-            "subject": "样式：执行工作区与通知选择器统一侧栏箭头"
+            "subject": "样式：重复计划箭头统一使用侧栏图标与灰色标记"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
+            "path": "src/preload/scheduled/view.ts"
           }
         ],
         "checks": [
@@ -36,15 +36,15 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；两个原生选择器隐藏默认箭头并复用侧栏14px图标",
-            "verifiedCommit": "e7a6c247f9087bfe892f1a859d94d0e906d91478",
-            "completedAt": "2026-09-21T03:19:40.202549+00:00",
+            "summary": "类型检查通过；重复计划改用共享st-chevron，与两侧选择器相同资源及颜色变量",
+            "verifiedCommit": "f1dda5c519d1b8cc76adbfb58a9d37e1ca399da3",
+            "completedAt": "2026-09-21T03:26:54.453829+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "样式复用侧栏SVG；保留原生select与点击区域，预留22px防止文字覆盖箭头；客户端视觉待构建"
+          "summary": "核对执行于、重复、通知均使用figma-sidebar-chevron.svg、14px与同一tertiary颜色变量；客户端视觉待构建"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -55,41 +55,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T03:19:40.202549+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b9634ae405beb226d53bda1c6082690d6325eeb2",
-        "verificationCommit": "b9634ae405beb226d53bda1c6082690d6325eeb2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b9634ae405beb226d53bda1c6082690d6325eeb2",
-            "completedAt": "2026-09-21T03:19:54.579Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "b9634ae405beb226d53bda1c6082690d6325eeb2",
-            "completedAt": "2026-09-21T03:19:54.579Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T03:19:54.579Z"
+        "generatedAt": "2026-09-21T03:26:54.453829+00:00"
       }
     }
   ],
