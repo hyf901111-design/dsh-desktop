@@ -66,6 +66,7 @@ export class ScheduledTaskView {
   private busy = false
   private poll?: ReturnType<typeof setInterval>
   private observer?: MutationObserver
+  private sidebarResizeObserver?: ResizeObserver
   private background?: HTMLElement
   private backgroundWasInert = false
   constructor(
@@ -227,6 +228,12 @@ export class ScheduledTaskView {
         this.background.dataset.scheduledHidden = 'true'
       }
     }
+    const sidebar = this.document.querySelector('.pI_x6G_sidebarCol') || this.document.querySelector('[data-dsh-sidebar-root]')
+    const Observer = this.document.defaultView?.ResizeObserver
+    if (sidebar && Observer && !this.sidebarResizeObserver) {
+      this.sidebarResizeObserver = new Observer(this.position)
+      this.sidebarResizeObserver.observe(sidebar)
+    }
     this.syncPanel()
     this.position()
     this.render()
@@ -235,6 +242,8 @@ export class ScheduledTaskView {
     this.poll = setInterval(() => void this.refresh(), 5000)
   }
   close() {
+    this.sidebarResizeObserver?.disconnect()
+    this.sidebarResizeObserver = undefined
     delete this.document.body.dataset.scheduledPage
     delete this.document.body.dataset.scheduledDetail
     this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-panel', {
