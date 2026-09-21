@@ -247,3 +247,34 @@ it('does not resurrect a closed component tab or replace a newer component draft
   expect(doc.querySelector('.st-detail')).toBeNull()
   expect(doc.body.hasAttribute('data-scheduled-component')).toBe(false)
 })
+
+it('offers direct component actions with live pause state and keyboard-resizable description', async () => {
+  const w=new Window();windows.push(w);vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
+  const doc=w.document as unknown as Document
+  doc.body.innerHTML='<div data-dsh-panel-host><div class="native_tabBar"><div class="native_tabList"></div><button data-odyssey-tab-overflow-trigger>页签菜单</button><button data-odyssey-tab-overflow-option="chat">对话</button></div><div data-scheduled-panel-slot></div></div>'
+  const component={sessionId:'canvas',nodeId:'node',title:'指标',boardTitle:'画板'}
+  const task:any={id:'component',title:'更新指标',prompt:'更新指标',component,workspaceId:'',schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-25'},notification:'always',state:'enabled',createdAt:1,runs:[]}
+  const action=vi.fn(async(_id:string,action:string)=>{if(action==='pause')task.state='paused';if(action==='resume')task.state='enabled'})
+  const view=new ScheduledTaskView(doc,{list:async()=>[task],workspaces:async()=>[],save:vi.fn(),action})
+  view.mount();await view.openComponent(component)
+  expect(doc.querySelector('.st-detail-more')).toBeNull()
+  expect(doc.querySelectorAll('.st-detail-actions button')).toHaveLength(3)
+  doc.querySelector<HTMLButtonElement>('[aria-label="暂停任务"]')!.click()
+  await new Promise(r=>setTimeout(r,10))
+  expect(action).toHaveBeenCalledWith('component','pause')
+  doc.querySelector<HTMLButtonElement>('[aria-label="恢复任务"]')!.click()
+  await new Promise(r=>setTimeout(r,10))
+  expect(action).toHaveBeenCalledWith('component','resume')
+  const handle=doc.querySelector<HTMLElement>('[aria-label="调整任务描述高度"]')!
+  const before=Number(handle.getAttribute('aria-valuenow'))
+  handle.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}) as unknown as Event)
+  expect(Number(handle.getAttribute('aria-valuenow'))).toBe(before+24)
+  doc.querySelector<HTMLButtonElement>('[aria-label="立即运行"]')!.click()
+  await new Promise(r=>setTimeout(r,10))
+  expect(action).toHaveBeenCalledWith('component','run')
+  doc.querySelector<HTMLButtonElement>('[data-odyssey-tab-overflow-trigger]')!.click()
+  expect(doc.body.dataset.scheduledComponent).toBe('true')
+  doc.querySelector<HTMLButtonElement>('[data-odyssey-tab-overflow-option]')!.click()
+  expect(doc.body.dataset.scheduledComponent).toBe('false')
+  view.close()
+})
