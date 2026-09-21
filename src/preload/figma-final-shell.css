@@ -69,7 +69,7 @@ body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession 
 .rScV5Q_root { background-color:var(--odyssey-canvas) !important; --sherlock-research-dot:var(--odyssey-dot); }
 .sRp_root,.sRp_body { background:transparent !important; }
 .sRp_conversation { display:flex; flex-direction:column; gap:4px; overflow:hidden; padding:16px 18px 12px; box-sizing:border-box; }
-.sRp_messages { flex:1 1 0; min-height:0; overflow:auto; }
+.sRp_messages { flex:1 1 0; min-height:0; overflow:auto; padding-inline:8px; box-sizing:border-box; }
 .sRp_composer { position:relative; flex:0 0 auto; bottom:auto; background:transparent; }
 .sRp_root { --dsh-composer-side-clearance:0px; --dsh-composer-dock-inset:0px; }
 .sRp_composer .wSkVaW_composerStack { --dsh-composer-stack-gap:4px; }

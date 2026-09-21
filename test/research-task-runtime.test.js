@@ -302,7 +302,7 @@ describe('Research task contract and prompt', () => {
     const { buildResearchTaskPrompt } = await runtimeModule()
     const prompt = buildResearchTaskPrompt({ ...containerRequest(), prompt: '将一月至三月的收入 12、18、16 和成本 8、11、10 绘制成图表' })
     expect(prompt).toContain('单层圆角细框')
-    expect(prompt).toContain('客户端统一提供 64px 可拖动标题区')
+    expect(prompt).toContain('客户端统一提供 48px 可拖动标题区')
     expect(prompt).toContain('18px / 600')
     expect(prompt).toContain('柱顶圆角约 4px')
     expect(prompt).toContain('Tooltip 使用 1px 细边框、8px 圆角和轻阴影')
@@ -574,7 +574,7 @@ describe('Research model connection failures', () => {
   it.each(['TRANSPORT', 'TIMEOUT', 'RATE_LIMIT'])('shows a safe %s cause after the provider retries without leaking its raw error', async code => {
     const { ResearchTaskRuntime, publicEventFromSessionEvent } = await runtimeModule()
     const launches = deferredTaskAdapter()
-    const runtime = new ResearchTaskRuntime({ adapter: launches.adapter, storage: memoryTaskStorage(), createId: sequentialTaskIds() })
+    const runtime = new ResearchTaskRuntime({ adapter: launches.adapter, storage: memoryTaskStorage(), createId: sequentialTaskIds(), retryDelayMs: 0 })
     const task = await runtime.start(containerRequest())
     await launches.waitForStarts(1)
     const retry = { type: 'llm/retry', data: { failure: { code, message: 'secret-api-key private-path' } } }
@@ -582,12 +582,40 @@ describe('Research model connection failures', () => {
     launches.event(task.taskId, retry)
     launches.event(task.taskId, { type: 'turn/end', data: { reason: { kind: 'error', error: { code, message: 'secret-api-key private-path' } } } })
     launches.complete(task.taskId, undefined, 'error')
+    await launches.waitForStarts(2)
+    launches.event(task.taskId, { type: 'turn/end', data: { reason: { kind: 'error', error: { code, message: 'secret-api-key private-path' } } } })
+    launches.complete(task.taskId, undefined, 'error')
     await launches.waitForDisposed(task.taskId)
     const state = runtime.inspect({ parentSessionId: 'parent-1', taskId: task.taskId })
     expect(state).toMatchObject({ state: 'failed', error: expect.stringMatching(/模型连接中断|模型响应超时|模型服务暂时限流/) })
     expect(JSON.stringify(state)).not.toMatch(/secret-api-key|private-path/)
-    expect(launches.startedTaskIds()).toHaveLength(1)
+    expect(launches.startedTaskIds()).toHaveLength(2)
     await runtime.dispose()
+  })
+  it('recovers once from provider pressure and keeps cancellation effective during backoff', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const launches = deferredTaskAdapter()
+    const runtime = new ResearchTaskRuntime({adapter:launches.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),retryDelayMs:0})
+    const task=await runtime.start(containerRequest())
+    await launches.waitForStarts(1)
+    launches.event(task.taskId,{type:'turn/end',data:{reason:{kind:'error',error:{code:'RATE_LIMIT'}}}})
+    launches.complete(task.taskId,undefined,'error')
+    await launches.waitForStarts(2)
+    launches.complete(task.taskId,JSON.stringify({version:1,type:'markdown',title:'研究结果',content:'已取得的真实研究内容。'}))
+    await launches.waitForDisposed(task.taskId)
+    expect(runtime.inspect({parentSessionId:'parent-1',taskId:task.taskId}).state).toBe('completed')
+    await runtime.dispose()
+    const cancelled=deferredTaskAdapter()
+    const other=new ResearchTaskRuntime({adapter:cancelled.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),retryDelayMs:5000})
+    const next=await other.start(containerRequest())
+    await cancelled.waitForStarts(1)
+    cancelled.event(next.taskId,{type:'turn/end',data:{reason:{kind:'error',error:{code:'TIMEOUT'}}}})
+    cancelled.complete(next.taskId,undefined,'error')
+    await cancelled.waitForDisposed(next.taskId)
+    await other.cancel({parentSessionId:'parent-1',taskId:next.taskId})
+    expect(cancelled.startedTaskIds()).toHaveLength(1)
+    expect(other.inspect({parentSessionId:'parent-1',taskId:next.taskId}).state).toBe('cancelled')
+    await other.dispose()
   })
   it('accepts a maximum UI prompt plus its layout budget but still bounds the task payload', async () => {
     const { validateResearchTaskStart } = await runtimeModule()
@@ -597,36 +625,19 @@ describe('Research model connection failures', () => {
 })
 
 describe('Research task ten-slot scheduling', () => {
-  it('shares the same ten slots between selection and native container tasks', async () => {
+  it('queues heavy components at three slots while summary tasks keep their independent capacity', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches = deferredTaskAdapter()
-    const runtime = new ResearchTaskRuntime({
-      adapter: launches.adapter,
-      storage: memoryTaskStorage(),
-      createId: sequentialTaskIds()
-    })
-
-    const receipts = await Promise.all([
-      runtime.start(summaryRequest('summary-1')),
-      runtime.start(containerRequest('container-1')),
-      runtime.start(containerRequest('container-2')),
-      runtime.start(summaryRequest('summary-2')),
-      ...Array.from({ length: 7 }, (_, index) => runtime.start(containerRequest(`container-extra-${index}`)))
-    ])
-    await launches.waitForStarts(10)
-
-    expect(new Set(launches.startedTaskIds())).toEqual(
-      new Set(Array.from({ length: 10 }, (_, index) => `task-${index + 1}`))
-    )
-    expect(runtime.inspect({
-      parentSessionId: 'parent-1', taskId: receipts[10].taskId, afterSeq: 0
-    }).state).toBe('queued')
-
-    launches.complete(receipts[0].taskId, '总结完成')
-    await launches.waitForStarts(11)
-    expect(new Set(launches.startedTaskIds())).toEqual(
-      new Set(Array.from({ length: 11 }, (_, index) => `task-${index + 1}`))
-    )
+    const runtime = new ResearchTaskRuntime({adapter: launches.adapter, storage: memoryTaskStorage(), createId: sequentialTaskIds()})
+    const receipts = await Promise.all(Array.from({length:7},(_,i)=>runtime.start(containerRequest('component-'+i))))
+    await launches.waitForStarts(3)
+    expect(runtime.inspect({parentSessionId:'parent-1',taskId:receipts[3].taskId}).state).toBe('queued')
+    await runtime.start(summaryRequest('summary'))
+    await launches.waitForStarts(4)
+    launches.complete(receipts[0].taskId, JSON.stringify({version:1,type:'markdown',title:'已核验资料',content:'有来源的研究正文。'}))
+    await launches.waitForStarts(5)
+    expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-8','task-4'])
+    await runtime.dispose()
   })
 
   it('runs ten tasks for one parent and admits the eleventh in FIFO order', async () => {

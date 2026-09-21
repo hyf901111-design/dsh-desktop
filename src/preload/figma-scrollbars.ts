@@ -93,7 +93,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
         else for (const root of element.querySelectorAll<HTMLElement>(scope)) pendingRoots.add(root)
       }
     }
-    schedule()
+    if (pendingRoots.size || records.some(record => [...record.removedNodes].some(node => node.nodeType === 1 && !(node as Element).matches('.odyssey-scroll-track')))) schedule()
     if (pendingRoots.size && !scanTimer) scanTimer = win.setTimeout(() => {
       scanTimer = 0
       const roots = [...pendingRoots].filter(root => root.isConnected && ![...pendingRoots].some(parent => parent !== root && parent.contains(root)))
@@ -101,6 +101,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     }, 100)
   })
   const edge = (e: PointerEvent) => {
+    if (e.buttons || (e.target as Element)?.closest?.('[data-research-canvas]')) return
     for (const bar of bars.values()) {
       const r = bar.port.getBoundingClientRect()
       const edge = rightEdge(bar.port)

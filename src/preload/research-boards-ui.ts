@@ -1,3 +1,4 @@
+import { researchBoardRunning } from './research-board-activity'
 import { orderBoardConversationGroups } from './research-board-conversation-order'
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
 import { TemporaryBoards } from './temporary-board'
@@ -5,7 +6,7 @@ import { installBoardSessionFork } from './board-session-fork'
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
-import { Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { StateDot, Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { admitSharedDraft } from './shared-send-draft'
 import { promoteSidebarOrder } from './sidebar-manual-order'
 import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
@@ -1288,6 +1289,14 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     getState: () => state,
     getView: view,
     identity,
+    subscribeActivity(id: string, listener: () => void) {
+      const offList = deps.sessions.list.subscribe(listener)
+      const offWorkspace = deps.researchWorkspaces.for(id).subscribe(listener)
+      return () => { offList(); offWorkspace() }
+    },
+    isRunning(id: string) {
+      return researchBoardRunning(deps.sessions.list.getSnapshot().byId, id, deps.researchWorkspaces.for(id).getSnapshot().artifacts)
+    },
     editedAt: (id: string) =>
       deps.sessions.list.getSnapshot().byId[id]?.updatedAt as
         number | undefined,
@@ -1900,12 +1909,15 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
   const selected = selectedSession === ('boardId' in entry ? entry.localSessionId : entry.sessionId) && page.current() === selectedSession
   const shared = 'boardId' in entry
   const sessionId = shared ? entry.localSessionId : entry.sessionId
+  const subscribeActivity = React.useCallback((listener: () => void) => page.subscribeActivity(sessionId, listener), [page, sessionId])
+  const activitySnapshot = React.useCallback(() => page.isRunning(sessionId), [page, sessionId])
+  const running = React.useSyncExternalStore(subscribeActivity, activitySnapshot, activitySnapshot)
   const collaboration = shared && entry.sharingState === 'shared'
   const items = boardEntryActions(entry).map(item => ({ ...item, icon: item.id === 'collaboration' ? boardIcon('people') : h(item.id === 'delete' ? IconTrashOutline16 : item.id === 'rename' ? IconEditOutline16 : IconFolderOpenOutline16) }))
   return h('div', { className: ['srb-row', R.sessionRow, !nested && R.flatSessionRowWithoutStatus, selected && R.selected, open && R.menuOpen, marker === 'before' && R.dropBefore, marker === 'after' && R.dropAfter].filter(Boolean).join(' '), 'data-menu-open': open, 'aria-current': selected,
     ...drag, 'data-drop-marker': marker ?? undefined,
     onContextMenu: (event: React.MouseEvent) => { event.preventDefault(); setOpen(true) } },
-    nested && h('span', { className: R.slot, 'aria-hidden': true }),
+    (nested || running) && h('span', { className: R.slot, 'aria-label': running ? '任务运行中' : undefined }, running && h(StateDot, { state: 'ongoing' })),
     h('button', { className: R.title + ' srb-board-title', title: entry.title, onClick: safely(page, async () => {
       if (shared) await page.openBoard(entry.boardId)
       else await page.openPersonal(entry.sessionId)
