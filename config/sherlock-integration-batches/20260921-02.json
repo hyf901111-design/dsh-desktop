@@ -97,6 +97,50 @@
           "修正版坐标点击与用户物理输入并行尚待新集成包验收"
         ],
         "generatedAt": "2026-09-21T04:54:27.674559+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
+        "verificationCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
+            "completedAt": "2026-09-21T04:55:03.765Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
+            "completedAt": "2026-09-21T04:55:03.765Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/build-computer-stroke.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/build-computer-stroke.mjs",
+            "verifiedCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
+            "completedAt": "2026-09-21T04:55:03.765Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T04:55:03.765Z"
       }
     }
   ],
