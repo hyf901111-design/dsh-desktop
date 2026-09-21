@@ -16,3 +16,36 @@
 - 保留 Developer ID 与旧版兼容桥签名；按用户要求跳过 Apple 公证与 stapling。
 - 验证双通道公开资源、Range/206 与差分合成 SHA-512，不执行旧客户端全量安装重启测试。
 - 从干净的本地 main 构建，源码同步 GitHub hyf、main，不推送版本标签。
+
+## 构建与客户端验证
+
+- 从干净本地 main 提交 `c41c65f3f3a1141837fcf00ca297061ab7c9a8f2` 构建，所有本地分支已合入 main，所有 worktree 干净。
+- 14 个测试文件共 107 项聚焦检查及类型检查通过；包运行时测试首次超过默认 5 秒，单独复验通过。未运行全功能测试。
+- 标准 App、DMG 签名与包运行时检查通过，DMG CRC、两份 ZIP CRC 通过；主进程及 preload 与构建输出逐字节一致。
+- 构建明确设置 `mac.notarize=false`，未执行 Apple 公证或 stapling。
+- 兼容桥外层标识 `io.dsh.desktop`，满足旧证书指定要求；内嵌 App 标识 `com.evanarts.sherlock`，两层版本均为 1.0.4，ShipIt、Squirrel、Mantle、ReactiveObjC 齐全。
+- 实际启动签名客户端，关于页显示“当前版本 1.0.4”及全部五项中文更新日志；原有工作区、会话可见，返回主界面后保持打开。
+- 保存上一版双通道元数据、ZIP、blockmap、DMG，核对大小和 SHA-512 与 1.0.3 公开元数据一致。
+
+## 公开资源与差分验证
+
+- 按顺序上传 5 个不可变资源、更新稳定 DMG、提升双通道元数据；临时上传 Worker 已删除。
+- 两通道元数据均为 1.0.4，中英文更新日志、文件大小、SHA-512 与本地签名构建一致。
+- 5 个对象大小和摘要一致，两份公开 blockmap 逐字节一致；ZIP、DMG、新旧稳定地址的首部、中部、尾部共 15 次 Range 请求均返回正确的 206、Content-Range 与字节内容。
+- 不可变资源采用 immutable 缓存，元数据 no-cache，稳定安装包 no-store。
+- 兼容通道 1.0.3 → 1.0.4：实际传输 185,444,426 字节，复用 363,022,728 字节，763 次单段 Range/206 请求；重建 548,467,154 字节，SHA-512 与签名构建一致，无全量回退。
+- 标准通道 1.0.3 → 1.0.4：实际传输 135,356,462 字节，复用 361,654,204 字节，791 次单段 Range/206 请求；重建 497,010,666 字节，SHA-512 与签名构建一致，无全量回退。
+- 差分验证使用真实公开 blockmap 与 electron-updater 下载器，未执行旧客户端全量安装重启测试。
+
+## 发布地址
+
+- 标准更新源：https://updates.evanarts.com/notarized/latest/latest-mac.yml
+- 兼容更新源：https://updates.evanarts.com/latest/latest-mac.yml
+- 稳定安装包：https://updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg
+- 本次为已签名但未公证的 macOS Apple Silicon 版本，不包含 Intel 或 Windows 发布。
+
+## 保留策略与源码同步
+
+- 全部公开资源与双通道差分验证通过后，仅精确删除 `releases/v0.9.14/` 下 5 个对象，逐项确认返回 404；保留 1.0.0 至 1.0.4。
+- 清理后双通道再次查询仍为 1.0.4。
+- 已验收代码和发布构建提交均已快进同步 GitHub `hyf`、`main`；发布记录和库存清单随最终提交同步，不推送版本标签。
