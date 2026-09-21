@@ -36,7 +36,7 @@ export class ComputerController {
     driver(): Promise<ComputerDriver>
     prepareObservation?(result: { data: RecordValue; screenshots: DriverResult['images'] }): { data: RecordValue; screenshots: DriverResult['images'] }
     unchanged?(before: Observation, after: Observation, input: RecordValue): boolean
-    stroke?(target: RecordValue, data: RecordValue, strokes: { x: number; y: number }[][], duration: number, signal: AbortSignal): Promise<void>
+    stroke?(target: RecordValue, data: RecordValue, strokes: { x: number; y: number }[][], duration: number, signal: AbortSignal, modifiers: string[]): Promise<void>
     pointer(data?: { x: number; y: number; drag: boolean }): void
     visibility(active: boolean): void
     screenPoint(target: RecordValue, data: RecordValue, x: number, y: number): { x: number; y: number }
@@ -156,7 +156,8 @@ export class ComputerController {
           if (!token) throw Error('刷新后的控件不可操作，请重新 observe。')
         }
       }
-      const args: RecordValue = { target: observed.target, session: this.runId, delivery_mode: 'foreground' }
+      if (observed.target.kind !== 'window') throw Error('后台输入需要目标应用窗口；桌面截图仅用于观察，请先 windows/observe 选择窗口。')
+      const args: RecordValue = { target: observed.target, session: this.runId, delivery_mode: 'background' }
       let point: { x: number; y: number } | undefined
       if (token !== undefined) {
         const element = observed.data.elements?.find((e: RecordValue) => e.element_token === token)
@@ -199,30 +200,27 @@ export class ComputerController {
           point = this.options.screenPoint(observed.target, observed.data, strokes[0]![0]!.x, strokes[0]![0]!.y)
           break
         case 'drag':
+          if (!this.options.stroke) throw Error('后台拖拽不可用，未切换到前台输入。')
           this.validatePoint(observed, v.x, v.y); this.validatePoint(observed, v.to_x, v.to_y)
-          delete args.x; delete args.y; delete args.element_token
-          Object.assign(args, { from_x: this.driverX(observed, v.x), from_y: this.driverY(observed, v.y), to_x: this.driverX(observed, v.to_x), to_y: this.driverY(observed, v.to_y), duration_ms: 700, steps: 45 })
-          if (v.modifiers) args.modifier = modifiers(v.modifiers)
+          if (v.button !== undefined && v.button !== 'left') throw Error('后台拖拽目前只支持左键。')
+          strokes = [[{ x: v.x, y: v.y }, { x: v.to_x, y: v.to_y }]]
+          duration = 700
+          point = this.options.screenPoint(observed.target, observed.data, v.x, v.y)
           break
       }
+      const gestureModifiers = strokes && v.modifiers !== undefined ? modifiers(v.modifiers) : []
+      if (gestureModifiers.includes('fn')) throw Error('后台拖拽不支持 fn 修饰键。')
       this.observation = undefined // Never replay a gesture against the old snapshot, including on failure.
-      if (point) this.options.pointer({ ...point, drag: v.op === 'drag' || v.op === 'stroke' })
+      if (point) this.options.pointer({ ...point, drag: !!strokes })
       const result = strokes
         ? await (async () => {
-          try { await call('bring_to_front', { pid: observed!.target.pid, window_id: observed!.target.window_id }) }
-          catch (error) {
-            // Electron helper windows can make Cua's whole-window ordering test
-            // fail after focus was confirmed. Only this exact partial result is
-            // eligible; native stroke still independently verifies foreground,
-            // geometry and that no foreign window covers the entire ink region.
-            if (!(error instanceof Error) || !error.message.includes('focused=true, frontmost_ordinary=false')) throw error
-          }
-          await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined)
-          return { data: { performed: true, strokes: strokes!.length } }
+          await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined, gestureModifiers)
+          return { data: { performed: true, strokes: strokes!.length, delivery_mode: 'background' } }
         })()
         : await call(tool, args)
       budget.failures = 0
-      const finalPoint = v.op === 'drag' ? this.options.screenPoint(observed.target, observed.data, v.to_x, v.to_y) : point
+      const last = strokes?.at(-1)?.at(-1)
+      const finalPoint = last ? this.options.screenPoint(observed.target, observed.data, last.x, last.y) : point
       this.options.pointer(finalPoint ? { ...finalPoint, drag: false } : undefined)
       // Let the application's event/render queue consume the input before the
       // screenshot. Otherwise a successful tool selection looks unchanged.
@@ -236,10 +234,7 @@ export class ComputerController {
       if (combined.aborted) this.stopped.add(id)
       throw error
     } finally {
-      // Native macOS drag is an atomic bounded gesture. An RPC cancellation can
-      // resolve before its blocking input worker emits mouseUp; retain the lease
-      // for the maximum 700ms gesture plus its focus/cleanup settling time.
-      if (combined.aborted && v.op === 'drag') await new Promise(resolve => setTimeout(resolve, 1200))
+      // Native gestures settle only after releasing the target's held button.
       this.busy = false
       this.abort = undefined
       if (failed || combined.aborted || this.stopped.has(id)) await this.endLease().catch(() => {})

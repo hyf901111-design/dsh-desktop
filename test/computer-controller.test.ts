@@ -5,8 +5,8 @@ const controllers: ComputerController[] = []
 afterEach(async () => { for (const c of controllers.splice(0)) await c.stop(); vi.useRealTimers() })
 function setup(options: Partial<ConstructorParameters<typeof ComputerController>[0]> = {}) {
   const callTool = vi.fn(async (name: string, raw: string, _options?: { signal: AbortSignal }) => ({
-    isError: false, text: '', structuredJson: JSON.stringify(name === 'get_window_state' ? { screenshot_width: 800, screenshot_height: 600, window_bounds: { x: 20, y: 30, width: 400, height: 300 }, elements: [{ element_token: 'verified-token', frame: { x: 20, y: 30, w: 10, h: 10 } }] } : { name, ...JSON.parse(raw) }),
-    images: name === 'get_window_state' ? [{ mimeType: 'image/png', dataBase64: 'AA==' }] : []
+    isError: false, text: '', structuredJson: JSON.stringify(['get_window_state', 'get_desktop_state'].includes(name) ? { screenshot_width: 800, screenshot_height: 600, window_bounds: { x: 20, y: 30, width: 400, height: 300 }, elements: [{ element_token: 'verified-token', frame: { x: 20, y: 30, w: 10, h: 10 } }] } : { name, ...JSON.parse(raw) }),
+    images: ['get_window_state', 'get_desktop_state'].includes(name) ? [{ mimeType: 'image/png', dataBase64: 'AA==' }] : []
   }))
   const c = new ComputerController({ driver: async () => ({ callTool }), pointer: vi.fn(), visibility: vi.fn(), screenPoint: (_t, _d, x, y) => ({ x, y }), ...options })
   controllers.push(c)
@@ -42,29 +42,13 @@ it('holds a global lease until finish and allows another session afterward', asy
   await expect(run({ op: 'apps' })).rejects.toThrow('本轮桌面控制已停止')
   await c.run({ op: 'apps', sessionId: 'b' }, new AbortController().signal)
 })
-it('stop cancels an in-flight gesture and releases the lease only after it unwinds', async () => {
-  const { run, c, callTool } = setup()
+it('routes drag through the cancellable background gesture worker in displayed pixels', async () => {
+  const stroke = vi.fn(async () => {})
+  const { run, callTool } = setup({ stroke, prepareObservation: r => ({ ...r, data: { ...r.data, original_screenshot_width: 1600, original_screenshot_height: 1200 } }) })
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
-  const original = callTool.getMockImplementation()!
-  callTool.mockImplementation(async (n, raw, options) => {
-    if (n === 'drag') await new Promise((_, reject) => options!.signal.addEventListener('abort', () => reject(options!.signal.reason), { once: true }))
-    return original(n, raw, options)
-  })
-  const pending = run({ op: 'drag', revision: o.revision, x: 20, y: 30, to_x: 200, to_y: 250 })
-  const rejected = expect(pending).rejects.toThrow('停止')
-  await vi.waitFor(() => expect(callTool.mock.calls.some(([n]) => n === 'drag')).toBe(true))
-  await c.stop()
-  await rejected
-  expect(callTool.mock.calls.some(([n]) => n === 'end_session')).toBe(true)
-  await run({ op: 'release' })
-  await run({ op: 'apps' })
-})
-
-it('maps displayed screenshot coordinates back to driver pixels', async () => {
-  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, original_screenshot_width: 1600, original_screenshot_height: 1200 } }) })
-  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
-  await run({ op: 'drag', revision: o.revision, x: 100, y: 100, to_x: 300, to_y: 200 })
-  expect(JSON.parse(callTool.mock.calls.find(([n]) => n === 'drag')![1])).toMatchObject({ from_x: 200, from_y: 200, to_x: 600, to_y: 400 })
+  await run({ op: 'drag', revision: o.revision, x: 100, y: 100, to_x: 300, to_y: 200, modifiers: ['shift'] })
+  expect(stroke).toHaveBeenCalledWith(o.target, expect.anything(), [[{ x: 100, y: 100 }, { x: 300, y: 200 }]], 700, expect.any(AbortSignal), ['shift'])
+  expect(callTool.mock.calls.some(([n]) => n === 'drag' || n === 'bring_to_front')).toBe(false)
 })
 it.each([true, false])('refreshes delayed model observations and only inputs on unchanged targets (%s)', async unchanged => {
   const compare = vi.fn(() => unchanged)
@@ -83,9 +67,9 @@ it('batches continuous strokes and returns one post-gesture observation', async 
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
   const paths = [[{ x: 40, y: 60 }, { x: 80, y: 100 }, { x: 120, y: 60 }], [{ x: 50, y: 80 }, { x: 100, y: 80 }]]
   const result = await run({ op: 'stroke', revision: o.revision, strokes: paths, duration_ms: 1600 })
-  expect(stroke).toHaveBeenCalledWith(o.target, expect.anything(), paths, 1600, expect.any(AbortSignal))
+  expect(stroke).toHaveBeenCalledWith(o.target, expect.anything(), paths, 1600, expect.any(AbortSignal), [])
   expect(callTool.mock.calls.filter(([n]) => n === 'get_window_state')).toHaveLength(2)
-  expect(result.action).toEqual({ performed: true, strokes: 2 })
+  expect(result.action).toEqual({ performed: true, strokes: 2, delivery_mode: 'background' })
   expect(result.revision).not.toBe(o.revision)
 })
 it.each([[], [[{ x: -1, y: 2 }, { x: 20, y: 20 }]], Array.from({ length: 13 }, () => [{ x: 1, y: 1 }, { x: 2, y: 2 }])])('rejects malformed stroke batches without delivering input', async strokes => {
@@ -141,15 +125,49 @@ it('binds discovered windows to their owning process and hides off-screen utilit
   await run({ op: 'release' })
   await expect(run({ op: 'observe', window_id: 10 })).rejects.toThrow()
 })
-it.each([true, false])('only delegates a confirmed-focus ordering partial to independently verified native ink (%s)', async partial => {
-  const stroke = vi.fn(async () => {})
-  const { run, callTool } = setup({ stroke })
-  const original = callTool.getMockImplementation()!
-  callTool.mockImplementation(async (name, raw, options) => name === 'bring_to_front' ? { isError: true, images: [], structuredJson: '{}', text: partial ? 'bring_to_front: exact window was not verified (focused=true, frontmost_ordinary=false)' : 'permission denied' } : original(name, raw, options))
+it.each([
+  { op: 'click', x: 20, y: 30 }, { op: 'type', text: '后台' },
+  { op: 'key', key: 'Return' }, { op: 'hotkey', keys: ['cmd', 'a'] },
+  { op: 'scroll', x: 20, y: 30, direction: 'down' }
+])('never accepts foreground escalation from model arguments: %j', async action => {
+  const { run, callTool } = setup()
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
-  const action = run({ op: 'stroke', revision: o.revision, strokes: [[{ x: 50, y: 50 }, { x: 200, y: 150 }]] })
-  if (partial) { await action; expect(stroke).toHaveBeenCalledOnce() }
-  else { await expect(action).rejects.toThrow('permission denied'); expect(stroke).not.toHaveBeenCalled() }
+  await run({ ...action, revision: o.revision, delivery_mode: 'foreground' })
+  const input = callTool.mock.calls.filter(([n]) => !['start_session', 'get_window_state'].includes(n))
+  expect(input).toHaveLength(1)
+  expect(JSON.parse(input[0]![1])).toMatchObject({ delivery_mode: 'background', target: o.target })
+})
+it('refuses desktop input without falling back to global mouse events', async () => {
+  const { run, callTool } = setup()
+  const o = await run({ op: 'observe', scope: 'desktop' })
+  await expect(run({ op: 'click', revision: o.revision, x: 20, y: 30 })).rejects.toThrow('后台输入需要目标应用窗口')
+  expect(callTool.mock.calls.some(([n]) => n === 'click')).toBe(false)
+})
+it('does not retry refused background input in the foreground', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'click'
+    ? { isError: true, images: [], text: 'background_unavailable', structuredJson: '{}' }
+    : original(name, raw, options))
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  await expect(run({ op: 'click', revision: o.revision, x: 20, y: 30 })).rejects.toThrow('background_unavailable')
+  expect(callTool.mock.calls.filter(([n]) => n === 'click')).toHaveLength(1)
+  expect(callTool.mock.calls.some(([n]) => n === 'bring_to_front')).toBe(false)
+})
+it.each(['drag', 'stroke'])('retains the lease until cancelled %s releases its target', async op => {
+  let release!: () => void
+  const stroke = vi.fn(async (_t, _d, _s, _duration, signal: AbortSignal) => {
+    await new Promise<void>(resolve => { release = resolve }); signal.throwIfAborted()
+  })
+  const { run, c, callTool } = setup({ stroke })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const pending = run({ op, revision: o.revision, x: 1, y: 1, to_x: 2, to_y: 2, strokes: [[{ x: 1, y: 1 }, { x: 2, y: 2 }]] })
+  const rejected = expect(pending).rejects.toThrow('停止')
+  await vi.waitFor(() => expect(stroke).toHaveBeenCalledOnce())
+  await c.stop()
+  expect(callTool.mock.calls.some(([n]) => n === 'end_session')).toBe(false)
+  release(); await rejected
+  expect(callTool.mock.calls.some(([n]) => n === 'end_session')).toBe(true)
 })
 
 it('ignores only snapshot tokens when comparing actionable controls', () => {

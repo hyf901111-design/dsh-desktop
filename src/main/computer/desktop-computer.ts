@@ -13,7 +13,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
   let pointer: BrowserWindow | undefined, controls: BrowserWindow | undefined
   let pointerTimer: ReturnType<typeof setInterval> | undefined
   let fadeTimer: ReturnType<typeof setTimeout> | undefined
-  let strokeDriver: { draw(args: unknown): Promise<void>; cancel(): void } | undefined
+  let strokeDriver: { draw(args: unknown): Promise<void>; cancel(): void; position(): { x: number; y: number } | undefined } | undefined
   const shortcut = 'CommandOrControl+Shift+Escape'
   const stop = () => { void controller.stop().catch(error => console.warn('[computer] stop failed', error)) }
   function overlay(html: string, width: number, height: number, mouse: boolean) {
@@ -31,7 +31,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
   function ensureOverlays() {
     if (!pointer || pointer.isDestroyed()) pointer = overlay(`<div style="display:flex;align-items:flex-start;gap:3px;padding:1px"><svg width="18" height="19" viewBox="0 0 20 22" style="filter:drop-shadow(0 1px 2px #0006)"><path d="M3 2.5L16.7 8.7Q17.5 9.1 16.6 9.5L10.8 11.5L8.4 17.8Q8 18.7 7.6 17.7Z" fill="rgba(135,135,135,.5)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/></svg><span style="display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 6px;border-radius:4px;background:#878787;color:white;font:400 11px/14px system-ui,-apple-system,sans-serif;white-space:nowrap"><span style="line-height:14px;transform:translateY(1px)">智能助理</span></span></div>`, 150, 26, false)
     if (!controls || controls.isDestroyed()) {
-      controls = overlay(`<div style="height:34px;background:#292929ee;border:1px solid #777;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:12px"><span>智能助理正在操作桌面</span><a href="https://stop.invalid" style="color:white;text-decoration:none;background:#555;padding:4px 8px;border-radius:5px" title="⌘⇧Esc">停止</a></div>`, 246, 38, true)
+      controls = overlay(`<div style="height:34px;background:#292929ee;border:1px solid #777;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:12px"><span>智能助理正在后台操作</span><a href="https://stop.invalid" style="color:white;text-decoration:none;background:#555;padding:4px 8px;border-radius:5px" title="⌘⇧Esc">停止</a></div>`, 246, 38, true)
       controls.webContents.once('did-finish-load', () => { if (!disposed && visible) controls?.showInactive() })
     }
   }
@@ -82,7 +82,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
       // The driver includes the same AX tree in structured and Markdown forms.
       // Keep actionable structured elements; duplicate legacy text wastes vision
       // context and lengthens every subsequent model response.
-      const { tree_markdown: _tree, _note, background_input: _background, ...view } = result.data
+      const { tree_markdown: _tree, _note, ...view } = result.data
       return { data: { ...view, screenshot_mime_type: 'image/jpeg', original_screenshot_width: result.data.screenshot_width,
         original_screenshot_height: result.data.screenshot_height, original_scale_factor: result.data.scale_factor,
         screenshot_width: shown.width, screenshot_height: shown.height,
@@ -109,7 +109,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
       const pixels = (observation: typeof before) => nativeImage.createFromBuffer(Buffer.from(observation.screenshots[0]!.dataBase64, 'base64')).crop(rect).toBitmap()
       return pixels(before).equals(pixels(after))
     },
-    stroke: async (target, data, strokes, duration, signal) => {
+    stroke: async (target, data, strokes, duration, signal, modifiers) => {
       if (!strokeDriver) strokeDriver = createRequire(import.meta.url)(join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'computer-stroke.node'))
       const native = strokeDriver!
       const b = data.window_bounds
@@ -119,6 +119,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
       signal.addEventListener('abort', cancel, { once: true })
       try {
         await native.draw({ pid: target.pid, window_id: target.window_id, frame: b, duration_ms: duration,
+          flags: modifiers.reduce((flags, key) => flags | ({ shift: 1 << 17, ctrl: 1 << 18, alt: 1 << 19, option: 1 << 19, cmd: 1 << 20 }[key] ?? 0), 0),
           strokes: strokes.map(path => path.map(p => ({ x: b.x + p.x * b.width / data.screenshot_width, y: b.y + p.y * b.height / data.screenshot_height }))) })
         signal.throwIfAborted()
       } finally { signal.removeEventListener('abort', cancel) }
@@ -127,9 +128,8 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
       clearInterval(pointerTimer); pointerTimer = undefined
       if (!data) return
       ensureOverlays(); move(data.x, data.y)
-      // Foreground drag emits real OS pointer events; track their measured position,
-      // rather than animating an assumed start/end trajectory while a gesture runs.
-      if (data.drag) pointerTimer = setInterval(() => { const p = screen.getCursorScreenPoint(); move(p.x, p.y) }, 16)
+      // Follow the last event actually sent by our worker, never the user's mouse.
+      if (data.drag) pointerTimer = setInterval(() => { const p = strokeDriver?.position(); if (p) move(p.x, p.y) }, 16)
     },
     visibility: active => {
       visible = active
@@ -139,7 +139,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
         const area = screen.getPrimaryDisplay().workArea
         controls!.setPosition(area.x + area.width - 262, area.y + 8)
         controls!.showInactive()
-        if (!pointer!.isVisible()) { const p = screen.getCursorScreenPoint(); move(p.x, p.y) }
+
         if (!globalShortcut.isRegistered(shortcut)) globalShortcut.register(shortcut, stop)
         void pointer!.webContents.executeJavaScript("document.body.style.opacity='1'").catch(() => {})
       } else {
