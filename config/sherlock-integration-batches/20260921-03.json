@@ -124,6 +124,44 @@
           "旧邀请汇总测试和旧默认尺寸测试存在基线不一致，未修改相关功能"
         ],
         "generatedAt": "2026-09-21T07:19:04.039400+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
+        "verificationCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
+            "completedAt": "2026-09-21T07:19:45.947Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-canvas-render-performance.test.ts",
+              "test/research-board-activity.test.ts",
+              "test/research-task-runtime.test.js",
+              "test/research-marquee-stroke.test.js",
+              "test/figma-scrollbars.test.ts",
+              "test/figma-task-scrollbar.test.ts",
+              "test/research-canvas-deferred-html-patch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/research-canvas-render-performance.test.ts test/research-board-activity.test.ts test/research-task-runtime.test.js test/research-marquee-stroke.test.js test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/research-canvas-deferred-html-patch.test.ts",
+            "verifiedCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
+            "completedAt": "2026-09-21T07:19:45.947Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T07:19:45.947Z"
       }
     }
   ],
