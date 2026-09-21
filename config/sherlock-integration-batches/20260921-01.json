@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "暂停任务弱化显示与详情按钮箭头对齐",
+        "featureName": "暂停任务与箭头样式优化、恢复左侧栏拖动",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
-        "tipCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
+        "baseCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
+        "tipCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
         "commits": [
           {
-            "commit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
+            "commit": "870ce87cb4e441bcb18c549e9f43ad6360b0b37a",
             "parents": [
-              "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f"
+              "e7b83546501fbed21f99f8784ff0216e8adc5d05"
             ],
-            "subject": "优化：暂停任务弱化显示与详情按钮箭头对齐"
+            "subject": "修复：定时任务页面恢复全局左侧栏拖动与宽度同步"
+          },
+          {
+            "commit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
+            "parents": [
+              "870ce87cb4e441bcb18c549e9f43ad6360b0b37a"
+            ],
+            "subject": "样式：详情更多按钮沿用全局展开控件的尺寸"
           }
         ],
         "files": [
@@ -30,6 +37,10 @@
           {
             "status": "M",
             "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
           }
         ],
         "checks": [
@@ -40,9 +51,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查及16项定时任务聚焦测试通过",
-            "verifiedCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
-            "completedAt": "2026-09-21T02:48:13.703348+00:00",
+            "summary": "类型检查与17项定时任务聚焦测试通过；其后仅同步按钮为全局控件28px尺寸",
+            "verifiedCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
+            "completedAt": "2026-09-21T02:50:45.251408+00:00",
             "timeoutMs": 120000
           },
           {
@@ -54,15 +65,15 @@
               "test/scheduled-tasks.test.ts"
             ],
             "outcome": "passed",
-            "summary": "类型检查及16项定时任务聚焦测试通过",
-            "verifiedCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
-            "completedAt": "2026-09-21T02:48:13.703348+00:00",
+            "summary": "类型检查与17项定时任务聚焦测试通过；其后仅同步按钮为全局控件28px尺寸",
+            "verifiedCommit": "ea8b6f3109b6fd8c7f55c35939327c7568299216",
+            "completedAt": "2026-09-21T02:50:45.251408+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "沿用已验证任务交互，本次调整暂停态透明度、更多按钮位置、类型与记录箭头；原生视觉待集成打包"
+          "summary": "交互验证原生侧栏宽度变更同步与退出清理；静态样式对照全局28px按钮；客户端视觉待打包"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -73,41 +84,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T02:48:13.703348+00:00"
-      },
-      "merged": {
-        "mergeCommit": "577ea0c1cecc85164140d22a3b2491f25e03c795",
-        "verificationCommit": "577ea0c1cecc85164140d22a3b2491f25e03c795",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "577ea0c1cecc85164140d22a3b2491f25e03c795",
-            "completedAt": "2026-09-21T02:48:28.492Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "577ea0c1cecc85164140d22a3b2491f25e03c795",
-            "completedAt": "2026-09-21T02:48:28.492Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T02:48:28.492Z"
+        "generatedAt": "2026-09-21T02:50:45.251408+00:00"
       }
     }
   ],
