@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260921-04",
+  "branch": "codex/integration/20260921-04",
+  "baseMainCommit": "01840d653d88ec1766bebb63e0267a029f3b4f58",
+  "expectedMainCommit": "01840d653d88ec1766bebb63e0267a029f3b4f58",
+  "createdAt": "2026-09-21T09:11:21.857Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件定时任务与右侧页签",
+        "branch": "codex/feat/component-scheduled-tasks-20260921",
+        "baseCommit": "01840d653d88ec1766bebb63e0267a029f3b4f58",
+        "tipCommit": "8ff095715c4fc0e5885b083f86ebb0c7a93f46d8",
+        "commits": [
+          {
+            "commit": "8ff095715c4fc0e5885b083f86ebb0c7a93f46d8",
+            "parents": [
+              "01840d653d88ec1766bebb63e0267a029f3b4f58"
+            ],
+            "subject": "功能：组件定时更新与右侧设置页签及任务类型管理"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/component-scheduled-tasks.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/scheduled/component-executor.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/scheduled/task-runner.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/scheduled/task-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/canvas-action-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/scheduled-tasks.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/component-scheduled-tasks.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-tasks.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "33项聚焦检查和类型检查通过",
+            "verifiedCommit": "8ff095715c4fc0e5885b083f86ebb0c7a93f46d8",
+            "completedAt": "2026-09-21T09:11:08.208357+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/component-scheduled-tasks.test.ts",
+              "test/research-canvas-actions-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "33项聚焦检查和类型检查通过",
+            "verifiedCommit": "8ff095715c4fc0e5885b083f86ebb0c7a93f46d8",
+            "completedAt": "2026-09-21T09:11:08.208548+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实ScheduledTaskView DOM验证组件页签、表单绑定、保存及类型筛选；打包客户端待复验"
+        },
+        "acceptanceCriteria": [
+          "组件更多菜单设定定时任务",
+          "右侧页签保持画布并下沉表单",
+          "标题时钟标识与全局类型标签",
+          "定时只更新绑定组件并保护用户并发修改"
+        ],
+        "risks": [
+          "共享画板失去编辑权限时任务失败并保留原内容"
+        ],
+        "generatedAt": "2026-09-21T09:11:21.240316+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/scheduled-tasks.test.ts",
+        "test/scheduled-task-view.test.ts",
+        "test/component-scheduled-tasks.test.ts",
+        "test/research-canvas-actions-client.test.js"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
