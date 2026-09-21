@@ -230,3 +230,20 @@ it('opens component settings in a tab without covering the canvas and filters ta
   expect(doc.querySelector('.st-badge')?.textContent).toBe('组件任务')
   view.close()
 })
+
+it('does not resurrect a closed component tab or replace a newer component draft', async () => {
+  const w=new Window();windows.push(w);vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
+  const doc=w.document as unknown as Document
+  doc.body.innerHTML='<div data-scheduled-panel-slot></div>'
+  const pending:((tasks:any[])=>void)[]=[]
+  const view=new ScheduledTaskView(doc,{list:()=>new Promise(resolve=>pending.push(resolve)),workspaces:async()=>[],save:vi.fn(),action:vi.fn()})
+  view.mount()
+  const first=view.openComponent({sessionId:'c',nodeId:'a',title:'A',boardTitle:'画板'})
+  const second=view.openComponent({sessionId:'c',nodeId:'b',title:'B',boardTitle:'画板'})
+  pending[1]!([]);await second;pending[0]!([]);await first
+  expect(doc.querySelector('.st-component-target')?.textContent).toContain('画板 · B')
+  const closing=view.openComponent({sessionId:'c',nodeId:'a',title:'A',boardTitle:'画板'})
+  view.close();pending[2]!([]);await closing
+  expect(doc.querySelector('.st-detail')).toBeNull()
+  expect(doc.body.hasAttribute('data-scheduled-component')).toBe(false)
+})

@@ -19,7 +19,7 @@ export class ScheduledComponentExecutor implements ComponentExecutor {
     const rpcId = 'scheduled:' + run.id
     const baseline = fingerprint(node.content.containerSpec)
     await this.store.updateRun(task.id, run.id, {rpcId, componentBaseline:baseline})
-    await this.runtime('start', {taskId:rpcId,sessionId:task.component!.sessionId,kind:'container',query:task.prompt,
+    await this.runtime('start', {taskId:rpcId,sessionId:task.component!.sessionId,kind:'container',query:task.prompt.slice(0,4000),
       prompt:`这是组件定时更新的一次执行，仅交付此组件的新内容，不创建定时任务，不操作其他组件。保留现有组件类型和结构，按用户要求更新数据。\n用户要求：${task.prompt}\n现有组件：${JSON.stringify(node.content.containerSpec)}`})
   }
   async inspect(task: ScheduledTask, run: TaskRun): ReturnType<ComponentExecutor['inspect']> {

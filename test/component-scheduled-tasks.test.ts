@@ -21,13 +21,13 @@ it.each([false,true])('updates only the bound component, detects concurrent chan
  const dir=await mkdtemp(join(tmpdir(),'component-task-'))
  try{
  const store=new TaskStore(join(dir,'tasks.json'))
- const task=await store.save({title:'更新',prompt:'更新指标',workspaceId:'',component:{sessionId:'canvas',nodeId:'a',title:'指标',boardTitle:'画板'},schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-25'},notification:'always'})
+ const task=await store.save({title:'更新',prompt:'更新指标'.repeat(2500),workspaceId:'',component:{sessionId:'canvas',nodeId:'a',title:'指标',boardTitle:'画板'},schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-25'},notification:'always'})
  let spec={version:1,type:'markdown',title:'指标',content:'旧内容'}
  const canvas=vi.fn(async(_target,method,args:any)=>{
    if(method==='inspect')return {revision:'current',writable:true,nodes:[{id:'a',kind:'generated-container',capabilities:{fields:{containerSpec:{}}},content:{containerSpec:spec}}]}
    expect(args.changes).toHaveLength(1);expect(args.changes[0].id).toBe('a');spec=args.changes[0].fields.containerSpec
  })
- const runtime=vi.fn(async(method,args)=>method==='start'?{status:'running'}:{status:'completed',text:JSON.stringify({...spec,content:'新内容'})})
+ const runtime=vi.fn(async(method,args)=>{ if(method==='start'){expect(Buffer.byteLength(args.query)).toBeLessThanOrEqual(16384);expect(args.prompt).toContain(task.prompt);return {status:'running'}} return {status:'completed',text:JSON.stringify({...spec,content:'新内容'})} })
  const rpc=vi.fn();const notify=vi.fn()
  const runner=new TaskRunner(store,rpc,()=>true,notify,Date.now,new ScheduledComponentExecutor(store,canvas,runtime))
  await runner.run(task.id)
@@ -38,5 +38,19 @@ it.each([false,true])('updates only the bound component, detects concurrent chan
  expect(store.list()[0]!.runs[0]!.status).toBe(changed?'failed':'success')
  expect(spec.content).toBe(changed?'用户修改':'新内容')
  expect(notify).toHaveBeenCalledOnce()
+ }finally{await rm(dir,{recursive:true,force:true})}
+})
+it('keeps ambiguous canvas timeouts recoverable and reconciles without redispatch',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'component-timeout-'))
+ try{
+ const store=new TaskStore(join(dir,'tasks.json'))
+ const task=await store.save({title:'更新',prompt:'更新指标',workspaceId:'',component:{sessionId:'canvas',nodeId:'a',title:'指标',boardTitle:'画板'},schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-25'},notification:'always'})
+ const executor={start:vi.fn(async()=>{}),inspect:vi.fn().mockRejectedValueOnce(Error('画布操作响应超时。请先查看当前状态')).mockResolvedValueOnce({status:'success'})}
+ const runner=new TaskRunner(store,vi.fn(),()=>true,vi.fn(),Date.now,executor)
+ await runner.run(task.id);await runner.tick()
+ expect(store.list()[0]!.runs[0]!.status).toBe('running')
+ await runner.tick()
+ expect(store.list()[0]!.runs[0]!.status).toBe('success')
+ expect(executor.start).toHaveBeenCalledOnce()
  }finally{await rm(dir,{recursive:true,force:true})}
 })
