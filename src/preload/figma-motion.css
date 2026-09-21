@@ -122,19 +122,19 @@ body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"]:active:
   transition-duration: var(--odyssey-motion-press-duration);
 }
 
-/* Individual translate preserves the toolbar's native horizontal centering.
-   Leaving research removes the animation so the next entry plays it again. */
+/* Only conversation-to-research entry is armed by the controller.
+   Individual translate preserves the toolbar's native horizontal centering. */
 @keyframes odyssey-canvas-toolbar-enter {
   from { opacity: 0; translate: 0 80px; }
   to { opacity: 1; translate: 0 0; }
 }
 
-.wSkVaW_root[data-odyssey-page="research"] [data-research-global-toolbar] {
+[data-research-global-toolbar][data-odyssey-toolbar-enter] {
   animation: odyssey-canvas-toolbar-enter 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wSkVaW_root[data-odyssey-page="research"] [data-research-global-toolbar] {
+  [data-research-global-toolbar][data-odyssey-toolbar-enter] {
     animation: none;
   }
 }
