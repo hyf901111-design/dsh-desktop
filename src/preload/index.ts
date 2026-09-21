@@ -1,3 +1,4 @@
+import { ScheduledTaskView } from './scheduled/view'
 import { mountWindowResize } from './window-resize'
 import { createCanvasActionsBridge } from './canvas-actions'
 import { mountUiLocalization } from './ui-localization'
@@ -175,6 +176,12 @@ function initializeUi(): void {
     })
   }
   sidebarUpdateControl.mount()
+  new ScheduledTaskView(document, {
+    list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
+    workspaces: () => ipcRenderer.invoke('scheduled-tasks:request', 'workspaces'),
+    save: (input, id) => ipcRenderer.invoke('scheduled-tasks:request', 'save', { input, id }),
+    action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
+  }).mount()
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,

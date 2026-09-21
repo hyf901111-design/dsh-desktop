@@ -1,0 +1,237 @@
+import { randomUUID } from 'node:crypto'
+import { TaskStore } from './task-store'
+import type { ScheduledTask, TaskRun } from '../../shared/scheduled-tasks'
+type Event = { seq: number; type: string; data: any }
+export type Rpc = <T = any>(
+  method: string,
+  payload: unknown,
+  rpcId?: string,
+) => Promise<T>
+export function harnessRpc(url: () => string | undefined): Rpc {
+  return async <T>(
+    method: string,
+    payload: unknown,
+    rpcId: string = randomUUID(),
+  ): Promise<T> => {
+    const base = url()
+    if (!base) throw new Error('执行服务未就绪，请稍后重试')
+    const response = await fetch(new URL(`/api/${method}`, base), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'client-request', rpcId, method, payload }),
+      signal: AbortSignal.timeout(30000),
+    })
+    if (!response.ok) throw new Error(`执行服务返回 HTTP ${response.status}`)
+    const body = (await response.json()) as any
+    if (body.rpcId !== rpcId || body.result?.ok !== true)
+      throw new Error(body.result?.error?.message || '执行请求失败')
+    return body.result.value as T
+  }
+}
+export class TaskRunner {
+  private active = new Set<string>()
+  private ticking = false
+  private timer?: ReturnType<typeof setInterval>
+  constructor(
+    private store: TaskStore,
+    private rpc: Rpc,
+    private ready: () => boolean,
+    private notify: (task: ScheduledTask, run: TaskRun) => void,
+    private now = Date.now,
+  ) {}
+  start() {
+    this.timer = setInterval(() => void this.tick().catch(console.error), 15000)
+    void this.tick().catch(console.error)
+  }
+  stop() {
+    clearInterval(this.timer)
+  }
+  async tick() {
+    if (this.ticking || !this.ready()) return
+    this.ticking = true
+    try {
+      for (const t of this.store.list(true)) {
+        const running = t.runs.find((r) => r.status === 'running')
+        if (running) {
+          if (!this.active.has(t.id)) {
+            try {
+              await this.reconcile(t, running)
+            } catch (error) {
+              console.error('[scheduled-tasks] reconcile', t.id, error)
+            }
+          }
+          continue
+        }
+        if (
+          !t.deletedAt &&
+          t.state === 'enabled' &&
+          t.nextRun !== null &&
+          t.nextRun <= this.now()
+        )
+          await this.run(t.id, true)
+      }
+    } finally {
+      this.ticking = false
+    }
+  }
+  async run(id: string, automatic = false): Promise<void> {
+    if (!this.ready()) throw new Error('执行服务未就绪')
+    if (this.active.has(id)) throw new Error('任务正在运行')
+    this.active.add(id)
+    try {
+      const task = await this.store.claim(id, automatic)
+      if (!task) {
+        if (!automatic) throw new Error('任务不存在或正在运行')
+        return
+      }
+      const run = task.runs[0]!
+      let dispatching = false
+      try {
+        const sessionId =
+          task.sessionId ||
+          (await this.rpc('session.create', { workspaceId: task.workspaceId }))
+            .sessionId
+        if (typeof sessionId !== 'string') throw new Error('未能创建专属对话')
+        const rpcId = randomUUID()
+        await this.store.updateRun(id, run.id, { sessionId, rpcId }, sessionId)
+        const history = await this.rpc('session.history', {
+          sessionId,
+          maxMessages: 20,
+        })
+        const events = (history.events || []).map((e: any) => e.event as Event)
+        if (
+          [...events]
+            .reverse()
+            .find(
+              (e: Event) => e.type === 'turn/start' || e.type === 'turn/end',
+            )?.type === 'turn/start'
+        )
+          throw new Error('专属对话正在执行其他内容，请稍后重试')
+        await this.rpc('session.rename', { sessionId, title: task.title })
+        // Ordinary session execution owns model selection and permission policy.
+        const models = await this.rpc('session.models', { sessionId })
+        if (!models.current)
+          throw new Error('专属对话尚未选择模型，请打开对话选择模型后重试')
+        const text =
+          task.prompt +
+          '\n\n这是定时任务的一次执行，请现在执行本次内容，不要再创建定时任务。与本对话上次结果比较。若没有值得提醒的新内容，在最终回复末尾单独写 [NO_CHANGE]；有重要变化则写 [CHANGED]。'
+        dispatching = true
+        await this.rpc(
+          'session.prompt',
+          {
+            sessionId,
+            mode: 'queue',
+            content: [{ type: 'text', text }],
+            clientTimeZone: task.schedule.timezone,
+          },
+          rpcId,
+        )
+      } catch (error) {
+        // A lost transport response is not proof of rejection. Reconcile the
+        // durable rpcId instead of allowing a second run to duplicate effects.
+        if (
+          dispatching &&
+          (error instanceof TypeError ||
+            (error instanceof Error &&
+              /timeout|abort|HTTP|fetch|network/i.test(error.message)))
+        )
+          return
+        await this.finish(
+          task,
+          run,
+          'failed',
+          error instanceof Error ? error.message : String(error),
+        )
+      }
+    } finally {
+      this.active.delete(id)
+    }
+  }
+  private async reconcile(task: ScheduledTask, run: TaskRun) {
+    if (!run.sessionId || !run.rpcId) {
+      await this.finish(task, run, 'failed', '上次执行在提交前中断；请手动重试')
+      return
+    }
+    // Page back until this run's prompt, so long tool runs cannot hide completion.
+    let events: Event[] = []
+    let beforeSeq: number | undefined
+    for (let page = 0; page < 100; page++) {
+      const history = await this.rpc('session.history', {
+        sessionId: run.sessionId,
+        maxMessages: 100,
+        ...(beforeSeq === undefined ? {} : { beforeSeq }),
+      })
+      const part: Event[] = (history.events || []).map((e: any) => e.event)
+      events = [...part, ...events]
+      if (
+        events.some(
+          (e) =>
+            e.type === 'user/message' &&
+            (e.data.message || e.data).source?.rpcId === run.rpcId,
+        ) ||
+        !history.hasMore ||
+        !part.length
+      )
+        break
+      beforeSeq = part[0]!.seq
+    }
+    const start = events.findIndex(
+      (e) =>
+        e.type === 'user/message' &&
+        (e.data.message || e.data).source?.rpcId === run.rpcId,
+    )
+    const end =
+      start >= 0
+        ? events.slice(start + 1).find((e) => e.type === 'turn/end')
+        : undefined
+    if (end) {
+      const reason = end.data.reason
+      const output = events
+        .slice(start + 1, events.indexOf(end))
+        .filter((e) => e.type === 'assistant/message')
+        .flatMap((e) =>
+          (e.data.message?.content || [])
+            .filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text),
+        )
+        .join('\n')
+      await this.finish(
+        task,
+        run,
+        reason?.kind === 'completed' ? 'success' : 'failed',
+        reason?.kind === 'completed'
+          ? undefined
+          : reason?.error?.message ||
+              `执行未完成：${reason?.kind || '未知原因'}`,
+        output.trim().endsWith('[NO_CHANGE]'),
+      )
+    } else if (this.now() - run.startedAt > 24 * 60 * 60 * 1000) {
+      await this.finish(
+        task,
+        run,
+        'failed',
+        '未收到完成结果，请检查专属对话；不会自动重试以避免重复执行',
+      )
+    }
+  }
+  private async finish(
+    task: ScheduledTask,
+    run: TaskRun,
+    status: 'success' | 'failed',
+    error?: string,
+    noChange = false,
+  ) {
+    const patch = {
+      status,
+      finishedAt: this.now(),
+      ...(error ? { error } : {}),
+    }
+    await this.store.updateRun(task.id, run.id, patch)
+    if (
+      !task.deletedAt &&
+      task.notification !== 'never' &&
+      (status === 'failed' || task.notification === 'always' || !noChange)
+    )
+      this.notify(task, { ...run, ...patch })
+  }
+}
