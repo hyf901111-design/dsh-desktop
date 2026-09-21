@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "定时任务快捷开关、菜单交互与自动标题",
+        "featureName": "暂停任务弱化显示与详情按钮箭头对齐",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
-        "tipCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
+        "baseCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
+        "tipCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
         "commits": [
           {
-            "commit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
+            "commit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
             "parents": [
-              "63d57a3a09e14c111337aa5dc05397767e95e8d5"
+              "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f"
             ],
-            "subject": "优化：定时任务快捷开关、菜单交互与自动标题"
-          },
-          {
-            "commit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
-            "parents": [
-              "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4"
-            ],
-            "subject": "测试：补齐快捷开关用例的计划字段"
+            "subject": "优化：暂停任务弱化显示与详情按钮箭头对齐"
           }
         ],
         "files": [
@@ -37,10 +30,6 @@
           {
             "status": "M",
             "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
           }
         ],
         "checks": [
@@ -52,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查及16项定时任务聚焦测试通过",
-            "verifiedCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
-            "completedAt": "2026-09-21T02:32:56.255604+00:00",
+            "verifiedCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
+            "completedAt": "2026-09-21T02:48:13.703348+00:00",
             "timeoutMs": 120000
           },
           {
@@ -66,14 +55,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查及16项定时任务聚焦测试通过",
-            "verifiedCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
-            "completedAt": "2026-09-21T02:32:56.255879+00:00",
+            "verifiedCommit": "e7b83546501fbed21f99f8784ff0216e8adc5d05",
+            "completedAt": "2026-09-21T02:48:13.703348+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "DOM交互验证菜单再次点击收起、菜单展开行高亮、快捷暂停恢复防重复提交、自动标题与内容保留；原生视觉待集成打包"
+          "summary": "沿用已验证任务交互，本次调整暂停态透明度、更多按钮位置、类型与记录箭头；原生视觉待集成打包"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -84,41 +73,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T02:31:39.356832+00:00"
-      },
-      "merged": {
-        "mergeCommit": "219cf4af0bb4d338ea478027128152816875cd78",
-        "verificationCommit": "219cf4af0bb4d338ea478027128152816875cd78",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "219cf4af0bb4d338ea478027128152816875cd78",
-            "completedAt": "2026-09-21T02:33:18.275Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "219cf4af0bb4d338ea478027128152816875cd78",
-            "completedAt": "2026-09-21T02:33:18.275Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T02:33:18.275Z"
+        "generatedAt": "2026-09-21T02:48:13.703348+00:00"
       }
     }
   ],
