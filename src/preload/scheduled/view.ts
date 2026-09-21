@@ -86,6 +86,7 @@ export class ScheduledTaskView {
     this.document.addEventListener('pointerdown', this.outside)
     this.document.addEventListener('keydown', this.keyboard)
     this.document.addEventListener('click', this.navigateAway, true)
+    this.document.addEventListener('sherlock:search-session-opened', () => this.close())
     this.document.defaultView?.addEventListener('resize', this.position)
     this.document.defaultView?.addEventListener('sherlock:scheduled-panel-toggle', ((event: CustomEvent<{open: boolean}>) => {
       if (!this.root) return
@@ -105,6 +106,7 @@ export class ScheduledTaskView {
       target.closest('.hHd-Xa_newSession') ||
       (target.closest('[data-dsh-sidebar-root]') &&
         !target.closest('.st-more-zone') &&
+        !target.closest('[data-sidebar-session-search]') &&
         !target.closest('.hHd-Xa_toggle') &&
         target.closest('button,a,[role=button],[role=row][aria-selected],[class*="_sessionRow"]'))
     )
@@ -468,6 +470,11 @@ export class ScheduledTaskView {
     const t = this.tasks.find((t) => t.id === this.draftId),
       detail = this.detail
     if (!detail) return
+    if (t) {
+      this.draft.title = t.title
+      const heading = detail.querySelector<HTMLElement>('.st-detail-title')
+      if (heading) { heading.textContent = t.title; heading.title = t.title }
+    }
     const status = detail.querySelector<HTMLElement>('.st-status')!
     const label = t ? stateLabel(t) : '新建任务'
     status.dataset.state = label === '运行中' ? 'running' : label === '需要处理' ? 'failed' : label === '已开启' ? 'enabled' : 'idle'
