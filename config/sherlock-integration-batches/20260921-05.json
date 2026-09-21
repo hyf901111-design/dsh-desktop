@@ -11,33 +11,25 @@
         "schemaVersion": 1,
         "featureName": "组件任务右侧栏关闭与页签缩略",
         "branch": "codex/feat/component-panel-close-20260921",
-        "baseCommit": "deda274ff9cd7bb961f3992a6d38959a1f043b11",
-        "tipCommit": "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a",
+        "baseCommit": "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a",
+        "tipCommit": "c20630558332a414e1be86e270282f38eef13415",
         "commits": [
           {
-            "commit": "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a",
+            "commit": "c20630558332a414e1be86e270282f38eef13415",
             "parents": [
-              "deda274ff9cd7bb961f3992a6d38959a1f043b11"
+              "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a"
             ],
-            "subject": "优化：对话页签增加图标并按内容收紧页签宽度"
+            "subject": "修复：页签自适应宽度塌缩并减少协作弹层背景残影"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
           {
             "status": "M",
             "path": "src/preload/figma-panels.css"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-panel-tab-overflow.test.ts"
+            "path": "src/preload/research-board-dialogs.ts"
           }
         ],
         "checks": [
@@ -49,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "12项页签和任务界面测试与类型检查通过",
-            "verifiedCommit": "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a",
-            "completedAt": "2026-09-21T15:16:32.340552+00:00",
+            "verifiedCommit": "c20630558332a414e1be86e270282f38eef13415",
+            "completedAt": "2026-09-21T15:22:34.021476+00:00",
             "timeoutMs": 120000
           },
           {
@@ -63,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "12项页签和任务界面测试与类型检查通过",
-            "verifiedCommit": "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a",
-            "completedAt": "2026-09-21T15:16:32.340552+00:00",
+            "verifiedCommit": "c20630558332a414e1be86e270282f38eef13415",
+            "completedAt": "2026-09-21T15:22:34.021476+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -78,39 +70,7 @@
           "页签拥挤时文字省略"
         ],
         "risks": [],
-        "generatedAt": "2026-09-21T15:16:32.340552+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9c658d0880f8b02584a07bc902f68be343a312d9",
-        "verificationCommit": "9c658d0880f8b02584a07bc902f68be343a312d9",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9c658d0880f8b02584a07bc902f68be343a312d9",
-            "completedAt": "2026-09-21T15:16:36.547Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-task-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-task-view.test.ts",
-            "verifiedCommit": "9c658d0880f8b02584a07bc902f68be343a312d9",
-            "completedAt": "2026-09-21T15:16:36.547Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T15:16:36.547Z"
+        "generatedAt": "2026-09-21T15:22:34.021476+00:00"
       }
     }
   ],
