@@ -36,7 +36,7 @@ export class ComputerController {
     driver(): Promise<ComputerDriver>
     prepareObservation?(result: { data: RecordValue; screenshots: DriverResult['images'] }): { data: RecordValue; screenshots: DriverResult['images'] }
     unchanged?(before: Observation, after: Observation, input: RecordValue): boolean
-    stroke?(target: RecordValue, data: RecordValue, strokes: { x: number; y: number }[][], duration: number, signal: AbortSignal, modifiers: string[]): Promise<void>
+    stroke?(target: RecordValue, data: RecordValue, strokes: { x: number; y: number }[][], duration: number, signal: AbortSignal, modifiers: string[], click?: { count: number; button: 'left' | 'right' | 'middle' }): Promise<void>
     pointer(data?: { x: number; y: number; drag: boolean }): void
     visibility(active: boolean): void
     screenPoint(target: RecordValue, data: RecordValue, x: number, y: number): { x: number; y: number }
@@ -170,6 +170,7 @@ export class ComputerController {
         point = this.options.screenPoint(observed.target, observed.data, v.x, v.y)
       }
       let strokes: { x: number; y: number }[][] | undefined
+      let click: { count: number; button: 'left' | 'right' | 'middle' } | undefined
       let duration = 2000
       let tool: string = v.op
       switch (v.op) {
@@ -178,6 +179,15 @@ export class ComputerController {
           if (v.button !== undefined && !['left','right','middle'].includes(v.button)) throw Error('无效鼠标按键。')
           args.button = v.button ?? 'left'; args.count = v.count === undefined ? 1 : positiveInteger(v.count, 2)
           if (v.modifiers) args.modifier = modifiers(v.modifiers)
+          if (!token) {
+            if (!this.options.stroke) throw Error('后台坐标点击不可用，未切换到前台输入。')
+            // Cua's coordinate path can report AXPress success on a generic
+            // canvas container without actually clicking the requested point.
+            // Preserve explicit pixel targeting through our window-only route.
+            click = { count: args.count, button: args.button }
+            strokes = [[{ x: v.x, y: v.y }, { x: v.x, y: v.y }]]
+            duration = 100
+          }
           break
         case 'type': tool = 'type_text'; args.text = text(v.text, 2000); args.delay_ms = 0; break
         case 'key': tool = 'press_key'; args.key = text(v.key, 64); if (v.modifiers) args.modifiers = modifiers(v.modifiers); break
@@ -209,13 +219,13 @@ export class ComputerController {
           break
       }
       const gestureModifiers = strokes && v.modifiers !== undefined ? modifiers(v.modifiers) : []
-      if (gestureModifiers.includes('fn')) throw Error('后台拖拽不支持 fn 修饰键。')
+      if (gestureModifiers.includes('fn')) throw Error('后台指针输入不支持 fn 修饰键。')
       this.observation = undefined // Never replay a gesture against the old snapshot, including on failure.
-      if (point) this.options.pointer({ ...point, drag: !!strokes })
+      if (point) this.options.pointer({ ...point, drag: !!strokes && !click })
       const result = strokes
         ? await (async () => {
-          await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined, gestureModifiers)
-          return { data: { performed: true, strokes: strokes!.length, delivery_mode: 'background' } }
+          await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined, gestureModifiers, click)
+          return { data: { performed: true, ...(click ? { count: click.count, route: 'window_pointer' } : { strokes: strokes!.length }), delivery_mode: 'background' } }
         })()
         : await call(tool, args)
       budget.failures = 0
