@@ -89,7 +89,7 @@ it('shows relative next-run copy and updates the distinct running status after r
   view.mount()
   await view.open()
   expect(doc.querySelector('.st-task-meta')!.textContent).toBe('工作日 9:00 · 下次运行 23 小时后')
-  expect(doc.querySelector('.st-badge')).toBeNull()
+  expect(doc.querySelector('.st-badge')?.textContent).toBe('全局任务')
   doc.querySelector<HTMLButtonElement>('.st-row-main')!.click()
   expect(doc.querySelector('.st-next')!.previousElementSibling!.classList.contains('st-repeat')).toBe(true)
   expect(doc.querySelector('.st-detail-footer .st-next')).toBeNull()
@@ -200,4 +200,33 @@ it('preserves management and its draft when opening search, closes only after re
   expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')!.value).toBe('未提交的任务')
   doc.dispatchEvent(new w.CustomEvent('sherlock:search-session-opened') as unknown as Event)
   expect(doc.querySelector('.st-root')).toBeNull()
+})
+
+it('opens component settings in a tab without covering the canvas and filters task types', async () => {
+  const w = new Window(); windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver); vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML='<main class="pI_x6G_centerCol">画板内容</main><div data-dsh-panel-host><div class="native_tabList"><button>对话</button></div><div data-scheduled-panel-slot></div></div>'
+  const component={sessionId:'canvas',nodeId:'node',title:'市场指标',boardTitle:'加密货币'}
+  const schedule={frequency:'daily' as const,time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-25'}
+  const tasks:any[]=[{id:'global',title:'日报',prompt:'整理资讯',workspaceId:'w',schedule,notification:'always',state:'enabled',nextRun:Date.now()+100000,createdAt:1,runs:[]}]
+  const bridge={list:vi.fn(async()=>tasks),workspaces:vi.fn(async()=>[{workspaceId:'w',path:'/tmp'}]),save:vi.fn(async(input:any,id?:string)=>{const task={...input,id:id||'component',state:'enabled',nextRun:Date.now()+100000,createdAt:1,runs:[]};tasks.push(task);return task}),action:vi.fn()}
+  const view=new ScheduledTaskView(doc,bridge);view.mount()
+  await view.openComponent({...component,prompt:'更新指标'})
+  expect(doc.querySelector('.st-root')).toBeNull()
+  expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')?.inert).not.toBe(true)
+  expect(doc.querySelector('.st-component-tab')?.textContent).toContain('定时任务')
+  expect(doc.querySelector('.st-component-target')?.textContent).toContain('加密货币 · 市场指标')
+  expect(doc.querySelector('.st-workspace')).toBeNull()
+  doc.querySelector<HTMLButtonElement>('.st-save')!.click()
+  await new Promise(r=>setTimeout(r,10))
+  expect(bridge.save.mock.calls[0]?.[0].component).toEqual(component)
+  expect(doc.querySelector('.st-save')?.textContent).toBe('保存修改')
+  await view.open()
+  expect(doc.querySelectorAll('.st-badge')).toHaveLength(2)
+  const filter=doc.querySelector<HTMLSelectElement>('[aria-label="任务类型"]')!
+  filter.value='component';filter.dispatchEvent(new w.Event('change') as unknown as Event)
+  expect(doc.querySelectorAll('.st-row')).toHaveLength(1)
+  expect(doc.querySelector('.st-badge')?.textContent).toBe('组件任务')
+  view.close()
 })

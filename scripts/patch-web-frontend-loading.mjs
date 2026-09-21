@@ -1,3 +1,4 @@
+import { patchComponentScheduledTasks } from './lib/component-scheduled-tasks.mjs'
 import { patchConversationBrowser } from './lib/conversation-browser-client.mjs'
 import { patchWorkspaceDragFeedback } from './lib/workspace-drag-feedback.mjs'
 import { patchResearchNativeWeb } from './lib/research-native-web-client.mjs'
@@ -219,3 +220,5 @@ writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversatio
 }
 
 writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversationPath, 'utf8')))
+
+writeFileSync(conversationPath, patchComponentScheduledTasks(readFileSync(conversationPath, 'utf8')))

@@ -5,7 +5,9 @@ export type Schedule = {
   weekday: number
   date: string
 }
+export type ComponentTarget = { sessionId: string; nodeId: string; title: string; boardTitle: string }
 export type TaskInput = {
+  component?: ComponentTarget
   title: string
   prompt: string
   workspaceId: string
@@ -20,6 +22,7 @@ export type TaskRun = {
   error?: string
   sessionId?: string
   rpcId?: string
+  componentBaseline?: string
 }
 export type ScheduledTask = TaskInput & {
   id: string
@@ -61,12 +64,14 @@ export function validateTask(value: unknown): TaskInput {
     throw new Error('请输入执行指令（最多 20000 字）')
   if (
     typeof v.workspaceId !== 'string' ||
-    !v.workspaceId ||
+    (!v.workspaceId && !v.component) ||
     v.workspaceId.length > 512
   )
     throw new Error('请选择工作区')
   if (!['always', 'changes', 'never'].includes(v.notification))
     throw new Error('通知方式无效')
+  if (v.component !== undefined && (!v.component || ['sessionId', 'nodeId', 'title', 'boardTitle'].some(k => typeof (v.component as any)[k] !== 'string' || !(v.component as any)[k].trim() || (v.component as any)[k].length > 256)))
+    throw new Error('组件绑定无效')
   validateSchedule(v.schedule)
   return {
     title: v.title.trim(),
@@ -74,6 +79,7 @@ export function validateTask(value: unknown): TaskInput {
     workspaceId: v.workspaceId,
     schedule: { ...v.schedule },
     notification: v.notification,
+    ...(v.component ? { component: { sessionId: v.component.sessionId, nodeId: v.component.nodeId, title: v.component.title, boardTitle: v.component.boardTitle } } : {}),
   }
 }
 export function validateSchedule(s: Schedule): void {

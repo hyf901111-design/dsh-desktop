@@ -1014,7 +1014,7 @@ function patchFigmaCompactPanel(source) {
 // temporary; resizing keeps the native geometry writer and persisted width.
 function patchScheduledGlobalPanel(source) {
   const marker = '/* sherlock:scheduled-global-panel:v1 */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return source.replaceAll("inert: scheduledPanel.active ? '' : void 0", "inert: scheduledPanel.active && !document.body.hasAttribute('data-scheduled-component') ? '' : void 0")
   const start = source.indexOf('function Sidebar(props) {')
   const end = source.indexOf('\n\t\t//#endregion', start)
   let part = source.slice(start, end)
@@ -1055,7 +1055,7 @@ function patchScheduledGlobalPanel(source) {
                     window.dispatchEvent(new CustomEvent('sherlock:scheduled-panel-toggle', {detail:{open}}));
                   } else if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);`, 'scheduled native toggle')
   part = replaceExact(part, 'className: sidebar_module_css_default.panelBody,', `className: sidebar_module_css_default.panelBody,
-                inert: scheduledPanel.active ? '' : void 0,`, 'preserve inactive workspace content', 2)
+                inert: scheduledPanel.active && !document.body.hasAttribute('data-scheduled-component') ? '' : void 0,`, 'preserve inactive workspace content', 2)
   part = replaceExact(part, '!narrow && state.panelOpen && state.bottomOpen &&', `/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {"data-scheduled-panel-slot":true, hidden:!scheduledPanel.active}),
               !narrow && state.panelOpen && state.bottomOpen &&`, 'scheduled content slot')
   return source.slice(0, start) + part + source.slice(end)

@@ -2,6 +2,7 @@ import {
   nextRun,
   scheduleLabel,
   timezoneLabel,
+  type ComponentTarget,
   type Schedule,
   type ScheduledTask,
   type ScheduledTaskBridge,
@@ -52,6 +53,10 @@ export class ScheduledTaskView {
   private draft?: TaskInput
   private draftId?: string
   private detailOpen = false
+  private componentMode = false
+  private componentVisible = false
+  private componentTab?: HTMLElement
+  private typeFilter = 'all'
   private filter = 'all'
   private query = ''
   private listSignature = ''
@@ -89,18 +94,22 @@ export class ScheduledTaskView {
     this.document.addEventListener('sherlock:search-session-opened', () => this.close())
     this.document.defaultView?.addEventListener('resize', this.position)
     this.document.defaultView?.addEventListener('sherlock:scheduled-panel-toggle', ((event: CustomEvent<{open: boolean}>) => {
-      if (!this.root) return
+      if (!this.root && !this.componentMode) return
       this.detailOpen = event.detail.open
       if (this.detailOpen && !this.draft) this.newDraft()
       else {
-        this.root.dataset.detail = String(this.detailOpen)
+        if (this.root) this.root.dataset.detail = String(this.detailOpen)
+        if (this.componentMode) this.componentVisible = this.detailOpen
         this.syncPanel()
       }
+    }) as EventListener)
+    this.document.defaultView?.addEventListener('sherlock:component-schedule-open', ((event: CustomEvent<ComponentTarget & {prompt?: string}>) => {
+      void this.openComponent(event.detail)
     }) as EventListener)
     this.mountMore()
   }
   private navigateAway = (event: MouseEvent) => {
-    if (!this.root) return
+    if (!this.root && !this.componentMode) return
     const target = event.target as Element
     if (
       target.closest('.hHd-Xa_newSession') ||
@@ -183,30 +192,34 @@ export class ScheduledTaskView {
     this.more = more
   }
   private position = () => {
-    if (!this.root) return
+    if (!this.root && !this.componentMode) return
+    if (this.componentMode) { this.attachDetail(); if (this.detail) this.detail.dataset.dark = String(this.dark()); return }
     const sidebar = this.document
       .querySelector('[data-dsh-sidebar-root]')
       ?.getBoundingClientRect()
     const left = Math.max(10, sidebar?.right || 10) + 'px'
-    if (this.root.style.left !== left) this.root.style.left = left
+    if (this.root && this.root.style.left !== left) this.root.style.left = left
     this.attachDetail()
     const dark = String(this.dark())
-    if (this.root.dataset.dark !== dark) this.root.dataset.dark = dark
+    if (this.root && this.root.dataset.dark !== dark) this.root.dataset.dark = dark
     if (this.detail && this.detail.dataset.dark !== dark) this.detail.dataset.dark = dark
   }
   private syncPanel() {
-    this.document.body.dataset.scheduledPage = 'true'
+    if (this.componentMode) this.document.body.dataset.scheduledComponent = String(this.componentVisible)
+    else this.document.body.dataset.scheduledPage = 'true'
     this.document.body.dataset.scheduledDetail = String(this.detailOpen)
     this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-panel', {
-      detail: { active: true, open: this.detailOpen },
+      detail: { active: !this.componentMode || this.componentVisible, open: this.detailOpen, component: this.componentMode },
     }))
     this.attachDetail()
   }
   private attachDetail() {
+    if (this.componentMode) this.attachComponentTab()
     const slot = this.document.querySelector('[data-scheduled-panel-slot]')
     if (slot && this.detail && this.detail.parentElement !== slot) slot.append(this.detail)
   }
   async open() {
+    if (this.componentMode) this.close()
     this.closeMenu()
     if (!this.root) {
       this.root = this.document.createElement('section')
@@ -239,7 +252,51 @@ export class ScheduledTaskView {
     clearInterval(this.poll)
     this.poll = setInterval(() => void this.refresh(), 5000)
   }
+  async openComponent(target: ComponentTarget & {prompt?: string}) {
+    this.close()
+    this.componentMode = true
+    this.componentVisible = true
+    this.detailOpen = true
+    try {
+      this.tasks = await this.bridge.list()
+      const task = this.tasks.find(t => t.component?.sessionId === target.sessionId && t.component.nodeId === target.nodeId)
+      this.draftId = task?.id
+      this.selected = task?.id
+      this.draft = task ? structuredClone(task) : {
+        title:'', prompt:target.prompt || '更新此组件的内容', workspaceId:'',
+        component:{sessionId:target.sessionId,nodeId:target.nodeId,title:target.title,boardTitle:target.boardTitle},
+        schedule:{frequency:'daily',time:'09:00',timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,weekday:1,date:new Date().toISOString().slice(0,10)},notification:'always'
+      }
+      this.syncPanel()
+      this.renderDetail()
+      this.poll = setInterval(() => void this.refresh(), 5000)
+    } catch (e) { this.showError(e) }
+  }
+  private attachComponentTab() {
+    const tabs = this.document.querySelector<HTMLElement>('[data-dsh-panel-host] [class*="_tabList"]')
+    if (!tabs) return
+    if (!this.componentTab) {
+      const tab = this.document.createElement('button')
+      tab.type = 'button'; tab.className = 'st-component-tab'; tab.role = 'tab'
+      tab.innerHTML = `${icon('clock')}<span>定时任务</span><span class="st-component-close" aria-label="关闭定时任务">×</span>`
+      tab.onclick = e => { if ((e.target as Element).closest('.st-component-close')) this.close(); else { this.componentVisible = true; this.detailOpen = true; this.syncPanel() } }
+      this.componentTab = tab
+    }
+    this.componentTab.setAttribute('aria-selected', String(this.componentVisible))
+    if (this.componentTab.parentElement !== tabs) tabs.append(this.componentTab)
+    if (!tabs.dataset.scheduledTabBound) {
+      tabs.dataset.scheduledTabBound = 'true'
+      tabs.addEventListener('click', e => {
+        if (!this.componentMode || this.componentTab?.contains(e.target as Node)) return
+        this.componentVisible = false; this.syncPanel()
+      }, true)
+    }
+  }
   close() {
+    this.componentMode = false
+    this.componentVisible = false
+    this.componentTab?.remove(); this.componentTab = undefined
+    delete this.document.body.dataset.scheduledComponent
     this.sidebarResizeObserver?.disconnect()
     this.sidebarResizeObserver = undefined
     delete this.document.body.dataset.scheduledPage
@@ -259,11 +316,11 @@ export class ScheduledTaskView {
     clearInterval(this.poll)
   }
   private async refresh() {
-    if (!this.root) return
+    if (!this.root && !this.componentMode) return
     try {
       const [tasks, workspaces] = await Promise.all([
         this.bridge.list(),
-        this.bridge.workspaces(),
+        this.componentMode ? Promise.resolve([]) : this.bridge.workspaces(),
       ])
       this.tasks = tasks
       this.workspaces = workspaces
@@ -277,6 +334,7 @@ export class ScheduledTaskView {
     this.error = e instanceof Error ? e.message : String(e)
     const box = this.root?.querySelector<HTMLElement>('.st-error')
     if (box) box.textContent = this.error
+    const detailError = this.detail?.querySelector('.st-detail-error'); if (detailError) detailError.textContent = this.error
   }
   private time(t: number | null, s: Schedule) {
     return t === null
@@ -291,6 +349,7 @@ export class ScheduledTaskView {
         }).format(t)
   }
   private render() {
+    if (this.componentMode) { this.renderDetail(); this.syncPanel(); return }
     if (!this.root) return
     this.listSignature = ''
     this.root.dataset.detail = String(this.detailOpen)
@@ -306,7 +365,10 @@ export class ScheduledTaskView {
       )
       .join(
         '',
-      )}<label class="st-type-filter"><select aria-label="任务类型"><option>全部类型</option><option>全局任务</option></select><span class="st-chevron" aria-hidden="true"></span></label><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></main>`
+      )}<label class="st-type-filter"><select aria-label="任务类型"><option value="all">全部类型</option><option value="global">全局任务</option><option value="component">组件任务</option></select><span class="st-chevron" aria-hidden="true"></span></label><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></main>`
+    const type = this.root.querySelector<HTMLSelectElement>('.st-type-filter select')!
+    type.value = this.typeFilter
+    type.onchange = () => { this.typeFilter = type.value; this.renderList() }
     this.root.querySelector<HTMLButtonElement>('.st-back')!.onclick = () =>
       this.close()
     this.root.querySelector<HTMLInputElement>('.st-search input')!.oninput = (
@@ -340,6 +402,7 @@ export class ScheduledTaskView {
     const tasks = this.tasks.filter(
       (t) =>
         (this.filter === 'all' || t.state === this.filter) &&
+        (this.typeFilter === 'all' || (t.component ? 'component' : 'global') === this.typeFilter) &&
         `${t.title} ${t.prompt}`
           .toLowerCase()
           .includes(this.query.toLowerCase()),
@@ -348,6 +411,7 @@ export class ScheduledTaskView {
       this.selected,
       this.query,
       this.filter,
+      this.typeFilter,
       tasks,
       this.tasks.length,
       Math.floor(Date.now() / 60_000),
@@ -358,7 +422,7 @@ export class ScheduledTaskView {
       ? tasks
           .map(
             (t) =>
-              `<div class="st-row" data-id="${escape(t.id)}" data-state="${t.state}" data-selected="${this.selected === t.id}"><button class="st-quick-toggle" data-state="${t.state}" aria-label="${t.state === 'paused' ? '继续' : '暂停'}任务 ${escape(t.title)}" title="${t.state === 'paused' ? '继续任务' : '暂停任务'}" ${t.state === 'completed' || this.pendingActions.has(t.id) ? 'disabled' : ''}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path class="st-quick-pause" d="M8 7v6m4-6v6"/><path class="st-quick-play" d="m8 6 6 4-6 4z"/></svg></button><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-task-info"><span class="st-task-title"><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
+              `<div class="st-row" data-id="${escape(t.id)}" data-state="${t.state}" data-selected="${this.selected === t.id}"><button class="st-quick-toggle" data-state="${t.state}" aria-label="${t.state === 'paused' ? '继续' : '暂停'}任务 ${escape(t.title)}" title="${t.state === 'paused' ? '继续任务' : '暂停任务'}" ${t.state === 'completed' || this.pendingActions.has(t.id) ? 'disabled' : ''}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path class="st-quick-pause" d="M8 7v6m4-6v6"/><path class="st-quick-play" d="m8 6 6 4-6 4z"/></svg></button><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-task-info"><span class="st-task-title"><span class="st-badge">${t.component ? '组件任务' : '全局任务'}</span><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
           )
           .join('')
       : `<div class="st-empty"><h2>${this.tasks.length ? '没有符合条件的任务' : '让重复的工作按计划完成'}</h2><p>${this.tasks.length ? '试试其他关键词或状态筛选。' : '定期整理资讯、跟踪指标或汇总资料。<br>新建任务，让重复的工作按计划完成。'}</p>${this.tasks.length ? '' : '<button class="st-primary st-first">＋ 新建第一个任务</button>'}</div>`
@@ -403,7 +467,7 @@ export class ScheduledTaskView {
     this.detail?.querySelector<HTMLTextAreaElement>('.st-prompt')?.focus()
   }
   private renderDetail() {
-    if (!this.root || !this.draft) return
+    if ((!this.root && !this.componentMode) || !this.draft) return
     this.detail?.remove()
     this.historySignature = ''
     const d = this.draft,
@@ -411,7 +475,7 @@ export class ScheduledTaskView {
     const detail = this.document.createElement('aside')
     detail.className = 'st-detail'
     detail.setAttribute('aria-label', '任务详情')
-    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">全局任务</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button>` : ''}</div><h2 class="st-detail-title" title="${escape(t ? d.title : '新建任务')}">${escape(t ? d.title : '新建任务')}</h2><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">${d.component ? '组件任务' : '全局任务'}</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button>` : ''}</div><h2 class="st-detail-title" title="${escape(t ? d.title : '新建任务')}">${escape(t ? d.title : '新建任务')}</h2><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea>${d.component ? `<div class="st-setting st-component-target"><span>执行于</span><span title="${escape(d.component.boardTitle + ' · ' + d.component.title)}">${escape(d.component.boardTitle)} · ${escape(d.component.title)}</span></div>` : `<label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label>`}<button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
       ['always', '每次完成'],
       ['changes', '重要变化'],
       ['never', '不通知'],
@@ -422,7 +486,7 @@ export class ScheduledTaskView {
       )
       .join(
         '',
-      )}</select></label><div class="st-history-wrap"></div><div class="st-detail-footer"><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
+      )}</select></label><div class="st-history-wrap"></div><div class="st-error st-detail-error" role="alert">${escape(this.error)}</div><div class="st-detail-footer"><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
     this.detail = detail
     detail.dataset.dark = String(this.dark())
     this.attachDetail()
@@ -437,8 +501,8 @@ export class ScheduledTaskView {
       resizePrompt()
     }
     resizePrompt()
-    detail.querySelector<HTMLSelectElement>('.st-workspace')!.onchange = (e) =>
-      (d.workspaceId = (e.target as HTMLSelectElement).value)
+    const workspace = detail.querySelector<HTMLSelectElement>('.st-workspace')
+    if (workspace) workspace.onchange = e => (d.workspaceId = (e.target as HTMLSelectElement).value)
     detail.querySelector<HTMLSelectElement>('.st-notification')!.onchange = (
       e,
     ) =>
@@ -519,6 +583,7 @@ export class ScheduledTaskView {
       this.draft = structuredClone(task)
       this.error = ''
       await this.refresh()
+      this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-tasks-changed'))
       this.render()
     } catch (e) {
       this.showError(e)
@@ -543,8 +608,10 @@ export class ScheduledTaskView {
         this.draftId = undefined
         this.selected = undefined
         this.detailOpen = false
+        if (this.componentMode) this.close()
       }
       await this.refresh()
+      this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-tasks-changed'))
       this.render()
     } catch (e) {
       this.showError(e)

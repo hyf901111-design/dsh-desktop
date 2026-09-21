@@ -66,6 +66,8 @@ export class TaskStore {
     const saved = await this.change((tasks) => {
       let task = id ? tasks.find((t) => t.id === id && !t.deletedAt) : undefined
       if (id && !task) throw new Error('任务不存在')
+      if (task && (task.component?.sessionId !== input.component?.sessionId || task.component?.nodeId !== input.component?.nodeId)) throw new Error('不能更改任务的组件绑定')
+      if (input.component && tasks.some(t => !t.deletedAt && t.id !== id && t.component?.sessionId === input.component!.sessionId && t.component?.nodeId === input.component!.nodeId)) throw new Error('该组件已设有定时任务，请编辑已有任务')
       if (task?.runs.some((r) => r.status === 'running'))
         throw new Error('任务运行中，请完成后再编辑')
       const next = nextRun(input.schedule, this.now())
