@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, nativeImage, screen, shell, systemPreferences } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, nativeImage, powerMonitor, screen, shell, systemPreferences } from 'electron'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { ComputerController, sameObservedElements, type ComputerDriver } from './controller'
@@ -36,7 +36,13 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
     }
   }
   function move(x: number, y: number) { if (pointer && !pointer.isDestroyed() && Number.isFinite(x) && Number.isFinite(y)) { pointer.setPosition(Math.round(x - 3), Math.round(y - 2), false); pointer.showInactive() } }
+  const onLock = () => { stop() }
+  powerMonitor.on('lock-screen', onLock)
+  powerMonitor.on('suspend', onLock)
   const controller = new ComputerController({
+    assertAvailable: () => {
+      if (powerMonitor.getSystemIdleState(60) === 'locked') throw Error('Mac 已锁屏，桌面操作已暂停；请解锁后继续。')
+    },
     driver: async () => {
       if (disposed) throw Error('桌面控制服务已关闭。')
       if (driver) return driver
@@ -164,6 +170,8 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
     dispose: async () => {
       await controller.stop().catch(() => {})
       disposed = true
+      powerMonitor.removeListener('lock-screen', onLock)
+      powerMonitor.removeListener('suspend', onLock)
       await starting?.catch(() => {})
       await host?.stop().catch(() => {})
       driver = undefined; host = undefined

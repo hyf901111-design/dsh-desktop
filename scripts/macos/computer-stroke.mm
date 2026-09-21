@@ -26,23 +26,48 @@ static double number(napi_env env,napi_value obj,const char* key) {
   return d;
 }
 // Targeted delivery only: never post into the global HID stream, warp the
-// physical pointer, activate an app, or restore an old foreground app.
+// physical pointer, raise an app, or restore an old foreground app.
 // Window routing fields follow Cua Driver's Chromium-compatible event recipe.
 // See docs/licenses/cua-driver-MIT.txt and docs/research/computer-use-integration.md.
 struct BackgroundTransport {
   using Post = void (*)(pid_t, CGEventRef);
   using Location = void (*)(CGEventRef, double, double);
   using Field = void (*)(CGEventRef, uint32_t, int64_t);
+  using Connection = uint32_t (*)();
+  using Owner = int32_t (*)(uint32_t,uint32_t,uint32_t*);
+  using PSN = int32_t (*)(uint32_t,void*);
+  using Front = int32_t (*)(void*);
+  using Record = int32_t (*)(const void*,const uint8_t*);
   Post post=nullptr; Location location=nullptr; Field field=nullptr;
+  Connection connection=nullptr; Owner owner=nullptr; PSN psn=nullptr; Front front=nullptr; Record record=nullptr;
   BackgroundTransport() {
     void* handle=dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight",RTLD_LAZY|RTLD_LOCAL);
     if(handle) {
       post=reinterpret_cast<Post>(dlsym(handle,"SLEventPostToPid"));
       location=reinterpret_cast<Location>(dlsym(handle,"CGEventSetWindowLocation"));
       field=reinterpret_cast<Field>(dlsym(handle,"SLEventSetIntegerValueField"));
+      connection=reinterpret_cast<Connection>(dlsym(handle,"CGSMainConnectionID"));
+      owner=reinterpret_cast<Owner>(dlsym(handle,"SLSGetWindowOwner"));
+      psn=reinterpret_cast<PSN>(dlsym(handle,"SLSGetConnectionPSN"));
+      front=reinterpret_cast<Front>(dlsym(handle,"_SLPSGetFrontProcess"));
+      record=reinterpret_cast<Record>(dlsym(handle,"SLPSPostEventRecordTo"));
     }
   }
-  bool available() const {return post && location && field;}
+  bool available() const {return post && location && field && connection && owner && psn && front && record;}
+  bool prepare(uint32_t window) const {
+    // AppKit needs its input gate armed even with correctly window-routed
+    // events. Match Cua's activate_without_raise recipe. Never call
+    // SetFrontProcess, AXRaise, or move/restore the physical cursor.
+    uint32_t current[2]={},target[2]={},cid=0;
+    if(front(current)!=0 || owner(connection(),window,&cid)!=0 || psn(cid,target)!=0)return false;
+    uint8_t bytes[0xF8]={};bytes[4]=0xF8;bytes[8]=0x0D;
+    for(int i=0;i<4;i++)bytes[0x3C+i]=(window>>(8*i))&0xFF;
+    if(current[0]!=target[0] || current[1]!=target[1]) {
+      bytes[0x8A]=2;if(record(current,bytes)!=0)return false;
+    }
+    bytes[0x8A]=1;
+    return record(target,bytes)==0;
+  }
 };
 static BackgroundTransport transport;
 static CGPoint progress=CGPointZero;
@@ -61,25 +86,25 @@ static bool sameWindow(StrokeJob* j) {
   }
   return false;
 }
-static void post(StrokeJob* j,CGEventType type,CGPoint p) {
+static void post(StrokeJob* j,CGEventType type,CGPoint p,int phase=-1,bool primer=false) {
   CGEventSourceRef source=CGEventSourceCreate(kCGEventSourceStatePrivate);
-  CGEventRef e=CGEventCreateMouseEvent(source,type,p,j->button);
+  CGEventRef e=CGEventCreateMouseEvent(source,type,p,primer?kCGMouseButtonLeft:j->button);
   if(source)CFRelease(source);
   if(!e)throw std::runtime_error("无法创建后台鼠标事件");
   CGEventSetFlags(e,j->flags);
-  transport.field(e,0,type==kCGEventMouseMoved?2:3);
+  transport.field(e,0,phase>=0?phase:(type==kCGEventMouseMoved?2:3));
   transport.field(e,1,type==kCGEventMouseMoved?0:j->clickState);
-  transport.field(e,3,j->button);
+  transport.field(e,3,primer?kCGMouseButtonLeft:j->button);
   transport.field(e,7,3);
   transport.field(e,40,j->pid);
   transport.field(e,51,j->window);
   transport.field(e,58,j->group);
   transport.field(e,91,j->window);
   transport.field(e,92,j->window);
-  transport.location(e,p.x-j->frame.origin.x,p.y-j->frame.origin.y);
+  transport.location(e,primer?-1:p.x-j->frame.origin.x,primer?-1:p.y-j->frame.origin.y);
   transport.post(j->pid,e);
   CFRelease(e);
-  {std::lock_guard<std::mutex> guard(lock);progress=p;hasProgress=true;}
+  if(!primer){std::lock_guard<std::mutex> guard(lock);progress=p;hasProgress=true;}
 }
 static void execute(napi_env,void* raw) {
  @autoreleasepool {
@@ -89,6 +114,13 @@ static void execute(napi_env,void* raw) {
   try {
     if(!AXIsProcessTrusted())throw std::runtime_error("需要 EWork 辅助功能权限");
     if(!transport.available())throw std::runtime_error("当前系统不支持后台绘制，未切换到前台输入");
+    if(j->cancelled || !sameWindow(j))throw std::runtime_error("操作已取消或目标窗口发生变化");
+    if(!transport.prepare(j->window))throw std::runtime_error("无法准备目标窗口后台输入，未切换前台");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    if(j->cancelled || !sameWindow(j))throw std::runtime_error("操作已取消或目标窗口发生变化");
+    // Off-window down/up primes Chromium's input gate without hitting DOM.
+    post(j,kCGEventLeftMouseDown,CGPointMake(-1,-1),1,true);
+    post(j,kCGEventLeftMouseUp,CGPointMake(-1,-1),2,true);
     if(j->clicks) {
       last=j->strokes.front().front();
       for(int pair=1;pair<=j->clicks;pair++) {
