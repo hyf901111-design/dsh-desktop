@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "桌面控制后台输入与独立画笔",
         "branch": "codex/feat/background-computer-input-20260921",
-        "baseCommit": "fcf8d3fc31c80b1fa800c9d829778e9eab91a895",
-        "tipCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+        "baseCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+        "tipCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
         "commits": [
           {
-            "commit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+            "commit": "90f77547ee39e57f4865c7ae305d306381cbf557",
             "parents": [
-              "fcf8d3fc31c80b1fa800c9d829778e9eab91a895"
+              "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb"
             ],
-            "subject": "功能：将桌面输入与画笔改为目标窗口后台投递"
+            "subject": "修复：让后台坐标点击保持窗口指针语义并补充现场证据"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/research/computer-use-integration.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
           },
           {
             "status": "M",
@@ -57,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
-            "completedAt": "2026-09-21T04:34:17.236405+00:00",
+            "verifiedCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
+            "completedAt": "2026-09-21T04:54:27.674559+00:00",
             "timeoutMs": 120000
           },
           {
@@ -70,9 +66,9 @@
               "test/computer-vision.test.js"
             ],
             "outcome": "passed",
-            "summary": "36项后台路由、取消、观察与视觉准入检查通过",
-            "verifiedCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
-            "completedAt": "2026-09-21T04:34:17.236405+00:00",
+            "summary": "39项后台路由、取消、观察与视觉准入检查通过",
+            "verifiedCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
+            "completedAt": "2026-09-21T04:54:27.674559+00:00",
             "timeoutMs": 120000
           },
           {
@@ -82,14 +78,14 @@
             ],
             "outcome": "passed",
             "summary": "原生后台手势模块编译通过",
-            "verifiedCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
-            "completedAt": "2026-09-21T04:34:17.236405+00:00",
+            "verifiedCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
+            "completedAt": "2026-09-21T04:54:27.674559+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "此卡交接输入后端及聚焦检查；真实画布接收与不抢占验证安排在集成包执行，未声明UI验收通过。"
+          "summary": "本交接为坐标输入后端修正；上一集成包已真实画出后台曲线，此修正版本的点击与文字UI验收须在新集成包中执行，不声明通过。"
         },
         "acceptanceCriteria": [
           "后台绘制实际产生画布笔迹",
@@ -97,54 +93,10 @@
           "取消后原目标释放按键且不会向其他应用发送输入"
         ],
         "risks": [
-          "SkyLight私有接口依赖系统版本",
-          "Electron后台连续手势接收尚待集成包现场验证"
+          "私有系统接口需按系统版本验证",
+          "修正版坐标点击与用户物理输入并行尚待新集成包验收"
         ],
-        "generatedAt": "2026-09-21T04:34:17.236405+00:00"
-      },
-      "merged": {
-        "mergeCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
-        "verificationCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
-            "completedAt": "2026-09-21T04:34:27.638Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/computer-vision.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-vision.test.js",
-            "verifiedCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
-            "completedAt": "2026-09-21T04:34:27.638Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/build-computer-stroke.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/build-computer-stroke.mjs",
-            "verifiedCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
-            "completedAt": "2026-09-21T04:34:27.638Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T04:34:27.638Z"
+        "generatedAt": "2026-09-21T04:54:27.674559+00:00"
       }
     }
   ],
