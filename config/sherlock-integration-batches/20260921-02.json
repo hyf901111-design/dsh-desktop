@@ -101,6 +101,50 @@
           "Electron后台连续手势接收尚待集成包现场验证"
         ],
         "generatedAt": "2026-09-21T04:34:17.236405+00:00"
+      },
+      "merged": {
+        "mergeCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
+        "verificationCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
+            "completedAt": "2026-09-21T04:34:27.638Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
+            "completedAt": "2026-09-21T04:34:27.638Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/build-computer-stroke.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/build-computer-stroke.mjs",
+            "verifiedCommit": "37f604244b29743d89e2cbbc87c285f602fe9427",
+            "completedAt": "2026-09-21T04:34:27.638Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T04:34:27.638Z"
       }
     }
   ],
