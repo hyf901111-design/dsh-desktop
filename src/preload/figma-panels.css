@@ -400,3 +400,8 @@ body:has(.cubgiG_seat[aria-expanded="true"]) :is(.wSkVaW_header,.wSkVaW_titleRow
 
 /* Native drag regions must yield pointer events to dismiss open top-layer UI. */
 body:has(.wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],.srb-members-popover:popover-open,.srb-avatar-info:popover-open,.srb-session-search[open]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}
+
+/* Tabs fit their labels; only inactive tabs yield width when the row is crowded. */
+.t8lSSG_panel [data-odyssey-panel-tab]{flex:0 1 auto;max-width:160px}
+.t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true]{flex:0 0 auto;max-width:min(160px,70%)}
+.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"]{gap:4px}

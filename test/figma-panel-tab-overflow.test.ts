@@ -113,6 +113,11 @@ describe('Figma panel tab overflow', () => {
           newTabOptions: []
         }))
       })
+      // The pinned research conversation gets the same icon in the strip and switcher.
+      const conversationTabs = [{id:'sherlock-research-conversation',type:'sherlock-research-conversation',title:'对话',meta:{sherlockPinned:true}}, ...tabs]
+      await act(async () => { root.render(createElement(renderTabBar, {paneId:'right',tabs:conversationTabs,active:'sherlock-research-conversation',onActivate,onClose,onNewTab:vi.fn(),onDropTab:vi.fn(),newTabOptions:[]})) })
+      expect(host.querySelector('[data-odyssey-panel-tab-id="sherlock-research-conversation"] [data-conversation-tab-icon]')).not.toBeNull()
+      await act(async () => { root.render(createElement(renderTabBar, {paneId:'right',tabs,active:'gold-md',onActivate,onClose,onNewTab:vi.fn(),onDropTab:vi.fn(),newTabOptions:[]})) })
       expect(host.querySelectorAll('[role=tab][aria-selected=true]')).toHaveLength(1)
       await act(async () => {
         browserWindow.document.body.dataset.scheduledComponent = 'true'
