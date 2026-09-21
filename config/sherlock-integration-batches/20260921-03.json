@@ -9,41 +9,79 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "画板交互性能与生成稳定性",
+        "featureName": "定时任务标题与轨迹及画布工具体验",
         "branch": "codex/feat/board-performance-20260921",
-        "baseCommit": "46a506a20af19e73ae4cdebe0895ca22c25b05ed",
-        "tipCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
+        "baseCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
+        "tipCommit": "50a7c4c64157d195d08233143cd35b890d16fee7",
         "commits": [
           {
-            "commit": "6c59387649f889f45923e745b68a3ffca3899699",
+            "commit": "50a7c4c64157d195d08233143cd35b890d16fee7",
             "parents": [
-              "46a506a20af19e73ae4cdebe0895ca22c25b05ed"
+              "c3cab3cc3ba01e480d49cf9780633e1b56497e30"
             ],
-            "subject": "修复：避免框选优化破坏重复构建的手势补丁锚点"
-          },
-          {
-            "commit": "7172525acc953e3620a78bb2106336779484134d",
-            "parents": [
-              "6c59387649f889f45923e745b68a3ffca3899699"
-            ],
-            "subject": "修复：在原生画布补丁完成后应用卡片复用"
-          },
-          {
-            "commit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
-            "parents": [
-              "7172525acc953e3620a78bb2106336779484134d"
-            ],
-            "subject": "测试：标注旧画布补丁模块的类型边界"
+            "subject": "优化：定时任务简短标题、轨迹描边与画布工具快捷键"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/scheduled-title.js"
           },
           {
             "status": "M",
-            "path": "test/research-canvas-render-performance.test.ts"
+            "path": "scripts/lib/canvas-creation-tools.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/canvas-tool-shortcuts.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-trajectory-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/scheduled/task-store.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/scheduled/task-title.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-trajectory.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/canvas-tool-shortcuts.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-trajectory-client.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-tasks.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/scheduled-title.test.js"
           }
         ],
         "checks": [
@@ -54,9 +92,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "干净依赖和两次完整补丁验证后161项聚焦测试与类型检查通过",
-            "verifiedCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
-            "completedAt": "2026-09-21T07:40:38.721187+00:00",
+            "summary": "172项聚焦测试与类型检查通过",
+            "verifiedCommit": "50a7c4c64157d195d08233143cd35b890d16fee7",
+            "completedAt": "2026-09-21T08:11:39.614852+00:00",
             "timeoutMs": 120000
           },
           {
@@ -64,75 +102,35 @@
               "npm",
               "test",
               "--",
+              "test/canvas-tool-shortcuts.test.js",
               "test/research-canvas-render-performance.test.ts",
-              "test/research-board-activity.test.ts",
-              "test/research-task-runtime.test.js",
-              "test/research-marquee-stroke.test.js",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/research-canvas-deferred-html-patch.test.ts",
-              "test/figma-reading-column.test.js"
+              "test/scheduled-task-view.test.ts",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-title.test.js",
+              "test/figma-trajectory-client.test.ts",
+              "test/research-task-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "干净依赖和两次完整补丁验证后161项聚焦测试与类型检查通过",
-            "verifiedCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
-            "completedAt": "2026-09-21T07:40:38.721187+00:00",
+            "summary": "172项聚焦测试与类型检查通过",
+            "verifiedCommit": "50a7c4c64157d195d08233143cd35b890d16fee7",
+            "completedAt": "2026-09-21T08:11:39.614852+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "功能分支不构建共享客户端，集成后执行真实界面检查"
+          "outcome": "passed",
+          "summary": "Chromium使用真实定时任务组件与完整样式验证新建标题固定、保存标题与描述分离；轨迹两侧描边一致。模型返回使用测试替身，待集成客户端验证真实模型。"
         },
         "acceptanceCriteria": [
-          "会话图标无遮挡且输入框边距保持",
-          "框选与窗口调整流畅",
-          "个人看板主代理和子代理运行显示圆环",
-          "组件生成限制并发并恢复短暂服务错误"
+          "新建标题固定，创建后摘要标题持久化",
+          "轨迹详情与列表细描边一致",
+          "V/F/L切换且输入时避让",
+          "链接创建后自动回到选择工具"
         ],
         "risks": [
-          "外部数据源不可用仍会明确显示失败",
-          "旧邀请汇总测试和旧默认尺寸测试存在基线不一致，未修改相关功能"
+          "标题服务暂不可用时使用本地短标题，完整执行指令不变"
         ],
-        "generatedAt": "2026-09-21T07:40:38.721187+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3425ce9d7eff33b65d537d683c1219a60a9e80a3",
-        "verificationCommit": "3425ce9d7eff33b65d537d683c1219a60a9e80a3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3425ce9d7eff33b65d537d683c1219a60a9e80a3",
-            "completedAt": "2026-09-21T07:40:55.812Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-activity.test.ts",
-              "test/research-task-runtime.test.js",
-              "test/research-marquee-stroke.test.js",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/research-canvas-deferred-html-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-canvas-render-performance.test.ts test/research-board-activity.test.ts test/research-task-runtime.test.js test/research-marquee-stroke.test.js test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/research-canvas-deferred-html-patch.test.ts",
-            "verifiedCommit": "3425ce9d7eff33b65d537d683c1219a60a9e80a3",
-            "completedAt": "2026-09-21T07:40:55.812Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T07:40:55.812Z"
+        "generatedAt": "2026-09-21T08:11:39.614852+00:00"
       }
     }
   ],
