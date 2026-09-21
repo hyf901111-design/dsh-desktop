@@ -259,7 +259,9 @@ function patchFigmaCanvasContent(source) {
                 };
                 `);
   source=source.replace('syncSize();\n\t\t\t\tconst observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleSync);', 'let observedPanel=null;\n                const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleSync);\n                syncSize();');
-  source=source.replace('for(const panel of document.querySelectorAll(".t8lSSG_panel"))observer?.observe(panel);', `const panelMutations=typeof MutationObserver==='undefined'?null:new MutationObserver(records=>{if(records.some(record=>record.type==='attributes'?record.target?.closest?.('.t8lSSG_panel'):[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&(node.matches?.('.t8lSSG_panel')||node.closest?.('.t8lSSG_panel')||node.querySelector?.('.t8lSSG_panel')))))scheduleSync();});
+  // Upgrade already patched clients too; streamed descendants do not resize the panel.
+  source=source.replace("record.target?.closest?.('.t8lSSG_panel')", "record.target?.matches?.('.t8lSSG_panel')").replace("||node.closest?.('.t8lSSG_panel')", '');
+  source=source.replace('for(const panel of document.querySelectorAll(".t8lSSG_panel"))observer?.observe(panel);', `const panelMutations=typeof MutationObserver==='undefined'?null:new MutationObserver(records=>{if(records.some(record=>record.type==='attributes'?record.target?.matches?.('.t8lSSG_panel'):[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&(node.matches?.('.t8lSSG_panel')||node.querySelector?.('.t8lSSG_panel')))))scheduleSync();});
                 if(document.body)panelMutations?.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-research-active','class','style']});
                 const onPanelMotion=event=>{if(event.target?.matches?.('.t8lSSG_panel'))scheduleSync();};
                 for(const type of ['transitionrun','transitionend','transitioncancel','animationend','animationcancel'])document.addEventListener(type,onPanelMotion,true);`);

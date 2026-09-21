@@ -116,7 +116,13 @@ export function mountFigmaTaskScrollbar(doc: Document): () => void {
   }
   const mutations = new win.MutationObserver(records => {
     // Our own thumb position/visibility writes must not create a frame loop.
-    if (records.some(record => !(record.target instanceof win.Element) || !record.target.closest('[data-odyssey-task-scrollbar]'))) schedule()
+    if (records.some(record => {
+      const target = record.target instanceof win.Element ? record.target : record.target.parentElement
+      if (!target || target.closest('[data-odyssey-task-scrollbar],.odyssey-scroll-track,[data-research-canvas]')) return false
+      if (target.closest('.lXshSW_root') || target.matches('[data-odyssey-task-collapsed]')) return true
+      return record.type === 'childList' && [...record.addedNodes, ...record.removedNodes].some(node =>
+        node instanceof win.Element && (node.matches('.lXshSW_root') || node.querySelector('.lXshSW_root')))
+    })) schedule()
   })
   mutations.observe(doc.body, { subtree: true, childList: true, characterData: true,
     attributes: true, attributeFilter: ['class', 'style', 'hidden', 'inert', 'aria-hidden', 'data-odyssey-task-collapsed'] })
