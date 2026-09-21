@@ -108,7 +108,7 @@ it('toggles task menus, retains menu-row highlight, pauses without selection, an
   vi.stubGlobal('CustomEvent', w.CustomEvent)
   const doc = w.document as unknown as Document
   doc.body.innerHTML = '<main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
-  const task: import('../src/shared/scheduled-tasks').ScheduledTask = {id:'one',title:'新闻',prompt:'整理新闻',workspaceId:'work',notification:'always',schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai'},state:'enabled',nextRun:Date.now()+3600000,createdAt:Date.now(),runs:[]}
+  const task: import('../src/shared/scheduled-tasks').ScheduledTask = {id:'one',title:'新闻',prompt:'整理新闻',workspaceId:'work',notification:'always',schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-21'},state:'enabled',nextRun:Date.now()+3600000,createdAt:Date.now(),runs:[]}
   let finish!: () => void
   const action = vi.fn(async (_id: string, state: string) => { await new Promise<void>(resolve => {finish = resolve}); task.state = state === 'pause' ? 'paused' : 'enabled' })
   const save = vi.fn(async input => ({...task,...input}))
