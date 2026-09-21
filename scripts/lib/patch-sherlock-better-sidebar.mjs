@@ -1014,7 +1014,7 @@ function patchFigmaCompactPanel(source) {
 // temporary; resizing keeps the native geometry writer and persisted width.
 function patchComponentNativeTabSelection(source) {
   const marker = '/* SHERLOCK_COMPONENT_NATIVE_SELECTION */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchComponentTabOverflow(source)
   const start = source.indexOf('function TabBar(props) {')
   const end = source.indexOf('\n\t\t//#endregion', start)
   if (start < 0 || end < 0) throw new Error('Component schedule native tab boundary missing')
@@ -1028,8 +1028,40 @@ function patchComponentNativeTabSelection(source) {
       return () => window.removeEventListener('sherlock:scheduled-panel', update);
     }, []);`)
   part = part.replaceAll('active === tab.id', '(!componentScheduleActive && active === tab.id)')
+  return patchComponentTabOverflow(source.slice(0, start) + part + source.slice(end))
+}
+
+function patchComponentTabOverflow(source) {
+  const marker = '/* sherlock:component-tab-overflow:v1 */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('function TabBar(props) {')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  let part = source.slice(start, end)
+  part = replaceExact(part, 'const [componentScheduleActive,', `
+    ${marker}
+    const componentTabId = 'sherlock-component-schedule';
+    const [componentSchedulePresent, setComponentSchedulePresent] = react.useState(() => document.body.hasAttribute('data-scheduled-component'));
+    const [componentScheduleActive,`, 'component tab presence')
+  part = replaceExact(part, "const update = () => setComponentScheduleActive(document.body.dataset.scheduledComponent === 'true');", `const update = () => {
+      setComponentScheduleActive(document.body.dataset.scheduledComponent === 'true');
+      setComponentSchedulePresent(document.body.hasAttribute('data-scheduled-component'));
+    };`, 'component tab presence updates')
+  const anchor = 'const { paneId, tabs, active, onActivate, onClose, onNewTab, newTabOptions, onDropTab, getTabIcon, getTabBadge } = props;'
+  part = replaceExact(part, anchor, anchor + `
+    const overflowTabs = react.useMemo(() => componentSchedulePresent ? [...tabs, {id:componentTabId, title:'定时任务'}] : tabs, [tabs, componentSchedulePresent]);`, 'complete overflow tab registry')
+  part = part.replace('String(tabs.length)); setHasOverflow(tabs.length > 1);', 'String(overflowTabs.length)); setHasOverflow(overflowTabs.length > 1);')
+  part = part.replace('}, [tabs]);', '}, [tabs, componentSchedulePresent]);')
+  const menuStart = part.indexOf('overflowOpen &&')
+  let menu = part.slice(menuStart)
+  menu = menu.replace('children: tabs.length', 'children: overflowTabs.length').replace('children: tabs.map(', 'children: overflowTabs.map(')
+  menu = menu.replaceAll('(!componentScheduleActive && active === tab.id)', '(tab.id === componentTabId ? componentScheduleActive : !componentScheduleActive && active === tab.id)')
+  menu = menu.replace('onActivate(tab.id);', `if (tab.id === componentTabId) window.dispatchEvent(new window.CustomEvent('sherlock:component-schedule-select'));
+              else onActivate(tab.id);`)
+  menu = menu.replace('getTabIcon?.(tab) ?? null', `tab.id === componentTabId ? (0, react_jsx_runtime.jsxs)('svg', {width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1,children:[(0, react_jsx_runtime.jsx)('circle',{cx:8,cy:8,r:6}),(0, react_jsx_runtime.jsx)('path',{d:'M8 4v4l3 2'})]}) : getTabIcon?.(tab) ?? null`)
+  part = part.slice(0, menuStart) + menu
   return source.slice(0, start) + part + source.slice(end)
 }
+
 function patchScheduledGlobalPanel(source) {
   source = patchComponentNativeTabSelection(source)
   const marker = '/* sherlock:scheduled-global-panel:v1 */'

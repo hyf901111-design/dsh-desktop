@@ -141,7 +141,35 @@ describe('Figma panel tab overflow', () => {
       expect(menu?.querySelectorAll('[data-odyssey-tab-overflow-option]')).toHaveLength(7)
       expect(menu?.textContent).toContain('已打开的页签7')
 
-      const tasks = menu?.querySelector('[data-odyssey-tab-overflow-option="tasks"]') as unknown as HTMLButtonElement
+      await act(async () => {
+        browserWindow.document.body.dataset.scheduledComponent = 'false'
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel'))
+      })
+      expect(menu?.querySelectorAll('[data-odyssey-tab-overflow-option]')).toHaveLength(8)
+      expect(menu?.textContent).toContain('已打开的页签8')
+      const scheduleOption = menu?.querySelector('[data-odyssey-tab-overflow-option="sherlock-component-schedule"]') as unknown as HTMLButtonElement
+      expect(scheduleOption.getAttribute('aria-checked')).toBe('false')
+      const selectSchedule = vi.fn()
+      browserWindow.addEventListener('sherlock:component-schedule-select', selectSchedule)
+      await act(async () => { scheduleOption.click() })
+      expect(selectSchedule).toHaveBeenCalledOnce()
+      expect(onActivate).not.toHaveBeenCalledWith('sherlock-component-schedule')
+      expect(host.querySelector('[data-odyssey-tab-overflow-menu]')).toBeNull()
+      await act(async () => {
+        browserWindow.document.body.dataset.scheduledComponent = 'true'
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel'))
+        trigger.click()
+      })
+      expect(host.querySelector('[data-odyssey-tab-overflow-option="sherlock-component-schedule"]')?.getAttribute('aria-checked')).toBe('true')
+      expect(host.querySelectorAll('[role=menuitemradio][aria-checked=true]')).toHaveLength(1)
+      await act(async () => {
+        delete browserWindow.document.body.dataset.scheduledComponent
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel'))
+      })
+      expect(host.querySelectorAll('[data-odyssey-tab-overflow-option]')).toHaveLength(7)
+      expect(host.querySelector('[data-odyssey-tab-overflow-heading]')?.textContent).toContain('已打开的页签7')
+
+      const tasks = host.querySelector('[data-odyssey-tab-overflow-option="tasks"]') as unknown as HTMLButtonElement
       await act(async () => { tasks.click() })
       expect(onActivate).toHaveBeenCalledWith('tasks')
       expect(host.querySelector('[data-odyssey-tab-overflow-menu]')).toBeNull()
