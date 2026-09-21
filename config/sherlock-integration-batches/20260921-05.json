@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "组件任务右侧栏关闭与页签缩略",
         "branch": "codex/feat/component-panel-close-20260921",
-        "baseCommit": "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a",
-        "tipCommit": "c20630558332a414e1be86e270282f38eef13415",
+        "baseCommit": "c20630558332a414e1be86e270282f38eef13415",
+        "tipCommit": "0ff0193e26d2a268ed347313af979e2ea49e17d3",
         "commits": [
           {
-            "commit": "c20630558332a414e1be86e270282f38eef13415",
+            "commit": "0ff0193e26d2a268ed347313af979e2ea49e17d3",
             "parents": [
-              "ed8eb0f9283dac128055e9d709b3a27bcb6a9a5a"
+              "c20630558332a414e1be86e270282f38eef13415"
             ],
-            "subject": "修复：页签自适应宽度塌缩并减少协作弹层背景残影"
+            "subject": "修复：拥挤页签保留图标并隐藏非选中关闭按钮"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
           }
         ],
         "checks": [
@@ -41,8 +37,8 @@
             ],
             "outcome": "passed",
             "summary": "12项页签和任务界面测试与类型检查通过",
-            "verifiedCommit": "c20630558332a414e1be86e270282f38eef13415",
-            "completedAt": "2026-09-21T15:22:34.021476+00:00",
+            "verifiedCommit": "0ff0193e26d2a268ed347313af979e2ea49e17d3",
+            "completedAt": "2026-09-21T15:25:32.419897+00:00",
             "timeoutMs": 120000
           },
           {
@@ -55,8 +51,8 @@
             ],
             "outcome": "passed",
             "summary": "12项页签和任务界面测试与类型检查通过",
-            "verifiedCommit": "c20630558332a414e1be86e270282f38eef13415",
-            "completedAt": "2026-09-21T15:22:34.021476+00:00",
+            "verifiedCommit": "0ff0193e26d2a268ed347313af979e2ea49e17d3",
+            "completedAt": "2026-09-21T15:25:32.419897+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -70,39 +66,7 @@
           "页签拥挤时文字省略"
         ],
         "risks": [],
-        "generatedAt": "2026-09-21T15:22:34.021476+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cf3461baa570d2f648f050061d73b98a8d9ea1e6",
-        "verificationCommit": "cf3461baa570d2f648f050061d73b98a8d9ea1e6",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "cf3461baa570d2f648f050061d73b98a8d9ea1e6",
-            "completedAt": "2026-09-21T15:22:49.605Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-task-view.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-task-view.test.ts",
-            "verifiedCommit": "cf3461baa570d2f648f050061d73b98a8d9ea1e6",
-            "completedAt": "2026-09-21T15:22:49.605Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T15:22:49.605Z"
+        "generatedAt": "2026-09-21T15:25:32.419897+00:00"
       }
     }
   ],
