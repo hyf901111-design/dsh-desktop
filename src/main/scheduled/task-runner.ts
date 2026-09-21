@@ -1,3 +1,4 @@
+import type { ComponentExecutor } from './component-executor'
 import { randomUUID } from 'node:crypto'
 import { TaskStore } from './task-store'
 import type { ScheduledTask, TaskRun } from '../../shared/scheduled-tasks'
@@ -38,6 +39,7 @@ export class TaskRunner {
     private ready: () => boolean,
     private notify: (task: ScheduledTask, run: TaskRun) => void,
     private now = Date.now,
+    private componentExecutor?: ComponentExecutor,
   ) {}
   start() {
     this.timer = setInterval(() => void this.tick().catch(console.error), 15000)
@@ -87,6 +89,12 @@ export class TaskRunner {
       const run = task.runs[0]!
       let dispatching = false
       try {
+        if (task.component) {
+          if (!this.componentExecutor) throw Error('组件执行服务未就绪')
+          dispatching = true
+          await this.componentExecutor.start(task, run)
+          return
+        }
         const sessionId =
           task.sessionId ||
           (await this.rpc('session.create', { workspaceId: task.workspaceId }))
@@ -148,6 +156,19 @@ export class TaskRunner {
     }
   }
   private async reconcile(task: ScheduledTask, run: TaskRun) {
+    if (task.component) {
+      if (!this.componentExecutor) return
+      try {
+        const result = await this.componentExecutor.inspect(task, run)
+        if (result.status !== 'running') await this.finish(task, run, result.status, result.error, result.noChange)
+        else if (this.now() - run.startedAt > 24 * 60 * 60 * 1000) await this.finish(task, run, 'failed', '组件更新超时，请检查后重试')
+      } catch (error) {
+        // Preserve transport failures for a later durable reconciliation.
+        if (error instanceof TypeError || /timeout|abort|HTTP|fetch|network/i.test(String(error))) return
+        await this.finish(task, run, 'failed', error instanceof Error ? error.message : String(error))
+      }
+      return
+    }
     if (!run.sessionId || !run.rpcId) {
       await this.finish(task, run, 'failed', '上次执行在提交前中断；请手动重试')
       return

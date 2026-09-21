@@ -1,3 +1,5 @@
+import { ScheduledComponentExecutor } from './scheduled/component-executor'
+import { validateTask } from '../shared/scheduled-tasks'
 import { generateTaskTitle } from './scheduled/task-title'
 import { TaskStore } from './scheduled/task-store'
 import { TaskRunner, harnessRpc } from './scheduled/task-runner'
@@ -1280,15 +1282,21 @@ async function bootstrap(): Promise<void> {
   let scheduledLoadError: unknown
   try { await scheduledStore.load() } catch (error) { scheduledLoadError = error; console.error('[scheduled-tasks]', error) }
   const taskRpc = harnessRpc(() => runtime.snapshot().url)
+  const componentExecutor = new ScheduledComponentExecutor(scheduledStore, async (target, method, args) => {
+    canvasActions.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]})
+    return canvasActions.execute({sessionId:target.sessionId,method,args,scheduled:true})
+  }, (method, args) => researchBoardIntegration!.runtime(method, args, AbortSignal.timeout(30000)))
   scheduledRunner = new TaskRunner(scheduledStore, taskRpc, () => !scheduledLoadError && runtime.snapshot().phase === 'ready', (task, run) => {
-    if (Notification.isSupported()) new Notification({ title: task.title, body: run.status === 'success' ? '定时任务已完成，打开专属对话查看结果' : `定时任务需要处理：${run.error}` }).show()
-  })
+    if (Notification.isSupported()) new Notification({ title: task.title, body: run.status === 'success' ? (task.component ? '组件已按计划更新' : '定时任务已完成，打开专属对话查看结果') : `定时任务需要处理：${run.error}` }).show()
+  }, Date.now, componentExecutor)
   ipcMain.handle('scheduled-tasks:request', async (event, method: unknown, payload: any) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (scheduledLoadError) throw new Error('定时任务数据读取失败，原数据已保留，请检查日志')
     if (method === 'list') return scheduledStore.list()
     if (method === 'workspaces') return (await taskRpc('workspace.list', {})).items
     if (method === 'save') {
+      const input = validateTask(payload?.input)
+      if (input.component) { await componentExecutor.target(input.component); return scheduledStore.save(input, payload.id) }
       const workspaces = (await taskRpc('workspace.list', {})).items
       if (!workspaces.some((w: any) => w.workspaceId === payload?.input?.workspaceId)) throw new Error('工作区不存在')
       return scheduledStore.save(payload.input, payload.id)

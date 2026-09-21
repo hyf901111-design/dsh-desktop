@@ -271,3 +271,22 @@ it('keeps the saved task when background title generation fails', async () => {
   expect(store.list()[0]!.id).toBe(task.id)
   expect(store.list()[0]!.prompt).toBe(input.prompt)
 })
+
+describe('component task identity', () => {
+  const component = { sessionId: 'board-session', nodeId: 'component-a', title: '市场指标', boardTitle: '研究画板' }
+  it('persists the target and prevents duplicate component schedules', async () => {
+    const { store, file } = await fixture()
+    const t = await store.save({ ...input, component })
+    expect(t).toMatchObject({ component })
+    await expect(store.save({ ...input, component })).rejects.toThrow(/已.*定时任务/)
+    const restored = new TaskStore(file, () => now)
+    await restored.load()
+    expect(restored.list()[0]).toMatchObject({ component })
+    await expect(restored.save({ ...input, component: { ...component, nodeId: 'other' } }, t.id)).rejects.toThrow(/绑定/)
+    await restored.action(t.id, 'delete')
+    expect(await restored.save({ ...input, component })).toMatchObject({ component })
+  })
+  it('rejects malformed component targets rather than turning them into global tasks', () => {
+    expect(() => validateTask({ ...input, component: { ...component, nodeId: '' } })).toThrow()
+  })
+})
