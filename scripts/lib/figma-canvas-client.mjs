@@ -221,7 +221,7 @@ function patchFigmaCanvasContent(source) {
     artifact=exact(artifact,'onNodeLabelCommit: onMindMapNodeCommit','onNodeLabelCommit: readOnly ? undefined : onMindMapNodeCommit, readOnly');
   }
   source=source.slice(0,artifactStart)+artifact+source.slice(artifactEnd);
-  const cardParentStart=source.indexOf('(0, react_jsx_runtime.jsx)(ResearchCanvasArtifactCard, {',source.indexOf('const selectionToolbarRef')),cardParentEnd=source.indexOf('}, node.id))',cardParentStart);
+  const cardParentStart=source.indexOf(source.includes('/* ODYSSEY_STABLE_CANVAS_CARDS */') ? '(0, react_jsx_runtime.jsx)(ResearchStableArtifactCard, {' : '(0, react_jsx_runtime.jsx)(ResearchCanvasArtifactCard, {',source.indexOf('const selectionToolbarRef')),cardParentEnd=source.indexOf('}, node.id))',cardParentStart);
   if(cardParentStart<0||cardParentEnd<cardParentStart)throw Error('Figma readonly card parent anchor missing');
   let cardParent=source.slice(cardParentStart,cardParentEnd);
   if(!cardParent.includes('readOnly: sharedReadOnly'))cardParent=exact(cardParent,'sessionId,','sessionId, readOnly: sharedReadOnly,');

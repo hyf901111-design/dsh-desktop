@@ -112,7 +112,7 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
    dock. Keep one small clearance between the reader and the first dock card. */
 body .sRp_conversation { padding:18px 12px 14px; gap:0; }
 body .sRp_conversation > .sRp_composer { margin-top:6px; }
-body .sRp_messages { padding-inline:0; box-sizing:border-box; }
+body .sRp_messages { padding-inline:8px; box-sizing:border-box; }
 body .sRp_messages .Md3f7G_column { gap:14px; padding-block:8px 24px; }
 body .sRp_messages [class*="_markdown_"] { line-height:1.8 !important; overflow-wrap:anywhere; }
 body .sRp_messages [class*="_markdown_"] > :is(p,ul,ol,blockquote) { margin-top:0; margin-bottom:14px; }
