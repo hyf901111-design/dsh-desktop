@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260921-02",
+  "branch": "codex/integration/20260921-02",
+  "baseMainCommit": "fcf8d3fc31c80b1fa800c9d829778e9eab91a895",
+  "expectedMainCommit": "fcf8d3fc31c80b1fa800c9d829778e9eab91a895",
+  "createdAt": "2026-09-21T04:34:17.751Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "桌面控制后台输入与独立画笔",
+        "branch": "codex/feat/background-computer-input-20260921",
+        "baseCommit": "fcf8d3fc31c80b1fa800c9d829778e9eab91a895",
+        "tipCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+        "commits": [
+          {
+            "commit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+            "parents": [
+              "fcf8d3fc31c80b1fa800c9d829778e9eab91a895"
+            ],
+            "subject": "功能：将桌面输入与画笔改为目标窗口后台投递"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/research/computer-use-integration.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/macos/computer-stroke.mm"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/desktop-computer.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-controller.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+            "completedAt": "2026-09-21T04:34:17.236405+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "36项后台路由、取消、观察与视觉准入检查通过",
+            "verifiedCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+            "completedAt": "2026-09-21T04:34:17.236405+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/build-computer-stroke.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "原生后台手势模块编译通过",
+            "verifiedCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
+            "completedAt": "2026-09-21T04:34:17.236405+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "此卡交接输入后端及聚焦检查；真实画布接收与不抢占验证安排在集成包执行，未声明UI验收通过。"
+        },
+        "acceptanceCriteria": [
+          "后台绘制实际产生画布笔迹",
+          "用户物理光标与前台应用不被抢占",
+          "取消后原目标释放按键且不会向其他应用发送输入"
+        ],
+        "risks": [
+          "SkyLight私有接口依赖系统版本",
+          "Electron后台连续手势接收尚待集成包现场验证"
+        ],
+        "generatedAt": "2026-09-21T04:34:17.236405+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/computer-controller.test.ts",
+        "test/computer-vision.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/build-computer-stroke.mjs"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
