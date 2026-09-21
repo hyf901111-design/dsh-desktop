@@ -295,3 +295,32 @@ it('uses the shared task menu with live pause state and keyboard-resizable descr
   expect(doc.body.dataset.scheduledComponent).toBe('false')
   view.close()
 })
+
+it('collapses the whole component panel without deselecting its tab or losing the draft', async () => {
+  const w = new Window(); windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver); vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<div data-dsh-panel-host><div class="native_tabList"><button role="tab" id="chat">对话</button></div><div data-scheduled-panel-slot></div></div>'
+  const states: any[] = []
+  w.addEventListener('sherlock:scheduled-panel', (e: any) => states.push(e.detail))
+  const view = new ScheduledTaskView(doc, {list: async () => [], workspaces: async () => [], save: vi.fn(), action: vi.fn()})
+  view.mount()
+  await view.openComponent({sessionId: 'canvas', nodeId: 'node', title: '指标', boardTitle: '画板', prompt: '更新指标'})
+  const prompt = doc.querySelector<HTMLTextAreaElement>('.st-prompt')!
+  prompt.value = '未保存的组件设置'
+  prompt.dispatchEvent(new w.Event('input', {bubbles: true}) as unknown as Event)
+  for (const open of [false, true, false, true]) {
+    w.dispatchEvent(new w.CustomEvent('sherlock:scheduled-panel-toggle', {detail: {open}}))
+    expect(states.at(-1)).toEqual({active: true, open, component: true})
+    expect(doc.querySelector('.st-component-tab')?.getAttribute('aria-selected')).toBe('true')
+    expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')!.value).toBe('未保存的组件设置')
+  }
+  doc.querySelector<HTMLButtonElement>('#chat')!.click()
+  expect(states.at(-1).active).toBe(false)
+  doc.querySelector<HTMLButtonElement>('.st-component-tab')!.click()
+  expect(states.at(-1)).toEqual({active: true, open: true, component: true})
+  doc.querySelector<HTMLElement>('.st-component-close')!.click()
+  expect(doc.querySelector('.st-component-tab')).toBeNull()
+  expect(states.at(-1)).toEqual({active: false, open: false})
+  view.close()
+})
