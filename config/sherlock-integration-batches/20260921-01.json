@@ -12,7 +12,7 @@
         "featureName": "定时任务快捷开关、菜单交互与自动标题",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
         "baseCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
-        "tipCommit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
+        "tipCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
         "commits": [
           {
             "commit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
@@ -20,6 +20,13 @@
               "63d57a3a09e14c111337aa5dc05397767e95e8d5"
             ],
             "subject": "优化：定时任务快捷开关、菜单交互与自动标题"
+          },
+          {
+            "commit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
+            "parents": [
+              "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4"
+            ],
+            "subject": "测试：补齐快捷开关用例的计划字段"
           }
         ],
         "files": [
@@ -45,8 +52,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查及16项定时任务聚焦测试通过",
-            "verifiedCommit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
-            "completedAt": "2026-09-21T02:31:39.356832+00:00",
+            "verifiedCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
+            "completedAt": "2026-09-21T02:32:56.255604+00:00",
             "timeoutMs": 120000
           },
           {
@@ -59,8 +66,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查及16项定时任务聚焦测试通过",
-            "verifiedCommit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
-            "completedAt": "2026-09-21T02:31:39.356832+00:00",
+            "verifiedCommit": "de2eb1e42c3c887d0b5d39a68d235b5890d80e5f",
+            "completedAt": "2026-09-21T02:32:56.255879+00:00",
             "timeoutMs": 120000
           }
         ],
