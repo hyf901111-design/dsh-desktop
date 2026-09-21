@@ -123,3 +123,16 @@ it('keeps trajectory, child, Research and right-side reading on their own geomet
     } finally { await page.close() }
   }
 })
+
+it('keeps research message gutters after all production sheets without moving the composer', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+  try {
+    await page.setContent(`<style>${frontend}\n${native}\n${css}</style><div class="sRp_conversation" style="position:absolute;left:990px;top:10px;width:380px;height:880px;box-sizing:border-box"><div class="sRp_messages"><div class="Md3f7G_scroll"><div class="Md3f7G_column"><button>正在准备任务上下文…</button></div></div></div><div class="sRp_composer"><div class="uV2eYG_card">输入框</div></div></div>`)
+    const layout = await page.evaluate(() => {
+      const messages = document.querySelector('.sRp_messages'), composer = document.querySelector('.sRp_composer')
+      const style = getComputedStyle(messages), box = document.querySelector('.sRp_conversation').getBoundingClientRect(), input = composer.getBoundingClientRect()
+      return { left: style.paddingLeft, right: style.paddingRight, inputLeft: input.left-box.left, inputRight: box.right-input.right }
+    })
+    expect(layout).toEqual({left:'8px',right:'8px',inputLeft:12,inputRight:12})
+  } finally { await page.close() }
+})
