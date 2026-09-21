@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "组件定时任务与右侧页签",
         "branch": "codex/feat/component-scheduled-tasks-20260921",
-        "baseCommit": "f812bde24b93e6346a47835cf4581598b8cc72f0",
-        "tipCommit": "f484d136fb8f39084838c106f9734db97acd7cf7",
+        "baseCommit": "f484d136fb8f39084838c106f9734db97acd7cf7",
+        "tipCommit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
         "commits": [
           {
-            "commit": "f484d136fb8f39084838c106f9734db97acd7cf7",
+            "commit": "26f9af208e84439224627ba08aa72ca29a79cbdf",
             "parents": [
-              "f812bde24b93e6346a47835cf4581598b8cc72f0"
+              "f484d136fb8f39084838c106f9734db97acd7cf7"
             ],
-            "subject": "样式：收紧定时任务页签下方的内容间距"
+            "subject": "修复：切换页签后移除定时任务的选中背景"
+          },
+          {
+            "commit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
+            "parents": [
+              "26f9af208e84439224627ba08aa72ca29a79cbdf"
+            ],
+            "subject": "样式：组件任务图标采用更轻的十八像素线框风格"
           }
         ],
         "files": [
@@ -37,8 +44,8 @@
             ],
             "outcome": "passed",
             "summary": "10项任务界面聚焦检查及类型检查通过",
-            "verifiedCommit": "f484d136fb8f39084838c106f9734db97acd7cf7",
-            "completedAt": "2026-09-21T10:55:19.834636+00:00",
+            "verifiedCommit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
+            "completedAt": "2026-09-21T11:21:38.942875+00:00",
             "timeoutMs": 120000
           },
           {
@@ -50,8 +57,8 @@
             ],
             "outcome": "passed",
             "summary": "10项任务界面聚焦检查及类型检查通过",
-            "verifiedCommit": "f484d136fb8f39084838c106f9734db97acd7cf7",
-            "completedAt": "2026-09-21T10:55:19.834636+00:00",
+            "verifiedCommit": "36cfe87f753f354152cb730845a1d5fe15ed8774",
+            "completedAt": "2026-09-21T11:21:38.942875+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -68,42 +75,7 @@
         "risks": [
           "共享画板失去编辑权限时任务失败并保留原内容"
         ],
-        "generatedAt": "2026-09-21T10:55:19.834636+00:00"
-      },
-      "merged": {
-        "mergeCommit": "96512090143a78d782229704ce44c4693d93d7e4",
-        "verificationCommit": "96512090143a78d782229704ce44c4693d93d7e4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "96512090143a78d782229704ce44c4693d93d7e4",
-            "completedAt": "2026-09-21T10:55:40.430Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-canvas-actions-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/component-scheduled-tasks.test.ts test/research-canvas-actions-client.test.js",
-            "verifiedCommit": "96512090143a78d782229704ce44c4693d93d7e4",
-            "completedAt": "2026-09-21T10:55:40.430Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T10:55:40.430Z"
+        "generatedAt": "2026-09-21T11:21:38.942875+00:00"
       }
     }
   ],
