@@ -73,6 +73,41 @@
           "共享画板失去编辑权限时任务失败并保留原内容"
         ],
         "generatedAt": "2026-09-21T11:39:58.582512+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4fd3908169a763d1824beb1535b7e0f0fe346a5d",
+        "verificationCommit": "4fd3908169a763d1824beb1535b7e0f0fe346a5d",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4fd3908169a763d1824beb1535b7e0f0fe346a5d",
+            "completedAt": "2026-09-21T11:40:01.371Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/component-scheduled-tasks.test.ts",
+              "test/research-canvas-actions-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/component-scheduled-tasks.test.ts test/research-canvas-actions-client.test.js",
+            "verifiedCommit": "4fd3908169a763d1824beb1535b7e0f0fe346a5d",
+            "completedAt": "2026-09-21T11:40:01.371Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T11:40:01.371Z"
       }
     }
   ],
