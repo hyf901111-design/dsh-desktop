@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "桌面控制后台输入与独立画笔",
         "branch": "codex/feat/background-computer-input-20260921",
-        "baseCommit": "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb",
-        "tipCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
+        "baseCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
+        "tipCommit": "2fe1e0d50a63a853b251ad7f19e3cf9eec978e66",
         "commits": [
           {
-            "commit": "90f77547ee39e57f4865c7ae305d306381cbf557",
+            "commit": "2fe1e0d50a63a853b251ad7f19e3cf9eec978e66",
             "parents": [
-              "77dcf4af7062704c23c90cf46d8ec3e52c8b32fb"
+              "90f77547ee39e57f4865c7ae305d306381cbf557"
             ],
-            "subject": "修复：让后台坐标点击保持窗口指针语义并补充现场证据"
+            "subject": "修复：统一桌面会话生命周期并补齐后台窗口输入准备"
           }
         ],
         "files": [
@@ -53,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
-            "completedAt": "2026-09-21T04:54:27.674559+00:00",
+            "verifiedCommit": "2fe1e0d50a63a853b251ad7f19e3cf9eec978e66",
+            "completedAt": "2026-09-21T05:31:26.948797+00:00",
             "timeoutMs": 120000
           },
           {
@@ -66,9 +66,9 @@
               "test/computer-vision.test.js"
             ],
             "outcome": "passed",
-            "summary": "39项后台路由、取消、观察与视觉准入检查通过",
-            "verifiedCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
-            "completedAt": "2026-09-21T04:54:27.674559+00:00",
+            "summary": "43项桌面会话、后台路由、取消、观察与视觉检查通过",
+            "verifiedCommit": "2fe1e0d50a63a853b251ad7f19e3cf9eec978e66",
+            "completedAt": "2026-09-21T05:31:26.948797+00:00",
             "timeoutMs": 120000
           },
           {
@@ -78,8 +78,8 @@
             ],
             "outcome": "passed",
             "summary": "原生后台手势模块编译通过",
-            "verifiedCommit": "90f77547ee39e57f4865c7ae305d306381cbf557",
-            "completedAt": "2026-09-21T04:54:27.674559+00:00",
+            "verifiedCommit": "2fe1e0d50a63a853b251ad7f19e3cf9eec978e66",
+            "completedAt": "2026-09-21T05:31:26.948797+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -93,54 +93,10 @@
           "取消后原目标释放按键且不会向其他应用发送输入"
         ],
         "risks": [
-          "私有系统接口需按系统版本验证",
-          "修正版坐标点击与用户物理输入并行尚待新集成包验收"
+          "后台AppKit准备的真实画虎与并行输入待集成包验证",
+          "未改变系统锁屏和电源策略"
         ],
-        "generatedAt": "2026-09-21T04:54:27.674559+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
-        "verificationCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
-            "completedAt": "2026-09-21T04:55:03.765Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-controller.test.ts",
-              "test/computer-vision.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-vision.test.js",
-            "verifiedCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
-            "completedAt": "2026-09-21T04:55:03.765Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/build-computer-stroke.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/build-computer-stroke.mjs",
-            "verifiedCommit": "e88e0cd1ba19b5758a8bf0d828bef5b19980b866",
-            "completedAt": "2026-09-21T04:55:03.765Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T04:55:03.765Z"
+        "generatedAt": "2026-09-21T05:31:26.948797+00:00"
       }
     }
   ],
