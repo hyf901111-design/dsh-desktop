@@ -18,7 +18,7 @@ const { createRoot } = requireModule('react-dom/client') as {
   createRoot(container: Element): { render(node: unknown): void; unmount(): void }
 }
 
-async function mountStatefulSidebar(desktop = false) {
+async function mountStatefulSidebar(desktop = false, noSession = false) {
   const source = await readFile(new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
   const patched = patchBetterSidebarClient(source)
   const browserWindow = new Window({ url: 'https://sherlock.local/' })
@@ -86,7 +86,7 @@ async function mountStatefulSidebar(desktop = false) {
   const Sidebar = client.__testSidebar as (props: Record<string, unknown>) => unknown
   const store = new SidebarStore()
   store.setPrefs({ ...store.getPrefs(), openByDefault: true, bottomPanelAutoTerminal: false, tabsEnabled: { editor: false, probe: true } })
-  store.setSession('motion-session')
+  store.setSession(noSession ? undefined : 'motion-session')
   store.reduce((state: any) => ({
     ...state,
     panelOpen: true,
@@ -99,7 +99,7 @@ async function mountStatefulSidebar(desktop = false) {
       tabs: [{ id: 'motion-probe', type: 'probe', title: 'Motion probe' }]
     }
   }))
-  const sessionSnapshot = { current: 'motion-session', ids: ['motion-session'], byId: { 'motion-session': { cwd: '/tmp' } } }
+  const sessionSnapshot = { current: noSession ? undefined : 'motion-session', ids: ['motion-session'], byId: { 'motion-session': { cwd: '/tmp' } } }
   const ctx = {
     locale: { subscribe: () => () => {}, getSnapshot: () => ({ active: 'zh' }) },
     sessions: { list: { subscribe: () => () => {}, getSnapshot: () => sessionSnapshot } },
@@ -156,6 +156,62 @@ async function mountStatefulSidebar(desktop = false) {
 }
 
 describe('Figma panel production lifecycle', () => {
+  it('opens the global shell without creating or selecting a session', async () => {
+    const mounted = await mountStatefulSidebar(true, true)
+    try {
+      const {browserWindow, host, store} = mounted
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel', {detail:{active:true,open:true}}))
+      })
+      expect(host.querySelector('#odyssey-right-workspace-panel')).not.toBeNull()
+      expect(host.querySelector('[data-scheduled-panel-slot]')!.hasAttribute('hidden')).toBe(false)
+      expect(store.getSnapshot().sessionId).toBeUndefined()
+      expect(store.getSnapshot().state).toBeUndefined()
+      await act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel', {detail:{active:false,open:false}}))
+      })
+      expect(host.querySelector('#odyssey-right-workspace-panel')).toBeNull()
+    } finally { await mounted.restore() }
+  })
+  it('hosts global task detail in the native shell and restores workspace panel state', async () => {
+    const mounted = await mountStatefulSidebar(true)
+    try {
+      const {browserWindow, host, store} = mounted
+      const before = structuredClone(store.getSnapshot().state)
+      const panel = host.querySelector('#odyssey-right-workspace-panel')!
+      const probe = host.querySelector('[data-motion-instance]')!
+      const request = async (active: boolean, open: boolean) => act(async () => {
+        browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:scheduled-panel', {detail:{active,open}}))
+      })
+      await request(true, true)
+      expect(host.querySelector('#odyssey-right-workspace-panel')).toBe(panel)
+      expect(host.querySelector('[data-motion-instance]')).toBe(probe)
+      expect(host.querySelector('[data-scheduled-panel-slot]')!.hasAttribute('hidden')).toBe(false)
+      expect(host.querySelectorAll('[data-odyssey-panel-entry="right"]')).toHaveLength(1)
+      expect(host.querySelector('[data-odyssey-panel-entry="bottom"]')).toBeNull()
+      expect(store.getSnapshot().state).toEqual(before)
+      const toggle = host.querySelector('[data-odyssey-panel-entry="right"]') as unknown as HTMLButtonElement
+      await act(async () => { toggle.click() })
+      expect(host.querySelector('[data-dsh-panel-host]')!.getAttribute('data-odyssey-panel-right')).toBe('closed')
+      await act(async () => { toggle.click() })
+      expect(host.querySelector('[data-dsh-panel-host]')!.getAttribute('data-odyssey-panel-right')).toBe('open')
+      const handle = host.querySelector('.t8lSSG_panelResize') as unknown as HTMLElement
+      let captured = false
+      Object.assign(handle, {setPointerCapture: () => {captured=true}, hasPointerCapture: () => captured, releasePointerCapture: () => {captured=false}})
+      const pointer = (type: string, x: number) => handle.dispatchEvent(new browserWindow.PointerEvent(type, {bubbles:true,pointerId:1,clientX:x,clientY:200,button:0}) as unknown as Event)
+      await act(async () => { pointer('pointerdown', 1000) })
+      await act(async () => { pointer('pointermove', 920) })
+      await act(async () => { pointer('pointerup', 920) })
+      expect(store.getSnapshot().state.width).toBe(before.width + 80)
+      expect(store.getSnapshot().state.panelOpen).toBe(before.panelOpen)
+      expect(store.getSnapshot().state.bottomOpen).toBe(before.bottomOpen)
+      await request(false, false)
+      expect(store.getSnapshot().state).toEqual({...before,width:before.width+80})
+      expect(host.querySelector('[data-scheduled-panel-slot]')!.hasAttribute('hidden')).toBe(true)
+      expect(host.querySelector('[data-motion-instance]')).toBe(probe)
+    } finally { await mounted.restore() }
+  })
+
   it('reserves an independent desktop pane when manually opened below 840 px and preserves stored state', async () => {
     const mounted = await mountStatefulSidebar(true)
     try {

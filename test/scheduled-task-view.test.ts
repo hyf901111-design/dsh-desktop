@@ -15,7 +15,7 @@ it('provides only scheduled tasks in More, closes on Escape, and preserves the w
   vi.stubGlobal('CustomEvent', w.CustomEvent)
   const doc = w.document as unknown as Document
   doc.body.innerHTML =
-    '<div data-dsh-sidebar-root><div class="hHd-Xa_newSessionGroup"><button class="hHd-Xa_newSession">新对话</button><button class="hHd-Xa_newSession">新研究</button></div></div><div class="pI_x6G_centerCol"><textarea>原草稿</textarea></div>'
+    '<div data-dsh-sidebar-root><div class="hHd-Xa_newSessionGroup"><button class="hHd-Xa_newSession">新对话</button><button class="hHd-Xa_newSession">新研究</button></div></div><div class="pI_x6G_centerCol"><textarea>原草稿</textarea></div><div data-scheduled-panel-slot></div>'
   const bridge = {
     list: vi.fn(async () => []),
     workspaces: vi.fn(async () => [{ workspaceId: 'w', path: '/tmp/test' }]),
@@ -39,8 +39,10 @@ it('provides only scheduled tasks in More, closes on Escape, and preserves the w
   name.dispatchEvent(
     new w.Event('input', { bubbles: true }) as unknown as Event,
   )
-  doc.querySelector<HTMLButtonElement>('.st-collapse')!.click()
-  doc.querySelector<HTMLButtonElement>('.st-panel-toggle')!.click()
+  expect(doc.querySelector('.st-panel-toggle')).toBeNull()
+  expect(doc.querySelector('.st-collapse')).toBeNull()
+  expect(name.closest('[data-scheduled-panel-slot]')).not.toBeNull()
+  for (const open of [false, true]) w.dispatchEvent(new w.CustomEvent('sherlock:scheduled-panel-toggle', {detail:{open}}))
   expect(doc.querySelector<HTMLInputElement>('.st-detail-title')!.value).toBe(
     '保留未提交任务',
   )

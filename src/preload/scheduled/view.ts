@@ -31,6 +31,7 @@ const stateLabel = (t: ScheduledTask) =>
           ? '需要处理'
           : '已开启'
 export class ScheduledTaskView {
+  private detail?: HTMLElement
   private root?: HTMLElement
   private menu?: HTMLElement
   private more?: HTMLButtonElement
@@ -68,12 +69,21 @@ export class ScheduledTaskView {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'class'],
+      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'class', 'data-odyssey-panel-right'],
     })
     this.document.addEventListener('pointerdown', this.outside)
     this.document.addEventListener('keydown', this.keyboard)
     this.document.addEventListener('click', this.navigateAway, true)
     this.document.defaultView?.addEventListener('resize', this.position)
+    this.document.defaultView?.addEventListener('sherlock:scheduled-panel-toggle', ((event: CustomEvent<{open: boolean}>) => {
+      if (!this.root) return
+      this.detailOpen = event.detail.open
+      if (this.detailOpen && !this.draft) this.newDraft()
+      else {
+        this.root.dataset.detail = String(this.detailOpen)
+        this.syncPanel()
+      }
+    }) as EventListener)
     this.mountMore()
   }
   private navigateAway = (event: MouseEvent) => {
@@ -162,8 +172,22 @@ export class ScheduledTaskView {
       ?.getBoundingClientRect()
     const left = Math.max(10, sidebar?.right || 10) + 'px'
     if (this.root.style.left !== left) this.root.style.left = left
+    this.attachDetail()
     const dark = String(this.dark())
     if (this.root.dataset.dark !== dark) this.root.dataset.dark = dark
+    if (this.detail && this.detail.dataset.dark !== dark) this.detail.dataset.dark = dark
+  }
+  private syncPanel() {
+    this.document.body.dataset.scheduledPage = 'true'
+    this.document.body.dataset.scheduledDetail = String(this.detailOpen)
+    this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-panel', {
+      detail: { active: true, open: this.detailOpen },
+    }))
+    this.attachDetail()
+  }
+  private attachDetail() {
+    const slot = this.document.querySelector('[data-scheduled-panel-slot]')
+    if (slot && this.detail && this.detail.parentElement !== slot) slot.append(this.detail)
   }
   async open() {
     this.closeMenu()
@@ -183,6 +207,7 @@ export class ScheduledTaskView {
         this.background.dataset.scheduledHidden = 'true'
       }
     }
+    this.syncPanel()
     this.position()
     this.render()
     await this.refresh()
@@ -190,6 +215,13 @@ export class ScheduledTaskView {
     this.poll = setInterval(() => void this.refresh(), 5000)
   }
   close() {
+    delete this.document.body.dataset.scheduledPage
+    delete this.document.body.dataset.scheduledDetail
+    this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-panel', {
+      detail: { active: false, open: false },
+    }))
+    this.detail?.remove()
+    this.detail = undefined
     if (this.background && !this.backgroundWasInert)
       this.background.inert = false
     if (this.background) delete this.background.dataset.scheduledHidden
@@ -235,7 +267,7 @@ export class ScheduledTaskView {
     if (!this.root) return
     this.listSignature = ''
     this.root.dataset.detail = String(this.detailOpen)
-    this.root.innerHTML = `<main class="st-center"><button class="st-icon-button st-back" aria-label="返回工作区">${icon('back')}</button><button class="st-icon-button st-panel-toggle" aria-label="展开右侧栏">${icon('panel')}</button><h1>定时任务</h1><p class="st-subtitle">安排任务、定期跟踪，或在重要变化时收到提醒</p><label class="st-search">${icon('search')}<input aria-label="搜索已安排任务" placeholder="搜索已安排任务" value="${escape(this.query)}"></label><div class="st-toolbar" role="tablist" aria-label="任务状态">${[
+    this.root.innerHTML = `<main class="st-center"><button class="st-icon-button st-back" aria-label="返回工作区">${icon('back')}</button><h1>定时任务</h1><p class="st-subtitle">安排任务、定期跟踪，或在重要变化时收到提醒</p><label class="st-search">${icon('search')}<input aria-label="搜索已安排任务" placeholder="搜索已安排任务" value="${escape(this.query)}"></label><div class="st-toolbar" role="tablist" aria-label="任务状态">${[
       ['all', '全部'],
       ['enabled', '已开启'],
       ['paused', '已暂停'],
@@ -250,12 +282,6 @@ export class ScheduledTaskView {
       )}<select aria-label="任务类型"><option>全部类型</option><option>全局任务</option></select><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></main>`
     this.root.querySelector<HTMLButtonElement>('.st-back')!.onclick = () =>
       this.close()
-    this.root.querySelector<HTMLButtonElement>('.st-panel-toggle')!.onclick =
-      () => {
-        this.detailOpen = !this.detailOpen
-        if (this.detailOpen && !this.draft) this.newDraft()
-        else this.render()
-      }
     this.root.querySelector<HTMLInputElement>('.st-search input')!.oninput = (
       e,
     ) => {
@@ -279,6 +305,7 @@ export class ScheduledTaskView {
       this.newDraft()
     this.renderList()
     if (this.detailOpen) this.renderDetail()
+    this.syncPanel()
   }
   private renderList() {
     const list = this.root?.querySelector('.st-list')
@@ -344,18 +371,18 @@ export class ScheduledTaskView {
     this.detailOpen = true
     this.error = ''
     this.render()
-    this.root?.querySelector<HTMLInputElement>('.st-detail-title')?.focus()
+    this.detail?.querySelector<HTMLInputElement>('.st-detail-title')?.focus()
   }
   private renderDetail() {
     if (!this.root || !this.draft) return
-    this.root.querySelector('.st-detail')?.remove()
+    this.detail?.remove()
     this.historySignature = ''
     const d = this.draft,
       t = this.tasks.find((t) => t.id === this.draftId)
     const detail = this.document.createElement('aside')
     detail.className = 'st-detail'
     detail.setAttribute('aria-label', '任务详情')
-    detail.innerHTML = `<div class="st-detail-top"><span class="st-status">全局任务 · ${t ? stateLabel(t) : '新建任务'}</span>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button><button class="st-secondary st-pause">${t.state === 'paused' ? '恢复' : '暂停'}</button>` : ''}<button class="st-icon-button st-collapse" aria-label="收起右侧屏">${icon('panel')}</button></div><input class="st-detail-title" aria-label="任务名称" placeholder="为任务起个名字" maxlength="120" value="${escape(d.title)}"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span>${icon('chevron')}</button><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+    detail.innerHTML = `<div class="st-detail-top"><span class="st-status">全局任务 · ${t ? stateLabel(t) : '新建任务'}</span>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button><button class="st-secondary st-pause">${t.state === 'paused' ? '恢复' : '暂停'}</button>` : ''}</div><input class="st-detail-title" aria-label="任务名称" placeholder="为任务起个名字" maxlength="120" value="${escape(d.title)}"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span>${icon('chevron')}</button><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
       ['always', '每次完成'],
       ['changes', '重要变化'],
       ['never', '不通知'],
@@ -367,7 +394,9 @@ export class ScheduledTaskView {
       .join(
         '',
       )}</select></label><div class="st-history-wrap"></div><div class="st-detail-footer"><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
-    this.root.append(detail)
+    this.detail = detail
+    detail.dataset.dark = String(this.dark())
+    this.attachDetail()
     detail.querySelector<HTMLInputElement>('.st-detail-title')!.oninput = (e) =>
       (d.title = (e.target as HTMLInputElement).value)
     const promptField = detail.querySelector<HTMLTextAreaElement>('.st-prompt')!
@@ -388,10 +417,6 @@ export class ScheduledTaskView {
     ) =>
       (d.notification = (e.target as HTMLSelectElement)
         .value as TaskInput['notification'])
-    detail.querySelector<HTMLButtonElement>('.st-collapse')!.onclick = () => {
-      this.detailOpen = false
-      this.render()
-    }
     detail.querySelector<HTMLButtonElement>('.st-repeat')!.onclick = () =>
       this.editSchedule()
     detail.querySelector<HTMLButtonElement>('.st-save')!.onclick = () =>
@@ -422,7 +447,7 @@ export class ScheduledTaskView {
   private updateStatus() {
     if (!this.draft) return
     const t = this.tasks.find((t) => t.id === this.draftId),
-      detail = this.root?.querySelector('.st-detail')
+      detail = this.detail
     if (!detail) return
     const status = detail.querySelector('.st-status')!
     status.textContent = `全局任务 · ${t ? stateLabel(t) : '新建任务'}`

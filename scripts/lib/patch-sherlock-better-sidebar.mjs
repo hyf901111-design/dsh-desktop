@@ -1010,6 +1010,57 @@ function patchFigmaCompactPanel(source) {
   return source.slice(0,start)+part+source.slice(end)
 }
 
+// Scheduled tasks occupy the existing global panel shell. Only visibility is
+// temporary; resizing keeps the native geometry writer and persisted width.
+function patchScheduledGlobalPanel(source) {
+  const marker = '/* sherlock:scheduled-global-panel:v1 */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('function Sidebar(props) {')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  let part = source.slice(start, end)
+  part = replaceExact(part, 'const snapshot = (0, react.useSyncExternalStore)', 'const nativeSnapshot = (0, react.useSyncExternalStore)', 'scheduled native snapshot')
+  part = replaceExact(part, 'const current = sessionList.current;', `const current = sessionList.current;
+      ${marker}
+      const [scheduledPanel, setScheduledPanel] = (0, react.useState)(() => ({active:document.body.hasAttribute('data-scheduled-page'), open:document.body.dataset.scheduledDetail === 'true'}));
+      const [scheduledWidth, setScheduledWidth] = (0, react.useState)(() => { try { return Number(localStorage.getItem('odyssey-global-panel-width')) || 340; } catch { return 340; } });
+      const emptyScheduledState = (0, react.useMemo)(() => makeDefaultState(340, false, 'none'), []);
+      (0, react.useEffect)(() => {
+        const update = event => {
+          const value = event.detail;
+          if (typeof value?.active !== 'boolean' || typeof value?.open !== 'boolean') return;
+          setScheduledPanel({active:value.active, open:value.open});
+        };
+        window.addEventListener('sherlock:scheduled-panel', update);
+        return () => window.removeEventListener('sherlock:scheduled-panel', update);
+      }, []);`, 'scheduled presentation state')
+  part = replaceExact(part, 'const state = snapshot.state && compactPanel ? {...snapshot.state, panelOpen:compactPanelOpen} : snapshot.state;', `const snapshot = scheduledPanel.active ? {...nativeSnapshot, state:{...(nativeSnapshot.state ?? emptyScheduledState), panelOpen:scheduledPanel.open, bottomOpen:false, width:nativeSnapshot.state?.width ?? scheduledWidth}} : nativeSnapshot;
+      const state = !scheduledPanel.active && snapshot.state && compactPanel ? {...snapshot.state, panelOpen:compactPanelOpen} : snapshot.state;
+      const resizePanel = (width, reduce) => {
+        if (scheduledPanel.active) {
+          setScheduledWidth(width);
+          try { localStorage.setItem('odyssey-global-panel-width', String(width)); } catch {}
+          store.reduce(s => setWidth(s, width));
+        } else store.reduce(reduce);
+      };`, 'scheduled effective state')
+  part = replaceExact(part, 'store.reduce(reduce);\n\t\t\t};', 'resizePanel(width, reduce);\n\t\t\t};', 'scheduled width commit')
+  part = replaceExact(part, 'store.reduce((s) => setBottomHeight(setWidth(s, width), height));', 'resizePanel(width, (s) => setBottomHeight(setWidth(s, width), height));', 'scheduled cancelled width commit')
+  part = replaceExact(part, '(compactPanel ? compactPanelOpen : snapshot.state?.panelOpen === true)', '(!scheduledPanel.active && compactPanel ? compactPanelOpen : snapshot.state?.panelOpen === true)', 'scheduled compact occupancy')
+  part = replaceExact(part, 'narrow, compactPanel, compactPanelOpen,', 'narrow, compactPanel, compactPanelOpen, scheduledPanel.active,', 'scheduled geometry dependency')
+  part = replaceExact(part, 'if (state === void 0 || sessionId === void 0) return', 'if (state === void 0 || (!scheduledPanel.active && sessionId === void 0)) return', 'scheduled no-session shell')
+  part = replaceExact(part, 'const showBottomToggle = !narrow && state.panelOpen;', 'const showBottomToggle = !scheduledPanel.active && !narrow && state.panelOpen;', 'scheduled right-only controls')
+  part = replaceExact(part, '"data-odyssey-panel-right": state.panelOpen ? "open" : "closed",', '"data-scheduled-panel": scheduledPanel.active || void 0,\n\t\t\t\t"data-odyssey-panel-right": state.panelOpen ? "open" : "closed",', 'scheduled host identity')
+  part = replaceExact(part, 'if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);', `if (scheduledPanel.active) {
+                    const open = !scheduledPanel.open;
+                    setScheduledPanel(value => ({...value, open}));
+                    window.dispatchEvent(new CustomEvent('sherlock:scheduled-panel-toggle', {detail:{open}}));
+                  } else if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);`, 'scheduled native toggle')
+  part = replaceExact(part, 'className: sidebar_module_css_default.panelBody,', `className: sidebar_module_css_default.panelBody,
+                inert: scheduledPanel.active ? '' : void 0,`, 'preserve inactive workspace content', 2)
+  part = replaceExact(part, '!narrow && state.panelOpen && state.bottomOpen &&', `/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {"data-scheduled-panel-slot":true, hidden:!scheduledPanel.active}),
+              !narrow && state.panelOpen && state.bottomOpen &&`, 'scheduled content slot')
+  return source.slice(0, start) + part + source.slice(end)
+}
+
 export function patchBetterSidebarClient(source) {
   source = patchSidebarFileRefresh(source)
   source = patchSidebarFileReference(source)
@@ -1163,7 +1214,7 @@ export function patchBetterSidebarClient(source) {
     'committed panel surface dimensions'
   )
 
-  if (source.includes(PATCH_MARKER)) return patchSidebarSystemTitles(patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))))
+  if (source.includes(PATCH_MARKER)) return patchScheduledGlobalPanel(patchSidebarSystemTitles(patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))))))
 
   const moveBefore = `\t\t\t\t\tconst insertAt = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
   const moveAfter = `\t\t\t\t\tconst requestedIndex = index >= 0 && index <= leaf.tabs.length ? index : leaf.tabs.length;\n\t\t\t\t\tconst pinnedCount = leaf.tabs.filter((tab) => tab.meta?.sherlockPinned === true).length;\n\t\t\t\t\tconst insertAt = moved.meta?.sherlockPinned === true ? 0 : Math.max(pinnedCount, requestedIndex);\n\t\t\t\t\tleaf.tabs = [\n\t\t\t\t\t\t...leaf.tabs.slice(0, insertAt),\n\t\t\t\t\t\tmoved,\n\t\t\t\t\t\t...leaf.tabs.slice(insertAt)\n\t\t\t\t\t];`
@@ -1228,7 +1279,7 @@ export function patchBetterSidebarClient(source) {
     'tab render closure'
   )
 
-  return patchSidebarSystemTitles(patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next))))))
+  return patchScheduledGlobalPanel(patchSidebarSystemTitles(patchFigmaCompactPanel(patchSidebarPdfPreview(patchFigmaPanelBounds(patchTabBarOverflow(patchTabBarMenuLayout(next)))))))
 }
 
 export async function patchBetterSidebarPackage(packageRoot) {
