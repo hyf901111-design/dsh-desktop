@@ -70,9 +70,10 @@ body[data-scheduled-component=true] .t8lSSG_panel>.t8lSSG_panelBody{z-index:2;po
 body[data-scheduled-component=true] .t8lSSG_panel .t8lSSG_tabBar{pointer-events:auto}
 body[data-scheduled-component=true] .t8lSSG_panel .t8lSSG_paneContent{visibility:hidden}
 body[data-scheduled-component] [class*="_tabList"]{position:relative}
-.st-component-tab{position:sticky;right:0;z-index:1;background:var(--dsw-alias-bg-layer-1,#252525)!important}
+.st-component-tab{position:sticky;right:0;z-index:1}
 .st-component-tab{display:flex;align-items:center;gap:6px;border:0;border-radius:8px;padding:6px 10px;white-space:nowrap;color:inherit;background:transparent;font:inherit;font-size:12px;cursor:pointer;flex:none}
-.st-component-tab[aria-selected=true]{box-shadow:inset 0 0 0 100px var(--dsw-alias-interactive-bg-hover,#8882)}
+.st-component-tab[aria-selected=false]{background:transparent!important;box-shadow:none}
+.st-component-tab[aria-selected=true]{background:var(--dsw-alias-bg-layer-1,#fff)!important;box-shadow:inset 0 0 0 100px var(--dsw-alias-interactive-bg-hover,#8882)}
 .st-component-close{margin-left:4px;padding:0 3px}
 .st-component-target span:last-child{max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-detail .st-detail-error:empty{display:none}
