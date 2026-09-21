@@ -17,6 +17,7 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
+    {"version": "1.0.4", "date": "2026-09-21", "items": ["新增全局定时任务，可设置执行时间、重复频率与通知，并查看运行记录", "画板组件支持独立定时更新，在组件更多菜单中设置任务，标题时钟标识显示任务状态", "定时任务管理支持组件任务筛选与类型标签，统一运行、暂停、恢复和删除操作", "优化定时任务页签切换、菜单层级、任务描述输入框与时间编辑器的关闭操作", "从对话进入研究模式时，底部工具栏自然上滑淡入；切换画板时保持稳定"]},
     {"version": "1.0.3", "date": "2026-09-21", "items": ["桌面画笔和坐标点击改为目标窗口后台执行，不再主动移动系统鼠标", "完善后台窗口输入准备，提升窗口失去活动状态后的点击与连续画笔稳定性", "修复桌面控制空闲一段时间后应用和窗口查询持续失败的问题", "Mac 锁屏或休眠时停止桌面输入，解锁后可继续发起任务", "改进桌面操作错误提示，并修复成功观察后仍累计连续失败次数的问题"]},
     {"version": "1.0.2", "date": "2026-09-20", "items": ["优化多人协作画板切换，点击后立即进入画板，加载内容时显示居中的小尺寸圆环提示", "减少画板重复加载请求，完善加载失败重试与快速切换时的状态处理", "修复框选边线部分边缘发灰，统一蓝色描边并对齐屏幕像素", "缩小右侧会话正文与输入框两侧留白，提高窄屏空间利用率", "修复下载更新并重启后，消息图标旁的下载图标长时间残留"]},
     {"version": "1.0.1", "date": "2026-09-19", "items": ["修复左侧栏看板区与工作区标题遮罩漏缝，滚动时完整遮挡标题下方文字，保留柔和渐隐效果", "客户端宽度低于1280像素时，新建看板或进入研究模式自动收起左侧栏；手动展开后切换看板或模式保持展开"]},
@@ -264,6 +265,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {"version": "1.0.4", "date": "2026-09-21", "items": ["Add global scheduled tasks with execution time, repeat frequency, notifications, and run history", "Schedule independent canvas component updates from the component menu, with a clock indicator in its title", "Filter component tasks by type and manage run, pause, resume, and delete actions from a consistent menu", "Refine task tab selection, menu layering, description resizing, and the time editor close action", "Slide the canvas toolbar into view when entering research from conversation, while keeping board switches stable"]},
     {"version": "1.0.3", "date": "2026-09-21", "items": ["Run desktop brush strokes and coordinate clicks in the target window without moving the system pointer", "Improve background input preparation for more reliable clicks and continuous strokes in inactive windows", "Fix persistent app and window discovery failures after desktop control has been idle", "Stop desktop input when the Mac locks or sleeps; new tasks can start after unlocking", "Show actionable desktop input errors and reset consecutive failures after successful observations"]},
     {"version": "1.0.2", "date": "2026-09-20", "items": ["Open shared boards immediately and show a small centered spinner while their content loads", "Reduce redundant board requests and improve loading retries and rapid board switching", "Fix gray marquee edges with consistent blue strokes aligned to screen pixels", "Reduce horizontal padding around the right conversation and composer for more room in narrow panes", "Hide the download icon beside notifications promptly after an update and restart"]},
     {"version": "1.0.1", "date": "2026-09-19", "items": ["Fix gaps in sidebar board and workspace heading masks so scrolling text stays fully hidden beneath the headings while retaining a soft fade", "Automatically collapse the left sidebar when creating a board or entering Research in windows narrower than 1280px; keep it expanded across board and mode changes after manually opening it"]},
