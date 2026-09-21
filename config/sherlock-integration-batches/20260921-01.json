@@ -116,6 +116,40 @@
           "应用运行时调度，关闭后恢复补跑一次"
         ],
         "generatedAt": "2026-09-21T01:23:26.941048+00:00"
+      },
+      "merged": {
+        "mergeCommit": "fb065ed848a9000feb65a06a58e002478cfb9779",
+        "verificationCommit": "fb065ed848a9000feb65a06a58e002478cfb9779",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fb065ed848a9000feb65a06a58e002478cfb9779",
+            "completedAt": "2026-09-21T01:25:10.369Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/sidebar-new-session-actions.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
+            "verifiedCommit": "fb065ed848a9000feb65a06a58e002478cfb9779",
+            "completedAt": "2026-09-21T01:25:10.369Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T01:25:10.369Z"
       }
     }
   ],
