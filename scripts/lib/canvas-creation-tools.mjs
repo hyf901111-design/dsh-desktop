@@ -37,8 +37,7 @@ function patchMarqueeScreenStyle(source) {
 export function patchMarqueeInteraction(source) {
   if (source.includes('/* ODYSSEY_MARQUEE_FRAME */')) return source
   const change = (from, to) => { if (!source.includes(from)) throw Error('Missing marquee interaction: ' + from); source = source.replace(from, to) }
-  change('let fileDragDepth = 0;', `let fileDragDepth = 0;
-    /* ODYSSEY_MARQUEE_FRAME */
+  change('let fileDragDepth = 0;', `/* ODYSSEY_MARQUEE_FRAME */
     let marqueeFrame=0;
     const paintMarquee=()=>{
       marqueeFrame=0;const op=operationRef.current,element=root.querySelector('[data-research-marquee]');
@@ -47,7 +46,8 @@ export function patchMarqueeInteraction(source) {
       const style=(${marqueeScreenStyle.toString()})(rect,root);
       for(const [key,value] of Object.entries(style))key.startsWith('--')?element.style.setProperty(key,value):element.style[key]=value+'px';
     };
-    const scheduleMarquee=()=>{if(!marqueeFrame)marqueeFrame=window.requestAnimationFrame(paintMarquee);};`)
+    const scheduleMarquee=()=>{if(!marqueeFrame)marqueeFrame=window.requestAnimationFrame(paintMarquee);};
+    let fileDragDepth = 0;`)
   change('setMarquee(normalizeResearchRect({ x: operation.startX, y: operation.startY }, { x: operation.currentX, y: operation.currentY }));', 'scheduleMarquee();')
   change('if (commitMarquee && operation.kind === "marquee") {', `if(marqueeFrame){window.cancelAnimationFrame(marqueeFrame);marqueeFrame=0;}
     if(commitMarquee && operation.kind==='marquee' && event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)){
@@ -60,10 +60,10 @@ export function patchCanvasCreationTools(source) {
   source = source.replace('// Resizing a placeholder must not lock the first finished artifact.', '// Explicit user dimensions remain authoritative after generation.')
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
   source = patchMarqueeScreenStyle(patchComponentMarquee(source))
-  source = patchResearchCanvasRenderPerformance(patchMarqueeInteraction(source))
+  source = patchMarqueeInteraction(source)
   source = patchComponentDraftFocus(source)
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
-  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
+  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchResearchCanvasRenderPerformance(installCreationStyle(source))
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
     source = source.replace(from, to)
@@ -108,7 +108,7 @@ export function patchCanvasCreationTools(source) {
   // Labels are kept in markup for older patch compatibility but visually hidden.
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   source = installCreationStyle(source)
-  return source
+  return patchResearchCanvasRenderPerformance(source)
 }
 function patchNativeLinkDraft(source) {
   if(source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')&&!source.includes('/* ODYSSEY_LINK_GEOMETRY */'))source=source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
