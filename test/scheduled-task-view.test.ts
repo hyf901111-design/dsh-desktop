@@ -160,7 +160,7 @@ it('follows native sidebar resizing and disconnects when management closes', asy
   vi.stubGlobal('MutationObserver', w.MutationObserver)
   vi.stubGlobal('CustomEvent', w.CustomEvent)
   const doc = w.document as unknown as Document
-  doc.body.innerHTML = '<aside class="pI_x6G_sidebarCol"><div data-dsh-sidebar-root></div></aside><main class="pI_x6G_centerCol"></main>'
+  doc.body.innerHTML = '<div class="pI_x6G_frame"><aside class="pI_x6G_sidebarCol"><div data-dsh-sidebar-root></div></aside><main class="pI_x6G_centerCol"></main><div class="pI_x6G_handle" data-side="sidebar"></div></div>'
   let notify!: () => void
   const observe = vi.fn(), disconnect = vi.fn()
   Object.defineProperty(w, 'ResizeObserver', {value:class {constructor(callback: () => void){notify=callback} observe=observe;disconnect=disconnect},configurable:true})
@@ -170,6 +170,7 @@ it('follows native sidebar resizing and disconnects when management closes', asy
   const view = new ScheduledTaskView(doc,{list:async()=>[],workspaces:async()=>[],save:vi.fn(),action:vi.fn()})
   view.mount()
   await view.open()
+  expect(doc.querySelector('.st-root')!.parentElement).toBe(doc.querySelector('.pI_x6G_handle')!.parentElement)
   expect(observe).toHaveBeenCalledWith(doc.querySelector('.pI_x6G_sidebarCol'))
   expect(doc.querySelector<HTMLElement>('.st-root')!.style.left).toBe('300px')
   right = 385

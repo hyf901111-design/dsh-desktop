@@ -216,7 +216,9 @@ export class ScheduledTaskView {
       this.root = this.document.createElement('section')
       this.root.className = 'st-root'
       this.root.setAttribute('aria-label', '定时任务')
-      this.document.body.append(this.root)
+      // Keep the task surface and native sidebar handle in the same stacking context.
+      // The app frame's backdrop filter otherwise traps the handle below this surface.
+      ;(this.document.querySelector('.pI_x6G_frame') || this.document.body).append(this.root)
     }
     if (!this.background) {
       this.background =
