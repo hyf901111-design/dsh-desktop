@@ -64,7 +64,8 @@ body[data-scheduled-page] [data-dsh-panel-host]{position:fixed;inset:0;z-index:9
 body[data-scheduled-page] [data-dsh-panel-host] .t8lSSG_toggleCluster{pointer-events:auto}
 [data-scheduled-panel] .t8lSSG_panel>.t8lSSG_panelBody{display:none}
 body[data-scheduled-component] [data-scheduled-panel] .t8lSSG_panel>.t8lSSG_panelBody{display:flex}
-body[data-scheduled-component=true] [data-scheduled-panel-slot]{top:58px;z-index:1}
+body[data-scheduled-component=true] [data-scheduled-panel-slot]{top:48px;z-index:1}
+body[data-scheduled-component=true] .st-detail{padding-top:8px}
 body[data-scheduled-component=true] .t8lSSG_panel>.t8lSSG_panelBody{z-index:2;pointer-events:none}
 body[data-scheduled-component=true] .t8lSSG_panel .t8lSSG_tabBar{pointer-events:auto}
 body[data-scheduled-component=true] .t8lSSG_panel .t8lSSG_paneContent{visibility:hidden}
