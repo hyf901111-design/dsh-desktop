@@ -11,29 +11,25 @@
         "schemaVersion": 1,
         "featureName": "组件定时任务与右侧页签",
         "branch": "codex/feat/component-scheduled-tasks-20260921",
-        "baseCommit": "8ff095715c4fc0e5885b083f86ebb0c7a93f46d8",
-        "tipCommit": "ab9bba0f919d7b11dbab7aa6f297e183339b2ffe",
+        "baseCommit": "ab9bba0f919d7b11dbab7aa6f297e183339b2ffe",
+        "tipCommit": "b00bd3f7a35622b1ff6212c757232c604b409599",
         "commits": [
           {
-            "commit": "ab9bba0f919d7b11dbab7aa6f297e183339b2ffe",
+            "commit": "b00bd3f7a35622b1ff6212c757232c604b409599",
             "parents": [
-              "8ff095715c4fc0e5885b083f86ebb0c7a93f46d8"
+              "ab9bba0f919d7b11dbab7aa6f297e183339b2ffe"
             ],
-            "subject": "修复：组件任务切换竞态和长指令及超时恢复"
+            "subject": "修复：组件定时页签独占选中状态并隔离覆盖内容"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/component-scheduled-tasks.mjs"
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/scheduled/component-executor.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/scheduled/task-runner.ts"
+            "path": "src/preload/scheduled/style.ts"
           },
           {
             "status": "M",
@@ -41,11 +37,7 @@
           },
           {
             "status": "M",
-            "path": "test/component-scheduled-tasks.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
+            "path": "test/figma-panel-tab-overflow.test.ts"
           }
         ],
         "checks": [
@@ -56,9 +48,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "37项聚焦检查和类型检查通过",
-            "verifiedCommit": "ab9bba0f919d7b11dbab7aa6f297e183339b2ffe",
-            "completedAt": "2026-09-21T09:17:41.100636+00:00",
+            "summary": "37项组件任务聚焦检查、原生页签回归和类型检查通过",
+            "verifiedCommit": "b00bd3f7a35622b1ff6212c757232c604b409599",
+            "completedAt": "2026-09-21T09:24:24.534904+00:00",
             "timeoutMs": 120000
           },
           {
@@ -72,9 +64,9 @@
               "test/research-canvas-actions-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "37项聚焦检查和类型检查通过",
-            "verifiedCommit": "ab9bba0f919d7b11dbab7aa6f297e183339b2ffe",
-            "completedAt": "2026-09-21T09:17:41.100636+00:00",
+            "summary": "37项组件任务聚焦检查、原生页签回归和类型检查通过",
+            "verifiedCommit": "b00bd3f7a35622b1ff6212c757232c604b409599",
+            "completedAt": "2026-09-21T09:24:24.534904+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -91,42 +83,7 @@
         "risks": [
           "共享画板失去编辑权限时任务失败并保留原内容"
         ],
-        "generatedAt": "2026-09-21T09:17:41.100636+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d19c52f5aaef48a31899e94796166efe23e22b95",
-        "verificationCommit": "d19c52f5aaef48a31899e94796166efe23e22b95",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d19c52f5aaef48a31899e94796166efe23e22b95",
-            "completedAt": "2026-09-21T09:18:13.295Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-canvas-actions-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/component-scheduled-tasks.test.ts test/research-canvas-actions-client.test.js",
-            "verifiedCommit": "d19c52f5aaef48a31899e94796166efe23e22b95",
-            "completedAt": "2026-09-21T09:18:13.295Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T09:18:13.295Z"
+        "generatedAt": "2026-09-21T09:24:24.534904+00:00"
       }
     }
   ],
