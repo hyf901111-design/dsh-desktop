@@ -11,101 +11,39 @@
         "schemaVersion": 1,
         "featureName": "画板交互性能与生成稳定性",
         "branch": "codex/feat/board-performance-20260921",
-        "baseCommit": "6f098197b8ad4693703a2d68e0ccd182330c6f62",
-        "tipCommit": "c2bb495e2031cf1b16289093a5e97e266597e436",
+        "baseCommit": "c2bb495e2031cf1b16289093a5e97e266597e436",
+        "tipCommit": "c8ad584ce1498422f538ed01c1abc701e7f6876d",
         "commits": [
           {
-            "commit": "c2bb495e2031cf1b16289093a5e97e266597e436",
+            "commit": "c8ad584ce1498422f538ed01c1abc701e7f6876d",
             "parents": [
-              "6f098197b8ad4693703a2d68e0ccd182330c6f62"
+              "c2bb495e2031cf1b16289093a5e97e266597e436"
             ],
-            "subject": "修复：优化画板框选性能、任务状态和组件生成恢复"
+            "subject": "修复：消除阅读样式对右侧消息边距的覆盖"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/research-canvas-render-performance.d.mts"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/research-canvas-render-performance.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-scrollbars.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-task-scrollbar.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/research-board-activity.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-board-activity.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-canvas-render-performance.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/figma-reading-column.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
               "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "聚焦检查通过",
-            "verifiedCommit": "c2bb495e2031cf1b16289093a5e97e266597e436",
-            "completedAt": "2026-09-21T07:19:04.039400+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
               "test",
               "--",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-activity.test.ts",
-              "test/research-task-runtime.test.js",
-              "test/research-marquee-stroke.test.js",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/research-canvas-deferred-html-patch.test.ts"
+              "test/figma-reading-column.test.js"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查通过",
-            "verifiedCommit": "c2bb495e2031cf1b16289093a5e97e266597e436",
-            "completedAt": "2026-09-21T07:19:04.039400+00:00",
+            "summary": "真实 Chromium 加载全部生产样式后，消息左右8px，输入框左右12px，6项通过",
+            "verifiedCommit": "c8ad584ce1498422f538ed01c1abc701e7f6876d",
+            "completedAt": "2026-09-21T07:28:35.020265+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -123,45 +61,7 @@
           "外部数据源不可用仍会明确显示失败",
           "旧邀请汇总测试和旧默认尺寸测试存在基线不一致，未修改相关功能"
         ],
-        "generatedAt": "2026-09-21T07:19:04.039400+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
-        "verificationCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
-            "completedAt": "2026-09-21T07:19:45.947Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-activity.test.ts",
-              "test/research-task-runtime.test.js",
-              "test/research-marquee-stroke.test.js",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/research-canvas-deferred-html-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-canvas-render-performance.test.ts test/research-board-activity.test.ts test/research-task-runtime.test.js test/research-marquee-stroke.test.js test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/research-canvas-deferred-html-patch.test.ts",
-            "verifiedCommit": "ba4c4c0a32671f4550f820590e46721c298d7c75",
-            "completedAt": "2026-09-21T07:19:45.947Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T07:19:45.947Z"
+        "generatedAt": "2026-09-21T07:28:35.020265+00:00"
       }
     }
   ],
