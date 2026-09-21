@@ -22,7 +22,7 @@ const escape = (s: unknown) =>
 const icon = (name: keyof typeof icons) =>
   `<i class="st-icon" aria-hidden="true" style="--icon:url('${icons[name]}')"></i>`
 const actionIcon = (name: 'run' | 'pause' | 'resume' | 'delete' | 'resize') => {
-  const paths = {run:'M6 4l11 6-11 6V4Z',resume:'M6 4l11 6-11 6V4Z',pause:'M7 4v12M13 4v12',delete:'M4 6h12M8 3h4M6 6l1 11h6l1-11M9 9v5M11 9v5',resize:'M5 15 15 5M10 15l5-5'}
+  const paths = {run:'M6 4l11 6-11 6V4Z',resume:'M3 9a7 7 0 1 1 4 7M1 7l2 3 3-2M9 6l5 4-5 4V6Z',pause:'M7 4v12M13 4v12',delete:'M4 6h12M8 3h4M6 6l1 11h6l1-11M9 9v5M11 9v5',resize:'M5 15 15 5M10 15l5-5'}
   return `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name]}"/></svg>`
 }
 const stateLabel = (t: ScheduledTask) =>
@@ -581,9 +581,12 @@ export class ScheduledTaskView {
       for (const button of detail.querySelectorAll<HTMLButtonElement>('[data-task-action]')) {
         const key = button.dataset.taskAction
         const action = key === 'toggle' ? (t.state === 'paused' ? 'resume' : 'pause') : key as 'run' | 'delete'
-        const label = {run:'立即运行',pause:'暂停任务',resume:'恢复任务',delete:'删除任务'}[action]
-        button.innerHTML = actionIcon(action)
-        button.setAttribute('aria-label', label); button.title = label
+        const label = {run:'立即运行',pause:'暂停运行',resume:'恢复运行',delete:'删除任务'}[action]
+        if (button.dataset.actionState !== action) {
+          button.innerHTML = actionIcon(action) + `<span class="st-action-tooltip" role="tooltip">${label}</span>`
+          button.dataset.actionState = action
+        }
+        button.setAttribute('aria-label', label)
         button.disabled = this.pendingActions.has(t.id) || (action === 'run' && t.runs[0]?.status === 'running')
         button.onclick = () => action === 'delete' ? this.confirmDelete(t) : void this.action(t, action)
       }
@@ -777,7 +780,7 @@ export class ScheduledTaskView {
     if (!this.draft) return
     const s = { ...this.draft.schedule }
     const d = this.dialog(
-      `<h2>编辑执行时间</h2><p>选择重复频率、时间和时区</p><div class="st-dialog-fields"><label>重复<select name="frequency">${[
+      `<button type="button" class="st-icon-button st-dialog-close" aria-label="关闭时间编辑器" title="关闭"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button><h2>编辑执行时间</h2><p>选择重复频率、时间和时区</p><div class="st-dialog-fields"><label>重复<select name="frequency">${[
         ['daily', '每天'],
         ['weekdays', '工作日'],
         ['weekly', '每周'],
@@ -791,6 +794,7 @@ export class ScheduledTaskView {
           '',
         )}</select></label><label>时间<input name="time" type="time" value="${s.time}"></label><label>时区<select name="timezone">${[...new Set(['Asia/Shanghai', s.timezone, 'UTC', 'Asia/Hong_Kong', 'Asia/Tokyo', 'America/New_York', 'Europe/London'])].map((v) => `<option value="${escape(v)}" ${s.timezone === v ? 'selected' : ''}>${timezoneLabel(v)}</option>`).join('')}</select></label><label data-weekday>星期<select name="weekday">${[1, 2, 3, 4, 5, 6, 0].map((v) => `<option value="${v}" ${s.weekday === v ? 'selected' : ''}>星期${'日一二三四五六'[v]}</option>`).join('')}</select></label><label data-date>日期<input name="date" type="date" value="${escape(s.date)}"></label></div><footer><div class="st-schedule-preview"></div><div class="st-error" role="alert"></div><div class="st-dialog-actions"><button class="st-secondary" data-cancel>取消</button><button class="st-primary" data-save>保存</button></div></footer>`,
     )
+    d.querySelector<HTMLButtonElement>('.st-dialog-close')!.onclick = () => d.close()
     const update = () => {
       s.frequency = d.querySelector<HTMLSelectElement>('[name=frequency]')!
         .value as Schedule['frequency']
