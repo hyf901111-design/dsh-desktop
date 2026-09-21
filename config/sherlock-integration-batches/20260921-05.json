@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260921-05",
+  "branch": "codex/integration/20260921-05",
+  "baseMainCommit": "9affb9c1d9f52f0061b0c0ca89ecd6b1b8d22cb5",
+  "expectedMainCommit": "9affb9c1d9f52f0061b0c0ca89ecd6b1b8d22cb5",
+  "createdAt": "2026-09-21T14:32:40.538Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件任务右侧栏关闭与页签缩略",
+        "branch": "codex/feat/component-panel-close-20260921",
+        "baseCommit": "9affb9c1d9f52f0061b0c0ca89ecd6b1b8d22cb5",
+        "tipCommit": "47073410c0fd91a5a8724c8002384503f196c462",
+        "commits": [
+          {
+            "commit": "47073410c0fd91a5a8724c8002384503f196c462",
+            "parents": [
+              "9affb9c1d9f52f0061b0c0ca89ecd6b1b8d22cb5"
+            ],
+            "subject": "修复：组件定时任务收起整个右侧栏并支持页签文字缩略"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "11项界面回归与类型检查通过",
+            "verifiedCommit": "47073410c0fd91a5a8724c8002384503f196c462",
+            "completedAt": "2026-09-21T14:32:21.379325+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/scheduled-task-view.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "11项界面回归与类型检查通过",
+            "verifiedCommit": "47073410c0fd91a5a8724c8002384503f196c462",
+            "completedAt": "2026-09-21T14:32:21.379534+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "DOM回归覆盖收起重开、草稿保留及切换页签；集成客户端待验证"
+        },
+        "acceptanceCriteria": [
+          "关闭按钮收起整个右侧栏",
+          "再次展开保留组件页签和草稿",
+          "页签拥挤时文字省略"
+        ],
+        "risks": [],
+        "generatedAt": "2026-09-21T14:32:33.087357+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/scheduled-task-view.test.ts"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
