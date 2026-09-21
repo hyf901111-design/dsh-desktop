@@ -1,3 +1,4 @@
+import { patchCanvasToolShortcuts } from './canvas-tool-shortcuts.mjs'
 import { patchResearchCanvasRenderPerformance } from './research-canvas-render-performance.mjs'
 import { readFileSync } from 'node:fs'
 const icon = name => `data:image/svg+xml;base64,${readFileSync(new URL(`../../build/figma-canvas-icons/tool-${name}.svg`, import.meta.url)).toString('base64')}`
@@ -63,7 +64,7 @@ export function patchCanvasCreationTools(source) {
   source = patchMarqueeInteraction(source)
   source = patchComponentDraftFocus(source)
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
-  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchResearchCanvasRenderPerformance(installCreationStyle(source))
+  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(installCreationStyle(source)))
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
     source = source.replace(from, to)
@@ -108,7 +109,7 @@ export function patchCanvasCreationTools(source) {
   // Labels are kept in markup for older patch compatibility but visually hidden.
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   source = installCreationStyle(source)
-  return patchResearchCanvasRenderPerformance(source)
+  return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(source))
 }
 function patchNativeLinkDraft(source) {
   if(source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')&&!source.includes('/* ODYSSEY_LINK_GEOMETRY */'))source=source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {

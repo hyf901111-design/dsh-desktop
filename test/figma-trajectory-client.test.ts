@@ -22,6 +22,7 @@ const packageSource = readFileSync(
   'utf8'
 )
 const patched = patchFigmaTrajectory(packageSource)
+expect(patched).toContain('"data-odyssey-trajectory-details": true')
 
 async function mountToolbar(props: Record<string, unknown>) {
   const browserWindow = new Window({ url: 'https://sherlock.local/' })
@@ -232,6 +233,6 @@ describe('Figma trajectory client patch', () => {
   })
 
   it('fails closed when an installed package anchor drifts', () => {
-    expect(() => patchFigmaTrajectory('function TrajectoryToolbar() {}')).toThrow(/Chinese locale boundary/)
+    expect(() => patchFigmaTrajectory('function TrajectoryToolbar() {}')).toThrow(/details border hook/)
   })
 })

@@ -39,12 +39,6 @@ const upcomingRun = (time: number | null) => {
   if (remaining < 86_400_000) return `下次运行 ${Math.floor(remaining / 3_600_000)} 小时后`
   return `下次运行 ${Math.floor(remaining / 86_400_000)} 天后`
 }
-const titleFromPrompt = (prompt: string) => {
-  const line = prompt.trim().split(/\r?\n/).find(line => line.trim()) || ''
-  const text = line.replace(/^\s*(?:#{1,6}\s+|[-*]\s+)/, '').replace(/\s+/g, ' ').trim()
-  const characters = Array.from(text)
-  return characters.length > 48 ? characters.slice(0, 48).join('') + '…' : text
-}
 export class ScheduledTaskView {
   private detail?: HTMLElement
   private root?: HTMLElement
@@ -415,7 +409,7 @@ export class ScheduledTaskView {
     const detail = this.document.createElement('aside')
     detail.className = 'st-detail'
     detail.setAttribute('aria-label', '任务详情')
-    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">全局任务</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button>` : ''}</div><h2 class="st-detail-title" title="${escape(d.title)}">${escape(d.title || '新建任务')}</h2><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">全局任务</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button>` : ''}</div><h2 class="st-detail-title" title="${escape(t ? d.title : '新建任务')}">${escape(t ? d.title : '新建任务')}</h2><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
       ['always', '每次完成'],
       ['changes', '重要变化'],
       ['never', '不通知'],
@@ -438,10 +432,6 @@ export class ScheduledTaskView {
     }
     promptField.oninput = () => {
       d.prompt = promptField.value
-      d.title = titleFromPrompt(d.prompt)
-      const heading = detail.querySelector<HTMLElement>('.st-detail-title')!
-      heading.textContent = d.title || '新建任务'
-      heading.title = d.title
       resizePrompt()
     }
     resizePrompt()
@@ -516,8 +506,7 @@ export class ScheduledTaskView {
     this.busy = true
     this.updateStatus()
     try {
-      if (!this.draft.title) this.draft.title = titleFromPrompt(this.draft.prompt)
-      const task = await this.bridge.save(this.draft, this.draftId)
+      const task = await this.bridge.save({...this.draft, title: this.draft.title || '定时任务'}, this.draftId)
       this.draftId = task.id
       this.selected = task.id
       this.draft = structuredClone(task)
