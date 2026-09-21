@@ -9,24 +9,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "定时任务列表详情优化与会话跳转修复",
+        "featureName": "定时任务快捷开关、菜单交互与自动标题",
         "branch": "codex/feat/global-scheduled-tasks-20260921",
-        "baseCommit": "a43f9e5f71ad3424a1164a96cc81cabaada2e33a",
-        "tipCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
+        "baseCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
+        "tipCommit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
         "commits": [
           {
-            "commit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
+            "commit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
             "parents": [
-              "a43f9e5f71ad3424a1164a96cc81cabaada2e33a"
+              "63d57a3a09e14c111337aa5dc05397767e95e8d5"
             ],
-            "subject": "优化：定时任务列表详情样式并修复会话跳转"
+            "subject": "优化：定时任务快捷开关、菜单交互与自动标题"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/verification/global-scheduled-tasks-20260921.md"
-          },
           {
             "status": "M",
             "path": "src/preload/scheduled/style.ts"
@@ -48,9 +44,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查及9项页面和全局面板相关测试通过",
-            "verifiedCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
-            "completedAt": "2026-09-21T02:11:21.589885+00:00",
+            "summary": "类型检查及16项定时任务聚焦测试通过",
+            "verifiedCommit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
+            "completedAt": "2026-09-21T02:31:39.356832+00:00",
             "timeoutMs": 120000
           },
           {
@@ -59,18 +55,18 @@
               "vitest",
               "run",
               "test/scheduled-task-view.test.ts",
-              "test/figma-panel-motion-runtime.test.ts"
+              "test/scheduled-tasks.test.ts"
             ],
             "outcome": "passed",
-            "summary": "类型检查及9项页面和全局面板相关测试通过",
-            "verifiedCommit": "63d57a3a09e14c111337aa5dc05397767e95e8d5",
-            "completedAt": "2026-09-21T02:11:21.589885+00:00",
+            "summary": "类型检查及16项定时任务聚焦测试通过",
+            "verifiedCommit": "ee4eba339cfc8abb51b5889375ee3e3cd8a94bb4",
+            "completedAt": "2026-09-21T02:31:39.356832+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "DOM交互验证了侧栏会话点击与回车退出、运行状态刷新、相对时间文案及时间提示位置；原生视觉验证待集成打包"
+          "summary": "DOM交互验证菜单再次点击收起、菜单展开行高亮、快捷暂停恢复防重复提交、自动标题与内容保留；原生视觉待集成打包"
         },
         "acceptanceCriteria": [
           "更多只包含定时任务",
@@ -81,41 +77,7 @@
         "risks": [
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
-        "generatedAt": "2026-09-21T02:11:21.589885+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cc67ab2e810aaf5f01ca8a97a80ccaa0d99494ff",
-        "verificationCommit": "cc67ab2e810aaf5f01ca8a97a80ccaa0d99494ff",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "cc67ab2e810aaf5f01ca8a97a80ccaa0d99494ff",
-            "completedAt": "2026-09-21T02:12:08.872Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/scheduled-tasks.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/sidebar-new-session-actions.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
-            "verifiedCommit": "cc67ab2e810aaf5f01ca8a97a80ccaa0d99494ff",
-            "completedAt": "2026-09-21T02:12:08.872Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T02:12:08.872Z"
+        "generatedAt": "2026-09-21T02:31:39.356832+00:00"
       }
     }
   ],
