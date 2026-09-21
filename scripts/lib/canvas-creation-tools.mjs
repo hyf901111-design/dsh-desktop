@@ -60,10 +60,10 @@ export function patchCanvasCreationTools(source) {
   source = source.replace('// Resizing a placeholder must not lock the first finished artifact.', '// Explicit user dimensions remain authoritative after generation.')
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
   source = patchMarqueeScreenStyle(patchComponentMarquee(source))
-  source = patchResearchCanvasRenderPerformance(patchMarqueeInteraction(source))
+  source = patchMarqueeInteraction(source)
   source = patchComponentDraftFocus(source)
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
-  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return installCreationStyle(source)
+  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchResearchCanvasRenderPerformance(installCreationStyle(source))
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
     source = source.replace(from, to)
@@ -108,7 +108,7 @@ export function patchCanvasCreationTools(source) {
   // Labels are kept in markup for older patch compatibility but visually hidden.
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   source = installCreationStyle(source)
-  return source
+  return patchResearchCanvasRenderPerformance(source)
 }
 function patchNativeLinkDraft(source) {
   if(source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')&&!source.includes('/* ODYSSEY_LINK_GEOMETRY */'))source=source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
