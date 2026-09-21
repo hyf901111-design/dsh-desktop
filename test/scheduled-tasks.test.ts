@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   nextRun,
   validateTask,
@@ -235,13 +235,39 @@ it('persists a summarized title separately from the full instruction and retains
   await store.load()
   const prompt = '扫描最新新闻及github有没有什么牛逼的项目可以结合到目前的项目里的'
   const task = await store.save({...input,title:'定时任务',prompt})
-  expect(task.title).toBe('新闻与开源项目精选')
+  expect(task.title.length).toBeLessThanOrEqual(21)
+  await vi.waitFor(() => expect(store.list()[0]!.title).toBe('新闻与开源项目精选'))
   expect(task.prompt).toBe(prompt)
   const reopened = new TaskStore(file, () => now)
   await reopened.load()
-  expect(reopened.list()[0]!.title).toBe(task.title)
+  expect(reopened.list()[0]!.title).toBe('新闻与开源项目精选')
   await store.save({...task,notification:'never'}, task.id)
   expect(calls).toBe(1)
   await store.save({...task,prompt:'整理项目周报'}, task.id)
   expect(calls).toBe(2)
+  await vi.waitFor(() => expect(store.list()[0]!.title).toBe('新闻与开源项目精选'))
+})
+
+it('saves immediately while title generation is pending and ignores stale results', async () => {
+  const {file} = await fixture()
+  const resolve: ((title: string) => void)[] = []
+  const store = new TaskStore(file, () => now, () => new Promise(r => resolve.push(r)))
+  await store.load()
+  const task = await store.save(input)
+  expect(store.list()).toHaveLength(1)
+  await store.save({...input, prompt:'新的任务描述'}, task.id)
+  resolve[1]!('新的摘要')
+  await vi.waitFor(() => expect(store.list()[0]!.title).toBe('新的摘要'))
+  resolve[0]!('旧的摘要')
+  await new Promise(r => setTimeout(r, 20))
+  expect(store.list()[0]!.title).toBe('新的摘要')
+})
+it('keeps the saved task when background title generation fails', async () => {
+  const {file} = await fixture()
+  const store = new TaskStore(file, () => now, async () => { throw Error('timeout') })
+  await store.load()
+  const task = await store.save(input)
+  await new Promise(r => setTimeout(r, 20))
+  expect(store.list()[0]!.id).toBe(task.id)
+  expect(store.list()[0]!.prompt).toBe(input.prompt)
 })

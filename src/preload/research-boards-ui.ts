@@ -1784,7 +1784,7 @@ export function addBoardCollaborator(page: ResearchBoardsPage, boardId: string, 
 
 export function SidebarSessionSearch({ page, buttonClass }: { page: ResearchBoardsPage; buttonClass: string }) {
   const label = '搜索会话'
-  return h('button', { type: 'button', className: buttonClass, 'aria-label': label, title: label, onClick: () => showSidebarSessionSearch(document, {
+  return h('button', { type: 'button', className: buttonClass, 'data-sidebar-session-search': '', 'aria-label': label, title: label, onClick: () => showSidebarSessionSearch(document, {
     results: page.searchSessions, subscribe: page.subscribeSearch,
     open: async result => { if (result.boardId) await page.openBoard(result.boardId); else if (result.area === 'boards') await page.openPersonal(result.sessionId!); else page.openSearchSession(result.sessionId!) }
   }) }, h(IconSearchOutline16))

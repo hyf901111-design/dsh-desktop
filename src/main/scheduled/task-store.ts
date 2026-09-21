@@ -7,7 +7,9 @@ import {
   type ScheduledTask,
   type TaskRun,
 } from '../../shared/scheduled-tasks'
+import { fallbackTaskTitle } from './task-title'
 export class TaskStore {
+  private titleRequests = new Map<string, symbol>()
   private tasks: ScheduledTask[] = []
   private queue: Promise<unknown> = Promise.resolve()
   constructor(
@@ -58,11 +60,10 @@ export class TaskStore {
   async save(value: unknown, id?: string): Promise<ScheduledTask> {
     const input = validateTask(value)
     const previous = id ? this.tasks.find(task => task.id === id && !task.deletedAt) : undefined
-    if (this.summarizeTitle && (!previous || previous.prompt !== input.prompt || previous.title === previous.prompt)) {
-      input.title = await this.summarizeTitle(input.prompt)
-      validateTask(input)
-    }
-    return this.change((tasks) => {
+    const needsTitle = !!this.summarizeTitle && (!previous || previous.prompt !== input.prompt || previous.title === previous.prompt)
+    if (needsTitle) input.title = fallbackTaskTitle(input.prompt)
+    else if (previous && this.summarizeTitle) input.title = previous.title
+    const saved = await this.change((tasks) => {
       let task = id ? tasks.find((t) => t.id === id && !t.deletedAt) : undefined
       if (id && !task) throw new Error('任务不存在')
       if (task?.runs.some((r) => r.status === 'running'))
@@ -87,6 +88,25 @@ export class TaskStore {
         tasks.unshift(task)
       }
       return task
+    })
+    if (needsTitle) this.refineTitle(saved)
+    return saved
+  }
+  private refineTitle(saved: ScheduledTask): void {
+    const token = Symbol()
+    this.titleRequests.set(saved.id, token)
+    void Promise.resolve().then(() => this.summarizeTitle!(saved.prompt)).then(async title => {
+      if (this.titleRequests.get(saved.id) !== token) return
+      validateTask({ ...saved, title })
+      await this.change(tasks => {
+        const task = tasks.find(t => t.id === saved.id && !t.deletedAt)
+        if (task && task.prompt === saved.prompt && this.titleRequests.get(saved.id) === token)
+          task.title = title
+      })
+    }).catch(() => {
+      // Creation already succeeded; retain its short local title on model failure.
+    }).finally(() => {
+      if (this.titleRequests.get(saved.id) === token) this.titleRequests.delete(saved.id)
     })
   }
   action(id: string, action: 'pause' | 'resume' | 'delete'): Promise<void> {
