@@ -53,6 +53,7 @@ export class ScheduledTaskView {
   private draft?: TaskInput
   private draftId?: string
   private detailOpen = false
+  private viewRevision = 0
   private componentMode = false
   private componentVisible = false
   private componentTab?: HTMLElement
@@ -254,11 +255,15 @@ export class ScheduledTaskView {
   }
   async openComponent(target: ComponentTarget & {prompt?: string}) {
     this.close()
+    const revision = this.viewRevision
+    this.error = ''
     this.componentMode = true
     this.componentVisible = true
     this.detailOpen = true
     try {
-      this.tasks = await this.bridge.list()
+      const tasks = await this.bridge.list()
+      if (revision !== this.viewRevision || !this.componentMode) return
+      this.tasks = tasks
       const task = this.tasks.find(t => t.component?.sessionId === target.sessionId && t.component.nodeId === target.nodeId)
       this.draftId = task?.id
       this.selected = task?.id
@@ -293,6 +298,7 @@ export class ScheduledTaskView {
     }
   }
   close() {
+    this.viewRevision++
     this.componentMode = false
     this.componentVisible = false
     this.componentTab?.remove(); this.componentTab = undefined
@@ -574,10 +580,13 @@ export class ScheduledTaskView {
   }
   private async save() {
     if (this.busy || !this.draft) return
+    const revision = this.viewRevision, draft = this.draft
     this.busy = true
     this.updateStatus()
     try {
       const task = await this.bridge.save({...this.draft, title: this.draft.title || '定时任务'}, this.draftId)
+      this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-tasks-changed'))
+      if (revision !== this.viewRevision || this.draft !== draft) return
       this.draftId = task.id
       this.selected = task.id
       this.draft = structuredClone(task)

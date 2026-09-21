@@ -141,7 +141,7 @@ export class TaskRunner {
           dispatching &&
           (error instanceof TypeError ||
             (error instanceof Error &&
-              /timeout|abort|HTTP|fetch|network/i.test(error.message)))
+              /timeout|abort|HTTP|fetch|network|画布操作响应超时/i.test(error.message)))
         )
           return
         await this.finish(
@@ -164,7 +164,7 @@ export class TaskRunner {
         else if (this.now() - run.startedAt > 24 * 60 * 60 * 1000) await this.finish(task, run, 'failed', '组件更新超时，请检查后重试')
       } catch (error) {
         // Preserve transport failures for a later durable reconciliation.
-        if (error instanceof TypeError || /timeout|abort|HTTP|fetch|network/i.test(String(error))) return
+        if (error instanceof TypeError || /timeout|abort|HTTP|fetch|network|画布操作响应超时/i.test(String(error))) return
         await this.finish(task, run, 'failed', error instanceof Error ? error.message : String(error))
       }
       return
