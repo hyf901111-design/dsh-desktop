@@ -50,3 +50,52 @@ it('provides only scheduled tasks in More, closes on Escape, and preserves the w
   expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(false)
   expect(doc.querySelector('textarea')!.value).toBe('原草稿')
 })
+
+it.each(['click', 'Enter'])('closes management for sidebar session navigation via %s without swallowing selection', async method => {
+  const w = new Window()
+  windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver)
+  vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><div class="YDXeBa_sessionRow" role="row" aria-selected="false"><span>目标会话</span></div></aside><main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+  const view = new ScheduledTaskView(doc, {list:async()=>[],workspaces:async()=>[],save:vi.fn(),action:vi.fn()})
+  view.mount()
+  await view.open()
+  const selected = vi.fn()
+  const row = doc.querySelector('.YDXeBa_sessionRow')!
+  row.addEventListener(method === 'click' ? 'click' : 'keydown', selected)
+  const event = method === 'click' ? new w.MouseEvent('click', {bubbles:true}) : new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true})
+  row.querySelector('span')!.dispatchEvent(event as unknown as Event)
+  expect(selected).toHaveBeenCalledOnce()
+  expect(event.defaultPrevented).toBe(false)
+  expect(doc.querySelector('.st-root')).toBeNull()
+  expect(doc.body.hasAttribute('data-scheduled-page')).toBe(false)
+  expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(false)
+  view.close()
+})
+
+it('shows relative next-run copy and updates the distinct running status after refresh', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-09-21T02:00:00Z'))
+  const w = new Window()
+  windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver)
+  vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+  const task: import('../src/shared/scheduled-tasks').ScheduledTask = {id:'one',title:'技术趋势早报',prompt:'整理新闻',workspaceId:'work',notification:'always',schedule:{frequency:'weekdays',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-21'},state:'enabled',nextRun:Date.now()+23*3600000,createdAt:Date.now(),runs:[]}
+  const view = new ScheduledTaskView(doc, {list:async()=>[task],workspaces:async()=>[],save:vi.fn(),action:vi.fn()})
+  view.mount()
+  await view.open()
+  expect(doc.querySelector('.st-task-meta')!.textContent).toBe('工作日 9:00 · 下次运行 23 小时后')
+  expect(doc.querySelector('.st-badge')).toBeNull()
+  doc.querySelector<HTMLButtonElement>('.st-row-main')!.click()
+  expect(doc.querySelector('.st-next')!.previousElementSibling!.classList.contains('st-repeat')).toBe(true)
+  expect(doc.querySelector('.st-detail-footer .st-next')).toBeNull()
+  task.runs.unshift({id:'run',startedAt:Date.now(),status:'running'})
+  await vi.advanceTimersByTimeAsync(5000)
+  expect(doc.querySelector('.st-status')!.getAttribute('data-state')).toBe('running')
+  expect(doc.querySelector('.st-status-label')!.textContent).toBe('运行中')
+  expect(doc.querySelector('.st-task-kind')!.textContent).toBe('全局任务')
+  view.close()
+})

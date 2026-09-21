@@ -30,6 +30,15 @@ const stateLabel = (t: ScheduledTask) =>
         : t.runs[0]?.status === 'failed'
           ? '需要处理'
           : '已开启'
+const upcomingRun = (time: number | null) => {
+  if (time === null) return '无后续计划'
+  const remaining = time - Date.now()
+  if (remaining <= 0) return '等待运行'
+  if (remaining < 60_000) return '下次运行 1 分钟内'
+  if (remaining < 3_600_000) return `下次运行 ${Math.ceil(remaining / 60_000)} 分钟后`
+  if (remaining < 86_400_000) return `下次运行 ${Math.floor(remaining / 3_600_000)} 小时后`
+  return `下次运行 ${Math.floor(remaining / 86_400_000)} 天后`
+}
 export class ScheduledTaskView {
   private detail?: HTMLElement
   private root?: HTMLElement
@@ -87,13 +96,14 @@ export class ScheduledTaskView {
     this.mountMore()
   }
   private navigateAway = (event: MouseEvent) => {
+    if (!this.root) return
     const target = event.target as Element
     if (
       target.closest('.hHd-Xa_newSession') ||
       (target.closest('[data-dsh-sidebar-root]') &&
         !target.closest('.st-more-zone') &&
         !target.closest('.hHd-Xa_toggle') &&
-        target.closest('button,a,[role=button]'))
+        target.closest('button,a,[role=button],[role=row][aria-selected],[class*="_sessionRow"]'))
     )
       this.close()
   }
@@ -106,6 +116,7 @@ export class ScheduledTaskView {
       this.closeMenu()
   }
   private keyboard = (e: KeyboardEvent) => {
+    if (this.root && e.key === 'Enter' && (e.target as Element)?.closest?.('[data-dsh-sidebar-root] [role=row][aria-selected], [data-dsh-sidebar-root] [class*="_sessionRow"]')) this.close()
     if (e.key === 'Escape' && this.menu) {
       e.preventDefault()
       this.closeMenu()
@@ -323,6 +334,7 @@ export class ScheduledTaskView {
       this.filter,
       tasks,
       this.tasks.length,
+      Math.floor(Date.now() / 60_000),
     ])
     if (this.listSignature === signature) return
     this.listSignature = signature
@@ -330,7 +342,7 @@ export class ScheduledTaskView {
       ? tasks
           .map(
             (t) =>
-              `<div class="st-row" data-id="${escape(t.id)}" data-selected="${this.selected === t.id}"><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-ring"></span><span class="st-task-info"><span class="st-task-title"><span class="st-badge">全局任务</span><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? '下次运行 ' + this.time(t.nextRun, t.schedule) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
+              `<div class="st-row" data-id="${escape(t.id)}" data-selected="${this.selected === t.id}"><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-ring"></span><span class="st-task-info"><span class="st-task-title"><strong>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
           )
           .join('')
       : `<div class="st-empty"><h2>${this.tasks.length ? '没有符合条件的任务' : '让重复的工作按计划完成'}</h2><p>${this.tasks.length ? '试试其他关键词或状态筛选。' : '定期整理资讯、跟踪指标或汇总资料。<br>新建任务，让重复的工作按计划完成。'}</p>${this.tasks.length ? '' : '<button class="st-primary st-first">＋ 新建第一个任务</button>'}</div>`
@@ -382,7 +394,7 @@ export class ScheduledTaskView {
     const detail = this.document.createElement('aside')
     detail.className = 'st-detail'
     detail.setAttribute('aria-label', '任务详情')
-    detail.innerHTML = `<div class="st-detail-top"><span class="st-status">全局任务 · ${t ? stateLabel(t) : '新建任务'}</span>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button><button class="st-secondary st-pause">${t.state === 'paused' ? '恢复' : '暂停'}</button>` : ''}</div><input class="st-detail-title" aria-label="任务名称" placeholder="为任务起个名字" maxlength="120" value="${escape(d.title)}"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span>${icon('chevron')}</button><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">全局任务</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作">${icon('more')}</button><button class="st-secondary st-pause">${t.state === 'paused' ? '恢复' : '暂停'}</button>` : ''}</div><input class="st-detail-title" aria-label="任务名称" placeholder="为任务起个名字" maxlength="120" value="${escape(d.title)}"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label><button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span>${icon('chevron')}</button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
       ['always', '每次完成'],
       ['changes', '重要变化'],
       ['never', '不通知'],
@@ -393,7 +405,7 @@ export class ScheduledTaskView {
       )
       .join(
         '',
-      )}</select></label><div class="st-history-wrap"></div><div class="st-detail-footer"><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
+      )}</select></label><div class="st-history-wrap"></div><div class="st-detail-footer"><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
     this.detail = detail
     detail.dataset.dark = String(this.dark())
     this.attachDetail()
@@ -449,8 +461,10 @@ export class ScheduledTaskView {
     const t = this.tasks.find((t) => t.id === this.draftId),
       detail = this.detail
     if (!detail) return
-    const status = detail.querySelector('.st-status')!
-    status.textContent = `全局任务 · ${t ? stateLabel(t) : '新建任务'}`
+    const status = detail.querySelector<HTMLElement>('.st-status')!
+    const label = t ? stateLabel(t) : '新建任务'
+    status.dataset.state = label === '运行中' ? 'running' : label === '需要处理' ? 'failed' : label === '已开启' ? 'enabled' : 'idle'
+    status.querySelector('.st-status-label')!.textContent = label
     const pause = detail.querySelector<HTMLButtonElement>('.st-pause')
     if (pause) pause.textContent = t?.state === 'paused' ? '恢复' : '暂停'
     let next: number | null = null
