@@ -56,6 +56,40 @@
           "修正版本的原生视觉与拖拽现场验证待打包执行"
         ],
         "generatedAt": "2026-09-21T03:26:54.453829+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e5305b8659465f5940266a1e00c505184f609c00",
+        "verificationCommit": "e5305b8659465f5940266a1e00c505184f609c00",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e5305b8659465f5940266a1e00c505184f609c00",
+            "completedAt": "2026-09-21T03:27:10.447Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/sidebar-new-session-actions.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/scheduled-tasks.test.ts test/scheduled-task-view.test.ts test/sidebar-new-session-actions.test.ts",
+            "verifiedCommit": "e5305b8659465f5940266a1e00c505184f609c00",
+            "completedAt": "2026-09-21T03:27:10.447Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-21T03:27:10.447Z"
       }
     }
   ],
