@@ -9,11 +9,13 @@
 #include <stdexcept>
 #include <thread>
 #include <vector>
+#include <dlfcn.h>
 
 struct StrokeJob {
   napi_async_work work; napi_deferred deferred;
-  pid_t pid; uint32_t window; CGRect frame; CGRect ink; CGPoint probe;
+  pid_t pid; uint32_t window; CGRect frame;
   std::vector<std::vector<CGPoint>> strokes;
+  CGEventFlags flags=0; int64_t group=0;
   double duration; std::atomic<bool> cancelled{false}; std::string error;
 };
 static std::mutex lock;
@@ -23,87 +25,95 @@ static double number(napi_env env,napi_value obj,const char* key) {
   if(napi_get_named_property(env,obj,key,&v)!=napi_ok || napi_get_value_double(env,v,&d)!=napi_ok) return NAN;
   return d;
 }
-static bool hitTarget(StrokeJob* j, CGPoint point) {
-  AXUIElementRef system=AXUIElementCreateSystemWide(), element=nullptr;
-  AXError error=AXUIElementCopyElementAtPosition(system,point.x,point.y,&element);
-  CFRelease(system);
-  if(error!=kAXErrorSuccess || !element)return false;
-  pid_t pid=0; AXUIElementGetPid(element,&pid);
-  if(pid!=j->pid){CFRelease(element);return false;}
-  CFTypeRef window=nullptr;
-  if(AXUIElementCopyAttributeValue(element,kAXWindowAttribute,&window)!=kAXErrorSuccess || !window) {
-    CFTypeRef role=nullptr;
-    AXUIElementCopyAttributeValue(element,kAXRoleAttribute,&role);
-    const bool isWindow=role && CFEqual(role,kAXWindowRole);
-    if(role)CFRelease(role);
-    if(isWindow)window=CFRetain(element);
+// Targeted delivery only: never post into the global HID stream, warp the
+// physical pointer, activate an app, or restore an old foreground app.
+// Window routing fields follow Cua Driver's Chromium-compatible event recipe.
+// See docs/licenses/cua-driver-MIT.txt and docs/research/computer-use-integration.md.
+struct BackgroundTransport {
+  using Post = void (*)(pid_t, CGEventRef);
+  using Location = void (*)(CGEventRef, double, double);
+  using Field = void (*)(CGEventRef, uint32_t, int64_t);
+  Post post=nullptr; Location location=nullptr; Field field=nullptr;
+  BackgroundTransport() {
+    void* handle=dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight",RTLD_LAZY|RTLD_LOCAL);
+    if(handle) {
+      post=reinterpret_cast<Post>(dlsym(handle,"SLEventPostToPid"));
+      location=reinterpret_cast<Location>(dlsym(handle,"CGEventSetWindowLocation"));
+      field=reinterpret_cast<Field>(dlsym(handle,"SLEventSetIntegerValueField"));
+    }
   }
-  CFRelease(element);
-  if(!window)return false;
-  CFTypeRef position=nullptr,size=nullptr;
-  AXUIElementCopyAttributeValue((AXUIElementRef)window,kAXPositionAttribute,&position);
-  AXUIElementCopyAttributeValue((AXUIElementRef)window,kAXSizeAttribute,&size);
-  CGPoint p; CGSize s;
-  const bool valid=position && size && CFGetTypeID(position)==AXValueGetTypeID() && CFGetTypeID(size)==AXValueGetTypeID()
-    && AXValueGetValue((AXValueRef)position,static_cast<AXValueType>(kAXValueCGPointType),&p) && AXValueGetValue((AXValueRef)size,static_cast<AXValueType>(kAXValueCGSizeType),&s)
-    && std::abs(p.x-j->frame.origin.x)<2 && std::abs(p.y-j->frame.origin.y)<2
-    && std::abs(s.width-j->frame.size.width)<2 && std::abs(s.height-j->frame.size.height)<2;
-  if(position)CFRelease(position);if(size)CFRelease(size);CFRelease(window);
-  return valid;
-}
+  bool available() const {return post && location && field;}
+};
+static BackgroundTransport transport;
+static CGPoint progress=CGPointZero;
+static bool hasProgress=false;
 static bool sameWindow(StrokeJob* j) {
-  // Check the actual drawing envelope in WindowServer order. Some Electron
-  // apps place small helper/header windows above their main window; those must
-  // not prevent drawing in an unobscured canvas far from the helper window.
-  NSArray* list=CFBridgingRelease(CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,kCGNullWindowID));
+  // Look up the exact window, including when covered. Desktop hit-testing is
+  // incorrect for background delivery: it selects the user's foreground app.
+  NSArray* list=CFBridgingRelease(CGWindowListCopyWindowInfo(kCGWindowListOptionIncludingWindow,j->window));
   for(NSDictionary* w in list) {
-    if(([w[(id)kCGWindowOwnerPID] intValue]==getpid() && [w[(id)kCGWindowLayer] intValue]>=25) || [w[(id)kCGWindowAlpha] doubleValue]<=0) continue;
-    CGRect b; if(!CGRectMakeWithDictionaryRepresentation((__bridge CFDictionaryRef)w[(id)kCGWindowBounds],&b))continue;
-    if(!CGRectIntersectsRect(b,j->ink))continue;
-    // Dock and remote cursor surfaces may span a display without receiving
-    // input. Verify the actual OS hit target; never whitelist their owner.
-    if([w[(id)kCGWindowLayer] intValue]>CGWindowLevelForKey(kCGNormalWindowLevelKey) && hitTarget(j,j->probe))continue;
-    if([w[(id)kCGWindowOwnerPID] intValue]!=j->pid || [w[(id)kCGWindowNumber] unsignedIntValue]!=j->window){j->error="绘制区域被窗口 " + std::to_string([w[(id)kCGWindowNumber] unsignedIntValue]) + " 遮挡，未继续输入";return false;}
-    return std::abs(b.origin.x-j->frame.origin.x)<2 && std::abs(b.origin.y-j->frame.origin.y)<2 && std::abs(b.size.width-j->frame.size.width)<2 && std::abs(b.size.height-j->frame.size.height)<2;
+    if([w[(id)kCGWindowNumber] unsignedIntValue]!=j->window)continue;
+    if([w[(id)kCGWindowOwnerPID] intValue]!=j->pid || ![w[(id)kCGWindowIsOnscreen] boolValue])return false;
+    CGRect b;
+    if(!CGRectMakeWithDictionaryRepresentation((__bridge CFDictionaryRef)w[(id)kCGWindowBounds],&b))return false;
+    return std::abs(b.origin.x-j->frame.origin.x)<1 && std::abs(b.origin.y-j->frame.origin.y)<1
+      && std::abs(b.size.width-j->frame.size.width)<1 && std::abs(b.size.height-j->frame.size.height)<1;
   }
   return false;
 }
-static void post(CGEventType type,CGPoint p) {
-  CGEventRef e=CGEventCreateMouseEvent(nullptr,type,p,kCGMouseButtonLeft);
-  if(e){CGEventSetFlags(e,0);CGEventPost(kCGHIDEventTap,e);CFRelease(e);}
+static void post(StrokeJob* j,CGEventType type,CGPoint p) {
+  CGEventSourceRef source=CGEventSourceCreate(kCGEventSourceStatePrivate);
+  CGEventRef e=CGEventCreateMouseEvent(source,type,p,kCGMouseButtonLeft);
+  if(source)CFRelease(source);
+  if(!e)throw std::runtime_error("无法创建后台鼠标事件");
+  CGEventSetFlags(e,j->flags);
+  transport.field(e,0,type==kCGEventMouseMoved?2:3);
+  transport.field(e,1,type==kCGEventMouseMoved?0:1);
+  transport.field(e,3,0);
+  transport.field(e,7,3);
+  transport.field(e,40,j->pid);
+  transport.field(e,51,j->window);
+  transport.field(e,58,j->group);
+  transport.field(e,91,j->window);
+  transport.field(e,92,j->window);
+  transport.location(e,p.x-j->frame.origin.x,p.y-j->frame.origin.y);
+  transport.post(j->pid,e);
+  CFRelease(e);
+  {std::lock_guard<std::mutex> guard(lock);progress=p;hasProgress=true;}
 }
 static void execute(napi_env,void* raw) {
  @autoreleasepool {
   auto* j=static_cast<StrokeJob*>(raw); bool down=false; CGPoint last=CGPointZero;
   try {
     if(!AXIsProcessTrusted())throw std::runtime_error("需要 EWork 辅助功能权限");
-    size_t emitted=0;
+    if(!transport.available())throw std::runtime_error("当前系统不支持后台绘制，未切换到前台输入");
     size_t segments=0;for(auto& s:j->strokes)segments+=s.size()-1;
     const double stepMs=j->duration/std::max<size_t>(segments,1);
     for(auto& s:j->strokes) {
-      j->probe=s.front();
-      if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || !sameWindow(j))throw std::runtime_error(j->error.empty()?"绘制已取消或目标窗口发生变化":j->error);
-      last=s.front();post(kCGEventMouseMoved,last);post(kCGEventLeftMouseDown,last);down=true;
+      if(j->cancelled || !sameWindow(j))throw std::runtime_error(j->error.empty()?"绘制已取消或目标窗口发生变化":j->error);
+      last=s.front();post(j,kCGEventMouseMoved,last);post(j,kCGEventLeftMouseDown,last);down=true;
       for(size_t i=1;i<s.size();i++) {
         const CGPoint from=last,to=s[i]; const int steps=std::max(1,(int)std::ceil(stepMs/8.0));
         for(int k=1;k<=steps;k++) {
-          j->probe=CGPointMake(from.x+(to.x-from.x)*k/steps,from.y+(to.y-from.y)*k/steps);
-          if(j->cancelled || [NSWorkspace.sharedWorkspace.frontmostApplication processIdentifier]!=j->pid || (++emitted % 12 == 0 && !sameWindow(j)))throw std::runtime_error(j->error.empty()?"绘制已停止或用户切换了应用":j->error);
+          if(j->cancelled || !sameWindow(j))throw std::runtime_error(j->error.empty()?"绘制已停止或目标窗口发生变化":j->error);
           last=CGPointMake(from.x+(to.x-from.x)*k/steps,from.y+(to.y-from.y)*k/steps);
-          post(kCGEventLeftMouseDragged,last);
+          post(j,kCGEventLeftMouseDragged,last);
           std::this_thread::sleep_for(std::chrono::microseconds((int)(stepMs*1000/steps)));
         }
       }
-      post(kCGEventLeftMouseUp,last);down=false;
+      post(j,kCGEventLeftMouseUp,last);down=false;
     }
   } catch(const std::exception& e) {j->error=e.what();}
   // Every exit, including stop and focus loss, releases the held button.
-  if(down)post(kCGEventLeftMouseUp,last);
+  if(down) {
+    // Release only to the original target, never to the window under the cursor.
+    try {post(j,kCGEventLeftMouseUp,last);} catch(const std::exception&) {}
+  }
  }
 }
 static void complete(napi_env env,napi_status status,void* raw) {
  auto* j=static_cast<StrokeJob*>(raw);
- {std::lock_guard<std::mutex> guard(lock);if(active==j)active=nullptr;}
+ {std::lock_guard<std::mutex> guard(lock);if(active==j){active=nullptr;hasProgress=false;}}
  napi_value result;
  if(status!=napi_ok || !j->error.empty()) {
   napi_value msg;napi_create_string_utf8(env,j->error.empty()?"绘制中止":j->error.c_str(),NAPI_AUTO_LENGTH,&msg);napi_create_error(env,nullptr,msg,&result);napi_reject_deferred(env,j->deferred,result);
@@ -123,22 +133,33 @@ static napi_value draw(napi_env env,napi_callback_info info) {
  if(!std::isfinite(j->frame.origin.x)||!std::isfinite(j->frame.origin.y)||!std::isfinite(j->frame.size.width)||!std::isfinite(j->frame.size.height)||j->frame.size.width<=0||j->frame.size.height<=0)return fail("无效窗口范围");
  uint32_t count=0;bool arr=false;napi_is_array(env,strokes,&arr);
  if(!arr||napi_get_array_length(env,strokes,&count)!=napi_ok||!count||count>12)return fail("笔画数量应为 1 至 12");
- uint32_t total=0; double minX=INFINITY,minY=INFINITY,maxX=-INFINITY,maxY=-INFINITY;
+ uint32_t total=0;
  for(uint32_t i=0;i<count;i++) {
   napi_value stroke;napi_get_element(env,strokes,i,&stroke);uint32_t n=0;napi_is_array(env,stroke,&arr);
   if(!arr||napi_get_array_length(env,stroke,&n)!=napi_ok||n<2||n>256||(total+=n)>768)return fail("笔画点数超限");
   std::vector<CGPoint> points;
-  for(uint32_t k=0;k<n;k++) {napi_value p;napi_get_element(env,stroke,k,&p);CGPoint pt=CGPointMake(number(env,p,"x"),number(env,p,"y"));if(!std::isfinite(pt.x)||!std::isfinite(pt.y)||!CGRectContainsPoint(j->frame,pt))return fail("绘制点超出目标窗口");minX=std::min(minX,pt.x);minY=std::min(minY,pt.y);maxX=std::max(maxX,pt.x);maxY=std::max(maxY,pt.y);points.push_back(pt);}
+  for(uint32_t k=0;k<n;k++) {napi_value p;napi_get_element(env,stroke,k,&p);CGPoint pt=CGPointMake(number(env,p,"x"),number(env,p,"y"));if(!std::isfinite(pt.x)||!std::isfinite(pt.y)||!CGRectContainsPoint(j->frame,pt))return fail("绘制点超出目标窗口");points.push_back(pt);}
   j->strokes.push_back(points);
  }
- j->ink=CGRectMake(minX-2,minY-2,maxX-minX+4,maxY-minY+4);
- {std::lock_guard<std::mutex> guard(lock);if(active)return fail("已有笔画正在执行");active=j;}
+ double flags=number(env,args[0],"flags");
+ if(!std::isfinite(flags)||flags<0||floor(flags)!=flags || flags>UINT32_MAX)return fail("无效修饰键");
+ const uint64_t allowed=kCGEventFlagMaskShift|kCGEventFlagMaskControl|kCGEventFlagMaskAlternate|kCGEventFlagMaskCommand;
+ if(static_cast<uint64_t>(flags)&~allowed)return fail("不支持的修饰键");
+ j->flags=static_cast<CGEventFlags>(flags);
+ j->group=std::chrono::steady_clock::now().time_since_epoch().count();
+ {std::lock_guard<std::mutex> guard(lock);if(active)return fail("已有笔画正在执行");active=j;hasProgress=false;}
  napi_value promise,name;napi_create_promise(env,&j->deferred,&promise);napi_create_string_utf8(env,"ework.stroke",NAPI_AUTO_LENGTH,&name);
  napi_create_async_work(env,nullptr,name,execute,complete,j,&j->work);napi_queue_async_work(env,j->work);return promise;
 }
 static napi_value cancel(napi_env env,napi_callback_info) {std::lock_guard<std::mutex> guard(lock);if(active)active->cancelled=true;napi_value v;napi_get_undefined(env,&v);return v;}
+static napi_value position(napi_env env,napi_callback_info) {
+ std::lock_guard<std::mutex> guard(lock);napi_value result;
+ if(!active||!hasProgress){napi_get_undefined(env,&result);return result;}
+ napi_create_object(env,&result);napi_value x,y;napi_create_double(env,progress.x,&x);napi_create_double(env,progress.y,&y);
+ napi_set_named_property(env,result,"x",x);napi_set_named_property(env,result,"y",y);return result;
+}
 static napi_value init(napi_env env,napi_value exports) {
- napi_property_descriptor props[]={{"draw",nullptr,draw,nullptr,nullptr,nullptr,napi_default,nullptr},{"cancel",nullptr,cancel,nullptr,nullptr,nullptr,napi_default,nullptr}};
- napi_define_properties(env,exports,2,props);return exports;
+ napi_property_descriptor props[]={{"draw",nullptr,draw,nullptr,nullptr,nullptr,napi_default,nullptr},{"cancel",nullptr,cancel,nullptr,nullptr,nullptr,napi_default,nullptr},{"position",nullptr,position,nullptr,nullptr,nullptr,napi_default,nullptr}};
+ napi_define_properties(env,exports,3,props);return exports;
 }
 NAPI_MODULE(NODE_GYP_MODULE_NAME,init)
