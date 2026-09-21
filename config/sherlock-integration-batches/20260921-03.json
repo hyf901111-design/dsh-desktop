@@ -9,67 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "定时任务标题与轨迹及画布工具体验",
+        "featureName": "定时任务非阻塞创建与搜索页面保留",
         "branch": "codex/feat/board-performance-20260921",
-        "baseCommit": "c3cab3cc3ba01e480d49cf9780633e1b56497e30",
-        "tipCommit": "50a7c4c64157d195d08233143cd35b890d16fee7",
+        "baseCommit": "50a7c4c64157d195d08233143cd35b890d16fee7",
+        "tipCommit": "d54cd2a37c9cf68237e4a8b0835848b5b2a063a2",
         "commits": [
           {
-            "commit": "50a7c4c64157d195d08233143cd35b890d16fee7",
+            "commit": "d54cd2a37c9cf68237e4a8b0835848b5b2a063a2",
             "parents": [
-              "c3cab3cc3ba01e480d49cf9780633e1b56497e30"
+              "50a7c4c64157d195d08233143cd35b890d16fee7"
             ],
-            "subject": "优化：定时任务简短标题、轨迹描边与画布工具快捷键"
+            "subject": "修复：定时任务立即保存并保留搜索时的管理页面"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/scheduled-title.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/canvas-tool-shortcuts.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-trajectory-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
             "path": "src/main/scheduled/task-store.ts"
           },
           {
-            "status": "A",
-            "path": "src/main/scheduled/task-title.ts"
-          },
-          {
             "status": "M",
-            "path": "src/preload/figma-trajectory.css"
+            "path": "src/preload/research-boards-ui.ts"
           },
           {
             "status": "M",
             "path": "src/preload/scheduled/view.ts"
           },
           {
-            "status": "A",
-            "path": "test/canvas-tool-shortcuts.test.js"
-          },
-          {
             "status": "M",
-            "path": "test/figma-trajectory-client.test.ts"
+            "path": "src/preload/sidebar-session-search.ts"
           },
           {
             "status": "M",
@@ -78,10 +46,6 @@
           {
             "status": "M",
             "path": "test/scheduled-tasks.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/scheduled-title.test.js"
           }
         ],
         "checks": [
@@ -92,9 +56,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "172项聚焦测试与类型检查通过",
-            "verifiedCommit": "50a7c4c64157d195d08233143cd35b890d16fee7",
-            "completedAt": "2026-09-21T08:11:39.614852+00:00",
+            "summary": "29项定时任务和搜索聚焦检查及类型检查通过",
+            "verifiedCommit": "d54cd2a37c9cf68237e4a8b0835848b5b2a063a2",
+            "completedAt": "2026-09-21T08:26:00.161193+00:00",
             "timeoutMs": 120000
           },
           {
@@ -102,73 +66,30 @@
               "npm",
               "test",
               "--",
-              "test/canvas-tool-shortcuts.test.js",
-              "test/research-canvas-render-performance.test.ts",
-              "test/scheduled-task-view.test.ts",
               "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-view.test.ts",
               "test/scheduled-title.test.js",
-              "test/figma-trajectory-client.test.ts",
-              "test/research-task-runtime.test.js"
+              "test/sidebar-session-search.test.ts"
             ],
             "outcome": "passed",
-            "summary": "172项聚焦测试与类型检查通过",
-            "verifiedCommit": "50a7c4c64157d195d08233143cd35b890d16fee7",
-            "completedAt": "2026-09-21T08:11:39.614852+00:00",
+            "summary": "29项定时任务和搜索聚焦检查及类型检查通过",
+            "verifiedCommit": "d54cd2a37c9cf68237e4a8b0835848b5b2a063a2",
+            "completedAt": "2026-09-21T08:26:00.161867+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium使用真实定时任务组件与完整样式验证新建标题固定、保存标题与描述分离；轨迹两侧描边一致。模型返回使用测试替身，待集成客户端验证真实模型。"
+          "summary": "真实ScheduledTaskView的DOM交互验证搜索时保留页面和草稿，成功打开结果后退出；打包客户端待复验。"
         },
         "acceptanceCriteria": [
-          "新建标题固定，创建后摘要标题持久化",
-          "轨迹详情与列表细描边一致",
-          "V/F/L切换且输入时避让",
-          "链接创建后自动回到选择工具"
+          "创建不等待模型标题",
+          "搜索保留任务页面和草稿，成功打开结果后退出"
         ],
         "risks": [
           "标题服务暂不可用时使用本地短标题，完整执行指令不变"
         ],
         "generatedAt": "2026-09-21T08:11:39.614852+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d462f2cc266f1ef22d800b10b0a3715de0d7be2f",
-        "verificationCommit": "d462f2cc266f1ef22d800b10b0a3715de0d7be2f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d462f2cc266f1ef22d800b10b0a3715de0d7be2f",
-            "completedAt": "2026-09-21T08:11:43.550Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-activity.test.ts",
-              "test/research-task-runtime.test.js",
-              "test/research-marquee-stroke.test.js",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/research-canvas-deferred-html-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/research-canvas-render-performance.test.ts test/research-board-activity.test.ts test/research-task-runtime.test.js test/research-marquee-stroke.test.js test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/research-canvas-deferred-html-patch.test.ts",
-            "verifiedCommit": "d462f2cc266f1ef22d800b10b0a3715de0d7be2f",
-            "completedAt": "2026-09-21T08:11:43.550Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-09-21T08:11:43.550Z"
       }
     }
   ],
