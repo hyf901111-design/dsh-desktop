@@ -224,6 +224,8 @@ it('opens component settings in a tab without covering the canvas and filters ta
   expect(doc.querySelector('.st-save')?.textContent).toBe('保存修改')
   await view.open()
   expect(doc.querySelectorAll('.st-badge')).toHaveLength(2)
+  expect(doc.querySelector('.st-detail-actions')).toBeNull()
+  expect(doc.querySelector('[aria-label="任务更多操作"]')).not.toBeNull()
   const filter=doc.querySelector<HTMLSelectElement>('[aria-label="任务类型"]')!
   filter.value='component';filter.dispatchEvent(new w.Event('change') as unknown as Event)
   expect(doc.querySelectorAll('.st-row')).toHaveLength(1)
