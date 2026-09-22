@@ -36,7 +36,7 @@ export function researchComponentTypographyCss(scope, options = {}) {
   const noto = options.notoFont === 'runtime' ? '' : options.notoFont === 'local'
     ? '@font-face{font-family:"Noto Sans SC";font-style:normal;font-weight:100 900;font-display:swap;src:url("/fonts/NotoSansSC.woff2") format("woff2");}'
     : researchNotoFontCss
-  return RESEARCH_COMPONENT_DIN_FACES + noto + `@layer sherlock-component-typography{:is(:is(${scope}),:is(${scope}) *){font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important}}`
+  return RESEARCH_COMPONENT_DIN_FACES + noto + `@layer sherlock-component-typography{:is(:is(${scope}),:is(${scope}) *){font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important}[data-sherlock-market] :is(table,table *){font-family:"EWork Market DIN Regular","Noto Sans SC",sans-serif!important}}`
 }
 // Existing model DOM may wrap a sign or separator in a numeric span. This
 // fixed-weight, glyph-limited face selects Noto Regular without editing that
@@ -139,6 +139,8 @@ export const RESEARCH_COMPONENT_CONTROLS_CSS = `@layer sherlock-component-contro
 textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:10px!important;line-height:16px!important}
 :is(button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
 :is(button[type="submit"],button[aria-pressed="true"],input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
+/* Market42 sort headers are text controls inside the original compact table header. */
+[data-sherlock-market="table"] th button{height:auto!important;min-height:0!important;padding:0!important;border-radius:0!important;font-size:9px!important;line-height:11px!important;font-weight:400!important;background-color:transparent!important;color:var(--sherlock-market-table-muted)!important}
 :is(input[type="checkbox"],input[type="radio"]){width:13px!important;height:13px!important;min-height:0!important;padding:0!important;accent-color:var(--sherlock-control-primary)!important}
 input[type="checkbox"]{border-radius:3px!important}
 :is(button,[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-text)!important;outline-offset:2px!important}
