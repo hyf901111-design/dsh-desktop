@@ -33,6 +33,7 @@
 ## 生成结果
 
 - 壳圆角 8px、标题区 48px，业务标题 13/20。业务内容内边距 12px。
+- HTML 不再重复外层业务题名。仅对文档首部明确页面标题做精确校验；题名加紧邻说明完整对应 JSON title 的括注时也命中。不把同名分节标题或后置标题当成重复；修复保留说明、来源、连接状态及共享回调，宿主不隐藏或删除业务 DOM。该类修复还与原输出做规范化 DOM 签名比对，除题名外的节点、属性、业务文本、CSS 和脚本均须保持，JSON title 不得改名规避；带 ID/事件的题名保留节点，只清重复文字。
 - 默认 fund72 指标块高 64px、圆角 5px，指标数字 23/26；标签 9/14。不同业务原稿可以保留有来源的排版关系。
 - 业务输入/select 高 28px、圆角 6px、边框 0.65px；按钮高 28px、圆角 7px。手动生成编辑器有独立规格，不套业务表格控件尺寸。
 - 语义组件：`.research-primary` 或 `[data-sherlock-variant="primary"]`；`.research-secondary`；`.research-metric` / `.kpi-card`；`.research-metric-value` / `.research-metric-label`；`.research-numeric` / `[data-sherlock-numeric]`；`[data-sherlock-status="success|warning|danger|info"]`。
@@ -46,7 +47,8 @@
 - running/retrying 流动；等待、停止、失败、暂停静态；减少动态效果偏好下静态。尚无实际暂停能力的入口不得呈现假“继续”。
 - hover/focus 不使用背景模糊遮罩；右上角对应功能 icon，每个有可读名称和气泡提示。停止先进入 stopping，最终结果以任务真实终态为准。
 - 手动框保留 x/y/width/height，输入、提交、生成、失败重试、完成均不得重置为自动 Bento 尺寸。620×300、240×620、360×200 仅为原稿例子，不是 min/max。
-- 输入流程：框选→空输入（禁用生成）→输入（Enter 生成，Shift+Enter 换行）→原位置生成→原位置结果；失败/停止保留需求和可用旧结果。提交按钮沿用手动编辑器 92×32、r8。
+- 边界使用画布世界坐标：x/y 表示框中心，width/height 表示未缩放尺寸。屏幕拖框先减去画布偏移和平移量，再除以 viewport.scale；宽高同样除以该缩放比例。它们不是截图像素或 Figma 文档全局坐标，画布平移/缩放不能改写已存边界。
+- 输入流程：框选→空输入（禁用生成）→输入（Enter 生成，Shift+Enter 换行）→原位置生成→原位置结果；失败/停止保留需求和可用旧结果。仅手动框编辑器采用此规则；实现另兼容 ⌘/Ctrl+Enter，并在输入法合成中忽略 Enter 提交。提交按钮沿用手动编辑器 92×32、r8。
 
 ## 回归入口
 

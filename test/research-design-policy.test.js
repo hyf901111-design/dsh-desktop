@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { designPolicyIssue } from '../packages/dsh-research-task-runtime/design-policy.js'
+import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
+import { load } from 'cheerio'
+import { designPolicyIssue, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue } from '../packages/dsh-research-task-runtime/design-policy.js'
+
+const fundTitle = '基金筛选表（合成数据 · 组件规范回归）'
+const fundHtml = readFileSync(new URL('./fixtures/research-kimi-fund-title.html', import.meta.url), 'utf8')
+const checklistHtml = readFileSync(new URL('./fixtures/research-kimi-checklist-title.html', import.meta.url), 'utf8')
 
 describe('generated HTML design policy', () => {
  it.each([
@@ -52,5 +59,72 @@ describe('generated HTML design policy', () => {
   'var(--sherlock-control-text,var(--sherlock-text,#1677ff))'
  ])('rejects a colored or untrusted nested control fallback: %s', value => {
   expect(designPolicyIssue(`<style>button{color:${value}}</style><button>筛选基金</button>`)).toContain('控件')
+ })
+ it.each([
+  [fundTitle, fundHtml],
+  ['研究准备清单', checklistHtml],
+  ['基金筛选表', '<h1>基金筛选表</h1><p>来源说明</p>'],
+  ['基金筛选表', '<main><header><h1> 基金筛选表 </h1></header><table></table></main>']
+ ])('rejects only a top-level page title matching the host title: %s', (title, html) => {
+  expect(designPolicyIssue(html, { title })).toContain('顶部重复标题')
+ })
+ it.each([
+  ['normal same-named section', '<section><h2>基金筛选表</h2><table></table></section>', '基金筛选表'],
+  ['normal same-named h3', '<div class="head"><h3>基金筛选表</h3></div>', '基金筛选表'],
+  ['section title class', '<div class="head"><h2 class="title">基金筛选表</h2></div>', '基金筛选表'],
+  ['metadata without title', '<div class="head"><span class="tag">合成数据 · 组件规范回归</span><span id="connStatus"></span></div>', fundTitle],
+  ['later same-named title', '<p>来源说明</p><div class="head"><span class="title">基金筛选表</span></div>', '基金筛选表'],
+  ['leading unwrapped content', '来源说明<h1>基金筛选表</h1>', '基金筛选表'],
+  ['caption', '<table><caption>基金筛选表</caption></table>', '基金筛选表'],
+  ['partial name', '<div class="head"><span class="title">基金筛选表说明</span></div>', '基金筛选表'],
+  ['different qualifier', '<div class="head"><span class="title">基金筛选表</span><span class="tag">A 类</span></div>', '基金筛选表（C 类）'],
+  ['unproved qualifier', '<div class="head"><span class="title">基金筛选表</span></div>', '基金筛选表（A 类）'],
+  ['qualifier is not adjacent', '<div class="head"><span class="title">基金筛选表</span><span>来源</span><span class="tag">A 类</span></div>', '基金筛选表（A 类）'],
+  ['qualifier after other text', '<div class="head"><span class="title">基金筛选表</span> 说明： <span class="tag">A 类</span></div>', '基金筛选表（A 类）'],
+  ['hidden title', '<h1 hidden>基金筛选表</h1><p>内容</p>', '基金筛选表'],
+  ['CSS-hidden title', '<style>.title{display:none}</style><h1 class="title">基金筛选表</h1><p>内容</p>', '基金筛选表'],
+  ['no artifact context', '<h1>基金筛选表</h1>', undefined]
+ ])('accepts %s without guessing a duplicate page title', (_, html, title) => {
+  expect(designPolicyIssue(html, { title })).toBeNull()
+ })
+ it('accepts the reduced real repair while keeping status updates, shared actions and source text', () => {
+  const repaired = fundHtml.replace('<span class="title">基金筛选表</span>', '')
+  expect(designPolicyIssue(repaired, { title: fundTitle })).toBeNull()
+  const $ = load(repaired), elements = { connStatus: { textContent: '' }, searchBtn: {} }, actions = []
+  let options
+  runInNewContext($('script').text(), { document: { getElementById: id => elements[id] }, window: { sherlockShared: { register(value) { options = value; return { dispatch: action => actions.push(action) } } } } })
+  options.onStatus({ connected: false })
+  expect(elements.connStatus.textContent).toBe('离线（本地预览）')
+  options.onStatus({ connected: true })
+  expect(elements.connStatus.textContent).toBe('')
+  elements.searchBtn.onclick()
+  expect(actions).toEqual([{ type: 'apply' }])
+  expect($('.tag').text()).toBe('合成数据 · 组件规范回归')
+  expect($('p').text()).toBe('来源：合成测试数据；保留业务说明。')
+ })
+ it('keeps the real checklist sections and synthetic-data disclaimer after its title repair', () => {
+  const repaired = checklistHtml.replace('<span class="t">研究准备清单</span>', '')
+  expect(designPolicyIssue(repaired, { title: '研究准备清单' })).toBeNull()
+  const $ = load(repaired)
+  expect($('h3').map((_, element) => $(element).text()).get()).toEqual(['数据核验', '风险检查', '来源确认'])
+  expect($('.foot').text()).toBe('合成测试数据 · 未联网 · 仅供演示')
+  expect($('#progressText').text()).toBe('0/9')
+ })
+ it('allows title-only repair with harmless formatting and attribute-order differences', () => {
+  const snapshot=duplicateTitleRepairSnapshot(fundHtml,{title:fundTitle})
+  const html=fundHtml.replace('<span class="title">基金筛选表</span>','')
+   .replace('class="status-line" id="connStatus"','id="connStatus" class="status-line"')
+   .replace('var connStatus = document.getElementById','var connStatus=document.getElementById')
+   .replace('font-weight: 600;','font-weight : 600 ;')
+   .replace('<p>来源：合成测试数据；保留业务说明。</p>','\n  <p>来源：合成测试数据；保留业务说明。</p>\n')
+  expect(duplicateTitleRepairIssue(snapshot,{type:'html',title:fundTitle,html})).toBeNull()
+ })
+ it('keeps an ID-bearing title node when removing its duplicate text', () => {
+  const snapshot=duplicateTitleRepairSnapshot('<h1 id="page-title">基金筛选表</h1><p>来源说明</p>',{title:'基金筛选表'})
+  expect(duplicateTitleRepairIssue(snapshot,{type:'html',title:'基金筛选表',html:'<h1 id="page-title"></h1><p>来源说明</p>'})).toBeNull()
+  expect(duplicateTitleRepairIssue(snapshot,{type:'html',title:'基金筛选表',html:'<p>来源说明</p>'})).toContain('ID')
+ })
+ it('does not create a preservation constraint for an ordinary section heading', () => {
+  expect(duplicateTitleRepairSnapshot('<section><h2>基金筛选表</h2></section>',{title:'基金筛选表'})).toBeNull()
  })
 })
