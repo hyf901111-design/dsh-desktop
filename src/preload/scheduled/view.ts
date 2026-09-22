@@ -56,6 +56,7 @@ export class ScheduledTaskView {
   private draftId?: string
   private detailOpen = false
   private viewRevision = 0
+  private refreshRequest = 0
   private componentMode = false
   private componentVisible = false
   private componentTab?: HTMLElement
@@ -228,6 +229,7 @@ export class ScheduledTaskView {
   }
   async open() {
     if (this.componentMode) this.close()
+    const revision = ++this.viewRevision
     this.closeMenu()
     if (!this.root) {
       this.root = this.document.createElement('section')
@@ -257,6 +259,7 @@ export class ScheduledTaskView {
     this.position()
     this.render()
     await this.refresh()
+    if (revision !== this.viewRevision || !this.root) return
     clearInterval(this.poll)
     this.poll = setInterval(() => void this.refresh(), 5000)
   }
@@ -334,16 +337,19 @@ export class ScheduledTaskView {
   }
   private async refresh() {
     if (!this.root && !this.componentMode) return
+    const revision = this.viewRevision, request = ++this.refreshRequest
     try {
       const [tasks, workspaces] = await Promise.all([
         this.bridge.list(),
         this.componentMode ? Promise.resolve([]) : this.bridge.workspaces(),
       ])
+      if (revision !== this.viewRevision || request !== this.refreshRequest) return
       this.tasks = tasks
       this.workspaces = workspaces
       this.renderList()
       this.updateStatus()
     } catch (e) {
+      if (revision !== this.viewRevision || request !== this.refreshRequest) return
       this.showError(e)
     }
   }

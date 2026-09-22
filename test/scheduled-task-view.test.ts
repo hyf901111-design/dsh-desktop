@@ -324,3 +324,25 @@ it('collapses the whole component panel without deselecting its tab or losing th
   expect(states.at(-1)).toEqual({active: false, open: false})
   view.close()
 })
+
+it('ignores refresh results from a closed view and does not restart its polling',async()=>{
+ vi.useFakeTimers()
+ const w=new Window();windows.push(w)
+ const doc=w.document as unknown as Document
+ vi.stubGlobal('CustomEvent',w.CustomEvent)
+ let resolveOld!: (tasks: any[])=>void
+ const old=new Promise<any[]>(resolve=>{resolveOld=resolve})
+ const list=vi.fn().mockReturnValueOnce(old).mockResolvedValue([])
+ const view=new ScheduledTaskView(doc,{list,workspaces:async()=>[],save:vi.fn(),action:vi.fn()})
+ const opening=view.open()
+ view.close()
+ await view.open()
+ resolveOld([{id:'old',title:'过期结果',prompt:'old',state:'enabled',schedule:{frequency:'daily',time:'09:00',timezone:'UTC'},runs:[],nextRun:null}])
+ await opening
+ expect(doc.querySelector('.st-list')!.textContent).not.toContain('过期结果')
+ view.close()
+ const reopening=view.open()
+ view.close()
+ await reopening
+ expect(vi.getTimerCount()).toBe(0)
+})
