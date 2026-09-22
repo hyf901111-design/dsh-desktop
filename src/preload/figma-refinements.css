@@ -314,7 +314,7 @@ body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; 
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_time,
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .srb-edit-time { display:none!important; }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions { box-sizing:border-box; position:absolute; right:8px; top:4px; display:flex; visibility:hidden; flex:0 0 24px; width:24px; height:24px; min-width:0; margin:0; padding:0; gap:0; align-items:center; justify-content:flex-end; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .YDXeBa_rowActions { visibility:visible; background:var(--srb-row-active); box-shadow:-8px 0 8px 2px var(--srb-row-active); }
+[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .YDXeBa_rowActions { visibility:visible; background:transparent; box-shadow:none; }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button { box-sizing:border-box; display:flex; align-items:center; justify-content:center; width:24px; height:24px; min-width:24px; padding:4px; margin:0; border:0; border-radius:5px; background:transparent; box-shadow:none; color:var(--srb-muted); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button:hover { background:var(--srb-row-hover); color:var(--srb-label); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .YDXeBa_rowActions button svg { width:16px; height:16px; flex:none; }
