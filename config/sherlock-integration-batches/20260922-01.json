@@ -236,15 +236,15 @@
         "schemaVersion": 1,
         "featureName": "研究看板组件Figma规范落地",
         "branch": "codex/feat/research-component-spec-20260922",
-        "baseCommit": "22f8aa80006a7807dcce30f598c4ed822e0eabb4",
-        "tipCommit": "d952bcce9d8e6d2ea6085c17e4a40453712cce56",
+        "baseCommit": "d952bcce9d8e6d2ea6085c17e4a40453712cce56",
+        "tipCommit": "8659e3ffdfaea5e6a804e5c9d731cf977341c5fa",
         "commits": [
           {
-            "commit": "d952bcce9d8e6d2ea6085c17e4a40453712cce56",
+            "commit": "8659e3ffdfaea5e6a804e5c9d731cf977341c5fa",
             "parents": [
-              "22f8aa80006a7807dcce30f598c4ed822e0eabb4"
+              "d952bcce9d8e6d2ea6085c17e4a40453712cce56"
             ],
-            "subject": "修复组件生成过程与默认卡片尺寸并统一页签图标和行情模板"
+            "subject": "对齐行情表格原稿字重透明色与紧凑表头并增加同数据回归"
           }
         ],
         "files": [
@@ -253,112 +253,24 @@
             "path": "docs/design/research-component-validation-20260922.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/design/research-market42-source-audit.json"
           },
           {
             "status": "M",
-            "path": "docs/research-component-design-contract.md"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/market-artifact.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-subagent-panel.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/market-font.js"
           },
           {
             "status": "A",
-            "path": "scripts/lib/research-tab-icons.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-research-generation-design.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-canvas-gestures-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-subagent-panel-destination.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-artifact-resilience.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-component-process-panel.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-derived-task-presentation.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-generation-controls.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-generation-expand-final.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-market-artifact.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-tab-icons.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
+            "path": "scripts/verify-research-market-source.mjs"
           }
         ],
         "checks": [
@@ -369,30 +281,15 @@
               "run",
               "test/research-html-theme.test.js",
               "test/research-html-profiles.test.js",
-              "test/research-component-header-note.test.ts",
-              "test/research-design-policy.test.js",
-              "test/research-task-runtime.test.js",
-              "test/shared-component-validation.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/research-generation-expand-final.test.ts",
-              "test/research-derived-task-presentation.test.ts",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "test/research-artifact-resilience.test.js",
-              "test/research-component-process-panel.test.js",
               "test/research-market-artifact.test.js",
-              "test/research-tab-icons.test.js",
-              "test/figma-panel-tab-overflow.test.ts",
-              "test/research-workbench.test.js",
-              "test/figma-subagent-panel.test.js",
-              "test/figma-subagent-panel-destination.test.js",
+              "test/research-artifact-resilience.test.js",
+              "test/research-design-policy.test.js",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "432项直接相关测试通过；默认280×200、右侧精确子任务、900ms进展、市场数据模板、全页签图标。",
-            "verifiedCommit": "d952bcce9d8e6d2ea6085c17e4a40453712cce56",
-            "completedAt": "2026-09-22T14:32:31.619782+00:00",
+            "summary": "141项关联测试通过；行情原稿字重、透明背景及紧凑表头。",
+            "verifiedCommit": "8659e3ffdfaea5e6a804e5c9d731cf977341c5fa",
+            "completedAt": "2026-09-22T14:44:41.881068+00:00",
             "timeoutMs": 180000
           },
           {
@@ -403,8 +300,19 @@
             ],
             "outcome": "passed",
             "summary": "研究组件来源规范及测试类型检查通过",
-            "verifiedCommit": "d952bcce9d8e6d2ea6085c17e4a40453712cce56",
-            "completedAt": "2026-09-22T14:32:31.619782+00:00",
+            "verifiedCommit": "8659e3ffdfaea5e6a804e5c9d731cf977341c5fa",
+            "completedAt": "2026-09-22T14:44:41.881068+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-market-source.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "四模块浅深8次源值渲染，无字段丢失或纵向溢出；21px指标及19.5px行高",
+            "verifiedCommit": "8659e3ffdfaea5e6a804e5c9d731cf977341c5fa",
+            "completedAt": "2026-09-22T14:44:41.881068+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -425,115 +333,7 @@
           "完整OHLC及缺失行业权重未在源稿标示，不用合成数据冒充同源对比。",
           "不变更版本、不推送或公开发布；用户验收前保留integration分支。"
         ],
-        "generatedAt": "2026-09-22T14:32:31.619782+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0515a503fa37f0fb74a38554a556ef206f5643bf",
-        "verificationCommit": "0515a503fa37f0fb74a38554a556ef206f5643bf",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0515a503fa37f0fb74a38554a556ef206f5643bf",
-            "completedAt": "2026-09-22T14:32:58.912Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "0515a503fa37f0fb74a38554a556ef206f5643bf",
-            "completedAt": "2026-09-22T14:32:58.912Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "0515a503fa37f0fb74a38554a556ef206f5643bf",
-            "completedAt": "2026-09-22T14:32:58.912Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-html-theme.test.js",
-              "test/research-design-policy.test.js",
-              "test/research-task-runtime.test.js",
-              "test/shared-component-validation.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/research-generation-expand-final.test.ts",
-              "test/research-derived-task-presentation.test.ts",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-html-theme.test.js test/research-design-policy.test.js test/research-task-runtime.test.js test/shared-component-validation.test.js test/research-generation-controls.test.ts test/figma-canvas-gestures-ui.test.ts test/research-generation-expand-final.test.ts test/research-derived-task-presentation.test.ts test/research-canvas-render-performance.test.ts test/research-board-client-adapter.test.js --reporter=dot",
-            "verifiedCommit": "0515a503fa37f0fb74a38554a556ef206f5643bf",
-            "completedAt": "2026-09-22T14:32:58.912Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-22T14:32:58.912Z"
+        "generatedAt": "2026-09-22T14:44:41.881068+00:00"
       }
     }
   ],
