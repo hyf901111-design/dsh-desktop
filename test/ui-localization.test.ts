@@ -36,3 +36,36 @@ it('translates dynamic notification counts and overlooked canvas controls',()=>{
  expect(translateUiCopy('从画布移除')).toBe('Remove from canvas')
  expect(translateUiCopy('登录')).toBe('Sign in')
 })
+
+it('localizes scheduled surfaces and live locale changes without translating task content', async () => {
+ const win=new Window(),doc=win.document
+ doc.body.innerHTML='<div class="st-root"><h1>定时任务</h1><select><option>全部类型</option></select><span class="st-task-meta">每天 9:00 · 下次运行 23 分钟后</span><strong data-ui-preserve>已完成</strong></div><div class="st-detail"><span>组件任务</span><div class="st-next">北京时间 · 下次运行 9/22 09:00</div><textarea>定时任务</textarea></div><div role="tooltip">选择 (V)</div><button data-tool-tooltip="组件 (F)"></button><div role="menu"><button>每 5 分钟</button></div>'
+ doc.documentElement.dataset.odysseyLocale='en'
+ const dispose=mountUiLocalization(doc as unknown as Document)
+ await win.happyDOM.waitUntilComplete()
+ expect(doc.querySelector('h1')!.textContent).toBe('Scheduled tasks')
+ expect(doc.querySelector('option')!.textContent).toBe('All types')
+ expect(doc.querySelector('.st-task-meta')!.textContent).toBe('Daily 9:00 · Next run in 23 minutes')
+ expect(doc.querySelector('.st-next')!.textContent).toBe('Beijing time · Next run 9/22 09:00')
+ expect(doc.querySelector('strong')!.textContent).toBe('已完成')
+ expect(doc.querySelector('textarea')!.value).toBe('定时任务')
+ expect(doc.querySelector('[role=tooltip]')!.textContent).toBe('Select (V)')
+ expect(doc.querySelector('[role=menu] button')!.textContent).toBe('Every 5 minutes')
+ expect(doc.querySelector('[data-tool-tooltip]')!.getAttribute('data-tool-tooltip')).toBe('Component (F)')
+ doc.documentElement.dataset.odysseyLocale='zh'
+ await win.happyDOM.waitUntilComplete()
+ expect(doc.querySelector('h1')!.textContent).toBe('定时任务')
+ dispose();await win.happyDOM.close()
+})
+
+
+it('translates schedule variants and tooltip attributes while retaining workspace names',()=>{
+ expect(translateUiCopy('每周一 09:00')).toBe('Every Monday 09:00')
+ expect(translateUiCopy('工作日 09:00')).toBe('Weekdays 09:00')
+ expect(translateUiCopy('星期日')).toBe('Sunday')
+ expect(translateUiCopy('运行记录（3）')).toBe('Run history (3)')
+ expect(translateUiCopy('下次运行：9/23 09:00 · 北京时间')).toBe('Next run 9/23 09:00 · Beijing time')
+ expect(translateUiCopy('工作日 · 专属对话')).toBe('工作日 · Dedicated conversation')
+ expect(translateUiCopy('链接 (L)')).toBe('Link (L)')
+ expect(translateUiCopy('不自动刷新')).toBe('Do not auto-refresh')
+})

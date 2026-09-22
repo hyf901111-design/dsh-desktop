@@ -2,12 +2,27 @@ import { englishUiCopy } from './ui-copy'
 
 // Preload UI and portaled plugin controls share the application's selected locale,
 // rather than navigator.language. Never replace elements or translate user content.
-const surfaces = '.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description]'
+const surfaces = '.st-root,.st-detail,.st-dialog,.st-menu,.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description]'
 const preserved = '.rScV5Q_voiceAccessible,script,style,textarea,input,[contenteditable],[data-ui-preserve],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText,.srb-member-identity strong,.srb-member-avatar,.srb-board-name,.sherlock-account-profile strong,.sherlock-account-menu-identity strong,.sherlock-account-label,[data-research-artifact-content]:not(:has(.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_previewPlaceholder))'
 export function translateUiCopy(value: string): string {
  const key=value.trim(), translated=englishUiCopy[key]
  if(translated)return value.replace(key,translated)
+ if(key.endsWith(' · 专属对话')) return value.replace(key,key.slice(0,-' · 专属对话'.length)+' · Dedicated conversation')
+ if(key.includes(' · ') && /^(下次运行|每天|工作日|每周[日一二三四五六]|\d{4}-\d{2}-\d{2}|北京时间|香港时间|东京时间|纽约时间|伦敦时间|UTC|[A-Za-z_]+\/)/.test(key))
+  return value.replace(key,key.split(' · ').map(translateUiCopy).join(' · '))
  const patterns: Array<[RegExp,(...args:string[])=>string]> = [
+  [/^每 (\d+) 分钟$/,(_m,n)=>`Every ${n} ${n==='1'?'minute':'minutes'}`],
+  [/^(每天|工作日) (\d{1,2}:\d{2})$/,(_m,f,t)=>`${f==='每天'?'Daily':'Weekdays'} ${t}`],
+  [/^每周([日一二三四五六]) (\d{1,2}:\d{2})$/,(_m,d,t)=>`Every ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']['日一二三四五六'.indexOf(d)]} ${t}`],
+  [/^星期([日一二三四五六])$/,(_m,d)=>['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']['日一二三四五六'.indexOf(d)]!],
+  [/^下次运行 (\d+) (分钟|小时|天)后$/,(_m,n,u)=>`Next run in ${n} ${{分钟:'minute',小时:'hour',天:'day'}[u]}${n==='1'?'':'s'}`],
+  [/^下次运行[： ](.+)$/,(_m,t)=>`Next run ${t}`],
+  [/^运行记录（(\d+)）$/,(_m,n)=>`Run history (${n})`],
+  [/^「(.+)」将不再按计划执行。$/,(_m,t)=>`“${t}” will no longer run on schedule.`],
+  [/^(暂停|继续)任务 (.+)$/,(_m,a,t)=>`${a==='暂停'?'Pause':'Resume'} task ${t}`],
+  [/^查看 (.+)$/,(_m,t)=>`View ${t}`],
+  [/^(.+) 更多操作$/,(_m,t)=>`${t} more actions`],
+  [/^(选择|组件|链接|连线|连接|语音|框选) ?([（(].+[）)])$/,(_m,a,k)=>`${({选择:'Select',组件:'Component',链接:'Link',连线:'Connect',连接:'Connect',语音:'Voice',框选:'Frame'} as Record<string,string>)[a]} ${k}`],
   [/^(\d+) 个会话$/,(_m,n)=>`${n} ${n==='1'?'session':'sessions'}`],
   [/^你已(接受|拒绝|处理)邀请$/,(_m,v)=>`You ${v==='接受'?'accepted':v==='拒绝'?'declined':'responded to'} the invitation`],
   [/^(.+)(接受|拒绝|处理)了你的邀请$/,(_m,name,v)=>`${name} ${v==='接受'?'accepted':v==='拒绝'?'declined':'responded to'} your invitation`],
@@ -61,10 +76,10 @@ export function mountUiLocalization(doc:Document=document):()=>void {
    if(text.data!==rendered)text.data=rendered
    if(source!==rendered||previous)textState.set(text,{source,rendered})
   }
-  for(const el of [root,...root.querySelectorAll('[placeholder],[aria-label],[title]')]){
+  for(const el of [root,...root.querySelectorAll('[placeholder],[aria-label],[title],[data-tool-tooltip]')]){
    if(el.closest('[data-ui-preserve],iframe,[contenteditable],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText') && el.getAttribute('title')!=='双击修改会话标题')continue
    let saved=attrState.get(el);if(!saved){saved=new Map();attrState.set(el,saved)}
-   for(const name of ['placeholder','aria-label','title']){
+   for(const name of ['placeholder','aria-label','title','data-tool-tooltip']){
     const current=el.getAttribute(name);if(current===null)continue
     const old=saved.get(name),source=old&&current===old.rendered?old.source:current
     const rendered=english?translateUiCopy(source):source
@@ -83,7 +98,7 @@ export function mountUiLocalization(doc:Document=document):()=>void {
   }
   if(roots.size)schedule()
  })
- observer.observe(doc.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-odyssey-locale','placeholder','aria-label','title']})
+ observer.observe(doc.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-odyssey-locale','placeholder','aria-label','title','data-tool-tooltip']})
  update()
  return()=>{disposed=true;win.cancelAnimationFrame(frame);observer.disconnect()}
 }
