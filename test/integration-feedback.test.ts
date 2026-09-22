@@ -78,14 +78,14 @@ it('serializes confirmation lookups across different rows and permits another co
     expect(f.calls.some(command => command.type === 'uninstall' || command.type === 'rollback-plugin')).toBe(false);
 });
 
-it('prevents overlapping skill selections and keeps the last preview when a later picker is cancelled', async () => {
+it.each(['plugins','apps','mcp','skills'])('prevents overlapping skill selections from %s and keeps the preview when another picker is cancelled', async tab => {
     const selections = [deferred<IntegrationReply>(), deferred<IntegrationReply>(), deferred<IntegrationReply>()];
     let index = 0;
     const f = await fixture(async command => {
         if (command.type === 'preview-skill') return selections[index++]!.promise;
         throw new Error(`Unexpected ${command.type}`);
     });
-    f.click('[data-tab=skills]'); f.click('[data-action=add]'); f.click('[data-action=import-file]');
+    f.click(`[data-tab=${tab}]`); f.click('[data-action=add]'); f.click('[data-action=import-file]');
     expect(f.button('[data-action=choose-skill]').disabled).toBe(true);
     expect(f.button('[data-action=choose-skill]').getAttribute('aria-busy')).toBe('true');
     f.click('[data-action=choose-skill]');

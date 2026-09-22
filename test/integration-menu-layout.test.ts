@@ -16,13 +16,13 @@ const snapshot = (): IntegrationSnapshot => ({ revision: 1, rows: [
     { id: 'plugin', kind: 'plugin', tab: 'plugins', name: '研究插件', description: '核验研究资料', enabled: true, status: '已启用', source: '个人', revision: 1, removable: true, marketEntryId: 'catalog:research', canRollback: true },
     { id: 'skill', kind: 'skill', tab: 'skills', name: '研究技能', description: '已有技能', enabled: true, status: '已启用', source: '个人', revision: 1, removable: true },
 ] });
-async function fixture() {
+async function fixture(data = snapshot()) {
     const window = new Window(), document = window.document as unknown as Document;
     document.body.innerHTML = '<aside data-dsh-sidebar-root></aside><main class="pI_x6G_centerCol"><textarea>保留的对话草稿</textarea></main>';
     const calls: IntegrationCommand[] = [];
     const view = new IntegrationView(document, { request: async (command): Promise<IntegrationReply> => {
         calls.push(command);
-        if (command.type === 'snapshot') return { type: 'snapshot', snapshot: snapshot() };
+        if (command.type === 'snapshot') return { type: 'snapshot', snapshot: data };
         if (command.type === 'preview-skill') return { type: 'preview', preview: { previewId: 'selected-skill', name: '待导入的完整技能包', description: '预览后确认', content: '# 技能正文', files: ['SKILL.md'], warnings: [] } };
         if (command.type === 'legacy-preview') return { type: 'legacy-preview', eligibleCount: 1, items: [{ name: '旧研究技能', kind: 'personal', status: 'eligible', sourcePath: '/example/skills/research' }] };
         throw new Error(`Unexpected command: ${command.type}`);
@@ -43,7 +43,7 @@ async function fixture() {
     return { window, document, view, calls, element, click, key };
 }
 
-it('opens the skill import header menu and reaches file preview without importing automatically', async () => {
+it('opens the shared add menu from skills and reaches file preview without importing automatically', async () => {
     const f = await fixture();
     f.click('[data-tab=skills]');
     expect(f.document.querySelector('.ig-compatibility')).toBeNull();
@@ -52,8 +52,8 @@ it('opens the skill import header menu and reaches file preview without importin
     expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
     trigger.click();
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
-    expect(f.element('[role=menu]').getAttribute('aria-label')).toBe('导入技能');
-    expect(f.element('[role=menu]').textContent).toContain('从文件导入');
+    expect(f.element('[role=menu]').getAttribute('aria-label')).toBe('添加能力');
+    expect(f.element('[role=menu]').textContent).toContain('导入技能');
     expect(f.element('[role=menu]').textContent).toContain('接入旧技能');
     expect(f.calls.map(command => command.type)).toEqual(['snapshot']);
     f.click('[data-action=import-file]');
@@ -157,4 +157,61 @@ it('flips above a bottom trigger and clamps a left-edge trigger within the panel
     expect(Number.parseFloat(menu.style.top)).toBe(534);
     expect(Number.parseFloat(menu.style.top) + 190).toBeLessThan(730);
     expect(Number.parseFloat(menu.style.left)).toBe(288);
+});
+
+const integrationTabs = ['plugins', 'apps', 'mcp', 'skills'] as const;
+const addItems = [
+    { text: '创建插件', selector: '[data-add=plugin]', title: '创建插件', field: '[name=manifest]' },
+    { text: '添加市场来源', selector: '[data-action=add-source]', title: '添加目录来源', field: '[name=sourceUrl]' },
+    { text: '自定义 API', selector: '[data-add=api]', title: '添加自定义 API', field: '[name=url]' },
+    { text: '添加 MCP 服务器', selector: '[data-add=mcp-http]', title: '添加 MCP 服务器', field: '[data-action=form-transport-mcp-http]' },
+    { text: '导入技能', selector: '[data-action=import-file]', title: '导入技能', field: '.ig-skill-preview' },
+    { text: '接入旧技能', selector: '[data-action=legacy-preview]', title: '', field: '[role=dialog]' },
+] as const;
+function expectSharedAddMenu(f: Awaited<ReturnType<typeof fixture>>) {
+    const menu = f.element('[role=menu]');
+    expect(menu.getAttribute('aria-label')).toBe('添加能力');
+    const items = [...menu.querySelectorAll('[role=menuitem]')];
+    expect(items.map(item => item.textContent?.trim())).toEqual(addItems.map(item => item.text));
+    for (const [index, item] of addItems.entries()) expect(items[index]!.matches(item.selector), item.text).toBe(true);
+    expect(menu.querySelectorAll('[role=separator]')).toHaveLength(1);
+    expect(menu.querySelector('[role=separator]')!.previousElementSibling).toBe(items[3]);
+}
+
+it.each(integrationTabs)('uses the identical add menu from %s and returns to that tab from every destination', async tab => {
+    const f = await fixture();
+    f.click(`[data-tab=${tab}]`);
+    for (const item of addItems) {
+        const trigger = f.element<HTMLButtonElement>('.ig-heading [data-action=add]');
+        expect(trigger.textContent?.trim()).toBe('添加');
+        expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+        trigger.click();
+        expectSharedAddMenu(f);
+        expect(f.element(`[data-tab=${tab}]`).getAttribute('aria-selected')).toBe('true');
+        expect(f.document.querySelector('.ig-add-row')).toBeNull();
+        f.click(item.selector);await settle();
+        expect(f.document.querySelector('[role=menu]')).toBeNull();
+        expect(f.document.querySelector(item.field), item.text).not.toBeNull();
+        if (item.title) {
+            expect(f.element('h1').textContent).toBe(item.title);
+            expect(f.document.querySelector('.ig-heading [data-action=add]')).toBeNull();
+            expect(f.document.querySelectorAll('.ig-page [data-add], .ig-page [data-action=import-file], .ig-page [data-action=legacy-preview]')).toHaveLength(0);
+            const formMarkers = ['[name=manifest]','[name=sourceUrl]','.ig-steps','.ig-transport','.ig-skill-select'];
+            expect(formMarkers.filter(selector => f.document.querySelector(selector))).toHaveLength(1);
+            f.click('.workspace-back-button');
+        } else f.click('[data-action=cancel-dialog]');
+        expect(f.element(`[data-tab=${tab}]`).getAttribute('aria-selected')).toBe('true');
+        expect(f.document.querySelector('[role=dialog]')).toBeNull();
+    }
+    expect(f.calls.map(command => command.type)).toEqual(['snapshot','preview-skill','legacy-preview']);
+});
+
+it.each(integrationTabs)('opens the same menu from the %s empty-state add button without opening an intermediate page', async tab => {
+    const f = await fixture({ revision: 1, rows: [] });
+    f.click(`[data-tab=${tab}]`);
+    f.click('.ig-empty [data-action=add]');
+    expectSharedAddMenu(f);
+    expect(f.element(`[data-tab=${tab}]`).getAttribute('aria-selected')).toBe('true');
+    expect(f.document.querySelector('.ig-add-row')).toBeNull();
+    expect(f.calls.map(command => command.type)).toEqual(['snapshot']);
 });

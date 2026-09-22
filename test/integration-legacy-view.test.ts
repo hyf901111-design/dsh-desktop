@@ -5,7 +5,7 @@ import type { IntegrationCommand, IntegrationReply } from '../src/shared/integra
 
 const cleanups: Array<() => void> = []
 afterEach(() => { for (const close of cleanups.splice(0)) close() })
-async function fixture() {
+async function fixture(tab = 'skills') {
   const window = new Window(), document = window.document as unknown as Document
   document.body.innerHTML = '<aside data-dsh-sidebar-root></aside><main class="pI_x6G_centerCol"></main>'
   const calls: IntegrationCommand[] = [], revealSource = vi.fn(async (_path: string): Promise<void> => undefined)
@@ -23,7 +23,7 @@ async function fixture() {
   cleanups.push(() => { view.dispose(); window.happyDOM.abort() })
   const settle = async () => { for (let i = 0; i < 10; i++) await Promise.resolve() }
   const click = (selector: string) => { const button = document.querySelector<HTMLButtonElement>(selector); expect(button).not.toBeNull(); button!.click() }
-  await view.open('integrations/skills'); click('[data-action=add]'); click('[data-action=legacy-preview]'); await settle()
+  await view.open(`integrations/${tab}`); click('[data-action=add]'); click('[data-action=legacy-preview]'); await settle()
   return { view, document, calls, revealSource, reply, click, settle }
 }
 
@@ -54,4 +54,15 @@ it('does not publish a delayed source-open failure into a different account view
   f.revealSource.mockImplementation(() => new Promise<void>((_resolve, fail) => { reject = fail }))
   f.click('[data-legacy-reveal="0"]'); f.view.resetIdentity(); reject(new Error('previous-account-path')); await f.settle()
   expect(f.document.body.textContent).not.toContain('previous-account-path')
+})
+
+it.each(['plugins','apps','mcp','skills'])('reviews legacy skills from %s and cancels back to the originating list', async tab => {
+  const f = await fixture(tab)
+  expect(f.document.querySelector('[role=dialog]')).not.toBeNull()
+  expect(f.document.querySelector(`[data-tab=${tab}]`)?.getAttribute('aria-selected')).toBe('true')
+  f.click('[data-action=cancel-dialog]')
+  expect(f.document.querySelector('[role=dialog]')).toBeNull()
+  expect(f.document.querySelector(`[data-tab=${tab}]`)?.getAttribute('aria-selected')).toBe('true')
+  expect(f.document.activeElement).toBe(f.document.querySelector('.ig-heading [data-action=add]'))
+  expect(f.calls.some(command => command.type === 'migrate-legacy-skills')).toBe(false)
 })

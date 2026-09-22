@@ -15,9 +15,6 @@ export type IntegrationRoute = {
     id: string;
     tab: IntegrationTab;
 } | {
-    page: 'add';
-    tab: IntegrationTab;
-} | {
     page: 'connection';
     type: ConnectionDraft['type'];
     id?: string;

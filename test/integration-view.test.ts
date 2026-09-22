@@ -38,7 +38,7 @@ it('renders compact text rows and all four market entries with retained workspac
         f.click(`[data-tab=${tab}]`);
         expect(f.doc.querySelector('[data-action=market]')!.textContent).toBe(label);
     }
-    expect(f.doc.querySelector('[data-action=add]')!.textContent).toBe('导入技能');
+    expect(f.doc.querySelector('.ig-heading [data-action=add]')!.textContent).toBe('添加');
     expect(f.doc.querySelector('.ig-root')!.textContent).not.toContain('创建插件');
     f.view.dispose();
 });
@@ -187,16 +187,19 @@ it('clears pending UI state when a save completes after leaving that route', asy
     f.click('[data-action=back]');
     resolve({ type: 'operation', operation: { id: 'done', status: 'succeeded', message: '已保存', entityId: 'old', cancellable: false } });
     await f.settle();
-    f.click('[data-add=api]');
+    expect(f.doc.querySelector('[data-tab=apps]')!.getAttribute('aria-selected')).toBe('true');
+    f.click('[data-action=add]');f.click('[data-add=api]');
     expect(f.doc.querySelector<HTMLButtonElement>('[data-action=form-next]')!.disabled).toBe(false);
     expect(f.doc.querySelector('.ig-live')!.textContent).not.toContain('已保存');
     f.view.dispose();
 });
-it('offers only a custom API in the app connection picker', async () => {
+it('offers the shared add menu from applications and opens API configuration directly', async () => {
     const f = await fixture();
     f.click('[data-tab=apps]');
     f.click('[data-action=add]');
-    expect([...f.doc.querySelectorAll('[data-add]')].map(item => item.getAttribute('data-add'))).toEqual(['api']);
+    expect([...f.doc.querySelectorAll('[role=menu] [data-add]')].map(item => item.getAttribute('data-add'))).toEqual(['plugin','api','mcp-http']);
+    expect(f.doc.querySelector('[data-tab=apps]')!.getAttribute('aria-selected')).toBe('true');
+    expect(f.doc.querySelector('.ig-add-row')).toBeNull();
     f.click('[data-add=api]');
     expect(f.doc.querySelector('[name=url]')).not.toBeNull();
     expect(f.doc.querySelector('[data-action=form-next]')).not.toBeNull();
@@ -285,8 +288,8 @@ it('uses one connection title, a real summary aside, and an explicit right-align
  f.doc.querySelector<HTMLInputElement>('[name=toolGrant][value=write]')!.click();
  f.click('[data-action=grant-tools]');await f.settle();expect(f.calls.find(c=>c.type==='grant-tools')).toMatchObject({id:'api',toolIds:['read','write'],meta:{expectedRevision:8}});f.view.dispose()
 })
-it('groups add choices into connection types and secondary skill/plugin actions',async()=>{
- const f=await fixture();f.click('[data-action=add]');expect(f.doc.querySelector('h1')!.textContent).toBe('添加连接');expect(f.doc.querySelectorAll('.ig-add-row')).toHaveLength(3);expect(f.doc.querySelector('.ig-add-other [data-add=skill]')).not.toBeNull();expect(f.doc.querySelector('.ig-add-other [data-add=plugin]')).not.toBeNull();f.click('[data-add=application]');await f.settle();expect(f.calls.some(c=>c.type==='market'&&c.kind==='app')).toBe(true);f.view.dispose()
+it('opens add choices in place and returns directly to the originating list after creating a plugin draft',async()=>{
+ const f=await fixture();f.click('[data-tab=mcp]');f.click('[data-action=add]');expect(f.doc.querySelector('h1')!.textContent).toBe('插件');expect(f.doc.querySelectorAll('.ig-add-row')).toHaveLength(0);expect(f.doc.querySelector('[role=menu] [data-add=plugin]')).not.toBeNull();f.click('[data-add=plugin]');expect(f.doc.querySelector('h1')!.textContent).toBe('创建插件');expect(f.doc.querySelector('[name=manifest]')).not.toBeNull();f.click('[data-action=back]');expect(f.doc.querySelector('[data-tab=mcp]')!.getAttribute('aria-selected')).toBe('true');f.view.dispose()
 })
 it('filters real market metadata and keeps installation permissions beside the primary action',async()=>{
  const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:snapshot()}:c.type==='market'?{type:'market',entries:[{id:'one',kind:'plugin',name:'研究报告',description:'核验资料',publisher:'EWork',version:'1.0',installed:false,available:true,permissions:['读取已授权资料'],category:'research'},{id:'two',kind:'plugin',name:'团队模板',description:'未分类条目',publisher:'团队',version:'1',installed:false,available:true,permissions:[]}]} as IntegrationReply:{type:'operation',operation:{id:'x',status:'succeeded',message:'',cancellable:false}});

@@ -15,6 +15,7 @@ const icons = {
 };
 const icon = (name: keyof typeof icons) => `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">${icons[name]}</svg>`;
 const tabs: IntegrationTab[] = ['plugins', 'apps', 'mcp', 'skills'];
+const addMenuButton = () => `<button type="button" class="ig-button ig-primary ig-add-trigger" data-action="add" aria-haspopup="menu" aria-expanded="false">添加${icon('chevron')}</button>`;
 const subtitles: Record<IntegrationTab, string> = { plugins: '让 EWork 连接你的工具与工作资料', apps: '管理应用账号、自有 API 与连接权限', mcp: '连接 MCP 服务器，管理可调用的工具', skills: '管理可复用的工作方法与专业能力' };
 /** Figma workspace flows, driven exclusively by the trusted main-process bridge. */
 export class IntegrationView {
@@ -270,7 +271,6 @@ export class IntegrationView {
         case 'market-detail': return this.route.kind === 'plugin' ? '插件详情' : this.route.kind === 'skill' ? '技能详情' : this.route.kind === 'app' ? '应用详情' : '工具详情';
         case 'detail': { const row=this.snapshot.rows.find(r=>r.id===this.routeId()); return row?.kind==='plugin' ? '插件详情' : row?.name || '详情'; }
         case 'connection': return this.connectionEditor.title(this.draft);
-        case 'add': return '添加连接';
         case 'skill-import': return '导入技能';
         case 'create-plugin': return '创建插件';
         case 'add-source': return '添加目录来源';
@@ -282,8 +282,8 @@ export class IntegrationView {
         const route = this.route;
         if(this.toolGrantDraft && (route.page!=='detail' || route.id!==this.toolGrantDraft.connectionId))this.clearToolGrantDraft();
         const currentRow = this.snapshot.rows.find(row => row.id === this.routeId());
-        const subtitle = route.page === 'list' ? subtitles[route.tab] : route.page === 'market' ? '为研究、写作与日常协作添加能力' : route.page === 'add' ? '选择你要接入的能力，后续只显示与它相关的配置' : route.page === 'detail' ? (currentRow?.kind === 'connection' ? '管理这条连接的使用范围、凭据和工具' : currentRow?.description || '') : route.page === 'market-detail' ? '了解能力与权限，选择适合你的工作方式' : route.page === 'connection' ? this.connectionEditor.subtitle(this.draft) : route.page === 'skill-import' ? '把已有的工作方法添加到 EWork' : route.page === 'create-plugin' ? '将技能与连接组合成一套可复用的能力' : route.page === 'add-source' ? '从团队或组织维护的目录中发现插件' : '';
-        const actions = route.page === 'list' ? `${button('market', marketNames[marketKinds[route.tab]])}${route.tab === 'skills' ? `<button type="button" class="ig-button ig-primary ig-import-trigger" data-action="add" aria-haspopup="menu" aria-expanded="false">导入技能${icon('chevron')}</button>` : button('add',route.tab === 'apps' ? '添加连接' : route.tab === 'mcp' ? '添加 MCP' : '添加',true)}` : route.page === 'market' ? button('add-source','添加来源') : '';
+        const subtitle = route.page === 'list' ? subtitles[route.tab] : route.page === 'market' ? '为研究、写作与日常协作添加能力' : route.page === 'detail' ? (currentRow?.kind === 'connection' ? '管理这条连接的使用范围、凭据和工具' : currentRow?.description || '') : route.page === 'market-detail' ? '了解能力与权限，选择适合你的工作方式' : route.page === 'connection' ? this.connectionEditor.subtitle(this.draft) : route.page === 'skill-import' ? '把已有的工作方法添加到 EWork' : route.page === 'create-plugin' ? '将技能与连接组合成一套可复用的能力' : route.page === 'add-source' ? '从团队或组织维护的目录中发现插件' : '';
+        const actions = route.page === 'list' ? `${button('market', marketNames[marketKinds[route.tab]])}${addMenuButton()}` : route.page === 'market' ? button('add-source','添加来源') : '';
         this.root.innerHTML = `<div class="ig-chrome">${workspaceBackButton()}</div><div class="ig-content"><header class="ig-heading"><div><h1>${esc(this.title())}</h1>${subtitle ? `<p class="ig-subtitle">${esc(subtitle)}</p>` : ''}</div><div class="ig-actions">${actions}</div></header><div class="ig-error" role="alert"></div><div class="ig-live" role="status" aria-live="polite" aria-atomic="true"></div><div class="ig-page">${this.content()}</div></div>`;
         this.renderFeedback();
         this.updateBusy();
@@ -296,7 +296,6 @@ export class IntegrationView {
             case 'market-detail': return marketDetail(this.entries.find(entry => entry.id === route.id));
             case 'connection': return this.connectionEditor.render(this.draft);
             case 'detail': return this.detailContent(this.snapshot.rows.find(row => row.id === route.id));
-            case 'add': return this.addContent(route.tab);
             case 'skill-import': return skillPreviewForm(this.preview);
             case 'create-plugin': return `<form class="ig-form ig-connection-form"><div class="ig-form-layout"><div class="ig-form-main"><label class="ig-field"><span>插件清单（JSON）</span><textarea name="manifest" class="ig-manifest" spellcheck="false" placeholder="粘贴声明式插件清单">${esc(this.manifest)}</textarea></label></div><aside class="ig-form-help"><h2>创建个人插件</h2><p>使用声明式清单组织可复用技能与能力。</p><p>创建时会校验文件、版本和权限；不会运行 npm 安装或清单中的脚本。</p><p>安装完成后，可在插件列表启用或管理。</p></aside></div><div class="ig-form-actions">${button('back', '取消')}${button('create-plugin', '校验并安装', true)}</div></form>`;
             case 'add-source': return `<form class="ig-form ig-connection-form"><div class="ig-form-layout"><div class="ig-form-main"><label class="ig-field"><span>目录地址</span><input type="url" name="sourceUrl" value="${esc(this.sourceUrl)}" placeholder="https://plugins.example.com/catalog.json"><small>目录名称使用来源的域名。仅支持可信的 HTTPS 目录。</small></label><p class="ig-form-explanation">验证后读取目录中实际提供的名称、版本与发布者信息。添加来源后，仍需逐个选择并安装。</p></div><aside class="ig-form-help"><h2>确认你信任这个来源</h2><p>添加来源不会自动安装插件，也不会运行其中的代码。</p><p>来源校验失败时不会添加，可修改地址后重试。</p></aside></div><div class="ig-form-actions">${button('back', '取消')}${button('save-source', '验证并添加', true)}</div></form>`;
@@ -304,7 +303,7 @@ export class IntegrationView {
     }
     private listContent(tab: IntegrationTab) { if (this.loading)
         return '<p class="ig-empty" role="status">正在加载…</p>'; const all = this.snapshot.rows.filter(row => row.tab === tab), rows = all.filter(row => (row.name + ' ' + row.description).toLocaleLowerCase().includes(this.query.toLocaleLowerCase())); if (!rows.length)
-        return `<div class="ig-empty"><h2>${this.query ? '没有匹配的结果' : `还没有${tabNames[tab]}`}</h2><p>${this.query ? '试试其他名称或关键词。' : tab === 'skills' ? '导入技能，或从技能市场寻找可复用的工作方法。' : `从${marketNames[marketKinds[tab]]}添加，或连接你自己的工具。`}</p>${this.query ? '' : button('add', tab === 'skills' ? '导入技能' : '添加', true)}</div>`; return `<div class="ig-list-heading"><span>${tab === 'apps' ? '连接' : tab === 'mcp' ? '服务器' : '已安装'}</span><span>${all.length} 项 · ${all.filter(row => row.enabled).length} 项已启用</span></div>${rows.map(row => `<article class="ig-row" data-row-id="${esc(row.id)}"><button class="ig-row-main" data-detail="${esc(row.id)}"><strong title="${esc(row.name)}">${esc(row.name)}</strong><span title="${esc(row.description)}">${esc(row.description)}</span></button><div class="ig-row-meta"><span data-enabled="${row.enabled}">${esc(row.status)}</span><span title="${esc(row.source)}">${esc(row.source)}${typeof row.toolCount === 'number' ? ` · ${row.toolCount} 个工具` : ''}</span></div><button type="button" role="switch" aria-checked="${row.enabled}" aria-label="${row.enabled ? '停用' : '启用'}${esc(row.name)}" class="ig-toggle" data-toggle="${esc(row.id)}" data-mutation></button><button class="ig-more" data-more="${esc(row.id)}" aria-label="${esc(row.name)}的更多操作" aria-haspopup="menu" aria-expanded="false">${icon('more')}</button></article>`).join('')}`; }
+        return `<div class="ig-empty"><h2>${this.query ? '没有匹配的结果' : `还没有${tabNames[tab]}`}</h2><p>${this.query ? '试试其他名称或关键词。' : tab === 'skills' ? '导入技能，或从技能市场寻找可复用的工作方法。' : `从${marketNames[marketKinds[tab]]}添加，或连接你自己的工具。`}</p>${this.query ? '' : addMenuButton()}</div>`; return `<div class="ig-list-heading"><span>${tab === 'apps' ? '连接' : tab === 'mcp' ? '服务器' : '已安装'}</span><span>${all.length} 项 · ${all.filter(row => row.enabled).length} 项已启用</span></div>${rows.map(row => `<article class="ig-row" data-row-id="${esc(row.id)}"><button class="ig-row-main" data-detail="${esc(row.id)}"><strong title="${esc(row.name)}">${esc(row.name)}</strong><span title="${esc(row.description)}">${esc(row.description)}</span></button><div class="ig-row-meta"><span data-enabled="${row.enabled}">${esc(row.status)}</span><span title="${esc(row.source)}">${esc(row.source)}${typeof row.toolCount === 'number' ? ` · ${row.toolCount} 个工具` : ''}</span></div><button type="button" role="switch" aria-checked="${row.enabled}" aria-label="${row.enabled ? '停用' : '启用'}${esc(row.name)}" class="ig-toggle" data-toggle="${esc(row.id)}" data-mutation></button><button class="ig-more" data-more="${esc(row.id)}" aria-label="${esc(row.name)}的更多操作" aria-haspopup="menu" aria-expanded="false">${icon('more')}</button></article>`).join('')}`; }
     private clearToolGrantDraft() { this.toolGrantDraft=undefined;this.toolsExpanded=false; }
     private toolSelections(row: IntegrationRow): Set<string> {
         const tools=row.tools || [];
@@ -343,19 +342,6 @@ export class IntegrationView {
         const selected = this.toolsExpanded ? this.toolSelections(row) : undefined;
         const toolForm = this.toolsExpanded ? `<section class="ig-tools" aria-label="工具权限"><header class="ig-tools-head"><h2>允许使用的工具</h2><span>${tools.length} 个工具</span></header><p class="ig-tools-intro">只开放你勾选的工具，新增能力不会自动授权。</p>${tools.length ? tools.map(tool => `<label class="ig-tool-row"><input type="checkbox" name="toolGrant" value="${esc(tool.id)}" ${selected?.has(tool.id) ? 'checked' : ''}><div><strong>${esc(tool.name)}</strong><span>${esc(tool.description)}</span></div></label>`).join('') : '<p class="ig-note">暂未发现工具。请先完善配置并测试连接。</p>'}<footer class="ig-tool-actions">${button('cancel-tool-grants', '取消')}${button('grant-tools', '保存工具权限', true, !tools.length)}</footer></section>` : '';
         return `<div class="ig-detail-grid"><div class="ig-detail-main">${this.toolsExpanded ? toolForm : `<section class="ig-detail-summary">${summaryContent}</section>`}</div><aside class="ig-detail-aside" aria-label="连接状态"><section class="ig-help"><h2>${esc(row.status)}</h2><p>${esc(summary?.healthDetail || row.detail || '点击重新测试，检查这条连接的实际可用状态。')}</p></section>${button('probe', '重新测试')}${['google-calendar', 'notion'].includes(row.connectionType || '') ? button('authorize', '授权连接', true) : ''}<hr><p class="ig-note">断开连接会影响依赖它的定时任务；已有内容仍会保留。</p>${button('disconnect', '断开连接')}${row.removable ? button('request-uninstall', '移除连接') : ''}</aside></div>`;
-    }
-    private addContent(tab: IntegrationTab) {
-        const choices: Array<[string, string, string, string]> = tab === 'mcp' ? [
-            ['mcp-http', '远程 MCP 服务器', '填写服务地址，通过流式 HTTP 连接工具服务。', '添加远程服务'],
-            ['mcp-stdio', '本机 MCP 服务器', '配置启动命令和参数，工具仅在本机运行。', '添加本机服务'],
-        ] : tab === 'apps' ? [
-            ['api', '自定义 API', '已有业务接口和密钥，导入 OpenAPI 或手动定义工具。', '添加 API'],
-        ] : [
-            ['application', '连接应用', '选择服务，查看对应的登录方式和授权范围。', '选择应用'],
-            ['api', '自定义 API', '已有业务接口和密钥，导入 OpenAPI 或手动定义工具。', '添加 API'],
-            ['mcp-http', 'MCP 服务器', '填写远程服务地址，或配置本机启动命令。', '添加 MCP'],
-        ];
-        return `<div class="ig-add-list">${choices.map(([key, title, desc, label]) => `<section class="ig-add-row"><div><strong>${title}</strong><span>${desc}</span></div><button type="button" class="ig-button ig-secondary" data-add="${key}">${label}</button></section>`).join('')}</div>${tab === 'plugins' ? '<footer class="ig-add-other"><button class="ig-button ig-secondary" data-add="skill">导入技能</button><button class="ig-button ig-secondary" data-add="plugin">创建插件</button></footer>' : ''}`;
     }
     private renderFeedback() {
         if (!this.root) return;
@@ -441,10 +427,10 @@ export class IntegrationView {
     } if (target.dataset.marketEntry && this.route.page === 'market') {
         this.navigate({ page: 'market-detail', kind: this.route.kind, id: target.dataset.marketEntry });
         return;
-    } if(target.dataset.action==='add' && this.route.page==='list' && this.route.tab==='skills'){this.showImportMenu(target);return;}
+    } if(target.dataset.action==='add' && this.route.page==='list'){this.showAddMenu(target);return;}
     if (target.dataset.action)
         void this.action(target.dataset.action); };
-    private async chooseAdd(type: string) { if (type === 'application') { this.marketCategory='all';this.navigate({page:'market',kind:'app'});return; } if (type === 'skill') {
+    private async chooseAdd(type: string) { if (type === 'skill') {
         this.preview = undefined;
         this.navigate({ page: 'skill-import' });
         await this.chooseSkill();
@@ -472,17 +458,9 @@ export class IntegrationView {
                 if (route.page === 'list')
                     this.navigate({ page: 'market', kind: marketKinds[route.tab] });
                 break;
-            case 'add':
-                if (route.page === 'list') {
-                    if (route.tab === 'skills')
-                        await this.chooseAdd('skill');
-                    else
-                        this.navigate({ page: 'add', tab: route.tab });
-                }
-                break;
             case 'add-source':
-                if (route.page === 'market')
-                    this.navigate({ page: 'add-source', kind: route.kind });
+                if (route.page === 'market' || route.page === 'list')
+                    this.navigate({ page: 'add-source', kind: route.page === 'market' ? route.kind : 'plugin' });
                 break;
             case 'save-source':
                 await this.run({ type: 'add-source', url: this.sourceUrl, meta: this.meta() }, () => {
@@ -703,8 +681,15 @@ export class IntegrationView {
         if (epoch === this.epoch)
             this.showError(error);
     } }
-    private showImportMenu(anchor: HTMLButtonElement) {
-        this.openMenu(anchor,'@skill-import','导入技能','<button type="button" role="menuitem" data-action="import-file">从文件导入</button><button type="button" role="menuitem" data-action="legacy-preview">接入旧技能</button>');
+    private showAddMenu(anchor: HTMLButtonElement) {
+        this.openMenu(anchor,'@add','添加能力',
+            '<button type="button" role="menuitem" data-add="plugin">创建插件</button>' +
+            '<button type="button" role="menuitem" data-action="add-source">添加市场来源</button>' +
+            '<button type="button" role="menuitem" data-add="api">自定义 API</button>' +
+            '<button type="button" role="menuitem" data-add="mcp-http">添加 MCP 服务器</button>' +
+            '<div class="ig-menu-separator" role="separator"></div>' +
+            '<button type="button" role="menuitem" data-action="import-file">导入技能</button>' +
+            '<button type="button" role="menuitem" data-action="legacy-preview">接入旧技能</button>');
     }
     private showMenu(anchor: HTMLButtonElement, id: string) {
         const row=this.snapshot.rows.find(item=>item.id===id);if(!row)return;
