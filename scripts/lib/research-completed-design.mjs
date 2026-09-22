@@ -72,6 +72,8 @@ ${nativeCard} .odyssey-component-content{color:var(--research-completed-text);fo
 /* 72 KPI: y56, 64px cell, label y6/14, value y23/26, detail y49/11.
    min-height retains the source density while allowing long user text to wrap. */
 ${nativeCard} .rScV5Q_containerKpis{padding:8px 12px 12px;gap:10px;align-content:start}
+${nativeCard} [data-component-width=wide] .rScV5Q_containerKpis:has(>div:nth-child(6)):not(:has(>div:nth-child(7))){grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+${nativeCard} [data-component-width=wide] .rScV5Q_containerKpis:has(>div:nth-child(6)):not(:has(>div:nth-child(7)))>div{min-height:76px;padding:8px}
 ${nativeCard} .rScV5Q_containerKpis>div{
   box-sizing:border-box;min-height:64px;padding:6px 10px 4px;gap:0;
   border:0;border-radius:5px;background:var(--research-completed-inset);
@@ -87,6 +89,7 @@ ${nativeCard} .rScV5Q_containerKpis strong[data-research-metric-positive=true]{
   margin-top:3px;font:500 23px/26px "EWork DIN Pro","Noto Sans SC",sans-serif;
   letter-spacing:0;color:var(--research-completed-text);overflow-wrap:anywhere;
 }
+${nativeCard} [data-component-width=wide] .rScV5Q_containerKpis:has(>div:nth-child(6)):not(:has(>div:nth-child(7))) strong{font-size:21px}
 ${nativeCard} .rScV5Q_containerKpis em{
   margin:0;font:400 8px/11px "EWork DIN Pro","Noto Sans SC",sans-serif;
   color:var(--research-completed-muted);overflow-wrap:anywhere;
