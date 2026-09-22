@@ -188,6 +188,7 @@ export const generationCss = `
 body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#030303;--generation-title:#f5f5f5;--generation-phase:#dbdbdb;--generation-detail:#b0b0b0;--generation-icon:#bdbdbd;--generation-time:#b3bcc4;--generation-button:#353535;--generation-border:#696969;--generation-action-icon:#ccc}
 [data-research-generation-dots]{position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:url('${asset('dot-grid')}');background-size:9.921px 9.921px;opacity:1;mask-image:linear-gradient(115deg,rgba(0,0,0,.16) 0%,rgba(0,0,0,.30) 20%,rgba(0,0,0,.55) 42%,rgba(0,0,0,.21) 60%,rgba(0,0,0,.45) 80%,rgba(0,0,0,.16) 100%);mask-size:200% 100%;animation:odyssey-generation-dot-flow 7s linear infinite;animation-play-state:paused}
 [data-research-generation-foreground]{position:absolute;top:calc(50% - 51px);left:20px;right:20px;bottom:20px;display:flex;flex-direction:column;gap:10px;min-width:0;flex:none;max-height:100%;overflow:auto;scrollbar-width:none}
+.odyssey-generation-surface[data-process-expanded=true]>[data-research-generation-foreground]{visibility:hidden}
 .odyssey-generation-state-icon{display:block;flex:none;width:18px;height:18px;background:var(--generation-icon);mask-position:center;mask-size:18px 18px;mask-repeat:no-repeat}
 .odyssey-generation-state-icon[data-generation-spinning=true]{animation:odyssey-generation-ring 1.2s linear infinite}
 [data-research-generation-foreground]>strong{font:700 14px/20px 'Noto Sans SC',sans-serif;overflow-wrap:anywhere}
@@ -207,7 +208,7 @@ body[data-ds-dark-theme] [data-generation-ui-state=error] .odyssey-generation-ph
 .odyssey-generation-action>button>span{display:block;width:13px;height:13px;background:currentColor;mask-size:13px 13px;mask-repeat:no-repeat;mask-position:center}
 .odyssey-generation-action>[role=tooltip]{position:absolute;top:calc(100% + 6px);right:0;z-index:6;white-space:nowrap;border-radius:4px;padding:5px 8px;background:#191919;color:#fff;font:400 12px/18px 'Noto Sans SC',sans-serif;pointer-events:none}
 body[data-ds-dark-theme] .odyssey-generation-action>[role=tooltip]{background:#f5f5f5;color:#191919}
-.odyssey-generation-surface>[data-research-generation-records]{position:absolute;inset:48px 20px 20px;z-index:2;margin:0;background:var(--generation-bg);border:1px solid var(--generation-border);border-radius:6px;padding:12px;font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--generation-phase);overflow:auto}
+[data-research-compact-chrome] .odyssey-generation-surface>[data-research-generation-records]{position:absolute;inset:48px 20px 20px;z-index:2;margin:0;background:var(--generation-bg);border:1px solid var(--generation-border);border-radius:6px;padding:12px;font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--generation-phase);overflow:auto}
 .odyssey-generation-surface>[data-research-generation-records]>div{display:flex;gap:8px;overflow-wrap:anywhere}.odyssey-generation-surface>[data-research-generation-records] time{flex:none;color:var(--generation-detail)}
 /* Breakpoints are implementation choices; source anchors: wide 99, tall 251, compact 62. */
 @container(max-width:300px){[data-research-generation-foreground]{top:calc(50% - 59px)}}

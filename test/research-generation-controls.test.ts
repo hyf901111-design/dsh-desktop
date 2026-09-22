@@ -67,6 +67,16 @@ it('opens real public process records without exposing private reasoning or resi
   expect(m.query('[data-research-generation-toggle]').getAttribute('aria-expanded')).toBe('true')
   expect(onExpand).not.toHaveBeenCalled();expect(JSON.stringify(m.node)).toBe(before)
 })
+it.each(['light','dark'])('isolates expanded records from the underlying foreground in %s mode',async(theme)=>{
+  const m=await mount('running')
+  m.win.document.body.toggleAttribute('data-ds-dark-theme',theme==='dark')
+  await m.click(m.query('[aria-label="查看过程"]'))
+  expect(m.win.getComputedStyle(m.query('[data-research-generation-foreground]')).visibility).toBe('hidden')
+  expect(m.win.getComputedStyle(m.query('[data-research-generation-records]')).backgroundColor).toBe(theme==='dark'?'#030303':'#fafafa')
+  expect(m.query('[data-research-generation-elapsed]')).not.toBeNull()
+  await m.click(m.query('[aria-label="收起过程"]'))
+  expect(m.win.getComputedStyle(m.query('[data-research-generation-foreground]')).visibility).not.toBe('hidden')
+})
 it('does not claim resume support without an existing resume capability',async()=>{
   const m=await mount('paused');expect(m.query('[aria-label="继续生成"]')).toBeNull()
 })

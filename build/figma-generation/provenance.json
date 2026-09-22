@@ -34,14 +34,14 @@
         "1300:293306",
         "1300:293307"
       ],
-      "derivation": "SVG exports combined at their original relative positions, centered within an 18px viewBox."
+      "derivation": "SVG exports combined at their original relative positions, centered within an 18px viewBox. Root fill=none preserves the source circle interior; only the explicit exclamation rectangles are filled. Chromium alpha checks cover the ring, four transparent interior points, stem, dot and gap."
     },
     "stopped": {
       "nodeIds": [
         "1290:72118",
         "1290:72124"
       ],
-      "derivation": "SVG exports combined at their original relative positions, centered within an 18px viewBox."
+      "derivation": "SVG exports combined at their original relative positions, centered within an 18px viewBox. Root fill=none preserves the source circle interior; only the explicit central stop square is filled. Chromium alpha checks cover the ring, four transparent interior points and central square."
     }
   },
   "implementationChoices": {
