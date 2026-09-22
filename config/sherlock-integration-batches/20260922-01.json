@@ -11,29 +11,64 @@
         "schemaVersion": 1,
         "featureName": "EWork 插件应用MCP技能与统一菜单",
         "branch": "codex/feat/ework-integrations-20260922",
-        "baseCommit": "ec76b52a089f84ffb7c51b9a8f2906ea658dfc51",
-        "tipCommit": "762aac3e311219758039e72edb942b6ed1431a0c",
+        "baseCommit": "762aac3e311219758039e72edb942b6ed1431a0c",
+        "tipCommit": "484f0b1727e9fd71de528881dc4614849badda0d",
         "commits": [
           {
-            "commit": "762aac3e311219758039e72edb942b6ed1431a0c",
+            "commit": "3f94e9d35e5885cf68fe02d7dde224acb0351b4f",
             "parents": [
-              "ec76b52a089f84ffb7c51b9a8f2906ea658dfc51"
+              "762aac3e311219758039e72edb942b6ed1431a0c"
             ],
-            "subject": "统一插件工作区顶栏并补齐操作反馈状态"
+            "subject": "精简插件页面提示和市场内容并支持独立删除技能"
+          },
+          {
+            "commit": "484f0b1727e9fd71de528881dc4614849badda0d",
+            "parents": [
+              "3f94e9d35e5885cf68fe02d7dde224acb0351b4f"
+            ],
+            "subject": "统一四类能力的添加下拉并精简重复配置入口"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "build/integration-catalog/catalog.json"
+          },
           {
             "status": "M",
             "path": "docs/ework-integrations-client-acceptance.md"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "path": "scripts/validate-integration-catalog.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/integrations/forms-style.ts"
+            "path": "src/main/integrations/installer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/package-resources.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/forms.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/market.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/router.ts"
           },
           {
             "status": "M",
@@ -45,35 +80,39 @@
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
+            "path": "src/shared/integrations.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/view.ts"
+            "path": "test/integration-catalog-worker.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/workspace-topbar.ts"
+            "path": "test/integration-catalog.test.ts"
           },
           {
             "status": "M",
-            "path": "test/figma-panel-motion-runtime.test.ts"
-          },
-          {
-            "status": "A",
             "path": "test/integration-feedback.test.ts"
           },
           {
             "status": "M",
-            "path": "test/integration-view.test.ts"
+            "path": "test/integration-harness-e2e.test.js"
           },
           {
             "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
+            "path": "test/integration-legacy-view.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-menu-layout.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-skill-removal.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-view.test.ts"
           }
         ],
         "checks": [
@@ -84,9 +123,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Shared workspace controls and interaction feedback typecheck",
-            "verifiedCommit": "762aac3e311219758039e72edb942b6ed1431a0c",
-            "completedAt": "2026-09-22T08:05:22.251377+00:00",
+            "summary": "Integration list polish, individual skill deletion and empty catalog typecheck",
+            "verifiedCommit": "484f0b1727e9fd71de528881dc4614849badda0d",
+            "completedAt": "2026-09-22T08:40:10.448554+00:00",
             "timeoutMs": 180000
           },
           {
@@ -94,25 +133,42 @@
               "npx",
               "vitest",
               "run",
+              "--maxWorkers=4",
               "test/integration-feedback.test.ts",
               "test/integration-view.test.ts",
+              "test/integration-menu-layout.test.ts",
               "test/integration-connection-form.test.ts",
               "test/integration-legacy-view.test.ts",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/scheduled-task-view.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/menu-surface-theme.test.ts"
+              "test/integration-skill-removal.test.ts",
+              "test/integration-installer.test.ts",
+              "test/integration-service.test.ts",
+              "test/integration-store.test.ts",
+              "test/integration-harness-e2e.test.js",
+              "test/integration-task-dependencies.test.ts",
+              "test/integration-catalog.test.ts",
+              "test/integration-catalog-worker.test.js"
             ],
             "outcome": "passed",
-            "summary": "Shared workspace controls and interaction feedback focused",
-            "verifiedCommit": "762aac3e311219758039e72edb942b6ed1431a0c",
-            "completedAt": "2026-09-22T08:05:23.909371+00:00",
+            "summary": "Integration list polish, individual skill deletion and empty catalog focused",
+            "verifiedCommit": "484f0b1727e9fd71de528881dc4614849badda0d",
+            "completedAt": "2026-09-22T08:40:12.882126+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/validate-integration-catalog.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Integration list polish, individual skill deletion and empty catalog catalog",
+            "verifiedCommit": "484f0b1727e9fd71de528881dc4614849badda0d",
+            "completedAt": "2026-09-22T08:40:13.007260+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "列表底部常驻提示移除；共用返回组件与原生右屏控件，深浅主题真实DOM hover/active/focus/busy/disabled已经核对；最终原生客户端将在集成构建后验收。"
+          "summary": "列表行和菜单的深浅主题及窄屏真实DOM核对通过；技能删除链路和空市场通过聚焦验证。已移除常驻完成提示和用户框选的说明与连接入口，最终客户端将在集成构建后验收。"
         },
         "acceptanceCriteria": [
           "右侧工作区入口与四类市场正确，返回和右屏按钮保留",
@@ -124,92 +180,7 @@
           "MCP动态OAuth不支持，当前支持显式Bearer/Header/无认证与STDIO",
           "需在集成客户端进行原生验收后由用户接受精确提交"
         ],
-        "generatedAt": "2026-09-22T08:05:23.950525+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9ef7fe235c207d8fb9cd90d0d0dea9d9286a570d",
-        "verificationCommit": "9ef7fe235c207d8fb9cd90d0d0dea9d9286a570d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9ef7fe235c207d8fb9cd90d0d0dea9d9286a570d",
-            "completedAt": "2026-09-22T08:06:58.975Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "9ef7fe235c207d8fb9cd90d0d0dea9d9286a570d",
-            "completedAt": "2026-09-22T08:06:58.975Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "9ef7fe235c207d8fb9cd90d0d0dea9d9286a570d",
-            "completedAt": "2026-09-22T08:06:58.975Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-22T08:06:58.975Z"
+        "generatedAt": "2026-09-22T08:40:13.053550+00:00"
       }
     }
   ],
