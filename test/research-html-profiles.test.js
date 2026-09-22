@@ -88,7 +88,7 @@ describe('opt-in Figma fund72 HTML profiles', () => {
     for (const selector of ['.research-metric-detail', '[data-sherlock-status]', '.research-benchmark', '.research-footer']) {
       expect(style(selector).fontWeight).toBe('400')
       expect(style(`${selector} [data-sherlock-numeric]`).fontWeight).toBe('500')
-      expect(style(`${selector} [data-sherlock-numeric]`).fontFamily).toBe('"EWork DIN Pro", "Noto Sans SC", sans-serif')
+      expect(style(`${selector} [data-sherlock-numeric]`).fontFamily).toBe('"EWork Profile Punctuation", "EWork DIN Pro", "Noto Sans SC", sans-serif')
     }
   })
 
@@ -98,7 +98,27 @@ describe('opt-in Figma fund72 HTML profiles', () => {
     expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('border-radius:6px!important')
     expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('border-radius:7px!important')
     expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('font-size:var(--sherlock-control-font-size,10px)!important')
-    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('input.research-filter-search{--sherlock-control-padding-left:28px;padding-left:28px!important')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('input.research-filter-search{--sherlock-control-padding-left:29px;padding-left:29px!important')
     expect(host.RESEARCH_COMPONENT_PROFILE_CSS).not.toMatch(/(?:display:none|overflow:hidden|text-overflow:ellipsis)/)
+  })
+
+  it('keeps existing mixed numeric text intact while selecting the fixed regular punctuation face', () => {
+    const { document, style } = render(`<main data-sherlock-profile="fund72-holdings"><table><tbody><tr><td>证券 S<span data-sherlock-numeric>001</span></td><td><span data-sherlock-numeric>6 / 8</span></td><td><span data-sherlock-holdings-change="positive"><span data-sherlock-numeric>+0.82%</span></span></td></tr></tbody></table><p class="research-footer">来源 · 合成数据</p></main>`)
+    expect(style('[data-sherlock-holdings-change] [data-sherlock-numeric]').fontFamily).toContain('"EWork Profile Punctuation"')
+    expect(style('[data-sherlock-holdings-change] [data-sherlock-numeric]').fontWeight).toBe('500')
+    expect(style('.research-footer').fontFamily).toContain('"EWork Profile Punctuation"')
+    expect(document.querySelector('[data-sherlock-holdings-change]').textContent).toBe('+0.82%')
+    expect(document.querySelectorAll('[data-sherlock-numeric]')).toHaveLength(3)
+  })
+
+  it('uses the source neutral dropdown arrow without replacing native selects', () => {
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('select:not([multiple]):not([size])')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('appearance:none!important')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('background-size:10px 6px!important')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('background-position:right 11px center!important')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain("stroke-width='1.2'")
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain("viewBox='-1 -1 10 6'")
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain("stroke-linecap='round'")
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain("d='M0 0L4 4L8 0'")
   })
 })

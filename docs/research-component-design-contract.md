@@ -34,7 +34,7 @@
 
 - 壳圆角 8px、标题区 48px，业务标题 13/20。业务内容内边距 12px。
 - HTML 不再重复外层业务题名。仅对文档首部明确页面标题做题名主体精确校验；单个尾括注视为说明，修复须原字保留该说明。不把同名分节标题或后置标题当成重复；修复保留来源、连接状态及共享回调，宿主不隐藏或删除业务 DOM。该类修复还与原输出做规范化 DOM 签名比对，除题名外的节点、属性、业务文本、CSS 和脚本均须保持，JSON title 不得改名规避；带 ID/事件的题名保留节点，只清重复文字。
-- 原稿标题右侧的期间、单位或来源使用 `<meta name="sherlock-header-note" content="2026中报">`，由宿主标题栏显示；9px/20px，中文 Noto Sans SC Regular、数字 DIN Pro Medium。只读文本，不执行标记；按钮显现时留出操作区，长文保留完整提示。
+- 原稿标题右侧的期间、单位或来源使用 `<meta name="sherlock-header-note" content="2026中报">`，由宿主标题栏显示；9px/20px，中文 Noto Sans SC Regular、数字 DIN Pro Medium。只读文本，不执行标记；右上角两个功能按钮绝对定位浮于上层，hover 与键盘聚焦时均不占位、不改变标题或右侧文本的坐标、宽度及省略状态；移出后自然露出原文。长文保留完整提示，按钮保留功能名气泡。
 - 默认 fund72 指标块高 64px、圆角 5px，指标数字 23/26；标签 9/14。不同业务原稿可以保留有来源的排版关系。
 - 业务输入/select 高 28px、圆角 6px、边框 0.65px；按钮高 28px、圆角 7px。手动生成编辑器有独立规格，不套业务表格控件尺寸。
 - 语义组件：`.research-primary` 或 `[data-sherlock-variant="primary"]`；`.research-secondary`；`.research-metric` / `.kpi-card`；`.research-metric-value` / `.research-metric-label`；`.research-numeric` / `[data-sherlock-numeric]`；`[data-sherlock-status="success|warning|danger|info"]`。
@@ -46,7 +46,9 @@
 
 基金72的持仓表、四指标、行业条形图分别使用 `main[data-sherlock-profile="fund72-holdings|fund72-kpi|fund72-industry"]`。宿主提供排版与颜色，模型只填真实数据和必要的筛选行为；不手写 body padding 或覆盖模板字号、间距、奇偶行颜色。不同场景不互套模板，Lumos 不套基金持仓行高。
 
-- 持仓：原稿 `1217:247167` / Dark `1217:255020`，556×400；表头25px、与首行间隔4px、行34px。五列均按原稿左对齐；中文与代码中的S采用 Noto Sans SC Bold，数字片段 DIN Pro Medium。正变化专用 Light `#B84343` / Dark `#FF9D9D`，负变化保持正文色，不套收益红绿。原稿搜索图标由宿主提供。
+显式声明 profile 后，生成验收检查名称与必需语义结构：指标容器/项/标签/值，行业行/标签/轨道/条形/值，或持仓表格的 thead/tbody；有筛选或搜索时使用对应 class。宿主管理的排版节点不得以内联 `!important` 改写字体、留白或颜色。失败只补声明和语义 class 或移除冲突优先级，保留原数据、来源、控件、脚本及共享回调；不得删除 profile 绕过校验。业务条数不锁死，空数据、真实条形宽度和筛选显隐仍允许。
+
+- 持仓：原稿 `1217:247167` / Dark `1217:255020`，556×400；表头25px、与首行间隔4px、行34px。五列均按原稿左对齐；中文与代码中的S采用 Noto Sans SC Bold，数字片段 DIN Pro Medium。正变化专用 Light `#B84343` / Dark `#FF9D9D`，负变化保持正文色，不套收益红绿。原稿搜索图标由宿主提供（外径8px、描边1.2px、柄4px）；选择器沿用原生语义与键盘行为，箭头源路径8×4、描边1.2px、距右12px，绘制视窗须留出描边而不裁边。数字使用DIN，斜线、分隔点、正负号按原稿使用Noto Regular；宿主限定字形映射直接覆盖已有产物，不修改文本和事件。
 - 四指标：原稿 `1217:247146`，896×132；4列、间隔10px、块高64px、圆角5px；标签9/14、值23/26、说明8/11，中文单位保持原稿 Regular。
 - 行业：原稿 `1217:247228` / Dark `1217:255081`，328×400；条形高7px、圆角2px、每行27px；标签9/18、数值10/18。业务条形图 Light `#005096 / #1EB9E1`、Dark `#0078B4 / #1EB9E1`，筛选控件使用黑白灰。比例按实际数值和明确量程计算，不为凑齐长度改变数据。
 

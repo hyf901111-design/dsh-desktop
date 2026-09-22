@@ -8,6 +8,53 @@ const fundTitle = '基金筛选表（合成数据 · 组件规范回归）'
 const fundHtml = readFileSync(new URL('./fixtures/research-kimi-fund-title.html', import.meta.url), 'utf8')
 const checklistHtml = readFileSync(new URL('./fixtures/research-kimi-checklist-title.html', import.meta.url), 'utf8')
 
+const profileKpiItem = '<div class="research-metric"><div class="research-metric-label">穿透基金</div><div class="research-metric-value">8只</div><div class="research-metric-detail">合成数据</div></div>'
+const profileIndustryRow = '<div class="research-industry-row"><span class="research-industry-label">电子</span><div class="research-industry-track"><div class="research-industry-bar" style="width:82%"></div></div><span class="research-industry-value">24.6%</span></div>'
+const profileDocument = (profile, content) => `<main data-sherlock-profile="${profile}">${content}</main>`
+
+describe('explicit generated source profile contract', () => {
+ it.each(['fund72_kpi','fund72-unknown',''])('rejects an unknown explicit profile %s with a narrow repair instruction', profile => {
+  const issue = designPolicyIssue(profileDocument(profile, '<p>业务数据保留</p>'))
+  expect(issue).toContain('未知 data-sherlock-profile')
+  expect(issue).toContain('保留全部数据、来源、控件、脚本和共享回调')
+ })
+ it.each([
+  ['fund72-kpi', '<div class="metrics"><div class="metric"><span class="value">8</span></div></div>', '.research-metrics'],
+  ['fund72-kpi', '<div class="research-metrics"><div class="metric">8</div></div>', '.research-metric'],
+  ['fund72-kpi', '<div class="research-metrics"><div class="research-metric"><span class="research-metric-label">基金</span><span class="value">8</span></div></div>', '.research-metric-value'],
+  ['fund72-industry', '<div class="rows">电子24.6%</div>', '.research-industry-rows'],
+  ['fund72-industry', '<div class="research-industry-rows">'+profileIndustryRow.replace('research-industry-bar','bar')+'</div>', '.research-industry-bar'],
+  ['fund72-holdings', '<div class="table">华芯科技6.42%</div>', 'table'],
+  ['fund72-holdings', '<table><tbody><tr><td>6.42%</td></tr></tbody></table>', 'thead'],
+  ['fund72-holdings', '<div class="filters"><input type="search"></div><table><thead></thead><tbody></tbody></table>', '.research-filters']
+ ])('rejects missing %s semantic structure without discarding its content', (profile, html, expected) => {
+  expect(designPolicyIssue(profileDocument(profile, html))).toContain(expected)
+ })
+ it.each([0,1,7])('allows %i KPI cards and industry rows, including empty-data containers', count => {
+  expect(designPolicyIssue(profileDocument('fund72-kpi', `<div class="research-metrics">${profileKpiItem.repeat(count)}</div>`))).toBeNull()
+  expect(designPolicyIssue(profileDocument('fund72-industry', `<div class="research-industry-rows">${profileIndustryRow.repeat(count)}</div>`))).toBeNull()
+ })
+ it.each(['font-size:32px!important','line-height:40px!important','padding:20px!important','background:var(--sherlock-surface-muted)!important'])('rejects a protected profile inline override %s', style => {
+  const html = profileDocument('fund72-kpi', `<div class="research-metrics">${profileKpiItem.replace('class="research-metric-value"',`class="research-metric-value" style="${style}"`)}</div>`)
+  expect(designPolicyIssue(html)).toContain('内联 !important')
+ })
+ it('keeps data widths, visibility, neutral controls, ordinary HTML, and normal authored declarations valid', () => {
+  const industry = profileDocument('fund72-industry', `<div class="research-industry-rows">${profileIndustryRow.replace('width:82%', 'width:82%!important;display:none!important').replace('class="research-industry-row"','class="research-industry-row" hidden')}</div><p>来源：合成数据</p><script>const state={selected:1};</script>`)
+  expect(designPolicyIssue(industry)).toBeNull()
+  expect(designPolicyIssue('<div class="value" style="font-size:32px!important">普通报告</div>')).toBeNull()
+  const kpi = profileDocument('fund72-kpi', `<div class="research-metrics">${profileKpiItem.replace('class="research-metric-value"','class="research-metric-value" style="font-size:32px"')}</div>`)
+  expect(designPolicyIssue(kpi)).toBeNull()
+  expect(designPolicyIssue('<style>.research-metric-value{font-size:32px!important}</style>'+kpi)).toBeNull()
+  expect(designPolicyIssue(profileDocument('fund72-holdings','<table><thead></thead><tbody></tbody></table><input type="button" value="查看">'))).toBeNull()
+  expect(designPolicyIssue(profileDocument('fund72-kpi','<div class="research-metrics"><template>加载后的数据模板</template><script>const items=[];</script></div>'))).toBeNull()
+ })
+ it('accepts semantic class repair without rewriting data or scripts', () => {
+  const content = `<div class="metrics">${profileKpiItem}</div><p>来源保留</p><script>const sharedState={checked:true};</script>`
+  expect(designPolicyIssue(profileDocument('fund72-kpi', content))).toContain('.research-metrics')
+  expect(designPolicyIssue(profileDocument('fund72-kpi', content.replace('class="metrics"','class="research-metrics"')))).toBeNull()
+ })
+})
+
 describe('generated HTML design policy', () => {
  it.each([
   '<style>:root{--sherlock-text:purple}</style><p>内容</p>',

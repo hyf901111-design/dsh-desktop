@@ -46,5 +46,6 @@ export const researchComponentHeaderNoteCss = `
   font:400 9px/20px "Noto Sans SC","EWork DIN Pro",sans-serif;
 }
 [data-research-component-header-note] [data-header-note-numeric]{font-family:"EWork DIN Pro","Noto Sans SC",sans-serif;font-weight:500}
-[data-research-generated-container]:is(:hover,:focus-within) [data-research-component-header-note]{margin-right:72px}
+/* Hover controls overlay the title row; metadata keeps its original geometry. */
+[data-research-generated-container]>.rScV5Q_nodeTitle>.rScV5Q_nodeTitleActions{position:absolute;z-index:3}
 `
