@@ -270,7 +270,8 @@ export class IntegrationView {
             const isRead=Object.values(readActions).some(actions=>actions.includes(action));
             const isMutation=el.hasAttribute('data-mutation') || mutationActions.includes(action);
             if (!isRead && !isMutation) return;
-            const unavailable=(action==='save-connection' && this.draft.type==='api' && !this.hasApiTools()) || (action==='grant-tools' && !this.snapshot.rows.find(row=>row.id===this.routeId())?.tools?.length) || (action==='install' && (!entry || entry.installed || !entry.available));
+            const toggleRow=el.dataset.toggle?this.snapshot.rows.find(row=>row.id===el.dataset.toggle):action==='toggle-detail'?this.snapshot.rows.find(row=>row.id===this.routeId()):undefined;
+            const unavailable=toggleRow?.toggleable===false || (action==='save-connection' && this.draft.type==='api' && !this.hasApiTools()) || (action==='grant-tools' && !this.snapshot.rows.find(row=>row.id===this.routeId())?.tools?.length) || (action==='install' && (!entry || entry.installed || !entry.available));
             el.disabled = pending || this.busy || (isMutation && this.pendingActions.size > 0) || unavailable;
             const mutationActive=this.busy && (action===this.busyCommand?.type || (this.busyCommand?.type==='set-enabled' && (el.dataset.toggle===this.busyCommand.id || action==='toggle-detail')) || (action==='install' && this.busyCommand?.type==='install'));
             if (pending || mutationActive) el.setAttribute('aria-busy','true'); else el.removeAttribute('aria-busy');
@@ -325,7 +326,14 @@ export class IntegrationView {
     }
     private listContent(tab: IntegrationTab) { if (this.loading)
         return '<p class="ig-empty" role="status">正在加载…</p>'; const all = this.snapshot.rows.filter(row => row.tab === tab), rows = all.filter(row => (row.name + ' ' + row.description).toLocaleLowerCase().includes(this.query.toLocaleLowerCase())); if (!rows.length)
-        return `<div class="ig-empty"><h2>${this.query ? '没有匹配的结果' : `还没有${tabNames[tab]}`}</h2><p>${this.query ? '试试其他名称或关键词。' : tab === 'skills' ? '导入技能，或从技能市场寻找可复用的工作方法。' : `从${marketNames[marketKinds[tab]]}添加，或连接你自己的工具。`}</p>${this.query ? '' : addMenuButton()}</div>`; return `<div class="ig-list-heading"><span>${tab === 'apps' ? '连接' : tab === 'mcp' ? '服务器' : '已安装'}</span><span>${all.length} 项 · ${all.filter(row => row.enabled).length} 项已启用</span></div>${rows.map(row => `<article class="ig-row" data-row-id="${esc(row.id)}"><button class="ig-row-main" data-detail="${esc(row.id)}"><strong title="${esc(row.name)}">${esc(row.name)}</strong><span title="${esc(row.description)}">${esc(row.description)}</span></button><div class="ig-row-meta"><span data-enabled="${row.enabled}">${esc(row.status)}</span><span title="${esc(row.source)}">${esc(row.source)}${typeof row.toolCount === 'number' ? ` · ${row.toolCount} 个工具` : ''}</span></div><button type="button" role="switch" aria-checked="${row.enabled}" aria-label="${row.enabled ? '停用' : '启用'}${esc(row.name)}" class="ig-toggle" data-toggle="${esc(row.id)}" data-mutation></button><button class="ig-more" data-more="${esc(row.id)}" aria-label="${esc(row.name)}的更多操作" aria-haspopup="menu" aria-expanded="false">${icon('more')}</button></article>`).join('')}`; }
+        return `<div class="ig-empty"><h2>${this.query ? '没有匹配的结果' : `还没有${tabNames[tab]}`}</h2><p>${this.query ? '试试其他名称或关键词。' : tab === 'skills' ? '导入技能，或从技能市场寻找可复用的工作方法。' : `从${marketNames[marketKinds[tab]]}添加，或连接你自己的工具。`}</p>${this.query ? '' : addMenuButton()}</div>`; return `<div class="ig-list-heading"><span>${tab === 'apps' ? '连接' : tab === 'mcp' ? '服务器' : '已安装'}</span><span>${all.length} 项 · ${all.filter(row => row.enabled).length} 项已启用</span></div>${rows.map(row => `<article class="ig-row" data-row-id="${esc(row.id)}"><button class="ig-row-main" data-detail="${esc(row.id)}"><strong title="${esc(row.name)}">${esc(row.name)}</strong><span title="${esc(row.description)}">${esc(row.description)}</span></button><div class="ig-row-meta"><span data-enabled="${row.enabled}">${esc(row.status)}</span><span title="${esc(row.source)}">${esc(row.source)}${typeof row.toolCount === 'number' ? ` · ${row.toolCount} 个工具` : ''}</span></div><button type="button" role="switch" aria-checked="${row.enabled}" aria-label="${row.enabled ? '停用' : '启用'}${esc(row.name)}${row.toggleable===false?`，${esc(this.toggleDisabledReason(row))}`:''}" class="ig-toggle" data-toggle="${esc(row.id)}" ${row.toggleable===false?`disabled data-toggle-locked="true" title="${esc(this.toggleDisabledReason(row))}"`:''} data-mutation></button><button class="ig-more" data-more="${esc(row.id)}" aria-label="${esc(row.name)}的更多操作" aria-haspopup="menu" aria-expanded="false">${icon('more')}</button></article>`).join('')}`; }
+    private toggleDisabledReason(row: IntegrationRow) { return row.toggleDisabledReason || '内置技能，保持启用'; }
+    private detailToggleButton(row: IntegrationRow, primary = false) {
+        const label=row.enabled?'停用':'启用';
+        return row.toggleable===false
+            ? `<button type="button" class="ig-button ig-secondary" data-action="toggle-detail" disabled title="${esc(this.toggleDisabledReason(row))}" aria-label="${label}${esc(row.name)}，${esc(this.toggleDisabledReason(row))}">${label}</button>`
+            : button('toggle-detail',label,primary);
+    }
     private clearToolGrantDraft() { this.toolGrantDraft=undefined;this.toolsExpanded=false; }
     private toolSelections(row: IntegrationRow): Set<string> {
         const tools=row.tools || [];
@@ -400,13 +408,13 @@ export class IntegrationView {
         const unavailable=!row.enabled || reply?.enabled===false ? '先启用技能，再在对话中使用。'
             : reply?.usable===false ? reply.unavailableReason || '此技能暂时不可用，请检查所属插件。'
             : !this.bridge.useSkill ? '当前客户端暂不支持直接使用技能。' : '';
-        return `<div class="ig-detail-grid ig-skill-detail-grid"><section class="ig-detail-main ig-skill-document" data-skill-detail data-skill-id="${esc(row.id)}" data-skill-revision="${row.revision}" tabindex="0" role="region" aria-label="技能 Markdown 预览" aria-busy="${state?.status==='loading'}"><div class="ig-skill-file-label">SKILL.md</div>${body}</section><aside class="ig-detail-aside" aria-label="技能操作">${button('use-skill',state?.useController?'正在准备…':'立即使用',true,!this.canUseSkill(row))}${unavailable?`<p class="ig-note">${esc(unavailable)}</p>`:''}${state?.useError?`<p class="ig-error" role="alert">${esc(state.useError)}</p>`:''}${state?.useMessage?`<p class="ig-note" role="status">${esc(state.useMessage)}</p>`:''}<section class="ig-help"><h2>${esc(row.status)}</h2><p>将在对话中填入技能，发送前仍可补充具体需求。</p></section><div class="ig-skill-actions">${button('toggle-detail',row.enabled?'停用':'启用')}${row.removable?button('request-uninstall','删除技能'):''}</div></aside></div>`;
+        return `<div class="ig-detail-grid ig-skill-detail-grid"><section class="ig-detail-main ig-skill-document" data-skill-detail data-skill-id="${esc(row.id)}" data-skill-revision="${row.revision}" tabindex="0" role="region" aria-label="技能 Markdown 预览" aria-busy="${state?.status==='loading'}"><div class="ig-skill-file-label">SKILL.md</div>${body}</section><aside class="ig-detail-aside" aria-label="技能操作">${button('use-skill',state?.useController?'正在准备…':'立即使用',true,!this.canUseSkill(row))}${unavailable?`<p class="ig-note">${esc(unavailable)}</p>`:''}${state?.useError?`<p class="ig-error" role="alert">${esc(state.useError)}</p>`:''}${state?.useMessage?`<p class="ig-note" role="status">${esc(state.useMessage)}</p>`:''}<section class="ig-help"><h2>${esc(row.status)}</h2><p>将在对话中填入技能，发送前仍可补充具体需求。</p></section><div class="ig-skill-actions">${this.detailToggleButton(row)}${row.removable?button('request-uninstall','删除技能'):''}</div></aside></div>`;
     }
     private detailContent(row?: IntegrationRow) {
         if (!row) return '<p class="ig-empty">该项目已不存在，请返回列表刷新。</p>';
         if (row.kind === 'skill') return this.skillDetailContent(row);
         if (row.kind === 'plugin') {
-            return `<section class="ig-detail-identity"><h2>${esc(row.name)}</h2><p>${esc(row.source)}${row.detail ? ` · ${esc(row.detail)}` : ''}</p></section><div class="ig-detail-grid"><section class="ig-detail-main ig-capabilities"><h2>可以帮你做什么</h2><p>${esc(row.description)}</p><p>启用后，可在当前账号允许的工作区中使用这项能力。</p></section><aside class="ig-detail-aside"><section class="ig-help"><h2>${esc(row.status)}</h2><p>插件控制能力是否可用，应用账号与工具权限可在对应连接中管理。</p></section>${button('toggle-detail', row.enabled ? '停用' : '启用', !row.enabled)}${row.removable ? `<hr><p class="ig-note">卸载前会检查关联任务，已有应用连接仍会保留。</p>${button('request-uninstall','卸载')}` : ''}</aside></div>`;
+            return `<section class="ig-detail-identity"><h2>${esc(row.name)}</h2><p>${esc(row.source)}${row.detail ? ` · ${esc(row.detail)}` : ''}</p></section><div class="ig-detail-grid"><section class="ig-detail-main ig-capabilities"><h2>可以帮你做什么</h2><p>${esc(row.description)}</p><p>启用后，可在当前账号允许的工作区中使用这项能力。</p></section><aside class="ig-detail-aside"><section class="ig-help"><h2>${esc(row.status)}</h2><p>插件控制能力是否可用，应用账号与工具权限可在对应连接中管理。</p></section>${this.detailToggleButton(row,!row.enabled)}${row.removable ? `<hr><p class="ig-note">卸载前会检查关联任务，已有应用连接仍会保留。</p>${button('request-uninstall','卸载')}` : ''}</aside></div>`;
         }
         const summary = row.connectionSummary;
         const capability = this.snapshot.taskCapabilities?.find(item => item.entityId === row.id);
@@ -493,7 +501,7 @@ export class IntegrationView {
         return;
     } if (target.dataset.toggle) {
         const row = this.snapshot.rows.find(r => r.id === target.dataset.toggle);
-        if (row)
+        if (row && row.toggleable!==false)
             void this.run({ type: 'set-enabled', kind: row.kind, id: row.id, enabled: !row.enabled, meta: this.meta(row.id) });
         return;
     } if (target.dataset.menuAction) {
@@ -696,7 +704,7 @@ export class IntegrationView {
                     await this.confirmRemoval(row, true);
                 break;
             case 'toggle-detail':
-                if (row)
+                if (row && row.toggleable!==false)
                     await this.run({ type: 'set-enabled', kind: row.kind, id: row.id, enabled: !row.enabled, meta: this.meta(row.id) });
                 break;
             case 'request-uninstall':
@@ -781,7 +789,7 @@ export class IntegrationView {
         const row=this.snapshot.rows.find(item=>item.id===id);if(!row)return;
         const locked=this.busy || this.pendingActions.size>0;
         const item=(action:string,label:string,destructive=false)=>`<button type="button" role="menuitem" data-menu-action="${action}" ${destructive?'class="ig-danger"':''} ${locked&&action!=='detail'?'disabled':''}>${label}</button>`;
-        this.openMenu(anchor,id,`${row.name}的更多操作`,`${item('detail','查看详情')}${item('toggle',row.enabled?'停用':'启用')}${row.kind==='connection'?item('probe','测试连接')+item('disconnect','断开连接'):''}${row.marketEntryId&&row.kind!=='connection'?item('check-update','检查更新'):''}${row.kind==='plugin'&&row.canRollback?item('rollback','回退上一版本'):''}${row.removable?'<div class="ig-menu-separator" role="separator"></div>'+item('uninstall',row.kind==='connection'?'移除连接':row.kind==='skill'?'删除技能':'卸载',true):''}`);
+        this.openMenu(anchor,id,`${row.name}的更多操作`,`${item('detail','查看详情')}${row.toggleable===false?'':item('toggle',row.enabled?'停用':'启用')}${row.kind==='connection'?item('probe','测试连接')+item('disconnect','断开连接'):''}${row.marketEntryId&&row.kind!=='connection'?item('check-update','检查更新'):''}${row.kind==='plugin'&&row.canRollback?item('rollback','回退上一版本'):''}${row.removable?'<div class="ig-menu-separator" role="separator"></div>'+item('uninstall',row.kind==='connection'?'移除连接':row.kind==='skill'?'删除技能':'卸载',true):''}`);
     }
     private openMenu(anchor:HTMLButtonElement,id:string,label:string,markup:string) {
         if(this.menuId===id){this.closeMenu();return;}
@@ -807,6 +815,7 @@ export class IntegrationView {
         await this.confirmRemoval(row, action === 'disconnect');
         return;
     } if (action === 'toggle') {
+        if(row.toggleable===false)return;
         await this.run({ type: 'set-enabled', kind: row.kind, id: row.id, enabled: !row.enabled, meta: this.meta(row.id) });
         return;
     } this.navigate({ page: 'detail', id: row.id, tab: row.tab }); if (action === 'probe')

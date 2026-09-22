@@ -1297,6 +1297,7 @@ async function bootstrap(): Promise<void> {
     integrationService = await IntegrationService.open({
       root: join(app.getPath('userData'), 'integrations'), encryption: safeStorage,
       getOwnerId: integrationOwner, bundledCatalogRoot: desktopResourcePath('integration-catalog'),
+      bundledSkillDirectory: bundledSkillDirectory(),
       clientVersion: app.getVersion(),
       legacySkillRoots: legacySkillRoots({ userDataRoot: app.getPath('userData'), bundledSkillDirectory: bundledSkillDirectory() }),
       legacyConnectionSources: legacyConnectionSources({userDataRoot:app.getPath('userData')}),
