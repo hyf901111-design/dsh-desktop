@@ -14,7 +14,7 @@ const executablePath = process.env.PLAYWRIGHT_EXECUTABLE_PATH || process.env.SHE
 const output = resolve(process.env.SHERLOCK_COMPLETED_DESIGN_EVIDENCE || 'output/research-completed-design')
 await mkdir(output, { recursive: true })
 
-const card = (id, type, body, extra = '') => `<article id="${id}" data-research-compact-chrome data-research-generated-container data-research-artifact-card="${id}" data-research-generation-state="completed" ${extra}><header class="rScV5Q_nodeTitle"><span class="rScV5Q_nodeTitleText">持仓穿透 / 组合风险</span>${id === 'kpi' ? '<span data-research-component-header-note title="09.22 · 研究模拟"><span data-header-note-numeric>09.22</span> · 研究模拟</span>' : ''}<div class="rScV5Q_nodeTitleActions"><button class="rScV5Q_containerMenuTrigger">⋯</button></div></header><div class="rScV5Q_previewBody"><div class="rScV5Q_artifactBody"><div class="rScV5Q_generatedContainer" data-research-container-type="${type}"><div class="rScV5Q_containerContent"><div class="odyssey-component-content" data-component-width="wide"><div class="odyssey-component-primary">${body}</div></div></div></div></div></div></article>`
+const card = (id, type, body, extra = '') => `<article id="${id}" data-research-compact-chrome data-research-generated-container data-research-artifact-card="${id}" data-research-generation-state="completed" ${extra}><header class="rScV5Q_nodeTitle"><span class="rScV5Q_nodeTitleText">持仓穿透 / 组合风险</span>${id === 'kpi' ? '<span data-research-component-header-note title="09.22 · 研究模拟"><span data-header-note-numeric>09.22</span> · 研究模拟</span>' : ''}<div class="rScV5Q_nodeTitleActions"><button class="rScV5Q_containerExpand" aria-label="展开组件">⛶</button><button class="rScV5Q_containerMenuTrigger" aria-label="更多操作">⋯</button></div></header><div class="rScV5Q_previewBody"><div class="rScV5Q_artifactBody"><div class="rScV5Q_generatedContainer" data-research-container-type="${type}"><div class="rScV5Q_containerContent"><div class="odyssey-component-content" data-component-width="wide"><div class="odyssey-component-primary">${body}</div></div></div></div></div></div></article>`
 const kpi = `<div class="rScV5Q_containerKpis">${['穿透基金', '穿透覆盖率', '底层证券', '前十大集中度'].map((label, index) => `<div><span>${label}</span><strong data-research-metric-positive="true">${['8只', '92.6%', '186', '38.4%'][index]}</strong><em>基于已披露权益持仓</em></div>`).join('')}</div>`
 const table = '<div class="rScV5Q_containerTableScroll"><table><thead><tr><th>证券 / 模拟简称</th><th data-numeric="true">穿透权重</th><th>操作</th></tr></thead><tbody><tr><td><span>华芯科技 S001</span></td><td data-numeric="true">6.42%</td><td><a href="#compare">对比</a></td></tr><tr><td>远航装备 S002</td><td data-numeric="true">5.18%</td><td>中等</td></tr></tbody></table></div>'
 const chart = '<div class="rScV5Q_containerChart" data-research-container-chart="line"><svg viewBox="0 0 860 100"><polyline id="series" points="0,90 200,60 400,80 830,15" fill="none" stroke="#005096" stroke-width="1.6"></polyline><text class="rScV5Q_chartLabel" x="8" y="98">2026</text></svg><div class="rScV5Q_chartLegend"><i style="background:#1eb9e1"></i>基金收益</div></div>'
@@ -83,12 +83,28 @@ try {
       return checks
     }, { theme, baseline })
     report.checks.push(...checks)
-    await page.locator('#kpi').hover()
-    const noteAvoidsActions = await page.evaluate(() => {
-      const note=document.querySelector('#kpi [data-research-component-header-note]'), actions=document.querySelector('#kpi .rScV5Q_nodeTitleActions')
-      return getComputedStyle(note).visibility === 'visible' && note.getBoundingClientRect().right <= actions.getBoundingClientRect().left
+    const headerGeometry = () => page.evaluate(() => {
+      const rect=selector=>{const n=document.querySelector(selector),r=n.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,scrollWidth:n.scrollWidth,text:n.textContent}}
+      return {note:rect('#kpi [data-research-component-header-note]'),title:rect('#kpi .rScV5Q_nodeTitleText'),body:rect('#kpi .rScV5Q_previewBody')}
     })
-    report.checks.push({name:theme+'/header-note-hover-does-not-overlap-actions',actual:noteAvoidsActions,expected:true})
+    for (const width of [896,328]) {
+      await page.locator('#kpi').evaluate((card,width)=>card.style.width=width+'px',width)
+      await page.mouse.move(999,999)
+      await page.locator('#kpi .rScV5Q_containerMenuTrigger').evaluate(button=>button.blur())
+      const geometry=await headerGeometry()
+      for (const state of ['hover','focus']) {
+        if(state==='hover') await page.locator('#kpi').hover()
+        else {await page.mouse.move(999,999);await page.locator('#kpi .rScV5Q_containerMenuTrigger').focus()}
+        report.checks.push({name:`${theme}/header-note-${width}-${state}-preserves-layout`,actual:JSON.stringify(await headerGeometry()),expected:JSON.stringify(geometry)})
+        const overlay=await page.evaluate(()=>{
+          const note=document.querySelector('#kpi [data-research-component-header-note]'),actions=document.querySelector('#kpi .rScV5Q_nodeTitleActions'),s=getComputedStyle(actions)
+          return s.position==='absolute' && Number(s.zIndex)>0 && actions.getBoundingClientRect().left<note.getBoundingClientRect().right
+        })
+        report.checks.push({name:`${theme}/header-actions-${width}-${state}-float-above-text`,actual:overlay,expected:true})
+      }
+    }
+    await page.locator('#kpi').evaluate(card=>card.style.width='896px')
+    await page.locator('#kpi .rScV5Q_containerMenuTrigger').evaluate(button=>button.blur())
     await page.mouse.move(999,999)
     await page.screenshot({ path: resolve(output, `${theme}.png`), fullPage: true })
   }

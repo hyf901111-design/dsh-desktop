@@ -15,6 +15,69 @@ const normalized = text => decodeCss(text).replace(/\/\*[\s\S]*?\*\//g, '').trim
 const NEUTRAL_VALUE_WORDS = new Set('transparent currentcolor inherit initial unset revert revert-layer none auto solid dashed dotted double inset outset hidden groove ridge thin medium thick linear-gradient radial-gradient repeating-linear-gradient repeating-radial-gradient color-mix in srgb to top right bottom left center circle ellipse closest-side closest-corner farthest-side farthest-corner at from calc min max clamp px em rem vh vw vmin vmax deg turn'.split(' '))
 const INHERITED_CONTROL_PROPERTIES = /^(?:color|fill|stroke|caret-color|font(?:-family)?)$/
 
+const SOURCE_PROFILE_NAMES = ['fund72-holdings','fund72-kpi','fund72-industry']
+const SOURCE_PROFILE_REPAIR = '只修正 profile 声明、补齐现有内容的语义 class，或移除冲突样式的 !important 优先级；保留全部数据、来源、控件、脚本和共享回调，不删内容、不重做页面，不删除 profile 来规避校验。'
+const PROFILE_PRESENTATION = /^(?:color|background(?:-.+)?|border(?:-.+)?|box-shadow|font(?:-.+)?|line-height|text-align|white-space|box-sizing|(?:min-|max-)?(?:width|height)|padding(?:-.+)?|margin(?:-.+)?|(?:row-|column-)?gap|grid-template-columns|align-items|align-self)$/
+const PROFILE_MANAGED = {
+ 'fund72-kpi': '.research-metrics,.research-metric,.research-metric-label,.research-metric-value,.research-metric-detail,[data-sherlock-numeric],[data-sherlock-unit]',
+ 'fund72-holdings': 'table,thead,tbody,tr,th,td,.research-filters,.research-footer,.research-numeric,[data-sherlock-numeric],[data-sherlock-holdings-change]',
+ 'fund72-industry': '.research-filters,.research-industry-rows,.research-industry-row,.research-industry-label,.research-industry-track,.research-industry-bar,.research-industry-value,.research-callout,.research-benchmark,.research-footer,[data-sherlock-status],[data-sherlock-numeric]'
+}
+
+// Explicit opt-in source profiles have a small markup contract. No profile is
+// inferred from prose or classes, and business item counts are never prescribed.
+function sourceProfileIssue($) {
+ for (const element of $('[data-sherlock-profile]').toArray()) {
+  const root = $(element), profile = root.attr('data-sherlock-profile')
+  const fail = detail => `来源 profile ${profile || '(空)'}：${detail} ${SOURCE_PROFILE_REPAIR}`
+  if (!SOURCE_PROFILE_NAMES.includes(profile)) return fail(`未知 data-sherlock-profile，请使用 ${SOURCE_PROFILE_NAMES.join(' / ')} 中与当前内容对应的名称。`)
+  const find = selector => root.find(selector).filter((_, node) => $(node).closest('[data-sherlock-profile]')[0] === element)
+  const collection = (containerSelector, itemSelector, parts) => {
+   const containers = find(containerSelector)
+   if (!containers.length) return `缺少 ${containerSelector} 语义容器。`
+   for (const container of containers.toArray()) {
+    const items = $(container).find(itemSelector).filter((_, node) => $(node).closest(containerSelector)[0] === container)
+    // An empty-data container is legal. Nonempty content must identify its
+    // existing items so the host can apply layout, rather than inventing data.
+    const content = $(container).clone()
+    content.find('script,style,template,noscript').remove()
+    if (!items.length && content.text().trim()) return `现有内容缺少 ${itemSelector} 语义 class。`
+    for (const item of items.toArray()) {
+     for (const selector of parts) if (!$(item).find(selector).length) return `${itemSelector} 缺少 ${selector} 语义节点；给现有对应内容补 class。`
+    }
+   }
+   return null
+  }
+  let structure
+  if (profile === 'fund72-kpi') structure = collection('.research-metrics','.research-metric',['.research-metric-label','.research-metric-value'])
+  if (profile === 'fund72-industry') structure = collection('.research-industry-rows','.research-industry-row',['.research-industry-label','.research-industry-track','.research-industry-track .research-industry-bar','.research-industry-value'])
+  if (profile === 'fund72-holdings') {
+   const tables = find('table')
+   if (!tables.length) structure = '缺少标准 table 语义表格。'
+   else if (tables.toArray().some(table => !$(table).children('thead').length || !$(table).children('tbody').length)) structure = '持仓 table 必须保留 thead 和 tbody 语义分组。'
+  }
+  if (structure) return fail(structure)
+  if (profile !== 'fund72-kpi') {
+   const fields = find('select,input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not([type="range"]):not([type="color"])').filter((_, node) => !$(node).closest('table').length)
+   if (fields.toArray().some(node => !$(node).closest('.research-filters').length)) return fail('现有筛选控件缺少 .research-filters 容器。')
+   if (profile === 'fund72-holdings' && fields.filter('input').toArray().some(node => !$(node).is('.research-filter-search'))) return fail('现有搜索输入框缺少 .research-filter-search class，以启用宿主搜索图标与留白。')
+  }
+  const managed = find(PROFILE_MANAGED[profile]).add(root)
+  for (const node of managed.toArray()) {
+   const style = $(node).attr('style')
+   if (!style) continue
+   let property
+   postcss.parse(`x{${style}}`).walkDecls(decl => {
+    const prop = normalized(decl.prop).toLowerCase()
+    // Bar width is data, and display/hidden remains available to interactions.
+    if (decl.important && PROFILE_PRESENTATION.test(prop) && !(prop === 'width' && $(node).is('.research-industry-bar'))) property ??= prop
+   })
+   if (property) return fail(`宿主管理节点的 ${property} 不能使用内联 !important 覆盖源稿样式。`)
+  }
+ }
+ return null
+}
+
 // Read balanced var() functions, retaining fallback literals for color checks.
 // Every nested token is checked; a safe outer token never hides an unsafe fallback.
 function colorValueParts(value) {
@@ -272,5 +335,5 @@ export function designPolicyIssue(html, { title } = {}) {
  $('*').each((_, element) => {
   for (const [name, value] of Object.entries(element.attribs || {})) if (/^on[a-z]+$/.test(name)) issue ??= scriptDesignIssue(value)
  })
- return issue || duplicatePageTitle($, title)?.issue || null
+ return issue || sourceProfileIssue($) || duplicatePageTitle($, title)?.issue || null
 }

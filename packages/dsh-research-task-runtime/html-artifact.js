@@ -38,6 +38,13 @@ export function researchComponentTypographyCss(scope, options = {}) {
     : researchNotoFontCss
   return RESEARCH_COMPONENT_DIN_FACES + noto + `@layer sherlock-component-typography{:is(:is(${scope}),:is(${scope}) *){font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important}}`
 }
+// Existing model DOM may wrap a sign or separator in a numeric span. This
+// fixed-weight, glyph-limited face selects Noto Regular without editing that
+// text or its listeners. Decimal points/percent signs remain in DIN.
+const RESEARCH_PROFILE_PUNCTUATION_DESCRIPTOR = Object.freeze({
+  style: 'normal', weight: '400', display: 'swap', variationSettings: '"wght" 400',
+  unicodeRange: 'U+0020,U+002B,U+002D,U+002F,U+00B7,U+2212'
+})
 // Figma 21M: current monochrome controls + 21H fund72/Lumos content roles.
 // Controls and business colors are independent; chart/status colors never become actions.
 const researchComponentPalette = (p) => Object.freeze({ ...p,
@@ -124,9 +131,11 @@ ${['success','warning','danger','info'].map(status => `:where([data-sherlock-sta
 // colors are deliberately outside this selector set. Existing artifacts keep their DOM/JS.
 export const RESEARCH_COMPONENT_CONTROLS_CSS = `@layer sherlock-component-controls{
 :is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],summary,input,select,textarea){color:var(--sherlock-control-text)!important;background-color:var(--sherlock-control-bg)!important;background-image:none!important;border-color:var(--sherlock-control-border)!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)!important;caret-color:var(--sherlock-control-text)!important}
-:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 10px 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,10px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
-[data-sherlock-profile="fund72-holdings"] input.research-filter-search{--sherlock-control-padding-left:28px;padding-left:28px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23777777' stroke-width='1'%3E%3Ccircle cx='5' cy='5' r='3.5'/%3E%3Cpath d='m7.5 7.5 3 3'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:12px 12px!important;background-position:9px center!important}
-:root[data-sherlock-theme="dark"] [data-sherlock-profile="fund72-holdings"] input.research-filter-search{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a0a0a0' stroke-width='1'%3E%3Ccircle cx='5' cy='5' r='3.5'/%3E%3Cpath d='m7.5 7.5 3 3'/%3E%3C/svg%3E")!important}
+:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 var(--sherlock-control-padding-right,10px) 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,10px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) :is(select:not([multiple]):not([size]),select[size="1"]){--sherlock-control-padding-right:32px;appearance:none!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='-1 -1 10 6' fill='none' stroke='%23777777' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='miter' stroke-miterlimit='4'%3E%3Cpath d='M0 0L4 4L8 0'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:10px 6px!important;background-origin:border-box!important;background-position:right 11px center!important}
+:root[data-sherlock-theme="dark"] :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) :is(select:not([multiple]):not([size]),select[size="1"]){background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='-1 -1 10 6' fill='none' stroke='%23a0a0a0' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='miter' stroke-miterlimit='4'%3E%3Cpath d='M0 0L4 4L8 0'/%3E%3C/svg%3E")!important}
+[data-sherlock-profile="fund72-holdings"] input.research-filter-search{--sherlock-control-padding-left:29px;padding-left:29px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23777777' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:12px 12px!important;background-position:10px center!important}
+:root[data-sherlock-theme="dark"] [data-sherlock-profile="fund72-holdings"] input.research-filter-search{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a0a0a0' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important}
 textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:10px!important;line-height:16px!important}
 :is(button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
 :is(button[type="submit"],button[aria-pressed="true"],input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
@@ -157,7 +166,8 @@ a[href]:hover{text-decoration:underline}
 export const RESEARCH_COMPONENT_PROFILE_CSS = `@layer sherlock-component-profiles{
 body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"])){margin:0!important;padding:0!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]){box-sizing:border-box!important;width:100%!important;min-width:0!important;height:auto!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--sherlock-surface)!important;color:var(--sherlock-text)!important;font-weight:400!important;container-type:inline-size}
-:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]) [data-sherlock-numeric]{font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important;font-weight:500!important;font-variant-numeric:tabular-nums!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]) :is(*),:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]){font-family:"EWork Profile Punctuation","EWork DIN Pro","Noto Sans SC",sans-serif!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]) [data-sherlock-numeric]{font-weight:500!important;font-variant-numeric:tabular-nums!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]){padding:11px 12px 10px!important;font-size:9px!important;line-height:18px!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-filters{--sherlock-control-font-size:9px;--sherlock-control-line-height:18px;display:grid!important;gap:8px!important;padding:0!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-filters :is(input,select){width:100%!important;min-width:0!important}
@@ -179,7 +189,7 @@ body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile=
 [data-sherlock-profile="fund72-holdings"] td:first-child{border-radius:2px 0 0 2px!important}
 [data-sherlock-profile="fund72-holdings"] :is(td:first-child,td:first-child span:not([data-sherlock-numeric]):not(.research-numeric)){font-family:"Noto Sans SC",sans-serif!important;font-weight:700!important;color:var(--sherlock-text)!important}
 [data-sherlock-profile="fund72-holdings"] td:last-child{border-radius:0 2px 2px 0!important}
-[data-sherlock-profile="fund72-holdings"] :is(.research-numeric,[data-sherlock-numeric],[data-sherlock-holdings-change]){font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important;text-align:left!important;font-weight:500!important;font-variant-numeric:tabular-nums!important}
+[data-sherlock-profile="fund72-holdings"] :is(.research-numeric,[data-sherlock-numeric],[data-sherlock-holdings-change]){text-align:left!important;font-weight:500!important;font-variant-numeric:tabular-nums!important}
 [data-sherlock-profile="fund72-holdings"] [data-sherlock-holdings-change="positive"]{color:var(--sherlock-holdings-change-positive)!important}
 [data-sherlock-profile="fund72-holdings"] [data-sherlock-holdings-change="negative"]{color:var(--sherlock-holdings-change-negative)!important}
 [data-sherlock-profile="fund72-holdings"] .research-footer{margin:4px 0 0!important}
@@ -229,6 +239,21 @@ function researchHtmlFixedTheme(html) {
   }
   return null
 }
+
+// Exports already contain the trusted Noto face. Reuse that exact source for
+// the profile punctuation alias instead of duplicating its large font payload.
+const RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME = String.raw`function researchProfilePunctuationFontRuntime() {
+  if (typeof FontFace !== 'function' || !document.fonts) return
+  for (const sheet of document.styleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (rule.type !== 5 || rule.style.getPropertyValue('font-family').replace(/["']/g,'').trim() !== 'Noto Sans SC') continue
+      const face = new FontFace('EWork Profile Punctuation',rule.style.getPropertyValue('src'),${JSON.stringify(RESEARCH_PROFILE_PUNCTUATION_DESCRIPTOR)})
+      document.fonts.add(face)
+      face.load().catch(()=>{})
+      return
+    }
+  }
+}`
 
 // This listener is installed before artifact scripts. The only font input is
 // the fixed bundled Noto binary, supplied by this exact parent; no URL is accepted.
@@ -284,10 +309,11 @@ const RESEARCH_HTML_INNER_FONT_RUNTIME = String.raw`function researchHtmlInnerFo
     received = true
     const attempt = generation
     readBlob.call(data.blob).then((bytes) => {
-      const face = new Font('Noto Sans SC', bytes, { style: 'normal', weight: '100 900', display: 'swap' })
-      return face.load().then(() => {
+      const faces = [new Font('Noto Sans SC', bytes, { style: 'normal', weight: '100 900', display: 'swap' }),
+        new Font('EWork Profile Punctuation', bytes, ${JSON.stringify(RESEARCH_PROFILE_PUNCTUATION_DESCRIPTOR)})]
+      return Promise.all(faces.map(face => face.load())).then(() => {
         if (attempt !== generation) return
-        addFont(face)
+        faces.forEach(addFont)
         finished = true
         clearTimeout(timeout)
         publish('loaded')
@@ -724,7 +750,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME})();` : ''}(${RESEARCH_HTML_INNER_THEME_RUNTIME})(${JSON.stringify(fixedTheme)});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
+  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
