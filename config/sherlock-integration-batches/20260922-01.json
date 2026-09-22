@@ -12,7 +12,7 @@
         "featureName": "EWork 插件应用MCP技能与统一菜单",
         "branch": "codex/feat/ework-integrations-20260922",
         "baseCommit": "484f0b1727e9fd71de528881dc4614849badda0d",
-        "tipCommit": "763e57c128c02a8415b6e60671e7051d421c7a31",
+        "tipCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
         "commits": [
           {
             "commit": "763e57c128c02a8415b6e60671e7051d421c7a31",
@@ -20,6 +20,13 @@
               "484f0b1727e9fd71de528881dc4614849badda0d"
             ],
             "subject": "撤下技能市场中的周报整理和会议纪要示例"
+          },
+          {
+            "commit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
+            "parents": [
+              "763e57c128c02a8415b6e60671e7051d421c7a31"
+            ],
+            "subject": "改用独立目录验证市场技能运行链路"
           }
         ],
         "files": [
@@ -42,6 +49,10 @@
           {
             "status": "M",
             "path": "test/integration-client-flow.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-harness-e2e.test.js"
           }
         ],
         "checks": [
@@ -53,8 +64,8 @@
             ],
             "outcome": "passed",
             "summary": "Withdraw unaccepted skill examples typecheck",
-            "verifiedCommit": "763e57c128c02a8415b6e60671e7051d421c7a31",
-            "completedAt": "2026-09-22T09:06:29.168843+00:00",
+            "verifiedCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
+            "completedAt": "2026-09-22T09:14:12.543489+00:00",
             "timeoutMs": 180000
           },
           {
@@ -64,12 +75,13 @@
               "run",
               "test/integration-catalog.test.ts",
               "test/integration-catalog-worker.test.js",
-              "test/integration-client-flow.test.ts"
+              "test/integration-client-flow.test.ts",
+              "test/integration-harness-e2e.test.js"
             ],
             "outcome": "passed",
             "summary": "Withdraw unaccepted skill examples focused",
-            "verifiedCommit": "763e57c128c02a8415b6e60671e7051d421c7a31",
-            "completedAt": "2026-09-22T09:06:30.936576+00:00",
+            "verifiedCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
+            "completedAt": "2026-09-22T09:14:14.547113+00:00",
             "timeoutMs": 180000
           },
           {
@@ -79,8 +91,8 @@
             ],
             "outcome": "passed",
             "summary": "Withdraw unaccepted skill examples catalog",
-            "verifiedCommit": "763e57c128c02a8415b6e60671e7051d421c7a31",
-            "completedAt": "2026-09-22T09:06:31.063606+00:00",
+            "verifiedCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
+            "completedAt": "2026-09-22T09:14:14.669799+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -98,7 +110,7 @@
           "MCP动态OAuth不支持，当前支持显式Bearer/Header/无认证与STDIO",
           "需在集成客户端进行原生验收后由用户接受精确提交"
         ],
-        "generatedAt": "2026-09-22T09:06:31.108566+00:00"
+        "generatedAt": "2026-09-22T09:14:14.712900+00:00"
       }
     }
   ],
