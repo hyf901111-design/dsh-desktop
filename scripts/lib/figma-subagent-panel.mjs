@@ -1,3 +1,21 @@
+export async function openComponentProcess(sessions, parentSessionId, childSessionId) {
+  if (!parentSessionId || !childSessionId) throw Error('任务尚未启动，暂无子 Agent 过程。')
+  await sessions.refreshSubagents(parentSessionId)
+  const child = sessions.list.getSnapshot().subagentsByParent?.[parentSessionId]?.entries.find(e => e.kind === 'child' && e.id === childSessionId)
+  if (!child) throw Error('未找到此组件的子 Agent 记录，请稍后重试。')
+  sessions.openSubagentPanel({ parentSessionId, childSessionId, mode: child.mode })
+}
+function patchComponentProcessEntry(source) {
+  if (source.includes('/* odyssey:component-process-panel */')) return source
+  const anchor = 'sessions.openSubagentPanel=openPanel;'
+  const listener = `sessions.openSubagentPanel=openPanel;
+    /* odyssey:component-process-panel */
+    const openComponentProcess=${openComponentProcess.toString().replace('export ', '')};
+    const componentProcess=event=>{const d=event.detail;if(!d||d.handled)return;d.handled=true;openComponentProcess(sessions,d.parentSessionId,d.childSessionId).then(d.resolve,d.reject);};
+    window.addEventListener('sherlock:component-process',componentProcess);`
+  source=exact(source,anchor,listener)
+  return exact(source,'if(sessions.openSubagentPanel===openPanel)delete sessions.openSubagentPanel;',"window.removeEventListener('sherlock:component-process',componentProcess);if(sessions.openSubagentPanel===openPanel)delete sessions.openSubagentPanel;")
+}
 /** A catalog-addressed child gets a retained real Session in a sibling tab.
  * Selection remains on the parent; the renderer receives the child's standard
  * props, so history, tools, drafts and composer guards keep their native scope. */
@@ -113,7 +131,7 @@ function OdysseySubagentPanelHeader({sessionId,useSession,useSessions}) {
 `;
 export function patchSubagentPanelConversation(source) {
   const marker='/* odyssey:subagent-conversation-tab:v1 */'
-  if(source.includes(marker))return finishSubagentPanelScope(source)
+  if(source.includes(marker))return patchComponentProcessEntry(finishSubagentPanelScope(source))
   source=exact(source,'class ResearchSidebarCoordinator {',marker+'\n'+panelComponent+'\nclass ResearchSidebarCoordinator {\n sessions=null;')
   source=exact(source,'attach(service, t) {','attach(service, t, sessions) {\n this.sessions=sessions;')
   source=exact(source,'return () => {\n\t\t\t\t\tunregister?.();',`const unregisterSubagent=service.registerTab({id:'sherlock-subagent-conversation',title:()=> '子代理',hidden:true,single:false,component:props=>react_jsx_runtime.jsx(OdysseySubagentPanel,{...props,coordinator})});
@@ -144,7 +162,7 @@ export function patchSubagentPanelConversation(source) {
   source=source.slice(0,a)+`const odysseyConversationOptions=${options};
       slots.register({...odysseyConversationOptions,children:{...odysseyConversationOptions.children,'conversation.subagent.panel':{kind:'single',scope:'session'}}},ConversationRoot);
       slots.register({...odysseyConversationOptions,name:'conversation.subagent.panel'},ConversationRoot);`+source.slice(b+'}, ConversationRoot);'.length)
-  return finishSubagentPanelScope(source)
+  return patchComponentProcessEntry(finishSubagentPanelScope(source))
 }
 
 const subagentHeader=`function OdysseySubagentPanelHeader({sessionId,useSession,useSessions,useProjection}) {

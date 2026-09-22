@@ -6,7 +6,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 export const WORKBENCH_PATH = '/sherlock/research-workbenches/list';
 import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt} from './workbench-plan.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
-const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard'];
+const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 // Only a host-started, leased board child can register this in-process sink.
 // Planning captures validated data; cloud writes still require current edit authority.
@@ -99,7 +99,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     };
     const disposeTool = ctx.tools.register(defineTool({
         name: 'research_workbench_create',
-        description: '在研究画布一次创建由独立面板组成的工作台，各面板自动并发生成。仅用于需要多个研究维度的工作台需求；简单问答直接回复。先判断最少必要面板数（2–10），分别指定用途、范围、内容类型和高度。按使用目的选择交互：新闻/政策/交易动态用 news，报告库用 reports，日历用 calendar，指标监控快照用 dashboard，趋势用 chart，对比才用 table；综合工作台通常包含至少三种有意义的形式，避免清一色表格或长文。尊重用户明确要求的形式，不要在主会话先重复完成所有检索与报告。相同请求重试使用相同 requestId。返回 accepted 仅表示任务已提交，不表示数据已生成或监控已启用。',
+        description: '在研究画布一次创建由独立面板组成的工作台，各面板自动并发生成。仅用于需要多个研究维度的工作台需求；简单问答直接回复。先判断最少必要面板数（2–10），分别指定用途、范围、内容类型和高度。按使用目的选择交互：新闻/政策/交易动态用 news，报告库用 reports，日历用 calendar，指标监控快照用 dashboard；金融行情、K线成交量、行业热力及市场广度用 market，面板prompt写明variant与数据口径；其它趋势用 chart，对比才用 table；综合工作台通常包含至少三种有意义的形式，避免清一色表格或长文。尊重用户明确要求的形式，不要在主会话先重复完成所有检索与报告。相同请求重试使用相同 requestId。返回 accepted 仅表示任务已提交，不表示数据已生成或监控已启用。',
         parameters: {
             requestId: { type: 'string', required: true, description: '本轮需求的唯一稳定标识，重试保持一致。' },
             title: { type: 'string', required: true },

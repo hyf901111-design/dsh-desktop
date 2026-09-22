@@ -1,3 +1,5 @@
+import { Window } from 'happy-dom';
+import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
 import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,8 +13,8 @@ const panel = (n) => ({ title: `面板${n}`, prompt: `研究独立维度${n}`, t
 function toolPanel(n) { const {height, ...p} = panel(n); return {...p, size: height <= 600 ? 'medium' : 'large'}; }
 function fake() { const f = new Proxy(function () { }, { get: () => f, apply: () => f }); return f; }
 async function bundle() {
-    let descriptor;
-    runInNewContext(patchResearchWorkbenchGrowth(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')), { window: { __ModuleLoader__: { load: (d) => descriptor = d } }, URL, TextEncoder, TextDecoder, AbortController, setTimeout, clearTimeout });
+    let descriptor;const win=new Window();
+    runInNewContext(patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')), { document:win.document, window: { __ModuleLoader__: { load: (d) => descriptor = d } }, URL, TextEncoder, TextDecoder, AbortController, setTimeout, clearTimeout });
     return descriptor.factory(() => fake());
 }
 function store() { const map = new Map(); return { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => { map.set(k, v); return true; } }; }
@@ -22,17 +24,10 @@ describe('研究工作台', () => {
         for (const panels of [[panel(1)], [panel(1), panel(1)], Array.from({ length: 11 }, (_, i) => panel(i)), [panel(1), { ...panel(2), height: 99999 }]])
             expect(() => validateWorkbench({ requestId: 'a', title: '行业', panels })).toThrow();
     });
-    it('packs large cards first and fills the remaining cells without changing same-size order', () => {
-        const panels = layoutWorkbench(['small','large','medium','small','small'].map((size,i)=>({...panel(i),size})));
-        expect(panels.map(({x,y,width,height})=>({x,y,width,height}))).toEqual([
-            {x:672,y:236,width:320,height:220}, {x:0,y:0,width:656,height:456},
-            {x:672,y:0,width:656,height:220}, {x:1008,y:236,width:320,height:220},
-            {x:0,y:472,width:320,height:220}
-        ]);
-        expect(panels.map(p=>p.title)).toEqual(Array.from({length:5},(_,i)=>`面板${i}`));
-        for(let i=0;i<panels.length;i++)for(const b of panels.slice(i+1)) {
-            const a=panels[i];expect(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y).toBe(true);
-        }
+    it('uses source 280 by 200 placeholders in source order with 20 by 24 gaps',()=>{
+        const panels=layoutWorkbench(['small','large','medium','small','small','large','medium','small','large'].map((size,i)=>({...panel(i),size})));
+        expect(panels.map(({x,y,width,height})=>({x,y,width,height}))).toEqual(Array.from({length:9},(_,i)=>({x:i%3*300,y:Math.floor(i/3)*224,width:280,height:200})));
+        expect(panels.map(p=>p.title)).toEqual(Array.from({length:9},(_,i)=>`面板${i}`));
     });
     it('fits the whole workbench rather than only the nearest panel, leaving the designed outer margin', async () => {
         const client = await bundle();
@@ -110,27 +105,26 @@ describe('研究工作台', () => {
         expect(workspace.getSnapshot().artifacts).toHaveLength(4);
         expect(client.createResearchWorkspaceSession(storage, 's').getSnapshot().artifacts[0].workbenchId).toBe('board');
         workspace.applyGenerationInspection('n0', { taskId: 't0', canvasNodeId: 'n0', state: 'running', lastSeq: 1, events: [] });
-        expect(workspace.getSnapshot().artifacts[0].width).toBe(656);
-        expect(workspace.getSnapshot().artifacts[0].height).toBe(456);
-        workspace.applyGenerationInspection('n0', { taskId: 't0', canvasNodeId: 'n0', state: 'completed', lastSeq: 2, events: [], finalOutput: JSON.stringify({ type: 'markdown', title: '内容', markdown: '# 标题\n正文' }) });
+        expect(workspace.getSnapshot().artifacts[0]).toMatchObject({width:280,height:200,sizeMode:'auto'});
+        workspace.applyGenerationInspection('n0', { taskId: 't0', canvasNodeId: 'n0', state: 'completed', lastSeq: 2, events: [], finalOutput: JSON.stringify({ version:1, type: 'markdown', title: '内容', content: '# 标题\n正文' }) });
         const nodes = workspace.getSnapshot().artifacts;
         expect(nodes[0].width).toBe(656);
-        expect(nodes.every(n=>n.width===656&&[220,456].includes(n.height))).toBe(true);
+        expect(nodes.slice(1).every(n=>n.width===280&&n.height===200)).toBe(true);
     });
     it('uses S M L sizes and retains full content while capping arranged frames at L', async () => {
         const input = { requestId: 'sizes', title: '工作台', panels: [0,1,2,3].map((n) => ({ ...panel(n), size: n === 0 ? 'small' : n === 1 ? 'medium' : 'large' })) };
         const planned = layoutWorkbench(validateWorkbench(input).panels);
-        expect(planned.map(p => p.height)).toEqual([220,220,456,456]);
+        expect(planned.map(p => p.height)).toEqual([200,200,200,200]);
         const client = await bundle(), workspace = client.createResearchWorkspaceSession(store(), 'sizes');
         workspace.applyWorkbench({ id: 'sizes', panels: planned.map((p,i) => ({ ...p, nodeId: `s${i}`, taskId: `t${i}` })) });
         workspace.updateNodeGeometry('s0', { height: 3500, sizeMode: 'auto' });
         // A tall automatic S card upgrades both axes to L; 320×456 is not a valid preset.
-        expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 656, height: 456, containerSizePreset: 'large', sizeMode: 'auto' });
+        expect(workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 280, height: 200, sizeMode: 'auto' });
         const times = workspace.getSnapshot().artifacts.map(p => p.workbenchRevealAt);
         expect(times[1]-times[0]).toBeGreaterThanOrEqual(500);
         workspace.organizeCanvas(new Map([['s0', {width: 720, height: 3500}]]));
         const nodes = workspace.getSnapshot().artifacts;
-        expect(nodes.map(n=>n.height)).toEqual([456,220,456,456]);
+        expect(nodes.map(n=>n.height)).toEqual([200,200,200,200]);
         expect(nodes[0].containerPrompt).toBe(planned[0].prompt);
         expect(nodes.every(n=>n.width<=656&&n.height<=456)).toBe(true);
         workspace.updateNodeGeometry('s0', { width: 420, height: 3500, sizeMode: 'manual' });

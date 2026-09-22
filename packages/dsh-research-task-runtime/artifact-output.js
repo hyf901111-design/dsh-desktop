@@ -1,3 +1,4 @@
+import { renderMarketArtifact } from './market-artifact.js';
 import { parseResearchContainerSpec } from './artifact-validator.js';
 import { renderInteractiveArtifact } from './interactive-artifact.js';
 import { researchHtmlText } from './html-artifact.js';
@@ -19,7 +20,7 @@ export function acceptArtifactOutput(text) {
  for(const candidate of candidates.reverse()) {
   const chartWithNotes=preserveLongChartCaption(candidate);
   if(chartWithNotes)return JSON.stringify(chartWithNotes);
-  const spec=parseResearchContainerSpec(renderInteractiveArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.

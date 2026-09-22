@@ -10,7 +10,7 @@ const start=source.indexOf('function researchGenerationPresentation('),end=sourc
 const derivedStart=source.indexOf('function researchIsDerivedNode('),derivedEnd=source.indexOf('function researchDerivedTitle(',derivedStart)
 const Process=new Function('react','react_jsx_runtime',source.slice(derivedStart,derivedEnd)+source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,require('react/jsx-runtime'))
 const cleanups:Array<()=>Promise<void>>=[]
-afterEach(async()=>{for(const cleanup of cleanups.splice(0).reverse())await cleanup();vi.unstubAllGlobals()})
+afterEach(async()=>{for(const cleanup of cleanups.splice(0).reverse())await cleanup();vi.unstubAllGlobals();vi.useRealTimers()})
 async function mount(status:string,callbacks:any={}) {
   const win=new Window({url:'https://sherlock.local/'});vi.stubGlobal('window',win);vi.stubGlobal('document',win.document);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
   const host=win.document.createElement('div');host.setAttribute('data-research-compact-chrome','');win.document.body.append(host)
@@ -59,23 +59,13 @@ it('keeps stop pending until inspection returns a terminal state and can recover
   await m.render('cancelled')
   expect(m.query('[data-research-generation-process]').getAttribute('data-generation-ui-state')).toBe('stopped')
 })
-it('opens real public process records without exposing private reasoning or resizing the frame',async()=>{
-  const onExpand=vi.fn(),m=await mount('running',{onExpand})
-  const button=m.query('[aria-label="查看过程"]');expect(button).not.toBeNull()
-  const before=JSON.stringify(m.node);onExpand.mockClear();await m.click(button)
-  expect(m.query('[data-research-generation-records]')).not.toBeNull()
-  expect(m.query('[data-research-generation-toggle]').getAttribute('aria-expanded')).toBe('true')
-  expect(onExpand).not.toHaveBeenCalled();expect(JSON.stringify(m.node)).toBe(before)
-})
-it.each(['light','dark'])('isolates expanded records from the underlying foreground in %s mode',async(theme)=>{
-  const m=await mount('running')
-  m.win.document.body.toggleAttribute('data-ds-dark-theme',theme==='dark')
-  await m.click(m.query('[aria-label="查看过程"]'))
-  expect(m.win.getComputedStyle(m.query('[data-research-generation-foreground]')).visibility).toBe('hidden')
-  expect(m.win.getComputedStyle(m.query('[data-research-generation-records]')).backgroundColor).toBe(theme==='dark'?'#030303':'#fafafa')
-  expect(m.query('[data-research-generation-elapsed]')).not.toBeNull()
-  await m.click(m.query('[aria-label="收起过程"]'))
+it('opens the matching child in the right panel without inline records or resizing',async()=>{
+  const onProcess=vi.fn(),onExpand=vi.fn(),m=await mount('running',{onProcess,onExpand})
+  const before=JSON.stringify(m.node);onExpand.mockClear();await m.click(m.query('[aria-label="查看过程"]'))
+  expect(onProcess).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({id:'manual'}))
+  expect(m.query('[data-research-generation-records]')).toBeNull()
   expect(m.win.getComputedStyle(m.query('[data-research-generation-foreground]')).visibility).not.toBe('hidden')
+  expect(onExpand).not.toHaveBeenCalled();expect(JSON.stringify(m.node)).toBe(before)
 })
 it('does not claim resume support without an existing resume capability',async()=>{
   const m=await mount('paused');expect(m.query('[aria-label="继续生成"]')).toBeNull()
@@ -94,4 +84,17 @@ it('renders the full source dot field on an isolated canvas without the old opac
   expect(dots.tagName).toBe('CANVAS')
   expect(dots.getAttribute('aria-hidden')).toBe('true')
   expect(m.win.getComputedStyle(dots).getPropertyValue('mask-image')).not.toContain('linear-gradient')
+})
+
+it('rolls real public progress every 900ms and freezes after stopping',async()=>{
+ vi.useFakeTimers()
+ const m=await mount('running');m.node.generationEvents=[{seq:1,type:'tool-started',tool:'web_search',detail:'检索行业资料'},{seq:2,type:'tool-started',tool:'financial_query',detail:'查询指数行情'}] as any
+ await m.render();const first=m.query('[data-progress-ticker]')?.textContent
+ expect(first).toBeTruthy()
+ await React.act(async()=>{vi.advanceTimersByTime(900)})
+ expect(m.query('[data-progress-ticker]')?.textContent).not.toBe(first)
+ await m.render('cancelled');expect(m.query('[data-progress-ticker]')).toBeNull()
+ const stopped=m.host.textContent
+ await React.act(async()=>{vi.advanceTimersByTime(1800)})
+ expect(m.host.textContent).toBe(stopped)
 })

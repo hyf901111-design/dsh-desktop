@@ -4,10 +4,17 @@ const asset = name => 'data:image/svg+xml;base64,' + readFileSync(new URL(`../..
 const dotFieldData = JSON.parse(readFileSync(new URL('../../build/figma-generation/dot-fields.json', import.meta.url), 'utf8'))
 const icons = Object.fromEntries(['stop', 'retry', 'restart', 'resume', 'process', 'running', 'waiting', 'error', 'stopped'].map(name => [name, asset(name)]))
 
-function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDisabled, retryLabel, onResume }) {
+function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExpand, onRetry, retryDisabled, retryLabel, onResume }) {
   /* GENERATION_ICONS */
   const presentation = researchGenerationPresentation(node)
-  const [expanded, setExpanded] = (0, react.useState)(false)
+  const [reduceMotion, setReduceMotion] = (0, react.useState)(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  ;(0, react.useEffect)(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReduceMotion(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  const [progressIndex, setProgressIndex] = (0, react.useState)(0)
   const [pending, setPending] = (0, react.useState)(false)
   const [requestError, setRequestError] = (0, react.useState)('')
   const [clock, setClock] = (0, react.useState)(Date.now)
@@ -19,7 +26,7 @@ function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDis
   ;(0, react.useEffect)(() => { if (active) onExpand?.('loading') }, [node.id, node.generationTaskId])
   ;(0, react.useEffect)(() => {
     epoch.current++; started.current = node.generationStartedAt ?? (node.generationStatus === 'queued' ? null : Date.now())
-    setExpanded(false); setPending(false); setRequestError('')
+    setProgressIndex(0); setPending(false); setRequestError('')
     return () => { epoch.current++ }
   }, [node.id, node.generationTaskId])
   ;(0, react.useEffect)(() => { if (!active) { epoch.current++; setPending(false) } }, [active])
@@ -39,9 +46,19 @@ function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDis
   const elapsed = node.generationStatus === 'queued' || startTime === null ? 0 : Math.max(0, Math.floor(((active ? clock : node.generationCompletedAt ?? clock) - startTime) / 1000))
   const time = String(Math.floor(elapsed / 60)).padStart(2, '0') + ':' + String(elapsed % 60).padStart(2, '0')
   const rows = researchGenerationLog(node).filter(row => active || row.id !== 'preparing')
-  const last = rows.filter(row => row.id !== 'preparing').at(-1)?.text
+  const progressRows = rows.filter(row => row.id !== 'preparing')
+  const last = progressRows.at(-1)?.text
+  const progressKey = progressRows.map(row => row.id + ':' + row.text).join('|')
+  ;(0, react.useEffect)(() => {
+    setProgressIndex(0)
+    if (!moving || progressRows.length < 2 || reduceMotion) return
+    const timer = setInterval(() => setProgressIndex(value => value + 1), 900)
+    return () => clearInterval(timer)
+  }, [moving, node.generationTaskId, progressKey, reduceMotion])
+  const rolling = moving && !reduceMotion && progressRows.length > 1
+  const progress = rolling ? progressRows[(progressRows.length - 1 + progressIndex) % progressRows.length]?.text : last
   const phase = ({ waiting: '等待开始', stopping: '正在停止生成…', stopped: '已停止生成', error: '暂时未能完成生成', paused: '已暂停生成' }[state] || presentation.title)
-  const detail = requestError || (state === 'error' ? researchPublicProgress(node.generationError || '已保留你的生成要求，可以重试。') : state === 'stopped' ? '已保留需求与已获取的信息，可以重新生成。' : last || '正在准备任务…')
+  const detail = requestError || (state === 'error' ? researchPublicProgress(node.generationError || '已保留你的生成要求，可以重试。') : state === 'stopped' ? '已保留需求与已获取的信息，可以重新生成。' : progress || '正在准备任务…')
   const derived = researchIsDerivedNode(node)
   const sourceCount = new Set(node.sourceNodeIds ?? []).size
   const stop = async () => {
@@ -62,12 +79,23 @@ function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDis
   else if (state === 'error' && typeof onRetry === 'function') action = { name: 'retry', label: retryLabel || '重试生成', disabled: retryDisabled, invoke: () => onRetry(node) }
   else if (state === 'stopped' && typeof onRetry === 'function') action = { name: 'restart', label: retryLabel || '重新生成', disabled: retryDisabled, invoke: () => onRetry(node) }
   else if (state === 'paused' && typeof onResume === 'function') action = { name: 'resume', label: '继续生成', invoke: () => onResume(node) }
-  const toggle = () => setExpanded(value => !value)
+  const openProcess = async () => {
+    setRequestError('')
+    try {
+      if (onProcess) { await onProcess(node); return }
+      if (!node.generationChildSessionId) throw Error('任务尚未启动，暂无子 Agent 过程。')
+      await new Promise((resolve, reject) => {
+        const detail = { parentSessionId: sessionId, childSessionId: node.generationChildSessionId, resolve, reject, handled: false }
+        window.dispatchEvent(new window.CustomEvent('sherlock:component-process', { detail }))
+        if (!detail.handled) reject(Error('右侧任务页暂不可用，请稍后重试。'))
+      })
+    } catch (error) { setRequestError(error.message || '过程打开失败，请重试。') }
+  }
   const glyph = moving ? 'running' : state === 'waiting' ? 'waiting' : state === 'error' ? 'error' : 'stopped'
   return (0, react_jsx_runtime.jsxs)('div', {
     className: 'rScV5Q_generationProcess odyssey-generation-surface', 'data-research-generation-process': '',
     'data-research-generation-stage': presentation.stage, 'data-generation-ui-state': state,
-    'data-process-expanded': expanded, 'data-research-generation-failure': ['error', 'stopped'].includes(state) ? '' : undefined,
+ 'data-research-generation-failure': ['error', 'stopped'].includes(state) ? '' : undefined,
     'aria-busy': active,
     children: [
       (0, react_jsx_runtime.jsx)(ResearchGenerationDots, { moving }),
@@ -76,18 +104,12 @@ function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDis
         (0, react_jsx_runtime.jsx)('span', { className: 'odyssey-generation-state-icon', 'aria-hidden': true, style: { maskImage: 'url("' + glyphs[glyph] + '")', animationPlayState: moving ? 'running' : 'paused' }, 'data-generation-spinning': moving }),
         (0, react_jsx_runtime.jsx)('strong', { children: researchPublicProgress(node.title || '当前组件') }),
         (0, react_jsx_runtime.jsx)('div', { className: 'odyssey-generation-phase', role: 'status', children: phase }),
-        (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: detail }),
+        (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: (0, react_jsx_runtime.jsx)('span', { 'data-progress-ticker': rolling ? '' : undefined, children: detail }, node.generationTaskId + ':' + progressIndex + ':' + detail) }),
         derived ? (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-sources': '', children: node.kind === 'generated-summary' ? '基于所选 ' + sourceCount + ' 个组件' : '来源：' + sourceCount + ' 个组件' }) : null
       ] }),
-      expanded ? (0, react_jsx_runtime.jsxs)('section', { className: 'odyssey-generation-records', 'data-research-generation-records': '', 'aria-label': '生成过程', children: [
-        (0, react_jsx_runtime.jsx)('strong', { children: '生成过程' }),
-        rows.length === 0 ? (0, react_jsx_runtime.jsx)('span', { children: '暂无可用过程记录' }) : null,
-        ...rows.map(row => (0, react_jsx_runtime.jsxs)('div', { 'data-research-generation-row': '', children: [row.stamp ? (0, react_jsx_runtime.jsx)('time', { children: row.stamp }) : null, (0, react_jsx_runtime.jsx)('span', { children: row.text })] }, row.id)),
-        state === 'error' && node.generationError ? (0, react_jsx_runtime.jsx)('p', { children: researchPublicProgress(node.generationError) }) : null
-      ] }) : null,
       (0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-generation-actions', 'aria-label': '生成操作', children: [
         action ? (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { ...action, icon: glyphs[action.name] }) : null,
-        (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { name: 'process', label: expanded ? '收起过程' : '查看过程', icon: glyphs.process, expanded, invoke: toggle })
+        (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { name: 'process', label: '查看过程', icon: glyphs.process, invoke: openProcess })
       ] })
     ]
   })
@@ -227,6 +249,11 @@ export function patchGenerationLifecycle(source) {
     /* ODYSSEY_MANUAL_COMPONENT_BOUNDS */
     if(node?.kind==='generated-container'&&node.sizeMode==='manual'&&node.containerPrompt!=='odyssey:link-draft'&&Number.isFinite(node.width)&&node.width>0&&Number.isFinite(node.height)&&node.height>0)return {width:Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.width),height:Math.min(RESEARCH_CANVAS_MAX_GENERATED_HEIGHT,node.height),sizeMode:'manual',resizable:true};`)
   }
+  if (!source.includes('/* ODYSSEY_AUTO_GENERATION_BOUNDS */')) {
+    source = source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
+    /* ODYSSEY_AUTO_GENERATION_BOUNDS */
+    if(node?.kind==='generated-container'&&node.sizeMode!=='manual'&&!node.containerSpec&&['queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus))return {width:280,height:200,sizeMode:'auto',resizable:true};`)
+  }
   const retryStart = source.indexOf('retryGeneration(nodeId) {'), retryEnd = source.indexOf('setGenerationCancelSink(', retryStart)
   if (retryStart < 0 || retryEnd < retryStart) throw Error('Missing generation retry lifecycle')
   let retry = source.slice(retryStart, retryEnd)
@@ -240,6 +267,8 @@ export function patchGenerationLifecycle(source) {
     if (previous === replacement) throw Error('Missing generation cancellation request')
     source = source.slice(0, start) + replacement + source.slice(end)
   }
+  source = source.replace(/ResearchGenerationProcess, \{\n(?!\s*sessionId,)/g, 'ResearchGenerationProcess, {\n                    sessionId,')
+  source = source.replace(/ResearchGenerationProcess,\{node,(?!sessionId,)/g, 'ResearchGenerationProcess,{node,sessionId,')
   source = source.replace('onCancelGeneration: () => workspace.cancelGeneration(node.id),', 'onCancelGeneration: () => workspace.cancelGeneration(node.id, true),')
   source = source.replace('onCancel: onCancelGeneration, onExpand: onExpandGeneration', 'onCancel: readOnly ? undefined : onCancelGeneration, onExpand: onExpandGeneration')
   // Retained shared results continue through their existing callback. Only the
@@ -249,12 +278,17 @@ export function patchGenerationLifecycle(source) {
     const start = source.indexOf(': [\'failed\', \'cancelled\', \'interrupted\'].includes(node.generationStatus) ? (0, react_jsx_runtime.jsxs)("div", {')
     const end = source.indexOf('}) : (0, react_jsx_runtime.jsx)("span", {', start)
     if (start < 0 || end < start || end - start > 6000) throw Error('Missing terminal generation presentation')
-    source = source.slice(0, start) + `: ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? /* ODYSSEY_GENERATION_TERMINAL */ (0,react_jsx_runtime.jsx)(ResearchGenerationProcess,{node,onRetry:onRetryGeneration,retryDisabled,retryLabel:(sherlockShared(sessionId)&&sherlockBoardsAdapter?.hasRetainedResult(sessionId,node.id))?'应用保留的研究结果':undefined` + source.slice(end)
+    source = source.slice(0, start) + `: ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? /* ODYSSEY_GENERATION_TERMINAL */ (0,react_jsx_runtime.jsx)(ResearchGenerationProcess,{node,sessionId,onRetry:onRetryGeneration,retryDisabled,retryLabel:(sherlockShared(sessionId)&&sherlockBoardsAdapter?.hasRetainedResult(sessionId,node.id))?'应用保留的研究结果':undefined` + source.slice(end)
   }
   return source
 }
 
 export const generationCss = `
+[data-research-generation-description]{overflow:hidden;min-height:16px}
+[data-progress-ticker]{display:block;animation:odyssey-progress-ticker .22s ease-out}
+@keyframes odyssey-progress-ticker{from{transform:translateY(100%);opacity:.25}to{transform:translateY(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){[data-progress-ticker]{animation:none}}
+
 /* Figma 1300:300378 / 09-09C: an independent dot layer, fixed foreground. */
 [data-research-compact-chrome]:has([data-research-generation-process]){border-width:0!important;border-radius:8px!important}
 [data-research-compact-chrome]:has([data-research-generation-process])[data-selected=true]::after{inset:0;border-radius:8px}

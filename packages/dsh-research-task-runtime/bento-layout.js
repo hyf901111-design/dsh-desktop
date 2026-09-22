@@ -26,7 +26,8 @@ export function researchBentoLayout(nodes, canvasSize = {}, measured = new Map()
   const height = canvasSize.height > 0 ? canvasSize.height : 900;
   const entries = nodes.map((node, index) => {
     const size = researchBentoSize(node, measured.get(node.id));
-    return { node, index, size, ...RESEARCH_BENTO_SIZES[size] };
+    const generating = node.kind==='generated-container' && node.sizeMode!=='manual' && !node.containerSpec && ['queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus);
+    return { node, index, size, ...RESEARCH_BENTO_SIZES[size], ...(generating ? {width:280,height:200,columns:1,rows:1} : {}) };
   });
   const minimumColumns = Math.max(...entries.map(entry => entry.columns), fitColumns && nodes.length > 2 ? 4 : 1);
   const defaultColumns = Math.max(minimumColumns, Math.min(8, Math.floor((availableWidth - 64 + 16) / 336)));

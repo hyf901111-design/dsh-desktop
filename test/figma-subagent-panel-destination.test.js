@@ -27,7 +27,7 @@ async function sidebar() {
   const {SidebarStore,createBetterSidebarService}=new Function(source.slice(start,end)+';return {SidebarStore,createBetterSidebarService}')()
   const store=new SidebarStore();store.setSession('parent')
   const service=createBetterSidebarService(store),coordinator=new ResearchSidebarCoordinator()
-  const sessions={list:{getSnapshot:()=>snapshot}}
+  const sessions={list:{getSnapshot:()=>snapshot,subscribe:()=>()=>{}}}
   coordinator.attach(service,x=>x,sessions)
   return {store,service,sessions}
 }

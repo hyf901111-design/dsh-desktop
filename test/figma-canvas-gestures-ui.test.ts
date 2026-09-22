@@ -234,13 +234,17 @@ it.each(['failed','cancelled'])('keeps the real public process available after %
   await act(async()=>{
     node=m.workspace.createContainerDraft({x:300,y:200,width:360,height:200,sizeMode:'manual'})
     m.workspace.beginContainerGeneration(node.id,'比较基金')
-    m.workspace.attachGenerationTask(node.id,{taskId:'history',canvasNodeId:node.id,state:'running',lastSeq:1,events:[{taskId:'history',canvasNodeId:node.id,seq:1,type:'tool-started',tool:'资料核对',detail:'已经核对真实基金来源 token=fixture-private /Users/private/report.txt'}]})
-    m.workspace.applyGenerationInspection(node.id,{taskId:'history',canvasNodeId:node.id,state,lastSeq:2,events:[],error:'数据源响应超时'})
+    m.workspace.attachGenerationTask(node.id,{taskId:'history',childSessionId:'history-child',canvasNodeId:node.id,state:'running',lastSeq:1,events:[{taskId:'history',canvasNodeId:node.id,seq:1,type:'tool-started',tool:'资料核对',detail:'已经核对真实基金来源 token=fixture-private /Users/private/report.txt'}]})
+    m.workspace.applyGenerationInspection(node.id,{taskId:'history',childSessionId:'history-child',canvasNodeId:node.id,state,lastSeq:2,events:[],error:'数据源响应超时'})
   })
+  const open=vi.fn((event:any)=>{event.detail.handled=true;event.detail.resolve()})
+  m.win.addEventListener('sherlock:component-process',open)
   await m.event('click',m.query('[data-research-generation-toggle]'))
-  expect(m.query('[data-research-generation-records]').textContent).toContain('已经核对真实基金来源')
+  expect(open).toHaveBeenCalledOnce()
+  expect(open.mock.calls[0]![0].detail.childSessionId).toBe('history-child')
+  expect(m.query('[data-research-generation-records]')).toBeNull()
   expect(JSON.stringify(m.workspace.getSnapshot().artifacts[0].generationEvents)).not.toContain('fixture-private')
-  expect(m.query('[data-research-generation-records]').textContent).not.toContain('/Users/private')
+  expect(JSON.stringify(m.workspace.getSnapshot().artifacts[0].generationEvents)).not.toContain('/Users/private')
 })
 
 it('treats link drafts as native nodes for marquee, dragging, layout and in-place creation', async () => {
