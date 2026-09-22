@@ -11,48 +11,89 @@
         "schemaVersion": 1,
         "featureName": "EWork 插件应用MCP技能与统一菜单",
         "branch": "codex/feat/ework-integrations-20260922",
-        "baseCommit": "484f0b1727e9fd71de528881dc4614849badda0d",
-        "tipCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
+        "baseCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
+        "tipCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
         "commits": [
           {
-            "commit": "763e57c128c02a8415b6e60671e7051d421c7a31",
+            "commit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
             "parents": [
-              "484f0b1727e9fd71de528881dc4614849badda0d"
+              "fa67b1bb275a9147383da2a7837ab54a6d5de8a1"
             ],
-            "subject": "撤下技能市场中的周报整理和会议纪要示例"
-          },
-          {
-            "commit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
-            "parents": [
-              "763e57c128c02a8415b6e60671e7051d421c7a31"
-            ],
-            "subject": "改用独立目录验证市场技能运行链路"
+            "subject": "展示技能正文并接入立即使用的原生对话流程"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "build/integration-catalog/catalog.json"
-          },
-          {
-            "status": "M",
             "path": "docs/ework-integrations-client-acceptance.md"
           },
           {
-            "status": "M",
-            "path": "test/integration-catalog-worker.test.js"
+            "status": "A",
+            "path": "scripts/lib/patch-integration-skill-composer.mjs"
           },
           {
             "status": "M",
-            "path": "test/integration-catalog.test.ts"
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
-            "path": "test/integration-client-flow.test.ts"
+            "path": "src/main/integrations/ipc.ts"
           },
           {
             "status": "M",
-            "path": "test/integration-harness-e2e.test.js"
+            "path": "src/main/integrations/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/integrations/skill-composer.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/integrations/skill-markdown.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/integrations/skill-use.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/integration-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-skill-composer.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-skill-detail.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-skill-use.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workspace-surface-host.test.ts"
           }
         ],
         "checks": [
@@ -63,9 +104,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Withdraw unaccepted skill examples typecheck",
-            "verifiedCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
-            "completedAt": "2026-09-22T09:14:12.543489+00:00",
+            "summary": "Skill markdown preview and native composer typecheck",
+            "verifiedCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
+            "completedAt": "2026-09-22T09:36:17.015936+00:00",
             "timeoutMs": 180000
           },
           {
@@ -73,15 +114,21 @@
               "npx",
               "vitest",
               "run",
-              "test/integration-catalog.test.ts",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-client-flow.test.ts",
-              "test/integration-harness-e2e.test.js"
+              "--maxWorkers=4",
+              "test/integration-view.test.ts",
+              "test/integration-skill-detail.test.js",
+              "test/integration-skill-use.test.ts",
+              "test/integration-skill-composer.test.ts",
+              "test/integration-ipc.test.ts",
+              "test/integration-harness-e2e.test.js",
+              "test/profile-runtime-patches.test.js",
+              "test/preload-main-frame.test.ts",
+              "test/workspace-surface-host.test.ts"
             ],
             "outcome": "passed",
-            "summary": "Withdraw unaccepted skill examples focused",
-            "verifiedCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
-            "completedAt": "2026-09-22T09:14:14.547113+00:00",
+            "summary": "Skill markdown preview and native composer focused",
+            "verifiedCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
+            "completedAt": "2026-09-22T09:36:19.054890+00:00",
             "timeoutMs": 180000
           },
           {
@@ -90,15 +137,15 @@
               "scripts/validate-integration-catalog.mjs"
             ],
             "outcome": "passed",
-            "summary": "Withdraw unaccepted skill examples catalog",
-            "verifiedCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
-            "completedAt": "2026-09-22T09:14:14.669799+00:00",
+            "summary": "Skill markdown preview and native composer catalog",
+            "verifiedCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
+            "completedAt": "2026-09-22T09:36:19.127971+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "技能市场两个示例已撤下，目录与客户端安装流程聚焦检查通过；本地打包后核验真实技能市场空态。"
+          "summary": "技能正文、异步状态和原生输入适配聚焦检查及隔离深浅主题渲染通过；本地打包后核验真实技能预览与立即使用。"
         },
         "acceptanceCriteria": [
           "右侧工作区入口与四类市场正确，返回和右屏按钮保留",
@@ -110,92 +157,7 @@
           "MCP动态OAuth不支持，当前支持显式Bearer/Header/无认证与STDIO",
           "需在集成客户端进行原生验收后由用户接受精确提交"
         ],
-        "generatedAt": "2026-09-22T09:14:14.712900+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3d55a93389d8b0de9a6e592f1b7ceeedb62ab138",
-        "verificationCommit": "3d55a93389d8b0de9a6e592f1b7ceeedb62ab138",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3d55a93389d8b0de9a6e592f1b7ceeedb62ab138",
-            "completedAt": "2026-09-22T09:15:35.969Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "3d55a93389d8b0de9a6e592f1b7ceeedb62ab138",
-            "completedAt": "2026-09-22T09:15:35.969Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "3d55a93389d8b0de9a6e592f1b7ceeedb62ab138",
-            "completedAt": "2026-09-22T09:15:35.969Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-22T09:15:35.969Z"
+        "generatedAt": "2026-09-22T09:36:19.170067+00:00"
       }
     }
   ],
