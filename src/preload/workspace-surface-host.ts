@@ -104,11 +104,7 @@ export class WorkspaceSurfaceHost {
             this.expanded=detail.open;
             if (this.current()?.surface === 'integrations') {
                 this.document.body.dataset.workspaceRightExpanded=String(detail.open);
-                const centerControl = this.surfaces.get('integrations')?.querySelector<HTMLButtonElement>('[data-action=panel]');
-                const nativeControl = this.document.querySelector<HTMLButtonElement>('[data-workspace-panel=integrations] [data-odyssey-panel-entry=right]');
-                // Transfer keyboard focus with the action instead of leaving it on a hidden button.
-                if (detail.open && this.document.activeElement === centerControl) nativeControl?.focus({ preventScroll: true });
-                else if (!detail.open && this.document.activeElement === nativeControl) centerControl?.focus({ preventScroll: true });
+                // The same native button remains mounted in both states, so focus stays put.
             }
         }
     };

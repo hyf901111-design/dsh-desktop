@@ -1,4 +1,5 @@
 import { WorkspaceSurfaceHost } from '../workspace-surface-host';
+import { workspaceBackButton, mountWorkspaceTopbarStyles } from '../workspace-topbar';
 import { type IntegrationBridge, type IntegrationCommand, type IntegrationReply, type IntegrationSnapshot, type IntegrationRow, type IntegrationTab, type MarketEntry, type Mutation, type ConnectionDraft, type SkillPreview, type UiOperation, emptyConnectionDraft } from './bridge';
 import { type IntegrationRoute, marketKinds, marketNames, tabNames, parseIntegrationRoute } from './router';
 import { button, parseDraftTools, escapeHtml as esc, skillPreviewForm } from './forms';
@@ -8,14 +9,11 @@ import { integrationStyles } from './style';
 import { legacyPreviewMarkup, legacyPreviewStyles } from './legacy-view';
 import type { LegacySkillPreviewItem } from '../../shared/integration-ui';
 const icons = {
-    back: '<path d="m10 4-6 6 6 6M4 10h12"/>',
-    panel: '<rect x="3" y="4" width="14" height="12" rx="2"/><path d="M12 4v12"/>',
     search: '<circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/>',
 };
 const icon = (name: keyof typeof icons) => `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">${icons[name]}</svg>`;
 const tabs: IntegrationTab[] = ['plugins', 'apps', 'mcp', 'skills'];
 const subtitles: Record<IntegrationTab, string> = { plugins: '让 EWork 连接你的工具与工作资料', apps: '管理应用账号、自有 API 与连接权限', mcp: '连接 MCP 服务器，管理可调用的工具', skills: '管理可复用的工作方法与专业能力' };
-const rowHints: Record<IntegrationTab, string> = { plugins: '插件控制能力是否可用；账号授权在「应用」中单独管理。', apps: '连接凭据加密保存在本机；每次调用都会检查当前授权。', mcp: '连接后发现工具，选择允许使用的能力；新增工具需要重新授权。', skills: '导入的技能先预览正文和所需连接，再决定是否启用。' };
 /** Figma workspace flows, driven exclusively by the trusted main-process bridge. */
 export class IntegrationView {
     private root?: HTMLElement;
@@ -43,6 +41,8 @@ export class IntegrationView {
     private operationTimer?: ReturnType<typeof setTimeout>;
     private snapshotTimer?: ReturnType<typeof setInterval>;
     private busy = false;
+    private busyCommand?: {type: IntegrationCommand['type']; id?: string};
+    private pendingActions = new Map<string, symbol>();
     private mutationSeq = 0;
     private menuAnchor?: HTMLButtonElement;
     private menuId?: string;
@@ -61,6 +61,7 @@ export class IntegrationView {
         if (this.mounted)
             return;
         this.mounted = true;
+        mountWorkspaceTopbarStyles(this.document);
         if (!this.document.getElementById('sherlock-integrations-style')) {
             const style = this.document.createElement('style');
             style.id = 'sherlock-integrations-style';
@@ -78,7 +79,6 @@ export class IntegrationView {
         this.document.addEventListener('pointerdown', this.onOutside);
         this.document.addEventListener('sherlock:workspace-surface-change', this.onSurfaceChange);
         this.document.defaultView?.addEventListener('sherlock:integrations-open', this.onOpen as EventListener);
-        this.document.defaultView?.addEventListener('sherlock:workspace-panel-state', this.onPanelState);
         this.host.register('integrations', this.root);
         this.snapshotTimer=setInterval(()=>{if(this.host.current()?.surface==='integrations' && this.route.page==='list' && !this.loading && !this.busy && !this.menuId && !this.dialogId && !this.document.activeElement?.matches('[name=query]'))void this.refresh(true)},5000);
     }
@@ -99,7 +99,7 @@ export class IntegrationView {
     }
     resetIdentity() {
         this.epoch++;this.mutationSeq++;this.refreshSeq++;clearTimeout(this.operationTimer);
-        this.closeMenu();this.closeDialog();this.busy=false;this.loading=false;
+        this.closeMenu();this.closeDialog();this.busy=false;this.busyCommand=undefined;this.pendingActions.clear();this.loading=false;
         this.snapshot={revision:0,rows:[]};this.entries=[];this.history=[{page:'list',tab:'plugins'}];
         this.draft=emptyConnectionDraft();this.connectionEditor.reset();this.draftVersion++;this.preview=undefined;this.operation=undefined;
         this.query='';this.marketCategory='all';this.clearToolGrantDraft();this.dependenciesExpanded=false;this.manifest='';this.sourceUrl='';this.legacyEligibleCount=0;this.error='';this.message='';
@@ -114,16 +114,9 @@ export class IntegrationView {
     }
     close() { this.clearToolGrantDraft(); this.epoch++; this.closeMenu(); this.closeDialog(); this.host.close('integrations'); this.draft.secret = ''; clearTimeout(this.operationTimer); }
     dispose() { clearInterval(this.snapshotTimer); this.close(); this.document.removeEventListener('keydown', this.onKey); this.document.removeEventListener('pointerdown', this.onOutside); this.document.removeEventListener('sherlock:workspace-surface-change', this.onSurfaceChange); this.document.defaultView?.removeEventListener('sherlock:integrations-open', this.onOpen as EventListener);
-        this.document.defaultView?.removeEventListener('sherlock:workspace-panel-state', this.onPanelState); this.root?.remove(); if (this.ownHost)
+        this.root?.remove(); if (this.ownHost)
         this.host.dispose(); this.mounted = false; }
     private get route() { return this.history[this.history.length - 1]!; }
-    private onPanelState = (event:Event) => {
-        const value=(event as CustomEvent<{surface?:string;open?:boolean}>).detail;
-        if(value?.surface!=='integrations'||typeof value.open!=='boolean')return;
-        const button=this.root?.querySelector('[data-action=panel]');
-        button?.setAttribute('aria-expanded',String(value.open));
-        button?.setAttribute('aria-label',`${value.open?'收起':'展开'}右侧屏`);
-    };
     private onOpen = (event: CustomEvent<{
         route?: string;
     }>) => { void this.open(event.detail?.route); };
@@ -141,7 +134,7 @@ export class IntegrationView {
         throw new Error('客户端返回了不匹配的结果，请重试。'); return reply as Extract<IntegrationReply, {
         type: T;
     }>; }
-    private showError(error: unknown) { let message = error instanceof Error ? error.message : String(error); if (this.draft.secret)
+    private showError(error: unknown) { this.message='';let message = error instanceof Error ? error.message : String(error); if (this.draft.secret)
         message = message.split(this.draft.secret).join('••••••'); this.error = message; this.renderFeedback(); }
     private navigate(route: IntegrationRoute) { this.closeMenu(); this.closeDialog(); this.history.push(route); this.clearToolGrantDraft();this.dependenciesExpanded=false;this.epoch++; this.loading = false; this.error = ''; this.message = ''; this.query = ''; this.render(); if(this.root)this.root.scrollTop=0; if (route.page === 'market')
         void this.loadMarket(); }
@@ -185,7 +178,7 @@ export class IntegrationView {
         this.render();
     } }
     private async run(command: IntegrationCommand, done?: () => void) { if (this.busy)
-        return; const epoch = this.epoch, mutationSeq = ++this.mutationSeq; this.busy = true; this.operation = undefined; clearTimeout(this.operationTimer); this.error = ''; this.message = '正在提交…'; this.renderFeedback(); this.updateBusy(); try {
+        return; const epoch = this.epoch, mutationSeq = ++this.mutationSeq; this.busy = true; this.busyCommand={type:command.type,id:'id' in command ? command.id : undefined}; this.operation = undefined; clearTimeout(this.operationTimer); this.error = ''; this.message = '正在提交…'; this.renderFeedback(); this.updateBusy(); try {
         const reply = await this.request(command, 'operation');
         if (mutationSeq !== this.mutationSeq) return;
         if (epoch !== this.epoch) {
@@ -223,9 +216,9 @@ export class IntegrationView {
             await this.followOperation(epoch, done, mutationSeq);
         }
         catch (error) {
-            if (epoch === this.epoch && mutationSeq === this.mutationSeq) {
-                this.busy = false;
-                this.showError(error);
+            if (mutationSeq === this.mutationSeq) {
+                this.busy = false;this.message='';
+                if(epoch===this.epoch)this.showError(error);else this.renderFeedback();
                 this.updateBusy();
             }
         } })(); }, 700);
@@ -242,7 +235,29 @@ export class IntegrationView {
     } await this.refresh(); if (epoch === this.epoch)
         done?.(); }
     private hasApiTools() { try { return parseDraftTools(this.draft).length > 0; } catch { return false; } }
-    private updateBusy() { this.root?.querySelectorAll<HTMLButtonElement>('[data-mutation], [data-action=grant-tools], [data-action=save-connection], [data-action=import-skill], [data-action=install], [data-action=create-plugin], [data-action=save-source]').forEach(el => { const entry=this.route.page==='market-detail'?this.entries.find(item=>item.id===this.routeId()):undefined; el.disabled = this.busy || (el.dataset.action==='save-connection' && this.draft.type==='api' && !this.hasApiTools()) || (el.dataset.action==='grant-tools' && !this.snapshot.rows.find(row=>row.id===this.routeId())?.tools?.length) || (el.dataset.action==='install' && (!entry || entry.installed || !entry.available)); }); }
+    private updateBusy() {
+        if (!this.root) return;
+        this.root.setAttribute('aria-busy', String(this.busy || this.pendingActions.size > 0));
+        const mutationActions = ['grant-tools','save-connection','import-skill','install','create-plugin','save-source','authorize','toggle-detail'];
+        const readActions: Record<string,string[]> = { probe:['probe'], 'compile-openapi':['compile-openapi'], 'edit-connection':['edit-connection'], skill:['choose-skill'], legacy:['legacy-preview','legacy-recheck'], dependencies:['request-uninstall','disconnect'] };
+        const entry=this.route.page==='market-detail'?this.entries.find(item=>item.id===this.routeId()):undefined;
+        this.root.querySelectorAll<HTMLButtonElement>('button').forEach(el => {
+            const action=el.dataset.action || '';
+            const pending=Object.entries(readActions).some(([key,actions])=>this.pendingActions.has(key)&&actions.includes(action));
+            const isRead=Object.values(readActions).some(actions=>actions.includes(action));
+            const isMutation=el.hasAttribute('data-mutation') || mutationActions.includes(action);
+            if (!isRead && !isMutation) return;
+            const unavailable=(action==='save-connection' && this.draft.type==='api' && !this.hasApiTools()) || (action==='grant-tools' && !this.snapshot.rows.find(row=>row.id===this.routeId())?.tools?.length) || (action==='install' && (!entry || entry.installed || !entry.available));
+            el.disabled = pending || this.busy || (isMutation && this.pendingActions.size > 0) || unavailable;
+            const mutationActive=this.busy && (action===this.busyCommand?.type || (this.busyCommand?.type==='set-enabled' && (el.dataset.toggle===this.busyCommand.id || action==='toggle-detail')) || (action==='install' && this.busyCommand?.type==='install'));
+            if (pending || mutationActive) el.setAttribute('aria-busy','true'); else el.removeAttribute('aria-busy');
+        });
+    }
+    private async withPending(key: string, work: () => Promise<void>) {
+        if(this.pendingActions.has(key)) return;
+        const token=Symbol(key);this.pendingActions.set(key,token);this.updateBusy();
+        try {await work();} finally {if(this.pendingActions.get(key)===token){this.pendingActions.delete(key);this.updateBusy();}}
+    }
     private title() { switch (this.route.page) {
         case 'list': return '插件';
         case 'market': return marketNames[this.route.kind];
@@ -263,14 +278,14 @@ export class IntegrationView {
         const currentRow = this.snapshot.rows.find(row => row.id === this.routeId());
         const subtitle = route.page === 'list' ? subtitles[route.tab] : route.page === 'market' ? '为研究、写作与日常协作添加能力' : route.page === 'add' ? '选择你要接入的能力，后续只显示与它相关的配置' : route.page === 'detail' ? (currentRow?.kind === 'connection' ? '管理这条连接的使用范围、凭据和工具' : currentRow?.description || '') : route.page === 'market-detail' ? '了解能力与权限，选择适合你的工作方式' : route.page === 'connection' ? this.connectionEditor.subtitle(this.draft) : route.page === 'skill-import' ? '把已有的工作方法添加到 EWork' : route.page === 'create-plugin' ? '将技能与连接组合成一套可复用的能力' : route.page === 'add-source' ? '从团队或组织维护的目录中发现插件' : '';
         const actions = route.page === 'list' ? `${button('market', marketNames[marketKinds[route.tab]])}${button('add', route.tab === 'skills' ? '导入技能' : route.tab === 'apps' ? '添加连接' : route.tab === 'mcp' ? '添加 MCP' : '添加', true)}` : '';
-        this.root.innerHTML = `<div class="ig-chrome"><button data-action="back" aria-label="返回工作区">${icon('back')}</button><button data-action="panel" aria-label="${this.host.isRightPaneExpanded() ? '收起' : '展开'}右侧屏" aria-expanded="${this.host.isRightPaneExpanded()}">${icon('panel')}</button></div><div class="ig-content"><header class="ig-heading"><div><h1>${esc(this.title())}</h1>${subtitle ? `<p class="ig-subtitle">${esc(subtitle)}</p>` : ''}</div><div class="ig-actions">${actions}</div></header><div class="ig-error" role="alert"></div><div class="ig-feedback" role="status" aria-live="polite"></div><div class="ig-page">${this.content()}</div></div>`;
+        this.root.innerHTML = `<div class="ig-chrome">${workspaceBackButton()}</div><div class="ig-content"><header class="ig-heading"><div><h1>${esc(this.title())}</h1>${subtitle ? `<p class="ig-subtitle">${esc(subtitle)}</p>` : ''}</div><div class="ig-actions">${actions}</div></header><div class="ig-error" role="alert"></div><div class="ig-feedback" role="status" aria-live="polite"></div><div class="ig-page">${this.content()}</div></div>`;
         this.renderFeedback();
         this.updateBusy();
     }
     private content(): string {
         const route = this.route;
         switch (route.page) {
-            case 'list': return `<div class="ig-toolbar"><nav class="ig-tabs" role="tablist" aria-label="能力类型">${tabs.map(tab => `<button type="button" role="tab" data-tab="${tab}" aria-selected="${route.tab === tab}" tabindex="${route.tab === tab ? '0' : '-1'}">${tabNames[tab]}<small>${this.snapshot.rows.filter(row => row.tab === tab).length}</small></button>`).join('')}</nav><label class="ig-search">${icon('search')}<input name="query" aria-label="搜索${tabNames[route.tab]}" placeholder="搜索${tabNames[route.tab]}" value="${esc(this.query)}"></label></div><div class="ig-list" role="tabpanel">${this.listContent(route.tab)}</div><p class="ig-note">${rowHints[route.tab]}</p>${this.snapshot.compatibilityStatus || route.tab === 'skills' ? `<div class="ig-compatibility">${this.snapshot.compatibilityStatus ? `<p class="ig-note">${esc(this.snapshot.compatibilityStatus)}</p>` : ''}${route.tab === 'skills' ? button('legacy-preview','接入旧技能') : ''}</div>` : ''}`;
+            case 'list': return `<div class="ig-toolbar"><nav class="ig-tabs" role="tablist" aria-label="能力类型">${tabs.map(tab => `<button type="button" role="tab" data-tab="${tab}" aria-selected="${route.tab === tab}" tabindex="${route.tab === tab ? '0' : '-1'}">${tabNames[tab]}<small>${this.snapshot.rows.filter(row => row.tab === tab).length}</small></button>`).join('')}</nav><label class="ig-search">${icon('search')}<input name="query" aria-label="搜索${tabNames[route.tab]}" placeholder="搜索${tabNames[route.tab]}" value="${esc(this.query)}"></label></div><div class="ig-list" role="tabpanel">${this.listContent(route.tab)}</div>${route.tab === 'skills' ? `<div class="ig-compatibility">${button('legacy-preview','接入旧技能')}</div>` : ''}`;
             case 'market': return `${marketGrid(this.entries, this.loading, this.marketCategory)}<footer class="ig-market-source"><p class="ig-note">找不到需要的能力？添加可信的团队目录，或返回创建自己的插件。</p>${button('add-source', '添加来源')}</footer>`;
             case 'market-detail': return marketDetail(this.entries.find(entry => entry.id === route.id));
             case 'connection': return this.connectionEditor.render(this.draft);
@@ -432,6 +447,10 @@ export class IntegrationView {
         return;
     } this.draft = emptyConnectionDraft(type as ConnectionDraft['type']); this.connectionEditor.reset(); this.draftVersion++; this.navigate({ page: 'connection', type: this.draft.type }); }
     private async action(action: string) {
+        if (['probe','compile-openapi','edit-connection'].includes(action)) return this.withPending(action,()=>this.performAction(action));
+        return this.performAction(action);
+    }
+    private async performAction(action: string) {
         if(this.route.page==='connection') {
             const result=this.connectionEditor.action(action,this.draft);
             if(result.handled){this.draftVersion++;this.error=result.error||'';this.message='';this.render();if(this.root && ['form-next','form-previous','form-manual','form-manual-cancel','form-manual-save'].includes(action))this.root.scrollTop=0;return;}
@@ -440,14 +459,6 @@ export class IntegrationView {
         switch (action) {
             case 'back':
                 this.back();
-                break;
-            case 'panel':
-                this.host.setRightPaneExpanded(!this.host.isRightPaneExpanded());
-                {
-                    const control = this.root?.querySelector('[data-action=panel]');
-                    control?.setAttribute('aria-expanded', String(this.host.isRightPaneExpanded()));
-                    control?.setAttribute('aria-label', `${this.host.isRightPaneExpanded() ? '收起' : '展开'}右侧屏`);
-                }
                 break;
             case 'market':
                 this.marketCategory = 'all';
@@ -514,6 +525,7 @@ export class IntegrationView {
             case 'compile-openapi':
                 {
                     const epoch = this.epoch, version = this.draftVersion;
+                    this.message='正在解析接口文档…';this.renderFeedback();
                     try {
                         const result = await this.request({ type: 'compile-openapi', document: this.draft.openApiDocument }, 'compiled');
                         if (epoch !== this.epoch || version !== this.draftVersion)
@@ -552,6 +564,7 @@ export class IntegrationView {
             case 'edit-connection':
                 if (row) {
                     const epoch = this.epoch;
+                    this.message='正在读取连接配置…';this.renderFeedback();
                     try {
                         const reply = await this.request({ type: 'connection-draft', id: row.id }, 'draft');
                         if (epoch !== this.epoch)
@@ -649,7 +662,8 @@ export class IntegrationView {
                 break;
         }
     }
-    private async showLegacyPreview() {
+    private showLegacyPreview() { return this.withPending('legacy',()=>this.loadLegacyPreview()); }
+    private async loadLegacyPreview() {
         this.closeDialog();const epoch=this.epoch,seq=++this.legacyPreviewSeq;this.error='';this.message='正在检查旧技能…';this.renderFeedback();this.returnFocus=this.document.activeElement as HTMLElement;
         try {
             const reply=await this.request({type:'legacy-preview'},'legacy-preview');
@@ -667,11 +681,12 @@ export class IntegrationView {
         try {await this.bridge.revealSource(item.sourcePath);if(epoch===this.epoch && seq===this.legacyPreviewSeq && feedback?.isConnected)feedback.textContent='已在 Finder 中显示来源，原文件未修改。';}
         catch {if(epoch===this.epoch && seq===this.legacyPreviewSeq && feedback?.isConnected)feedback.textContent='暂时无法定位来源；请确认目录仍存在，也可复制上方路径在 Finder 中打开。';}
     }
-    private async chooseSkill() { const epoch = this.epoch; this.error = ''; try {
+    private chooseSkill() { return this.withPending('skill',()=>this.loadSkillPreview()); }
+    private async loadSkillPreview() { const epoch = this.epoch; this.error = ''; this.message='正在选择并检查技能…';this.renderFeedback();try {
         const reply = await this.request({ type: 'preview-skill' }, 'preview');
         if (epoch !== this.epoch)
             return;
-        if(reply.preview) this.preview = reply.preview;
+        this.message='';if(reply.preview) this.preview = reply.preview;
         this.render();
     }
     catch (error) {
@@ -695,11 +710,12 @@ export class IntegrationView {
     } this.navigate({ page: 'detail', id: row.id, tab: row.tab }); if (action === 'probe')
         await this.action('probe'); }
     private closeMenu() { this.root?.querySelector('.ig-menu')?.remove(); this.menuAnchor?.setAttribute('aria-expanded', 'false'); this.menuId = undefined; }
-    private async confirmRemoval(row: IntegrationRow, disconnect = false) { const epoch = this.epoch; this.returnFocus = this.menuAnchor?.isConnected ? this.menuAnchor : this.document.activeElement as HTMLElement; try {
+    private confirmRemoval(row: IntegrationRow, disconnect = false) { return this.withPending('dependencies',()=>this.loadRemoval(row,disconnect)); }
+    private async loadRemoval(row: IntegrationRow, disconnect = false) { this.closeDialog();const epoch = this.epoch; this.returnFocus = this.menuAnchor?.isConnected ? this.menuAnchor : this.document.activeElement as HTMLElement;this.message='正在检查关联任务…';this.renderFeedback();try {
         const reply = await this.request({ type: 'dependencies', kind: row.kind, id: row.id }, 'dependencies');
         if (epoch !== this.epoch || !this.root)
             return;
-        this.dialogId = row.id;
+        this.message='';this.renderFeedback();this.dialogId = row.id;
         const overlay = this.document.createElement('div');
         overlay.className = 'ig-overlay';
         overlay.innerHTML = `<section role="dialog" aria-modal="true" aria-labelledby="ig-confirm-title" class="ig-dialog"><h2 id="ig-confirm-title">${disconnect ? '断开' : '卸载'}“${esc(row.name)}”？</h2><p>${disconnect ? '断开后将撤销此连接，新的调用无法继续使用。' : '此项目及其托管能力将被移除，已有对话和引用内容会保留。'}</p>${reply.descriptions.length ? `<ul>${reply.descriptions.map(description => `<li>${esc(description)}</li>`).join('')}</ul>` : '<p>当前没有记录到依赖此项目的任务。</p>'}${row.kind === 'plugin' ? '<p>应用账号连接仍在「应用」中单独管理。</p>' : ''}<footer>${button('cancel-dialog', '取消')}${button(disconnect ? 'confirm-disconnect' : 'confirm-uninstall', disconnect ? '确认断开' : '确认卸载', true)}</footer></section>`;
@@ -710,13 +726,15 @@ export class IntegrationView {
         if (epoch === this.epoch)
             this.showError(error);
     } }
-    private async confirmRollback(row: IntegrationRow) {
-        const epoch=this.epoch;
+    private confirmRollback(row: IntegrationRow) { return this.withPending('dependencies',()=>this.loadRollback(row)); }
+    private async loadRollback(row: IntegrationRow) {
+        this.closeDialog();const epoch=this.epoch;
         this.returnFocus=this.menuAnchor || this.document.activeElement as HTMLElement;
+        this.message='正在检查关联任务…';this.renderFeedback();
         try {
             const reply=await this.request({type:'dependencies',kind:row.kind,id:row.id},'dependencies');
             if(epoch!==this.epoch || !this.root)return;
-            this.dialogId=row.id;
+            this.message='';this.renderFeedback();this.dialogId=row.id;
             const overlay=this.document.createElement('div');overlay.className='ig-overlay';
             overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="ig-confirm-title" class="ig-dialog"><h2 id="ig-confirm-title">回退“${esc(row.name)}”的上一版本？</h2><p>恢复上一版本的插件和技能文件。应用账号连接会保留；依赖此插件的任务需要重新核对工具版本与授权。</p>${reply.descriptions.length?`<ul>${reply.descriptions.map(description=>`<li>${esc(description)}</li>`).join('')}</ul>`:''}<footer>${button('cancel-dialog','取消')}${button('confirm-rollback','确认回退',true)}</footer></section>`;
             this.root.append(overlay);overlay.querySelector<HTMLButtonElement>('[data-action=cancel-dialog]')?.focus();

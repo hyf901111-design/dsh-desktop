@@ -31,7 +31,7 @@ async function fixture(handler?: (command: IntegrationCommand) => Promise<Integr
 it('renders compact text rows and all four market entries with retained workspace controls', async () => {
     const f = await fixture();
     expect(f.doc.querySelector('[data-action=back]')).not.toBeNull();
-    expect(f.doc.querySelector('[data-action=panel]')).not.toBeNull();
+    expect(f.doc.querySelector('[data-action=panel]')).toBeNull();
     expect(f.doc.querySelector('[data-row-id="plugin-1"]')!.textContent).toContain('需要连接应用');
     expect(f.doc.querySelector('[data-row-id="plugin-1"] img, [data-row-id="plugin-1"] svg')).toBeNull();
     for (const [tab, label] of [['plugins', '插件市场'], ['apps', '应用市场'], ['mcp', '工具市场'], ['skills', '技能市场']]) {
@@ -164,8 +164,9 @@ it('preserves connection drafts when the right pane is collapsed and reopened', 
     const input = f.doc.querySelector<HTMLInputElement>('[name=url]')!;
     input.value = 'https://mcp.example.test';
     input.dispatchEvent(new f.w.Event('input', { bubbles: true }) as unknown as Event);
-    f.click('[data-action=panel]');
-    f.click('[data-action=panel]');
+    expect(f.doc.querySelector('[data-action=panel]')).toBeNull();
+    for (const open of [true, false]) f.w.dispatchEvent(new f.w.CustomEvent('sherlock:workspace-panel-state', { detail: { surface: 'integrations', open } }));
+    expect(f.doc.querySelector<HTMLInputElement>('[name=url]')).toBe(input);
     expect(f.doc.querySelector<HTMLInputElement>('[name=url]')!.value).toBe('https://mcp.example.test');
     f.view.dispose();
 });
@@ -247,7 +248,7 @@ it('clears prior account UI and draft credentials immediately on identity change
   f.click('[data-tab=apps]');f.click('[data-action=add]');f.click('[data-add=api]');f.fill('authType','bearer');const secret=f.doc.querySelector<HTMLInputElement>('[name=secret]')!;secret.value='previous-owner-secret';secret.dispatchEvent(new f.w.Event('input',{bubbles:true}) as unknown as Event)
   data={revision:10,rows:[],compatibilityStatus:'旧连接只读识别，尚未授权'}
   f.view.resetIdentity();await f.settle()
-  expect(f.doc.querySelector('[name=secret]')).toBeNull();expect(f.doc.querySelector('.ig-root')!.textContent).not.toContain('团队知识库');expect(f.doc.querySelector('.ig-compatibility')!.textContent).toContain('尚未授权')
+  expect(f.doc.querySelector('[name=secret]')).toBeNull();expect(f.doc.querySelector('.ig-root')!.textContent).not.toContain('团队知识库');expect(f.doc.querySelector('.ig-root')!.textContent).not.toContain('尚未授权')
   f.click('[data-tab=apps]');f.click('[data-action=add]');f.click('[data-add=api]');expect(f.doc.querySelector('[name=secret]')).toBeNull();f.fill('authType','bearer');expect(f.doc.querySelector<HTMLInputElement>('[name=secret]')!.value).toBe('');f.view.dispose()
 })
 it('does not publish a prior owner mutation receipt after identity reset',async()=>{
@@ -260,9 +261,9 @@ it('keeps a reviewed skill preview if the replacement file chooser is cancelled'
  f.click('[data-tab=skills]');f.click('[data-action=add]');await f.settle();f.click('[data-action=choose-skill]');await f.settle();expect(f.doc.querySelector('.ig-preview')!.textContent).toBe('技能正文');f.view.dispose()
 })
 
-it('refreshes visible list compatibility status without replacing an active connection draft',async()=>{
+it('refreshes list data without persistent compatibility copy or replacing an active connection draft',async()=>{
  vi.useFakeTimers();let data=snapshot();let f:Awaited<ReturnType<typeof fixture>>|undefined;
- try {f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:data}:{type:'market',entries:[]});data={...data,compatibilityStatus:'个人技能已复制完成'};await vi.advanceTimersByTimeAsync(5000);expect(f.doc.querySelector('.ig-compatibility')!.textContent).toBe('个人技能已复制完成');f.click('[data-tab=apps]');f.click('[data-action=add]');f.click('[data-add=api]');const input=f.doc.querySelector<HTMLInputElement>('[name=url]')!;input.value='https://draft.example.test';input.dispatchEvent(new f.w.Event('input',{bubbles:true}) as unknown as Event);await vi.advanceTimersByTimeAsync(5000);expect(f.doc.querySelector('[name=url]')).toBe(input);expect(input.value).toBe('https://draft.example.test')}finally{f?.view.dispose();vi.useRealTimers()}
+ try {f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:data}:{type:'market',entries:[]});data={...data,compatibilityStatus:'个人技能已复制完成'};await vi.advanceTimersByTimeAsync(5000);expect(f.doc.querySelector('.ig-root')!.textContent).not.toContain('个人技能已复制完成');f.click('[data-tab=apps]');f.click('[data-action=add]');f.click('[data-add=api]');const input=f.doc.querySelector<HTMLInputElement>('[name=url]')!;input.value='https://draft.example.test';input.dispatchEvent(new f.w.Event('input',{bubbles:true}) as unknown as Event);await vi.advanceTimersByTimeAsync(5000);expect(f.doc.querySelector('[name=url]')).toBe(input);expect(input.value).toBe('https://draft.example.test')}finally{f?.view.dispose();vi.useRealTimers()}
 })
 it('previews legacy skill scope before explicitly copying eligible skills',async()=>{
  const f=await fixture(async c=>{if(c.type==='snapshot')return{type:'snapshot',snapshot:snapshot()};if(c.type==='legacy-preview')return{type:'legacy-preview',eligibleCount:1,items:[{name:'个人周报',status:'eligible'},{name:'内置分析',status:'compatibility',message:'保留原提供者与作用域'}]};return{type:'operation',operation:{id:'migration',status:'succeeded',message:'已复制接入，原文件保留',cancellable:false}}})
@@ -305,7 +306,7 @@ it('preserves revoked grant drafts through probe refresh and rejects new, remove
  const f=await fixture(async c=>{if(c.type==='snapshot')return{type:'snapshot',snapshot:data};if(c.type==='probe'){row.revision=9;row.tools=row.tools.filter(t=>t.id!=='removed').map(t=>({...t,allowed:t.id==='revoked'?false:t.allowed}));row.tools.push({id:'new',name:'新工具',description:'新增',allowed:true});data.taskCapabilities![0]!.tools=row.tools.map(t=>({...t,effect:'read',schemaDigest:`${t.id}-${t.id==='changed'?'v2':'v1'}`}));return{type:'probe',status:'verified',message:'已更新工具'}};if(c.type==='grant-tools')for(const tool of row.tools)tool.allowed=c.toolIds.includes(tool.id);return{type:'operation',operation:{id:'grant',status:'succeeded',message:'已保存',cancellable:false}}});
  f.click('[data-tab=apps]');f.click('[data-detail=api]');f.click('[data-action=manage-tools]');f.doc.querySelector<HTMLInputElement>('[name=toolGrant][value=write]')!.click();f.click('[data-action=probe]');await f.settle();
  for(const id of ['write','new','changed','revoked'])expect(f.doc.querySelector<HTMLInputElement>(`[name=toolGrant][value=${id}]`)!.checked,id).toBe(false);expect(f.doc.querySelector('[name=toolGrant][value=removed]')).toBeNull();expect(f.doc.querySelector<HTMLInputElement>('[name=toolGrant][value=read]')!.checked).toBe(true);
- f.click('[data-action=grant-tools]');await f.settle();expect(f.calls.find(c=>c.type==='grant-tools')).toMatchObject({id:'api',toolIds:['read'],meta:{expectedRevision:9}});expect(f.doc.querySelector('[name=toolGrant]')).toBeNull();f.click('[data-action=manage-tools]');expect(f.doc.querySelector<HTMLInputElement>('[name=toolGrant][value=write]')!.checked).toBe(false);f.view.dispose()
+ await vi.waitFor(()=>expect(f.doc.querySelector<HTMLButtonElement>('[data-action=grant-tools]')!.disabled).toBe(false));f.click('[data-action=grant-tools]');await f.settle();expect(f.calls.find(c=>c.type==='grant-tools')).toMatchObject({id:'api',toolIds:['read'],meta:{expectedRevision:9}});expect(f.doc.querySelector('[name=toolGrant]')).toBeNull();f.click('[data-action=manage-tools]');expect(f.doc.querySelector<HTMLInputElement>('[name=toolGrant][value=write]')!.checked).toBe(false);f.view.dispose()
 })
 it('retains grant edits after a failed probe but clears them on cancel, leaving the page and identity reset',async()=>{
  const data=snapshot();data.rows.push({id:'api',kind:'connection',tab:'apps',name:'数据连接',description:'API',enabled:true,status:'已验证',source:'个人',revision:1,tools:[{id:'write',name:'写入',description:'修改',allowed:true}]});

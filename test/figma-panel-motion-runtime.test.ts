@@ -158,7 +158,7 @@ async function mountStatefulSidebar(desktop = false, noSession = false) {
 }
 
 describe('Figma panel production lifecycle', () => {
-  it('moves the integrations pane control to the far-right native toolbar and preserves drafts through real clicks', async () => {
+  it('reuses one native pane control in both states and preserves focus and drafts through real clicks', async () => {
     const mounted=await mountStatefulSidebar(true)
     const {browserWindow,host: nativeHost,store}=mounted, doc=browserWindow.document as unknown as Document
     const workspace=new WorkspaceSurfaceHost(doc)
@@ -173,31 +173,32 @@ describe('Figma panel production lifecycle', () => {
       await click('[data-tab=apps]');await click('[data-action=add]');await click('[data-add=api]')
       const draft=doc.querySelector<HTMLInputElement>('[name=url]')!
       draft.value='https://unsaved.example.test';draft.dispatchEvent(new browserWindow.Event('input',{bubbles:true}) as unknown as Event)
-      const centerButton=doc.querySelector<HTMLElement>('.ig-chrome [data-action=panel]')!
-      const nativeButton=()=>nativeHost.querySelector('[data-odyssey-panel-entry=right]') as unknown as HTMLElement
-      const nativeCluster=()=>nativeButton().parentElement!
-      const style=(element:Element)=>browserWindow.getComputedStyle(element as any)
+      expect(doc.querySelector('.ig-root [data-action=panel]')).toBeNull()
+      const nativeButton=nativeHost.querySelector('[data-odyssey-panel-entry=right]') as unknown as HTMLButtonElement
+      const nativeCluster=nativeButton.parentElement!
+      const style=(element:Element)=>doc.defaultView!.getComputedStyle(element)
       expect(nativeHost.querySelector('[data-workspace-panel=integrations]')).not.toBeNull()
-      expect(nativeButton().getAttribute('aria-expanded')).toBe('false')
-      expect(style(centerButton).display).not.toBe('none')
-      expect(style(nativeCluster()).visibility).toBe('hidden')
-      centerButton.focus()
-      await click('.ig-chrome [data-action=panel]')
-      expect(nativeButton().getAttribute('aria-expanded')).toBe('true')
-      expect(nativeButton().getAttribute('aria-label')).toBe('收起右侧屏')
-      expect(workspace.isRightPaneExpanded()).toBe(true)
-      expect(doc.activeElement).toBe(nativeButton())
-      expect(style(centerButton).display).toBe('none')
-      expect(style(nativeCluster()).visibility).toBe('visible')
-      expect(style(nativeCluster()).top).toBe('18px')
-      expect(style(nativeButton()).width).toBe('28px')
-      expect(style(doc.querySelector('.ig-chrome [data-action=back]')!).display).not.toBe('none')
+      expect(doc.querySelectorAll('[data-odyssey-panel-entry=right]')).toHaveLength(1)
+      expect(nativeButton.getAttribute('aria-expanded')).toBe('false')
+      expect(nativeButton.getAttribute('aria-label')).toBe('展开右侧屏')
+      expect(style(nativeCluster).visibility).toBe('visible')
+      nativeButton.focus()
       await click('[data-odyssey-panel-entry=right]')
-      expect(nativeButton().getAttribute('aria-expanded')).toBe('false')
+      expect(nativeHost.querySelector('[data-odyssey-panel-entry=right]')).toBe(nativeButton)
+      expect(nativeButton.getAttribute('aria-expanded')).toBe('true')
+      expect(nativeButton.getAttribute('aria-label')).toBe('收起右侧屏')
+      expect(workspace.isRightPaneExpanded()).toBe(true)
+      expect(doc.activeElement).toBe(nativeButton)
+      expect(style(nativeCluster).visibility).toBe('visible')
+      expect(style(nativeCluster).top).toBe('24px')
+      expect(style(nativeButton).width).toBe('28px')
+      expect(style(doc.querySelector('.workspace-back-button')!).display).not.toBe('none')
+      await click('[data-odyssey-panel-entry=right]')
+      expect(nativeButton.getAttribute('aria-expanded')).toBe('false')
       expect(workspace.isRightPaneExpanded()).toBe(false)
-      expect(doc.activeElement).toBe(centerButton)
-      expect(style(centerButton).display).not.toBe('none')
-      expect(style(nativeCluster()).visibility).toBe('hidden')
+      expect(doc.activeElement).toBe(nativeButton)
+      expect(style(nativeCluster).visibility).toBe('visible')
+      expect(doc.querySelectorAll('[data-odyssey-panel-entry=right]')).toHaveLength(1)
       expect(doc.querySelector<HTMLInputElement>('[name=url]')).toBe(draft)
       expect(draft.value).toBe('https://unsaved.example.test')
       expect(store.getSnapshot().state).toEqual(before)

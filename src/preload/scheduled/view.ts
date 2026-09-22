@@ -1,6 +1,7 @@
 import type { IntegrationBridge, TaskCapabilitySummary } from '../../shared/integration-ui'
 import type { IntegrationBinding } from '../../shared/integrations'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
+import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
 import {
   nextRun,
   scheduleLabel,
@@ -89,6 +90,7 @@ export class ScheduledTaskView {
     private integrationsBridge?: IntegrationBridge,
   ) {}
   mount() {
+    mountWorkspaceTopbarStyles(this.document)
     if (this.document.getElementById('sherlock-scheduled-style')) return
     const style = this.document.createElement('style')
     style.id = 'sherlock-scheduled-style'
@@ -511,7 +513,7 @@ export class ScheduledTaskView {
     if (!this.root) return
     this.listSignature = ''
     this.root.dataset.detail = String(this.detailOpen)
-    this.root.innerHTML = `<main class="st-center"><button class="st-icon-button st-back" aria-label="返回工作区">${icon('back')}</button><h1>定时任务</h1><p class="st-subtitle">安排任务、定期跟踪，或在重要变化时收到提醒</p><label class="st-search">${icon('search')}<input aria-label="搜索已安排任务" placeholder="搜索已安排任务" value="${escape(this.query)}"></label><div class="st-toolbar" role="tablist" aria-label="任务状态">${[
+    this.root.innerHTML = `<main class="st-center">${workspaceBackButton('st-back')}<h1>定时任务</h1><p class="st-subtitle">安排任务、定期跟踪，或在重要变化时收到提醒</p><label class="st-search">${icon('search')}<input aria-label="搜索已安排任务" placeholder="搜索已安排任务" value="${escape(this.query)}"></label><div class="st-toolbar" role="tablist" aria-label="任务状态">${[
       ['all', '全部'],
       ['enabled', '已开启'],
       ['paused', '已暂停'],
