@@ -11,111 +11,25 @@
         "schemaVersion": 1,
         "featureName": "EWork 插件应用MCP技能与统一菜单",
         "branch": "codex/feat/ework-integrations-20260922",
-        "baseCommit": "76f6350aec1a37bb284d681c3d971197360d96fc",
-        "tipCommit": "bb665f3ceddc5b379de10c8210c72b19d321066b",
+        "baseCommit": "bb665f3ceddc5b379de10c8210c72b19d321066b",
+        "tipCommit": "ec76b52a089f84ffb7c51b9a8f2906ea658dfc51",
         "commits": [
           {
-            "commit": "4cd5773c1de6d81b30c5491bc2598de9f59c31e2",
+            "commit": "ec76b52a089f84ffb7c51b9a8f2906ea658dfc51",
             "parents": [
-              "76f6350aec1a37bb284d681c3d971197360d96fc"
+              "bb665f3ceddc5b379de10c8210c72b19d321066b"
             ],
-            "subject": "文档：纳入插件连接实施与验收计划"
-          },
-          {
-            "commit": "400360c68e729006180074685555c995d270bd4c",
-            "parents": [
-              "4cd5773c1de6d81b30c5491bc2598de9f59c31e2"
-            ],
-            "subject": "功能：增加集成状态与加密凭据基础设施"
-          },
-          {
-            "commit": "bb665f3ceddc5b379de10c8210c72b19d321066b",
-            "parents": [
-              "400360c68e729006180074685555c995d270bd4c"
-            ],
-            "subject": "功能：接通插件应用工具技能市场及客户端运行权限"
+            "subject": "修复插件页面设计还原、文字可读性与旧技能接入指引"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "build/dsh-desktop.patch.yml"
-          },
-          {
-            "status": "M",
-            "path": "build/harness-node-entry.mjs"
-          },
-          {
-            "status": "A",
             "path": "build/integration-catalog/catalog.json"
           },
           {
-            "status": "A",
-            "path": "build/integration-catalog/skills/meeting-notes/SKILL.md"
-          },
-          {
-            "status": "A",
-            "path": "build/integration-catalog/skills/research-report/SKILL.md"
-          },
-          {
-            "status": "A",
-            "path": "build/integration-catalog/skills/weekly-summary/SKILL.md"
-          },
-          {
             "status": "M",
-            "path": "build/sherlock-bundled-plugins.json"
-          },
-          {
-            "status": "A",
             "path": "docs/ework-integrations-client-acceptance.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-09-22-ework-integrations-implementation-plan.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/specs/2026-09-22-ework-integrations-technical-design.md"
-          },
-          {
-            "status": "M",
-            "path": "package-lock.json"
-          },
-          {
-            "status": "M",
-            "path": "package.json"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-integration-runtime/context.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-integration-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-integration-runtime/package.json"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-integration-runtime/skill-policy.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-integration-runtime/skill-provider.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-integration-runtime/tool-proxy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "patches/@deepseek-ai+dsh-skill+0.1.0-rc.7.patch"
           },
           {
             "status": "M",
@@ -123,171 +37,19 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/profile-runtime-patches.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/validate-integration-catalog.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-packaged-macos.mjs"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/README.md"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/catalog.js"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/crypto.js"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/migrations/0001_integrations.sql"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/migrations/0002_catalog.sql"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/oauth-broker.js"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/provider-proxy.js"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/worker.js"
-          },
-          {
-            "status": "A",
-            "path": "services/integrations/wrangler.jsonc"
-          },
-          {
-            "status": "M",
-            "path": "src/main/account-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/google-calendar.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/http-api.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/mcp.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/network-policy.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/notion.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/oauth.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/openapi.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/adapters/provider.ts"
-          },
-          {
-            "status": "A",
             "path": "src/main/integrations/catalog.ts"
           },
           {
-            "status": "A",
-            "path": "src/main/integrations/context.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/dependency-index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/installer.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/ipc.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/legacy-connections.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/main/integrations/legacy-skills.ts"
           },
           {
-            "status": "A",
-            "path": "src/main/integrations/manifest.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/operations.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/package-resources.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/policy.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/projection.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/runtime-bridge.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/main/integrations/service.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/main/integrations/skill-import.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/store.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/vault.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/runtime/harness-runtime.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/scheduled/task-runner.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/scheduled/task-store.ts"
           },
           {
             "status": "M",
@@ -299,203 +61,83 @@
           },
           {
             "status": "A",
-            "path": "src/preload/integrations/bridge.ts"
+            "path": "src/preload/integrations/connection-form-controller.ts"
           },
           {
             "status": "A",
+            "path": "src/preload/integrations/forms-style.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/integrations/forms.ts"
           },
           {
             "status": "A",
+            "path": "src/preload/integrations/legacy-view.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/integrations/market.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/integrations/router.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/integrations/style.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/integrations/view.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
+            "path": "src/preload/scheduled/icons.ts"
           },
           {
             "status": "M",
             "path": "src/preload/scheduled/view.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/workspace-surface-host.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/shared/integration-ui.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/shared/integrations.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/scheduled-tasks.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/account-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-plugin-profile.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-command-menu-layout.test.js"
           },
           {
             "status": "M",
             "path": "test/figma-panel-motion-runtime.test.ts"
           },
           {
-            "status": "A",
-            "path": "test/fixtures/integrations/mcp-http.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/integrations/mcp-stdio.mjs"
-          },
-          {
             "status": "M",
-            "path": "test/harness-bundled-package-resolution.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-broker.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-catalog-worker.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/integration-catalog.test.ts"
           },
           {
             "status": "A",
-            "path": "test/integration-client-flow.test.ts"
+            "path": "test/integration-connection-form.test.ts"
           },
           {
             "status": "A",
-            "path": "test/integration-context.test.ts"
+            "path": "test/integration-legacy-service.test.ts"
           },
           {
-            "status": "A",
-            "path": "test/integration-harness-e2e.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-http-api.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-installer.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-ipc.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-legacy-connections.test.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "test/integration-legacy-skills.test.ts"
           },
           {
             "status": "A",
-            "path": "test/integration-mcp.test.ts"
+            "path": "test/integration-legacy-view.test.ts"
           },
           {
-            "status": "A",
-            "path": "test/integration-oauth.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-openapi.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-operations.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-policy.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-providers.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-runtime-bridge.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-runtime-errors.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-runtime.test.js"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "test/integration-service.test.ts"
           },
           {
-            "status": "A",
-            "path": "test/integration-skill-policy.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-skills.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-store.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-task-dependencies.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-vault.test.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "test/integration-view.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/menu-surface-theme.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/preload-main-frame.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/profile-runtime-patches.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-task-integrations.test.js"
           },
           {
             "status": "M",
@@ -503,10 +145,6 @@
           },
           {
             "status": "M",
-            "path": "test/sherlock-office-theme.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/workspace-surface-host.test.ts"
           }
         ],
@@ -518,9 +156,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "typecheck checked feature source",
-            "verifiedCommit": "bb665f3ceddc5b379de10c8210c72b19d321066b",
-            "completedAt": "2026-09-22T06:48:01.352473+00:00",
+            "summary": "Figma frontend and legacy import repair typecheck",
+            "verifiedCommit": "ec76b52a089f84ffb7c51b9a8f2906ea658dfc51",
+            "completedAt": "2026-09-22T07:37:22.848438+00:00",
             "timeoutMs": 180000
           },
           {
@@ -570,12 +208,15 @@
               "test/workspace-surface-host.test.ts",
               "test/scheduled-tasks.test.ts",
               "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
+              "test/research-task-runtime.test.js",
+              "test/integration-connection-form.test.ts",
+              "test/integration-legacy-view.test.ts",
+              "test/integration-legacy-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "focused checked feature source",
-            "verifiedCommit": "bb665f3ceddc5b379de10c8210c72b19d321066b",
-            "completedAt": "2026-09-22T06:48:14.376059+00:00",
+            "summary": "Figma frontend and legacy import repair focused",
+            "verifiedCommit": "ec76b52a089f84ffb7c51b9a8f2906ea658dfc51",
+            "completedAt": "2026-09-22T07:37:35.959333+00:00",
             "timeoutMs": 180000
           },
           {
@@ -584,15 +225,15 @@
               "scripts/validate-integration-catalog.mjs"
             ],
             "outcome": "passed",
-            "summary": "catalog checked feature source",
-            "verifiedCommit": "bb665f3ceddc5b379de10c8210c72b19d321066b",
-            "completedAt": "2026-09-22T06:48:14.446384+00:00",
+            "summary": "Figma frontend and legacy import repair catalog",
+            "verifiedCommit": "ec76b52a089f84ffb7c51b9a8f2906ea658dfc51",
+            "completedAt": "2026-09-22T07:37:36.030162+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "DOM流程与深浅菜单截图已核验，最终打包客户端将在集成后原生验收。"
+          "summary": "Figma节点与实际DOM深浅主题截图已逐页对照，列表76px与内容986px已测量；最终原生客户端将在集成构建后验收。"
         },
         "acceptanceCriteria": [
           "右侧工作区入口与四类市场正确，返回和右屏按钮保留",
@@ -604,92 +245,7 @@
           "MCP动态OAuth不支持，当前支持显式Bearer/Header/无认证与STDIO",
           "需在集成客户端进行原生验收后由用户接受精确提交"
         ],
-        "generatedAt": "2026-09-22T06:48:14.446449+00:00"
-      },
-      "merged": {
-        "mergeCommit": "eac42f3ba4ef12d0740e7e0baad6b4173a006cec",
-        "verificationCommit": "eac42f3ba4ef12d0740e7e0baad6b4173a006cec",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "eac42f3ba4ef12d0740e7e0baad6b4173a006cec",
-            "completedAt": "2026-09-22T06:49:32.942Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "eac42f3ba4ef12d0740e7e0baad6b4173a006cec",
-            "completedAt": "2026-09-22T06:49:32.942Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "eac42f3ba4ef12d0740e7e0baad6b4173a006cec",
-            "completedAt": "2026-09-22T06:49:32.942Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-22T06:49:32.942Z"
+        "generatedAt": "2026-09-22T07:37:36.072080+00:00"
       }
     }
   ],
