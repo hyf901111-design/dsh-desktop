@@ -186,8 +186,9 @@ function patchFigmaCanvasContent(source) {
   source=source.replace('onActivate, onAutoHeight, onWebInspection', 'onActivate, onAutoHeight, onExpandGeneration, onWebInspection');
   // Figma 43 manual dimensions are a user choice, not an automatic preset request.
   // Read the latest node because a resize can finish before this render's callback is replaced.
-  const expandGeneration = 'onExpandGeneration:(requestedSize="large")=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=Math.min(current.width,400),height=Math.min(current.height,300);if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;if(height===220&&(current.width>320||current.height>220))return;if(current.height!==height||current.width!==656)workspace.updateNodeGeometry(current.id,{width:656,height,sizeMode:"auto"});},';
-  source=source.replace('if(!current||current.sizeMode==="manual")return;const height=requestedSize==="medium"?220:456;','if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=Math.min(current.width,400),height=Math.min(current.height,300);if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;');
+  source=source.replaceAll('const width=Math.min(current.width,400),height=Math.min(current.height,300);','const width=280,height=200;');
+  const expandGeneration = 'onExpandGeneration:(requestedSize="large")=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=280,height=200;if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;if(height===220&&(current.width>320||current.height>220))return;if(current.height!==height||current.width!==656)workspace.updateNodeGeometry(current.id,{width:656,height,sizeMode:"auto"});},';
+  source=source.replace('if(!current||current.sizeMode==="manual")return;const height=requestedSize==="medium"?220:456;','if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=280,height=200;if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;');
   if (!source.includes(expandGeneration)) {
     const oldExpand = [
       'onExpandGeneration:()=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(current&&current.sizeMode!=="manual"&&(current.height!==456||current.width!==656))workspace.updateNodeGeometry(current.id,{width:656,height:456,sizeMode:"auto"});},',
@@ -288,7 +289,7 @@ function patchFigmaCanvasContent(source) {
   source=source.replace('"data-research-clipboard-feedback": "", "data-state": clipboardFeedback.state,', '"data-research-clipboard-feedback": "", "data-research-arrange-feedback":clipboardFeedback.kind==="arrange"?"":undefined, "data-state": clipboardFeedback.state,');
   source=source.replace("pointerEvents: 'none' }, children: clipboardFeedback.message", `pointerEvents: 'none' }, children: clipboardFeedback.kind==='arrange'?(0,react_jsx_runtime.jsxs)('span',{className:'odyssey-arrange-toast',children:[(0,react_jsx_runtime.jsx)('img',{src:${JSON.stringify(iconData.check)},width:16,height:16,alt:''}),clipboardFeedback.message]}):clipboardFeedback.message`);
   source=block(source,'function researchCanvasMeasureForArrange(',source.includes('/* SHERLOCK_FIGMA_CANVAS_FINAL_20260910 */')?'const RESEARCH_BENTO_SIZES':'function researchCanvasOrganizedLayout(',`function researchCanvasMeasureForArrange(root,nodes) {
-    return new Map(nodes.filter(n=>n.kind==='generated-container').map(n=>{const size=researchBentoSize(n);const {width,height}=RESEARCH_BENTO_SIZES[size];return [n.id,{width,height,sizeMode:'manual'}];}));
+    return new Map(nodes.filter(n=>n.kind==='generated-container').map(n=>{const size=researchBentoSize(n);const {width,height}=RESEARCH_BENTO_SIZES[size];return [n.id,{width,height,sizeMode:n.sizeMode==='manual'?'manual':'auto'}];}));
   }`);
   source=source.replace('[selectionToolbarWidth, setSelectionToolbarWidth] = (0, react.useState)(420)', '[selectionToolbarWidth, setSelectionToolbarWidth] = (0, react.useState)(320)');
   source=source.replace('snapshot.canvasSize.width - selectionToolbarWidth / 2 - 8', '(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width) - selectionToolbarWidth / 2 - 8');
@@ -375,7 +376,7 @@ const organizedLayoutSource = `function researchCanvasOrganizedLayout(files, art
   const nodes = [...files, ...artifacts].filter(n => typeof n?.id === 'string' && Number.isFinite(n.x) && Number.isFinite(n.y));
   if (!nodes.length) return null;
   const packed = researchBentoLayout(nodes, researchCanvasVisibleArea({canvasSize}), measured, {fitColumns:true});
-  const byId = new Map(packed.nodes.map(n => [n.id, { ...n, x:n.x+n.width/2, y:n.y+n.height/2, sizeMode:'manual' }]));
+  const byId = new Map(packed.nodes.map(n => [n.id, { ...n, x:n.x+n.width/2, y:n.y+n.height/2, sizeMode:n.sizeMode==='manual'?'manual':'auto' }]));
   return { files:files.map(n=>byId.get(n.id)??n), artifacts:artifacts.map(n=>byId.get(n.id)??n), viewport:packed.viewport };
 }`;
 
@@ -432,7 +433,7 @@ function researchContainerPromptPreset(prompt) {
   return researchBentoSize({type:large?'chart':small?'kpi':/短表|表格|趋势|走势|对比|比较|trend|table|compare/i.test(text)?'table':'chart'});
 }
 function researchContainerPlannedGeometry(snapshot,node,prompt) {
-  const preset=researchContainerPromptPreset(prompt),dimensions={width:400,height:300};
+  const preset=researchContainerPromptPreset(prompt),dimensions={width:280,height:200};
   const placed=researchCanvasContainedAutoNode(snapshot,{...node,width:dimensions.width,height:dimensions.height});
   return {containerSizePreset:preset,width:placed.width,height:placed.height,x:placed.x,y:placed.y};
 }

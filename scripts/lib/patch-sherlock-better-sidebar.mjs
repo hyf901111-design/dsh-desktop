@@ -1,3 +1,4 @@
+import { patchResearchTabIcons } from './research-tab-icons.mjs'
 import { patchSidebarSystemTitles } from './sidebar-system-titles.mjs'
 import { patchSidebarFileRefresh, patchSidebarRefreshFeedback } from './sidebar-file-refresh.mjs'
 import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-subagent-panel.mjs'
@@ -1057,7 +1058,7 @@ function patchComponentTabOverflow(source) {
   menu = menu.replaceAll('(!componentScheduleActive && active === tab.id)', '(tab.id === componentTabId ? componentScheduleActive : !componentScheduleActive && active === tab.id)')
   menu = menu.replace('onActivate(tab.id);', `if (tab.id === componentTabId) window.dispatchEvent(new window.CustomEvent('sherlock:component-schedule-select'));
               else onActivate(tab.id);`)
-  menu = menu.replace('getTabIcon?.(tab) ?? null', `tab.id === componentTabId ? (0, react_jsx_runtime.jsxs)('svg', {width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1,children:[(0, react_jsx_runtime.jsx)('circle',{cx:8,cy:8,r:6}),(0, react_jsx_runtime.jsx)('path',{d:'M8 4v4l3 2'})]}) : getTabIcon?.(tab) ?? null`)
+  menu = menu.replace('getTabIcon?.(tab) ?? null', `getTabIcon?.(tab.id === componentTabId ? {...tab,type:'scheduled'} : tab) ?? null`)
   part = part.slice(0, menuStart) + menu
   return patchConversationTabIcon(source.slice(0, start) + part + source.slice(end))
 }
@@ -1127,6 +1128,8 @@ function patchScheduledGlobalPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
+  source = patchResearchTabIcons(source)
+  source = source.replace("tab.id === componentTabId ? (0, react_jsx_runtime.jsxs)('svg', {width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1,children:[(0, react_jsx_runtime.jsx)('circle',{cx:8,cy:8,r:6}),(0, react_jsx_runtime.jsx)('path',{d:'M8 4v4l3 2'})]}) : getTabIcon?.(tab) ?? null", "getTabIcon?.(tab.id === componentTabId ? {...tab,type:'scheduled'} : tab) ?? null")
   source = patchSidebarFileRefresh(source)
   source = patchSidebarFileReference(source)
   source = patchSubagentPanelEntry(source, true)

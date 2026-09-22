@@ -55,6 +55,14 @@ describe('stable interactive collections',()=>{
   doc.getElementById('expand').click();expect(doc.querySelector('details').open).toBe(true);w.happyDOM.abort();
  });
  it.each(['news','reports'])('provides searchable %s and safe source links',type=>{const out=renderInteractiveArtifact({...base,type});expect(out.html).toContain('https://example.org/a');expect(out.html).toContain('筛选分类');expect(out.html).not.toContain('<iframe')});
+ it('uses the host title only and source metric roles without nested decorative cards',()=>{
+  const out=renderInteractiveArtifact({version:1,type:'dashboard',title:'多资产行情',asOf:'09.21 15:00',items:[{label:'上证指数',value:'3,912.48',detail:'+0.64%'}]});
+  const w=new Window();w.document.body.innerHTML=out.html;
+  expect(w.document.querySelector('h1')).toBeNull();
+  expect(w.document.querySelector('.research-metric-label')?.textContent).toBe('上证指数');
+  expect(w.document.querySelector('.research-metric-value')?.textContent).toBe('3,912.48');
+  expect(w.document.querySelector('.research-metric-detail')?.textContent).toBe('+0.64%');w.happyDOM.abort();
+ });
  it('shows compact dashboard values without list controls or repeated dates',()=>{
   const out=renderInteractiveArtifact({version:1,type:'dashboard',title:'行情快照',asOf:'2026-09-08',items:[{label:'最新价',value:'示例 100 元',detail:'离线验收数据',url:'https://example.org/quote'},{label:'成交额',value:'示例 12 亿'}]});
   const w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.body.innerHTML=out.html;w.eval(w.document.querySelector('script').textContent);
@@ -68,14 +76,14 @@ describe('stable interactive collections',()=>{
 });
 
 describe('evidence-preserving synthesis retries',()=>{
- it('carries web evidence into a tool-free repair instead of searching from scratch',async()=>{
+ it('carries evidence into one repair but does not mark an empty result completed',async()=>{
   const start=vi.fn(async()=>({childSessionId:'child-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve(start.mock.calls.length===1?{stopReason:'completed',output:[{type:'reasoning',text:'PRIVATE'}],researchEvidence:'已取得来源：[示例报告](https://example.org/report)，覆盖公司12家。'}:{stopReason:'completed',output:[]})}));
   const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'task'});
   await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'研究公司覆盖数量'});
-  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'));
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('failed'));
   expect(start).toHaveBeenCalledTimes(2);expect(start.mock.calls[1][0].synthesisOnly).toBe(true);
   expect(start.mock.calls[1][0].prompt).toContain('覆盖公司12家');expect(start.mock.calls[1][0].prompt).not.toContain('PRIVATE');
-  expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toContain('完整分析暂未完成');await runtime.dispose();
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toBeUndefined();await runtime.dispose();
  });
  it('retains only successful identified search results',async()=>{
   const {researchSearchEvidence}=await import('../packages/dsh-research-task-runtime/index.js');

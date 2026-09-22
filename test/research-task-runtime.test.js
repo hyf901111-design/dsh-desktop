@@ -1164,6 +1164,8 @@ describe('Research task Subagent adapter', () => {
     for (let i = 0; i < 8; i++) fixture.ctx.emit(fixture.ctx.child.session, { seq: i + 1, type: 'tool/call', data: { name: 'web_search', arguments: '{"query":"指标数据"}' } });
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 9, type: 'tool/result', data: {} });
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 10, type: 'tool/result', data: {} });
+    expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
+    fixture.ctx.emit(fixture.ctx.child.session, { seq: 11, type: 'step/end', data: {} });
     expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search', 'financial_query'] });
     expect(fixture.ctx.child.steer).not.toHaveBeenCalled();
     await handle.dispose();
@@ -2088,7 +2090,7 @@ it('finishes all five shared panels when one reaches the local deadline with usa
     await vi.advanceTimersByTimeAsync(180001)
     expect(await pending).toEqual(Array(5).fill(valid))
     expect(ctx.subagents.start).toHaveBeenCalledTimes(6)
-    expect(children[2].ctx.tools.restrict).toHaveBeenCalledWith({deny:['web_search','financial_query']})
+    expect(children[2].ctx.tools.restrict).not.toHaveBeenCalled()
   } finally {await executor.dispose();vi.useRealTimers()}
 })
 
@@ -2143,7 +2145,7 @@ it('does not enqueue a new turn when the retrieval timer expires while a chart i
  try{
   handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'000933.SH半年历史行情',prompt:'生成折线图',signal:new AbortController().signal,onSessionEvent:()=>{}})
   await vi.advanceTimersByTimeAsync(120001)
-  expect(child.ctx.tools.restrict).toHaveBeenCalledWith({deny:['web_search','financial_query']})
+  expect(child.ctx.tools.restrict).not.toHaveBeenCalled()
   expect(child.steer).not.toHaveBeenCalled()
   await vi.advanceTimersByTimeAsync(32000)
   result.resolve({stopReason:'completed',output:[{type:'text',text:chart}]})

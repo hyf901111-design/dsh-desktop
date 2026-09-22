@@ -295,7 +295,7 @@ export class ScheduledTaskView {
       tab.type = 'button'; tab.className = 'st-component-tab'; tab.role = 'tab'
       tab.dataset.odysseyPanelTab = 'true'; tab.dataset.odysseyPanelTabId = 'sherlock-component-schedule'
       tab.title = '定时任务'; tab.setAttribute('aria-label', '定时任务')
-      tab.innerHTML = `${icon('clock')}<span class="st-component-tab-label t8lSSG_tabTitle">定时任务</span><span class="st-component-close t8lSSG_tabClose" aria-label="关闭定时任务">×</span>`
+      tab.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-odyssey-tab-icon="schedule"><path d="M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0ZM8 4v4l3 2"/></svg><span class="st-component-tab-label t8lSSG_tabTitle">定时任务</span><span class="st-component-close t8lSSG_tabClose" aria-label="关闭定时任务">×</span>`
       tab.onclick = e => { if ((e.target as Element).closest('.st-component-close')) this.close(); else { this.componentVisible = true; this.detailOpen = true; this.syncPanel() } }
       this.componentTab = tab
     }

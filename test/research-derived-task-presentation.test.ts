@@ -3,7 +3,7 @@ import {createRequire} from 'node:module'
 import {derivedFixture} from './helpers/research-derived-fixture'
 const {act}=createRequire(import.meta.url)('react')
 it('shows real summary state and source count, with process details behind its toolbar action',async()=>{
- const f=await derivedFixture('generated-summary',2,{title:'总结提炼',generationStatus:'running',generationTaskId:'task-summary',width:320,height:220,generationStartedAt:Date.now()-2000,generationEvents:[{taskId:'task-summary',canvasNodeId:'derived',seq:1,type:'tool-started',tool:'资料核对',detail:'正在核对文件中的观点'}]})
+ const f=await derivedFixture('generated-summary',2,{title:'总结提炼',generationStatus:'running',generationTaskId:'task-summary',generationChildSessionId:'summary-child',width:320,height:220,generationStartedAt:Date.now()-2000,generationEvents:[{taskId:'task-summary',canvasNodeId:'derived',seq:1,type:'tool-started',tool:'资料核对',detail:'正在核对文件中的观点'}]})
  try{
   await act(async()=>expect(f.workspace.applyGenerationInspection('derived',{taskId:'task-summary',canvasNodeId:'derived',state:'running',lastSeq:1,events:[{taskId:'task-summary',canvasNodeId:'derived',seq:1,type:'tool-started',tool:'资料核对',detail:'正在核对文件中的观点'}]})).toBe(true))
   expect(f.host.querySelector('[data-research-derived-title]')?.textContent).toContain('正在提炼关键结论')
@@ -11,9 +11,12 @@ it('shows real summary state and source count, with process details behind its t
   expect(f.host.querySelector('[data-research-generation-elapsed]')).not.toBeNull()
   const step=f.host.querySelector('button[aria-label="查看过程"]')
   expect(f.host.querySelector('[data-research-generation-description]')?.textContent).toContain('正在核对文件中的观点')
+  let address:any
+  f.browser.addEventListener('sherlock:component-process',(event:any)=>{address=event.detail;address.handled=true;address.resolve()})
   await act(async()=>step!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))
-  expect(f.host.querySelector('[data-research-generation-records]')).not.toBeNull()
-  expect(f.host.querySelector('[data-research-generation-row]')?.textContent).toContain('正在核对文件中的观点')
+  expect(f.host.querySelector('[data-research-generation-records]')).toBeNull()
+  expect(address).toMatchObject({parentSessionId:'text-final',childSessionId:'summary-child'})
+  expect(f.host.querySelector('[data-research-generation-description]')?.textContent).toContain('正在核对文件中的观点')
   expect(f.host.querySelector('[data-research-generation-elapsed]')).not.toBeNull()
   expect(f.workspace.getSnapshot().artifacts.find((n:any)=>n.id==='derived')).toMatchObject({width:320,height:220,sizeMode:'manual'})
   await act(async()=>f.host.querySelector('[data-research-generation-cancel]')!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))

@@ -1,3 +1,4 @@
+import { MARKET_ARTIFACT_PROMPT } from './market-artifact.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
@@ -347,6 +348,7 @@ export function buildResearchTaskPrompt(request) {
       '只输出以下 JSON schema 之一，不得添加字段：',
       '{"version": 1, "type": "chart", "title": "标题", "variant": "bar 或 line", "labels": ["标签"], "series": [{"name": "系列名", "values": [1]}]}',
       INTERACTIVE_ARTIFACT_PROMPT,
+      MARKET_ARTIFACT_PROMPT,
       '{"version": 1, "type": "table", "title": "标题", "columns": ["列名"], "rows": [["单元格"]]}',
       '{"version": 1, "type": "kpi", "title": "标题", "items": [{"label": "指标", "value": "数值", "change": "可选变化"}]}',
       '{"version": 1, "type": "markdown", "title": "标题", "content": "Markdown 内容"}',
@@ -378,6 +380,7 @@ export function buildResearchTaskPrompt(request) {
       ] : []),
       '{"version": 1, "type": "chart", "title": "标题", "variant": "bar 或 line", "labels": ["标签"], "series": [{"name": "系列名", "values": [1]}]}',
       INTERACTIVE_ARTIFACT_PROMPT,
+      MARKET_ARTIFACT_PROMPT,
       '{"version": 1, "type": "table", "title": "标题", "columns": ["列名"], "rows": [["单元格"]]}',
       '{"version": 1, "type": "kpi", "title": "标题", "items": [{"label": "指标", "value": "数值", "change": "可选变化"}]}',
       '{"version": 1, "type": "markdown", "title": "标题", "content": "Markdown 内容"}',
@@ -603,6 +606,9 @@ export function publicEventFromSessionEvent(event) {
     let detail
     if (event.data?.name === 'web_search') {
       try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText(args?.query) } catch {}
+    }
+    if (event.data?.name === 'financial_query') {
+      try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText([args?.intent, args?.query, Array.isArray(args?.symbols) ? args.symbols.join('、') : '', args?.start, args?.end].filter(Boolean).join(' · ')) } catch {}
     }
     return { type: 'tool-started', tool, ...(detail ? { detail } : {}) }
   }
@@ -1391,7 +1397,7 @@ export function createSubagentAdapter(ctx) {
       // Restrict only this child after its bounded research phase. A queued steer
       // would start another step after its final artifact and discard that result.
       // Let in-flight reads and final output finish without injecting a new turn.
-      let searchCalls = 0, researchClosed = false, liftResearchLimit
+      let searchCalls = 0, researchClosed = false, researchLimitDue = false, liftResearchLimit
       let lastOutputAt = 0, streamedText = '', completedArtifact
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
       let evidenceBytes = Buffer.byteLength(hostEvidence, 'utf8')
@@ -1400,7 +1406,7 @@ export function createSubagentAdapter(ctx) {
         researchClosed = true
         liftResearchLimit = child.ctx.tools.restrict({ deny: ['web_search', 'financial_query'] })
       }
-      const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(closeResearch, 120000) : undefined
+      const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(() => { researchLimitDue = true }, 120000) : undefined
       const seen = new Set()
       const deliver = (event) => {
         const seq = event?.seq
@@ -1420,7 +1426,8 @@ export function createSubagentAdapter(ctx) {
             evidenceBytes += Buffer.byteLength(piece, 'utf8')
           }
         }
-        if (event?.type === 'tool/result' && searchCalls >= 8) closeResearch()
+        // A timer must not revoke a tool already advertised to the current model step.
+        if (event?.type === 'step/end' && (researchLimitDue || searchCalls >= 8)) closeResearch()
         if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {
           // Retain only complete public artifacts accepted by the normal parser.
           // Never recover reasoning or an incomplete JSON fragment as success.
