@@ -580,17 +580,6 @@ body :is(.sherlock-account-menu,.st-menu,.ig-menu) button:is(:hover,:focus-visib
 body .sherlock-account-menu-profile:after { background:var(--odyssey-menu-border); }
 body .srb-avatar-info>svg { fill:var(--odyssey-menu)!important; stroke:var(--odyssey-menu-border)!important; }
 
-/* Figma 1277:79516: the collapse action belongs to the open native right pane.
-   The integration surface keeps its own expand action only while that pane is closed. */
-body[data-workspace-surface=integrations][data-workspace-right-expanded=true] .ig-chrome [data-action=panel] { display:none; }
-body[data-workspace-surface=integrations] [data-dsh-panel-host][data-workspace-panel=integrations][data-odyssey-panel-right=closed] .t8lSSG_toggleCluster { visibility:hidden; pointer-events:none; }
-body[data-workspace-surface=integrations] [data-dsh-panel-host][data-workspace-panel=integrations][data-odyssey-panel-right=open] .t8lSSG_toggleCluster {
-  visibility:visible; pointer-events:auto; position:fixed; top:18px!important; right:calc(var(--odyssey-panel-edge,10px) + 12px)!important;
-}
-body[data-workspace-surface=integrations] [data-workspace-panel=integrations] [data-odyssey-panel-entry=right] {
-  width:28px; height:28px; border-radius:7px; padding:6px; -webkit-app-region:no-drag;
-}
-body[data-workspace-surface=integrations] [data-workspace-panel=integrations] [data-odyssey-panel-entry=right] > svg { width:16px; height:16px; }
-body[data-workspace-surface=integrations] [data-workspace-panel=integrations] .t8lSSG_panel:not(.t8lSSG_panelHidden) .t8lSSG_tabBar {
-  height:44px; min-height:44px; flex:0 0 44px; padding-top:8px; padding-bottom:8px; padding-right:52px;
-}
+/* Workspace surfaces reuse the native pane entry and its normal open/closed geometry. */
+body[data-workspace-surface=integrations] [data-dsh-panel-host]{position:fixed;inset:0;z-index:901;pointer-events:none}
+body[data-workspace-surface=integrations] [data-dsh-panel-host] .t8lSSG_toggleCluster{pointer-events:auto;visibility:visible}

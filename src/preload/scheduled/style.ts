@@ -25,7 +25,7 @@ export const scheduledStyles = `
 .st-icon-button{width:28px;height:28px;display:grid;place-items:center;border-radius:7px;padding:6px!important}
 :is(.st-root,.st-detail) button:hover,.st-menu button:hover,.st-dialog button:hover{background:var(--st-field)}
 :is(.st-root,.st-detail) button:focus-visible,.st-menu button:focus-visible,.st-dialog button:focus-visible{outline:2px solid var(--st-accent);outline-offset:2px}
-.st-back{position:absolute;top:17px;left:19px}.st-panel-toggle{position:absolute;top:17px;right:19px;background:var(--st-field)!important}
+.st-panel-toggle{position:absolute;top:17px;right:19px;background:var(--st-field)!important}
 .st-search{height:42px;border:1px solid var(--st-line);border-radius:21px;background:var(--st-field);display:flex;align-items:center;padding:0 14px;gap:10px;margin-bottom:24px}
 :is(.st-root,.st-detail) input,:is(.st-root,.st-detail) textarea,:is(.st-root,.st-detail) select,.st-dialog input,.st-dialog select{font:inherit;color:inherit;outline-color:var(--st-accent)}
 .st-search input{width:100%;min-width:0;background:transparent;border:0;outline:none}
