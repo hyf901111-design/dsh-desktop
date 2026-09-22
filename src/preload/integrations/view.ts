@@ -298,10 +298,15 @@ export class IntegrationView {
         const route = this.route;
         if(this.toolGrantDraft && (route.page!=='detail' || route.id!==this.toolGrantDraft.connectionId))this.clearToolGrantDraft();
         const currentRow = this.snapshot.rows.find(row => row.id === this.routeId());
+        const skillPage=route.page==='detail' && currentRow?.kind==='skill';
+        const previousDocument=this.root.querySelector<HTMLElement>('[data-skill-detail]');
+        const previewScroll=skillPage && previousDocument?.dataset.skillId===currentRow.id && previousDocument.dataset.skillRevision===String(currentRow.revision) ? previousDocument.scrollTop : 0;
+        this.root.classList.toggle('ig-skill-detail-page',skillPage);
         this.ensureSkillDetail(currentRow);
         const subtitle = route.page === 'list' ? subtitles[route.tab] : route.page === 'market' ? '为研究、写作与日常协作添加能力' : route.page === 'detail' ? (currentRow?.kind === 'connection' ? '管理这条连接的使用范围、凭据和工具' : currentRow?.description || '') : route.page === 'market-detail' ? '了解能力与权限，选择适合你的工作方式' : route.page === 'connection' ? this.connectionEditor.subtitle(this.draft) : route.page === 'skill-import' ? '把已有的工作方法添加到 EWork' : route.page === 'create-plugin' ? '将技能与连接组合成一套可复用的能力' : route.page === 'add-source' ? '从团队或组织维护的目录中发现插件' : '';
         const actions = route.page === 'list' ? `${button('market', marketNames[marketKinds[route.tab]])}${addMenuButton()}` : route.page === 'market' ? button('add-source','添加来源') : '';
         this.root.innerHTML = `<div class="ig-chrome">${workspaceBackButton()}</div><div class="ig-content"><header class="ig-heading"><div><h1>${esc(this.title())}</h1>${subtitle ? `<p class="ig-subtitle">${esc(subtitle)}</p>` : ''}</div><div class="ig-actions">${actions}</div></header><div class="ig-error" role="alert"></div><div class="ig-live" role="status" aria-live="polite" aria-atomic="true"></div><div class="ig-page">${this.content()}</div></div>`;
+        if(skillPage){this.root.scrollTop=0;const preview=this.root.querySelector<HTMLElement>('[data-skill-detail]');if(preview)preview.scrollTop=previewScroll;}
         this.renderFeedback();
         this.updateBusy();
     }
@@ -395,7 +400,7 @@ export class IntegrationView {
         const unavailable=!row.enabled || reply?.enabled===false ? '先启用技能，再在对话中使用。'
             : reply?.usable===false ? reply.unavailableReason || '此技能暂时不可用，请检查所属插件。'
             : !this.bridge.useSkill ? '当前客户端暂不支持直接使用技能。' : '';
-        return `<div class="ig-detail-grid ig-skill-detail-grid"><section class="ig-detail-main ig-skill-document" data-skill-detail aria-busy="${state?.status==='loading'}"><div class="ig-skill-file-label">SKILL.md</div>${body}</section><aside class="ig-detail-aside" aria-label="技能操作">${button('use-skill',state?.useController?'正在准备…':'立即使用',true,!this.canUseSkill(row))}${unavailable?`<p class="ig-note">${esc(unavailable)}</p>`:''}${state?.useError?`<p class="ig-error" role="alert">${esc(state.useError)}</p>`:''}${state?.useMessage?`<p class="ig-note" role="status">${esc(state.useMessage)}</p>`:''}<section class="ig-help"><h2>${esc(row.status)}</h2><p>将在对话中填入技能，发送前仍可补充具体需求。</p></section>${button('toggle-detail',row.enabled?'停用':'启用')}${row.removable?`<hr><p class="ig-note">删除技能会影响依赖它的任务，已有对话内容仍会保留。</p>${button('request-uninstall','删除技能')}`:''}</aside></div>`;
+        return `<div class="ig-detail-grid ig-skill-detail-grid"><section class="ig-detail-main ig-skill-document" data-skill-detail data-skill-id="${esc(row.id)}" data-skill-revision="${row.revision}" tabindex="0" role="region" aria-label="技能 Markdown 预览" aria-busy="${state?.status==='loading'}"><div class="ig-skill-file-label">SKILL.md</div>${body}</section><aside class="ig-detail-aside" aria-label="技能操作">${button('use-skill',state?.useController?'正在准备…':'立即使用',true,!this.canUseSkill(row))}${unavailable?`<p class="ig-note">${esc(unavailable)}</p>`:''}${state?.useError?`<p class="ig-error" role="alert">${esc(state.useError)}</p>`:''}${state?.useMessage?`<p class="ig-note" role="status">${esc(state.useMessage)}</p>`:''}<section class="ig-help"><h2>${esc(row.status)}</h2><p>将在对话中填入技能，发送前仍可补充具体需求。</p></section><div class="ig-skill-actions">${button('toggle-detail',row.enabled?'停用':'启用')}${row.removable?button('request-uninstall','删除技能'):''}</div></aside></div>`;
     }
     private detailContent(row?: IntegrationRow) {
         if (!row) return '<p class="ig-empty">该项目已不存在，请返回列表刷新。</p>';

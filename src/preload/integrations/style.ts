@@ -74,6 +74,10 @@ body[data-workspace-surface] .pI_x6G_handle[data-side=sidebar]{z-index:902;point
 @keyframes ig-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.ig-root button:not(.workspace-back-button),.ig-row,.ig-market-card,.ig-search,.ig-toggle::before,.ig-toggle::after{transition:none}.ig-root button:not(.workspace-back-button)[aria-busy=true]::before,.ig-root button:not(.workspace-back-button)[aria-busy=true]::after{animation:none}}
 
+.ig-root.ig-skill-detail-page{overflow:hidden}
+.ig-skill-detail-page>.ig-content{height:100%;min-height:0;display:flex;flex-direction:column;width:100%}.ig-skill-detail-page .ig-heading,.ig-skill-detail-page>.ig-content>.ig-error{flex:none}.ig-skill-detail-page .ig-page{flex:1;min-height:0;overflow:hidden}
+.ig-skill-detail-grid{height:100%;min-height:0;grid-template-rows:minmax(0,1fr)}.ig-skill-document{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:16px;scroll-padding-block:12px}.ig-skill-document:focus-visible{outline:2px solid var(--ig-focus);outline-offset:-2px;border-radius:6px}
+.ig-skill-detail-grid>.ig-detail-aside{max-height:100%;overflow-y:auto;overscroll-behavior:contain}.ig-skill-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ig-skill-actions>.ig-button{flex:1;min-width:0;padding-inline:12px!important}
 .ig-skill-file-label{font-size:var(--ig-text-meta);line-height:var(--ig-leading-meta);color:var(--ig-muted);margin:0 0 18px}
 .ig-skill-read-state{padding:24px 0;display:flex;flex-direction:column;gap:18px;align-items:flex-start;font-size:14px;line-height:24px;color:var(--ig-muted)}.ig-skill-read-state .ig-error{margin:0}
 .ig-markdown{font-size:14px;line-height:24px;color:var(--ig-ink);overflow-wrap:anywhere;min-width:0}.ig-markdown>:first-child{margin-top:0}.ig-markdown>:last-child{margin-bottom:0}
@@ -83,5 +87,5 @@ body[data-workspace-surface] .pI_x6G_handle[data-side=sidebar]{z-index:902;point
 .ig-markdown-table{max-width:100%;overflow:auto;margin:18px 0}.ig-markdown table{width:100%;border-collapse:collapse;font-size:13px;line-height:22px}.ig-markdown th,.ig-markdown td{border:1px solid var(--ig-line);padding:8px 12px;text-align:left;min-width:80px}.ig-markdown th{font-weight:500;background:var(--ig-field)}
 .ig-skill-metadata{border-top:1px solid var(--ig-line);margin-top:28px;padding-top:16px;color:var(--ig-muted)}.ig-skill-metadata summary{font-size:13px;cursor:pointer;line-height:24px;width:fit-content}.ig-skill-metadata pre{white-space:pre-wrap;overflow-wrap:anywhere}
 @container integrations (min-width:680px) and (max-width:880px){.ig-skill-detail-grid{grid-template-columns:minmax(0,1fr) 220px;gap:24px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{display:flex}}
-@container integrations (max-width:679px){.ig-skill-detail-grid>.ig-detail-aside{grid-row:1}.ig-skill-detail-grid>.ig-detail-aside>.ig-error{grid-column:1/-1}}
+@container integrations (max-width:679px){.ig-skill-detail-grid{grid-template-rows:auto minmax(0,1fr);gap:20px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{grid-row:1;display:flex;max-height:min(240px,42vh);gap:12px}.ig-skill-detail-grid .ig-help{padding:14px;gap:6px}.ig-skill-document{padding-right:12px}}
 ` + connectionFormStyles;
