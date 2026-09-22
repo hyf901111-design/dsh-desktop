@@ -19,6 +19,8 @@ describe('source market workbench completion layout',()=>{
     workspace.setArtifacts(nodes);expect(workspace.getSnapshot().artifacts).toHaveLength(2);expect(workspace.organizeCanvas()).toBe(true);
     workspace.setArtifacts(workspace.getSnapshot().artifacts);
     expect(workspace.getSnapshot().artifacts.map(n=>[n.width,n.height,n.sizeMode])).toEqual([[896,144,'auto'],[896,110,'auto']]);
+    expect(workspace.fitHtmlContent('breadth',nodes[1].containerSpec.html,{width:896,height:110})).toBe(false);
+    expect(workspace.getSnapshot().artifacts[1]).toMatchObject({width:896,height:110});
     workspace.organizeCanvas();expect(workspace.getSnapshot().artifacts.map(n=>[n.width,n.height])).toEqual([[896,144],[896,110]]);
     win.happyDOM.abort();
   });
