@@ -158,6 +158,91 @@
           "需在集成客户端进行原生验收后由用户接受精确提交"
         ],
         "generatedAt": "2026-09-22T09:36:19.170067+00:00"
+      },
+      "merged": {
+        "mergeCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
+        "verificationCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
+            "completedAt": "2026-09-22T09:37:06.190Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "--maxWorkers=4",
+              "test/account-service.test.ts",
+              "test/bundled-plugin-profile.test.ts",
+              "test/figma-command-menu-layout.test.js",
+              "test/figma-panel-motion-runtime.test.ts",
+              "test/harness-bundled-package-resolution.test.ts",
+              "test/integration-broker.test.js",
+              "test/integration-catalog-worker.test.js",
+              "test/integration-catalog.test.ts",
+              "test/integration-client-flow.test.ts",
+              "test/integration-context.test.ts",
+              "test/integration-harness-e2e.test.js",
+              "test/integration-http-api.test.ts",
+              "test/integration-installer.test.ts",
+              "test/integration-ipc.test.ts",
+              "test/integration-legacy-connections.test.ts",
+              "test/integration-legacy-skills.test.ts",
+              "test/integration-mcp.test.ts",
+              "test/integration-oauth.test.ts",
+              "test/integration-openapi.test.ts",
+              "test/integration-operations.test.ts",
+              "test/integration-policy.test.ts",
+              "test/integration-providers.test.ts",
+              "test/integration-runtime-bridge.test.ts",
+              "test/integration-runtime-errors.test.js",
+              "test/integration-runtime.test.js",
+              "test/integration-service.test.ts",
+              "test/integration-skill-policy.test.js",
+              "test/integration-skills.test.ts",
+              "test/integration-store.test.ts",
+              "test/integration-task-dependencies.test.ts",
+              "test/integration-vault.test.ts",
+              "test/integration-view.test.ts",
+              "test/menu-surface-theme.test.ts",
+              "test/preload-main-frame.test.ts",
+              "test/profile-runtime-patches.test.js",
+              "test/research-task-integrations.test.js",
+              "test/scheduled-task-view.test.ts",
+              "test/sherlock-office-theme.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/scheduled-tasks.test.ts",
+              "test/component-scheduled-tasks.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
+            "completedAt": "2026-09-22T09:37:06.190Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/validate-integration-catalog.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
+            "verifiedCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
+            "completedAt": "2026-09-22T09:37:06.190Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-22T09:37:06.190Z"
       }
     }
   ],
