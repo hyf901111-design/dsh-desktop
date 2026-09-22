@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto'
 import { lstat, mkdir, readdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { SkillImportManager, readSkillResource, type ImportedSkill } from './skill-import'
+import { SkillImportManager, SkillImportError, readSkillResource, skillImportDiagnostic, type ImportedSkill } from './skill-import'
 import { atomicWrite } from './store'
+import type { SkillImportDiagnostic } from '../../shared/integration-ui'
 
 export type LegacySkillRoot = { path: string; kind: 'personal' | 'project' | 'custom' | 'bundled' }
 export interface LegacySkillMigrationItem {
@@ -15,6 +16,7 @@ export interface LegacySkillMigrationItem {
   message?: string
   skillId?: string
   sourceId?: string
+  diagnostic?: SkillImportDiagnostic
 }
 export interface LegacySkillMigrationReport {
   version: 1
@@ -64,37 +66,39 @@ export class LegacySkillMigration {
       try {
         const stat = await lstat(root.path)
         if (stat.isSymbolicLink() || !stat.isDirectory()) {
-          items.push(this.item(root, root.path, 'skipped', '旧技能目录是链接或不是目录，未读取内容。'))
+          items.push({ ...this.item(root, root.path, 'skipped', '目录未接入；原文件保持不变。'), diagnostic: skillImportDiagnostic(new SkillImportError('UNSAFE_PATH', '旧技能目录是链接或不是目录，未读取内容。')) })
           continue
         }
         entries = (await readdir(root.path)).sort()
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
-        items.push(this.item(root, root.path, 'failed', '旧技能目录不可读取。'))
+        items.push({ ...this.item(root, root.path, 'failed', '旧技能目录不可读取；原文件保持不变。'), diagnostic: skillImportDiagnostic(error) })
         continue
       }
       for (const name of entries) {
         if (name === '.system' || name.startsWith('.')) continue
         if (items.length >= 1000) throw new Error('旧技能条目超过 1000 项，请分批迁移')
         const sourcePath = join(root.path, name)
-        const info = await lstat(sourcePath)
-        if (info.isSymbolicLink()) { items.push(this.item(root, sourcePath, 'skipped', '未导入符号链接，原文件保持不变。')); continue }
+        let info
+        try { info = await lstat(sourcePath) }
+        catch (error) { items.push({ ...this.item(root, sourcePath, 'failed', '此来源暂不可读取，其他技能仍可检查。'), diagnostic: skillImportDiagnostic(error) }); continue }
+        if (info.isSymbolicLink()) { items.push({ ...this.item(root, sourcePath, 'skipped', '未导入符号链接，原文件保持不变。'), diagnostic: skillImportDiagnostic(new SkillImportError('UNSAFE_PATH', '所选技能来源是符号链接。')) }); continue }
         if (info.isFile() && name.endsWith('.md')) {
           items.push(this.item(root, sourcePath, 'compatibility', '独立 Markdown 技能保留原提供者兼容；整理为含 SKILL.md 的独立目录后可导入管理。'))
           continue
         }
         if (!info.isDirectory()) continue
         try { if (!(await lstat(join(sourcePath, 'SKILL.md'))).isFile()) continue }
-        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error }
+        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; items.push({ ...this.item(root, sourcePath, 'failed', '技能定义暂不可读取；原文件保持不变。'), diagnostic: skillImportDiagnostic(error) }); continue }
         if (root.kind === 'bundled') {
-          items.push(this.item(root, sourcePath, 'compatibility', '内置技能由产品版本管理，保持原安装位置，不自动复制为个人技能。'))
+          items.push(this.item(root, sourcePath, 'compatibility', '仍由客户端内置管理，可继续在对话中按原方式使用；随客户端版本更新，不复制为个人技能，也不会因本次接入被停用。'))
           continue
         }
         try {
           const preview = await this.options.manager.previewSkillImport(sourcePath)
           items.push({ ...this.item(root, sourcePath, 'eligible'), name: preview.name, sourceId: preview.sourceId })
-        } catch {
-          items.push(this.item(root, sourcePath, 'failed', '技能格式、资源路径或文件大小未通过安全检查，原文件保持不变。'))
+        } catch (error) {
+          items.push({ ...this.item(root, sourcePath, 'failed', '暂不能接入管理；原技能保持原方式使用，原文件和依赖不变。'), diagnostic: skillImportDiagnostic(error) })
         }
       }
     }
@@ -105,7 +109,7 @@ export class LegacySkillMigration {
   migrateOnce(register: (receipt: ImportedSkill, source: LegacySkillMigrationItem) => Promise<void>): Promise<LegacySkillMigrationReport> {
     const operation = this.queue.then(async () => {
       const previous = await this.readReport()
-      if (previous?.status === 'complete') return structuredClone(previous)
+      // A completed earlier pass must not hide newly added or repaired sources.
       const report = await this.preview()
       const completed = new Map((previous?.items ?? []).filter(item => item.status === 'migrated').map(item => [item.id, item]))
       for (let index = 0; index < report.items.length; index++) {
@@ -122,9 +126,9 @@ export class LegacySkillMigration {
           registered = true
           this.options.manager.finalizeSkillImport(receipt)
           item = { ...item, status: 'migrated', skillId: receipt.id, sourceId: receipt.sourceId, message: '已复制到当前账户的受管理目录，原文件保持不变。' }
-        } catch {
+        } catch (error) {
           if (receipt && !registered) await this.options.manager.rollbackSkillImport(receipt)
-          item = { ...item, status: 'failed', message: '迁移未完成；已保留原技能，请修复后重试。' }
+          item = { ...item, status: 'failed', message: '迁移未完成；原技能保持原方式使用，原文件不变。', diagnostic: skillImportDiagnostic(error) }
         }
         report.items[index] = item
         report.status = 'partial'

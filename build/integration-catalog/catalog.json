@@ -34,7 +34,8 @@
           "工具调用继续使用当前连接授权"
         ]
       },
-      "digest": "09f3cab5d3670b204a384e68579e5e12ef374500fcc76ed8b26090a2d5d90679"
+      "digest": "09f3cab5d3670b204a384e68579e5e12ef374500fcc76ed8b26090a2d5d90679",
+      "category": "research"
     },
     {
       "id": "office-workflows",
@@ -77,7 +78,8 @@
           "工具调用继续使用当前连接授权"
         ]
       },
-      "digest": "cf3b7b453a6920236b4b2832ac6e2beb376e41d2da15d325d7269250bd068170"
+      "digest": "cf3b7b453a6920236b4b2832ac6e2beb376e41d2da15d325d7269250bd068170",
+      "category": "office"
     },
     {
       "id": "weekly-summary",
@@ -112,7 +114,8 @@
           "工具调用继续使用当前连接授权"
         ]
       },
-      "digest": "482ebdda0da9dbf613e8f693d2255177cc932c42bf5dd1c15e1e3226c197d098"
+      "digest": "482ebdda0da9dbf613e8f693d2255177cc932c42bf5dd1c15e1e3226c197d098",
+      "category": "office"
     },
     {
       "id": "meeting-notes",
@@ -147,7 +150,8 @@
           "工具调用继续使用当前连接授权"
         ]
       },
-      "digest": "d4b2f4d0b9d528bc2688e7dd0eafe5dbdeb038a67961273d93f2c8ba35de306c"
+      "digest": "d4b2f4d0b9d528bc2688e7dd0eafe5dbdeb038a67961273d93f2c8ba35de306c",
+      "category": "office"
     },
     {
       "id": "notion",
@@ -164,7 +168,8 @@
       "manifest": {
         "type": "notion",
         "name": "Notion"
-      }
+      },
+      "category": "office"
     },
     {
       "id": "google-calendar",
@@ -182,7 +187,8 @@
         "type": "google-calendar",
         "name": "Google Calendar",
         "clientId": ""
-      }
+      },
+      "category": "office"
     },
     {
       "id": "custom-api",
@@ -200,7 +206,8 @@
         "type": "api",
         "name": "自定义 API",
         "url": ""
-      }
+      },
+      "category": "developer"
     },
     {
       "id": "remote-mcp",
@@ -218,7 +225,8 @@
         "type": "mcp-http",
         "name": "远程 MCP",
         "url": ""
-      }
+      },
+      "category": "developer"
     },
     {
       "id": "local-mcp",
@@ -237,7 +245,8 @@
         "name": "本机 MCP",
         "command": "",
         "args": ""
-      }
+      },
+      "category": "developer"
     }
   ]
 }

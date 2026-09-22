@@ -47,8 +47,7 @@ export class WorkspaceSurfaceHost {
     close(surface: WorkspaceSurface) { this.history = this.history.filter(location => location.surface !== surface); this.sync(); }
     current() { return this.history.at(-1); }
     setRightPaneExpanded(expanded: boolean) {
-        this.expanded = expanded;
-        this.document.body.dataset.workspaceRightExpanded = String(expanded);
+        // The native pane owns visibility; only its acknowledgement updates UI state.
         this.dispatch('sherlock:workspace-panel', { surface: this.current()?.surface, open: expanded });
     }
     isRightPaneExpanded() { return this.expanded; }
@@ -103,7 +102,14 @@ export class WorkspaceSurfaceHost {
         const detail=(event as CustomEvent<{surface?:string;open?:boolean}>).detail;
         if(detail?.surface==='integrations' && typeof detail.open==='boolean') {
             this.expanded=detail.open;
-            this.document.body.dataset.workspaceRightExpanded=String(detail.open);
+            if (this.current()?.surface === 'integrations') {
+                this.document.body.dataset.workspaceRightExpanded=String(detail.open);
+                const centerControl = this.surfaces.get('integrations')?.querySelector<HTMLButtonElement>('[data-action=panel]');
+                const nativeControl = this.document.querySelector<HTMLButtonElement>('[data-workspace-panel=integrations] [data-odyssey-panel-entry=right]');
+                // Transfer keyboard focus with the action instead of leaving it on a hidden button.
+                if (detail.open && this.document.activeElement === centerControl) nativeControl?.focus({ preventScroll: true });
+                else if (!detail.open && this.document.activeElement === nativeControl) centerControl?.focus({ preventScroll: true });
+            }
         }
     };
     private closeAll = () => { this.history = []; this.sync(); };

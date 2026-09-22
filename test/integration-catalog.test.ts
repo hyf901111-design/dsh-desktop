@@ -15,6 +15,7 @@ it('loads all four actual bundled catalogs with installable resources and provid
         for (const entry of entries) {
             expect(entry.available).toBe(true);
             expect(entry.manifest).toBeDefined();
+            expect(['research', 'office', 'developer']).toContain(entry.category);
             expect((await catalog.get(entry.id, [])).id).toBe(entry.id);
         }
     }

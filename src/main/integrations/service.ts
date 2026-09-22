@@ -1,13 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import type { IntegrationCommand, IntegrationReply, IntegrationRow, ConnectionDraft, UiOperation } from '../../shared/integration-ui';
+import type { IntegrationCommand, IntegrationReply, IntegrationRow, ConnectionDraft, UiOperation, LegacySkillPreviewItem } from '../../shared/integration-ui';
 import { emptyConnectionDraft } from '../../shared/integration-ui';
 import { IntegrationError, type Connection, type ConnectionConfig, type MutationMeta, type EntityKind, type ToolBinding, type ToolCall, type ToolResult, type CapabilityContext, type SkillInstall, type ApiOperation, type IntegrationState, type PluginInstall } from '../../shared/integrations';
 import { IntegrationStore } from './store';
 import { CredentialVault, type PlatformEncryption } from './vault';
 import { OperationManager } from './operations';
-import { SkillImportManager, readSkillResource, listManagedSkillSourceIds } from './skill-import';
+import { SkillImportManager, readSkillResource, listManagedSkillSourceIds, skillImportErrorMessage } from './skill-import';
 import { HttpApiAdapter } from './adapters/http-api';
 import { compileOpenApi } from './adapters/openapi';
 import { McpSupervisor } from './adapters/mcp';
@@ -73,12 +73,13 @@ export class IntegrationService {
     async previewLegacySkills() {
         const owner = this.owner(), migration = new LegacySkillMigration({ root: join(this.options.root, 'migration'), ownerAccountId: owner, manager: this.skills, roots: this.options.legacySkillRoots ?? [] });
         const report = await migration.preview(), state = this.store.snapshot();
-        const items = report.items.map(item => {
+        const items: LegacySkillPreviewItem[] = report.items.map(item => {
+            const source = { name: item.name, sourcePath: item.sourcePath, kind: item.kind };
             if (item.sourceId && Object.values(state.skills).some(skill => skill.ownerAccountId === owner && skill.sourceId === item.sourceId))
-                return { name: item.name, status: 'migrated', message: '已在当前账户管理' };
+                return { ...source, status: 'migrated', message: '已在当前账户管理，可在技能列表中启用或停用；来源文件保持不变。' };
             if (item.sourceId && this.managedSkillSources.includes(item.sourceId))
-                return { name: item.name, status: 'compatibility', message: '该来源已接入管理或已卸载；如需重新添加，请使用“导入技能”' };
-            return { name: item.name, status: item.status, message: item.message };
+                return { ...source, status: 'compatibility', message: '该来源曾接入管理或已卸载，旧来源不会自动重复启用；如需重新添加，请重新选择完整技能包。' };
+            return { ...source, status: item.status, message: item.message, diagnostic: item.diagnostic };
         });
         const eligibleCount = items.filter(item => item.status === 'eligible').length;
         this.compatibility.set(owner, eligibleCount ? `发现 ${eligibleCount} 项旧个人技能，可预览后复制接入管理；原文件保留。` : '旧技能检查完成；已接入的技能由当前列表管理，其余保持原提供者兼容。');
@@ -118,8 +119,8 @@ export class IntegrationService {
             });
             await this.refreshSkillSources();
             const migrated = report.items.filter(item => item.status === 'migrated').length, compatibility = report.items.filter(item => item.status === 'compatibility').length, failed = report.items.filter(item => item.status === 'failed').length;
-            this.compatibility.set(owner, `已接入 ${migrated} 项旧个人技能；${compatibility} 项保持原提供者兼容${failed ? `；${failed} 项需手动导入` : ''}。原文件均保留。`);
-        })().catch(() => { this.compatibility.set(owner, '部分旧技能尚未接入管理；原文件保留，可从“导入技能”重新导入'); this.migrations.delete(owner); });
+            this.compatibility.set(owner, `已接入 ${migrated} 项旧个人技能；${compatibility} 项保持原提供者兼容${failed ? `；${failed} 项暂不能接入，可在“接入旧技能”查看原因与处理方式` : ''}。原文件均保留。`);
+        })().catch(() => { this.compatibility.set(owner, '部分旧技能尚未接入管理；原文件保留，可在“接入旧技能”重新检查'); }).finally(() => { this.migrations.delete(owner); });
         this.migrations.set(owner, work);
         return work;
     }
@@ -218,13 +219,13 @@ export class IntegrationService {
                 const path = command.path ?? await this.options.selectSkill?.();
                 if (!path)
                     return { type: 'preview', preview: null };
-                const preview = await this.skills.previewSkillImport(text(path, 4096));
+                const preview = await this.skills.previewSkillImport(text(path, 4096)).catch(error => { throw new IntegrationError('INVALID_CONFIG', skillImportErrorMessage(error)); });
                 return { type: 'preview', preview: { previewId: preview.previewId, name: preview.name, description: preview.description, content: preview.bodyPreview, files: preview.files.map(file => file.path), warnings: preview.conflicts.map(conflict => `已有同名技能「${conflict.name}」，请明确选择替换或另存`) } };
             }
             case 'import-skill': return this.mutate(command.type, command.meta, undefined, undefined, async (_target, signal) => {
                 signal.throwIfAborted();
                 const manager = this.skills;
-                const receipt = await manager.commitSkillImport(command.previewId, command.mode);
+                const receipt = await manager.commitSkillImport(command.previewId, command.mode).catch(error => { throw new IntegrationError('INVALID_CONFIG', skillImportErrorMessage(error)); });
                 try {
                     await this.store.change(state => { signal.throwIfAborted(); const old = state.skills[receipt.id]; state.skills[receipt.id] = { id: receipt.id, name: receipt.name, description: receipt.description, provider: 'managed', source: '个人导入', sourceId: receipt.sourceId, version: String(receipt.version), ownerAccountId: this.owner(), enabled: true, revision: (old?.revision ?? 0) + 1, bodyDigest: receipt.digest, resourceRoot: receipt.installPath, connectionRequirements: receipt.dependencies, createdAt: old?.createdAt ?? Date.now() }; });
                     manager.finalizeSkillImport(receipt);
@@ -306,7 +307,7 @@ export class IntegrationService {
                 const state = this.store.snapshot();
                 return { type: 'market', entries: entries.map(entry => {
                         const blueprint = entry.manifest ?? {}, type = blueprint.type as ConnectionDraft['type'];
-                        return { id: entry.id, kind: entry.kind, name: entry.name, description: entry.description, publisher: entry.publisher, version: entry.version, permissions: entry.permissions, available: entry.available, unavailableReason: entry.unavailableReason,
+                        return { id: entry.id, kind: entry.kind, category: entry.category, capabilities: Array.isArray(blueprint.skills) ? blueprint.skills.flatMap((item: unknown) => { const skill = item as { name?: unknown; description?: unknown }; return skill && typeof skill.name === 'string' && typeof skill.description === 'string' ? [{ name: skill.name, description: skill.description }] : [] }) : [], name: entry.name, description: entry.description, publisher: entry.publisher, version: entry.version, permissions: entry.permissions, available: entry.available, unavailableReason: entry.unavailableReason,
                             installed: Object.values(state.plugins).some(p => p.sourceId === entry.sourceId && p.packageId === blueprint.id && compareVersions(p.version, entry.version) >= 0 && (!p.ownerAccountId || p.ownerAccountId === this.owner())),
                             ...(['app', 'tool'].includes(entry.kind) && ['api', 'mcp-http', 'mcp-stdio', 'google-calendar', 'notion'].includes(type) ? { blueprint: { ...emptyConnectionDraft(type), name: entry.name, authType: type === 'notion' ? 'bearer' as const : 'none' as const, url: typeof blueprint.url === 'string' ? blueprint.url : '', command: typeof blueprint.command === 'string' ? blueprint.command : '', args: typeof blueprint.args === 'string' ? blueprint.args : '', clientId: typeof blueprint.clientId === 'string' ? blueprint.clientId : '' } } : {}) };
                     }) };
@@ -604,7 +605,13 @@ export class IntegrationService {
             for (const c of Object.values(state.connections))
                 if (c.ownerAccountId === owner) {
                     const tools = Object.values(state.tools).filter(tool => tool.connectionId === c.id);
-                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: rowStatus(c), source: c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: true, removable: true, connectionType: this.draft(c).type, toolCount: tools.length, tools: tools.map(tool => ({ id: tool.id, name: tool.name, description: tool.description, allowed: c.toolGrants.includes(tool.id) })) });
+                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: rowStatus(c), source: c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: true, removable: true, connectionType: this.draft(c).type,
+                        connectionSummary: {
+                            workspaceLabel: c.workspaceGrant.mode === 'all-owned' ? '当前账号的所有工作区' : c.workspaceGrant.workspaceIds.length ? `已选择 ${c.workspaceGrant.workspaceIds.length} 个工作区` : '未选择工作区',
+                            authLabel: c.providerId === 'google-calendar' ? `OAuth 2.0 · ${c.authState === 'connected' ? '已授权' : c.authState === 'expired' ? '授权已过期' : '待授权'}` : c.config.auth.type === 'none' ? '无需认证' : c.config.auth.credentialRef ? `${c.config.auth.type === 'bearer' ? 'Token' : 'API Key'} · 已配置` : '尚未配置凭据',
+                            dependencies: Object.entries(state.taskBindings).filter(([, bindings]) => bindings.some(binding => binding.entityId === c.id || binding.toolIds.some(id => tools.some(tool => tool.id === id)))).map(([task]) => `定时任务 ${task}`),
+                            healthDetail: c.lastError || (c.lastCheckedAt ? `上次检查：${new Date(c.lastCheckedAt).toLocaleString('zh-CN')}` : '尚未测试连接'),
+                        }, toolCount: tools.length, tools: tools.map(tool => ({ id: tool.id, name: tool.name, description: tool.description, allowed: c.toolGrants.includes(tool.id) })) });
                 }
             for (const skill of Object.values(state.skills))
                 if (!skill.ownerAccountId || skill.ownerAccountId === owner) {

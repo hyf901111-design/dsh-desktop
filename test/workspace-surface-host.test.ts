@@ -46,3 +46,20 @@ it('preserves surface through search overlay and panel toggle; only an opened se
 it('updates existing surfaces when the native body theme changes',async()=>{
  const w=new Window();windows.push(w);const doc=w.document as unknown as Document;const host=new WorkspaceSurfaceHost(doc);const surface=doc.createElement('section');host.register('integrations',surface);host.open('integrations');expect(surface.dataset.dark).toBe('false');doc.body.setAttribute('data-ds-dark-theme','');await w.happyDOM.whenAsyncComplete();expect(surface.dataset.dark).toBe('true');doc.body.removeAttribute('data-ds-dark-theme');await w.happyDOM.whenAsyncComplete();expect(surface.dataset.dark).toBe('false');host.dispose()
 })
+
+it('waits for native pane confirmation and ignores late acknowledgements after leaving', () => {
+    const w = new Window(); windows.push(w);
+    const doc = w.document as unknown as Document;
+    const host = new WorkspaceSurfaceHost(doc), surface = doc.createElement('section');
+    host.register('integrations', surface); host.open('integrations');
+    host.setRightPaneExpanded(true);
+    expect(host.isRightPaneExpanded()).toBe(false);
+    expect(doc.body.dataset.workspaceRightExpanded).not.toBe('true');
+    w.dispatchEvent(new w.CustomEvent('sherlock:workspace-panel-state', {detail:{surface:'integrations',open:true}}));
+    expect(host.isRightPaneExpanded()).toBe(true);
+    expect(doc.body.dataset.workspaceRightExpanded).toBe('true');
+    host.close('integrations');
+    w.dispatchEvent(new w.CustomEvent('sherlock:workspace-panel-state', {detail:{surface:'integrations',open:false}}));
+    expect(doc.body.hasAttribute('data-workspace-right-expanded')).toBe(false);
+    host.dispose();
+});

@@ -975,7 +975,7 @@ function patchFigmaPanelDefaultWidth(source) {
 function patchFigmaCompactPanel(source) {
   const marker = '/* odyssey:compact-independent-panel:20260912 */'
   const legacyMarker = '/* odyssey:compact-panel:20260912 */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchIntegrationWorkspaceControls(source)
   const start=source.indexOf('function Sidebar(props) {'), end=source.indexOf('\n\t\t//#endregion',start)
   if (start < 0 || end < 0) throw new Error('Missing compact sidebar boundary')
   let part=source.slice(start,end)
@@ -1078,6 +1078,21 @@ function patchConversationTabIcon(source) {
 
 // Integration management uses the native right pane temporarily. The conversation's
 // stored panel visibility, tabs and drafts survive leaving this workspace surface.
+function patchIntegrationWorkspaceControls(source) {
+  const marker = '/* sherlock:integration-workspace-controls:v2 */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('function Sidebar(props) {'), end = source.indexOf('\n\t\t//#endregion', start)
+  if (start < 0 || end < 0) throw new Error('Integration workspace Sidebar controls boundary missing')
+  let part = source.slice(start, end)
+  part = replaceExact(part, '"data-scheduled-panel": scheduledPanel.active || void 0,', `${marker}
+                "data-workspace-panel": workspacePanel.active ? 'integrations' : void 0,
+                "data-scheduled-panel": scheduledPanel.active || void 0,`, 'integration native pane control ownership')
+  for (const key of ['label', '"aria-label"']) {
+    part = replaceExact(part, `${key}: state.panelOpen ? t("collapse") : t("expand"),`, `${key}: workspacePanel.active ? (state.panelOpen ? '收起右侧屏' : '展开右侧屏') : state.panelOpen ? t("collapse") : t("expand"),`, 'integration native pane control label')
+  }
+  return source.slice(0, start) + part + source.slice(end)
+}
+
 function patchIntegrationWorkspacePanel(source) {
   const marker = '/* sherlock:integration-workspace-panel:v1 */'
   if (source.includes(marker)) return source
@@ -1104,7 +1119,7 @@ function patchIntegrationWorkspacePanel(source) {
   part=replaceExact(part, '(!scheduledPanel.active && sessionId === void 0)', '(!scheduledPanel.active && !workspacePanel.active && sessionId === void 0)', 'integration pane without a session')
   part=replaceExact(part, 'const showBottomToggle = !scheduledPanel.active && !narrow', 'const showBottomToggle = !scheduledPanel.active && !workspacePanel.active && !narrow', 'integration right-only pane')
   part=replaceExact(part, '} else if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);', '} else if (workspacePanel.active) setWorkspacePanel(value => ({...value,open:!value.open})); else if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);', 'integration native toggle')
-  return source.slice(0,start)+part+source.slice(end)
+  return patchIntegrationWorkspaceControls(source.slice(0,start)+part+source.slice(end))
 }
 
 function patchScheduledGlobalPanel(source) {
