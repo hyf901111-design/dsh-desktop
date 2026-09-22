@@ -1,17 +1,24 @@
 import { afterEach, expect, it } from 'vitest'
 import { createServer } from 'node:http'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
+import { manifestDigest } from '../src/main/integrations/manifest'
 import { IntegrationService } from '../src/main/integrations/service'
 import { emptyConnectionDraft, type IntegrationCommand, type IntegrationRow } from '../src/shared/integration-ui'
 const roots: string[] = [], services: IntegrationService[] = []
 const encryption = { isEncryptionAvailable: () => true, encryptString: (s: string) => Buffer.from(s), decryptString: (b: Buffer) => b.toString() }
-async function create(getOwnerId = () => 'owner') {
+async function create(getOwnerId = () => 'owner', withSkillFixture = false) {
   const root = await mkdtemp(join(tmpdir(), 'ework-client-flow-')); roots.push(root)
-  const service = await IntegrationService.open({ root, encryption, getOwnerId, bundledCatalogRoot: resolve('build/integration-catalog'), approveWrite: async () => true })
+  let bundledCatalogRoot = resolve('build/integration-catalog')
+  if (withSkillFixture) {
+    bundledCatalogRoot = join(root, 'test-catalog'); await mkdir(bundledCatalogRoot)
+    const manifest = { schemaVersion: 1, id: 'test.catalog.skill', name: '市场测试技能', description: '仅用于隔离验收', version: '1.0.0', skills: [{ id: 'summary', name: '市场测试技能', description: '验收摘要', files: { 'SKILL.md': '---\nname: 市场测试技能\ndescription: 验收摘要\n---\n基于已提供资料编写验收摘要。' } }] }
+    await writeFile(join(bundledCatalogRoot, 'catalog.json'), JSON.stringify({ schemaVersion: 1, entries: [{ id: 'test-skill', kind: 'skill', name: manifest.name, description: manifest.description, publisher: 'Test fixture', version: '1.0.0', permissions: [], manifest, digest: manifestDigest(manifest) }] }))
+  }
+  const service = await IntegrationService.open({ root, encryption, getOwnerId, bundledCatalogRoot, approveWrite: async () => true })
   services.push(service); return service
 }
 async function mutate(service: IntegrationService, command: object, revision = service.store.snapshot().revision) {
@@ -49,14 +56,14 @@ it('connects a user API, discovers the declared tool, invokes it and denies it a
 })
 
 it('installs a real market skill and preserves independent copies for two accounts', async () => {
-  let owner = 'one'; const service = await create(() => owner)
+  let owner = 'one'; const service = await create(() => owner, true)
   const market = await service.request({ type: 'market', kind: 'skill' }); if (market.type !== 'market') throw Error('Wrong market')
   const entry = market.entries[0]!
   const first = await mutate(service, { type: 'install', entryId: entry.id })
   const firstSkill = await row(service)
   expect(firstSkill.tab).toBe('skills')
   const content = await service.readSkill({ id: firstSkill.id, revision: firstSkill.revision, context: { sessionId: 's', rootSessionId: 's', workspaceId: 'w', ownerAccountId: owner, runtimeEpoch: service.runtimeEpoch, unattended: false } })
-  expect(content.content).toContain('周报')
+  expect(content.content).toContain('验收摘要')
   owner = 'two'; service.rotateIdentity()
   await expect(service.request({ type: 'operation', id: first.id })).rejects.toMatchObject({ code: 'ACCESS_DENIED' })
   await mutate(service, { type: 'install', entryId: entry.id })
@@ -121,13 +128,13 @@ it('does not return delayed adapter results after identity and epoch revocation'
 })
 
 it('removes market-skill package ownership so the same skill can be reinstalled', async () => {
-  const service = await create()
-  await mutate(service, { type: 'install', entryId: 'bundled:weekly-summary' })
+  const service = await create(undefined, true)
+  await mutate(service, { type: 'install', entryId: 'bundled:test-skill' })
   const skill = await row(service)
   await mutate(service, { type: 'uninstall', kind: 'skill', id: skill.id }, skill.revision)
   expect(Object.keys(service.store.snapshot().plugins)).toHaveLength(0)
   const market = await service.request({ type: 'market', kind: 'skill' })
-  expect(market.type === 'market' && market.entries.find(entry => entry.id === 'bundled:weekly-summary')?.installed).toBe(false)
-  await mutate(service, { type: 'install', entryId: 'bundled:weekly-summary' })
-  expect((await row(service)).name).toBe('周报整理')
+  expect(market.type === 'market' && market.entries.find(entry => entry.id === 'bundled:test-skill')?.installed).toBe(false)
+  await mutate(service, { type: 'install', entryId: 'bundled:test-skill' })
+  expect((await row(service)).name).toBe('市场测试技能')
 })
