@@ -12,9 +12,9 @@ const remoteDocument = () => ({ schemaVersion: 1, entries: ['remote-research', '
 }) });
 const roots: string[] = [];
 afterEach(async () => { network.fetch.mockReset(); await Promise.all(roots.splice(0).map(path => rm(path, { recursive: true, force: true }))); });
-it('keeps unaccepted plugin and app markets empty while retaining skill resources and tool blueprints', async () => {
+it('keeps unaccepted plugin, app and skill markets empty while retaining resources and tool blueprints', async () => {
     const catalog = new IntegrationCatalog({ bundledRoot: join(process.cwd(), 'build/integration-catalog'), clientVersion: '1.0.6' });
-    for (const kind of ['tool', 'skill'] as const) {
+    for (const kind of ['tool'] as const) {
         const entries = await catalog.list(kind, []);
         expect(entries.length).toBeGreaterThan(0);
         for (const entry of entries) {
@@ -24,12 +24,12 @@ it('keeps unaccepted plugin and app markets empty while retaining skill resource
             expect((await catalog.get(entry.id, [])).id).toBe(entry.id);
         }
     }
-    expect(await catalog.list('plugin', [])).toEqual([]);
-    expect(await catalog.list('app', [])).toEqual([]);
-    for (const id of ['research-assistant', 'office-workflows', 'notion', 'google-calendar'])
+    for (const kind of ['plugin', 'app', 'skill'] as const) expect(await catalog.list(kind, [])).toEqual([]);
+    expect((await catalog.list('tool', [])).map(entry => entry.id)).toEqual(['bundled:custom-api','bundled:remote-mcp','bundled:local-mcp']);
+    for (const id of ['research-assistant', 'office-workflows', 'notion', 'google-calendar', 'weekly-summary', 'meeting-notes'])
         await expect(catalog.get(`bundled:${id}`, [])).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    expect(JSON.stringify((await catalog.list('skill', []))[0]!.manifest)).toContain('SKILL.md');
-    expect(await readFile(join(process.cwd(), 'build/integration-catalog/skills/research-report/SKILL.md'), 'utf8')).toContain('研究报告');
+    for (const id of ['research-report', 'weekly-summary', 'meeting-notes'])
+        expect(await readFile(join(process.cwd(), 'build/integration-catalog/skills', id, 'SKILL.md'), 'utf8')).toMatch(/^---\n/);
     expect(network.fetch).not.toHaveBeenCalled();
 });
 it('rejects non-HTTPS, embedded credentials and untrusted remote sources before fetching', async () => {
