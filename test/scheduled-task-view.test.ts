@@ -346,3 +346,84 @@ it('ignores refresh results from a closed view and does not restart its polling'
  await reopening
  expect(vi.getTimerCount()).toBe(0)
 })
+
+it('shares one More menu and preserves the scheduled draft through the integrations workspace', async () => {
+  const { WorkspaceSurfaceHost } = await import('../src/preload/workspace-surface-host')
+  const { IntegrationView } = await import('../src/preload/integrations/view')
+  const w = new Window(); windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver);vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><div class="hHd-Xa_newSessionGroup"></div></aside><main class="pI_x6G_centerCol"><textarea>对话原稿</textarea></main><div data-scheduled-panel-slot></div>'
+  const host = new WorkspaceSurfaceHost(doc)
+  const integrations = new IntegrationView(doc,{request:async()=>({type:'snapshot',snapshot:{revision:0,rows:[]}})},host);integrations.mount()
+  const scheduled = new ScheduledTaskView(doc,{list:async()=>[],workspaces:async()=>[],save:vi.fn(),action:vi.fn()},host);scheduled.mount()
+  await scheduled.open();doc.querySelector<HTMLButtonElement>('.st-new')!.click()
+  const prompt=doc.querySelector<HTMLTextAreaElement>('.st-prompt')!;prompt.value='定时任务未提交草稿';prompt.dispatchEvent(new w.Event('input',{bubbles:true}) as unknown as Event)
+  doc.querySelector<HTMLButtonElement>('.st-more')!.click()
+  expect(doc.querySelectorAll('.st-more')).toHaveLength(1)
+  const plugin=Array.from(doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]')).find(button=>button.textContent?.includes('插件'))
+  expect(plugin).toBeDefined();plugin!.click();await Promise.resolve();await Promise.resolve()
+  expect(doc.querySelector<HTMLElement>('.st-root')!.hidden).toBe(true)
+  expect(doc.body.hasAttribute('data-scheduled-page')).toBe(false)
+  doc.querySelector<HTMLButtonElement>('.ig-root [data-action=back]')!.click()
+  expect(doc.querySelector<HTMLElement>('.st-root')!.hidden).toBe(false)
+  expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')!.value).toBe('定时任务未提交草稿')
+  expect(doc.body.dataset.scheduledPage).toBe('true')
+  scheduled.close();integrations.dispose();host.dispose()
+})
+
+it('saves only explicitly selected tools and separately approved writes using backend revisions and schemas', async () => {
+  const w=new Window();windows.push(w);vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
+  const doc=w.document as unknown as Document;doc.body.innerHTML='<main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+  const save=vi.fn(async(input:import('../src/shared/scheduled-tasks').TaskInput)=>({...input,id:'new',state:'enabled' as const,nextRun:Date.now(),createdAt:Date.now(),runs:[]}))
+  const capabilities=[{entityId:'api-1',kind:'connection' as const,name:'业务 API',revision:7,available:true,workspaceIds:['w'],tools:[{id:'read',name:'读取资料',description:'只读',effect:'read' as const,schemaDigest:'a'.repeat(64),allowed:true},{id:'write',name:'写入资料',description:'更新记录',effect:'write' as const,schemaDigest:'b'.repeat(64),allowed:true},{id:'denied',name:'删除资料',description:'未授权',effect:'destructive' as const,schemaDigest:'c'.repeat(64),allowed:false}]}]
+  const view=new ScheduledTaskView(doc,{list:async()=>[],workspaces:async()=>[{workspaceId:'w',path:'/work'}],save,action:vi.fn()},undefined,{request:async()=>({type:'snapshot',snapshot:{revision:20,rows:[],taskCapabilities:capabilities}})})
+  view.mount();await view.open();doc.querySelector<HTMLButtonElement>('.st-new')!.click()
+  const entity=doc.querySelector<HTMLInputElement>('[data-capability="api-1"]')!;expect(entity).not.toBeNull();entity.click()
+  expect(doc.querySelectorAll('[data-task-tool]:checked')).toHaveLength(0)
+  doc.querySelector<HTMLInputElement>('[data-task-tool="read"]')!.click();doc.querySelector<HTMLInputElement>('[data-task-tool="write"]')!.click()
+  expect(doc.querySelector<HTMLInputElement>('[data-task-write="api-1"]')!.checked).toBe(false)
+  expect(doc.querySelector<HTMLInputElement>('[data-task-tool="denied"]')!.disabled).toBe(true)
+  doc.querySelector<HTMLInputElement>('[data-task-write="api-1"]')!.click()
+  const prompt=doc.querySelector<HTMLTextAreaElement>('.st-prompt')!;prompt.value='整理资料';prompt.dispatchEvent(new w.Event('input',{bubbles:true}) as unknown as Event)
+  doc.querySelector<HTMLButtonElement>('.st-save')!.click();for(let i=0;i<8;i++)await Promise.resolve()
+  expect(save.mock.calls[0]![0].integrationBindings).toEqual([{entityId:'api-1',kind:'connection',bindingRevision:7,toolIds:['read','write'],schemaDigests:{read:'a'.repeat(64),write:'b'.repeat(64)},allowWrite:true}])
+  view.close()
+})
+
+it('shows stale capability bindings and blocked runs without silently approving newer tool schemas', async () => {
+ const w=new Window();windows.push(w);vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
+ const doc=w.document as unknown as Document;doc.body.innerHTML='<main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+ const task:import('../src/shared/scheduled-tasks').ScheduledTask={id:'task',title:'业务早报',prompt:'读取资料',workspaceId:'w',schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-22'},notification:'always',state:'enabled',nextRun:Date.now(),createdAt:Date.now(),integrationBindings:[{entityId:'api-1',kind:'connection',bindingRevision:2,toolIds:['read'],schemaDigests:{read:'a'.repeat(64)},allowWrite:false}],runs:[{id:'blocked',startedAt:Date.now(),finishedAt:Date.now(),status:'blocked',error:'连接授权已变化'}]}
+ const save=vi.fn(async(input:import('../src/shared/scheduled-tasks').TaskInput)=>({...task,...input}))
+ const view=new ScheduledTaskView(doc,{list:async()=>[task],workspaces:async()=>[{workspaceId:'w',path:'/work'}],save,action:vi.fn()},undefined,{request:async()=>({type:'snapshot',snapshot:{revision:20,rows:[],taskCapabilities:[{entityId:'api-1',kind:'connection',name:'业务 API',revision:3,available:true,tools:[{id:'read',name:'读取资料',description:'新版接口',effect:'read',schemaDigest:'b'.repeat(64),allowed:true}]}]}})})
+ view.mount();await view.open();doc.querySelector<HTMLButtonElement>('.st-row-main')!.click()
+ expect(doc.querySelector('.st-status-label')!.textContent).toBe('等待恢复连接')
+ expect(doc.querySelector('.st-history-wrap')!.textContent).toContain('未执行：能力不可用')
+ expect(doc.querySelector('.st-capability-issues')!.textContent).toContain('配置或权限已变化')
+ doc.querySelector<HTMLButtonElement>('.st-save')!.click();for(let i=0;i<8;i++)await Promise.resolve()
+ expect(save.mock.calls[0]![0].integrationBindings?.[0]?.bindingRevision).toBe(2)
+ expect(save.mock.calls[0]![0].integrationBindings?.[0]?.schemaDigests.read).toBe('a'.repeat(64))
+ doc.querySelector<HTMLButtonElement>('[data-confirm-capability="api-1"]')!.click()
+ doc.querySelector<HTMLButtonElement>('.st-save')!.click();for(let i=0;i<8;i++)await Promise.resolve()
+ expect(save.mock.calls[1]![0].integrationBindings?.[0]?.bindingRevision).toBe(3)
+ expect(save.mock.calls[1]![0].integrationBindings?.[0]?.schemaDigests.read).toBe('b'.repeat(64))
+ view.close()
+})
+
+it('retains bindings when snapshot fails and prevents selecting a connection outside its workspace', async () => {
+  const w=new Window();windows.push(w);vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
+  const doc=w.document as unknown as Document;doc.body.innerHTML='<main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+  const request=vi.fn(async()=>({type:'snapshot' as const,snapshot:{revision:1,rows:[],taskCapabilities:[{entityId:'scoped',kind:'connection' as const,name:'团队接口',revision:1,available:true,workspaceIds:['other'],tools:[]},{entityId:'shared',kind:'skill' as const,name:'周报技能',revision:1,available:true,tools:[]}]}}))
+  const view=new ScheduledTaskView(doc,{list:async()=>[],workspaces:async()=>[{workspaceId:'w',path:'/work'}],save:vi.fn(),action:vi.fn()},undefined,{request})
+  view.mount();await view.open();doc.querySelector<HTMLButtonElement>('.st-new')!.click()
+  expect(doc.querySelector<HTMLInputElement>('[data-capability="scoped"]')!.disabled).toBe(true)
+  expect(doc.querySelector('.st-integration-wrap')!.textContent).toContain('此连接未授权给当前工作区')
+  doc.querySelector<HTMLInputElement>('[data-capability="shared"]')!.click()
+  request.mockRejectedValueOnce(new Error('暂时离线'))
+  await view.open()
+  expect(doc.querySelector<HTMLInputElement>('[data-capability="shared"]')!.checked).toBe(true)
+  expect(doc.querySelector('.st-capability-issues')!.textContent).toContain('暂时离线')
+  expect(doc.querySelector('.st-integration-wrap')!.textContent).toContain('已保存的授权不会自动变更')
+  view.close()
+})

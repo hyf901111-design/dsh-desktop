@@ -1,0 +1,66 @@
+diff --git a/node_modules/@deepseek-ai/dsh-skill/lib/index.js b/node_modules/@deepseek-ai/dsh-skill/lib/index.js
+--- a/node_modules/@deepseek-ai/dsh-skill/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-skill/lib/index.js
+@@ -122,6 +122,7 @@
+ 	layers = new ScopedLayers((scope) => new SkillLayer(scope), () => {
+ 		this.invalidateCache();
+ 	});
++	candidatePolicies = new Set();
+ 	collectCache = /* @__PURE__ */ new Map();
+ 	revision = 0;
+ 	nextProviderOrder = 0;
+@@ -144,6 +145,22 @@
+ 	* @returns the exact Cordis effect disposer that unregisters this provider;
+ 	*   composite effects may yield it directly to preserve teardown ordering.
+ 	*/
++	/** EWork source-scoped policy runs before rank resolution and again around cached loads. */
++	registerCandidatePolicy(policy) {
++		if (typeof policy !== "function") throw new TypeError("skill candidate policy must be a function");
++		return this.ctx.effect(() => {
++			this.candidatePolicies.add(policy);
++			this.invalidateCache();
++			return () => { this.candidatePolicies.delete(policy); this.invalidateCache(); };
++		});
++	}
++	async allowsCandidate(candidate, options) {
++		for (const policy of this.candidatePolicies) {
++			try { if (await waitWithAbort(Promise.resolve(policy(candidate, options)), options.signal) !== true) return false; }
++			catch (error) { if (options.signal?.aborted) throw error; return false; }
++		}
++		return true;
++	}
+ 	registerProvider(create) {
+ 		const lifecycle = new AbortController();
+ 		let registration;
+@@ -233,8 +250,10 @@
+ 	*/
+ 	async snapshot(options = {}) {
+ 		const collected = await this.collect(options);
++		const visible = [];
++		for (const entry of collected.entries.values()) if (await this.allowsCandidate(entry.candidate, options)) visible.push(entry);
+ 		return {
+-			skills: [...collected.entries.values()].map((entry) => toSummary(entry.candidate)).sort(compareSkillSummary),
++			skills: visible.map((entry) => toSummary(entry.candidate)).sort(compareSkillSummary),
+ 			complete: collected.cacheable
+ 		};
+ 	}
+@@ -252,9 +271,9 @@
+ 		const collected = await this.collect(options);
+ 		throwIfAborted(options.signal);
+ 		const match = collected.entries.get(name);
+-		if (match === void 0) return void 0;
++		if (match === void 0 || !await this.allowsCandidate(match.candidate, options)) return void 0;
+ 		const definition = await waitWithAbort(match.provider.get(match.candidate, options), options.signal);
+-		if (definition === void 0) return void 0;
++		if (definition === void 0 || !await this.allowsCandidate(match.candidate, options)) return void 0;
+ 		validateDefinition(definition);
+ 		if (definition.name !== match.candidate.name) {
+ 			this.invalidateEntry(match);
+@@ -315,6 +334,7 @@
+ 		const seen = /* @__PURE__ */ new Set();
+ 		const result = [];
+ 		for (const entry of collected.entries) {
++			if (!await this.allowsCandidate(entry.candidate, options)) continue;
+ 			const skill = entry.candidate;
+ 			if (seen.has(skill.name)) {
+ 				this.ctx.logger.warn(`skill "${skill.name}" from ${skill.source} ignored because a higher-priority skill already exists`);

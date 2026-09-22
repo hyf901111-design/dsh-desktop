@@ -6,6 +6,16 @@ import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 describe('bundled Harness package resolution', () => {
+  it('maps the managed integration runtime to app resources without a profile copy',async()=>{
+    const fixture=await mkdtemp(join(tmpdir(),'ework-bundled-integrations-'))
+    try{
+      const entry=join(fixture,'runtime.mjs'),runner=join(fixture,'runner.mjs')
+      await writeFile(entry,"export const source='managed-integrations'\n")
+      await writeFile(runner,"import {source} from 'dsh-integration-runtime'; console.log(source)\n")
+      const result=spawnSync(resolve('node_modules/node/bin/node'),['--expose-internals',resolve('build/harness-node-entry.mjs'),runner],{encoding:'utf8',env:{...process.env,DSH_DESKTOP_INTEGRATION_ENTRY:pathToFileURL(entry).href}})
+      expect(result.status,result.stderr).toBe(0);expect(result.stdout).toContain('managed-integrations')
+    }finally{await rm(fixture,{recursive:true,force:true})}
+  })
   it('maps the session-model search package to Sherlock app resources', async () => {
     const fixture = await mkdtemp(join(tmpdir(), 'sherlock-bundled-search-'))
     try {

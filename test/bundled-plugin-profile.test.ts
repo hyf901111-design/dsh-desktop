@@ -1,3 +1,6 @@
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { pathToFileURL } from 'node:url'
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -7,6 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { installBundledPluginProfile } from '../src/main/bundled-plugin-profile'
 import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
 import { patchSherlockOfficePreviewClient } from '../scripts/lib/patch-sherlock-office-preview.mjs'
+import { stripPptxResizePatch } from '../scripts/lib/pptx-resize-settle.mjs'
 
 const temporaryDirectories: string[] = []
 
@@ -64,7 +68,7 @@ afterEach(() => {
 
 describe('bundled Sherlock plugin profile', () => {
   it('prepares the bundled Office adapter reproducibly and fails closed on a drifted bundle', async () => {
-    const source = await readFile(
+    const source = stripPptxResizePatch(await readFile(
       path.resolve(
         import.meta.dirname,
         '..',
@@ -77,7 +81,9 @@ describe('bundled Sherlock plugin profile', () => {
         'client.js'
       ),
       'utf8'
-    )
+    ))
+    // The packaged fixture has a final PPT resize layer; Office's pinned hash
+    // deliberately validates its input before that independently reapplied layer.
     const patched = patchSherlockOfficePreviewClient(source)
 
     expect(patchSherlockOfficePreviewClient(patched)).toBe(patched)
@@ -124,6 +130,30 @@ describe('bundled Sherlock plugin profile', () => {
         'const inject = ["unexpected-office-api"];'
       ))).toThrow(/Office preview .*expected 1, found 0/u)
     }
+  })
+
+  it('reprepares the complete Office package byte-for-byte and rejects changes outside the resize layer', async () => {
+    const packaged = path.resolve(import.meta.dirname, '../build/sherlock-plugin-profile/vendor/@huanlin/dsh-plugin-better-sidebar-plugin-office')
+    const fixture = await temporaryDirectory('sherlock-office-package')
+    await mkdir(path.join(fixture, 'lib'))
+    await writeFile(path.join(fixture, 'package.json'), await readFile(path.join(packaged, 'package.json')))
+    const original = await readFile(path.join(packaged, 'lib/client.js'), 'utf8')
+    const clientPath = path.join(fixture, 'lib/client.js')
+    await writeFile(clientPath, original)
+    // Run the real prepare helper under Node: Vitest transforms function.toString()
+    // in the resize generator and inserts harmless semicolons into its payload.
+    const moduleUrl = pathToFileURL(path.resolve(import.meta.dirname, '../scripts/lib/patch-sherlock-office-preview.mjs')).href
+    const prepare = () => promisify(execFile)(process.execPath, ['--input-type=module', '-e',
+      `import {patchSherlockOfficePreviewPackage} from ${JSON.stringify(moduleUrl)}; await patchSherlockOfficePreviewPackage(process.argv[1]);`, fixture])
+    await prepare()
+    const once = await readFile(clientPath, 'utf8')
+    expect(once).toBe(original)
+    await prepare()
+    expect(await readFile(clientPath, 'utf8')).toBe(once)
+    const drifted = `${once}\n/* unexpected vendor drift */\n`
+    await writeFile(clientPath, drifted)
+    await expect(prepare()).rejects.toThrow(/fixed client fingerprint/u)
+    expect(await readFile(clientPath, 'utf8')).toBe(drifted)
   })
 
   it('keeps Sherlock pinned sidebar tabs first, fixed, and session-targetable', async () => {
@@ -293,6 +323,7 @@ describe('bundled Sherlock plugin profile', () => {
     expect(policy.bundles).not.toContain('dsh-memory-evolve')
     expect(policy.bundles).not.toContain('@vectorize-io/hindsight-coding-agents')
     expect(policy.runtimePackages).toEqual([
+      'dsh-integration-runtime',
       'dsh-desktop-market-installer',
       'dsh-fund-research-runtime',
       'dsh-research-task-runtime',

@@ -5,6 +5,7 @@ import { Window } from 'happy-dom'
 import { createOfficeSpreadsheetTheme } from '../scripts/lib/office-spreadsheet-theme.mjs'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { patchSherlockOfficePreviewClient } from '../scripts/lib/patch-sherlock-office-preview.mjs'
+import { patchPptxResize, stripPptxResizePatch } from '../scripts/lib/pptx-resize-settle.mjs'
 
 let browser, bootstrap, client
 beforeAll(async () => {
@@ -12,7 +13,7 @@ beforeAll(async () => {
   const { chromium } = await import(/* @vite-ignore */ pathToFileURL(runtime).href)
   browser = await chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
   bootstrap = (await build({ stdin: { contents: `import * as r from 'react';import * as d from 'react-dom';import * as c from 'react-dom/client';import * as j from 'react/jsx-runtime';window.req=id=>({'react':r,'react-dom':d,'react-dom/client':c,'react/jsx-runtime':j,util:{}}[id]);`, resolveDir: process.cwd() }, bundle: true, write: false, platform: 'browser', format: 'iife' })).outputFiles[0].text
-  client = patchSherlockOfficePreviewClient(readFileSync('build/sherlock-plugin-profile/vendor/@huanlin/dsh-plugin-better-sidebar-plugin-office/lib/client.js', 'utf8'))
+  client = patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(readFileSync('build/sherlock-plugin-profile/vendor/@huanlin/dsh-plugin-better-sidebar-plugin-office/lib/client.js', 'utf8'))))
   // Instrument the actual installed engine, never replace createUniver or its renderer.
   client = client.replace('univerRef.current = univer;', `univerRef.current = univer; window.engineCreations=(window.engineCreations||0)+1; window.testEngine={univer,api:univerAPI,engine:{...univerCore,...spreadsheetEngine}};
     workbookData.sheets['sheet-0'].cellData[0][1].s={bg:{rgb:'#FFFFFF'},cl:{rgb:'#000000'}};

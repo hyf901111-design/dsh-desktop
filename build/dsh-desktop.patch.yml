@@ -44,6 +44,9 @@
     - id: sherlock-fund-research-runtime
       name: dsh-fund-research-runtime
 
+    - id: ework-integration-runtime
+      name: dsh-integration-runtime
+
 # dsh-market normally offers to restart its own Node process after mutations.
 # The desktop shell has the real lifecycle authority, so keep that behavior off
 # whenever the optional plugin is present in the composed profile.

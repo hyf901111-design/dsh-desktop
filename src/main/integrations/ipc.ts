@@ -1,6 +1,6 @@
 import {assertTrustedMainWindowEvent,type TrustedWindow,type TrustedWindowEvent} from '../ipc-trust'
 import {IntegrationError} from '../../shared/integrations'
-const commands=new Set(['snapshot','market','set-enabled','dependencies','uninstall','disconnect','save-connection','connection-draft','probe','compile-openapi','grant-tools','preview-skill','import-skill','install','create-plugin','add-source','authorize','operation','cancel-operation'])
+const commands=new Set(['snapshot','market','set-enabled','dependencies','uninstall','disconnect','save-connection','connection-draft','probe','compile-openapi','grant-tools','preview-skill','import-skill','install','create-plugin','add-source','authorize','operation','cancel-operation','rollback-plugin','legacy-preview','migrate-legacy-skills'])
 export function registerIntegrationIpc(
   ipc:{handle(channel:string,handler:(event:TrustedWindowEvent,command:unknown)=>Promise<unknown>):unknown},
   getWindow:()=>TrustedWindow|undefined,

@@ -14,6 +14,6 @@ it('deduplicates repeated request IDs before starting external work and persists
     expect(first.operationId).toBe(second.operationId)
     await manager.wait(first.operationId)
     expect(calls).toBe(1)
-    expect((await IntegrationStore.open(root)).snapshot().operations[first.operationId].phase).toBe('succeeded')
+    expect((await IntegrationStore.open(root)).snapshot().operations[first.operationId]?.phase).toBe('succeeded')
   } finally {await rm(root,{recursive:true,force:true})}
 })

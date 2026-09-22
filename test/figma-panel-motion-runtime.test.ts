@@ -156,6 +156,36 @@ async function mountStatefulSidebar(desktop = false, noSession = false) {
 }
 
 describe('Figma panel production lifecycle', () => {
+  it('connects the integrations workspace toggle to real shell geometry and restores native state', async () => {
+    const mounted=await mountStatefulSidebar(true)
+    try {
+      const {browserWindow,host,store}=mounted
+      const before=structuredClone(store.getSnapshot().state)
+      await act(async()=>{browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:workspace-surface-change',{detail:{surface:'integrations',active:true}}))})
+      await act(async()=>{browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:workspace-panel',{detail:{surface:'integrations',open:false}}))})
+      expect(host.querySelector('[data-dsh-panel-host]')!.getAttribute('data-odyssey-panel-right')).toBe('closed')
+      expect(browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width')).toBe('0px')
+      await act(async()=>{browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:workspace-panel',{detail:{surface:'integrations',open:true}}))})
+      expect(host.querySelector('[data-dsh-panel-host]')!.getAttribute('data-odyssey-panel-right')).toBe('open')
+      expect(Number.parseFloat(browserWindow.document.documentElement.style.getPropertyValue('--dsh-sidebar-width'))).toBeGreaterThan(0)
+      expect(store.getSnapshot().state).toEqual(before)
+      await act(async()=>{browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:workspace-surface-change',{detail:{active:false}}))})
+      expect(store.getSnapshot().state).toEqual(before)
+    } finally {await mounted.restore()}
+  })
+  it('opens and closes the integrations pane without creating a conversation when no session exists', async () => {
+    const mounted=await mountStatefulSidebar(true,true)
+    try {
+      const {browserWindow,host,store}=mounted
+      await act(async()=>{browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:workspace-surface-change',{detail:{surface:'integrations',active:true}}))})
+      await act(async()=>{browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:workspace-panel',{detail:{surface:'integrations',open:true}}))})
+      expect(host.querySelector('[data-dsh-panel-host]')!.getAttribute('data-odyssey-panel-right')).toBe('open')
+      expect(store.getSnapshot().sessionId).toBeUndefined()
+      expect(store.getSnapshot().state).toBeUndefined()
+      await act(async()=>{browserWindow.dispatchEvent(new browserWindow.CustomEvent('sherlock:workspace-surface-change',{detail:{active:false}}))})
+      expect(host.querySelector('#odyssey-right-workspace-panel')).toBeNull()
+    } finally {await mounted.restore()}
+  })
   it('opens the global shell without creating or selecting a session', async () => {
     const mounted = await mountStatefulSidebar(true, true)
     try {

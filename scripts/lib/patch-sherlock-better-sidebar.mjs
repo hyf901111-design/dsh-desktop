@@ -1076,10 +1076,41 @@ function patchConversationTabIcon(source) {
   return source.slice(0, start) + part + source.slice(end)
 }
 
+// Integration management uses the native right pane temporarily. The conversation's
+// stored panel visibility, tabs and drafts survive leaving this workspace surface.
+function patchIntegrationWorkspacePanel(source) {
+  const marker = '/* sherlock:integration-workspace-panel:v1 */'
+  if (source.includes(marker)) return source
+  const start=source.indexOf('function Sidebar(props) {'), end=source.indexOf('\n\t\t//#endregion',start)
+  if(start<0 || end<0)throw new Error('Integration workspace Sidebar boundary missing')
+  let part=source.slice(start,end)
+  part=replaceExact(part, 'const [scheduledPanel, setScheduledPanel]', `${marker}
+      const [workspacePanel, setWorkspacePanel] = (0, react.useState)(() => ({active:document.body.dataset.workspaceSurface === 'integrations', open:document.body.dataset.workspaceRightExpanded === 'true'}));
+      (0, react.useEffect)(() => {
+        const activate = event => setWorkspacePanel(value => ({...value, active:event.detail?.active === true && event.detail?.surface === 'integrations'}));
+        const toggle = event => { if(event.detail?.surface === 'integrations' && typeof event.detail?.open === 'boolean') setWorkspacePanel(value => ({...value, open:event.detail.open})); };
+        window.addEventListener('sherlock:workspace-surface-change',activate);
+        window.addEventListener('sherlock:workspace-panel',toggle);
+        return () => { window.removeEventListener('sherlock:workspace-surface-change',activate); window.removeEventListener('sherlock:workspace-panel',toggle); };
+      }, []);
+      (0, react.useEffect)(() => {
+        if(workspacePanel.active)window.dispatchEvent(new CustomEvent('sherlock:workspace-panel-state', {detail:{surface:'integrations',open:workspacePanel.open}}));
+      }, [workspacePanel.active,workspacePanel.open]);
+      const [scheduledPanel, setScheduledPanel]`, 'integration pane lifecycle')
+  part=replaceExact(part, 'width:nativeSnapshot.state?.width ?? scheduledWidth}} : nativeSnapshot;', 'width:nativeSnapshot.state?.width ?? scheduledWidth}} : workspacePanel.active ? {...nativeSnapshot,state:{...(nativeSnapshot.state ?? emptyScheduledState),panelOpen:workspacePanel.open,bottomOpen:false,width:nativeSnapshot.state?.width ?? scheduledWidth}} : nativeSnapshot;', 'integration pane state')
+  part=replaceExact(part, '!scheduledPanel.active && snapshot.state && compactPanel', '!scheduledPanel.active && !workspacePanel.active && snapshot.state && compactPanel', 'integration compact state')
+  part=replaceExact(part, '(!scheduledPanel.active && compactPanel ? compactPanelOpen : snapshot.state?.panelOpen === true)', '(!scheduledPanel.active && !workspacePanel.active && compactPanel ? compactPanelOpen : snapshot.state?.panelOpen === true)', 'integration pane occupancy')
+  part=replaceExact(part, 'narrow, compactPanel, compactPanelOpen, scheduledPanel.active,', 'narrow, compactPanel, compactPanelOpen, scheduledPanel.active, workspacePanel.active,', 'integration pane geometry dependencies')
+  part=replaceExact(part, '(!scheduledPanel.active && sessionId === void 0)', '(!scheduledPanel.active && !workspacePanel.active && sessionId === void 0)', 'integration pane without a session')
+  part=replaceExact(part, 'const showBottomToggle = !scheduledPanel.active && !narrow', 'const showBottomToggle = !scheduledPanel.active && !workspacePanel.active && !narrow', 'integration right-only pane')
+  part=replaceExact(part, '} else if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);', '} else if (workspacePanel.active) setWorkspacePanel(value => ({...value,open:!value.open})); else if (compactPanel) setCompactPanelOpen(value=>!value); else store.reduce(togglePanel);', 'integration native toggle')
+  return source.slice(0,start)+part+source.slice(end)
+}
+
 function patchScheduledGlobalPanel(source) {
   source = patchComponentNativeTabSelection(source)
   const marker = '/* sherlock:scheduled-global-panel:v1 */'
-  if (source.includes(marker)) return source.replaceAll("inert: scheduledPanel.active ? '' : void 0", "inert: scheduledPanel.active && !document.body.hasAttribute('data-scheduled-component') ? '' : void 0")
+  if (source.includes(marker)) return patchIntegrationWorkspacePanel(source.replaceAll("inert: scheduledPanel.active ? '' : void 0", "inert: scheduledPanel.active && !document.body.hasAttribute('data-scheduled-component') ? '' : void 0"))
   const start = source.indexOf('function Sidebar(props) {')
   const end = source.indexOf('\n\t\t//#endregion', start)
   let part = source.slice(start, end)
@@ -1123,7 +1154,7 @@ function patchScheduledGlobalPanel(source) {
                 inert: scheduledPanel.active && !document.body.hasAttribute('data-scheduled-component') ? '' : void 0,`, 'preserve inactive workspace content', 2)
   part = replaceExact(part, '!narrow && state.panelOpen && state.bottomOpen &&', `/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {"data-scheduled-panel-slot":true, hidden:!scheduledPanel.active}),
               !narrow && state.panelOpen && state.bottomOpen &&`, 'scheduled content slot')
-  return source.slice(0, start) + part + source.slice(end)
+  return patchIntegrationWorkspacePanel(source.slice(0, start) + part + source.slice(end))
 }
 
 export function patchBetterSidebarClient(source) {

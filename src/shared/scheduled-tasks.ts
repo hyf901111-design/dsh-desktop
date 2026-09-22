@@ -7,6 +7,7 @@ export type Schedule = {
 }
 export type ComponentTarget = { sessionId: string; nodeId: string; title: string; boardTitle: string }
 export type TaskInput = {
+  integrationBindings?: IntegrationBinding[]
   component?: ComponentTarget
   title: string
   prompt: string
@@ -18,7 +19,7 @@ export type TaskRun = {
   id: string
   startedAt: number
   finishedAt?: number
-  status: 'running' | 'success' | 'failed'
+  status: 'running' | 'success' | 'failed' | 'blocked'
   error?: string
   sessionId?: string
   rpcId?: string
@@ -74,6 +75,7 @@ export function validateTask(value: unknown): TaskInput {
     throw new Error('组件绑定无效')
   validateSchedule(v.schedule)
   return {
+    integrationBindings: validateIntegrationBindings(v.integrationBindings),
     title: v.title.trim(),
     prompt: v.prompt.trim(),
     workspaceId: v.workspaceId,
@@ -81,6 +83,36 @@ export function validateTask(value: unknown): TaskInput {
     notification: v.notification,
     ...(v.component ? { component: { sessionId: v.component.sessionId, nodeId: v.component.nodeId, title: v.component.title, boardTitle: v.component.boardTitle } } : {}),
   }
+}
+
+/** Task approval is copied and validated independently of mutable connection-wide grants. */
+export function validateIntegrationBindings(value: unknown): IntegrationBinding[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.length > 64) throw new Error('任务能力绑定无效（最多 64 项）')
+  const validId = (id: unknown): id is string => typeof id === 'string' && !!id.trim()
+    && id.length <= 512 && !/[\u0000-\u001f]/u.test(id) && !['__proto__', 'prototype', 'constructor'].includes(id)
+  const seen = new Set<string>()
+  return value.map(raw => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('任务能力绑定格式无效')
+    const item = raw as Record<string, unknown>
+    if (!validId(item.entityId) || !['connection', 'plugin', 'skill'].includes(String(item.kind))
+      || !Number.isSafeInteger(item.bindingRevision) || Number(item.bindingRevision) < 1
+      || typeof item.allowWrite !== 'boolean') throw new Error('任务能力绑定或批准版本无效')
+    const key = `${item.kind}:${item.entityId}`
+    if (seen.has(key)) throw new Error('任务能力绑定不能重复')
+    seen.add(key)
+    if (!Array.isArray(item.toolIds) || item.toolIds.length > 1000 || item.toolIds.some(id => !validId(id))
+      || new Set(item.toolIds).size !== item.toolIds.length) throw new Error('任务批准的工具列表无效')
+    const schema = item.schemaDigests
+    if (!schema || typeof schema !== 'object' || Array.isArray(schema)
+      || ![Object.prototype, null].includes(Object.getPrototypeOf(schema))) throw new Error('任务工具版本无效')
+    const digests = schema as Record<string, unknown>
+    if (Object.keys(digests).length !== item.toolIds.length || item.toolIds.some(id => !Object.hasOwn(digests, id) || typeof digests[id] !== 'string' || !/^[a-f0-9]{64}$/u.test(digests[id] as string))) {
+      throw new Error('任务工具版本必须与批准的工具一一对应')
+    }
+    return { entityId: item.entityId, kind: item.kind as IntegrationBinding['kind'], bindingRevision: item.bindingRevision as number,
+      toolIds: [...item.toolIds] as string[], schemaDigests: Object.fromEntries(item.toolIds.map(id => [id, digests[id]])) as Record<string, string>, allowWrite: item.allowWrite }
+  })
 }
 export function validateSchedule(s: Schedule): void {
   if (
@@ -185,3 +217,4 @@ export function timezoneLabel(zone: string): string {
     )[zone] || zone
   )
 }
+import type { IntegrationBinding } from './integrations'

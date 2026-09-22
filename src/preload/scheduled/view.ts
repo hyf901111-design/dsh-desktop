@@ -1,3 +1,6 @@
+import type { IntegrationBridge, TaskCapabilitySummary } from '../../shared/integration-ui'
+import type { IntegrationBinding } from '../../shared/integrations'
+import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import {
   nextRun,
   scheduleLabel,
@@ -32,7 +35,9 @@ const stateLabel = (t: ScheduledTask) =>
         ? '已完成'
         : t.runs[0]?.status === 'failed'
           ? '需要处理'
-          : '已开启'
+          : t.runs[0]?.status === 'blocked'
+            ? '等待恢复连接'
+            : '已开启'
 const upcomingRun = (time: number | null) => {
   if (time === null) return '无后续计划'
   const remaining = time - Date.now()
@@ -65,6 +70,11 @@ export class ScheduledTaskView {
   private query = ''
   private listSignature = ''
   private historySignature = ''
+  private capabilities: TaskCapabilitySummary[] = []
+  private capabilitiesLoaded = false
+  private capabilitiesError = ''
+  private capabilityRequest = 0
+  private capabilitySignature = ''
   private error = ''
   private busy = false
   private poll?: ReturnType<typeof setInterval>
@@ -75,6 +85,8 @@ export class ScheduledTaskView {
   constructor(
     private document: Document,
     private bridge: ScheduledTaskBridge,
+    private surfaceHost?: WorkspaceSurfaceHost,
+    private integrationsBridge?: IntegrationBridge,
   ) {}
   mount() {
     if (this.document.getElementById('sherlock-scheduled-style')) return
@@ -90,7 +102,10 @@ export class ScheduledTaskView {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'class', 'data-odyssey-panel-right'],
+      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right'],
+    })
+    this.document.addEventListener('sherlock:workspace-surface-change', () => {
+      if (this.root || this.componentMode) this.syncPanel()
     })
     this.document.addEventListener('pointerdown', this.outside)
     this.document.addEventListener('keydown', this.keyboard)
@@ -173,6 +188,7 @@ export class ScheduledTaskView {
       ''
     const channels = color.match(/\d+/g)?.map(Number)
     return (
+      this.document.body.hasAttribute('data-ds-dark-theme') ||
       el.dataset.theme === 'dark' ||
       el.classList.contains('dark') ||
       !!(channels && channels[0]! > 180)
@@ -194,6 +210,9 @@ export class ScheduledTaskView {
       this.menu
         ? this.closeMenu()
         : this.showMenu(more, [
+            ...(this.surfaceHost ? [{ label: '插件', run: () => {
+              this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
+            } }] : []),
             { label: '定时任务', icon: 'clock', run: () => void this.open() },
           ])
     zone.append(more)
@@ -213,7 +232,21 @@ export class ScheduledTaskView {
     if (this.root && this.root.dataset.dark !== dark) this.root.dataset.dark = dark
     if (this.detail && this.detail.dataset.dark !== dark) this.detail.dataset.dark = dark
   }
+  private surfaceActive() {
+    if (!this.surfaceHost) return true
+    const current = this.surfaceHost.current()
+    return current?.surface === 'scheduled' || (this.componentMode && !current)
+  }
   private syncPanel() {
+    if (!this.surfaceActive()) {
+      delete this.document.body.dataset.scheduledPage
+      delete this.document.body.dataset.scheduledDetail
+      if (this.componentMode) this.document.body.dataset.scheduledComponent = 'false'
+      if (this.detail) this.detail.style.display = 'none'
+      this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-panel', {detail:{active:false,open:false}}))
+      return
+    }
+    if (this.detail) this.detail.style.display = ''
     if (this.componentMode) this.document.body.dataset.scheduledComponent = String(this.componentVisible)
     else this.document.body.dataset.scheduledPage = 'true'
     this.document.body.dataset.scheduledDetail = String(this.detailOpen)
@@ -223,6 +256,7 @@ export class ScheduledTaskView {
     this.attachDetail()
   }
   private attachDetail() {
+    if (this.detail) this.detail.style.display = this.surfaceActive() ? '' : 'none'
     if (this.componentMode) this.attachComponentTab()
     const slot = this.document.querySelector('[data-scheduled-panel-slot]')
     if (slot && this.detail && this.detail.parentElement !== slot) slot.append(this.detail)
@@ -239,7 +273,11 @@ export class ScheduledTaskView {
       // The app frame's backdrop filter otherwise traps the handle below this surface.
       ;(this.document.querySelector('.pI_x6G_frame') || this.document.body).append(this.root)
     }
-    if (!this.background) {
+    if (this.surfaceHost) {
+      if (this.root && !this.root.dataset.workspaceSurface) this.surfaceHost.register('scheduled', this.root)
+      this.surfaceHost.open('scheduled')
+    }
+    if (!this.surfaceHost && !this.background) {
       this.background =
         this.document.querySelector<HTMLElement>('.pI_x6G_centerCol') ||
         undefined
@@ -271,7 +309,7 @@ export class ScheduledTaskView {
     this.componentVisible = true
     this.detailOpen = true
     try {
-      const tasks = await this.bridge.list()
+      const [tasks] = await Promise.all([this.bridge.list(), this.refreshCapabilities()])
       if (revision !== this.viewRevision || !this.componentMode) return
       this.tasks = tasks
       const task = this.tasks.find(t => t.component?.sessionId === target.sessionId && t.component.nodeId === target.nodeId)
@@ -311,6 +349,10 @@ export class ScheduledTaskView {
       }, true)
     }
   }
+  resetIntegrationIdentity() {
+    this.close();this.capabilityRequest++;this.capabilities=[];this.capabilitiesLoaded=false;this.capabilitiesError='';
+    this.draft=undefined;this.draftId=undefined;this.selected=undefined;this.tasks=[];this.error='';this.busy=false;this.pendingActions.clear();
+  }
   close() {
     this.viewRevision++
     this.componentMode = false
@@ -333,6 +375,7 @@ export class ScheduledTaskView {
     this.closeMenu()
     this.root?.remove()
     this.root = undefined
+    this.surfaceHost?.close('scheduled')
     clearInterval(this.poll)
   }
   private async refresh() {
@@ -342,6 +385,7 @@ export class ScheduledTaskView {
       const [tasks, workspaces] = await Promise.all([
         this.bridge.list(),
         this.componentMode ? Promise.resolve([]) : this.bridge.workspaces(),
+        this.refreshCapabilities(),
       ])
       if (revision !== this.viewRevision || request !== this.refreshRequest) return
       this.tasks = tasks
@@ -352,6 +396,97 @@ export class ScheduledTaskView {
       if (revision !== this.viewRevision || request !== this.refreshRequest) return
       this.showError(e)
     }
+  }
+  private async refreshCapabilities() {
+    if (!this.integrationsBridge) return
+    const revision = this.viewRevision, request = ++this.capabilityRequest
+    try {
+      const reply = await this.integrationsBridge.request({type: 'snapshot'})
+      if (revision !== this.viewRevision || request !== this.capabilityRequest) return
+      if (reply.type !== 'snapshot' || !reply.snapshot.taskCapabilities) throw new Error('当前连接服务暂未提供任务授权信息')
+      this.capabilities = reply.snapshot.taskCapabilities
+      this.capabilitiesLoaded = true
+      this.capabilitiesError = ''
+    } catch (error) {
+      if (revision !== this.viewRevision || request !== this.capabilityRequest) return
+      this.capabilitiesError = error instanceof Error ? error.message : '无法读取连接与工具授权'
+    }
+  }
+  private capabilityUnavailable(cap: TaskCapabilitySummary) {
+    if (!cap.available) return cap.unavailableReason || '此能力当前不可用，请在插件页面检查连接与授权'
+    if (this.draft?.workspaceId && cap.workspaceIds && !cap.workspaceIds.includes(this.draft.workspaceId)) return '此连接未授权给当前工作区'
+    return ''
+  }
+  private bindingIssues(binding: IntegrationBinding, cap?: TaskCapabilitySummary) {
+    if (!this.capabilitiesLoaded || this.capabilitiesError) return ['暂时无法核验此绑定；已保存的授权不会自动变更']
+    if (!cap) return ['能力已移除或不属于当前账号，请重新选择']
+    const issues: string[] = []
+    const unavailable = this.capabilityUnavailable(cap)
+    if (unavailable) issues.push(unavailable)
+    if (binding.bindingRevision !== cap.revision) issues.push('配置或权限已变化，请确认当前工具版本')
+    for (const id of binding.toolIds) {
+      const tool = cap.tools.find(item => item.id === id)
+      if (!tool) issues.push(`工具 ${id} 已移除，请取消选择`)
+      else if (!tool.allowed) issues.push(`${tool.name}：${tool.unavailableReason || '尚未授权或授权已撤销'}`)
+      else if (binding.schemaDigests[id] !== tool.schemaDigest) issues.push(`${tool.name}：工具定义已变化，需重新确认`)
+      else if (tool.effect !== 'read' && !binding.allowWrite) issues.push(`${tool.name}：尚未允许无人值守写入`)
+    }
+    return issues
+  }
+  private renderCapabilities() {
+    const wrap = this.detail?.querySelector<HTMLElement>('.st-integration-wrap'), draft = this.draft
+    if (!wrap || !draft) return
+    const bindings = draft.integrationBindings || []
+    const signature = JSON.stringify([bindings, this.capabilities, this.capabilitiesLoaded, this.capabilitiesError, draft.workspaceId])
+    if (signature === this.capabilitySignature) return
+    this.capabilitySignature = signature
+    const wasOpen = wrap.querySelector('details')?.open ?? bindings.length > 0
+    const candidates = [...this.capabilities]
+    const missing = bindings.filter(binding => !candidates.some(cap => cap.entityId === binding.entityId && cap.kind === binding.kind))
+    const bindingFor = (cap: TaskCapabilitySummary) => bindings.find(binding => binding.entityId === cap.entityId && binding.kind === cap.kind)
+    const effectLabel = {read:'只读',write:'写入',destructive:'删除 / 破坏性操作',unknown:'影响未知'}
+    wrap.innerHTML = `<details class="st-capabilities" ${wasOpen ? 'open' : ''}><summary><span class="st-chevron" aria-hidden="true"></span>连接与工具授权<span class="st-capability-count">${bindings.length ? `已选择 ${bindings.length} 项` : '可选'}</span></summary><p class="st-capability-hint">仅将明确选择的能力提供给此任务。写入、删除及影响未知的工具需要单独允许无人值守执行。</p>${this.capabilitiesError ? `<p class="st-capability-issues" role="status">${escape(this.capabilitiesError)}；保留当前绑定，可稍后重新检查。</p><button class="st-secondary st-reload-capabilities" type="button">重新检查</button>` : !this.capabilitiesLoaded ? '<p class="st-capability-hint">正在读取连接与工具授权…</p>' : !candidates.length && !missing.length ? '<p class="st-capability-hint">还没有可用能力。先在「插件」中添加连接、安装插件或导入技能。</p>' : ''}${candidates.map(cap => {
+      const binding = bindingFor(cap), unavailable = this.capabilityUnavailable(cap), issues = binding ? this.bindingIssues(binding, cap) : []
+      const stale = binding && (binding.bindingRevision !== cap.revision || binding.toolIds.some(id => binding.schemaDigests[id] !== cap.tools.find(tool => tool.id === id)?.schemaDigest))
+      const invalidSelection = binding?.toolIds.some(id => !cap.tools.some(tool => tool.id === id && tool.allowed))
+      const writeSelected = binding?.toolIds.some(id => cap.tools.some(tool => tool.id === id && tool.effect !== 'read'))
+      return `<section class="st-capability" data-capability-kind="${cap.kind}" data-capability-entity="${escape(cap.entityId)}"><label class="st-capability-title"><input type="checkbox" data-capability="${escape(cap.entityId)}" ${binding ? 'checked' : ''} ${(!binding && (unavailable || this.capabilitiesError)) ? 'disabled' : ''}><span>${escape(cap.name)}<small>${cap.kind === 'connection' ? `应用 / MCP 连接 · ${cap.workspaceIds ? '指定工作区' : '当前账号所有工作区'}` : cap.kind === 'plugin' ? '插件' : '技能'}</small></span></label>${!binding && unavailable ? `<p class="st-capability-hint">${escape(unavailable)}</p>` : ''}${binding ? `<div class="st-capability-tools">${cap.tools.map(tool => `<label class="st-capability-tool"><input type="checkbox" data-task-tool="${escape(tool.id)}" ${binding.toolIds.includes(tool.id) ? 'checked' : ''} ${!binding.toolIds.includes(tool.id) && (!tool.allowed || unavailable || this.capabilitiesError) ? 'disabled' : ''}><span>${escape(tool.name)}<small>${escape(tool.description)}${!tool.allowed ? ' · 尚未授权' : ''}</small></span><span class="st-tool-effect">${effectLabel[tool.effect]}</span></label>`).join('')}${binding.toolIds.filter(id => !cap.tools.some(tool => tool.id === id)).map(id => `<label class="st-capability-tool"><input type="checkbox" data-task-tool="${escape(id)}" checked><span>${escape(id)}<small>工具已移除，取消选择以移除绑定</small></span></label>`).join('')}${!cap.tools.length ? '<p class="st-capability-hint">此能力不包含可调用工具。</p>' : ''}${writeSelected ? `<label class="st-write-approval"><input type="checkbox" data-task-write="${escape(cap.entityId)}" ${binding.allowWrite ? 'checked' : ''} ${unavailable || stale || this.capabilitiesError ? 'disabled' : ''}><span>允许此任务在无人值守时执行所选写入、删除或影响未知的操作</span></label>` : ''}</div>${issues.length ? `<ul class="st-capability-issues">${issues.map(issue => `<li>${escape(issue)}</li>`).join('')}</ul>` : ''}${stale ? `<button class="st-secondary" data-confirm-capability="${escape(cap.entityId)}" type="button" ${unavailable || invalidSelection || this.capabilitiesError ? 'disabled' : ''}>确认当前工具版本</button>` : ''}` : ''}</section>`
+    }).join('')}${missing.map(binding => `<section class="st-capability"><label class="st-capability-title"><input type="checkbox" data-missing-capability="${escape(binding.entityId)}" data-kind="${binding.kind}" checked><span>${escape(binding.entityId)}</span></label><p class="st-capability-issues">${escape(this.bindingIssues(binding).join('；'))}</p></section>`).join('')}</details>`
+    wrap.querySelector<HTMLButtonElement>('.st-reload-capabilities')?.addEventListener('click', () => { void this.refreshCapabilities().then(() => this.renderCapabilities()) })
+    wrap.querySelectorAll<HTMLElement>('[data-capability-entity]').forEach(section => {
+      const cap = candidates.find(item => item.entityId === section.dataset.capabilityEntity && item.kind === section.dataset.capabilityKind)!
+      const entity = section.querySelector<HTMLInputElement>('[data-capability]')!
+      entity.onchange = () => {
+        draft.integrationBindings = (draft.integrationBindings || []).filter(item => item.entityId !== cap.entityId || item.kind !== cap.kind)
+        if (entity.checked) draft.integrationBindings.push({entityId:cap.entityId,kind:cap.kind,bindingRevision:cap.revision,toolIds:[],schemaDigests:{},allowWrite:false})
+        this.renderCapabilities()
+      }
+      section.querySelectorAll<HTMLInputElement>('[data-task-tool]').forEach(input => { input.onchange = () => {
+        const binding = bindingFor(cap), id = input.dataset.taskTool!, tool = cap.tools.find(item => item.id === id)
+        if (!binding) return
+        if (input.checked && tool?.allowed && !this.capabilityUnavailable(cap)) {
+          if (!binding.toolIds.includes(id)) binding.toolIds.push(id)
+          binding.schemaDigests[id] = tool.schemaDigest
+          if (tool.effect !== 'read') binding.allowWrite = false
+        } else { binding.toolIds = binding.toolIds.filter(value => value !== id); delete binding.schemaDigests[id] }
+        if (!binding.toolIds.some(value => cap.tools.some(tool => tool.id === value && tool.effect !== 'read'))) binding.allowWrite = false
+        this.renderCapabilities()
+      } })
+      const write = section.querySelector<HTMLInputElement>('[data-task-write]')
+      if (write) write.onchange = () => { const binding = bindingFor(cap); if (binding) binding.allowWrite = write.checked; this.renderCapabilities() }
+      section.querySelector<HTMLButtonElement>('[data-confirm-capability]')?.addEventListener('click', () => {
+        const binding = bindingFor(cap)
+        if (!binding || this.capabilityUnavailable(cap) || binding.toolIds.some(id => !cap.tools.some(tool => tool.id === id && tool.allowed))) return
+        binding.bindingRevision = cap.revision
+        binding.schemaDigests = Object.fromEntries(binding.toolIds.map(id => [id, cap.tools.find(tool => tool.id === id)!.schemaDigest]))
+        binding.allowWrite = false
+        this.renderCapabilities()
+      })
+    })
+    wrap.querySelectorAll<HTMLInputElement>('[data-missing-capability]').forEach(input => { input.onchange = () => {
+      draft.integrationBindings = (draft.integrationBindings || []).filter(binding => binding.entityId !== input.dataset.missingCapability || binding.kind !== input.dataset.kind)
+      this.renderCapabilities()
+    } })
   }
   private showError(e: unknown) {
     this.error = e instanceof Error ? e.message : String(e)
@@ -393,7 +528,7 @@ export class ScheduledTaskView {
     type.value = this.typeFilter
     type.onchange = () => { this.typeFilter = type.value; this.renderList() }
     this.root.querySelector<HTMLButtonElement>('.st-back')!.onclick = () =>
-      this.close()
+      this.surfaceHost ? this.surfaceHost.back() : this.close()
     this.root.querySelector<HTMLInputElement>('.st-search input')!.oninput = (
       e,
     ) => {
@@ -445,7 +580,7 @@ export class ScheduledTaskView {
       ? tasks
           .map(
             (t) =>
-              `<div class="st-row" data-id="${escape(t.id)}" data-state="${t.state}" data-selected="${this.selected === t.id}"><button class="st-quick-toggle" data-state="${t.state}" aria-label="${t.state === 'paused' ? '继续' : '暂停'}任务 ${escape(t.title)}" title="${t.state === 'paused' ? '继续任务' : '暂停任务'}" ${t.state === 'completed' || this.pendingActions.has(t.id) ? 'disabled' : ''}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path class="st-quick-pause" d="M8 7v6m4-6v6"/><path class="st-quick-play" d="m8 6 6 4-6 4z"/></svg></button><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-task-info"><span class="st-task-title"><span class="st-badge">${t.component ? '组件任务' : '全局任务'}</span><strong data-ui-preserve>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
+              `<div class="st-row" data-id="${escape(t.id)}" data-state="${t.state}" data-selected="${this.selected === t.id}"><button class="st-quick-toggle" data-state="${t.state}" aria-label="${t.state === 'paused' ? '继续' : '暂停'}任务 ${escape(t.title)}" title="${t.state === 'paused' ? '继续任务' : '暂停任务'}" ${t.state === 'completed' || this.pendingActions.has(t.id) ? 'disabled' : ''}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path class="st-quick-pause" d="M8 7v6m4-6v6"/><path class="st-quick-play" d="m8 6 6 4-6 4z"/></svg></button><button class="st-row-main" aria-label="查看 ${escape(t.title)}"><span class="st-task-info"><span class="st-task-title"><span class="st-badge">${t.component ? '组件任务' : '全局任务'}</span><strong data-ui-preserve>${escape(t.title)}</strong></span><span class="st-task-meta">${escape(scheduleLabel(t.schedule).replace(/ 0(?=\d:)/, ' '))} · ${t.state === 'enabled' && t.runs[0]?.status !== 'blocked' && t.runs[0]?.status !== 'failed' && t.runs[0]?.status !== 'running' ? upcomingRun(t.nextRun) : stateLabel(t)}</span></span></button><button class="st-row-more" aria-label="${escape(t.title)} 更多操作">${icon('more')}</button></div>`,
           )
           .join('')
       : `<div class="st-empty"><h2>${this.tasks.length ? '没有符合条件的任务' : '让重复的工作按计划完成'}</h2><p>${this.tasks.length ? '试试其他关键词或状态筛选。' : '定期整理资讯、跟踪指标或汇总资料。<br>新建任务，让重复的工作按计划完成。'}</p>${this.tasks.length ? '' : '<button class="st-primary st-first">＋ 新建第一个任务</button>'}</div>`
@@ -493,6 +628,7 @@ export class ScheduledTaskView {
     if ((!this.root && !this.componentMode) || !this.draft) return
     this.detail?.remove()
     this.historySignature = ''
+    this.capabilitySignature = ''
     const d = this.draft,
       t = this.tasks.find((t) => t.id === this.draftId)
     const detail = this.document.createElement('aside')
@@ -509,7 +645,7 @@ export class ScheduledTaskView {
       )
       .join(
         '',
-      )}</select></label><div class="st-history-wrap"></div><div class="st-error st-detail-error" role="alert">${escape(this.error)}</div><div class="st-detail-footer"><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
+      )}</select></label>${this.integrationsBridge ? '<div class="st-integration-wrap"></div>' : ''}<div class="st-history-wrap"></div><div class="st-error st-detail-error" role="alert">${escape(this.error)}</div><div class="st-detail-footer"><div class="st-footer-actions">${t?.sessionId ? '<button class="st-secondary st-open-result">打开对话 ↗</button>' : ''}<button class="st-primary st-save">${t ? '保存修改' : '创建任务'}</button></div></div>`
     this.detail = detail
     detail.dataset.dark = String(this.dark())
     this.attachDetail()
@@ -551,7 +687,7 @@ export class ScheduledTaskView {
     resizePrompt()
     this.document.defaultView?.requestAnimationFrame(() => { if (this.detail === detail) resizePrompt() })
     const workspace = detail.querySelector<HTMLSelectElement>('.st-workspace')
-    if (workspace) workspace.onchange = e => (d.workspaceId = (e.target as HTMLSelectElement).value)
+    if (workspace) workspace.onchange = e => { d.workspaceId = (e.target as HTMLSelectElement).value; this.renderCapabilities() }
     detail.querySelector<HTMLSelectElement>('.st-notification')!.onchange = (
       e,
     ) =>
@@ -590,7 +726,7 @@ export class ScheduledTaskView {
     }
     const status = detail.querySelector<HTMLElement>('.st-status')!
     const label = t ? stateLabel(t) : '新建任务'
-    status.dataset.state = label === '运行中' ? 'running' : label === '需要处理' ? 'failed' : label === '已开启' ? 'enabled' : 'idle'
+    status.dataset.state = label === '运行中' ? 'running' : label === '需要处理' ? 'failed' : label === '等待恢复连接' ? 'blocked' : label === '已开启' ? 'enabled' : 'idle'
     status.querySelector('.st-status-label')!.textContent = label
     let next: number | null = null
     try {
@@ -602,7 +738,7 @@ export class ScheduledTaskView {
     const wasOpen = history.querySelector('details')?.open
     const runSignature = JSON.stringify(t?.runs)
     if (t?.runs.length && this.historySignature !== runSignature)
-      history.innerHTML = `<details class="st-history" ${wasOpen ? 'open' : ''}><summary><span class="st-chevron" aria-hidden="true"></span>运行记录（${t.runs.length}）</summary>${t.runs.map((r) => `<div class="st-run"><strong>${r.status === 'running' ? '运行中' : r.status === 'success' ? '已完成' : '执行失败'}</strong> · ${this.time(r.startedAt, t.schedule)}${r.error ? `<p class="st-error">${escape(r.error)}</p>` : ''}</div>`).join('')}</details>`
+      history.innerHTML = `<details class="st-history" ${wasOpen ? 'open' : ''}><summary><span class="st-chevron" aria-hidden="true"></span>运行记录（${t.runs.length}）</summary>${t.runs.map((r) => `<div class="st-run"><strong>${r.status === 'running' ? '运行中' : r.status === 'success' ? '已完成' : r.status === 'blocked' ? '未执行：能力不可用' : '执行失败'}</strong> · ${this.time(r.startedAt, t.schedule)}${r.error ? `<p class="st-error">${escape(r.error)}</p>` : ''}</div>`).join('')}</details>`
     this.historySignature = runSignature
     if (t?.sessionId && !detail.querySelector('.st-open-result')) {
       const b = this.document.createElement('button')
@@ -618,6 +754,7 @@ export class ScheduledTaskView {
       }
       detail.querySelector('.st-footer-actions')?.prepend(b)
     }
+    this.renderCapabilities()
     const save = detail.querySelector<HTMLButtonElement>('.st-save')
     if (save) save.disabled = this.busy || t?.runs[0]?.status === 'running'
   }
@@ -638,10 +775,9 @@ export class ScheduledTaskView {
       this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:scheduled-tasks-changed'))
       this.render()
     } catch (e) {
-      this.showError(e)
+      if (revision === this.viewRevision && this.draft === draft) this.showError(e)
     } finally {
-      this.busy = false
-      this.updateStatus()
+      if (revision === this.viewRevision) { this.busy = false; this.updateStatus() }
     }
   }
   private async action(

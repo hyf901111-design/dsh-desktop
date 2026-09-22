@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "ework-integrations",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {"enabled": false}
+  // Deliberately no routes, database IDs or OAuth credentials.
+  // Configure actual ACCOUNTS_DB / INTEGRATIONS_DB bindings and deployment secrets
+  // only after OAuth registration and infrastructure provisioning. See README.md.
+}
