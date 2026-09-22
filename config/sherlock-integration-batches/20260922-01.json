@@ -236,168 +236,45 @@
         "schemaVersion": 1,
         "featureName": "研究看板组件Figma规范落地",
         "branch": "codex/feat/research-component-spec-20260922",
-        "baseCommit": "d797cb43c5fc81efa4cf8ef17f3e5f49d3402215",
-        "tipCommit": "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc",
+        "baseCommit": "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc",
+        "tipCommit": "30ca02e33eb684be28e5b20e424772be383e6d0f",
         "commits": [
           {
-            "commit": "75220fdedb6b5d544245d879c3b04d7967b5eaf5",
+            "commit": "30ca02e33eb684be28e5b20e424772be383e6d0f",
             "parents": [
-              "d797cb43c5fc81efa4cf8ef17f3e5f49d3402215"
+              "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc"
             ],
-            "subject": "规范研究组件：统一黑白控件、生成动效交互与AI设计校验"
-          },
-          {
-            "commit": "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc",
-            "parents": [
-              "75220fdedb6b5d544245d879c3b04d7967b5eaf5"
-            ],
-            "subject": "修复组件设计校验对业务背景和中性色回退的误判"
+            "subject": "修复生成过程面板叠字及停止失败图标填充"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "build/figma-generation/dot-grid.svg"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "build/figma-generation/error.svg"
           },
           {
-            "status": "A",
-            "path": "build/figma-generation/process.svg"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "build/figma-generation/provenance.json"
           },
           {
-            "status": "A",
-            "path": "build/figma-generation/restart.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-generation/resume.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-generation/retry.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-generation/running.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-generation/stop.svg"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "build/figma-generation/stopped.svg"
           },
           {
-            "status": "A",
-            "path": "build/figma-generation/waiting.svg"
-          },
-          {
-            "status": "A",
-            "path": "docs/design/research-component-figma-source-audit.json"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "docs/design/research-component-validation-20260922.md"
           },
           {
-            "status": "A",
-            "path": "docs/research-component-design-contract.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-09-22-research-component-spec.md"
-          },
-          {
             "status": "M",
-            "path": "package-lock.json"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/design-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/package.json"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/research-completed-design.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/verify-research-completed-design.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/verify-research-component-design.mjs"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "scripts/verify-research-generation-design.mjs"
           },
           {
             "status": "M",
-            "path": "test/figma-canvas-gestures-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-client-adapter.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-derived-task-presentation.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-design-policy.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/research-generation-controls.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-generation-expand-final.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -419,15 +296,15 @@
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "291项直接相关聚焦测试通过，含业务背景与嵌套中性fallback正反例；真实Chromium验证浅深主题、控件、生成及完成态。",
-            "verifiedCommit": "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc",
-            "completedAt": "2026-09-22T10:28:51.114573+00:00",
+            "summary": "293项直接相关聚焦测试通过，含业务背景、嵌套fallback、原生发现的过程叠字与SVG透明语义回归；Chromium18生成态和8项专项通过。",
+            "verifiedCommit": "30ca02e33eb684be28e5b20e424772be383e6d0f",
+            "completedAt": "2026-09-22T10:45:50.632307+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离Chromium真实渲染器已验证Light/Dark HTML、78项完成态和18组生成态及手动编辑；原生打包客户端将在集成分支继续验证。"
+          "summary": "原生首轮已验证两尺寸手动框、两主题、停止/重试/真实超时；发现过程叠字与图标填充并修复。Chromium18组与8专项通过。外部GLM超时，最终客户端继续内容回归。"
         },
         "acceptanceCriteria": [
           "组件内控件黑白灰，业务图表与状态色保持",
@@ -440,115 +317,7 @@
           "research-container-chrome存在16项基线既有失败，基线和本次一致；resilience另1项基线失败已记录",
           "不变更版本、不推送或公开发布；用户验收前保留integration分支"
         ],
-        "generatedAt": "2026-09-22T10:28:51.114573+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3621e97c151b9285f690580a0dbc24e5be949982",
-        "verificationCommit": "3621e97c151b9285f690580a0dbc24e5be949982",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3621e97c151b9285f690580a0dbc24e5be949982",
-            "completedAt": "2026-09-22T10:29:48.630Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "3621e97c151b9285f690580a0dbc24e5be949982",
-            "completedAt": "2026-09-22T10:29:48.630Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "3621e97c151b9285f690580a0dbc24e5be949982",
-            "completedAt": "2026-09-22T10:29:48.630Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-html-theme.test.js",
-              "test/research-design-policy.test.js",
-              "test/research-task-runtime.test.js",
-              "test/shared-component-validation.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/research-generation-expand-final.test.ts",
-              "test/research-derived-task-presentation.test.ts",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-html-theme.test.js test/research-design-policy.test.js test/research-task-runtime.test.js test/shared-component-validation.test.js test/research-generation-controls.test.ts test/figma-canvas-gestures-ui.test.ts test/research-generation-expand-final.test.ts test/research-derived-task-presentation.test.ts test/research-canvas-render-performance.test.ts test/research-board-client-adapter.test.js --reporter=dot",
-            "verifiedCommit": "3621e97c151b9285f690580a0dbc24e5be949982",
-            "completedAt": "2026-09-22T10:29:48.630Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-22T10:29:48.630Z"
+        "generatedAt": "2026-09-22T10:45:50.632307+00:00"
       }
     }
   ],
