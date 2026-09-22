@@ -69,3 +69,20 @@ it('translates schedule variants and tooltip attributes while retaining workspac
  expect(translateUiCopy('链接 (L)')).toBe('Link (L)')
  expect(translateUiCopy('不自动刷新')).toBe('Do not auto-refresh')
 })
+
+it('localizes inserted controls without rescanning existing message history', async()=>{
+ const win=new Window(),doc=win.document
+ doc.documentElement.dataset.odysseyLocale='en'
+ doc.body.innerHTML='<main>'+('<p>Conversation history</p>'.repeat(1000))+'</main>'
+ const dispose=mountUiLocalization(doc as unknown as Document)
+ await win.happyDOM.waitUntilComplete()
+ const roots: unknown[]=[]
+ const original=doc.createTreeWalker.bind(doc)
+ doc.createTreeWalker=((...args: Parameters<typeof doc.createTreeWalker>)=>{roots.push(args[0]);return original(...args)}) as typeof doc.createTreeWalker
+ const button=doc.createElement('button');button.textContent='定时任务';doc.body.append(button)
+ await win.happyDOM.waitUntilComplete()
+ expect(button.textContent).toBe('Scheduled tasks')
+ expect(roots).not.toContain(doc.body)
+ expect(roots).not.toContain(doc.querySelector('main'))
+ dispose();await win.happyDOM.close()
+})

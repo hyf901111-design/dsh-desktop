@@ -64,7 +64,11 @@ export function mountUiLocalization(doc:Document=document):()=>void {
   const english=doc.documentElement.dataset.odysseyLocale==='en'
   if(!english&&!translated){roots.clear();return}
   translated=english
-  const changed=[...roots].filter(root=>root.isConnected&&![...roots].some(parent=>parent!==root&&parent.contains(root)));roots.clear()
+  const changed=[...roots].filter(root=>{
+   if(!root.isConnected)return false
+   for(let parent=root.parentElement;parent;parent=parent.parentElement)if(roots.has(parent))return false
+   return true
+  });roots.clear()
   for(const root of changed){
   const walker=doc.createTreeWalker(root,win.NodeFilter.SHOW_TEXT)
   while(walker.nextNode()){
@@ -94,7 +98,21 @@ export function mountUiLocalization(doc:Document=document):()=>void {
   for(const record of records){
    const target=record.target.nodeType===1?record.target as Element:record.target.parentElement
    if(record.attributeName==='data-odyssey-locale'){roots.clear();roots.add(doc.body);break}
-   if(target&&!target.closest('script,style,textarea,[contenteditable]'))roots.add(target)
+   if(!target||target.closest('script,style,textarea,[contenteditable]'))continue
+   // Only new subtrees need translation. A portal appended to body must not
+   // rescan every existing message and canvas artifact.
+   if(record.type==='childList'){
+    for(const node of record.addedNodes){
+     const added=node.nodeType===1?node as Element:node.parentElement
+     if(added)roots.add(added)
+    }
+   }else if(record.type==='characterData'){
+    const text=record.target as Text
+    if(textState.get(text)?.rendered!==text.data)roots.add(target)
+   }else{
+    const name=record.attributeName!
+    if(attrState.get(target)?.get(name)?.rendered!==target.getAttribute(name))roots.add(target)
+   }
   }
   if(roots.size)schedule()
  })
