@@ -1,0 +1,2141 @@
+{
+  "fileKey": "Jkyr5rMvgM8GNH6E68xnqd",
+  "pageId": "111:683",
+  "parentId": "1217:254583",
+  "scope": "Read-only visible Dark KPI and industry counterparts to fund72 source components",
+  "modules": [
+    {
+      "id": "1217:254999",
+      "name": "基金研究 / 持仓穿透 / 组合风险",
+      "nodes": [
+        {
+          "id": "1217:254999",
+          "name": "基金研究 / 持仓穿透 / 组合风险",
+          "type": "COMPONENT",
+          "x": 0,
+          "y": 0,
+          "w": 896,
+          "h": 132,
+          "fill": [
+            {
+              "hex": "#303030",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 8
+        },
+        {
+          "id": "1217:255000",
+          "name": "持仓穿透 / 组合风险",
+          "type": "TEXT",
+          "x": 12,
+          "y": 14,
+          "w": 768,
+          "h": 20,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "持仓穿透 / 组合风险",
+          "size": 13,
+          "line": {
+            "unit": "PIXELS",
+            "value": 20
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "持仓穿透 / 组合风险",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Bold",
+                "variationSettings": {
+                  "wght": 700
+                }
+              },
+              "size": 13,
+              "weight": 700,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255001",
+          "name": "09.22 · 研究模拟",
+          "type": "TEXT",
+          "x": 784,
+          "y": 14,
+          "w": 100,
+          "h": 20,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "09.22 · 研究模拟",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 20
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "09.22",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 9,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            },
+            {
+              "text": " · 研究模拟",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255002",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 12,
+          "y": 47,
+          "w": 872,
+          "h": 0.5,
+          "fill": [
+            {
+              "hex": "#454545",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 0
+        },
+        {
+          "id": "1217:255003",
+          "name": "Frame",
+          "type": "FRAME",
+          "x": 12,
+          "y": 56,
+          "w": 872,
+          "h": 64,
+          "fill": [],
+          "opacity": 1,
+          "radius": 0
+        },
+        {
+          "id": "1217:255004",
+          "name": "Frame",
+          "type": "FRAME",
+          "x": 12,
+          "y": 56,
+          "w": 210.5,
+          "h": 64,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 5
+        },
+        {
+          "id": "1217:255005",
+          "name": "穿透基金",
+          "type": "TEXT",
+          "x": 22,
+          "y": 62,
+          "w": 190.5,
+          "h": 14,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "穿透基金",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 14
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "穿透基金",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255006",
+          "name": "8只",
+          "type": "TEXT",
+          "x": 22,
+          "y": 79,
+          "w": 190.5,
+          "h": 26,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "8只",
+          "size": 23,
+          "line": {
+            "unit": "PIXELS",
+            "value": 26
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "8",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 23,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            },
+            {
+              "text": "只",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 23,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255007",
+          "name": "基金池 · 权益核心组",
+          "type": "TEXT",
+          "x": 22,
+          "y": 105,
+          "w": 190.5,
+          "h": 11,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "基金池 · 权益核心组",
+          "size": 8,
+          "line": {
+            "unit": "PIXELS",
+            "value": 11
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "基金池 · 权益核心组",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 8,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255008",
+          "name": "Frame",
+          "type": "FRAME",
+          "x": 232.5,
+          "y": 56,
+          "w": 210.5,
+          "h": 64,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 5
+        },
+        {
+          "id": "1217:255009",
+          "name": "穿透覆盖率",
+          "type": "TEXT",
+          "x": 242.5,
+          "y": 62,
+          "w": 190.5,
+          "h": 14,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "穿透覆盖率",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 14
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "穿透覆盖率",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255010",
+          "name": "92.6%",
+          "type": "TEXT",
+          "x": 242.5,
+          "y": 79,
+          "w": 190.5,
+          "h": 26,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "92.6%",
+          "size": 23,
+          "line": {
+            "unit": "PIXELS",
+            "value": 26
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "92.6%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 23,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255011",
+          "name": "其余7.4%暂未披露",
+          "type": "TEXT",
+          "x": 242.5,
+          "y": 105,
+          "w": 190.5,
+          "h": 11,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "其余7.4%暂未披露",
+          "size": 8,
+          "line": {
+            "unit": "PIXELS",
+            "value": 11
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "其余",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 8,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            },
+            {
+              "text": "7.4%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 8,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            },
+            {
+              "text": "暂未披露",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 8,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255012",
+          "name": "Frame",
+          "type": "FRAME",
+          "x": 453,
+          "y": 56,
+          "w": 210.5,
+          "h": 64,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 5
+        },
+        {
+          "id": "1217:255013",
+          "name": "底层证券",
+          "type": "TEXT",
+          "x": 463,
+          "y": 62,
+          "w": 190.5,
+          "h": 14,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "底层证券",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 14
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "底层证券",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255014",
+          "name": "186",
+          "type": "TEXT",
+          "x": 463,
+          "y": 79,
+          "w": 190.5,
+          "h": 26,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "186",
+          "size": 23,
+          "line": {
+            "unit": "PIXELS",
+            "value": 26
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "186",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 23,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255015",
+          "name": "股票按证券代码合并",
+          "type": "TEXT",
+          "x": 463,
+          "y": 105,
+          "w": 190.5,
+          "h": 11,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "股票按证券代码合并",
+          "size": 8,
+          "line": {
+            "unit": "PIXELS",
+            "value": 11
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "股票按证券代码合并",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 8,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255016",
+          "name": "Frame",
+          "type": "FRAME",
+          "x": 673.5,
+          "y": 56,
+          "w": 210.5,
+          "h": 64,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 5
+        },
+        {
+          "id": "1217:255017",
+          "name": "前十大集中度",
+          "type": "TEXT",
+          "x": 683.5,
+          "y": 62,
+          "w": 190.5,
+          "h": 14,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "前十大集中度",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 14
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "前十大集中度",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255018",
+          "name": "38.4%",
+          "type": "TEXT",
+          "x": 683.5,
+          "y": 79,
+          "w": 190.5,
+          "h": 26,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "38.4%",
+          "size": 23,
+          "line": {
+            "unit": "PIXELS",
+            "value": 26
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "38.4%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 23,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255019",
+          "name": "基于已披露权益持仓",
+          "type": "TEXT",
+          "x": 683.5,
+          "y": 105,
+          "w": 190.5,
+          "h": 11,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "基于已披露权益持仓",
+          "size": 8,
+          "line": {
+            "unit": "PIXELS",
+            "value": 11
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "基于已披露权益持仓",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 8,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1217:255081",
+      "name": "基金研究 / 行业暴露 / 主动偏离",
+      "nodes": [
+        {
+          "id": "1217:255081",
+          "name": "基金研究 / 行业暴露 / 主动偏离",
+          "type": "COMPONENT",
+          "x": 0,
+          "y": 0,
+          "w": 328,
+          "h": 400,
+          "fill": [
+            {
+              "hex": "#303030",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 8
+        },
+        {
+          "id": "1217:255082",
+          "name": "行业暴露 / 主动偏离",
+          "type": "TEXT",
+          "x": 12,
+          "y": 14,
+          "w": 200,
+          "h": 20,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "行业暴露 / 主动偏离",
+          "size": 13,
+          "line": {
+            "unit": "PIXELS",
+            "value": 20
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "行业暴露 / 主动偏离",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Bold",
+                "variationSettings": {
+                  "wght": 700
+                }
+              },
+              "size": 13,
+              "weight": 700,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255083",
+          "name": "权重 %",
+          "type": "TEXT",
+          "x": 216,
+          "y": 14,
+          "w": 100,
+          "h": 20,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "权重 %",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 20
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "权重 %",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255084",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 12,
+          "y": 47,
+          "w": 304,
+          "h": 0.5,
+          "fill": [
+            {
+              "hex": "#454545",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 0
+        },
+        {
+          "id": "1217:255085",
+          "name": "Frame",
+          "type": "FRAME",
+          "x": 12,
+          "y": 59,
+          "w": 304,
+          "h": 28,
+          "fill": [],
+          "opacity": 1,
+          "radius": 0
+        },
+        {
+          "id": "1217:255086",
+          "name": "控件 / select / 申万一级",
+          "type": "FRAME",
+          "x": 12,
+          "y": 59,
+          "w": 142,
+          "h": 28,
+          "fill": [
+            {
+              "hex": "#292929",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 6
+        },
+        {
+          "id": "1217:255087",
+          "name": "申万一级",
+          "type": "TEXT",
+          "x": 22,
+          "y": 64,
+          "w": 110,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F5F5F5",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "申万一级",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "申万一级",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F5F5F5",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:273588",
+          "name": "Vector",
+          "type": "VECTOR",
+          "x": 134,
+          "y": 71,
+          "w": 8,
+          "h": 4,
+          "fill": [],
+          "opacity": 1,
+          "radius": 0
+        },
+        {
+          "id": "1217:255089",
+          "name": "控件 / select / 穿透权重",
+          "type": "FRAME",
+          "x": 162,
+          "y": 59,
+          "w": 146,
+          "h": 28,
+          "fill": [
+            {
+              "hex": "#292929",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 6
+        },
+        {
+          "id": "1217:255090",
+          "name": "穿透权重",
+          "type": "TEXT",
+          "x": 172,
+          "y": 64,
+          "w": 114,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F5F5F5",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "穿透权重",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "穿透权重",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F5F5F5",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:273589",
+          "name": "Vector",
+          "type": "VECTOR",
+          "x": 288,
+          "y": 71,
+          "w": 8,
+          "h": 4,
+          "fill": [],
+          "opacity": 1,
+          "radius": 0
+        },
+        {
+          "id": "1217:255092",
+          "name": "电子",
+          "type": "TEXT",
+          "x": 12,
+          "y": 112,
+          "w": 90,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "电子",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "电子",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255093",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 118,
+          "w": 160,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255094",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 118,
+          "w": 131.1999969482422,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#0078B4",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255095",
+          "name": "24.6%",
+          "type": "TEXT",
+          "x": 271,
+          "y": 112,
+          "w": 43,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "24.6%",
+          "size": 10,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "24.6%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 10,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255096",
+          "name": "医药生物",
+          "type": "TEXT",
+          "x": 12,
+          "y": 139,
+          "w": 90,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "医药生物",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "医药生物",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255097",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 145,
+          "w": 160,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255098",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 145,
+          "w": 100.26667022705078,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#1EB9E1",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255099",
+          "name": "18.8%",
+          "type": "TEXT",
+          "x": 271,
+          "y": 139,
+          "w": 43,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "18.8%",
+          "size": 10,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "18.8%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 10,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255100",
+          "name": "机械设备",
+          "type": "TEXT",
+          "x": 12,
+          "y": 166,
+          "w": 90,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "机械设备",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "机械设备",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255101",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 172,
+          "w": 160,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255102",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 172,
+          "w": 81.06666564941406,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#0078B4",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255103",
+          "name": "15.2%",
+          "type": "TEXT",
+          "x": 271,
+          "y": 166,
+          "w": 43,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "15.2%",
+          "size": 10,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "15.2%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 10,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255104",
+          "name": "计算机",
+          "type": "TEXT",
+          "x": 12,
+          "y": 193,
+          "w": 90,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "计算机",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "计算机",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255105",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 199,
+          "w": 160,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255106",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 199,
+          "w": 67.19999694824219,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#1EB9E1",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255107",
+          "name": "12.6%",
+          "type": "TEXT",
+          "x": 271,
+          "y": 193,
+          "w": 43,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "12.6%",
+          "size": 10,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "12.6%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 10,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255108",
+          "name": "食品饮料",
+          "type": "TEXT",
+          "x": 12,
+          "y": 220,
+          "w": 90,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "食品饮料",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "食品饮料",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255109",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 226,
+          "w": 160,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255110",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 226,
+          "w": 50.13333511352539,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#0078B4",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255111",
+          "name": "9.4%",
+          "type": "TEXT",
+          "x": 271,
+          "y": 220,
+          "w": 43,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "9.4%",
+          "size": 10,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "9.4%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 10,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255112",
+          "name": "电力设备",
+          "type": "TEXT",
+          "x": 12,
+          "y": 247,
+          "w": 90,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "电力设备",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "电力设备",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255113",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 253,
+          "w": 160,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255114",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 253,
+          "w": 45.86666488647461,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#1EB9E1",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255115",
+          "name": "8.6%",
+          "type": "TEXT",
+          "x": 271,
+          "y": 247,
+          "w": 43,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "8.6%",
+          "size": 10,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "8.6%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 10,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255116",
+          "name": "其他行业",
+          "type": "TEXT",
+          "x": 12,
+          "y": 274,
+          "w": 90,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "其他行业",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "其他行业",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255117",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 280,
+          "w": 160,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#3B3B3B",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255118",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 104,
+          "y": 280,
+          "w": 57.599998474121094,
+          "h": 7,
+          "fill": [
+            {
+              "hex": "#0078B4",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 2
+        },
+        {
+          "id": "1217:255119",
+          "name": "10.8%",
+          "type": "TEXT",
+          "x": 271,
+          "y": 274,
+          "w": 43,
+          "h": 18,
+          "fill": [
+            {
+              "hex": "#F4F5F6",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "10.8%",
+          "size": 10,
+          "line": {
+            "unit": "PIXELS",
+            "value": 18
+          },
+          "align": "RIGHT",
+          "segments": [
+            {
+              "text": "10.8%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 10,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F4F5F6",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255120",
+          "name": "Rectangle",
+          "type": "RECTANGLE",
+          "x": 14,
+          "y": 319,
+          "w": 136,
+          "h": 22,
+          "fill": [
+            {
+              "hex": "#50452C",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": 4
+        },
+        {
+          "id": "1217:255121",
+          "name": "电子超配 +8.2%",
+          "type": "TEXT",
+          "x": 17,
+          "y": 322,
+          "w": 130,
+          "h": 16,
+          "fill": [
+            {
+              "hex": "#F6D077",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "电子超配 +8.2%",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 16
+          },
+          "align": "CENTER",
+          "segments": [
+            {
+              "text": "电子超配 +",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#F6D077",
+                  "alpha": 1
+                }
+              ]
+            },
+            {
+              "text": "8.2%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 9,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#F6D077",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255122",
+          "name": "基准16.4%",
+          "type": "TEXT",
+          "x": 164,
+          "y": 322,
+          "w": 145,
+          "h": 16,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "基准16.4%",
+          "size": 9,
+          "line": {
+            "unit": "PIXELS",
+            "value": 16
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "基准",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 9,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            },
+            {
+              "text": "16.4%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 9,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1217:255123",
+          "name": "已披露权益持仓 · 行业权重合计100%",
+          "type": "TEXT",
+          "x": 12,
+          "y": 376,
+          "w": 304,
+          "h": 14,
+          "fill": [
+            {
+              "hex": "#B9BEC3",
+              "alpha": 1
+            }
+          ],
+          "opacity": 1,
+          "radius": null,
+          "text": "已披露权益持仓 · 行业权重合计100%",
+          "size": 8,
+          "line": {
+            "unit": "PIXELS",
+            "value": 14
+          },
+          "align": "LEFT",
+          "segments": [
+            {
+              "text": "已披露权益持仓 · 行业权重合计",
+              "font": {
+                "family": "Noto Sans SC",
+                "style": "Regular",
+                "variationSettings": {
+                  "wght": 400
+                }
+              },
+              "size": 8,
+              "weight": 400,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            },
+            {
+              "text": "100%",
+              "font": {
+                "family": "DINPro",
+                "style": "Medium"
+              },
+              "size": 8,
+              "weight": 500,
+              "fill": [
+                {
+                  "hex": "#B9BEC3",
+                  "alpha": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "version": "fund72-paired-dark-source-audit/2026-09-22",
+  "pairedLightSourceIds": {
+    "1217:254999": "1217:247146",
+    "1217:255081": "1217:247228"
+  },
+  "coordinateConvention": "x/y are relative to each component, in Figma px. Only visible nodes and visible fills are included; all stored paints retain alpha.",
+  "industryColorContract": {
+    "light": [
+      "#005096",
+      "#1EB9E1"
+    ],
+    "dark": [
+      "#0078B4",
+      "#1EB9E1"
+    ],
+    "darkSourceNodeIds": {
+      "odd": [
+        "1217:255094",
+        "1217:255102",
+        "1217:255110",
+        "1217:255118"
+      ],
+      "even": [
+        "1217:255098",
+        "1217:255106",
+        "1217:255114"
+      ]
+    },
+    "genericChartPaletteUnchanged": true
+  }
+}

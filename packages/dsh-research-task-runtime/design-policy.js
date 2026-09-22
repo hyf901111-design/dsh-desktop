@@ -116,9 +116,13 @@ function scriptDesignIssue(source) {
 
 function duplicatePageTitle($, title) {
  if (typeof title !== 'string' || !title.trim()) return null
- // Keep punctuation and qualifiers: a prefix or a same-named report section is
- // not evidence of a repeated page title. Only normalize typography/whitespace.
+ // Compare complete title subjects, never substrings or similar words. A single
+ // trailing qualifier is explanatory content and must survive the repair.
  const text = value => value.replace(/（/g, '(').replace(/）/g, ')').replace(/\s+/gu, ' ').trim()
+ const parts = value => {
+  const qualified = value.trim().match(/^([^()（）]+)[(（]([^()（）]+)[)）]$/u)
+  return qualified ? {subject:text(qualified[1]),qualifier:qualified[2].trim()} : {subject:text(value),qualifier:''}
+ }
  const hidden = element => $(element).is('[hidden],[aria-hidden="true"]') || /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important)?\s*(?:;|$)/i.test($(element).attr('style') || '')
  const content = element => $(element).contents().filter((_, node) => node.type === 'text' ? Boolean(node.data.trim()) : node.type === 'tag' && !$(node).is('style,script,template,noscript') && !hidden(node))
  let root = $('body'), nodes = content(root)
@@ -131,11 +135,11 @@ function duplicatePageTitle($, title) {
  let candidate = nodes.first()
  const header = candidate.is('header,.head,.page-header,.component-header')
  if (header) candidate = content(candidate).first()
- const explicitTitle = candidate.is('h1,[role="heading"][aria-level="1"],.title,.page-title,.component-title')
+ const explicitTitle = candidate.is('h1,[role="heading"][aria-level="1"],.title,.page-title,.component-title,p.lead') || header && candidate.is('h2,h3')
  // The real Kimi header uses span.t, not a semantic heading. An initial plain
  // text item within a document header is eligible only on an exact title match.
  if (!explicitTitle && !(header && candidate.is('span,strong,b'))) return null
- if (candidate.is('h2,h3,h4,h5,h6,.tag,.subtitle,.foot,.status-line,[role]:not([role="heading"])') || candidate.find('h1,h2,h3,h4,h5,h6,section,article,table,button,input,select,textarea,a,script').length) return null
+ if (!header && candidate.is('h2,h3') || candidate.is('h4,h5,h6,.tag,.subtitle,.foot,.status-line,[role]:not([role="heading"])') || candidate.find('h1,h2,h3,h4,h5,h6,section,article,table,button,input,select,textarea,a,script,svg,img,canvas,video,audio').length) return null
  const ancestors = candidate.parents().addBack()
  if (ancestors.toArray().some(hidden)) return null
  // If author CSS might hide this title, leave it alone. This conservative
@@ -151,14 +155,10 @@ function duplicatePageTitle($, title) {
   } catch {}
  })
  if (cssHidden) return null
- const actual = text(candidate.text()), expected = text(title)
- let duplicate = actual.length > 0 && actual === expected
- if (!duplicate) {
-  const parts = expected.match(/^([^()]+)\(([^()]+)\)$/u), siblings = content(candidate.parent()), next = siblings.eq(siblings.index(candidate) + 1)
-  duplicate = Boolean(parts && actual === parts[1].trim() && next.is('.tag,.subtitle') && !hidden(next) && text(next.text()) === parts[2].trim())
- }
- if (!duplicate) return null
- return { candidate, issue: `顶部重复标题「${actual}」已由宿主 48px 标题栏展示。保持 JSON title 不变，仅去掉 HTML 中这段重复题名，不要删除整个头部、隐藏 DOM 或重新设计。必须保留紧邻 tag/说明、数据来源、connStatus 等状态节点、onStatus 与共享回调，以及全部业务数据和交互。除重复题名外，其他 DOM、属性、CSS 和脚本保持不动；不要清理未使用的题名 CSS。题名节点若带 ID 或事件，只清空重复文字并保留节点。` }
+ const actual = parts(candidate.text()), expected = parts(title)
+ if (!actual.subject || actual.subject !== expected.subject) return null
+ const qualifierRepair = actual.qualifier ? `该题名含有说明，必须将原括注文字「${actual.qualifier}」原样保留为可见说明；仅将此题名节点的文字替换为这段说明，原属性不变，可将不带 ID/事件的题名标签改为 p。不得删掉这段说明或改写成 JSON title 的括注。` : '仅去掉 HTML 中这段重复题名；题名节点若带 ID 或事件，只清空重复文字并保留节点。'
+ return { candidate, qualifier:actual.qualifier, issue: `顶部重复标题「${actual.subject}」已由宿主 48px 标题栏展示。保持 JSON title 不变。${qualifierRepair}不要删除整个头部、隐藏 DOM 或重新设计。必须保留紧邻 tag/说明、数据来源、connStatus 等状态节点、onStatus 与共享回调，以及全部业务数据和交互。除重复题名外，其他 DOM、属性、CSS 和脚本保持不动；不要清理未使用的题名 CSS。` }
 }
 
 // These signatures are used only for the one repair of a detected duplicate
@@ -200,12 +200,19 @@ function repairDomSignature($) {
 export function duplicateTitleRepairSnapshot(html, { title } = {}) {
  const $ = load(html), duplicate = duplicatePageTitle($, title)
  if (!duplicate) return null
- const {candidate,issue} = duplicate
+ const {candidate,issue,qualifier} = duplicate
  const bound = candidate.find('*').addBack().toArray().some(element => Object.keys(element.attribs || {}).some(key => key === 'id' || /^on[a-z]+$/i.test(key)))
- // Keep ID/event-bearing elements even inside the title. Only its text may go.
- candidate.find('*').addBack().contents().filter((_,node) => node.type === 'text').remove()
+ // Keep ID/event-bearing elements even inside the title. A qualifier belongs
+ // to the content, so the only allowed edit retains its exact explanatory text.
+ const textNodes = candidate.find('*').addBack().contents().filter((_,node) => node.type === 'text')
+ if (qualifier) textNodes.each((index,node) => { node.data = index === 0 ? qualifier : '' })
+ else textNodes.remove()
  const signatures = [repairDomSignature($)]
- if (!bound) { candidate.remove(); signatures.push(repairDomSignature($)) }
+ if (!bound) {
+  if (qualifier) candidate[0].name = 'p'
+  else candidate.remove()
+  signatures.push(repairDomSignature($))
+ }
  return {title,issue,signatures}
 }
 

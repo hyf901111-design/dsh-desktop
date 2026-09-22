@@ -88,15 +88,16 @@ describe('offline HTML component theme runtime', () => {
     expect(outer.messages.at(-1).data).toEqual({ type: 'sherlock-font-failed', font: 'noto-sc' })
   })
 
-  it('lets the host own a leading title while preserving descriptions, section headings and inputs', () => {
+  it('never hides authored leading headings while preserving descriptions, section headings and inputs', () => {
     const inner = runtime(runtime(buildResearchHtmlPreview('<main><h2>原标题</h2><p>数据说明</p><input value="保留输入"><h3>明细分组</h3></main>')).childHtml())
     const input = inner.window.document.querySelector('input')
     inner.parsed()
-    expect(inner.window.document.querySelector('h2').style.display).toBe('none')
+    expect(inner.window.document.querySelector('h2').style.display).not.toBe('none')
+    expect(inner.window.document.querySelector('[data-sherlock-host-title]')).toBeNull()
     expect(inner.window.document.querySelector('h3').style.display).not.toBe('none')
     expect(inner.window.document.querySelector('input')).toBe(input)
     expect(input.value).toBe('保留输入')
-    for (const html of ['<p>摘要</p><h2>明细分组</h2>', '<h2><a href="https://example.com">可点击标题</a></h2>']) {
+    for (const html of ['<p>摘要</p><h2>明细分组</h2>', '<h2><a href="https://example.com">可点击标题</a></h2>', '<section><h2>数据核验</h2><p>业务内容</p></section>']) {
       const section = runtime(runtime(buildResearchHtmlPreview(html)).childHtml())
       section.parsed()
       expect(section.window.document.querySelector('h2').style.display).not.toBe('none')

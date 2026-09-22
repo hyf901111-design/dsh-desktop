@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 
 const asset = name => 'data:image/svg+xml;base64,' + readFileSync(new URL(`../../build/figma-generation/${name}.svg`, import.meta.url)).toString('base64')
+const dotFieldData = JSON.parse(readFileSync(new URL('../../build/figma-generation/dot-fields.json', import.meta.url), 'utf8'))
 const icons = Object.fromEntries(['stop', 'retry', 'restart', 'resume', 'process', 'running', 'waiting', 'error', 'stopped'].map(name => [name, asset(name)]))
 
 function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDisabled, retryLabel, onResume }) {
@@ -69,7 +70,7 @@ function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDis
     'data-process-expanded': expanded, 'data-research-generation-failure': ['error', 'stopped'].includes(state) ? '' : undefined,
     'aria-busy': active,
     children: [
-      (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-dots': '', 'aria-hidden': true, style: { animationPlayState: moving ? 'running' : 'paused' } }),
+      (0, react_jsx_runtime.jsx)(ResearchGenerationDots, { moving }),
       (0, react_jsx_runtime.jsx)('time', { 'data-research-generation-elapsed': '', children: time, title: elapsed + ' 秒' }),
       (0, react_jsx_runtime.jsxs)('div', { 'data-research-generation-foreground': '', children: [
         (0, react_jsx_runtime.jsx)('span', { className: 'odyssey-generation-state-icon', 'aria-hidden': true, style: { maskImage: 'url("' + glyphs[glyph] + '")', animationPlayState: moving ? 'running' : 'paused' }, 'data-generation-spinning': moving }),
@@ -90,6 +91,82 @@ function ResearchGenerationProcess({ node, onCancel, onExpand, onRetry, retryDis
       ] })
     ]
   })
+}
+
+// Source geometry and alpha are retained. Only the independent decorative
+// field advances; the fixed foreground and its readable lower region do not.
+function ResearchGenerationDots({ moving }) {
+  /* GENERATION_DOT_FIELDS */
+  const element = (0, react.useRef)(null)
+  const phase = (0, react.useRef)(0)
+  ;(0, react.useEffect)(() => {
+    const canvas = element.current
+    const context = canvas?.getContext?.('2d')
+    if (!context || typeof Path2D === 'undefined') return
+    const paths = ResearchGenerationDots.paths || (ResearchGenerationDots.paths = fields.shapes.map(path => new Path2D(path)))
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let frame = 0, previous = 0, width = 0, height = 0, scale = 1, points = [], color = ''
+    const grid = fields.grid, travelX = grid * 5, travelY = grid
+    const draw = () => {
+      context.setTransform(1, 0, 0, 1, 0, 0)
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      context.globalCompositeOperation = 'lighter'
+      context.fillStyle = color
+      const value = reduced.matches ? 0 : phase.current
+      for (const [a, b] of points) {
+        for (const [point, weight, dx, dy] of [[a, 1 - value, -value * travelX, -value * travelY], [b, value, (1 - value) * travelX, (1 - value) * travelY]]) {
+          if (weight <= 0) continue
+          context.setTransform(scale, 0, 0, scale, (point.x + dx) * scale, (point.y + dy) * scale)
+          context.globalAlpha = point.alpha * weight
+          context.fill(point.path)
+        }
+      }
+      canvas.dataset.dotPhase = String(value)
+      canvas.dataset.dotReady = 'true'
+    }
+    const layout = () => {
+      width = canvas.clientWidth; height = canvas.clientHeight
+      if (!width || !height) return
+      scale = Math.max(1, window.devicePixelRatio || 1)
+      canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale)
+      const shape = height <= 240 ? 'compact' : width <= 300 ? 'tall' : 'wide'
+      const theme = document.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
+      const field = fields.fields[theme + '-' + shape]
+      color = field.color
+      const cols = Math.max(1, Math.round(width / field.width * field.cols)), rows = Math.max(1, Math.round(height / field.height * field.rows))
+      const sample = (row, col) => {
+        const sourceRow = Math.min(field.rows - 1, Math.max(0, Math.round(row * (field.rows - 1) / Math.max(1, rows - 1))))
+        const sourceCol = Math.min(field.cols - 1, Math.max(0, Math.round(col * (field.cols - 1) / Math.max(1, cols - 1))))
+        const point = field.points[sourceRow * field.cols + sourceCol]
+        return { x: point[0] + (col - sourceCol) * grid, y: point[1] + (row - sourceRow) * grid, alpha: field.alphas[point[2]], path: paths[point[3]] }
+      }
+      points = []
+      // Extra source-derived edge points cover the complete phase travel. The
+      // matching endpoint is the original field, so there is no texture jump.
+      for (let row = 0; row < rows + 1; row++) for (let col = 0; col < cols + 5; col++) points.push([sample(row, col), sample(row - 1, col - 5)])
+      canvas.dataset.dotProfile = theme + '-' + shape
+      draw()
+    }
+    const tick = now => {
+      if (previous) phase.current = (phase.current + Math.min(100, now - previous) / 7000) % 1
+      previous = now
+      draw()
+      frame = requestAnimationFrame(tick)
+    }
+    const motion = () => {
+      cancelAnimationFrame(frame); previous = 0
+      canvas.dataset.dotMoving = String(moving && !reduced.matches)
+      if (moving && !reduced.matches) frame = requestAnimationFrame(tick)
+      else draw()
+    }
+    const resize = new ResizeObserver(layout)
+    const theme = new MutationObserver(layout)
+    resize.observe(canvas); theme.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
+    reduced.addEventListener('change', motion)
+    layout(); motion()
+    return () => { cancelAnimationFrame(frame); resize.disconnect(); theme.disconnect(); reduced.removeEventListener('change', motion) }
+  }, [moving])
+  return (0, react_jsx_runtime.jsx)('canvas', { ref: element, 'data-research-generation-dots': '', 'aria-hidden': true, style: { animationPlayState: moving ? 'running' : 'paused' } })
 }
 
 function ResearchGenerationAction({ name, label, icon, invoke, expanded, disabled }) {
@@ -120,7 +197,7 @@ function researchTerminalGenerationEvents(events) {
     ...(typeof event.text === 'string' ? { text: researchPublicProgress(event.text) } : {})
   })))
 }
-export const generationSource = ResearchGenerationProcess.toString().replace('/* GENERATION_ICONS */', 'const glyphs=' + JSON.stringify(icons) + ';') + '\n' + ResearchGenerationAction.toString() + '\n' + researchTerminalGenerationEvents.toString()
+export const generationSource = ResearchGenerationProcess.toString().replace('/* GENERATION_ICONS */', 'const glyphs=' + JSON.stringify(icons) + ';') + '\n' + ResearchGenerationDots.toString().replace('/* GENERATION_DOT_FIELDS */', 'const fields=ResearchGenerationDots.fields||(ResearchGenerationDots.fields=' + JSON.stringify(dotFieldData) + ');') + '\n' + ResearchGenerationAction.toString() + '\n' + researchTerminalGenerationEvents.toString()
 
 function researchComponentPrompt(node, prompt) {
   const manual = node.sizeMode === 'manual'
@@ -186,7 +263,8 @@ export const generationCss = `
 [data-research-compact-chrome]:has([data-research-generation-process]) .rScV5Q_artifactBody{height:100%;padding:0!important;gap:0}
 [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#fafafa;--generation-title:#262626;--generation-phase:#575757;--generation-detail:#6e6e6e;--generation-icon:#666;--generation-action-icon:#666;--generation-time:#59636d;--generation-button:#fff;--generation-border:rgba(0,0,0,.12);box-sizing:border-box;position:relative;isolation:isolate;display:flex;justify-content:center;min-height:0;height:100%;width:100%;padding:50px 20px!important;overflow:hidden;border-radius:8px;background:var(--generation-bg);color:var(--generation-title);filter:none!important;backdrop-filter:none!important}
 body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#030303;--generation-title:#f5f5f5;--generation-phase:#dbdbdb;--generation-detail:#b0b0b0;--generation-icon:#bdbdbd;--generation-time:#b3bcc4;--generation-button:#353535;--generation-border:#696969;--generation-action-icon:#ccc}
-[data-research-generation-dots]{position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:url('${asset('dot-grid')}');background-size:9.921px 9.921px;opacity:1;mask-image:linear-gradient(115deg,rgba(0,0,0,.16) 0%,rgba(0,0,0,.30) 20%,rgba(0,0,0,.55) 42%,rgba(0,0,0,.21) 60%,rgba(0,0,0,.45) 80%,rgba(0,0,0,.16) 100%);mask-size:200% 100%;animation:odyssey-generation-dot-flow 7s linear infinite;animation-play-state:paused}
+body [data-research-compact-chrome][data-research-artifact-card] .odyssey-generation-surface{background:var(--generation-bg)!important}
+[data-research-generation-dots]{position:absolute;inset:0;z-index:-1;pointer-events:none;width:100%;height:100%;opacity:1;mask-image:none}
 [data-research-generation-foreground]{position:absolute;top:calc(50% - 51px);left:20px;right:20px;bottom:20px;display:flex;flex-direction:column;gap:10px;min-width:0;flex:none;max-height:100%;overflow:auto;scrollbar-width:none}
 .odyssey-generation-surface[data-process-expanded=true]>[data-research-generation-foreground]{visibility:hidden}
 .odyssey-generation-state-icon{display:block;flex:none;width:18px;height:18px;background:var(--generation-icon);mask-position:center;mask-size:18px 18px;mask-repeat:no-repeat}
@@ -213,7 +291,6 @@ body[data-ds-dark-theme] .odyssey-generation-action>[role=tooltip]{background:#f
 /* Breakpoints are implementation choices; source anchors: wide 99, tall 251, compact 62. */
 @container(max-width:300px){[data-research-generation-foreground]{top:calc(50% - 59px)}}
 @container(max-height:240px){[data-research-generation-foreground]{top:calc(50% - 38px)}}
-@keyframes odyssey-generation-dot-flow{from{mask-position:200% 0}to{mask-position:0% 0}}
 @keyframes odyssey-generation-ring{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){[data-research-generation-dots],.odyssey-generation-state-icon{animation:none!important}.odyssey-generation-actions{transition:none}}
 @media(hover:none){.odyssey-generation-actions{opacity:1;pointer-events:auto}}

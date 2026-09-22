@@ -324,6 +324,15 @@ describe('Research task contract and prompt', () => {
     expect(prompt).toContain('主容器使用 height:auto 的自然文档流')
     expect(prompt).toContain('不设置 100vh 加内边距或固定主容器高度')
     expect(prompt).toContain('表格默认随内容展开，不添加内部滚动区')
+    expect(prompt).toContain('data-sherlock-profile="fund72-holdings"')
+    expect(prompt).toContain('不要把 fund72 的9px表格套到 Lumos')
+    expect(prompt).toContain('data-sherlock-holdings-change="positive"')
+    expect(prompt).toContain('负变化保持正文色，不能挪用市场涨跌红绿')
+    expect(prompt).toContain('华芯科技 S<span data-sherlock-numeric>001</span>')
+    expect(prompt).toContain('sherlock-header-note')
+    expect(prompt).toContain('24.6%对应width:82%')
+    expect(prompt).toContain('--sherlock-fund72-industry-1 / --sherlock-fund72-industry-2')
+    expect(prompt).toContain('KPI详情7.4%、行业提示8.2%、基准16.4%、底部口径100%')
   })
 
   it('keeps a brand request in business content while controls retain neutral roles and theme following', async () => {
