@@ -2225,6 +2225,45 @@ describe('component design policy generation gate', () => {
  const artifact = html => JSON.stringify({version:1,type:'html',title:'收入核验',html})
  const bad = '<style>button{background:#1677ff;color:white}</style><p>收入来自已核验的三月报表，保留原始数据和来源。</p><button>筛选</button>'
  const good = '<style>button{background:var(--sherlock-control-primary);color:var(--sherlock-control-on-primary)}</style><p>收入来自已核验的三月报表，保留原始数据和来源。</p><button>筛选</button>'
+ it('repairs a real duplicate page title once while preserving metadata and the shared status callback', async () => {
+  const {ResearchTaskRuntime}=await runtimeModule(), calls=[]
+  const html=await readFile(new URL('./fixtures/research-kimi-fund-title.html',import.meta.url),'utf8')
+  const title='基金筛选表（合成数据 · 组件规范回归）', repaired=html.replace('<span class="title">基金筛选表</span>','')
+  const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{calls.push(request);return {childSessionId:'title-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'html',title,html:calls.length===1?html:repaired})}]})}},dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+  try {
+   await runtime.start(containerRequest('duplicate-title'))
+   await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe('completed'))
+   expect(calls).toHaveLength(2)
+   expect(calls[1].synthesisOnly).toBe(true)
+   expect(calls[1].prompt).toContain('顶部重复标题')
+   expect(calls[1].prompt).toContain('connStatus')
+   expect(calls[1].prompt).toContain('onStatus')
+   expect(JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput)).toEqual({version:1,type:'html',title,html:repaired})
+  }finally{await runtime.dispose()}
+ })
+ it.each(['whole-head','status-node','json-title','business-text','control','status-handler','shared-action'])('rejects a duplicate-title repair that removes or changes %s', async damage => {
+  const {ResearchTaskRuntime}=await runtimeModule(), calls=[]
+  const html=await readFile(new URL('./fixtures/research-kimi-fund-title.html',import.meta.url),'utf8')
+  const title='基金筛选表（合成数据 · 组件规范回归）', clean=html.replace('<span class="title">基金筛选表</span>','')
+  const damaged={
+   'whole-head':clean.replace(/<div class="head">[\s\S]*?<\/div>/,''),
+   'status-node':clean.replace('<span class="status-line" id="connStatus"></span>',''),
+   'json-title':clean,
+   'business-text':clean.replace('<p>来源：合成测试数据；保留业务说明。</p>',''),
+   control:clean.replace('<button id="searchBtn">搜索</button>',''),
+   'status-handler':clean.replace("connStatus.textContent = s && s.connected ? '' : '离线（本地预览）';",''),
+   'shared-action':clean.replace("shared.dispatch({ type: 'apply' })","shared.dispatch({ type: 'different' })")
+  }[damage]
+  const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{calls.push(request);return {childSessionId:'title-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'html',title:calls.length===2&&damage==='json-title'?'改过的标题':title,html:calls.length===1?html:damaged})}]})}},dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+  try {
+   await runtime.start(containerRequest('damaged-title-repair'))
+   await eventually(()=>expect(['completed','failed']).toContain(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state))
+   const task=runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'})
+   expect(task.state).toBe('failed')
+   expect(task.finalOutput).toBeUndefined()
+   expect(calls).toHaveLength(2)
+  }finally{await runtime.dispose()}
+ })
  it.each(['repaired','invalid','downgraded'])('personal generation handles a %s design repair without publishing noncompliant content', async outcome => {
   const {ResearchTaskRuntime}=await runtimeModule(), calls=[]
   const repaired=outcome==='repaired'?artifact(good):outcome==='invalid'?artifact(bad):JSON.stringify({version:1,type:'markdown',title:'说明',content:'保留原始数据和来源但失去筛选功能。'})
@@ -2254,6 +2293,22 @@ describe('component design policy generation gate', () => {
    expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
    expect(ctx.subagents.start.mock.calls[1][1].prompt[0].text).toContain('组件设计规范验收未通过')
    expect(ctx.subagents.start.mock.calls[1][1].toolFilter.allow).toEqual([])
+  }finally{await executor.dispose()}
+ })
+ it.each(['preserved','missing-status'])('shared duplicate-title repair enforces the same preservation contract: %s', async outcome => {
+  const {createSharedBoardExecutor}=await runtimeModule(),parent={id:'title-parent',session:{events:[]}},child={id:'title-child',session:{id:'title-child',events:[]}}
+  const html=await readFile(new URL('./fixtures/research-kimi-fund-title.html',import.meta.url),'utf8'),title='基金筛选表（合成数据 · 组件规范回归）'
+  let repaired=html.replace('<span class="title">基金筛选表</span>','')
+  if(outcome==='missing-status')repaired=repaired.replace('<span class="status-line" id="connStatus"></span>','')
+  const run=html=>({id:child.id,localAgent:child,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'html',title,html})}]}),dispose:vi.fn(async()=>{})})
+  const first=run(html),ctx=sessionEventContext(parent,child,first)
+  ctx.subagents.start.mockResolvedValueOnce(first).mockResolvedValueOnce(run(repaired))
+  const executor=createSharedBoardExecutor(ctx)
+  try {
+   const result=executor.execute({sessionId:parent.id,kind:'container',prompt:'创建合成基金筛选组件',files:[]},new AbortController().signal)
+   if(outcome==='preserved')expect(JSON.parse(await result)).toEqual({version:1,type:'html',title,html:repaired})
+   else await expect(result).rejects.toMatchObject({code:'COMPONENT_DESIGN_POLICY_REQUIRED',message:expect.stringContaining('题名以外')})
+   expect(ctx.subagents.start).toHaveBeenCalledTimes(2)
   }finally{await executor.dispose()}
  })
  it('preserves an existing completed HTML artifact with author colors on restore', async () => {

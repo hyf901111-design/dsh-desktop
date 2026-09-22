@@ -3,7 +3,7 @@ import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
-import { designPolicyIssue, DESIGN_POLICY_ERROR, DESIGN_POLICY_REPAIR } from './design-policy.js'
+import { designPolicyIssue, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue, DESIGN_POLICY_ERROR, DESIGN_POLICY_REPAIR } from './design-policy.js'
 import { SHARED_COMPONENT_INSTRUCTION } from './shared-component-contract.js'
 import { startComponentAgent } from './component-agent-scope.js'
 import { createSharedMainAgentAdapter } from './shared-main-agent.js'
@@ -642,7 +642,7 @@ function taskDocument(task) {
   }
 }
 
-function finalText(output, kind, requireSharedState = false, validateSharedState = true, requireDesignHtml = false) {
+function finalText(output, kind, requireSharedState = false, validateSharedState = true, requireDesignHtml = false, titleRepairSnapshot) {
   if (!Array.isArray(output)) return undefined
   const text = output
     .filter((block) => block?.type === 'text' && typeof block.text === 'string')
@@ -661,12 +661,19 @@ function finalText(output, kind, requireSharedState = false, validateSharedState
     const spec = JSON.parse(accepted)
     if (requireSharedState && spec.type !== 'html') throw new ResearchTaskError('SHARED_STATE_REQUIRED', '交互组件修复不能降级成静态说明，必须保留共享交互。')
     if (requireDesignHtml && spec.type !== 'html') throw new ResearchTaskError(DESIGN_POLICY_ERROR, '设计规范修复必须保留原 HTML 内容与交互，不能降级为静态说明。')
+    const repairIssue = duplicateTitleRepairIssue(titleRepairSnapshot, spec)
+    if (repairIssue) throw new ResearchTaskError(DESIGN_POLICY_ERROR, repairIssue)
     // Validate raw model HTML only; native formats have trusted host renderers.
     if (validateSharedState && spec.type === 'html' && candidates.some(candidate => candidate.type === 'html')) {
       const issue = sharedComponentIssue(spec.html, { required: requireSharedState })
       if (issue) throw new ResearchTaskError('SHARED_STATE_REQUIRED', issue)
-      const designIssue = designPolicyIssue(spec.html)
-      if (designIssue) throw new ResearchTaskError(DESIGN_POLICY_ERROR, designIssue)
+      const designIssue = designPolicyIssue(spec.html, { title: spec.title })
+      if (designIssue) {
+        const error = new ResearchTaskError(DESIGN_POLICY_ERROR, designIssue)
+        const snapshot = duplicateTitleRepairSnapshot(spec.html, { title: spec.title })
+        if (snapshot?.issue === designIssue) error.titleRepairSnapshot = snapshot
+        throw error
+      }
     }
     return accepted
   }
@@ -1029,7 +1036,7 @@ export class ResearchTaskRuntime {
         const deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
-        try { output = finalText(result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError)) }
+        try { output = finalText(result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot) }
         catch (error) { if (!structured || !['INVALID_OUTPUT', 'OUTPUT_TOO_LARGE', 'GENERATION_FAILED', 'SHARED_STATE_REQUIRED', DESIGN_POLICY_ERROR].includes(error.code)) throw error; generationError = error; if (error.code === 'SHARED_STATE_REQUIRED') sharedStateError = error; if (error.code === DESIGN_POLICY_ERROR) designPolicyError = error }
         if (output !== undefined || !structured || attempt === 1 || !canSynthesizeResult(result) || result.localDeadlineExceeded && !recoveryText && !recoveryEvidence) break
         this.appendEvent(task, { type: 'assistant-delta', text: '正在校验并自动修复组件内容…' })
@@ -1783,7 +1790,7 @@ export function createSharedBoardExecutor(ctx) {
           if (result.localDeadlineExceeded && !recoveryText && !recoveryEvidence) throw new ResearchTaskError('TIMEOUT', MODEL_FAILURE_MESSAGES.TIMEOUT)
           if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
           try {
-            const text = finalText(result.output, request.kind, Boolean(sharedStateError), true, Boolean(designPolicyError))
+            const text = finalText(result.output, request.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
             if (!text) throw new ResearchTaskError('EMPTY_OUTPUT', '模型没有返回可展示的内容，自动恢复仍未完成。')
             return text
           } catch (error) {

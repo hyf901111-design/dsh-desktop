@@ -114,10 +114,112 @@ function scriptDesignIssue(source) {
  return issue
 }
 
+function duplicatePageTitle($, title) {
+ if (typeof title !== 'string' || !title.trim()) return null
+ // Keep punctuation and qualifiers: a prefix or a same-named report section is
+ // not evidence of a repeated page title. Only normalize typography/whitespace.
+ const text = value => value.replace(/（/g, '(').replace(/）/g, ')').replace(/\s+/gu, ' ').trim()
+ const hidden = element => $(element).is('[hidden],[aria-hidden="true"]') || /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important)?\s*(?:;|$)/i.test($(element).attr('style') || '')
+ const content = element => $(element).contents().filter((_, node) => node.type === 'text' ? Boolean(node.data.trim()) : node.type === 'tag' && !$(node).is('style,script,template,noscript') && !hidden(node))
+ let root = $('body'), nodes = content(root)
+ // A sole, explicitly named document wrapper is transparent. Do not descend
+ // into section/article/card/table or search globally through headings.
+ for (let depth = 0; depth < 8 && nodes.length === 1 && nodes.first().is('main,#app,#root,div.wrap,div.wrapper,div.container'); depth++) {
+  root = nodes.first()
+  nodes = content(root)
+ }
+ let candidate = nodes.first()
+ const header = candidate.is('header,.head,.page-header,.component-header')
+ if (header) candidate = content(candidate).first()
+ const explicitTitle = candidate.is('h1,[role="heading"][aria-level="1"],.title,.page-title,.component-title')
+ // The real Kimi header uses span.t, not a semantic heading. An initial plain
+ // text item within a document header is eligible only on an exact title match.
+ if (!explicitTitle && !(header && candidate.is('span,strong,b'))) return null
+ if (candidate.is('h2,h3,h4,h5,h6,.tag,.subtitle,.foot,.status-line,[role]:not([role="heading"])') || candidate.find('h1,h2,h3,h4,h5,h6,section,article,table,button,input,select,textarea,a,script').length) return null
+ const ancestors = candidate.parents().addBack()
+ if (ancestors.toArray().some(hidden)) return null
+ // If author CSS might hide this title, leave it alone. This conservative
+ // check does not attempt layout, cascade evaluation or script execution.
+ let cssHidden = false
+ $('style').each((_, element) => {
+  try {
+   postcss.parse($(element).text()).walkDecls(decl => {
+    if (!/^(?:display|visibility)$/.test(normalized(decl.prop).toLowerCase()) || !/^(?:none|hidden|collapse)$/i.test(normalized(decl.value))) return
+    const selector = ruleSelector(decl.parent)
+    try { if (selector && ancestors.is(selector)) cssHidden = true } catch {}
+   })
+  } catch {}
+ })
+ if (cssHidden) return null
+ const actual = text(candidate.text()), expected = text(title)
+ let duplicate = actual.length > 0 && actual === expected
+ if (!duplicate) {
+  const parts = expected.match(/^([^()]+)\(([^()]+)\)$/u), siblings = content(candidate.parent()), next = siblings.eq(siblings.index(candidate) + 1)
+  duplicate = Boolean(parts && actual === parts[1].trim() && next.is('.tag,.subtitle') && !hidden(next) && text(next.text()) === parts[2].trim())
+ }
+ if (!duplicate) return null
+ return { candidate, issue: `顶部重复标题「${actual}」已由宿主 48px 标题栏展示。保持 JSON title 不变，仅去掉 HTML 中这段重复题名，不要删除整个头部、隐藏 DOM 或重新设计。必须保留紧邻 tag/说明、数据来源、connStatus 等状态节点、onStatus 与共享回调，以及全部业务数据和交互。除重复题名外，其他 DOM、属性、CSS 和脚本保持不动；不要清理未使用的题名 CSS。题名节点若带 ID 或事件，只清空重复文字并保留节点。` }
+}
+
+// These signatures are used only for the one repair of a detected duplicate
+// title. They never alter the delivered document or constrain other repairs.
+function repairDomSignature($) {
+ const cleanAst = node => {
+  if (Array.isArray(node)) return node.map(cleanAst)
+  if (!node || typeof node !== 'object') return node
+  return Object.fromEntries(Object.entries(node).filter(([key]) => !['start','end','loc','extra','comments','leadingComments','trailingComments','innerComments','tokens'].includes(key)).sort(([a],[b]) => a.localeCompare(b)).map(([key,value]) => [key,cleanAst(value)]))
+ }
+ const script = value => {
+  try { return cleanAst(parseScript(value, {sourceType:'unambiguous',allowReturnOutsideFunction:true})) } catch { return value.trim() }
+ }
+ const css = value => {
+  try {
+   const node = current => current.type === 'comment' ? null : [current.type,current.name,current.params,current.selector,current.prop,current.value,Boolean(current.important),current.nodes?.map(node).filter(Boolean)]
+   return node(postcss.parse(value))
+  } catch { return value.trim() }
+ }
+ function signature(node, preserve = false) {
+  if (node.type === 'text') {
+   const value = preserve ? node.data : node.data.replace(/\s+/gu,' ').trim()
+   return value ? ['text',value] : null
+  }
+  if (!node.tagName && node.type !== 'root') return null
+  const name = node.tagName || 'root'
+  const attrs = Object.entries(node.attribs || {}).sort(([a],[b]) => a.localeCompare(b)).map(([key,value]) => [key,/^on[a-z]+$/i.test(key) ? script(value) : key === 'style' ? css(`x{${value}}`) : value])
+  const value = $(node).text()
+  if (name === 'script') {
+   const type = ($(node).attr('type') || '').toLowerCase()
+   return [name,attrs,!type || /^(?:module|(?:text|application)\/(?:javascript|ecmascript))$/.test(type) ? script(value) : value.trim()]
+  }
+  if (name === 'style') return [name,attrs,css(value)]
+  return [name,attrs,(node.children || []).map(child => signature(child,preserve || /^(?:pre|textarea)$/.test(name))).filter(Boolean)]
+ }
+ return JSON.stringify(signature($.root()[0]))
+}
+
+export function duplicateTitleRepairSnapshot(html, { title } = {}) {
+ const $ = load(html), duplicate = duplicatePageTitle($, title)
+ if (!duplicate) return null
+ const {candidate,issue} = duplicate
+ const bound = candidate.find('*').addBack().toArray().some(element => Object.keys(element.attribs || {}).some(key => key === 'id' || /^on[a-z]+$/i.test(key)))
+ // Keep ID/event-bearing elements even inside the title. Only its text may go.
+ candidate.find('*').addBack().contents().filter((_,node) => node.type === 'text').remove()
+ const signatures = [repairDomSignature($)]
+ if (!bound) { candidate.remove(); signatures.push(repairDomSignature($)) }
+ return {title,issue,signatures}
+}
+
+export function duplicateTitleRepairIssue(snapshot, spec) {
+ if (!snapshot) return null
+ if (spec.title !== snapshot.title) return '重复题名修复必须保持原 JSON title，不得改名规避校验。'
+ if (spec.type !== 'html' || !snapshot.signatures.includes(repairDomSignature(load(spec.html)))) return '重复题名修复改动了题名以外的内容。仅去掉重复题名；必须原样保留说明、来源、业务文本、带 ID 节点、控件、DOM 属性、CSS、共享脚本及事件回调，不能删除整个头部或隐藏内容。'
+ return null
+}
+
 // This is a generation quality gate, not a sandbox or proof of arbitrary JS
 // styling. Parse declarations and actual elements; never execute model code.
 // Existing saved artifacts and trusted native renderers are not revalidated.
-export function designPolicyIssue(html) {
+export function designPolicyIssue(html, { title } = {}) {
  const $ = load(html), styles = []
  let issue = null
  const isControl = element => $(element).is(CONTROLS) || $(element).closest(CONTROLS).length > 0
@@ -163,5 +265,5 @@ export function designPolicyIssue(html) {
  $('*').each((_, element) => {
   for (const [name, value] of Object.entries(element.attribs || {})) if (/^on[a-z]+$/.test(name)) issue ??= scriptDesignIssue(value)
  })
- return issue
+ return issue || duplicatePageTitle($, title)?.issue || null
 }

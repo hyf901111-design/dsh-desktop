@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><style>
+.head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.title { font-size: 13px; line-height: 20px; font-weight: 600; }
+</style></head><body>
+<!-- Reduced from the synthetic Kimi regression artifact; the original header and status callback are retained. -->
+<div class="head">
+  <span class="title">基金筛选表</span>
+  <span class="tag">合成数据 · 组件规范回归</span>
+  <span class="status-line" id="connStatus"></span>
+</div>
+<p>来源：合成测试数据；保留业务说明。</p>
+<button id="searchBtn">搜索</button>
+<script>
+var connStatus = document.getElementById('connStatus');
+var shared = window.sherlockShared.register({
+  initialState: { applied: false },
+  reduce: function (state, action) { return action.type === 'apply' ? { applied: true } : state; },
+  render: function (state, ctx) { document.getElementById('searchBtn').disabled = ctx.readOnly || !ctx.connected; },
+  onStatus: function (s) {
+    connStatus.textContent = s && s.connected ? '' : '离线（本地预览）';
+  }
+});
+document.getElementById('searchBtn').onclick = function () { shared.dispatch({ type: 'apply' }); };
+</script>
+</body></html>

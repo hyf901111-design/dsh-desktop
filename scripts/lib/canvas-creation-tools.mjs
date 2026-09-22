@@ -66,6 +66,7 @@ export function patchCanvasCreationTools(source) {
   source = patchMarqueeScreenStyle(patchComponentMarquee(source))
   source = patchMarqueeInteraction(source)
   source = patchComponentDraftFocus(source)
+  source = patchComponentDraftKeyboard(source)
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(installCreationStyle(source)))
   const replace = (from, to) => {
@@ -215,6 +216,17 @@ function patchLinkCanvasFrame(source) {
   source = source.replace('children: "添加" })]', 'children: "创建" })]')
   source = source.replace('placeholder: "example.com 或完整网址",', '"aria-label":"输入链接", placeholder: "输入网页链接，例如 https://example.com",')
   return source
+}
+function patchComponentDraftKeyboard(source) {
+  const start = source.indexOf('function ResearchContainerDraft(')
+  const end = source.indexOf('function ', start + 10)
+  if (start < 0 || end < start) throw Error('Missing component draft keyboard renderer')
+  const body = source.slice(start, end)
+  if (body.includes('ODYSSEY_MANUAL_COMPOSER_ENTER')) return source
+  const anchor = 'if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {'
+  if (!body.includes(anchor)) throw Error('Missing component draft submit shortcut')
+  return source.slice(0,start) + body.replace(anchor, `/* ODYSSEY_MANUAL_COMPOSER_ENTER */
+            if (event.key === "Enter" && !event.shiftKey && !event.altKey && !event.isComposing && !event.nativeEvent?.isComposing && event.keyCode !== 229 && event.nativeEvent?.keyCode !== 229) {`) + source.slice(end)
 }
 function patchComponentDraftFocus(source) {
   const start = source.indexOf('function ResearchContainerDraft(')

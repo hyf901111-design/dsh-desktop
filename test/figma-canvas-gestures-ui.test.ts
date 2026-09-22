@@ -203,6 +203,31 @@ it.each([[240,620],[360,200]])('keeps a manually drawn %s × %s frame through ge
   expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({...geometry,generationStatus:'completed'})
 })
 
+it.each([['Enter',{}],['Cmd+Enter',{metaKey:true}],['Ctrl+Enter',{ctrlKey:true}]])('submits the manual composer with %s without changing world bounds',async(_label,modifiers)=>{
+  const generate=vi.fn(async()=>({ok:true})),m=await mounted({},undefined,{disabled:false,generate})
+  const geometry={x:320,y:450,width:240,height:620,sizeMode:'manual'}
+  await act(async()=>{m.workspace.createContainerDraft(geometry)})
+  const input=m.query('[data-research-container-prompt]')
+  await act(async()=>input.focus())
+  input.value='整理基金比较';await m.event('input',input)
+  const event=await m.event('keydown',input,{key:'Enter',...modifiers})
+  expect(event.defaultPrevented).toBe(true);expect(generate).toHaveBeenCalledTimes(1)
+  expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({...geometry,generationStatus:'queued'})
+})
+it('leaves Shift+Enter to the textarea and ignores IME confirmation and empty manual prompts',async()=>{
+  const generate=vi.fn(async()=>({ok:true})),m=await mounted({},undefined,{disabled:false,generate})
+  await act(async()=>{m.workspace.createContainerDraft({x:320,y:450,width:240,height:620,sizeMode:'manual'})})
+  const input=m.query('[data-research-container-prompt]')
+  await act(async()=>input.focus())
+  await m.event('keydown',input,{key:'Enter'});expect(generate).not.toHaveBeenCalled()
+  input.value='基金比较';await m.event('input',input)
+  for(const modifiers of [{shiftKey:true},{isComposing:true},{metaKey:true,isComposing:true},{ctrlKey:true,keyCode:229}]){
+    const event=await m.event('keydown',input,{key:'Enter',...modifiers})
+    expect(event.defaultPrevented).toBe(false);expect(generate).not.toHaveBeenCalled()
+  }
+  expect(m.workspace.getSnapshot().artifacts[0].generationStatus).toBe('draft')
+})
+
 it.each(['failed','cancelled'])('keeps the real public process available after %s inspection',async(state)=>{
   const m=await mounted({},undefined,{disabled:false})
   let node:any
