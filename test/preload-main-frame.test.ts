@@ -21,7 +21,8 @@ vi.mock('electron', () => ({
     removeListener: electronFakes.removeListener,
     sendSync: electronFakes.sendSync
   },
-  webUtils: { getPathForFile: () => '/tmp/preview.html' }
+  webUtils: { getPathForFile: () => '/tmp/preview.html' },
+  webFrame: { getZoomFactor: () => 1 }
 }))
 
 const originalIsMainFrame = Object.getOwnPropertyDescriptor(process, 'isMainFrame')

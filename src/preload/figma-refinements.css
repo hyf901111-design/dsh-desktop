@@ -1,7 +1,7 @@
 /* Figma 14–17, 2026-09-12. A is the accepted layout; B remains a design alternative.
    Supersedes the two/three-row header in the earlier 64/66 boards. */
-body { --odyssey-menu:#fffffff7; --odyssey-menu-border:#dfe0e3; --odyssey-menu-row:#f1f1f3; --odyssey-menu-muted:#7d828a; --odyssey-scroll-ink:0 0 0; }
-body[data-ds-dark-theme] { --odyssey-menu:#292a2df7; --odyssey-menu-border:#444549; --odyssey-menu-row:#333438; --odyssey-menu-muted:#979ba2; --odyssey-scroll-ink:255 255 255; }
+body { --odyssey-menu:rgba(255, 255, 255, 0.86); --odyssey-menu-border:rgba(0, 0, 0, 0.10); --odyssey-menu-row:rgba(0, 0, 0, 0.055); --odyssey-menu-muted:#7d7d7d; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.16); --odyssey-menu-blur:blur(24px); --odyssey-scroll-ink:0 0 0; }
+body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-menu:rgba(43, 43, 43, 0.82); --odyssey-menu-border:rgba(255, 255, 255, 0.10); --odyssey-menu-row:rgba(255, 255, 255, 0.075); --odyssey-menu-muted:#999; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.32); --odyssey-scroll-ink:255 255 255; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:56px!important; min-height:56px!important; flex:0 0 56px!important;
@@ -565,3 +565,17 @@ body .srb-notifications .srb-notification{backdrop-filter:none;-webkit-backdrop-
   .LVzXQa_actions { flex-wrap:wrap; justify-content:flex-end; min-width:0; gap:6px; }
   .LVzXQa_actions>button { min-width:0; max-width:100%; white-space:normal; overflow-wrap:anywhere; }
 }
+
+/* One neutral frosted material for every expanded menu, including portal menus.
+   Deliberately leave layout, content, action colors and dialog surfaces to their owners. */
+body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.sherlock-account-menu,.st-menu,.ig-menu,.srb-avatar-info,.srb-members-popover,.odyssey-subagent-composer-popover) {
+  background:var(--odyssey-menu)!important;
+  border-color:var(--odyssey-menu-border)!important;
+  outline-color:var(--odyssey-menu-border)!important;
+  box-shadow:var(--odyssey-menu-shadow)!important;
+  backdrop-filter:var(--odyssey-menu-blur)!important;
+  -webkit-backdrop-filter:var(--odyssey-menu-blur)!important;
+}
+body :is(.sherlock-account-menu,.st-menu,.ig-menu) button:is(:hover,:focus-visible):not(:disabled) { background:var(--odyssey-menu-row)!important; }
+body .sherlock-account-menu-profile:after { background:var(--odyssey-menu-border); }
+body .srb-avatar-info>svg { fill:var(--odyssey-menu)!important; stroke:var(--odyssey-menu-border)!important; }

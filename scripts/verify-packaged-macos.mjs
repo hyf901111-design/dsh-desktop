@@ -140,6 +140,8 @@ try {
     if (!existsSync(updateRecovery)) throw new Error('macOS rename recovery helper is missing')
     execFileSync(runtimeNode, ['-e', "const h=require(process.argv[1]); if(typeof h.guard!=='function'||typeof h.repairDock!=='function')process.exit(1)", updateRecovery], { stdio: 'inherit' })
     await verifyProfileRuntimePatches(runtimeRoot, path.join(resourcesPath, 'sherlock-plugin-profile', 'modules'))
+    execFileSync(runtimeNode, [path.resolve('scripts/validate-integration-catalog.mjs'), path.join(resourcesPath, 'integration-catalog')], { stdio: 'inherit' })
+    if (existsSync(path.join(resourcesPath, 'integration-catalog', 'test')) || existsSync(path.join(runtimeRoot, 'test', 'fixtures', 'integrations'))) throw new Error('Integration test fixtures must not be packaged')
     verifyRuntime(runtimeNode, runtimeRoot)
     if (skipSignature) {
       console.log('signature: skipped (unsigned CI package)')

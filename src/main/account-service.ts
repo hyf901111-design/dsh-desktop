@@ -2,7 +2,7 @@ import { safeStorage } from 'electron'
 import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createServer, type Server } from 'node:http'
-import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import {
   collaborationOrigin,
@@ -13,6 +13,7 @@ import { ResearchBoardsError } from '../shared/research-boards'
 export class AccountService {
   private readonly origin: string
   private token?: string
+  private identityId?: string
   private server?: Server
   private serial: Promise<unknown> = Promise.resolve()
   private sessionGeneration = 0
@@ -33,6 +34,15 @@ export class AccountService {
   }
   get authenticated() {
     return !!this.token && !this.suspended
+  }
+  get accountId(): string | undefined { return this.authenticated ? this.identityId : undefined }
+  private async rememberIdentity(user:unknown):Promise<boolean> {
+    const id=(user as {id?:unknown}|undefined)?.id
+    if(typeof id!=='string'||!id||id.length>256||!this.token)return false
+    const changed=this.identityId!==id;this.identityId=id
+    const data=JSON.stringify({id,fingerprint:createHash('sha256').update(this.token).digest('hex')})
+    try{await mkdir(this.directory,{recursive:true,mode:0o700});await writeFile(join(this.directory,'account-identity.tmp'),data,{mode:0o600});await rename(join(this.directory,'account-identity.tmp'),join(this.directory,'account-identity'))}catch{/* Online identity remains valid; offline identity will be revalidated next launch. */}
+    return changed
   }
   subscribeSessionChanged(listener: () => void) {
     this.listeners.add(listener)
@@ -146,7 +156,10 @@ export class AccountService {
           await readFile(join(this.directory, 'account-session'))
         )
     } catch {}
-    if (this.token) this.changed()
+    if(this.token){
+      try{const identity=JSON.parse(await readFile(join(this.directory,'account-identity'),'utf8'));if(typeof identity.id==='string'&&identity.id.length<=256&&identity.fingerprint===createHash('sha256').update(this.token).digest('hex'))this.identityId=identity.id}catch{}
+      this.changed()
+    }
     const secret = randomBytes(32).toString('hex')
     this.server = createServer((req, res) => {
       void (async () => {
@@ -223,9 +236,11 @@ export class AccountService {
   }
   private async clear() {
     this.token = undefined
+    this.identityId = undefined
     this.suspended = false
     this.changed()
     await rm(join(this.directory, 'account-session'), { force: true })
+    await rm(join(this.directory, 'account-identity'), { force: true })
   }
   private async perform(action: string, input: unknown): Promise<unknown> {
     if (
@@ -280,8 +295,10 @@ export class AccountService {
         await rename(`${file}.tmp`, file)
         this.token = value.token
         this.suspended = false
+        await this.rememberIdentity(value.user)
         this.changed()
       }
+      else if(value.user&&await this.rememberIdentity(value.user))this.changed()
       const { token: _token, ...publicValue } = value
       return publicValue
     } catch {

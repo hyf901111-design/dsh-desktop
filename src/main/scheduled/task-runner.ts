@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { TaskStore } from './task-store'
 import type { ScheduledTask, TaskRun } from '../../shared/scheduled-tasks'
 type Event = { seq: number; type: string; data: any }
+export type TaskIntegrationPreflight = (task: ScheduledTask, run: TaskRun) =>
+  Promise<{ ready: boolean; issues: Array<{ message: string }> }> | { ready: boolean; issues: Array<{ message: string }> }
 export type Rpc = <T = any>(
   method: string,
   payload: unknown,
@@ -40,6 +42,7 @@ export class TaskRunner {
     private notify: (task: ScheduledTask, run: TaskRun) => void,
     private now = Date.now,
     private componentExecutor?: ComponentExecutor,
+    private integrationPreflight?: TaskIntegrationPreflight,
   ) {}
   start() {
     this.timer = setInterval(() => void this.tick().catch(console.error), 15000)
@@ -89,6 +92,22 @@ export class TaskRunner {
       const run = task.runs[0]!
       let dispatching = false
       try {
+        if (task.integrationBindings?.length && !this.integrationPreflight) {
+          await this.finish(task, run, 'blocked', '任务所需能力的检查服务尚未就绪，请稍后重试')
+          return
+        }
+        if (this.integrationPreflight) {
+          let preflight: Awaited<ReturnType<TaskIntegrationPreflight>>
+          try { preflight = await this.integrationPreflight(task, run) }
+          catch {
+            await this.finish(task, run, 'blocked', '无法核验任务所需的连接或插件，请检查能力设置后重试')
+            return
+          }
+          if (!preflight.ready) {
+            await this.finish(task, run, 'blocked', preflight.issues.map(issue => issue.message).filter(Boolean).slice(0, 5).join('；') || '任务所需的连接或插件不可用，请检查能力设置')
+            return
+          }
+        }
         if (task.component) {
           if (!this.componentExecutor) throw Error('组件执行服务未就绪')
           dispatching = true
@@ -238,7 +257,7 @@ export class TaskRunner {
   private async finish(
     task: ScheduledTask,
     run: TaskRun,
-    status: 'success' | 'failed',
+    status: 'success' | 'failed' | 'blocked',
     error?: string,
     noChange = false,
   ) {
@@ -251,7 +270,7 @@ export class TaskRunner {
     if (
       !task.deletedAt &&
       task.notification !== 'never' &&
-      (status === 'failed' || task.notification === 'always' || !noChange)
+      (status === 'failed' || status === 'blocked' || task.notification === 'always' || !noChange)
     )
       this.notify(task, { ...run, ...patch })
   }

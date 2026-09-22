@@ -23,13 +23,17 @@ export class TaskStore {
       if (data.version !== 1 || !Array.isArray(data.tasks))
         throw new Error('定时任务存储格式无效')
       for (const task of data.tasks) {
-        validateTask(task)
+        const normalized = validateTask(task)
         if (
           typeof task.id !== 'string' ||
           !Array.isArray(task.runs) ||
           !['enabled', 'paused', 'completed'].includes(task.state)
         )
           throw new Error('定时任务数据无效')
+        if (task.runs.some((run: TaskRun) => !run || !['running', 'success', 'failed', 'blocked'].includes(run.status)))
+          throw new Error('定时任务执行记录无效')
+        // Existing v1 files remain compatible; absent bindings grant no integration capability.
+        task.integrationBindings = normalized.integrationBindings
       }
       this.tasks = data.tasks
     } catch (e) {
@@ -166,6 +170,10 @@ export class TaskStore {
       if (!t || !r) return
       Object.assign(r, patch)
       if (sessionId) t.sessionId = sessionId
+      // A blocked manual attempt also consumes an already-due instant. Recovery
+      // waits for the next future plan instead of producing another block on tick.
+      if (patch.status === 'blocked' && t.state === 'enabled' && t.nextRun !== null && t.nextRun <= this.now())
+        t.nextRun = t.schedule.frequency === 'once' ? null : nextRun(t.schedule, this.now())
       if (
         patch.status === 'success' &&
         t.schedule.frequency === 'once' &&
@@ -175,7 +183,7 @@ export class TaskStore {
         t.nextRun = null
       }
       if (
-        patch.status === 'failed' &&
+        (patch.status === 'failed' || patch.status === 'blocked') &&
         t.schedule.frequency === 'once' &&
         t.nextRun === null
       )

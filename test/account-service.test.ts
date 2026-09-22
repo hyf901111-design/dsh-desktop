@@ -25,6 +25,17 @@ async function setup() {
   services.push(service)
   return { service, dir, endpoint: await service.start() }
 }
+it('binds cached integration identity to the encrypted session and clears it on logout',async()=>{
+  const {service,dir}=await setup()
+  vi.stubGlobal('fetch',vi.fn(async()=>Response.json({user:{id:'owner-a'},token:'a'.repeat(64)})))
+  await service.invoke('login',{})
+  expect(service.accountId).toBe('owner-a')
+  const restarted=new AccountService(dir);services.push(restarted);await restarted.start()
+  expect(restarted.accountId).toBe('owner-a')
+  vi.stubGlobal('fetch',vi.fn(async()=>Response.json({ok:true})))
+  await restarted.invoke('logout',{})
+  expect(restarted.accountId).toBeUndefined()
+})
 it('keeps cloud session credentials out of renderer replies and encrypts persistence', async () => {
   const { service, dir } = await setup()
   const token = 'a'.repeat(64)

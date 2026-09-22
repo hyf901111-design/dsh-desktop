@@ -1,3 +1,5 @@
+import { WorkspaceSurfaceHost } from './workspace-surface-host'
+import { IntegrationView } from './integrations/view'
 import { ScheduledTaskView } from './scheduled/view'
 import { mountWindowResize } from './window-resize'
 import { createCanvasActionsBridge } from './canvas-actions'
@@ -176,12 +178,20 @@ function initializeUi(): void {
     })
   }
   sidebarUpdateControl.mount()
-  new ScheduledTaskView(document, {
+  const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
+  const integrationView = new IntegrationView(document, { request: command => ipcRenderer.invoke('integrations:request', command) }, workspaceSurfaceHost)
+  integrationView.mount()
+  const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
     workspaces: () => ipcRenderer.invoke('scheduled-tasks:request', 'workspaces'),
     save: (input, id) => ipcRenderer.invoke('scheduled-tasks:request', 'save', { input, id }),
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
-  }).mount()
+  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) })
+  scheduledView.mount()
+  const resetIntegrationIdentity = () => { scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity() }
+  ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
+  window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
+  window.addEventListener('unload', () => { scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,

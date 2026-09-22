@@ -16,6 +16,8 @@ export interface HarnessRuntimeOptions {
   bundledMarketInstallerEntry: string
   bundledResearchTaskEntry: string
   bundledFundResearchEntry?: string
+  bundledIntegrationEntry?: string
+  integrationEndpoint?: {url:string;token:string}
   localSearchUrl: string
   accountEndpoint?: { url: string; token: string }
   localSearchToken: string
@@ -214,7 +216,9 @@ export class HarnessRuntime {
           launchDirectory,
           this.options.dshHome,
           process.platform,
-          { ...process.env, SHERLOCK_ACCOUNT_BRIDGE: this.options.accountEndpoint ? JSON.stringify(this.options.accountEndpoint) : undefined },
+          { ...process.env, SHERLOCK_ACCOUNT_BRIDGE: this.options.accountEndpoint ? JSON.stringify(this.options.accountEndpoint) : undefined,
+            EWORK_INTEGRATION_BRIDGE:this.options.integrationEndpoint?JSON.stringify(this.options.integrationEndpoint):undefined,
+            DSH_DESKTOP_INTEGRATION_ENTRY:this.options.bundledIntegrationEntry },
           this.options.bundledSkillDirectory,
           this.options.bundledWebSearchEntry,
           {

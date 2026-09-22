@@ -1,3 +1,13 @@
+import { legacyConnectionSources } from './integrations/legacy-connections'
+import { legacySkillRoots } from './integrations/legacy-skills'
+import { IntegrationService } from './integrations/service'
+import { startIntegrationBridge } from './integrations/runtime-bridge'
+import { registerIntegrationIpc } from './integrations/ipc'
+import { resolveIntegrationContext } from './integrations/context'
+import { DependencyIndex } from './integrations/dependency-index'
+import { GoogleCalendarAdapter } from './integrations/adapters/google-calendar'
+import { NotionAdapter } from './integrations/adapters/notion'
+import { IntegrationError } from '../shared/integrations'
 import { ScheduledComponentExecutor } from './scheduled/component-executor'
 import { validateTask } from '../shared/scheduled-tasks'
 import { generateTaskTitle } from './scheduled/task-title'
@@ -39,6 +49,7 @@ import {
   nativeTheme,
   Notification,
   systemPreferences,
+  safeStorage,
   net,
   protocol,
   session,
@@ -151,6 +162,9 @@ let accountService: AccountService | undefined
 let researchBoardsService: ResearchBoardsService | undefined
 let disposeResearchBoardsHandlers: (() => void) | undefined
 let mainWindow: BrowserWindow | undefined
+let integrationService: IntegrationService | undefined
+let integrationEndpoint: Awaited<ReturnType<typeof startIntegrationBridge>> | undefined
+let stopIntegrationIdentity = () => {}
 let runtime: HarnessRuntime
 let desktopComputer: ReturnType<typeof createDesktopComputer> | undefined
 let localSearchRuntime: LocalSearchRuntime | undefined
@@ -1275,6 +1289,55 @@ async function bootstrap(): Promise<void> {
     browserUse: (input,signal)=>conversationBrowser.run(input,signal),
     computerUse: (input,signal)=>desktopComputer!.run(input,signal)
   })
+  // Integrations are isolated from core startup: a damaged registry must never hide conversations.
+  let scheduledStoreForIntegrations: TaskStore | undefined
+  const taskRpc = harnessRpc(() => runtime?.snapshot().url)
+  const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  try {
+    integrationService = await IntegrationService.open({
+      root: join(app.getPath('userData'), 'integrations'), encryption: safeStorage,
+      getOwnerId: integrationOwner, bundledCatalogRoot: desktopResourcePath('integration-catalog'),
+      clientVersion: app.getVersion(),
+      legacySkillRoots: legacySkillRoots({ userDataRoot: app.getPath('userData'), bundledSkillDirectory: bundledSkillDirectory() }),
+      legacyConnectionSources: legacyConnectionSources({userDataRoot:app.getPath('userData')}),
+      selectSkill: async () => {
+        if (!mainWindow) return null
+        const result = await dialog.showOpenDialog(mainWindow, { title: '导入技能', properties: ['openFile', 'openDirectory'], filters: [{ name: '技能定义', extensions: ['md'] }] })
+        return result.canceled ? null : result.filePaths[0] ?? null
+      },
+      resolveContext: context => resolveIntegrationContext(context, {
+        ownerId: integrationOwner(), tasks: scheduledStoreForIntegrations?.list() ?? [],
+        workspaces: async () => (await taskRpc('workspace.list', {})).items,
+        sessions: async () => (await taskRpc('session.list', {})).items,
+      }),
+      approveWrite: async (_call, tool, connection) => {
+        if (!mainWindow || mainWindow.isDestroyed()) return false
+        const result = await dialog.showMessageBox(mainWindow, {
+          type: 'question', title: '确认工具操作', message: `允许“${connection.name}”执行“${tool.name}”？`,
+          detail: `${tool.description}\n\n此工具可能修改外部数据。仅批准这一次调用。`,
+          buttons: ['取消', '允许本次'], defaultId: 0, cancelId: 0,
+        })
+        return result.response === 1
+      },
+    })
+    integrationService.providers['google-calendar'] = new GoogleCalendarAdapter(integrationService.vault, { openExternal: url => shell.openExternal(url) })
+    integrationService.providers.notion = new NotionAdapter(integrationService.vault)
+    void integrationService.scanLegacySkills()
+  } catch (error) { console.error('[integrations] registry unavailable; preserving existing files', error instanceof IntegrationError ? error.code : 'STORAGE_UNAVAILABLE') }
+  const unavailableIntegration = () => { throw new IntegrationError('STORAGE_UNAVAILABLE', '连接数据暂时不可用，原数据已保留，请检查日志') }
+  registerIntegrationIpc(ipcMain, () => mainWindow, integrationService ?? { request: async () => unavailableIntegration() })
+  integrationEndpoint = await startIntegrationBridge(integrationService ?? {
+    runtimeSnapshot: () => ({ revision: 0, runtimeEpoch: 'unavailable', ownerAccountId: 'unavailable', connections: [], tools: [], skills: [], plugins: [] }),
+    execute: async () => unavailableIntegration(), readSkill: async () => unavailableIntegration(),
+  })
+  stopIntegrationIdentity = accountService.subscribeSessionChanged(() => {
+    integrationService?.rotateIdentity()
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('integrations:identity-changed')
+    void integrationService?.scanLegacySkills()
+    if (accountService?.authenticated && !accountService.accountId) void accountService.invoke('me', undefined).catch(() => {})
+  })
+  if (accountService.authenticated && !accountService.accountId) void accountService.invoke('me', undefined).catch(() => {})
+  const dependencyIndex = integrationService ? new DependencyIndex(integrationService.store) : undefined
   runtime = new HarnessRuntime({
     dshEntryPath: dshEntryPath(),
     nodeExecutablePath: bundledNodePath(),
@@ -1285,6 +1348,8 @@ async function bootstrap(): Promise<void> {
     bundledMarketInstallerEntry: bundledMarketInstallerEntry(),
     bundledResearchTaskEntry: bundledResearchTaskEntry(),
     bundledFundResearchEntry: bundledFundResearchEntry(),
+    bundledIntegrationEntry: pathToFileURL(join(app.getAppPath(), 'node_modules/dsh-integration-runtime/index.js')).href,
+    integrationEndpoint,
     accountEndpoint,
     localSearchUrl: localSearchRuntime.endpoint.url,
     localSearchToken: localSearchRuntime.endpoint.token,
@@ -1293,6 +1358,7 @@ async function bootstrap(): Promise<void> {
     logPath: join(app.getPath('logs'), 'harness.log'),
     launchProcess: (executablePath, args, options) => spawn(executablePath, args, options),
     onChanged: (snapshot) => {
+      if (snapshot.phase === 'starting') integrationService?.rotateIdentity()
       if (snapshot.phase === 'ready' && snapshot.url) {
         void openHarness(snapshot.url).catch(showUnexpectedError)
       } else if (snapshot.phase === 'failed') {
@@ -1305,14 +1371,31 @@ async function bootstrap(): Promise<void> {
   isScheduledSession = id => scheduledStore.list().some(task => task.sessionId === id || task.runs.some(run => run.sessionId === id))
   let scheduledLoadError: unknown
   try { await scheduledStore.load() } catch (error) { scheduledLoadError = error; console.error('[scheduled-tasks]', error) }
-  const taskRpc = harnessRpc(() => runtime.snapshot().url)
+  scheduledStoreForIntegrations = scheduledStore
+  for (const task of scheduledStore.list()) {
+    if (task.deletedAt) await dependencyIndex?.removeTask(task.id)
+    else try{await dependencyIndex?.syncBindings(task.id, task.integrationBindings ?? [])}catch{console.warn('[integrations] task dependency index update unavailable')}
+  }
   const componentExecutor = new ScheduledComponentExecutor(scheduledStore, async (target, method, args) => {
     canvasActions.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]})
     return canvasActions.execute({sessionId:target.sessionId,method,args,scheduled:true})
   }, (method, args) => researchBoardIntegration!.runtime(method, args, AbortSignal.timeout(30000)))
   scheduledRunner = new TaskRunner(scheduledStore, taskRpc, () => !scheduledLoadError && runtime.snapshot().phase === 'ready', (task, run) => {
     if (Notification.isSupported()) new Notification({ title: task.title, body: run.status === 'success' ? (task.component ? '组件已按计划更新' : '定时任务已完成，打开专属对话查看结果') : `定时任务需要处理：${run.error}` }).show()
-  }, Date.now, componentExecutor)
+  }, Date.now, componentExecutor, async task => {
+    if (!task.integrationBindings?.length) return { ready: true, issues: [] }
+    if (!dependencyIndex || !integrationService) return { ready: false, issues: [{ message: '连接检查服务暂不可用' }] }
+    const state = integrationService.store.snapshot(), owner = integrationOwner()
+    if (task.integrationBindings.some(binding => {
+      const entity = binding.kind === 'connection' ? state.connections[binding.entityId] : binding.kind === 'plugin' ? state.plugins[binding.entityId] : state.skills[binding.entityId]
+      return entity?.ownerAccountId && entity.ownerAccountId !== owner
+    })) return { ready: false, issues: [{ message: '任务绑定的能力属于其他账户，请切回原账户或重新配置' }] }
+    const tools = task.integrationBindings.flatMap(binding => binding.toolIds).map(id => state.tools[id]).filter(Boolean)
+    if (tools.some(tool => { const connection = state.connections[tool!.connectionId]; return !connection || connection.ownerAccountId !== owner || connection.workspaceGrant.mode === 'selected' && !connection.workspaceGrant.workspaceIds.includes(task.workspaceId) })) {
+      return { ready: false, issues: [{ message: '部分工具未获当前账户或任务工作区授权，请重新选择连接范围' }] }
+    }
+    return dependencyIndex.preflight(task.id, task.integrationBindings)
+  })
   ipcMain.handle('scheduled-tasks:request', async (event, method: unknown, payload: any) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (scheduledLoadError) throw new Error('定时任务数据读取失败，原数据已保留，请检查日志')
@@ -1320,14 +1403,23 @@ async function bootstrap(): Promise<void> {
     if (method === 'workspaces') return (await taskRpc('workspace.list', {})).items
     if (method === 'save') {
       const input = validateTask(payload?.input)
-      if (input.component) { await componentExecutor.target(input.component); return scheduledStore.save(input, payload.id) }
-      const workspaces = (await taskRpc('workspace.list', {})).items
-      if (!workspaces.some((w: any) => w.workspaceId === payload?.input?.workspaceId)) throw new Error('工作区不存在')
-      return scheduledStore.save(payload.input, payload.id)
+      if (input.component) await componentExecutor.target(input.component)
+      else {
+        const workspaces = (await taskRpc('workspace.list', {})).items
+        if (!workspaces.some((w: any) => w.workspaceId === input.workspaceId)) throw new Error('工作区不存在')
+      }
+      // Saving a draft does not silently repair or broaden stale integration grants.
+      const task = await scheduledStore.save(input, payload.id)
+      await dependencyIndex?.syncBindings(task.id, task.integrationBindings ?? [])
+      return task
     }
     if (typeof payload?.id !== 'string') throw new Error('任务标识无效')
     if (method === 'run') return scheduledRunner!.run(payload.id)
-    if (method === 'pause' || method === 'resume' || method === 'delete') return scheduledStore.action(payload.id, method)
+    if (method === 'pause' || method === 'resume' || method === 'delete') {
+      const result = await scheduledStore.action(payload.id, method)
+      if (method === 'delete') await dependencyIndex?.removeTask(payload.id)
+      return result
+    }
     throw new Error('未知任务操作')
   })
   scheduledRunner.start()
@@ -1417,6 +1509,7 @@ if (!singleInstance) {
   app.on('before-quit', (event) => {
     disposeResearchBoardsHandlers?.()
     researchBoardsService?.stop()
+    stopIntegrationIdentity()
     accountService?.stop()
     scheduledRunner?.stop()
     researchVoiceController.dispose()
@@ -1426,7 +1519,7 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )
