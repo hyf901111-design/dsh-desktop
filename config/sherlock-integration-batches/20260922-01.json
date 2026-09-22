@@ -11,54 +11,18 @@
         "schemaVersion": 1,
         "featureName": "EWork 插件应用MCP技能与统一菜单",
         "branch": "codex/feat/ework-integrations-20260922",
-        "baseCommit": "fa67b1bb275a9147383da2a7837ab54a6d5de8a1",
-        "tipCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
+        "baseCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
+        "tipCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
         "commits": [
           {
-            "commit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
+            "commit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
             "parents": [
-              "fa67b1bb275a9147383da2a7837ab54a6d5de8a1"
+              "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e"
             ],
-            "subject": "展示技能正文并接入立即使用的原生对话流程"
+            "subject": "限定技能正文区域滚动并合并管理操作"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/ework-integrations-client-acceptance.md"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/patch-integration-skill-composer.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/integrations/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/integrations/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/integrations/skill-composer.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/integrations/skill-markdown.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/integrations/skill-use.ts"
-          },
           {
             "status": "M",
             "path": "src/preload/integrations/style.ts"
@@ -69,31 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/integration-ui.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-skill-composer.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-skill-detail.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-skill-use.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/integration-view.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/workspace-surface-host.test.ts"
           }
         ],
         "checks": [
@@ -105,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "Skill markdown preview and native composer typecheck",
-            "verifiedCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
-            "completedAt": "2026-09-22T09:36:17.015936+00:00",
+            "verifiedCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
+            "completedAt": "2026-09-22T09:48:32.497883+00:00",
             "timeoutMs": 180000
           },
           {
@@ -127,8 +67,8 @@
             ],
             "outcome": "passed",
             "summary": "Skill markdown preview and native composer focused",
-            "verifiedCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
-            "completedAt": "2026-09-22T09:36:19.054890+00:00",
+            "verifiedCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
+            "completedAt": "2026-09-22T09:48:34.708359+00:00",
             "timeoutMs": 180000
           },
           {
@@ -138,8 +78,8 @@
             ],
             "outcome": "passed",
             "summary": "Skill markdown preview and native composer catalog",
-            "verifiedCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
-            "completedAt": "2026-09-22T09:36:19.127971+00:00",
+            "verifiedCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
+            "completedAt": "2026-09-22T09:48:34.829194+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -157,92 +97,7 @@
           "MCP动态OAuth不支持，当前支持显式Bearer/Header/无认证与STDIO",
           "需在集成客户端进行原生验收后由用户接受精确提交"
         ],
-        "generatedAt": "2026-09-22T09:36:19.170067+00:00"
-      },
-      "merged": {
-        "mergeCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
-        "verificationCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
-            "completedAt": "2026-09-22T09:37:06.190Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
-            "completedAt": "2026-09-22T09:37:06.190Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "22949130066feaf916a69e12c1b6ab2b94337ae1",
-            "completedAt": "2026-09-22T09:37:06.190Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-22T09:37:06.190Z"
+        "generatedAt": "2026-09-22T09:48:34.868673+00:00"
       }
     }
   ],
