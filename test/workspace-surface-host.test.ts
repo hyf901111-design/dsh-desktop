@@ -43,6 +43,24 @@ it('preserves surface through search overlay and panel toggle; only an opened se
     expect(surface.hidden).toBe(true);
     host.dispose();
 });
+it('reveals the conversation from nested management pages while retaining their drafts', () => {
+    const w = new Window(); windows.push(w);
+    const doc = w.document as unknown as Document;
+    doc.body.innerHTML = '<main class="pI_x6G_centerCol"><textarea>会话草稿</textarea></main>';
+    const host = new WorkspaceSurfaceHost(doc);
+    const scheduled = doc.createElement('section'), integrations = doc.createElement('section');
+    scheduled.innerHTML = '<textarea>未提交的定时任务</textarea>';
+    host.register('scheduled', scheduled); host.register('integrations', integrations);
+    host.open('scheduled'); host.open('integrations');
+    host.revealConversation();
+    expect(host.current()).toBeUndefined();
+    expect(scheduled.hidden).toBe(true); expect(integrations.hidden).toBe(true);
+    expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(false);
+    host.open('scheduled');
+    expect(scheduled.querySelector('textarea')!.value).toBe('未提交的定时任务');
+    expect(doc.querySelector('textarea')!.value).toBe('会话草稿');
+    host.dispose();
+});
 it('updates existing surfaces when the native body theme changes',async()=>{
  const w=new Window();windows.push(w);const doc=w.document as unknown as Document;const host=new WorkspaceSurfaceHost(doc);const surface=doc.createElement('section');host.register('integrations',surface);host.open('integrations');expect(surface.dataset.dark).toBe('false');doc.body.setAttribute('data-ds-dark-theme','');await w.happyDOM.whenAsyncComplete();expect(surface.dataset.dark).toBe('true');doc.body.removeAttribute('data-ds-dark-theme');await w.happyDOM.whenAsyncComplete();expect(surface.dataset.dark).toBe('false');host.dispose()
 })

@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import type { IntegrationCommand, IntegrationReply, IntegrationRow, ConnectionDraft, UiOperation, LegacySkillPreviewItem } from '../../shared/integration-ui';
-import { emptyConnectionDraft } from '../../shared/integration-ui';
+import type { IntegrationCommand, IntegrationReply, IntegrationRow, ConnectionDraft, UiOperation, LegacySkillPreviewItem, SkillDetail } from '../../shared/integration-ui';
+import { emptyConnectionDraft, isSkillDetailCommand } from '../../shared/integration-ui';
 import { IntegrationError, type Connection, type ConnectionConfig, type MutationMeta, type EntityKind, type ToolBinding, type ToolCall, type ToolResult, type CapabilityContext, type SkillInstall, type ApiOperation, type IntegrationState, type PluginInstall } from '../../shared/integrations';
 import { IntegrationStore } from './store';
 import { CredentialVault, type PlatformEncryption } from './vault';
@@ -167,6 +167,7 @@ export class IntegrationService {
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
         switch (command.type) {
             case 'snapshot': return { type: 'snapshot', snapshot: this.snapshot() };
+            case 'skill-detail': return this.skillDetail(command);
             case 'connection-draft': return { type: 'draft', draft: this.draft(this.connection(command.id)) };
             case 'operation': return { type: 'operation', operation: this.operation(command.id) };
             case 'cancel-operation':
@@ -634,6 +635,28 @@ export class IntegrationService {
     }
     dependencies(entityId: string): string[] { const state = this.store.snapshot(), tasks = Object.entries(state.taskBindings).filter(([, bindings]) => bindings.some(b => b.entityId === entityId)); return [...tasks.map(([task]) => `定时任务 ${task} 使用此能力`), '未显式绑定的对话或任务仍会在执行时检查权限；已有内容会保留']; }
     runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), plugins: Object.values(state.plugins).filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }
+    private async skillDetail(input: unknown): Promise<SkillDetail> {
+        if (!isSkillDetailCommand(input)) throw new IntegrationError('INVALID_CONFIG', '技能详情请求无效');
+        const owner = this.owner(), epoch = this.runtimeEpoch;
+        const check = () => {
+            if (owner !== this.owner() || epoch !== this.runtimeEpoch) throw new IntegrationError('ACCESS_DENIED', '账户状态已变化，请重新打开技能');
+            const skill = this.entity('skill', input.id) as SkillInstall;
+            if (skill.revision !== input.revision) throw new IntegrationError('VERSION_CONFLICT', '技能已更新，请刷新后重试');
+            return skill;
+        };
+        const skill = check();
+        if (!['managed', 'managed-plugin'].includes(skill.provider)) throw new IntegrationError('INVALID_CONFIG', '技能资源尚未接入托管');
+        await assertManagedPackagePath(join(this.options.root, skill.provider === 'managed-plugin' ? 'packages' : 'skills'), skill.resourceRoot);
+        const content = (await readSkillResource(skill.resourceRoot, 'SKILL.md').catch(error => { throw new IntegrationError('INVALID_CONFIG', skillImportErrorMessage(error)); })).toString('utf8');
+        const current = check();
+        if (current.resourceRoot !== skill.resourceRoot) throw new IntegrationError('VERSION_CONFLICT', '技能资源已更新，请刷新后重试');
+        const plugin = current.ownerPluginId ? this.store.snapshot().plugins[current.ownerPluginId] : undefined;
+        if (plugin?.ownerAccountId && plugin.ownerAccountId !== owner) throw new IntegrationError('ACCESS_DENIED', '当前账户无法访问此技能');
+        const unavailableReason = !current.enabled ? '技能已停用，请先启用。' : current.ownerPluginId && !plugin?.enabled ? '所属插件已停用或移除，请先恢复插件。' : undefined;
+        // Keep this stable-ID alias in parity with runtime managedSkillInvocationName (covered by a direct contract test).
+        const invocationName = `ework-skill-${createHash('sha256').update(current.id).digest('hex').slice(0, 16)}`;
+        return { type: 'skill-detail', id: current.id, revision: current.revision, content, invocationName, enabled: current.enabled, ...(unavailableReason ? { usable: false, unavailableReason } : {}) };
+    }
     async readSkill(input: {
         id: string;
         revision: number;

@@ -1,0 +1,171 @@
+type InputSnapshot = { draft: string; draftRev: number; phase: string; researchContextPreparing?: boolean }
+type InputShell = {
+    disposed?: boolean
+    readonly snapshot: InputSnapshot
+    insertText(text: string, span: { start: number; end: number; draftRev: number }): boolean
+}
+type SessionScope = { sessionId: string }
+type Dependencies = {
+    document?: Document
+    sessions: {
+        list: { getSnapshot(): { current?: string } }
+        binding(id: string): { session: { getSnapshot(): { removed?: boolean; subagent?: unknown } } } | undefined
+        subagentAddress(id: string): unknown
+    }
+    inputHub: { shell(id: string): InputShell }
+    composerBlocks: { storeFor(id: string): { getSnapshot(): unknown } }
+    researchSidebar: {
+        stores: Map<string, { getSnapshot(): { binding?: { active: boolean } | null } }>
+        service: {
+            activateTab(id: string, scope: SessionScope): void
+            setPanelState(patch: { open: boolean }, scope: SessionScope): void
+        } | null
+    }
+}
+type Ticket = { sessionId: string; shell: InputShell; revision: number; expires: number; inserted: boolean; caret: number }
+const REQUEST = 'sherlock:skill-compose-request'
+const REPLY = 'sherlock:skill-compose-reply'
+
+/** Lives beside the native input hub; no prompt, submit, command or DOM draft writes. */
+export function installSkillComposer(deps: Dependencies): () => void {
+    const document = deps.document ?? globalThis.document
+    const window = document.defaultView
+    if (!window) return () => {}
+    const tickets = new Map<string, Ticket>()
+    const frames = new Map<number, { token: string; cancel(): void }>()
+    let stopped = false
+    const reply = (requestId: string, ok: boolean, extra: { token?: string; message?: string } = {}) => {
+        if (!stopped) window.dispatchEvent(new window.CustomEvent(REPLY, { detail: { requestId, ok, ...extra } }))
+    }
+    const inputs = (sessionId: string) => Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea[data-odyssey-file-reference-session]'))
+        .filter(element => element.dataset.odysseyFileReferenceSession === sessionId)
+    const current = (ticket?: Ticket) => {
+        const id = deps.sessions.list.getSnapshot().current
+        if (!id) throw Error('请先创建或选择一个对话，再使用技能。')
+        if (ticket && id !== ticket.sessionId) throw Error('当前对话已切换，请重新点击“立即使用”。')
+        const binding = deps.sessions.binding(id)
+        if (!binding) throw Error('对话尚未就绪，请稍后重试。')
+        if (deps.sessions.subagentAddress(id) || binding.session.getSnapshot().subagent) throw Error('请返回主对话使用技能，子代理输入暂不支持。')
+        const shell = deps.inputHub.shell(id), snapshot = shell.snapshot
+        if (shell.disposed || (ticket && shell !== ticket.shell) || binding.session.getSnapshot().removed) throw Error('对话已关闭，请重新选择对话。')
+        if (snapshot.phase !== 'plain' || snapshot.researchContextPreparing || deps.composerBlocks.storeFor(id).getSnapshot() !== undefined)
+            throw Error('对话输入暂不可编辑，请完成当前操作后再使用技能。')
+        // A research composer can be resident in a hidden tab; the native disabled/readOnly
+        // flags still carry workspace, approval and collaboration edit restrictions.
+        if (!inputs(id).some(element => !element.disabled && !element.readOnly)) throw Error('对话输入框暂不可编辑，请先打开可编辑的对话。')
+        if (ticket && snapshot.draftRev !== ticket.revision) throw Error('对话草稿已变更，原输入已保留，请重新点击“立即使用”。')
+        return { id, shell, snapshot }
+    }
+    const focus = (requestId: string, token: string, ticket: Ticket) => {
+        const origin = document.activeElement
+        let attempts = 0
+        let openedPanel = false
+        const retry = () => {
+            if (++attempts >= 12) throw Error('技能已加入草稿，请打开对话输入框继续填写需求。')
+            schedule()
+        }
+        const tick = () => {
+            try {
+                if (stopped) return
+                current(ticket)
+                const research = deps.researchSidebar.stores.get(ticket.sessionId)?.getSnapshot().binding?.active === true
+                const toggle = document.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry="right"]')
+                // Compact desktop panes have their own native visibility state. Wait for
+                // the surface handoff, then use that pane's existing control once.
+                if (document.body.dataset.workspaceSurface || (research && toggle?.dataset.workspacePanel)) { retry(); return }
+                if (research && !openedPanel && toggle?.getAttribute('aria-expanded') === 'false' && !toggle.disabled) {
+                    openedPanel = true
+                    toggle.click()
+                    retry()
+                    return
+                }
+                // Native file chips project their placeholder glyph in the textarea. The
+                // newly inserted plain prefix remains identical and determines this caret.
+                const prefix = ticket.shell.snapshot.draft.slice(0, ticket.caret)
+                const input = inputs(ticket.sessionId).find(element => !element.disabled && !element.readOnly && !element.closest('[hidden],[aria-hidden="true"],[inert]') && element.checkVisibility() && element.value.startsWith(prefix))
+                if (!input) {
+                    retry()
+                    return
+                }
+                if (document.activeElement !== origin && document.activeElement !== document.body && document.activeElement !== input)
+                    throw Error('技能已加入草稿，焦点已移至其他位置。')
+                input.focus({ preventScroll: true })
+                input.setSelectionRange(ticket.caret, ticket.caret)
+                reply(requestId, true)
+            } catch (error) { reply(requestId, false, { message: error instanceof Error ? error.message : '无法定位对话输入框。' }) }
+        }
+        const schedule = () => {
+            const frame = window.requestAnimationFrame(() => { frames.delete(frame); tick() })
+            frames.set(frame, { token, cancel: () => reply(requestId, false, { message: '技能输入已取消。' }) })
+        }
+        schedule()
+    }
+    const onRequest = (event: Event) => {
+        const data = (event as CustomEvent<unknown>).detail
+        if (!data || typeof data !== 'object') return
+        const request = data as Record<string, unknown>
+        const requestId = request.requestId
+        if (typeof requestId !== 'string' || !requestId || requestId.length > 200) return
+        for (const [token, ticket] of tickets) if (ticket.expires < Date.now()) tickets.delete(token)
+        try {
+            if (request.phase === 'prepare') {
+                const { id, shell, snapshot } = current()
+                if (tickets.size >= 32) tickets.delete(tickets.keys().next().value!)
+                const token = window.crypto.randomUUID()
+                tickets.set(token, { sessionId: id, shell, revision: snapshot.draftRev, expires: Date.now() + 60_000, inserted: false, caret: 0 })
+                reply(requestId, true, { token })
+                return
+            }
+            const token = typeof request.token === 'string' ? request.token : ''
+            if (request.phase === 'cancel') {
+                tickets.delete(token)
+                for (const [frame, job] of frames) if (job.token === token) {
+                    window.cancelAnimationFrame(frame)
+                    frames.delete(frame)
+                    job.cancel()
+                }
+                reply(requestId, true)
+                return
+            }
+            const ticket = tickets.get(token)
+            if (!ticket) throw Error('本次技能操作已失效，请重新点击“立即使用”。')
+            if (request.phase === 'focus') {
+                tickets.delete(token)
+                if (!ticket.inserted) throw Error('技能尚未加入草稿，请重新点击“立即使用”。')
+                current(ticket)
+                focus(requestId, token, ticket)
+                return
+            }
+            if (request.phase !== 'insert' || typeof request.invocationName !== 'string' || !/^ework-skill-[a-f0-9]{16}$/.test(request.invocationName))
+                throw Error('技能引用无效，请刷新技能后重试。')
+            const { shell, snapshot } = current(ticket)
+            if (ticket.inserted) throw Error('本次技能已加入草稿，请返回对话继续填写需求。')
+            const research = deps.researchSidebar.stores.get(ticket.sessionId)?.getSnapshot().binding?.active === true
+            if (research && !deps.researchSidebar.service) throw Error('对话面板尚未就绪，请稍后重试。')
+            const prefix = `/${request.invocationName}`
+            const present = snapshot.draft.startsWith(prefix) && (snapshot.draft.length === prefix.length || /\s/.test(snapshot.draft[prefix.length]!))
+            if (!present && !shell.insertText(`${prefix} `, { start: 0, end: 0, draftRev: ticket.revision }))
+                throw Error('草稿发生变化，原输入已保留，请重试。')
+            ticket.revision = shell.snapshot.draftRev
+            ticket.inserted = true
+            ticket.caret = Math.min(prefix.length + 1, shell.snapshot.draft.length)
+            if (research) {
+                const scope = { sessionId: ticket.sessionId }
+                deps.researchSidebar.service!.activateTab('sherlock-research-conversation', scope)
+                deps.researchSidebar.service!.setPanelState({ open: true }, scope)
+            }
+            reply(requestId, true, { token })
+        } catch (error) {
+            if (typeof request.token === 'string') tickets.delete(request.token)
+            reply(requestId, false, { message: error instanceof Error ? error.message : '暂时无法使用技能，请稍后重试。' })
+        }
+    }
+    window.addEventListener(REQUEST, onRequest)
+    return () => {
+        window.removeEventListener(REQUEST, onRequest)
+        for (const [frame, job] of frames) { window.cancelAnimationFrame(frame); job.cancel() }
+        stopped = true
+        frames.clear()
+        tickets.clear()
+    }
+}

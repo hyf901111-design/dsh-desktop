@@ -8,13 +8,13 @@ const snapshot = (): IntegrationSnapshot => ({ revision: 4, rows: [
         { id: 'plugin-1', kind: 'plugin', tab: 'plugins', name: '团队知识库', description: '引用团队资料', enabled: true, status: '需要连接应用', source: '个人', revision: 1, removable: true },
         { id: 'skill-1', kind: 'skill', tab: 'skills', name: '研究报告', description: '核实来源', enabled: true, status: '已启用', source: '个人', revision: 1, removable: true },
     ] });
-async function fixture(handler?: (command: IntegrationCommand) => Promise<IntegrationReply>) {
+async function fixture(handler?: (command: IntegrationCommand) => Promise<IntegrationReply>, useSkill?: IntegrationBridge['useSkill']) {
     const w = new Window();
     windows.push(w);
     const doc = w.document as unknown as Document;
     doc.body.innerHTML = '<aside data-dsh-sidebar-root></aside><main class="pI_x6G_centerCol"><textarea>对话草稿</textarea></main>';
     const calls: IntegrationCommand[] = [];
-    const bridge: IntegrationBridge = { request: async (command) => { calls.push(command); if (handler)
+    const bridge: IntegrationBridge = { useSkill, request: async (command) => { calls.push(command); if (handler)
             return handler(command); if (command.type === 'snapshot')
             return { type: 'snapshot', snapshot: snapshot() }; if (command.type === 'dependencies')
             return { type: 'dependencies', descriptions: ['1 个定时任务使用此插件'] }; if (command.type === 'market')
@@ -334,4 +334,37 @@ it('shows honest empty plugin and app markets without placeholder cards, categor
  expect(f.doc.querySelector('.ig-market-vacant')!.textContent).toContain(`暂无可用${name}`);
  expect(f.doc.querySelector('.ig-market-card')).toBeNull();expect(f.doc.querySelector('.ig-market-categories')).toBeNull();expect(f.doc.querySelector('.ig-market-source')).toBeNull();expect(f.doc.querySelector('.ig-heading [data-action=add-source]')).not.toBeNull();}
  f.view.dispose();
+});
+
+it('loads the actual skill markdown, renders it safely, and waits for the composer acknowledgement before reporting use',async()=>{
+ let resolveDetail!:(value:IntegrationReply)=>void,resolveUse!:()=>void;const useSkill=vi.fn(()=>new Promise<void>(resolve=>{resolveUse=resolve}));
+ const f=await fixture(async command=>command.type==='snapshot'?{type:'snapshot',snapshot:snapshot()}:new Promise(resolve=>{resolveDetail=resolve}),useSkill);
+ f.click('[data-tab=skills]');f.click('[data-detail="skill-1"]');
+ expect(f.doc.querySelector('[data-skill-detail]')).not.toBeNull();expect(f.doc.querySelector('[data-skill-detail]')!.textContent).toContain('正在读取');expect(f.doc.querySelector<HTMLButtonElement>('[data-action=use-skill]')!.disabled).toBe(true);
+ resolveDetail({type:'skill-detail',id:'skill-1',revision:1,enabled:true,invocationName:'research-report',content:'---\nname: research-report\n---\n# 工作方法\n\n先**核验来源**。\n\n- 保留引用\n\n3. 第三步\n4. 第四步\n\n> 不确定时说明\n\n```sh\n<unsafe>\n```\n\n[资料](https://example.test/source) [坏链接](javascript:alert(1))\n\n![远程图片](https://example.test/tracker.png)\n\n<img src=x onerror=alert(1)><script>alert(1)</script>'});await f.settle();
+ const body=f.doc.querySelector('[data-skill-detail]')!;expect(body.querySelector('h1,h2')!.textContent).toBe('工作方法');expect(body.querySelector('strong')!.textContent).toBe('核验来源');expect(body.querySelector('li')!.textContent).toBe('保留引用');expect(body.querySelector('ol')!.getAttribute('start')).toBe('3');expect(body.querySelector('pre code')!.textContent).toContain('<unsafe>');expect(body.querySelector('script,img,iframe')).toBeNull();expect(body.querySelector('a[href^="javascript:"]')).toBeNull();expect(body.querySelector('a')!.getAttribute('href')).toBe('https://example.test/source');
+ expect(f.calls.find(c=>c.type==='skill-detail')).toEqual({type:'skill-detail',id:'skill-1',revision:1});f.click('[data-action=use-skill]');expect(f.doc.querySelector('[data-action=use-skill]')!.getAttribute('aria-busy')).toBe('true');f.click('[data-action=use-skill]');expect(useSkill).toHaveBeenCalledExactlyOnceWith({id:'skill-1',revision:1,invocationName:'research-report',name:'研究报告',signal:expect.any(AbortSignal)});resolveUse();await f.settle();expect(f.doc.querySelector('[data-skill-detail]')).not.toBeNull();expect(f.doc.querySelector('[data-action=use-skill]')!.hasAttribute('aria-busy')).toBe(false);f.view.dispose();
+});
+it('offers a detail retry after read failure or a mismatched revision, without falling back to generic row detail',async()=>{
+ let attempt=0;const data=snapshot();data.rows[1]!.detail='不能冒充真实文件的旧摘要';const f=await fixture(async c=>{if(c.type==='snapshot')return{type:'snapshot',snapshot:data};if(++attempt===1)throw Error('文件暂不可读');return{type:'skill-detail',id:'skill-1',revision:attempt===2?99:1,enabled:true,content:'# 最新正文',invocationName:'report'}});
+ f.click('[data-tab=skills]');f.click('[data-detail="skill-1"]');await f.settle();expect(f.doc.querySelector('[data-skill-detail]')!.textContent).toContain('文件暂不可读');expect(f.doc.querySelector('[data-skill-detail]')!.textContent).not.toContain('旧摘要');f.click('[data-action=retry-skill-detail]');await f.settle();expect(f.doc.querySelector('[data-action=retry-skill-detail]')).not.toBeNull();expect(f.doc.querySelector('[data-skill-detail]')!.textContent).not.toContain('最新正文');f.click('[data-action=retry-skill-detail]');await f.settle();expect(f.doc.querySelector('[data-skill-detail]')!.textContent).toContain('最新正文');f.view.dispose();
+});
+it('ignores skill detail replies after rapid navigation and account reset',async()=>{
+ let data=snapshot();data.rows.push({...data.rows[1]!,id:'skill-2',name:'第二个技能'});const waiting:Array<(reply:IntegrationReply)=>void>=[];const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:data}:new Promise(resolve=>waiting.push(resolve)));
+ f.click('[data-tab=skills]');f.click('[data-detail="skill-1"]');f.click('[data-action=back]');f.click('[data-detail="skill-2"]');waiting[1]!({type:'skill-detail',id:'skill-2',revision:1,enabled:true,content:'# 第二份正文',invocationName:'second'});await f.settle();waiting[0]!({type:'skill-detail',id:'skill-1',revision:1,enabled:true,content:'# 迟到的旧正文',invocationName:'first'});await f.settle();expect(f.doc.querySelector('[data-skill-detail]')!.textContent).toContain('第二份正文');expect(f.doc.body.textContent).not.toContain('迟到');f.click('[data-action=back]');f.click('[data-detail="skill-1"]');expect(f.doc.querySelector('[data-skill-detail]')!.textContent).not.toContain('第二份');data={revision:9,rows:[]};f.view.resetIdentity();waiting[2]!({type:'skill-detail',id:'skill-1',revision:1,enabled:true,content:'# 上一账号私有内容',invocationName:'private'});await f.settle();expect(f.doc.body.textContent).not.toContain('上一账号');expect(f.doc.querySelector('[data-skill-detail]')).toBeNull();f.view.dispose();
+});
+it('keeps disabled or parent-disabled skills readable but prevents immediate use, and reports callback failures inline for retry',async()=>{
+ const data=snapshot();data.rows[1]!.enabled=false;let usable=false;const useSkill=vi.fn(async()=>{throw Error('对话输入框暂不可用')});const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:data}:{type:'skill-detail',id:'skill-1',revision:data.rows[1]!.revision,enabled:data.rows[1]!.enabled,...(!usable?{usable:false,unavailableReason:'所属插件已停用'}:{}),content:'# 可阅读的正文',invocationName:'report'},useSkill);
+ f.click('[data-tab=skills]');f.click('[data-detail="skill-1"]');await f.settle();expect(f.doc.querySelector('[data-skill-detail]')!.textContent).toContain('可阅读');expect(f.doc.querySelector<HTMLButtonElement>('[data-action=use-skill]')!.disabled).toBe(true);expect(f.doc.querySelector('.ig-detail-aside')!.textContent).toContain('启用');
+ data.rows[1]!.enabled=true;data.rows[1]!.revision=2;await f.view.open();await f.settle();expect(f.doc.querySelector<HTMLButtonElement>('[data-action=use-skill]')!.disabled).toBe(true);expect(f.doc.querySelector('.ig-detail-aside')!.textContent).toContain('所属插件已停用');usable=true;data.rows[1]!.revision=3;await f.view.open();await f.settle();f.click('[data-action=use-skill]');await f.settle();expect(f.doc.querySelector('.ig-detail-aside')!.textContent).toContain('对话输入框暂不可用');expect(f.doc.querySelector<HTMLButtonElement>('[data-action=use-skill]')!.disabled).toBe(false);expect(f.doc.querySelector('[data-skill-detail]')).not.toBeNull();f.click('[data-action=use-skill]');await f.settle();expect(useSkill).toHaveBeenCalledTimes(2);f.view.dispose();
+});
+
+it('cancels an outstanding skill prefill on back, close, or account change and ignores late errors',async()=>{
+ for(const leave of ['back','close','identity'] as const){
+  let signal:AbortSignal|undefined,rejectUse!:(error:Error)=>void;
+  const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:snapshot()}:{type:'skill-detail',id:'skill-1',revision:1,enabled:true,content:'# 正文',invocationName:'report'},async input=>{signal=input.signal;await new Promise<void>((_,reject)=>{rejectUse=reject})});
+  f.click('[data-tab=skills]');f.click('[data-detail=skill-1]');await f.settle();f.click('[data-action=use-skill]');expect(signal?.aborted).toBe(false);
+  if(leave==='back')f.click('[data-action=back]');else if(leave==='close')f.view.close();else f.view.resetIdentity();
+  expect(signal?.aborted).toBe(true);rejectUse(Error('过期使用失败'));await f.settle();expect(f.doc.body.textContent).not.toContain('过期使用失败');f.view.dispose();
+ }
 });

@@ -45,6 +45,7 @@ export class WorkspaceSurfaceHost {
     }
     back() { this.history.pop(); this.sync(); }
     close(surface: WorkspaceSurface) { this.history = this.history.filter(location => location.surface !== surface); this.sync(); }
+    revealConversation() { this.closeAll(); }
     current() { return this.history.at(-1); }
     setRightPaneExpanded(expanded: boolean) {
         // The native pane owns visibility; only its acknowledgement updates UI state.

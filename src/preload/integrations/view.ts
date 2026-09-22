@@ -6,6 +6,7 @@ import { button, parseDraftTools, escapeHtml as esc, skillPreviewForm } from './
 import { ConnectionFormController } from './connection-form-controller';
 import { marketGrid, marketDetail, type MarketCategory } from './market';
 import { integrationStyles } from './style';
+import { renderSkillMarkdown } from './skill-markdown';
 import { legacyPreviewMarkup, legacyPreviewStyles } from './legacy-view';
 import type { LegacySkillPreviewItem } from '../../shared/integration-ui';
 const icons = {
@@ -14,6 +15,11 @@ const icons = {
     search: '<circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/>',
 };
 const icon = (name: keyof typeof icons) => `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">${icons[name]}</svg>`;
+type SkillDetailState = {
+    id: string; revision: number; epoch: number; status: 'loading' | 'ready' | 'error';
+    reply?: Extract<IntegrationReply, {type: 'skill-detail'}>; error?: string;
+    useController?: AbortController; useError?: string; useMessage?: string;
+};
 const tabs: IntegrationTab[] = ['plugins', 'apps', 'mcp', 'skills'];
 const addMenuButton = () => `<button type="button" class="ig-button ig-primary ig-add-trigger" data-action="add" aria-haspopup="menu" aria-expanded="false">添加${icon('chevron')}</button>`;
 const subtitles: Record<IntegrationTab, string> = { plugins: '让 EWork 连接你的工具与工作资料', apps: '管理应用账号、自有 API 与连接权限', mcp: '连接 MCP 服务器，管理可调用的工具', skills: '管理可复用的工作方法与专业能力' };
@@ -36,6 +42,7 @@ export class IntegrationView {
     private toolsExpanded = false;
     private toolGrantDraft?: { connectionId: string; selected: Set<string>; fingerprints: Map<string,string>; granted: Set<string> };
     private dependenciesExpanded = false;
+    private skillDetail?: SkillDetailState;
     private draft = emptyConnectionDraft();
     private connectionEditor = new ConnectionFormController();
     private draftVersion = 0;
@@ -91,6 +98,7 @@ export class IntegrationView {
     }
     async open(path?: string) {
         this.mount();
+        this.clearSkillDetail();
         this.epoch++;
         this.error = '';
         this.message = '';
@@ -105,6 +113,7 @@ export class IntegrationView {
             await this.loadMarket();
     }
     resetIdentity() {
+        this.clearSkillDetail();
         this.epoch++;this.mutationSeq++;this.refreshSeq++;clearTimeout(this.operationTimer);
         this.closeMenu();this.closeDialog();this.busy=false;this.busyCommand=undefined;this.pendingActions.clear();this.loading=false;
         this.snapshot={revision:0,rows:[]};this.entries=[];this.history=[{page:'list',tab:'plugins'}];
@@ -119,7 +128,7 @@ export class IntegrationView {
         if(entity)this.history.push({page:'detail',id:entity.id,tab:entity.tab});
         this.render();
     }
-    close() { this.clearToolGrantDraft(); this.epoch++; this.closeMenu(); this.closeDialog(); this.host.close('integrations'); this.draft.secret = ''; clearTimeout(this.operationTimer); }
+    close() { this.clearSkillDetail(); this.clearToolGrantDraft(); this.epoch++; this.closeMenu(); this.closeDialog(); this.host.close('integrations'); this.draft.secret = ''; clearTimeout(this.operationTimer); }
     dispose() { this.document.defaultView?.removeEventListener('resize',this.onMenuLayoutChanged);this.document.defaultView?.removeEventListener('sherlock:workspace-panel-state',this.onMenuLayoutChanged);clearInterval(this.snapshotTimer); this.close(); this.document.removeEventListener('keydown', this.onKey); this.document.removeEventListener('pointerdown', this.onOutside);this.document.removeEventListener('focusin',this.onFocusOutside); this.document.removeEventListener('sherlock:workspace-surface-change', this.onSurfaceChange); this.document.defaultView?.removeEventListener('sherlock:integrations-open', this.onOpen as EventListener);
         this.root?.remove(); if (this.ownHost)
         this.host.dispose(); this.mounted = false; }
@@ -130,6 +139,7 @@ export class IntegrationView {
     private onSurfaceChange = (event: Event) => { const detail = (event as CustomEvent<{
         surface?: string;
     }>).detail; if (detail?.surface !== 'integrations') {
+        this.clearSkillDetail();
         this.epoch++;
         this.closeMenu();
         this.closeDialog();
@@ -143,9 +153,9 @@ export class IntegrationView {
     }>; }
     private showError(error: unknown) { this.message='';let message = error instanceof Error ? error.message : String(error); if (this.draft.secret)
         message = message.split(this.draft.secret).join('••••••'); this.error = message; this.renderFeedback(); }
-    private navigate(route: IntegrationRoute) { this.closeMenu(); this.closeDialog(); this.history.push(route); this.clearToolGrantDraft();this.dependenciesExpanded=false;this.epoch++; this.loading = false; this.error = ''; this.message = ''; this.query = ''; this.render(); if(this.root)this.root.scrollTop=0; if (route.page === 'market')
+    private navigate(route: IntegrationRoute) { this.clearSkillDetail(); this.closeMenu(); this.closeDialog(); this.history.push(route); this.clearToolGrantDraft();this.dependenciesExpanded=false;this.epoch++; this.loading = false; this.error = ''; this.message = ''; this.query = ''; this.render(); if(this.root)this.root.scrollTop=0; if (route.page === 'market')
         void this.loadMarket(); }
-    private back() { if(this.toolsExpanded){this.clearToolGrantDraft();this.render();return;} this.closeMenu(); this.closeDialog(); this.epoch++; this.loading = false; this.error = ''; if (this.history.length > 1) {
+    private back() { this.clearSkillDetail(); if(this.toolsExpanded){this.clearToolGrantDraft();this.render();return;} this.closeMenu(); this.closeDialog(); this.epoch++; this.loading = false; this.error = ''; if (this.history.length > 1) {
         this.history.pop();
         this.render();
     }
@@ -244,12 +254,18 @@ export class IntegrationView {
     private hasApiTools() { try { return parseDraftTools(this.draft).length > 0; } catch { return false; } }
     private updateBusy() {
         if (!this.root) return;
-        this.root.setAttribute('aria-busy', String(this.busy || this.pendingActions.size > 0));
+        this.root.setAttribute('aria-busy', String(this.busy || this.pendingActions.size > 0 || Boolean(this.skillDetail?.useController)));
         const mutationActions = ['grant-tools','save-connection','import-skill','install','create-plugin','save-source','authorize','toggle-detail'];
         const readActions: Record<string,string[]> = { probe:['probe'], 'compile-openapi':['compile-openapi'], 'edit-connection':['edit-connection'], skill:['choose-skill'], legacy:['legacy-preview','legacy-recheck'], dependencies:['request-uninstall','disconnect'] };
         const entry=this.route.page==='market-detail'?this.entries.find(item=>item.id===this.routeId()):undefined;
         this.root.querySelectorAll<HTMLButtonElement>('button').forEach(el => {
             const action=el.dataset.action || '';
+            if(action==='use-skill') {
+                const row=this.snapshot.rows.find(item=>item.id===this.routeId());
+                el.disabled=!this.canUseSkill(row);
+                if(this.skillDetail?.useController)el.setAttribute('aria-busy','true');else el.removeAttribute('aria-busy');
+                return;
+            }
             const pending=Object.entries(readActions).some(([key,actions])=>this.pendingActions.has(key)&&actions.includes(action));
             const isRead=Object.values(readActions).some(actions=>actions.includes(action));
             const isMutation=el.hasAttribute('data-mutation') || mutationActions.includes(action);
@@ -282,6 +298,7 @@ export class IntegrationView {
         const route = this.route;
         if(this.toolGrantDraft && (route.page!=='detail' || route.id!==this.toolGrantDraft.connectionId))this.clearToolGrantDraft();
         const currentRow = this.snapshot.rows.find(row => row.id === this.routeId());
+        this.ensureSkillDetail(currentRow);
         const subtitle = route.page === 'list' ? subtitles[route.tab] : route.page === 'market' ? '为研究、写作与日常协作添加能力' : route.page === 'detail' ? (currentRow?.kind === 'connection' ? '管理这条连接的使用范围、凭据和工具' : currentRow?.description || '') : route.page === 'market-detail' ? '了解能力与权限，选择适合你的工作方式' : route.page === 'connection' ? this.connectionEditor.subtitle(this.draft) : route.page === 'skill-import' ? '把已有的工作方法添加到 EWork' : route.page === 'create-plugin' ? '将技能与连接组合成一套可复用的能力' : route.page === 'add-source' ? '从团队或组织维护的目录中发现插件' : '';
         const actions = route.page === 'list' ? `${button('market', marketNames[marketKinds[route.tab]])}${addMenuButton()}` : route.page === 'market' ? button('add-source','添加来源') : '';
         this.root.innerHTML = `<div class="ig-chrome">${workspaceBackButton()}</div><div class="ig-content"><header class="ig-heading"><div><h1>${esc(this.title())}</h1>${subtitle ? `<p class="ig-subtitle">${esc(subtitle)}</p>` : ''}</div><div class="ig-actions">${actions}</div></header><div class="ig-error" role="alert"></div><div class="ig-live" role="status" aria-live="polite" aria-atomic="true"></div><div class="ig-page">${this.content()}</div></div>`;
@@ -323,10 +340,68 @@ export class IntegrationView {
         }
         return this.toolGrantDraft.selected;
     }
+    private clearSkillDetail() {
+        this.skillDetail?.useController?.abort();
+        this.skillDetail=undefined;
+    }
+    private isCurrentSkillDetail(state: SkillDetailState) {
+        return this.skillDetail===state && state.epoch===this.epoch && this.route.page==='detail' && this.route.id===state.id
+            && this.snapshot.rows.some(row=>row.id===state.id && row.kind==='skill' && row.revision===state.revision);
+    }
+    private ensureSkillDetail(row?: IntegrationRow) {
+        if(this.route.page!=='detail' || row?.kind!=='skill') { this.clearSkillDetail(); return; }
+        const previous=this.skillDetail;
+        if(previous?.id===row.id && previous.revision===row.revision && previous.epoch===this.epoch)return;
+        this.clearSkillDetail();
+        const state: SkillDetailState={id:row.id,revision:row.revision,epoch:this.epoch,status:'loading'};
+        this.skillDetail=state;
+        void this.loadSkillDetail(state);
+    }
+    private async loadSkillDetail(state: SkillDetailState) {
+        try {
+            const reply=await this.request({type:'skill-detail',id:state.id,revision:state.revision},'skill-detail');
+            if(!this.isCurrentSkillDetail(state))return;
+            if(reply.id!==state.id || reply.revision!==state.revision || typeof reply.content!=='string' || typeof reply.invocationName!=='string' || typeof reply.enabled!=='boolean')throw new Error('技能已发生变化，请重新读取正文。');
+            state.reply=reply;state.status='ready';
+        } catch(error) {
+            if(!this.isCurrentSkillDetail(state))return;
+            state.status='error';state.error=error instanceof Error ? error.message : String(error);
+        }
+        this.render();
+    }
+    private canUseSkill(row?: IntegrationRow) {
+        const state=this.skillDetail,reply=state?.reply;
+        return Boolean(row?.kind==='skill' && row.enabled && state && this.isCurrentSkillDetail(state) && state.status==='ready'
+            && reply?.enabled && reply.usable!==false && this.bridge.useSkill && !state.useController && !this.busy && !this.pendingActions.size);
+    }
+    private async useCurrentSkill(row?: IntegrationRow) {
+        const state=this.skillDetail;
+        if(!row || !state?.reply || !this.canUseSkill(row) || !this.bridge.useSkill)return;
+        const controller=new AbortController();state.useController=controller;state.useError='';state.useMessage='';this.render();
+        try {
+            await this.bridge.useSkill({id:state.id,revision:state.revision,invocationName:state.reply.invocationName,name:row.name,signal:controller.signal});
+            if(this.isCurrentSkillDetail(state) && !controller.signal.aborted)state.useMessage='已在对话输入框中准备好技能。';
+        } catch(error) {
+            if(this.isCurrentSkillDetail(state) && !controller.signal.aborted)state.useError=error instanceof Error ? error.message : String(error);
+        } finally {
+            if(this.isCurrentSkillDetail(state) && !controller.signal.aborted){state.useController=undefined;this.render();}
+        }
+    }
+    private skillDetailContent(row: IntegrationRow) {
+        const state=this.skillDetail,reply=state?.reply;
+        const body=state?.status==='ready' && reply ? `<article class="ig-markdown">${renderSkillMarkdown(reply.content)}</article>`
+            : state?.status==='error' ? `<div class="ig-skill-read-state"><p class="ig-error" role="alert">${esc(state.error)}</p>${button('retry-skill-detail','重新读取')}</div>`
+            : '<div class="ig-skill-read-state" role="status">正在读取技能正文…</div>';
+        const unavailable=!row.enabled || reply?.enabled===false ? '先启用技能，再在对话中使用。'
+            : reply?.usable===false ? reply.unavailableReason || '此技能暂时不可用，请检查所属插件。'
+            : !this.bridge.useSkill ? '当前客户端暂不支持直接使用技能。' : '';
+        return `<div class="ig-detail-grid ig-skill-detail-grid"><section class="ig-detail-main ig-skill-document" data-skill-detail aria-busy="${state?.status==='loading'}"><div class="ig-skill-file-label">SKILL.md</div>${body}</section><aside class="ig-detail-aside" aria-label="技能操作">${button('use-skill',state?.useController?'正在准备…':'立即使用',true,!this.canUseSkill(row))}${unavailable?`<p class="ig-note">${esc(unavailable)}</p>`:''}${state?.useError?`<p class="ig-error" role="alert">${esc(state.useError)}</p>`:''}${state?.useMessage?`<p class="ig-note" role="status">${esc(state.useMessage)}</p>`:''}<section class="ig-help"><h2>${esc(row.status)}</h2><p>将在对话中填入技能，发送前仍可补充具体需求。</p></section>${button('toggle-detail',row.enabled?'停用':'启用')}${row.removable?`<hr><p class="ig-note">删除技能会影响依赖它的任务，已有对话内容仍会保留。</p>${button('request-uninstall','删除技能')}`:''}</aside></div>`;
+    }
     private detailContent(row?: IntegrationRow) {
         if (!row) return '<p class="ig-empty">该项目已不存在，请返回列表刷新。</p>';
-        if (row.kind !== 'connection') {
-            return `${row.kind === 'plugin' ? `<section class="ig-detail-identity"><h2>${esc(row.name)}</h2><p>${esc(row.source)}${row.detail ? ` · ${esc(row.detail)}` : ''}</p></section>` : ''}<div class="ig-detail-grid"><section class="ig-detail-main ig-capabilities"><h2>${row.kind === 'skill' ? '技能说明' : '可以帮你做什么'}</h2><p>${row.kind==='plugin'?esc(row.description):esc(row.source)}</p>${row.kind!=='plugin' && row.detail ? `<pre class="ig-preview">${esc(row.detail)}</pre>` : '<p>启用后，可在当前账号允许的工作区中使用这项能力。</p>'}</section><aside class="ig-detail-aside"><section class="ig-help"><h2>${esc(row.status)}</h2><p>${row.kind === 'skill' ? '技能的使用仍遵循当前工作区的连接与工具权限。' : '插件控制能力是否可用，应用账号与工具权限可在对应连接中管理。'}</p></section>${button('toggle-detail', row.enabled ? '停用' : '启用', !row.enabled)}${row.removable ? `<hr><p class="ig-note">${row.kind === 'skill' ? '移除技能会影响依赖它的任务，已有对话内容仍会保留。' : '卸载前会检查关联任务，已有应用连接仍会保留。'}</p>${button('request-uninstall',row.kind==='skill'?'删除技能':'卸载')}` : ''}</aside></div>`;
+        if (row.kind === 'skill') return this.skillDetailContent(row);
+        if (row.kind === 'plugin') {
+            return `<section class="ig-detail-identity"><h2>${esc(row.name)}</h2><p>${esc(row.source)}${row.detail ? ` · ${esc(row.detail)}` : ''}</p></section><div class="ig-detail-grid"><section class="ig-detail-main ig-capabilities"><h2>可以帮你做什么</h2><p>${esc(row.description)}</p><p>启用后，可在当前账号允许的工作区中使用这项能力。</p></section><aside class="ig-detail-aside"><section class="ig-help"><h2>${esc(row.status)}</h2><p>插件控制能力是否可用，应用账号与工具权限可在对应连接中管理。</p></section>${button('toggle-detail', row.enabled ? '停用' : '启用', !row.enabled)}${row.removable ? `<hr><p class="ig-note">卸载前会检查关联任务，已有应用连接仍会保留。</p>${button('request-uninstall','卸载')}` : ''}</aside></div>`;
         }
         const summary = row.connectionSummary;
         const capability = this.snapshot.taskCapabilities?.find(item => item.entityId === row.id);
@@ -450,6 +525,12 @@ export class IntegrationView {
         }
         const route = this.route, row = this.snapshot.rows.find(r => r.id === this.routeId());
         switch (action) {
+            case 'retry-skill-detail':
+                if(row?.kind==='skill'){this.clearSkillDetail();this.render();}
+                break;
+            case 'use-skill':
+                await this.useCurrentSkill(row);
+                break;
             case 'back':
                 this.back();
                 break;
