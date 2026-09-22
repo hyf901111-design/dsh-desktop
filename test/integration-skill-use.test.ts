@@ -1,0 +1,65 @@
+import { Window } from 'happy-dom';
+import { afterEach, expect, it, vi } from 'vitest';
+import { createSkillUseBridge } from '../src/preload/integrations/skill-use';
+import type { IntegrationBridge, SkillDetail } from '../src/shared/integration-ui';
+
+const windows: Window[] = [];
+afterEach(() => { windows.splice(0).forEach(w => w.happyDOM.abort()); });
+const detail: SkillDetail = { type: 'skill-detail', id: 'skill-1', revision: 2, enabled: true, invocationName: 'ework-skill-1234567890abcdef', content: '# Real skill' };
+const input = { id: 'skill-1', revision: 2, invocationName: 'stale-ui-name', name: '显示名称' };
+function fixture(request: IntegrationBridge['request'] = async () => detail, afterReply?: (phase: string) => void) {
+    const w = new Window(); windows.push(w);
+    const phases: Array<{ phase: string; invocationName?: string }> = [];
+    w.addEventListener('sherlock:skill-compose-request', event => {
+        const payload = (event as unknown as CustomEvent).detail;
+        phases.push(payload);
+        w.dispatchEvent(new w.CustomEvent('sherlock:skill-compose-reply', { detail: { requestId: payload.requestId, ok: true, token: 'draft-ticket' } }));
+        afterReply?.(payload.phase);
+    });
+    const reveal = vi.fn();
+    const adapter = createSkillUseBridge(w.document as unknown as Document, { request }, reveal);
+    return { adapter, phases, reveal };
+}
+it('rereads current authority and inserts only the verified invocation name before revealing and focusing', async () => {
+    const request = vi.fn(async () => detail);
+    const f = fixture(request);
+    await f.adapter.useSkill(input);
+    expect(request).toHaveBeenCalledExactlyOnceWith({ type: 'skill-detail', id: input.id, revision: input.revision });
+    expect(f.phases.map(p => p.phase)).toEqual(['prepare', 'insert', 'focus', 'cancel']);
+    expect(f.phases[1]?.invocationName).toBe(detail.invocationName);
+    expect(f.reveal).toHaveBeenCalledTimes(1);
+    f.adapter.dispose();
+});
+it('does not close a newly opened page if navigation happens just after insertion acknowledgement', async () => {
+    const signal = new AbortController();
+    const f = fixture(async () => detail, phase => { if (phase === 'insert') signal.abort(); });
+    await f.adapter.useSkill({ ...input, signal: signal.signal });
+    expect(f.reveal).not.toHaveBeenCalled();
+    expect(f.phases.some(p => p.phase === 'focus')).toBe(false);
+    f.adapter.dispose();
+});
+it.each([
+    { ...detail, enabled: false, unavailableReason: '技能已停用' },
+    { ...detail, usable: false as const, unavailableReason: '所属插件已停用' },
+    { ...detail, revision: 3 },
+])('does not touch the composer when authority changed (%j)', async reply => {
+    const f = fixture(async () => reply);
+    await expect(f.adapter.useSkill(input)).rejects.toThrow();
+    expect(f.phases.map(p => p.phase)).toEqual(['prepare', 'cancel']);
+    expect(f.reveal).not.toHaveBeenCalled();
+    f.adapter.dispose();
+});
+it.each(['identity', 'navigation'] as const)('discards a pending detail result after %s changes', async reason => {
+    let resolve!: (value: SkillDetail) => void;
+    const f = fixture(() => new Promise<SkillDetail>(done => { resolve = done; }));
+    const signal = new AbortController();
+    const operation = f.adapter.useSkill({ ...input, signal: signal.signal });
+    const rejected = expect(operation).rejects.toThrow('变化');
+    await Promise.resolve();
+    if (reason === 'identity') f.adapter.reset(); else signal.abort();
+    resolve(detail);
+    await rejected;
+    expect(f.phases.some(p => p.phase === 'insert')).toBe(false);
+    expect(f.reveal).not.toHaveBeenCalled();
+    f.adapter.dispose();
+});

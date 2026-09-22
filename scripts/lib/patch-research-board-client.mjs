@@ -6,6 +6,7 @@ import { patchFigmaFinalConversation } from './patch-figma-final-shell.mjs'
 import { researchNotoFontCss } from '../../packages/dsh-research-task-runtime/component-noto-font.js'
 import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
 import { patchFigmaFilePreview } from './figma-file-preview-client.mjs'
+import { patchIntegrationSkillComposer } from './patch-integration-skill-composer.mjs'
 import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -29,7 +30,7 @@ function replace(source, anchor, next, label = anchor.slice(0, 80)) {
 }
 async function pageModule() {
   const result = await build({
-    entryPoints: [join(root, 'src/preload/research-boards-ui.ts')],
+    stdin: { contents: "export * from './src/preload/research-boards-ui.ts'; export { installSkillComposer } from './src/preload/integrations/skill-composer.ts';", resolveDir: root, loader: 'ts' },
     bundle: true,
     platform: 'browser',
     format: 'cjs',
@@ -518,6 +519,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
+  source = patchIntegrationSkillComposer(source)
   source = patchSharedNativeConversation(sharedQueuePatch(source))
   if (!source.includes('applyDirectoryCanvas(canvas) {')) source = replace(source, 'setCollaborationAccess(edit) {', `                applyDirectoryCanvas(canvas) {
                     if (sherlockShared(sessionId)) throw new Error("Directory canvas requires a personal binding");

@@ -86,6 +86,27 @@ export type SkillPreview = {
     files: string[];
     warnings: string[];
 };
+export type SkillDetailCommand = { type: 'skill-detail'; id: string; revision: number };
+export type SkillDetail = {
+    type: 'skill-detail';
+    id: string;
+    revision: number;
+    content: string;
+    invocationName: string;
+    enabled: boolean;
+    /** False identifies a known global block; absence does not grant session/workspace access. */
+    usable?: false;
+    unavailableReason?: string;
+};
+export function isSkillDetailCommand(value: unknown): value is SkillDetailCommand {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const command = value as Record<string, unknown>;
+    return command.type === 'skill-detail' && typeof command.id === 'string' && command.id.length > 0 && command.id.length <= 256
+        && /^[a-zA-Z0-9_.:-]+(?:\/[a-zA-Z0-9_.:-]+)*$/.test(command.id)
+        && !command.id.split('/').some(part => ['.', '..', '__proto__', 'constructor', 'prototype'].includes(part))
+        && typeof command.revision === 'number' && Number.isSafeInteger(command.revision) && command.revision >= 0
+        && Object.keys(command).every(key => ['type', 'id', 'revision'].includes(key));
+}
 export type UiOperation = {
     id: string;
     status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
@@ -97,7 +118,7 @@ export type Mutation = {
     requestId: string;
     expectedRevision: number;
 };
-export type IntegrationCommand = {
+export type IntegrationCommand = SkillDetailCommand | {
     type: 'legacy-preview';
 } | {
     type: 'migrate-legacy-skills';
@@ -196,7 +217,7 @@ export type LegacySkillPreviewItem = {
     kind?: 'personal' | 'project' | 'custom' | 'bundled';
     diagnostic?: SkillImportDiagnostic;
 };
-export type IntegrationReply = {
+export type IntegrationReply = SkillDetail | {
     type: 'legacy-preview';
     items: LegacySkillPreviewItem[];
     eligibleCount: number;
@@ -232,5 +253,6 @@ export type IntegrationReply = {
 export interface IntegrationBridge {
     request(command: IntegrationCommand): Promise<IntegrationReply>;
     revealSource?(path: string): Promise<void>;
+    useSkill?(input: { id: string; revision: number; invocationName: string; name: string; signal?: AbortSignal }): Promise<void>;
 }
 export const emptyConnectionDraft = (type: ConnectionDraft['type'] = 'api'): ConnectionDraft => ({ name: '', type, url: '', clientId: '', command: '', args: '', cwd: '', env: '', authType: 'none', headerName: 'X-API-Key', secret: '', toolsJson: '[]', openApiDocument: '', workspaceIds: '', allowPrivateNetwork: false });
