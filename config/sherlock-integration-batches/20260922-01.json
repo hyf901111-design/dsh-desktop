@@ -230,6 +230,218 @@
         ],
         "recordedAt": "2026-09-22T10:07:29.019Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究看板组件Figma规范落地",
+        "branch": "codex/feat/research-component-spec-20260922",
+        "baseCommit": "d797cb43c5fc81efa4cf8ef17f3e5f49d3402215",
+        "tipCommit": "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc",
+        "commits": [
+          {
+            "commit": "75220fdedb6b5d544245d879c3b04d7967b5eaf5",
+            "parents": [
+              "d797cb43c5fc81efa4cf8ef17f3e5f49d3402215"
+            ],
+            "subject": "规范研究组件：统一黑白控件、生成动效交互与AI设计校验"
+          },
+          {
+            "commit": "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc",
+            "parents": [
+              "75220fdedb6b5d544245d879c3b04d7967b5eaf5"
+            ],
+            "subject": "修复组件设计校验对业务背景和中性色回退的误判"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/figma-generation/dot-grid.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/error.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/process.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/provenance.json"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/restart.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/resume.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/retry.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/running.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/stop.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/stopped.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-generation/waiting.svg"
+          },
+          {
+            "status": "A",
+            "path": "docs/design/research-component-figma-source-audit.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/design/research-component-validation-20260922.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/research-component-design-contract.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-09-22-research-component-spec.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-creation-tools.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/figma-generation-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-completed-design.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-research-completed-design.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-research-component-design.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-research-generation-design.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-canvas-gestures-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-derived-task-presentation.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-design-policy.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-generation-controls.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-expand-final.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-html-theme.test.js",
+              "test/research-design-policy.test.js",
+              "test/research-task-runtime.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-gestures-ui.test.ts",
+              "test/research-generation-expand-final.test.ts",
+              "test/research-derived-task-presentation.test.ts",
+              "test/research-canvas-render-performance.test.ts",
+              "test/research-board-client-adapter.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "291项直接相关聚焦测试通过，含业务背景与嵌套中性fallback正反例；真实Chromium验证浅深主题、控件、生成及完成态。",
+            "verifiedCommit": "ccd953adbf07a5ae4297c01464726a2f3d4d8bfc",
+            "completedAt": "2026-09-22T10:28:51.114573+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离Chromium真实渲染器已验证Light/Dark HTML、78项完成态和18组生成态及手动编辑；原生打包客户端将在集成分支继续验证。"
+        },
+        "acceptanceCriteria": [
+          "组件内控件黑白灰，业务图表与状态色保持",
+          "生成点阵流动、前景稳定、右上角图标与气泡",
+          "manual frameBounds贯穿生成、停止、重试及完成",
+          "AI新HTML检查并最多一次修复；错误保留原内容",
+          "集成客户端保持真实用户状态并接受原生UI回归"
+        ],
+        "risks": [
+          "research-container-chrome存在16项基线既有失败，基线和本次一致；resilience另1项基线失败已记录",
+          "不变更版本、不推送或公开发布；用户验收前保留integration分支"
+        ],
+        "generatedAt": "2026-09-22T10:28:51.114573+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -296,6 +508,25 @@
       "argv": [
         "node",
         "scripts/validate-integration-catalog.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-html-theme.test.js",
+        "test/research-design-policy.test.js",
+        "test/research-task-runtime.test.js",
+        "test/shared-component-validation.test.js",
+        "test/research-generation-controls.test.ts",
+        "test/figma-canvas-gestures-ui.test.ts",
+        "test/research-generation-expand-final.test.ts",
+        "test/research-derived-task-presentation.test.ts",
+        "test/research-canvas-render-performance.test.ts",
+        "test/research-board-client-adapter.test.js",
+        "--reporter=dot"
       ],
       "timeoutMs": 180000
     }
