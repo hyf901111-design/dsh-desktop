@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, mkdir, readFile, realpath, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,6 +17,7 @@ import WorkerThreadCodeRuntime from '@deepseek-ai/dsh-code-runtime-worker-thread
 import { apply as registerSkillTool } from '@deepseek-ai/dsh-tool-skill'
 import { scopeTarget } from '@deepseek-ai/dsh-scope'
 import { IntegrationService } from '../src/main/integrations/service'
+import { manifestDigest } from '../src/main/integrations/manifest'
 import { startIntegrationBridge } from '../src/main/integrations/runtime-bridge'
 import { resolveIntegrationContext } from '../src/main/integrations/context'
 import { emptyConnectionDraft } from '../src/shared/integration-ui'
@@ -30,7 +31,7 @@ const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 // Test-only encryption never opens an OS credential store or accesses personal credentials.
 const encryption = { isEncryptionAvailable: () => true, encryptString: value => Buffer.from(value), decryptString: value => value.toString() }
 
-async function fixture() {
+async function fixture({ marketManifest } = {}) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'ework-harness-e2e-')))
   let service, bridge, runtime, server
   const ctx = new Context(), requests = []
@@ -44,6 +45,16 @@ async function fixture() {
   })
   const workspaces = ['a', 'b'].map(id => ({ workspaceId: `workspace-${id}`, path: join(root, id) }))
   await Promise.all(workspaces.map(workspace => mkdir(workspace.path)))
+  let bundledCatalogRoot = join(projectRoot, 'build/integration-catalog')
+  if (marketManifest) {
+    bundledCatalogRoot = join(root, 'test-catalog')
+    await mkdir(bundledCatalogRoot)
+    await writeFile(join(bundledCatalogRoot, 'catalog.json'), JSON.stringify({ schemaVersion: 1, entries: [{
+      id: 'harness-test-skill', kind: 'skill', name: marketManifest.name, description: marketManifest.description,
+      publisher: 'Test fixture', version: marketManifest.version, permissions: [],
+      manifest: marketManifest, digest: manifestDigest(marketManifest),
+    }] }))
+  }
   new SessionStore(ctx); new AgentRegistry(ctx); new LlmRuntime(ctx); new SystemPrompt(ctx, {}); new ToolRuntime(ctx); new SkillRegistry(ctx)
   new AgentLoop(ctx, { agents: [], maxParallelToolCalls: 1 })
   new WorkerThreadCodeRuntime(ctx, { computeMs: 1000, maxWallMs: 3000, maxOutputBytes: 32768, maxOldGenerationSizeMb: 64 })
@@ -55,7 +66,7 @@ async function fixture() {
   const b = (await ctx.agents.create({ sessionId: 'real-agent-b', meta: { cwd: workspaces[1].path }, agentOptions: {} })).agent
   service = await IntegrationService.open({
     root: join(root, 'registry'), encryption, getOwnerId: () => 'fixture-owner',
-    bundledCatalogRoot: join(projectRoot, 'build/integration-catalog'), clientVersion: '1.0.6',
+    bundledCatalogRoot, clientVersion: '1.0.6',
     resolveContext: context => resolveIntegrationContext(context, {
       ownerId: 'fixture-owner', tasks: [], workspaces: async () => workspaces,
       // These identities come from real Harness Agent/Session objects, not the bridge request.
@@ -168,24 +179,29 @@ describe('IntegrationService → authenticated bridge → Harness tools and skil
   })
 
   it('installs a Chinese market skill and uses its actual resource via registry, skill tool and slash loading', async () => {
-    const f = await fixture()
+    const name = '中文市场验收技能'
+    const content = `---\nname: ${name}\ndescription: 核验测试资料中的事实与来源\n---\n\n仅使用独立测试资料，保留日期与原始引用。`
+    const marketManifest = { schemaVersion: 1, id: 'test.harness.market-skill', name, description: '仅用于隔离运行时验收', version: '1.0.0', skills: [{ id: 'verify', name, description: '核验测试资料中的事实与来源', files: { 'SKILL.md': content } }] }
+    const f = await fixture({ marketManifest })
     const market = await f.service.request({ type: 'market', kind: 'skill' })
-    const entry = market.entries.find(item => item.name === '周报整理')
+    expect(market.type).toBe('market')
+    expect(market.entries).toHaveLength(1)
+    const entry = market.entries.find(item => item.name === name)
     expect(entry?.available).toBe(true)
     await f.mutate({ type: 'install', entryId: entry.id }); await f.runtime.sync()
-    const installed = f.service.runtimeSnapshot().skills.find(skill => skill.name === '周报整理')
+    const installed = f.service.runtimeSnapshot().skills.find(skill => skill.name === name)
     expect(installed).toBeDefined()
     const alias = managedSkillInvocationName(installed), lookup = { cwd: f.a.session.header.cwd, scope: f.a }
     const catalog = await f.ctx.skills.list(lookup)
     expect(catalog.filter(isUserInvocable).map(skill => skill.name)).toContain(alias)
-    expect(catalog.find(skill => skill.name === alias).description).toContain('周报整理')
+    expect(catalog.find(skill => skill.name === alias).description).toContain(name)
     const resource = await readFile(join(installed.resourceRoot, 'SKILL.md'), 'utf8')
-    expect(resource).toContain('保留负责人、日期、原始来源')
+    expect(resource).toBe(content)
     expect((await f.ctx.skills.get(alias, lookup)).content).toBe(resource)
     const loaded = await f.invoke('skill', { name: alias })
-    expect(loaded.isError).toBe(false); expect(loaded.content[0].text).toContain('保留负责人、日期、原始来源')
+    expect(loaded.isError).toBe(false); expect(loaded.content[0].text).toContain('仅使用独立测试资料，保留日期与原始引用。')
     const slash = () => {
-      const messages = [createUserMessage({ content: [{ type: 'text', text: `/${alias} 写本周周报` }], source: { kind: 'user' } })]
+      const messages = [createUserMessage({ content: [{ type: 'text', text: `/${alias} 核验测试资料` }], source: { kind: 'user' } })]
       return f.ctx.waterfall(scopeTarget(f.ctx, f.a), 'agent/pre-step', { agent: f.a, messages, turn: 0, step: 0, signal: new AbortController().signal }, () => Promise.resolve({ kind: 'enter', messages }))
     }
     expect((await slash()).messages.some(message => message.source?.kind === 'skill-invocation')).toBe(true)
