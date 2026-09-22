@@ -3,8 +3,10 @@ import { patchResearchCanvasRenderPerformance } from './research-canvas-render-p
 import { readFileSync } from 'node:fs'
 const icon = name => `data:image/svg+xml;base64,${readFileSync(new URL(`../../build/figma-canvas-icons/tool-${name}.svg`, import.meta.url)).toString('base64')}`
 export function componentPlacement(rect, viewport) {
-  const width = Math.max(320, rect.width / viewport.scale)
-  const height = Math.max(220, rect.height / viewport.scale)
+  // A click without a drawn area retains the existing default. A real frame
+  // owns its dimensions, including narrow and short Figma examples.
+  const width = rect.width > 0 ? rect.width / viewport.scale : 320
+  const height = rect.height > 0 ? rect.height / viewport.scale : 220
   return { x: (rect.left - viewport.x) / viewport.scale + width / 2, y: (rect.top - viewport.y) / viewport.scale + height / 2, width, height, sizeMode: 'manual' }
 }
 // Snap both edges in screen space, including fractional panel offsets. Otherwise
@@ -58,6 +60,7 @@ export function patchMarqueeInteraction(source) {
   return source
 }
 export function patchCanvasCreationTools(source) {
+  source = source.replace(/\(function componentPlacement\(rect, viewport\) \{[\s\S]*?\}\)\(rect,current\.viewport\)/, `(${componentPlacement.toString()})(rect,current.viewport)`)
   source = source.replace('// Resizing a placeholder must not lock the first finished artifact.', '// Explicit user dimensions remain authoritative after generation.')
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')
   source = patchMarqueeScreenStyle(patchComponentMarquee(source))
@@ -259,9 +262,15 @@ export const creationToolsCss = `
 [data-canvas-tool] [data-research-global-toolbar] .odyssey-global-voice{mask-image:url("${icon('voice')}")}
 body[data-ds-dark-theme] [data-canvas-tool]{--odyssey-tool-color:#eee}
 [data-canvas-tool] [data-research-global-toolbar] button:hover:not([aria-pressed=true]){background:#8882!important}
-[data-research-container-draft]{box-sizing:border-box;min-height:0;height:100%;display:flex;flex-direction:column;padding:16px!important;gap:12px}
-[data-research-container-draft] textarea{box-sizing:border-box;flex:1;min-height:40px!important;height:auto!important;resize:none}
-[data-research-container-draft] .rScV5Q_containerDraftFooter{flex:none;margin-top:0}
+[data-research-compact-chrome][data-research-generated-container] [data-research-container-draft]{box-sizing:border-box;min-height:0;height:100%;display:flex;flex-direction:column;padding:18px!important;gap:12px}
+[data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] textarea{box-sizing:border-box;flex:1;min-height:40px!important;height:auto!important;resize:none}
+[data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] textarea{caret-color:#333}
+[data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] textarea:focus{border-color:#333!important;box-shadow:0 0 0 1px #0000001f!important;outline:0}
+body[data-ds-dark-theme] [data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] textarea{caret-color:#f5f5f5}
+body[data-ds-dark-theme] [data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] textarea:focus{border-color:#f5f5f5!important;box-shadow:0 0 0 1px #ffffff24!important}
+[data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] .rScV5Q_containerDraftFooter{flex:none;margin-top:0}
+[data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] .rScV5Q_containerDraftFooter button{box-sizing:border-box;width:92px;height:32px;border-radius:8px;padding:0 12px;background:#191919;color:#fff;border:0}
+body[data-ds-dark-theme] [data-research-compact-chrome][data-research-generated-container] [data-research-container-draft] .rScV5Q_containerDraftFooter button{background:#f5f5f5;color:#191919}
 [data-research-canvas][data-canvas-tool]{overflow:hidden!important;isolation:isolate}
 .odyssey-link-draft{box-sizing:border-box;bottom:auto!important;right:auto!important;min-height:0;padding:0!important;border:1px solid transparent;background:var(--odyssey-content);display:flex;flex-direction:column;gap:0!important;transform-origin:center;overflow:hidden;color:var(--odyssey-card-text)}
 .odyssey-link-draft .odyssey-link-title{box-sizing:border-box;flex:none;width:100%;margin:0!important;display:flex;background:var(--odyssey-card);cursor:grab;touch-action:none}

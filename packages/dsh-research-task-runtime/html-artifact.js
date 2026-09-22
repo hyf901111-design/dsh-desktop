@@ -38,34 +38,46 @@ export function researchComponentTypographyCss(scope, options = {}) {
     : researchNotoFontCss
   return RESEARCH_COMPONENT_DIN_FACES + noto + `@layer sherlock-component-typography{:is(:is(${scope}),:is(${scope}) *){font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important}}`
 }
-// Card and chart tokens adapted to the shadcn/ui neutral Card / Area Chart treatment.
-// https://ui.shadcn.com/charts/area — shared by sandbox HTML and native cards.
+// Figma 21M: current monochrome controls + 21H fund72/Lumos content roles.
+// Controls and business colors are independent; chart/status colors never become actions.
+const researchComponentPalette = (p) => Object.freeze({ ...p,
+  'accent-foreground': p['control-on-primary'], accent: p['control-primary'], link: p['control-text'],
+  'accent-soft': p['row-selected'], 'row-bg': p.surface, 'chart-background': p.surface,
+  'chart-foreground': p.text, 'chart-foreground-muted': p.muted, 'chart-label': p.muted,
+  'chart-grid': p.border, 'chart-crosshair': p.muted,
+  'tooltip-bg': p.surface, 'tooltip-text': p.text, 'tooltip-muted': p.muted, 'tooltip-border': p.border,
+  'chart-marker-background': p['surface-muted'], 'chart-marker-border': p.border, 'chart-marker-foreground': p.text,
+  'chart-marker-badge-background': p['control-primary'], 'chart-marker-badge-foreground': p['control-on-primary'],
+  'chart-segment-background': p['surface-muted'], 'chart-segment-line': p.border
+})
 export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
-  light: Object.freeze({
-    bg: '#ffffff', surface: '#ffffff', 'surface-muted': '#f5f5f5', text: '#0a0b0c', muted: '#737373',
-    border: '#e5e5e5', link: '#2563eb', accent: '#0a0b0c', 'accent-foreground': '#ffffff', 'accent-soft': '#7373730f',
-    'chart-1': '#3b82f6', 'chart-2': '#14b8a6',
-    'chart-3': '#8b5cf6', 'chart-4': '#f59e0b', 'chart-5': '#ec4899', 'chart-6': '#64748b',
-    'chart-background': '#ffffff', 'chart-foreground': 'oklch(.145 .004 285)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
-    'chart-label': 'oklch(.45 .01 260)', 'chart-grid': 'oklch(.917 0 0)', 'chart-crosshair': 'oklch(.677 0 72.411)',
-    'tooltip-bg': 'oklch(.999998 .0000253939 112.713)', 'tooltip-text': 'oklch(.147999 .0039982 228.752)',
-    'tooltip-muted': 'oklch(.564 0 78.958)', 'tooltip-border': 'oklch(.92 0 0)',
-    'chart-marker-background': '#f5f5f5', 'chart-marker-border': '#dedede', 'chart-marker-foreground': '#444',
-    'chart-marker-badge-background': '#171717', 'chart-marker-badge-foreground': '#fff',
-    'chart-segment-background': '#7373730f', 'chart-segment-line': '#73737340'
+  light: researchComponentPalette({
+    bg: '#fafafa', surface: '#fafafa', 'surface-muted': '#ebf1f5', text: '#202629', muted: '#65717a', border: '#e1e6e9',
+    'control-bg': '#ffffff', 'control-border': '#d9d9d9', 'control-text': '#333333', 'control-muted': '#777777',
+    'control-primary': '#191919', 'control-on-primary': '#ffffff', 'control-secondary': '#f0f0f0',
+    'row-alternate': '#f0f3f5', 'row-selected': '#f0f0f0',
+    'status-success-bg': '#e2f2eb', 'status-success-fg': '#08745d',
+    'status-warning-bg': '#faf0db', 'status-warning-fg': '#876000',
+    'status-info-bg': '#e2eef7', 'status-info-fg': '#005096',
+    'status-danger-bg': '#fafafa', 'status-danger-fg': '#b84343',
+    'chart-1': '#005096', 'chart-2': '#1eb9e1', 'chart-3': '#0078b4',
+    'chart-4': '#ffc819', 'chart-5': '#008565', 'chart-6': '#c62f36',
+    'market-positive': '#c62f36', 'market-negative': '#008565',
+    'heatmap-high': '#005096', 'heatmap-medium': '#0078b4', 'heatmap-low': '#d5e6f1'
   }),
-  dark: Object.freeze({
-    bg: '#171717', surface: '#171717', 'surface-muted': '#262626', text: '#fafafa', muted: '#a3a3a3',
-    border: '#303030', link: '#60a5fa', accent: '#fafafa', 'accent-foreground': '#171717', 'accent-soft': '#ffffff0f',
-    'chart-1': '#93c5fd', 'chart-2': '#5eead4',
-    'chart-3': '#c4b5fd', 'chart-4': '#fcd34d', 'chart-5': '#f9a8d4', 'chart-6': '#94a3b8',
-    'chart-background': '#171717', 'chart-foreground': 'oklch(.45 0 0)', 'chart-foreground-muted': 'oklch(.55 .014 260)',
-    'chart-label': 'oklch(.75 .01 260)', 'chart-grid': '#262626', 'chart-crosshair': 'oklch(.72 .0158 281.84)',
-    'tooltip-bg': '#1c1c1c', 'tooltip-text': 'oklch(.987 .002 197.1)',
-    'tooltip-muted': 'oklch(.62 .0218 270.07)', 'tooltip-border': 'oklch(.56 .0195 267.65 / .2)',
-    'chart-marker-background': '#27272a', 'chart-marker-border': '#3f3f46', 'chart-marker-foreground': '#d4d4d8',
-    'chart-marker-badge-background': '#fafafa', 'chart-marker-badge-foreground': '#18181b',
-    'chart-segment-background': '#ffffff0f', 'chart-segment-line': '#ffffff40'
+  dark: researchComponentPalette({
+    bg: '#303030', surface: '#303030', 'surface-muted': '#3b3b3b', text: '#f4f5f6', muted: '#b9bec3', border: '#454545',
+    'control-bg': '#292929', 'control-border': '#505050', 'control-text': '#f5f5f5', 'control-muted': '#a0a0a0',
+    'control-primary': '#f5f5f5', 'control-on-primary': '#191919', 'control-secondary': '#383838',
+    'row-alternate': '#353b40', 'row-selected': '#383838',
+    'status-success-bg': '#24473d', 'status-success-fg': '#82dabb',
+    'status-warning-bg': '#50452c', 'status-warning-fg': '#f6d077',
+    'status-info-bg': '#244459', 'status-info-fg': '#9bd8f6',
+    'status-danger-bg': '#303030', 'status-danger-fg': '#ff9d9d',
+    'chart-1': '#1eb9e1', 'chart-2': '#b3ebff', 'chart-3': '#0078b4',
+    'chart-4': '#ffc819', 'chart-5': '#22d6a0', 'chart-6': '#ff625f',
+    'market-positive': '#ff625f', 'market-negative': '#22d6a0',
+    'heatmap-high': '#005096', 'heatmap-medium': '#0078b4', 'heatmap-low': '#384c59'
   })
 })
 const RESEARCH_COMPONENT_CHART_ALIASES = Object.freeze({
@@ -80,12 +92,54 @@ const RESEARCH_COMPONENT_CHART_ALIASES = Object.freeze({
 })
 const researchComponentPaletteCss = (palette) => Object.entries(palette).map(([key, value]) => `--sherlock-${key}:${value}`).join(';')
 const researchComponentChartAliasCss = Object.entries(RESEARCH_COMPONENT_CHART_ALIASES).map(([key, semantic]) => `--${key}:var(--sherlock-${semantic})`).join(';')
-// Equal selector specificity lets a user's later :root custom palette override
-// either mode. Theme updates change the attribute, never the user's CSS rules.
-export const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};${researchComponentChartAliasCss};--sherlock-font-sans:Arial,"Helvetica Neue","PingFang SC",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:12px;--sherlock-shadow:none}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
-// Zero specificity is paired with the earliest cascade layer at injection, so
-// both layered and unlayered user styles retain priority over these defaults.
-const RESEARCH_COMPONENT_BASE_CSS = `:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans);font-synthesis:none}:where(body){margin:0}:where(*){box-sizing:border-box}:where(button,select,input,textarea,table,.research-card,.card,.panel,.kpi-card,[data-sherlock-card],[role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border-radius:var(--sherlock-radius);box-shadow:var(--sherlock-shadow)}:where(button,select,input,textarea){font:inherit;color:inherit;border:1px solid var(--sherlock-border);background:transparent}:where(button,select){cursor:pointer}:where(button){padding:6px 12px}:where(button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible){outline:2px solid var(--sherlock-muted);outline-offset:3px}:where(.research-card,.card,.panel,.kpi-card,[data-sherlock-card]){border:1px solid var(--sherlock-border);background:var(--sherlock-surface)}:where([role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border:1px solid var(--sherlock-tooltip-border);background:var(--sherlock-tooltip-bg);color:var(--sherlock-tooltip-text);font-size:12px;padding:13px 14px}:where(table){width:100%;border-collapse:collapse;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}:where(caption){text-align:left;padding-bottom:16px;color:var(--sherlock-muted)}:where(th){color:var(--sherlock-muted);font-weight:400}:where(th,td){padding:10px 8px;border-bottom:1px solid var(--sherlock-border)}:where(th:first-child,td:first-child){text-align:left}a[href],a[href]:visited{color:var(--sherlock-link)!important;text-underline-offset:3px;text-decoration-thickness:1px}a[href]:hover{text-decoration:underline}`
+// Content defaults remain overridable for layout; action geometry/colors are host-owned.
+export const RESEARCH_COMPONENT_THEME_CSS = `:root{${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.light)};${researchComponentChartAliasCss};--sherlock-font-sans:"EWork DIN Pro","Noto Sans SC",sans-serif;--sherlock-font-mono:"SF Mono",Menlo,Consolas,monospace;--sherlock-radius:8px;--sherlock-shadow:none}:root:where([data-sherlock-theme="dark"]){${researchComponentPaletteCss(RESEARCH_COMPONENT_PALETTES.dark)}}`
+const RESEARCH_COMPONENT_BASE_CSS = `
+:where(html,body){background:var(--sherlock-bg);color:var(--sherlock-text);font-family:var(--sherlock-font-sans);font-size:12px;line-height:18px;font-synthesis:none}
+:where(body){margin:0}:where(*){box-sizing:border-box}
+:where(button,select,input,textarea,table,.research-card,.card,.panel,.kpi-card,[data-sherlock-card],[role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border-radius:var(--sherlock-radius);box-shadow:none}
+:where(button,select,input,textarea){font:inherit;color:inherit;border:1px solid var(--sherlock-border);background:transparent}
+:where(button,select){cursor:pointer}:where(button){padding:0 10px}
+:where(.research-card,.card,.panel,[data-sherlock-card]){background:var(--sherlock-surface);padding:12px}
+:where(.research-metric,.kpi-card){border:0;border-radius:5px;background:var(--sherlock-surface-muted);padding:6px 10px}
+:where(.research-metric-value){font-size:23px;line-height:26px;font-weight:500;font-variant-numeric:tabular-nums}
+:where(.research-metric-label){color:var(--sherlock-muted);font-size:9px;line-height:14px}
+:where(.research-numeric,[data-sherlock-numeric]){text-align:right;font-variant-numeric:tabular-nums}
+:where([role="tooltip"],.chart-tooltip-panel,[data-chart-tooltip]){border:1px solid var(--sherlock-tooltip-border);background:var(--sherlock-tooltip-bg);color:var(--sherlock-tooltip-text);font-size:10px;line-height:16px;padding:6px 8px}
+:where(table){width:100%;border-collapse:collapse;text-align:left;font-size:10px;line-height:16px;font-variant-numeric:tabular-nums}
+:where(caption){text-align:left;padding-bottom:10px;color:var(--sherlock-muted)}
+:where(th){color:var(--sherlock-muted);font-weight:400;font-size:9px}
+:where(th,td){padding:6px 8px;border-bottom:.5px solid var(--sherlock-border)}
+:where(tbody tr:nth-child(even)){background:var(--sherlock-row-alternate)}
+:where(tr[aria-selected="true"],.research-row-selected){background:var(--sherlock-row-selected)}
+:where([data-sherlock-status]){display:inline-block;border-radius:5px;padding:2px 8px;font-size:10px;line-height:16px}
+${['success','warning','danger','info'].map(status => `:where([data-sherlock-status="${status}"]){background:var(--sherlock-status-${status}-bg);color:var(--sherlock-status-${status}-fg)}`).join('')}
+`
+// Earliest important layer wins against later authored styles and gradients. Content/SVG
+// colors are deliberately outside this selector set. Existing artifacts keep their DOM/JS.
+export const RESEARCH_COMPONENT_CONTROLS_CSS = `@layer sherlock-component-controls{
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],summary,input,select,textarea){color:var(--sherlock-control-text)!important;background-color:var(--sherlock-control-bg)!important;background-image:none!important;border-color:var(--sherlock-control-border)!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)!important;caret-color:var(--sherlock-control-text)!important}
+:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important}
+textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:10px!important;line-height:16px!important}
+:is(button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
+:is(button[type="submit"],button[aria-pressed="true"],input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
+:is(input[type="checkbox"],input[type="radio"]){width:13px!important;height:13px!important;min-height:0!important;padding:0!important;accent-color:var(--sherlock-control-primary)!important}
+input[type="checkbox"]{border-radius:3px!important}
+:is(button,[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-text)!important;outline-offset:2px!important}
+:is(input,textarea)::placeholder{color:var(--sherlock-control-muted)!important;opacity:1!important}
+:is(button,[role="button"],input,select,textarea):disabled{opacity:.45!important;cursor:not-allowed!important}
+a[href],a[href]:visited{color:var(--sherlock-control-text)!important;text-underline-offset:3px;text-decoration-thickness:1px}
+a[href]:hover{text-decoration:underline}
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[stroke]:not([stroke="none"]){stroke:currentColor!important}
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],a[href],[role="tab"]) :is(span,svg){color:inherit!important}
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"]) :is(svg,img){filter:grayscale(1)!important}
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg{fill:currentColor!important}
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[fill="none"]{fill:none!important}
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [fill]:not([fill="none"]){fill:currentColor!important}
+:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [stroke]:not([stroke="none"]){stroke:currentColor!important}
+:is([role="tab"],[aria-current="page"]){color:var(--sherlock-control-text)!important;border-color:var(--sherlock-control-border)!important;background-color:transparent!important;background-image:none!important}
+:is([role="tab"][aria-selected="true"],[aria-current="page"]){background-color:var(--sherlock-control-secondary)!important}
+}`
 
 // Scrollbars belong to the canvas chrome, including inside sandboxed HTML.
 // The first important layer keeps authored page scrollbar rules from diverging.
@@ -136,7 +190,7 @@ const RESEARCH_HTML_INNER_FONT_RUNTIME = String.raw`function researchHtmlInnerFo
       text.textContent = '字体加载失败'
       button.textContent = '重试'
       button.type = 'button'
-      button.style.cssText = 'border:0;background:none;color:var(--sherlock-link,#2563eb);padding:0 2px;min-height:20px;font:inherit;cursor:pointer'
+      button.style.cssText = 'border:0;background:none;color:var(--sherlock-control-text,#333333);padding:0 2px;min-height:20px;font:inherit;cursor:pointer'
       button.addEventListener('click', () => {
         received = false
         finished = false
@@ -231,7 +285,45 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     apply()
   }
   addEventListener('message', receive)
-  document.addEventListener('DOMContentLoaded', repairAccentControls)
+  // Dynamic controls use the same host roles. Inline !important otherwise wins
+  // over every stylesheet layer. Strip only protected control presentation;
+  // preserve layout width, values, listeners, business graphics and fill=none.
+  const controlSelector = 'button,input,select,textarea,summary,a[href],[role="button"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="combobox"],[role="slider"],[role="menuitem"]'
+  const protectedControlProperty = /^(?:color|background(?:-.+)?|border(?:-.+)?|outline(?:-.+)?|box-shadow|text-shadow|accent-color|caret-color|font(?:-.+)?|height|min-height|padding(?:-.+)?)$/
+  const normalizeControls = root => {
+    if (!root?.querySelectorAll) return
+    const elements = [root, ...root.querySelectorAll('*')]
+    for (const element of elements) {
+      if (!element.matches || !element.closest(controlSelector)) continue
+      const ownControl = element.matches(controlSelector)
+      for (const property of Array.from(element.style || [])) {
+        if (element.style.getPropertyPriority(property) !== 'important') continue
+        if ((ownControl && protectedControlProperty.test(property)) || (!ownControl && property === 'color')) element.style.removeProperty(property)
+      }
+      if (!element.closest('svg')) continue
+      // Preserve a stroke-only icon; only recolor chromatic paints, not 'none'.
+      const style = getComputedStyle(element)
+      for (const property of ['fill','stroke']) {
+        const color = rgb(style[property] || '')
+        if (color && Math.max(...color) - Math.min(...color) > 2) element.style.setProperty(property,'currentColor','important')
+      }
+    }
+  }
+  const startControlPolicy = () => {
+    repairAccentControls()
+    normalizeControls(document.body)
+    const observer = new MutationObserver(records => {
+      observer.disconnect()
+      for (const record of records) {
+        if (record.type === 'attributes') normalizeControls(record.target)
+        else for (const node of record.addedNodes) normalizeControls(node)
+      }
+      observer.observe(document.body, {subtree:true,childList:true,attributes:true,attributeFilter:['style','class','role','fill','stroke','type']})
+    })
+    observer.observe(document.body, {subtree:true,childList:true,attributes:true,attributeFilter:['style','class','role','fill','stroke','type']})
+    addEventListener('pagehide',()=>observer.disconnect(),{once:true})
+  }
+  document.addEventListener('DOMContentLoaded', startControlPolicy)
   const startContentMeasurement = () => {
     if (typeof parent.postMessage !== 'function') return
     let stopped = false
@@ -584,7 +676,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
   const baseStyle = `@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
-  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${html}</body></html>`
+  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${html}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
   const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`
   return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 EWork Odyssey 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`
