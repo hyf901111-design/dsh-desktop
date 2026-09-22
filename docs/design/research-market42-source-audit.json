@@ -1673,5 +1673,31 @@
       ],
       "shapes": []
     }
-  ]
+  ],
+  "tableStyleEvidence": {
+    "darkHeader": {
+      "node": "1217:213181",
+      "color": "#383838",
+      "opacity": 0.8
+    },
+    "firstRowHighlight": {
+      "node": "1217:213187",
+      "color": "#DEDEDE",
+      "opacity": 0.13
+    },
+    "alternateRow": {
+      "node": "1217:213194",
+      "color": "#505050",
+      "opacity": 0.07
+    },
+    "numeric": {
+      "node": "1217:213189",
+      "family": "DINPro",
+      "style": "Regular",
+      "size": 11,
+      "lineHeight": 14
+    },
+    "positive": "#FF625F",
+    "negative": "#22D6A0"
+  }
 }
