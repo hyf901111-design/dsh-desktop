@@ -1189,7 +1189,30 @@ async function bootstrap(): Promise<void> {
   })
   const disposeCanvasActions = registerCanvasActionHandlers({ipcMain,getMainWindow:()=>mainWindow,bridge:canvasActions})
   app.once('before-quit',disposeCanvasActions)
+  let isScheduledSession = (_id: string) => false
+  const notifiedSessionTurns = new Map<string, number>()
   researchContextBridge = new ResearchContextBridge({
+    sessionCompleted: ({ sessionId, seq, title }) => {
+      if (isScheduledSession(sessionId) || seq <= (notifiedSessionTurns.get(sessionId) ?? -1)) return
+      notifiedSessionTurns.delete(sessionId)
+      notifiedSessionTurns.set(sessionId, seq)
+      if (notifiedSessionTurns.size > 1000) notifiedSessionTurns.delete(notifiedSessionTurns.keys().next().value!)
+      try {
+        if (!Notification.isSupported()) return
+        const english = harnessLocale() === 'en'
+        const notification = new Notification({
+          title: title || (english ? 'Session task completed' : '会话任务已完成'),
+          body: english ? 'Task completed. Open EWork Odyssey to view the result.' : '任务已完成，打开 EWork Odyssey 查看结果。'
+        })
+        notification.on('click', () => {
+          if (!mainWindow || mainWindow.isDestroyed()) return
+          if (mainWindow.isMinimized()) mainWindow.restore()
+          mainWindow.show()
+          mainWindow.focus()
+        })
+        notification.show()
+      } catch (error) { console.warn('[session-notification] unable to show notification', error) }
+    },
     canvasAction: (value,signal) => canvasActions.execute(value,signal),
     isSharedSession:id=>researchBoardsService?.isSharedSession(id)===true,
     additionalSources:id=>researchBoardIntegration?.personalContext(id)??[],
@@ -1279,6 +1302,7 @@ async function bootstrap(): Promise<void> {
   })
   registerHarnessHandlers(researchCanvasStorage)
   const scheduledStore = new TaskStore(join(app.getPath('userData'), 'scheduled-tasks.json'), Date.now, prompt => generateTaskTitle(runtime.snapshot().url, prompt))
+  isScheduledSession = id => scheduledStore.list().some(task => task.sessionId === id || task.runs.some(run => run.sessionId === id))
   let scheduledLoadError: unknown
   try { await scheduledStore.load() } catch (error) { scheduledLoadError = error; console.error('[scheduled-tasks]', error) }
   const taskRpc = harnessRpc(() => runtime.snapshot().url)

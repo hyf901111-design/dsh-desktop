@@ -1,3 +1,4 @@
+import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
@@ -1816,6 +1817,7 @@ export async function apply(ctx) {
   const disposeCanvasUseTasks=await registerCanvasUseTasks(ctx,{filePath:join(dshHome(),'sherlock-canvas-tasks.json'),isTrustedRequest,readJsonBody})
   const disposeWorkbench = await registerWorkbench(ctx, runtime, { filePath: join(dshHome(), 'sherlock-workbenches.json'), isTrustedRequest, readJsonBody })
   ctx.effect(() => {
+    const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
@@ -1823,12 +1825,14 @@ export async function apply(ctx) {
     try {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
     } catch (error) {
+      disposeCompletionNotifications()
       disposeCanvasTools()
       disposeRoutes()
       disposeScheduledTitle()
       throw error
     }
     return async () => {
+      disposeCompletionNotifications()
       await disposeShared()
       await disposeComputerUseTool()
       disposeCanvasUseTool();disposeBrowserUseTool()

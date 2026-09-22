@@ -14,6 +14,7 @@ type Source = { id: string; title: string; kind: string; text: string; status: s
 type Canvas = { files: unknown[]; artifacts: unknown[] }
 type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes: number }
 type Options = {
+  sessionCompleted?(value: { sessionId: string; seq: number; title: string }): void
   canvasAction?(value: unknown,signal?:AbortSignal): Promise<unknown>
   canReadSession?(sessionId: string): boolean
   isSharedSession?(sessionId:string):boolean
@@ -118,7 +119,7 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (!['/snapshot','/board-authority','/canvas-actions'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/board-authority','/canvas-actions','/session-completed'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
       try {
         const chunks: Buffer[] = []
         let size = 0
@@ -130,6 +131,11 @@ export class ResearchContextBridge {
           chunks.push(chunk)
         }
         const raw=JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if (req.url === '/session-completed') {
+          if (!id(raw?.sessionId) || !Number.isSafeInteger(raw?.seq) || raw.seq < 0 || typeof raw?.title !== 'string' || raw.title.length > 160) return send(400, { error: 'Invalid completion' })
+          this.options.sessionCompleted?.({ sessionId: raw.sessionId, seq: raw.seq, title: raw.title })
+          return send(200, { ok: true })
+        }
         if(req.url==='/canvas-actions') {
           const controller=new AbortController(),abort=()=>controller.abort()
           const close=()=>{if(!res.writableEnded)abort()}
