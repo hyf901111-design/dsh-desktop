@@ -49,6 +49,20 @@ try {
       return{node:workspace.getSnapshot().artifacts[0],card:box(card),surface:box(surface),foreground:box(foreground),foregroundTransform:getComputedStyle(foreground).transform,filter:getComputedStyle(surface).filter,backdrop:getComputedStyle(surface).backdropFilter,motion:getComputedStyle(dots).animationPlayState,animations:dots.getAnimations().map(a=>({currentTime:a.currentTime,playState:a.playState})),text:foreground.textContent,state:surface.dataset.generationUiState,overflow:foreground.scrollHeight>foreground.clientHeight}
     }
   })
+  for(const state of ['cancelled','failed']) {
+    await page.evaluate(state=>reset({state}),state)
+    const alpha=await page.locator('.odyssey-generation-state-icon').evaluate(async el=>{
+      const image=new Image();image.src=getComputedStyle(el).maskImage.match(/url\(["']?([^"')]+)["']?\)/)[1];await image.decode()
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=180
+      const context=canvas.getContext('2d');context.drawImage(image,0,0,180,180)
+      const at=(x,y)=>context.getImageData(Math.floor(x*10),Math.floor(y*10),1,1).data[3]
+      return{outside:at(1,1),interior:[[4.5,9],[13.5,9],[9,4.5],[9,13.5]].map(([x,y])=>at(x,y)),ring:at(9,2.65),square:at(9,9),stem:at(9,7),point:at(9,11.9),gap:at(9,10.5)}
+    })
+    assert.equal(alpha.outside,0);assert.deepEqual(alpha.interior,[0,0,0,0],`${state} ring interior is transparent, not a solid circle`);assert.ok(alpha.ring>240)
+    if(state==='cancelled')assert.ok(alpha.square>240,'stop square is present inside the transparent ring')
+    else{assert.ok(alpha.stem>240);assert.ok(alpha.point>240);assert.equal(alpha.gap,0,'exclamation stem and point remain separated')}
+  }
+  report.checks.push('actual stopped/error SVG masks have transparent ring interiors and opaque center glyphs')
   for(const theme of ['light','dark']) for(const [shape,width,height] of [['wide',620,300],['tall',240,620],['compact',360,200]]) for(const state of ['running','cancelled','failed']) {
     await page.evaluate(value=>reset(value),{theme,width,height,state})
     try { await page.waitForSelector('[data-research-generation-process]',{timeout:4000}) }
@@ -80,6 +94,26 @@ try {
     await page.getByRole('button',{name:'收起过程',exact:true}).click()
     report.cases.push({theme,shape,state,width,height,foreground:before.foreground,animationPixelsChanged:different,button:buttonBox,processPreservesBounds:true})
   }
+  for(const theme of ['light','dark']) for(const [shape,width,height] of [['wide',620,300],['tall',240,620],['compact',360,200]]) {
+    await page.evaluate(value=>{
+      reset(value)
+      workspace.applyGenerationInspection('card',{taskId:'task-running',canvasNodeId:'card',state:'running',lastSeq:12,events:Array.from({length:11},(_,index)=>({taskId:'task-running',canvasNodeId:'card',seq:index+2,type:'tool-started',tool:'核验步骤 '+(index+2),detail:'依据公开资料核对样本、时间口径、基金规模、经理任职、累计收益和最大回撤。'.repeat(7)}))})
+    },{theme,width,height})
+    const before=await page.evaluate(()=>metrics())
+    await page.locator('[data-research-generation-process]').hover();await page.getByRole('button',{name:'查看过程',exact:true}).click()
+    const records=page.locator('[data-research-generation-records]')
+    const panel=await records.evaluate(el=>({background:getComputedStyle(el).backgroundColor,clientHeight:el.clientHeight,scrollHeight:el.scrollHeight,rows:el.querySelectorAll('[data-research-generation-row]').length}))
+    assert.equal(panel.background,theme==='dark'?'rgb(3, 3, 3)':'rgb(250, 250, 250)');assert.ok(panel.rows>=8);assert.ok(panel.scrollHeight>panel.clientHeight,'long real process rows scroll inside the original card')
+    assert.equal(await page.locator('[data-research-generation-foreground]').evaluate(el=>getComputedStyle(el).visibility),'hidden')
+    await records.evaluate(el=>{el.scrollTop=el.scrollHeight})
+    assert.ok(await records.evaluate(el=>el.scrollTop)>0)
+    assert.deepEqual((await page.evaluate(()=>metrics())).card,before.card);assert.deepEqual((await page.evaluate(()=>metrics())).foreground,before.foreground)
+    assert.equal(await page.locator('[data-research-generation-elapsed]').isVisible(),true);assert.equal(await page.getByRole('button',{name:'停止生成',exact:true}).isVisible(),true)
+    await page.screenshot({path:output+`${theme}-${shape}-process-scrolled.png`,animations:'allow'})
+    await page.getByRole('button',{name:'收起过程',exact:true}).click()
+    assert.equal(await page.locator('[data-research-generation-foreground]').evaluate(el=>getComputedStyle(el).visibility),'visible');assert.deepEqual((await page.evaluate(()=>metrics())).foreground,before.foreground)
+  }
+  report.checks.push('Light/Dark wide/tall/compact multiline records are opaque and scroll without foreground overlap or bounds changes; timer/actions stay visible')
   await page.evaluate(()=>{reset();workspace.setGenerationCancelSink(()=>new Promise(resolve=>{window.resolveCancel=resolve}))})
   await page.locator('[data-research-generation-process]').hover();await page.getByRole('button',{name:'停止生成',exact:true}).click()
   assert.equal((await page.evaluate(()=>metrics())).state,'stopping')
