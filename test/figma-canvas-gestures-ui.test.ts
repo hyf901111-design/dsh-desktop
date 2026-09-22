@@ -1,4 +1,5 @@
 import { patchCanvasCreationTools } from '../scripts/lib/canvas-creation-tools.mjs'
+import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
@@ -24,7 +25,7 @@ async function fixture(desktop: any = {}, win?: Window) {
   let descriptor: any
   const window: any = win ?? {}
   Object.assign(window, { dshDesktop: desktop, __ModuleLoader__: { load: (value: any) => { descriptor = value } } })
-  const source = patchCanvasCreationTools(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const source = patchCanvasCreationTools(patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
   runInNewContext(source, { window, document: win?.document, localStorage: win?.localStorage, navigator: win?.navigator, HTMLElement: win?.HTMLElement, HTMLTextAreaElement: win?.HTMLTextAreaElement, Text: win?.Text, ResizeObserver: win?.ResizeObserver, requestAnimationFrame: win?.requestAnimationFrame.bind(win), cancelAnimationFrame: win?.cancelAnimationFrame.bind(win), AbortController, TextDecoder, TextEncoder, setTimeout, clearTimeout, setInterval, clearInterval })
   const bundle = descriptor.factory((id: string) => {
     if (id === 'react') return react
@@ -175,6 +176,48 @@ it('draws manually sized components in zoomed world coordinates, returns to sele
   await m.event('click', m.query('[data-research-global-select]'))
   expect(m.canvas.getAttribute('data-canvas-tool')).toBe('select')
 })
+it.each([[240,620],[360,200]])('keeps a manually drawn %s × %s frame through generation, retry and completion', async (width,height) => {
+  const m=await mounted({},undefined,{disabled:false})
+  await act(async()=>m.workspace.setViewport({x:100,y:40,scale:.5}))
+  await m.event('click',m.query('[data-research-global-container]'))
+  await m.event('pointerdown',m.canvas,{button:0,pointerId:1,clientX:250,clientY:200})
+  await m.event('pointermove',m.canvas,{pointerId:1,clientX:250+width*.5,clientY:200+height*.5})
+  await m.event('pointerup',m.canvas,{pointerId:1})
+  const node=m.workspace.getSnapshot().artifacts[0]
+  const geometry={x:200+width/2,y:200+height/2,width,height,sizeMode:'manual'}
+  expect(node).toMatchObject(geometry)
+  for(const state of ['failed','cancelled','interrupted']) {
+    await act(async()=>{
+      m.workspace.beginContainerGeneration(node.id,'生成实际研究内容')
+      m.workspace.attachGenerationTask(node.id,{taskId:state,canvasNodeId:node.id,state:'running',lastSeq:0})
+      m.workspace.applyGenerationInspection(node.id,{taskId:state,canvasNodeId:node.id,state,lastSeq:1,events:[],error:'fixture'})
+    })
+    expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({...geometry,generationStatus:state})
+    await act(async()=>{expect(m.workspace.retryGeneration(node.id)).not.toBeNull()})
+    expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({...geometry,generationStatus:'queued'})
+  }
+  await act(async()=>{
+    m.workspace.attachGenerationTask(node.id,{taskId:'finished',canvasNodeId:node.id,state:'running',lastSeq:0})
+    m.workspace.applyGenerationInspection(node.id,{taskId:'finished',canvasNodeId:node.id,state:'completed',lastSeq:1,events:[],finalOutput:JSON.stringify({version:1,type:'markdown',title:'研究内容',content:'# 内容\n完成'})})
+  })
+  expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({...geometry,generationStatus:'completed'})
+})
+
+it.each(['failed','cancelled'])('keeps the real public process available after %s inspection',async(state)=>{
+  const m=await mounted({},undefined,{disabled:false})
+  let node:any
+  await act(async()=>{
+    node=m.workspace.createContainerDraft({x:300,y:200,width:360,height:200,sizeMode:'manual'})
+    m.workspace.beginContainerGeneration(node.id,'比较基金')
+    m.workspace.attachGenerationTask(node.id,{taskId:'history',canvasNodeId:node.id,state:'running',lastSeq:1,events:[{taskId:'history',canvasNodeId:node.id,seq:1,type:'tool-started',tool:'资料核对',detail:'已经核对真实基金来源 token=fixture-private /Users/private/report.txt'}]})
+    m.workspace.applyGenerationInspection(node.id,{taskId:'history',canvasNodeId:node.id,state,lastSeq:2,events:[],error:'数据源响应超时'})
+  })
+  await m.event('click',m.query('[data-research-generation-toggle]'))
+  expect(m.query('[data-research-generation-records]').textContent).toContain('已经核对真实基金来源')
+  expect(JSON.stringify(m.workspace.getSnapshot().artifacts[0].generationEvents)).not.toContain('fixture-private')
+  expect(m.query('[data-research-generation-records]').textContent).not.toContain('/Users/private')
+})
+
 it('treats link drafts as native nodes for marquee, dragging, layout and in-place creation', async () => {
   const m = await mounted({}, undefined, { disabled: false })
   await m.event('click', m.query('[data-research-global-link]'))

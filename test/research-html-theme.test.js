@@ -2,7 +2,7 @@ import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
 import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { buildResearchHtmlPreview, parseResearchHtmlArtifact, researchComponentTypographyCss } from '../packages/dsh-research-task-runtime/html-artifact.js'
+import { buildResearchHtmlPreview, parseResearchHtmlArtifact, researchComponentTypographyCss, RESEARCH_COMPONENT_PALETTES } from '../packages/dsh-research-task-runtime/html-artifact.js'
 
 function runtime(html, { standalone = false, systemDark = false, configure } = {}) {
   const window = new Window({ settings: { disableJavaScriptEvaluation: true } })
@@ -25,9 +25,9 @@ function runtime(html, { standalone = false, systemDark = false, configure } = {
   configure?.(window)
   const media = { matches: systemDark, addEventListener: vi.fn(), removeEventListener: vi.fn() }
   const context = vm.createContext({
-    window, document: window.document, parent, Blob: window.Blob,
+    window, document: window.document, parent, Blob: window.Blob, crypto: window.crypto, setInterval: vi.fn(), clearInterval: vi.fn(), setTimeout: vi.fn(), clearTimeout: vi.fn(),
     trustedTypes: { isHTML: () => true }, matchMedia: () => media,
-    CustomEvent: window.CustomEvent, getComputedStyle: window.getComputedStyle.bind(window),
+    MutationObserver: window.MutationObserver, MouseEvent: window.MouseEvent, Event: window.Event, location: window.location, navigator: window.navigator, CustomEvent: window.CustomEvent, getComputedStyle: window.getComputedStyle.bind(window),
     addEventListener: window.addEventListener.bind(window),
     removeEventListener: window.removeEventListener.bind(window)
   })
@@ -129,14 +129,14 @@ describe('offline HTML component theme runtime', () => {
     const inner = runtime(outer.childHtml())
     expect(inner.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('dark')
     expect(inner.window.document.documentElement.style.colorScheme).toBe('dark')
-    expect(outer.childHtml()).toContain('--sherlock-bg:#171717')
-    expect(outer.childHtml()).toContain('--sherlock-bg:#ffffff')
+    expect(outer.childHtml()).toContain('--sherlock-bg:#303030')
+    expect(outer.childHtml()).toContain('--sherlock-bg:#fafafa')
     expect(outer.childHtml()).toContain('--sherlock-chart-6:')
     const fallback = runtime(runtime(buildResearchHtmlPreview('<main>内容</main>', '报告', 'unknown')).childHtml())
     expect(fallback.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('light')
   })
 
-  it('keeps chart aliases and readable blue links in both card themes', () => {
+  it('keeps chart aliases independent of neutral link roles in both card themes', () => {
     for (const mode of ['light', 'dark']) {
       const inner = runtime(runtime(buildResearchHtmlPreview('<a href="https://example.com" style="color:inherit">来源</a>', '图表', mode)).childHtml())
       const computed = inner.window.getComputedStyle(inner.window.document.documentElement)
@@ -144,9 +144,9 @@ describe('offline HTML component theme runtime', () => {
         expect(computed.getPropertyValue(alias).trim()).toBe(computed.getPropertyValue(token).trim())
         expect(computed.getPropertyValue(token).trim()).not.toBe('')
       }
-      expect(computed.getPropertyValue('--sherlock-bg').trim()).toBe(mode === 'dark' ? '#171717' : '#ffffff')
+      expect(computed.getPropertyValue('--sherlock-bg').trim()).toBe(mode === 'dark' ? '#303030' : '#fafafa')
       const link = inner.window.getComputedStyle(inner.window.document.querySelector('a'))
-      expect(link.color).toBe(mode === 'dark' ? '#60a5fa' : '#2563eb')
+      expect(computed.getPropertyValue('--sherlock-link').trim()).toBe(mode === 'dark' ? '#f5f5f5' : '#333333')
     }
   })
 
@@ -155,7 +155,7 @@ describe('offline HTML component theme runtime', () => {
     const inner = runtime(runtime(buildResearchHtmlPreview(html)).childHtml())
     for (const selector of ['.research-card', 'button:not(.custom)', '[role="tooltip"]', 'table']) {
       const style = inner.window.getComputedStyle(inner.window.document.querySelector(selector))
-      expect(style.borderRadius, selector).toBe('12px')
+      expect(style.borderRadius, selector).toBe('8px')
       expect(style.boxShadow, selector).toBe('none')
     }
     const custom = inner.window.getComputedStyle(inner.window.document.querySelector('.custom'))
@@ -166,7 +166,7 @@ describe('offline HTML component theme runtime', () => {
     // Happy DOM does not resolve OKLCH in border shorthands; use a supported
     // color to exercise edge geometry independently of the exact palette test.
     inner.window.document.documentElement.style.setProperty('--sherlock-border', '#d4d4d4')
-    expect(inner.window.getComputedStyle(inner.window.document.querySelector('td')).borderBottomWidth).toBe('1px')
+    expect(inner.window.getComputedStyle(inner.window.document.querySelector('td')).borderBottomWidth).toBe('0.5px')
     expect(inner.window.getComputedStyle(inner.window.document.querySelector('table')).borderCollapse).toBe('collapse')
   })
 
@@ -175,7 +175,7 @@ describe('offline HTML component theme runtime', () => {
     const innerHtml = runtime(buildResearchHtmlPreview(userHtml, '分层自定义', 'dark')).childHtml()
     const defaultStyle = innerHtml.match(/<style>([\s\S]*?)<\/style>/)?.[1]
     expect(defaultStyle).toMatch(/^@layer sherlock-component-defaults\{/)
-    expect(defaultStyle).toMatch(/\}\}$/)
+    expect(defaultStyle).toMatch(/\}\s*\}$/)
     expect(defaultStyle).toContain('--sherlock-surface:')
     expect(defaultStyle).toContain(':where(button')
     expect(defaultStyle).not.toMatch(/(?:background|border-radius|box-shadow):[^}]*!important/)
@@ -221,17 +221,16 @@ describe('offline HTML component theme runtime', () => {
     expect(inner.window.document.querySelector('button')).toBe(button)
   })
 
-  it('keeps accent button labels readable in both themes without rebuilding interactive state', () => {
-    const html='<style>button{background:var(--sherlock-accent);color:#fff}#brand{background:#225599;color:white}</style><button id="counter" onclick="this.textContent=Number(this.textContent)+1">0</button><button id="brand">品牌</button>'
+  it('releases inline important control colors to the host layer without rebuilding interactive state', () => {
+    const html='<button id="counter" class="research-primary" style="background:blue!important;color:yellow!important">0</button><svg><path id="business" fill="#005096"/></svg>'
     const inner=runtime(runtime(buildResearchHtmlPreview(html,'计数器','dark')).childHtml())
     inner.parsed()
-    const button=inner.window.document.getElementById('counter'),brand=inner.window.document.getElementById('brand')
-    expect(inner.window.getComputedStyle(button).color).toBe('rgb(0, 0, 0)')
-    expect(brand.style.color).toBe('')
+    const button=inner.window.document.getElementById('counter')
+    expect(button.style.getPropertyValue('background')).toBe('')
+    expect(button.style.getPropertyValue('color')).toBe('')
+    expect(inner.window.document.getElementById('business').getAttribute('fill')).toBe('#005096')
     button.textContent='2'
     inner.send(themeMessage('light'))
-    expect(inner.window.getComputedStyle(button).color).toBe('#fff')
-    expect(button.style.color).toBe('')
     expect(button.textContent).toBe('2')
     expect(inner.window.document.getElementById('counter')).toBe(button)
   })
@@ -341,3 +340,15 @@ it('relays hover only from the current embedded component using a boolean state'
   for(const active of [true,false]) outer.send({type:'sherlock-content-hover',active},outer.frame.contentWindow);
   expect(outer.parentMessages.map(x=>x.data)).toEqual([{type:'sherlock-content-hover',active:true},{type:'sherlock-content-hover',active:false}]);
 });
+
+// Regression: current Figma controls are neutral in both themes; chart/status roles stay colored.
+it('publishes source-backed field, action, row and business color roles independently', () => {
+  expect(RESEARCH_COMPONENT_PALETTES.light['control-primary']).toBe('#191919')
+  expect(RESEARCH_COMPONENT_PALETTES.dark['control-primary']).toBe('#f5f5f5')
+  expect(RESEARCH_COMPONENT_PALETTES.light['control-border']).toBe('#d9d9d9')
+  expect(RESEARCH_COMPONENT_PALETTES.dark['control-border']).toBe('#505050')
+  expect(RESEARCH_COMPONENT_PALETTES.light['row-selected']).toBe('#f0f0f0')
+  expect(RESEARCH_COMPONENT_PALETTES.dark['row-selected']).toBe('#383838')
+  expect(RESEARCH_COMPONENT_PALETTES.light['chart-1']).toBe('#005096')
+  expect(RESEARCH_COMPONENT_PALETTES.dark['status-warning-fg']).toBe('#f6d077')
+})

@@ -1,4 +1,6 @@
 import { patchResearchCanvasDeferredHtml } from './research-canvas-deferred-html.mjs'
+import { generationSource, generationCss, patchGenerationLifecycle, componentPromptSource } from './figma-generation-client.mjs'
+import { researchCompletedDesignCss } from './research-completed-design.mjs'
 import { patchResearchOfficeResize } from './research-office-resize.mjs'
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
 import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
@@ -92,7 +94,7 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))));
+  return patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)))));
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);
@@ -312,10 +314,7 @@ function patchFigmaCanvasContent(source) {
 ${organizedLayoutSource}`)
   source = block(source, 'const RESEARCH_COMPONENT_SIZES =', 'function researchCanvasReflowGrowth(', `const RESEARCH_COMPONENT_SIZES = { small:220, medium:220, large:456 };
 function researchComponentSize(node) { return researchBentoSize(node); }
-function researchComponentPrompt(node, prompt) {
-  const size=researchComponentSize(node), dimensions=RESEARCH_BENTO_SIZES[size];
-  return prompt+'\\n组件初始尺寸 '+dimensions.width+'×'+dimensions.height+'px；S 320×220、M 656×220、L 656×456。按内容密度先选规格；内容不足以容纳时升级规格，组件内必须直接呈现完整可视化页面，不使用摘要替代，必要时允许内部滚动，放大仅辅助阅读。数字英文 DINPro，中文 Noto Sans SC，标题15px、主指标24px、正文13px。按容器宽高重排，不缩小字号、字形，不用 overflow:hidden 隐藏有效内容。窄框指标2列，中框4列，宽框图表与表格可并排。';
-}
+${componentPromptSource}
 function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
   const packed=researchBentoLayout(artifacts.filter(n=>n.kind==='generated-container'),canvasSize);
   const replacements=new Map(packed.nodes.map(n=>[n.id,{...n,x:n.x+n.width/2,y:top+n.y+n.height/2,sizeMode:'auto'}]));
@@ -549,32 +548,6 @@ function ResearchMindMap({nodeId,text,detail='standard',onNodeLabelCommit,readOn
 }
 `;
 
-const generationSource = `function ResearchGenerationProcess({node,onCancel,onExpand}) {
-  const presentation=researchGenerationPresentation(node);
-  (0,react.useEffect)(()=>{onExpand?.("loading");},[node.id,node.generationTaskId]);
-  const [clock,setClock]=(0,react.useState)(Date.now);
-  const [expanded,setExpanded]=(0,react.useState)(false);
-  const started=(0,react.useRef)(node.generationStartedAt??Date.now());
-  (0,react.useEffect)(()=>{started.current=node.generationStartedAt??Date.now();setExpanded(false);},[node.generationTaskId]);
-  (0,react.useEffect)(()=>{let timer;const tick=()=>{setClock(Date.now());timer=setTimeout(tick,1000);};timer=setTimeout(tick,1000);return()=>clearTimeout(timer);},[]);
-  const elapsed=Math.max(0,Math.floor((clock-started.current)/1000));
-  const rows=researchGenerationLog(node).slice(-3);
-  if(researchIsDerivedNode(node)){
-    const kind=node.kind==='generated-summary'?'summary':node.kind==='generated-mind-map'?'mind-map':'create',count=new Set(node.sourceNodeIds??[]).size;
-    const records=rows.filter(row=>row.id!=='preparing'),fullStep=records.at(-1)?.text||presentation.title,maxStep=Math.max(16,Math.floor(((node.width??656)-68)/13)*2),step=expanded||fullStep.length<=maxStep?fullStep:fullStep.slice(0,maxStep-1)+'…';
-    const toggle=event=>{event.stopPropagation();setExpanded(!expanded);};
-    const source=(0,react_jsx_runtime.jsx)('span',{'data-research-generation-sources':'',children:kind==='summary'?'基于所选 '+count+' 个组件':'来源：'+count+' 个组件'});
-    return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess odyssey-derived-process','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'data-process-compact':!expanded&&node.height<=220,'data-derived-kind':kind,'aria-busy':true,children:[
-      (0,react_jsx_runtime.jsxs)('button',{type:'button',className:'odyssey-generation-step','aria-label':expanded?'收起生成过程':'查看生成过程','aria-expanded':expanded,onPointerDown:event=>event.stopPropagation(),onClick:toggle,children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:step})]}),
-      kind==='summary'?source:null,
-      expanded?(0,react_jsx_runtime.jsxs)('div',{className:'odyssey-generation-records',children:[...records.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id)),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-elapsed':'',children:elapsed+' 秒'})]}):kind==='create'?(0,react_jsx_runtime.jsx)('div',{'data-research-derived-skeleton':'create',className:'odyssey-derived-skeleton','aria-hidden':true,children:Array.from({length:9},(_,index)=>(0,react_jsx_runtime.jsx)('i',{},index))}):null,
-      (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationFooter',children:[kind==='summary'?(0,react_jsx_runtime.jsx)('span',{children:'保留来源组件'}):source,typeof onCancel==='function'&&node.generationTaskId?(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-cancel':'','aria-label':'停止生成',onPointerDown:event=>event.stopPropagation(),onClick:event=>{event.preventDefault();event.stopPropagation();onCancel(node);},children:'停止'}):null]})]});
-  }
-  return (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationProcess','data-research-generation-process':'','data-research-generation-stage':presentation.stage,'data-process-expanded':expanded,'aria-busy':true,children:[
-    (0,react_jsx_runtime.jsxs)('div',{className:'odyssey-generation-step',children:[(0,react_jsx_runtime.jsx)('span',{className:'rScV5Q_generationSpinner','aria-hidden':true}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-description':'',role:'status',children:researchPublicProgress(node.title||'当前组件')+' · '+(rows.at(-1)?.text||presentation.title)})]}),
-    expanded?(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-records',children:rows.map(row=>(0,react_jsx_runtime.jsxs)('div',{'data-research-generation-row':'',children:[row.stamp?(0,react_jsx_runtime.jsx)('time',{children:row.stamp}):null,(0,react_jsx_runtime.jsx)('span',{children:row.text})]},row.id))}):(0,react_jsx_runtime.jsx)('div',{className:'odyssey-generation-skeleton','aria-hidden':true,children:[0,1,2,3,4,5].map(i=>(0,react_jsx_runtime.jsx)('i',{},i))}),
-    (0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_generationFooter',children:[(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-toggle':'','aria-expanded':expanded,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();setExpanded(!expanded);},children:expanded?'收起过程':'查看过程'}),(0,react_jsx_runtime.jsx)('span',{'data-research-generation-elapsed':'',children:elapsed+' 秒'}),typeof onCancel==='function'&&node.generationTaskId?(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-generation-cancel':'','aria-label':'停止生成',onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.preventDefault();e.stopPropagation();onCancel(node);},children:'停止'}):null]})]});
-}`
 
 const responsiveSource = `function ResearchContainerContent(props) {
   const {node}=props,ref=(0,react.useRef)(null);
@@ -735,4 +708,4 @@ body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 .rScV5Q_generationFailure>strong{font-size:16px;font-weight:500}.rScV5Q_generationFailure>span{color:var(--odyssey-card-muted)}.rScV5Q_generationFailure details{font-size:12px;line-height:20px}.rScV5Q_generationFailure details p{margin:8px 0}.rScV5Q_generationFailure button{margin-left:auto}
 @keyframes odyssey-ring{to{transform:rotate(360deg)}}@keyframes odyssey-skeleton{50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.rScV5Q_generationSpinner,.odyssey-generation-skeleton i,.odyssey-derived-skeleton>i{animation:none}}
-` + derivedMenuCss
+` + derivedMenuCss + researchCompletedDesignCss + generationCss

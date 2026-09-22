@@ -1077,7 +1077,7 @@ it('applies a retained result from the component without another model request',
     await f.page.applyRetainedResult('shared', 'a')
     expect(f.bridge.invoke).toHaveBeenCalledWith('task.applyResult', { boardId: 'board', taskId: 'retained' })
     expect(f.bridge.invoke.mock.calls.some(c => c[0] === 'request.submit')).toBe(false)
-    expect(f.source.includes('"应用结果" : "重新生成"')).toBe(true)
+    expect(f.source).toContain("retryLabel:(sherlockShared(sessionId)&&sherlockBoardsAdapter?.hasRetainedResult(sessionId,node.id))?'应用保留的研究结果':undefined")
   } finally { f.dispose() }
 })
 
