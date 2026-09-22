@@ -19,7 +19,7 @@ export class WorkspaceSurfaceHost {
         document.defaultView?.addEventListener('sherlock:workspace-panel-state', this.onPanelState);
         const Observer = document.defaultView?.MutationObserver;
         if (Observer) {
-            this.observer = new Observer(this.position);
+            this.observer = new Observer(this.onDomChanged);
             this.observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right'] });
         }
         const Resize = document.defaultView?.ResizeObserver;
@@ -38,6 +38,7 @@ export class WorkspaceSurfaceHost {
         this.position();
     }
     open(surface: WorkspaceSurface, route?: string) {
+        if (this.settingsOpen()) { this.closeAll(); return; }
         const current = this.history.at(-1);
         if (current?.surface !== surface || current.route !== route)
             this.history.push({ surface, route });
@@ -86,6 +87,13 @@ export class WorkspaceSurfaceHost {
         this.position();
         this.dispatch('sherlock:workspace-surface-change', { ...current, active: !!current });
     }
+    private settingsOpen() { return !!this.document.querySelector('.VOzbGW_overlay'); }
+    private onDomChanged = () => {
+        // Native settings can also mount through keyboard or programmatic navigation.
+        // End the surface session instead of concealing it behind another layer.
+        if (this.current() && this.settingsOpen()) { this.closeAll(); return; }
+        this.position();
+    };
     private position = () => {
         const sidebar = this.document.querySelector('[data-dsh-sidebar-root]')?.getBoundingClientRect();
         const left = `${Math.max(10, sidebar?.right || 10)}px`;
@@ -114,6 +122,9 @@ export class WorkspaceSurfaceHost {
         if (!this.current())
             return;
         const target = event.target as Element;
+        // Account/settings entries ultimately click this existing native trigger.
+        // Release inert and cancel the active surface before React mounts settings.
+        if (target?.closest?.('.VOzbGW_trigger')) { this.closeAll(); return; }
         if (target?.closest?.('[data-sidebar-session-search],.st-more-zone'))
             return;
         if (target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
