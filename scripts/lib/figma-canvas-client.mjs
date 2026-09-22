@@ -72,6 +72,11 @@ function patchCanvasGraphicPrimitives(source) {
 
 export function patchFigmaFinalCanvas(source) {
   source = patchResearchCanvasDeferredHtml(source)
+  if(!source.includes('/* ODYSSEY_MARKET_COMPLETION_BOUNDS */')) {
+    source=exact(source,'function normalizeResearchCanvasNodeGeometry(node) {',`function normalizeResearchCanvasNodeGeometry(node) {
+    /* ODYSSEY_MARKET_COMPLETION_BOUNDS */
+    if(node?.kind==='generated-container'&&node.sizeMode!=='manual'&&node.containerSpec&&(researchMarketDimensions(node)||(node.containerSpec.type==='kpi'&&node.containerSpec.items?.length===6&&node.width===896))&&Number.isFinite(node.width)&&node.width>0&&Number.isFinite(node.height)&&node.height>0)return {width:Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.width),height:Math.min(RESEARCH_CANVAS_MAX_GENERATED_HEIGHT,node.height),sizeMode:'auto',resizable:true};`);
+  }
   if(!source.includes('/* ODYSSEY_NEW_NODES_FRONT */')) {
     source=exact(source,'const publish = (next, persist = false) => {',`const publish = (next, persist = false, preserveStack = false) => {
       /* ODYSSEY_NEW_NODES_FRONT */
