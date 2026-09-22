@@ -13,6 +13,50 @@ const COLOR_LITERAL = /#[\da-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|
 const decodeCss = text => text.replace(/\\([\da-f]{1,6})\s?|\\(.)/gi, (_, hex, char) => hex ? String.fromCodePoint(Math.min(parseInt(hex, 16), 0x10ffff)) : char)
 const normalized = text => decodeCss(text).replace(/\/\*[\s\S]*?\*\//g, '').trim()
 const NEUTRAL_VALUE_WORDS = new Set('transparent currentcolor inherit initial unset revert revert-layer none auto solid dashed dotted double inset outset hidden groove ridge thin medium thick linear-gradient radial-gradient repeating-linear-gradient repeating-radial-gradient color-mix in srgb to top right bottom left center circle ellipse closest-side closest-corner farthest-side farthest-corner at from calc min max clamp px em rem vh vw vmin vmax deg turn'.split(' '))
+const INHERITED_CONTROL_PROPERTIES = /^(?:color|fill|stroke|caret-color|font(?:-family)?)$/
+
+// Read balanced var() functions, retaining fallback literals for color checks.
+// Every nested token is checked; a safe outer token never hides an unsafe fallback.
+function colorValueParts(value) {
+ const tokens = []
+ let invalid = false
+ const scan = (input, nesting = 0) => {
+  if (nesting > 32) { invalid = true; return '' }
+  let residual = ''
+  for (let index = 0; index < input.length;) {
+   if (input[index] === '"' || input[index] === "'") {
+    const start = index++, quote = input[start]
+    while (index < input.length) {
+     if (input[index] === '\\') { index += 2; continue }
+     if (input[index++] === quote) break
+    }
+    residual += input.slice(start, index)
+    continue
+   }
+   const head = (input[index] === 'v' || input[index] === 'V') && (index === 0 || !/[\w-]/.test(input[index - 1])) ? input.slice(index, index + 32).match(/^var\s*\(/i) : null
+   if (!head) { residual += input[index++]; continue }
+   const start = index + head[0].length
+   let end = start, depth = 1, quote = ''
+   for (; end < input.length; end++) {
+    const char = input[end]
+    if (char === '\\') { end++; continue }
+    if (quote) { if (char === quote) quote = ''; continue }
+    if (char === '"' || char === "'") { quote = char; continue }
+    if (char === '(') depth++
+    if (char === ')' && --depth === 0) break
+   }
+   if (depth !== 0) { invalid = true; return residual }
+   const parts = postcss.list.comma(input.slice(start, end)), token = parts.shift()?.trim()
+   if (!token || !/^--[\w-]+$/.test(token)) invalid = true
+   else tokens.push(token)
+   residual += scan(parts.join(','), nesting + 1)
+   index = end + 1
+  }
+  return residual
+ }
+ const residual = scan(value)
+ return { tokens, residual, invalid }
+}
 
 function ruleSelector(rule) {
  let selector = rule?.selector || ''
@@ -34,10 +78,10 @@ function declarationIssue(property, rawValue, control, dataGraphic = false) {
   if (!inherited && !hostFont) return '字体由宿主统一提供：中文 Noto Sans SC，数字英文 DIN Pro；删除自定义 font/font-family。'
  }
  if (!COLOR_PROPERTIES.test(prop)) return null
- const tokens = [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(match => match[1])
- const withoutVars = value.replace(/var\(\s*--[\w-]+\s*\)/g, '').replace(/\btransparent\b/gi, '')
+ const { tokens, residual, invalid } = colorValueParts(value)
+ const withoutVars = residual.replace(/\btransparent\b/gi, '')
  const unknownControlWord = [...withoutVars.matchAll(/[a-z][a-z-]*/gi)].some(match => !NEUTRAL_VALUE_WORDS.has(match[0].toLowerCase()))
- if (control && (tokens.some(token => BUSINESS_TOKEN.test(token) || !NEUTRAL_TOKEN.test(token)) || COLOR_LITERAL.test(withoutVars) || unknownControlWord)) return `控件 ${prop} 必须使用 --sherlock-control-* 黑白灰角色变量，不能使用字面色、自定义变量或 chart/status/accent 业务色。`
+ if (control && (invalid || tokens.some(token => BUSINESS_TOKEN.test(token) || !NEUTRAL_TOKEN.test(token)) || COLOR_LITERAL.test(withoutVars) || unknownControlWord)) return `控件 ${prop} 必须使用 --sherlock-control-* 黑白灰角色变量，不能使用字面色、自定义变量或 chart/status/accent 业务色。`
  if (!control && !dataGraphic && COLOR_LITERAL.test(withoutVars)) return `${prop} 请使用宿主 --sherlock-* 角色变量；图表及业务状态使用其专用 token，不能硬编码界面颜色。`
  return null
 }
@@ -105,7 +149,8 @@ export function designPolicyIssue(html) {
    const selector = ruleSelector(rule)
    let matches
    try { matches = selector ? $(selector) : $() } catch { matches = $() }
-   const control = matches.toArray().some(element => isControl(element) || $(element).find(CONTROLS).length > 0)
+   const inherited = INHERITED_CONTROL_PROPERTIES.test(normalized(decl.prop).toLowerCase())
+   const control = matches.toArray().some(element => isControl(element) || inherited && $(element).find(CONTROLS).length > 0)
    const dataGraphic = matches.length > 0 && matches.toArray().every(element => $(element).closest('svg').length > 0)
    issue = declarationIssue(decl.prop, decl.value, control, dataGraphic)
   })
