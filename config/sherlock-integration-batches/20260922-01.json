@@ -11,18 +11,41 @@
         "schemaVersion": 1,
         "featureName": "EWork 插件应用MCP技能与统一菜单",
         "branch": "codex/feat/ework-integrations-20260922",
-        "baseCommit": "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e",
-        "tipCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
+        "baseCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
+        "tipCommit": "08a78bae122c0c5c21ae10ec5b3d6d67db0137a9",
         "commits": [
           {
-            "commit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
+            "commit": "ae8c99ede6c9aa8bb155da92a4335691abf18294",
             "parents": [
-              "0c157afafc1fde8c0ebf5dd7e2bd402dbbbb086e"
+              "dca7bcdf0f6ec8938f073096af50552aeebca73e"
             ],
-            "subject": "限定技能正文区域滚动并合并管理操作"
+            "subject": "展示内置PPT制作技能并锁定启用状态"
+          },
+          {
+            "commit": "08a78bae122c0c5c21ae10ec5b3d6d67db0137a9",
+            "parents": [
+              "ae8c99ede6c9aa8bb155da92a4335691abf18294"
+            ],
+            "subject": "打开设置时退出插件等工作区页面"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/skill-provider.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/integrations/bundled-skills.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/service.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/integrations/style.ts"
@@ -33,7 +56,27 @@
           },
           {
             "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/integration-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-bundled-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/integration-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workspace-surface-host.test.ts"
           }
         ],
         "checks": [
@@ -44,9 +87,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Skill markdown preview and native composer typecheck",
-            "verifiedCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
-            "completedAt": "2026-09-22T09:48:32.497883+00:00",
+            "summary": "Builtin PPT locked skill and settings navigation typecheck",
+            "verifiedCommit": "08a78bae122c0c5c21ae10ec5b3d6d67db0137a9",
+            "completedAt": "2026-09-22T10:06:21.984546+00:00",
             "timeoutMs": 180000
           },
           {
@@ -63,12 +106,15 @@
               "test/integration-harness-e2e.test.js",
               "test/profile-runtime-patches.test.js",
               "test/preload-main-frame.test.ts",
-              "test/workspace-surface-host.test.ts"
+              "test/workspace-surface-host.test.ts",
+              "test/integration-bundled-runtime.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/integration-skill-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "Skill markdown preview and native composer focused",
-            "verifiedCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
-            "completedAt": "2026-09-22T09:48:34.708359+00:00",
+            "summary": "Builtin PPT locked skill and settings navigation focused",
+            "verifiedCommit": "08a78bae122c0c5c21ae10ec5b3d6d67db0137a9",
+            "completedAt": "2026-09-22T10:06:24.916299+00:00",
             "timeoutMs": 180000
           },
           {
@@ -77,15 +123,15 @@
               "scripts/validate-integration-catalog.mjs"
             ],
             "outcome": "passed",
-            "summary": "Skill markdown preview and native composer catalog",
-            "verifiedCommit": "dca7bcdf0f6ec8938f073096af50552aeebca73e",
-            "completedAt": "2026-09-22T09:48:34.829194+00:00",
+            "summary": "Builtin PPT locked skill and settings navigation catalog",
+            "verifiedCommit": "08a78bae122c0c5c21ae10ec5b3d6d67db0137a9",
+            "completedAt": "2026-09-22T10:06:24.992457+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "技能正文、异步状态和原生输入适配聚焦检查及隔离深浅主题渲染通过；本地打包后核验真实技能预览与立即使用。"
+          "summary": "技能独立滚动已通过实际客户端核验；内置PPT锁定、正文与真实运行时调用以及设置退出完成聚焦检查，待本次包核验。"
         },
         "acceptanceCriteria": [
           "右侧工作区入口与四类市场正确，返回和右屏按钮保留",
@@ -97,92 +143,7 @@
           "MCP动态OAuth不支持，当前支持显式Bearer/Header/无认证与STDIO",
           "需在集成客户端进行原生验收后由用户接受精确提交"
         ],
-        "generatedAt": "2026-09-22T09:48:34.868673+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1439da49304bda298dd90649f893ffacae386dcc",
-        "verificationCommit": "1439da49304bda298dd90649f893ffacae386dcc",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1439da49304bda298dd90649f893ffacae386dcc",
-            "completedAt": "2026-09-22T09:49:26.154Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "1439da49304bda298dd90649f893ffacae386dcc",
-            "completedAt": "2026-09-22T09:49:26.154Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "1439da49304bda298dd90649f893ffacae386dcc",
-            "completedAt": "2026-09-22T09:49:26.154Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-22T09:49:26.154Z"
+        "generatedAt": "2026-09-22T10:06:25.035228+00:00"
       }
     }
   ],
