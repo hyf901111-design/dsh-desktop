@@ -24,6 +24,8 @@ export type IntegrationRow = {
     marketEntryId?: string;
     configurable?: boolean;
     removable?: boolean;
+    toggleable?: boolean;
+    toggleDisabledReason?: string;
     connectionType?: ConnectionDraft['type'];
     connectionSummary?: { workspaceLabel: string; authLabel: string; dependencies: string[]; healthDetail?: string };
 };

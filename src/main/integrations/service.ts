@@ -21,11 +21,13 @@ import { assertManagedPackagePath, removePackageResources, removeSkillPackageRes
 import { manifestDigest, compareVersions } from './manifest';
 import { LegacySkillMigration, type LegacySkillRoot } from './legacy-skills';
 import { previewLegacyConnections, type LegacyConnectionSource } from './legacy-connections';
+import { loadBundledSkills, readBundledSkill, BUNDLED_PPT_SKILL_ID, type BundledSkill } from './bundled-skills';
 export interface IntegrationServiceOptions {
     root: string;
     encryption: PlatformEncryption;
     getOwnerId(): string | undefined;
     bundledCatalogRoot?: string;
+    bundledSkillDirectory?: string;
     clientVersion?: string;
     selectSkill?(): Promise<string | null>;
     resolveContext?(context: CapabilityContext): Promise<CapabilityContext>;
@@ -45,6 +47,7 @@ export class IntegrationService {
     readonly vault: CredentialVault;
     private skillManagers = new Map<string, SkillImportManager>();
     private managedSkillSources: string[] = [];
+    private bundledSkills = new Map<string, BundledSkill>();
     get skills(): SkillImportManager { const owner = this.owner(); let manager = this.skillManagers.get(owner); if (!manager) {
         manager = new SkillImportManager(join(this.options.root, 'skills'), { ownerAccountId: owner });
         this.skillManagers.set(owner, manager);
@@ -69,7 +72,7 @@ export class IntegrationService {
         this.installer = new DeclarativeInstaller(join(options.root, 'packages'));
         this.providers = options.providers ?? {};
     }
-    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.refreshSkillSources(); return service; }
+    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); return service; }
     async previewLegacySkills() {
         const owner = this.owner(), migration = new LegacySkillMigration({ root: join(this.options.root, 'migration'), ownerAccountId: owner, manager: this.skills, roots: this.options.legacySkillRoots ?? [] });
         const report = await migration.preview(), state = this.store.snapshot();
@@ -127,7 +130,7 @@ export class IntegrationService {
     private owner(): string { const owner = this.options.getOwnerId(); if (!owner)
         throw new IntegrationError('AUTH_REQUIRED', '账户身份尚未确认，请等待登录完成'); return owner; }
     private entity(kind: EntityKind, entityId: string, state = this.store.snapshot()) {
-        const value = kind === 'connection' ? state.connections[id(entityId)] : kind === 'plugin' ? state.plugins[id(entityId)] : state.skills[id(entityId)];
+        const value = kind === 'connection' ? state.connections[id(entityId)] : kind === 'plugin' ? state.plugins[id(entityId)] : this.bundledSkills.get(id(entityId))?.skill ?? state.skills[id(entityId)];
         if (!value)
             throw new IntegrationError('NOT_FOUND', '项目不存在或已移除');
         if (value.ownerAccountId && value.ownerAccountId !== this.owner())
@@ -165,6 +168,10 @@ export class IntegrationService {
         const command = raw as IntegrationCommand;
         if (!command || typeof command !== 'object')
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
+        if ((command.type === 'set-enabled' || command.type === 'uninstall') && command.id === BUNDLED_PPT_SKILL_ID) {
+            this.owner();
+            throw new IntegrationError('ACCESS_DENIED', '内置技能保持启用，随客户端更新，不能关闭或删除');
+        }
         switch (command.type) {
             case 'snapshot': return { type: 'snapshot', snapshot: this.snapshot() };
             case 'skill-detail': return this.skillDetail(command);
@@ -625,6 +632,8 @@ export class IntegrationService {
                             healthDetail: c.lastError || (c.lastCheckedAt ? `上次检查：${new Date(c.lastCheckedAt).toLocaleString('zh-CN')}` : '尚未测试连接'),
                         }, toolCount: tools.length, tools: tools.map(tool => ({ id: tool.id, name: tool.name, description: tool.description, allowed: c.toolGrants.includes(tool.id) })) });
                 }
+            for (const { skill } of this.bundledSkills.values())
+                rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: true, status: '已启用', source: skill.source, revision: skill.revision, toggleable: false, toggleDisabledReason: '内置技能，保持启用', removable: false });
             for (const skill of Object.values(state.skills))
                 if (!skill.ownerAccountId || skill.ownerAccountId === owner) {
                     const plugin = skill.ownerPluginId ? state.plugins[skill.ownerPluginId] : undefined;
@@ -634,7 +643,7 @@ export class IntegrationService {
         return { revision: state.revision, rows, taskCapabilities: projectTaskCapabilities(state, owner), compatibilityStatus: owner ? this.compatibility.get(owner) : undefined, runtimeStatus: !owner ? '等待账户身份确认' : Date.now() - this.runtimeSeenAt < 30000 ? '运行时已连接' : '运行时尚未连接' };
     }
     dependencies(entityId: string): string[] { const state = this.store.snapshot(), tasks = Object.entries(state.taskBindings).filter(([, bindings]) => bindings.some(b => b.entityId === entityId)); return [...tasks.map(([task]) => `定时任务 ${task} 使用此能力`), '未显式绑定的对话或任务仍会在执行时检查权限；已有内容会保留']; }
-    runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), plugins: Object.values(state.plugins).filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }
+    runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: [...Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), ...(owner ? [...this.bundledSkills.values()].map(({ skill }) => structuredClone(skill)) : [])], plugins: Object.values(state.plugins).filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }
     private async skillDetail(input: unknown): Promise<SkillDetail> {
         if (!isSkillDetailCommand(input)) throw new IntegrationError('INVALID_CONFIG', '技能详情请求无效');
         const owner = this.owner(), epoch = this.runtimeEpoch;
@@ -645,9 +654,10 @@ export class IntegrationService {
             return skill;
         };
         const skill = check();
-        if (!['managed', 'managed-plugin'].includes(skill.provider)) throw new IntegrationError('INVALID_CONFIG', '技能资源尚未接入托管');
-        await assertManagedPackagePath(join(this.options.root, skill.provider === 'managed-plugin' ? 'packages' : 'skills'), skill.resourceRoot);
-        const content = (await readSkillResource(skill.resourceRoot, 'SKILL.md').catch(error => { throw new IntegrationError('INVALID_CONFIG', skillImportErrorMessage(error)); })).toString('utf8');
+        const bundled = this.bundledSkills.get(skill.id);
+        if (!bundled && !['managed', 'managed-plugin'].includes(skill.provider)) throw new IntegrationError('INVALID_CONFIG', '技能资源尚未接入托管');
+        if (!bundled) await assertManagedPackagePath(join(this.options.root, skill.provider === 'managed-plugin' ? 'packages' : 'skills'), skill.resourceRoot);
+        const content = bundled ? await readBundledSkill(bundled) : (await readSkillResource(skill.resourceRoot, 'SKILL.md').catch(error => { throw new IntegrationError('INVALID_CONFIG', skillImportErrorMessage(error)); })).toString('utf8');
         const current = check();
         if (current.resourceRoot !== skill.resourceRoot) throw new IntegrationError('VERSION_CONFLICT', '技能资源已更新，请刷新后重试');
         const plugin = current.ownerPluginId ? this.store.snapshot().plugins[current.ownerPluginId] : undefined;
@@ -674,7 +684,8 @@ export class IntegrationService {
         }
         if (input.context.unattended && input.context.taskId && !input.context.taskBindings?.some(binding => binding.kind === 'skill' && binding.entityId === skill.id && binding.bindingRevision === skill.revision || binding.kind === 'plugin' && binding.entityId === skill.ownerPluginId && binding.bindingRevision === state.plugins[binding.entityId]?.revision))
             throw new IntegrationError('ACCESS_DENIED', '此技能未获定时任务明确批准');
-        const content = (await readSkillResource(skill.resourceRoot, 'SKILL.md')).toString('utf8');
+        const bundled = this.bundledSkills.get(skill.id);
+        const content = bundled ? await readBundledSkill(bundled) : (await readSkillResource(skill.resourceRoot, 'SKILL.md')).toString('utf8');
         check();
         return { name: skill.name, description: skill.description, content, directory: skill.resourceRoot };
     }

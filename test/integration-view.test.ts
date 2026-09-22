@@ -368,3 +368,17 @@ it('cancels an outstanding skill prefill on back, close, or account change and i
   expect(signal?.aborted).toBe(true);rejectUse(Error('过期使用失败'));await f.settle();expect(f.doc.body.textContent).not.toContain('过期使用失败');f.view.dispose();
  }
 });
+
+it('keeps built-in skills enabled through list, busy refresh, menus, and detail toggle entry points',async()=>{
+ const data=snapshot();Object.assign(data.rows[1]!,{name:'易方达演示文稿',source:'EWork 内置 · v1.1.1',toggleable:false,toggleDisabledReason:'内置技能，保持启用',removable:false});
+ data.rows.push({...data.rows[1]!,id:'personal-skill',name:'个人技能',source:'个人',toggleable:true,toggleDisabledReason:undefined,removable:true});
+ const f=await fixture(async c=>{if(c.type==='snapshot')return{type:'snapshot',snapshot:data};if(c.type==='skill-detail')return{type:'skill-detail',id:c.id,revision:c.revision,content:'# 内置正文',enabled:true,invocationName:'efund-ppt'};if(c.type==='set-enabled'){data.rows.find(row=>row.id===c.id)!.enabled=c.enabled;}return{type:'operation',operation:{id:'op',status:'succeeded',message:'已保存',cancellable:false}}});
+ f.click('[data-tab=skills]');const locked=()=>f.doc.querySelector<HTMLButtonElement>('[data-toggle=skill-1]')!;
+ expect(locked().disabled).toBe(true);expect(locked().getAttribute('aria-checked')).toBe('true');expect(locked().title).toBe('内置技能，保持启用');expect(locked().getAttribute('aria-label')).toContain('内置技能，保持启用');expect(f.doc.querySelector('[data-row-id=skill-1]')!.textContent).toContain('EWork 内置 · v1.1.1');
+ f.click('[data-toggle=personal-skill]');await f.settle();expect(locked().disabled).toBe(true);expect(locked().getAttribute('aria-checked')).toBe('true');
+ locked().disabled=false;locked().click();await f.settle();expect(f.calls.filter(c=>c.type==='set-enabled'&&c.id==='skill-1')).toHaveLength(0);
+ f.click('[data-more=skill-1]');expect(f.doc.querySelector('[data-menu-action=toggle]')).toBeNull();expect(f.doc.querySelector('[data-menu-action=uninstall]')).toBeNull();
+ const fake=f.doc.createElement('button');fake.dataset.menuAction='toggle';f.doc.querySelector('.ig-menu')!.append(fake);fake.click();await f.settle();expect(f.calls.filter(c=>c.type==='set-enabled'&&c.id==='skill-1')).toHaveLength(0);
+ f.click('[data-more=skill-1]');f.click('[data-menu-action=detail]');await f.settle();const detail=f.doc.querySelector<HTMLButtonElement>('[data-action=toggle-detail]')!;expect(detail.disabled).toBe(true);expect(detail.title).toBe('内置技能，保持启用');expect(detail.getAttribute('aria-label')).toContain('内置技能，保持启用');expect(f.doc.querySelector('[data-action=request-uninstall]')).toBeNull();
+ detail.disabled=false;detail.click();await f.settle();expect(f.calls.filter(c=>c.type==='set-enabled'&&c.id==='skill-1')).toHaveLength(0);f.view.dispose();
+});

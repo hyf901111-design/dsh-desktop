@@ -1,6 +1,8 @@
 import { Window } from 'happy-dom';
 import { afterEach, expect, it } from 'vitest';
 import { WorkspaceSurfaceHost } from '../src/preload/workspace-surface-host';
+import { IntegrationView } from '../src/preload/integrations/view';
+import type { IntegrationReply } from '../src/preload/integrations/bridge';
 const windows: Window[] = [];
 afterEach(() => { windows.splice(0).forEach(w => w.happyDOM.abort()); });
 it('returns to the previous surface without replacing its draft DOM', () => {
@@ -80,4 +82,30 @@ it('waits for native pane confirmation and ignores late acknowledgements after l
     w.dispatchEvent(new w.CustomEvent('sherlock:workspace-panel-state', {detail:{surface:'integrations',open:false}}));
     expect(doc.body.hasAttribute('data-workspace-right-expanded')).toBe(false);
     host.dispose();
+});
+
+it('leaves all workspace surfaces before native settings opens and never restores them when settings closes',()=>{
+ const w=new Window();windows.push(w);const doc=w.document as unknown as Document;
+ doc.body.innerHTML='<aside data-dsh-sidebar-root><button class="sherlock-account-button">头像</button><button class="VOzbGW_trigger">设置</button></aside><main class="pI_x6G_centerCol"><textarea>对话草稿</textarea></main>';
+ const host=new WorkspaceSurfaceHost(doc),scheduled=doc.createElement('section'),integrations=doc.createElement('section');host.register('scheduled',scheduled);host.register('integrations',integrations);host.open('scheduled');host.open('integrations');
+ doc.querySelector<HTMLButtonElement>('.sherlock-account-button')!.click();expect(host.current()?.surface).toBe('integrations');
+ doc.querySelector('.VOzbGW_trigger')!.addEventListener('click',()=>{expect(host.current()).toBeUndefined();expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(false);doc.body.insertAdjacentHTML('beforeend','<div class="VOzbGW_overlay"><div class="VOzbGW_panel">账户设置</div></div>')});
+ doc.querySelector<HTMLButtonElement>('.VOzbGW_trigger')!.click();expect(scheduled.hidden).toBe(true);expect(integrations.hidden).toBe(true);expect(doc.body.hasAttribute('data-workspace-surface')).toBe(false);expect(doc.querySelector('.pI_x6G_centerCol')!.hasAttribute('data-workspace-surface-hidden')).toBe(false);
+ host.open('integrations');expect(host.current()).toBeUndefined();expect(integrations.hidden).toBe(true);doc.querySelector('.VOzbGW_overlay')!.remove();host.back();expect(host.current()).toBeUndefined();expect(integrations.hidden).toBe(true);expect(doc.querySelector('textarea')!.value).toBe('对话草稿');host.dispose();
+});
+it('observes settings opened without a click and retains the previous native inert state',async()=>{
+ const w=new Window();windows.push(w);const doc=w.document as unknown as Document;doc.body.innerHTML='<main class="pI_x6G_centerCol"></main>';const center=doc.querySelector<HTMLElement>('main')!;center.inert=true;
+ const host=new WorkspaceSurfaceHost(doc),surface=doc.createElement('section');host.register('integrations',surface);host.open('integrations');doc.body.insertAdjacentHTML('beforeend','<div class="VOzbGW_overlay"><div class="VOzbGW_panel">通用设置</div></div>');await w.happyDOM.whenAsyncComplete();expect(host.current()).toBeUndefined();expect(surface.hidden).toBe(true);expect(center.inert).toBe(true);expect(center.hasAttribute('data-workspace-surface-hidden')).toBe(false);doc.querySelector('.VOzbGW_overlay')!.remove();await w.happyDOM.whenAsyncComplete();expect(surface.hidden).toBe(true);host.dispose();
+});
+
+it('cancels skill detail work when entering settings and ignores late reads or composer failures',async()=>{
+ for(const mode of ['read','use'] as const){
+  const w=new Window();windows.push(w);const doc=w.document as unknown as Document;doc.body.innerHTML='<aside data-dsh-sidebar-root><button class="VOzbGW_trigger">设置</button></aside><main class="pI_x6G_centerCol"><textarea>会话草稿</textarea></main>';
+  let resolveRead!:(reply:IntegrationReply)=>void,rejectUse!:(error:Error)=>void,signal:AbortSignal|undefined;
+  const host=new WorkspaceSurfaceHost(doc),view=new IntegrationView(doc,{request:async command=>command.type==='snapshot'?{type:'snapshot',snapshot:{revision:1,rows:[{id:'s',kind:'skill',tab:'skills',name:'个人技能',description:'',enabled:true,status:'已启用',source:'个人',revision:1}]}}:mode==='read'?new Promise(resolve=>{resolveRead=resolve}):{type:'skill-detail',id:'s',revision:1,enabled:true,content:'# 当前正文',invocationName:'skill'},useSkill:async input=>{signal=input.signal;await new Promise<void>((_,reject)=>{rejectUse=reject})}},host);
+  const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve()};await view.open('integrations/skills');doc.querySelector<HTMLButtonElement>('[data-detail=s]')!.click();await settle();if(mode==='use'){doc.querySelector<HTMLButtonElement>('[data-action=use-skill]')!.click();expect(signal?.aborted).toBe(false)}
+  doc.querySelector('.VOzbGW_trigger')!.addEventListener('click',()=>doc.body.insertAdjacentHTML('beforeend','<div class="VOzbGW_overlay"><div class="VOzbGW_panel">账户信息</div></div>'));
+  doc.querySelector<HTMLButtonElement>('.VOzbGW_trigger')!.click();expect(host.current()).toBeUndefined();expect(doc.querySelector<HTMLElement>('.ig-root')!.hidden).toBe(true);expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(false);
+  if(mode==='read')resolveRead({type:'skill-detail',id:'s',revision:1,enabled:true,content:'# 过期私有正文',invocationName:'skill'});else{expect(signal?.aborted).toBe(true);rejectUse(Error('过期使用错误'))}await settle();expect(doc.body.textContent).not.toContain('过期');doc.querySelector('.VOzbGW_overlay')!.remove();await w.happyDOM.whenAsyncComplete();host.back();expect(doc.querySelector<HTMLElement>('.ig-root')!.hidden).toBe(true);view.dispose();host.dispose();
+ }
 });

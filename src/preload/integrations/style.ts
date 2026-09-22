@@ -70,6 +70,7 @@ body[data-workspace-surface] .pI_x6G_handle[data-side=sidebar]{z-index:902;point
 .ig-root button:not(.workspace-back-button)[aria-busy=true]{opacity:.7;cursor:progress}
 .ig-root button:not(.workspace-back-button)[aria-busy=true]:not(.ig-toggle)::after{content:'';position:absolute;right:7px;top:50%;width:10px;height:10px;margin-top:-6px;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:ig-spin .8s linear infinite}
 .ig-root .ig-toggle[aria-busy=true]{opacity:.6;cursor:progress}
+.ig-root .ig-toggle[data-toggle-locked=true]::before{background:var(--ig-muted)}
 
 @keyframes ig-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.ig-root button:not(.workspace-back-button),.ig-row,.ig-market-card,.ig-search,.ig-toggle::before,.ig-toggle::after{transition:none}.ig-root button:not(.workspace-back-button)[aria-busy=true]::before,.ig-root button:not(.workspace-back-button)[aria-busy=true]::after{animation:none}}
@@ -87,5 +88,6 @@ body[data-workspace-surface] .pI_x6G_handle[data-side=sidebar]{z-index:902;point
 .ig-markdown-table{max-width:100%;overflow:auto;margin:18px 0}.ig-markdown table{width:100%;border-collapse:collapse;font-size:13px;line-height:22px}.ig-markdown th,.ig-markdown td{border:1px solid var(--ig-line);padding:8px 12px;text-align:left;min-width:80px}.ig-markdown th{font-weight:500;background:var(--ig-field)}
 .ig-skill-metadata{border-top:1px solid var(--ig-line);margin-top:28px;padding-top:16px;color:var(--ig-muted)}.ig-skill-metadata summary{font-size:13px;cursor:pointer;line-height:24px;width:fit-content}.ig-skill-metadata pre{white-space:pre-wrap;overflow-wrap:anywhere}
 @container integrations (min-width:680px) and (max-width:880px){.ig-skill-detail-grid{grid-template-columns:minmax(0,1fr) 220px;gap:24px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{display:flex}}
-@container integrations (max-width:679px){.ig-skill-detail-grid{grid-template-rows:auto minmax(0,1fr);gap:20px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{grid-row:1;display:flex;max-height:min(240px,42vh);gap:12px}.ig-skill-detail-grid .ig-help{padding:14px;gap:6px}.ig-skill-document{padding-right:12px}}
+@container integrations (min-width:480px) and (max-width:679px){.ig-skill-detail-grid{grid-template-columns:minmax(0,1fr) 180px;gap:20px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{display:flex;gap:12px}.ig-skill-detail-grid .ig-help{padding:14px;gap:6px}.ig-skill-document{padding-right:12px}}
+@container integrations (max-width:479px){.ig-skill-detail-grid{grid-template-rows:auto minmax(0,1fr);gap:20px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{grid-row:1;display:flex;max-height:min(240px,42vh);gap:12px}.ig-skill-detail-grid .ig-help{padding:14px;gap:6px}.ig-skill-document{padding-right:12px}}
 ` + connectionFormStyles;

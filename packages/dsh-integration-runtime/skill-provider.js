@@ -3,6 +3,9 @@ import { enabledManagedSkill, managedSkillInvocationName, registerLegacySkillPol
 
 const PROVIDER = 'ework-managed-skills'
 const invocation = { modelInvocable: true, userInvocable: true }
+const bundledInvocation = { modelInvocable: false, userInvocable: true }
+// Builtin aliases pin explicit user picks; automatic discovery keeps the native provider.
+const invocationFor = skill => skill.provider === 'bundled' ? bundledInvocation : invocation
 
 /** Registry invalidation reaches model discovery, the skill tool, and slash consumers. */
 export function registerManagedSkillProvider(ctx, runtime) {
@@ -19,7 +22,7 @@ export function registerManagedSkillProvider(ctx, runtime) {
         const snapshot = runtime.snapshot
         return (snapshot?.skills ?? []).filter(skill => enabledManagedSkill(snapshot, skill.id)).map(skill => ({
           name: managedSkillInvocationName(skill), description: `${skill.name}：${skill.description}`, source: skill.source, provider: PROVIDER,
-          rank: 250, invocation, resourceBase: { kind: 'directory', path: skill.resourceRoot },
+          rank: 250, invocation: invocationFor(skill), resourceBase: { kind: 'directory', path: skill.resourceRoot },
           locator: { id: skill.id, revision: skill.revision, runtimeEpoch: snapshot.runtimeEpoch, ownerAccountId: snapshot.ownerAccountId }
         }))
       },
@@ -43,7 +46,7 @@ export function registerManagedSkillProvider(ctx, runtime) {
         if (!result || result.name !== skill.name || typeof result.description !== 'string' || typeof result.content !== 'string' || Buffer.byteLength(result.content) > 2 * 1024 * 1024 || result.directory !== skill.resourceRoot) throw Error('技能内容与安装记录不一致，请重新导入')
         return {
           name: managedSkillInvocationName(skill), description: `${skill.name}：${skill.description}`, source: skill.source, provider: PROVIDER,
-          invocation, resourceBase: { kind: 'directory', path: result.directory }, path: join(result.directory, 'SKILL.md'), content: result.content
+          invocation: invocationFor(skill), resourceBase: { kind: 'directory', path: result.directory }, path: join(result.directory, 'SKILL.md'), content: result.content
         }
       }
     }
