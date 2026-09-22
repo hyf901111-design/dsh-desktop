@@ -8,7 +8,7 @@ const { act } = React
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ Menu: () => null, IconEllipsisOutline16: () => null, IconSearchOutline16: () => null, IconPersonalizationOutline16: () => null, IconCloseFill14: () => null, IconFolderOpenOutline16: () => null, IconEditOutline16: () => null, IconTriangleRightFill14: () => null }))
 import { ResearchBoardCanvasOverlay, ResearchBoardHeader, shareFavorite } from '../src/preload/research-boards-ui'
 const cleanup: Array<() => Promise<void>> = []
-afterEach(async () => { for (const done of cleanup.splice(0)) await done(); vi.unstubAllGlobals() })
+afterEach(async () => { for (const done of cleanup.splice(0)) await done(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers() })
 async function mount(kind: 'header' | 'presence', sharingState = 'shared', role = 'owner', pinned = true) {
   const w = new Window({ url: 'http://localhost/' })
   vi.stubGlobal('document', w.document); vi.stubGlobal('window', w); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
@@ -16,7 +16,7 @@ async function mount(kind: 'header' | 'presence', sharingState = 'shared', role 
   const view: any = { boardId: 'b', board: { sharingState, title: '专用研究', lifecycle: 'active' }, permissions: { read: true, edit: role !== 'viewer', manage: role === 'owner' }, connection: 'online', members: [{ userId: 'self', username: '自己', role: 'owner' }], presence: [{ userId: 'peer', username: '林然', role: 'editor', cursor: { x: 100, y: 200 }, selectedIds: ['card'] }], seq: 1 }
   const listeners = new Set<() => void>(); let currentState = state
   const actions: string[] = []
-  const page: any = { version: () => currentState, getView: () => view, getState: () => currentState, subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, isResearch: () => true, editorError: () => null, favorite: async () => { throw Error('ownerOnly must use board pin state, not personal favorite deletion') }, showError: (error: unknown) => { throw error }, call: async (action: string, payload: any) => { actions.push(action); expect(payload.boardId).toBe('b'); currentState = { ...currentState, boards: [{ ...currentState.boards[0], pinned: action === 'board.pin' }] }; listeners.forEach(fn => fn()) } }
+  const page: any = { version: () => currentState, getView: () => view, getState: () => currentState, subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, isResearch: () => true, isLoading: () => false, activationError: () => null, editorError: () => null, favorite: async () => { throw Error('ownerOnly must use board pin state, not personal favorite deletion') }, showError: (error: unknown) => { throw error }, call: async (action: string, payload: any) => { actions.push(action); expect(payload.boardId).toBe('b'); currentState = { ...currentState, boards: [{ ...currentState.boards[0], pinned: action === 'board.pin' }] }; listeners.forEach(fn => fn()) } }
   let snapshot: any = { viewport: { x: 10, y: 20, scale: .5 }, files: [], artifacts: [{ id: 'card', x: 400, y: 300, width: 656, height: 456 }] }
   const workspace: any = { subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, getSnapshot: () => snapshot }
   const host = w.document.createElement('div'); w.document.body.append(host); const root = createRoot(host as unknown as HTMLElement)
@@ -29,7 +29,7 @@ it('keeps an added private board when its header icon is clicked again', async (
   expect(f.host.querySelector('.srb-favorite-button')).toBeNull()
   f.view.board.sharingState = 'ownerOnly'; await f.emit()
   const button = f.host.querySelector('.srb-favorite-button') as unknown as HTMLButtonElement
-  expect(button.getAttribute('aria-label')).toBe('已添加至研究看板')
+  expect(button.getAttribute('aria-label')).toBe('已创建至看板区')
   expect(button.getAttribute('aria-pressed')).toBe('true')
   expect(button.textContent).toBe('')
   await act(async () => button.click())
@@ -39,10 +39,10 @@ it('keeps an added private board when its header icon is clicked again', async (
 it('adds a dedicated private board through board pin instead of deleting its favorite', async () => {
   const f = await mount('header', 'ownerOnly', 'owner', false)
   const button = f.host.querySelector('.srb-favorite-button') as unknown as HTMLButtonElement
-  expect(button.getAttribute('aria-label')).toBe('添加至研究看板')
+  expect(button.getAttribute('aria-label')).toBe('创建至看板区')
   await act(async () => button.click())
   expect(f.actions).toEqual(['board.pin'])
-  expect(button.getAttribute('aria-label')).toBe('已添加至研究看板')
+  expect(button.getAttribute('aria-label')).toBe('已创建至看板区')
 })
 it('keeps shared viewer management without dedicated pin or invitation actions', async () => {
   const f = await mount('header', 'shared', 'viewer')
@@ -92,4 +92,20 @@ it('renders the checked creation recipient from lookup and clears it when the ID
   input.value = '1111111111'; input.dispatchEvent(new w.Event('input'))
   expect(result.textContent).toBe(''); expect(send.disabled).toBe(true)
   expect(call.mock.calls.some(([action]) => action === 'board.create' || action === 'invitation.send')).toBe(false)
+})
+
+
+it('keeps idle presence free of polling and expires geometry previews once', async()=>{
+ vi.useFakeTimers({toFake:['setTimeout','clearTimeout','setInterval','clearInterval','Date']})
+ const interval=vi.spyOn(globalThis,'setInterval')
+ const f=await mount('presence')
+ expect(interval).not.toHaveBeenCalled()
+ f.view.presence[0].previewExpiresAt=Date.now()+1000
+ f.view.presence[0].previewSeq=1
+ f.view.presence[0].previews=[{nodeId:'card',x:600,y:300,width:656,height:456}]
+ await f.emit()
+ expect(f.host.querySelector('.srb-occupied')!.getAttribute('data-geometry-preview')).toBe('true')
+ await act(async()=>{await vi.advanceTimersByTimeAsync(1001)})
+ expect(f.host.querySelector('.srb-occupied')!.getAttribute('data-geometry-preview')).toBe('false')
+ expect(vi.getTimerCount()).toBe(0)
 })

@@ -2827,12 +2827,23 @@ export function ResearchBoardCanvasOverlay({
     workspace.getSnapshot,
     workspace.getSnapshot
   )
-  const [previewNow, setPreviewNow] = React.useState(Date.now())
-  React.useEffect(() => {
-    const timer = setInterval(() => setPreviewNow(Date.now()), 500)
-    return () => clearInterval(timer)
-  }, [])
+  const [previewTick, setPreviewNow] = React.useState(Date.now())
+  const previewNow = Math.max(previewTick, Date.now())
   const v = page.getView(sessionId)
+  const nextPreviewExpiry = (v?.presence ?? []).reduce((next, peer) => {
+    const expires = peer.previewExpiresAt ?? 0
+    return peer.userId !== state.account.user?.userId && peer.role !== 'viewer' &&
+      v?.board.lifecycle === 'active' && peer.previewSeq === v?.seq &&
+      peer.previews?.length && peer.selectedIds?.length && expires > previewNow
+      ? Math.min(next, expires) : next
+  }, Infinity)
+  React.useEffect(() => {
+    if (!Number.isFinite(nextPreviewExpiry)) return
+    // Presence events already render new geometry. Wake once only when a
+    // transient preview expires; idle boards need no recurring React updates.
+    const timer = setTimeout(() => setPreviewNow(Date.now()), Math.max(0, nextPreviewExpiry - Date.now()) + 1)
+    return () => clearTimeout(timer)
+  }, [nextPreviewExpiry])
   if (page.isLoading(sessionId)) return h('div',
     { className: 'srb-canvas-loading', role: 'status', 'aria-live': 'polite', 'aria-busy': true },
     h('span', { className: 'srb-canvas-loading-spinner', 'aria-hidden': true }),
