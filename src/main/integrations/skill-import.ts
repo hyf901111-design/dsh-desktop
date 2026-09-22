@@ -3,6 +3,7 @@ import { constants } from 'node:fs'
 import { lstat, mkdir, open, readdir, realpath, rename, rm } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { parseDocument } from 'yaml'
+import type { SkillImportDiagnostic } from '../../shared/integration-ui'
 
 export const SKILL_IMPORT_LIMITS = Object.freeze({
   maxFileBytes: 2 * 1024 * 1024,
@@ -15,7 +16,8 @@ export type SkillImportErrorCode = 'UNSAFE_PATH' | 'INVALID_SKILL' | 'FILE_TOO_L
   | 'PREVIEW_EXPIRED' | 'PREVIEW_STALE' | 'STORAGE_INVALID' | 'ROLLBACK_CONFLICT'
 
 export class SkillImportError extends Error {
-  constructor(public readonly code: SkillImportErrorCode, message: string) {
+  constructor(public readonly code: SkillImportErrorCode, message: string,
+    public readonly details: Pick<SkillImportDiagnostic, 'resourcePath' | 'actual' | 'limit' | 'unit'> = {}) {
     super(message)
     this.name = 'SkillImportError'
   }
@@ -90,8 +92,38 @@ interface Snapshot {
   totalBytes: number
 }
 
-function fail(code: SkillImportErrorCode, message: string): never {
-  throw new SkillImportError(code, message)
+function fail(code: SkillImportErrorCode, message: string, details?: SkillImportError['details']): never {
+  throw new SkillImportError(code, message, details)
+}
+/** Safe, actionable diagnostics. Never includes file contents or executes dependency installers. */
+export function skillImportDiagnostic(error: unknown): SkillImportDiagnostic {
+  const code = error instanceof SkillImportError ? error.code : (error as NodeJS.ErrnoException)?.code
+  const details = error instanceof SkillImportError ? error.details : {}
+  const guidance: Partial<Record<SkillImportErrorCode, string>> = {
+    FILE_TOO_LARGE: '请选择发布者提供的完整可导入包；不要删除必需的模板、字体或其他资源来绕过限制。当前可继续按原方式使用该技能；同名内置技能仍由客户端管理。',
+    PACKAGE_TOO_LARGE: '包体超过当前管理限制。请保留原技能，选择发布者提供的完整可导入包；不要删减运行必需资源。',
+    TOO_MANY_FILES: '文件数超过当前管理限制，可能包含已安装依赖。请保留原目录，选择发布者提供的完整可导入包；客户端不会自动删减依赖。',
+    UNSAFE_PATH: details.resourcePath?.split('/').includes('node_modules')
+      ? '此资源属于已安装依赖，其中的链接不能复制接入。请保留现有依赖与原技能，选择发布者提供的完整可导入包；客户端不会删除依赖或跟随链接。'
+      : '请选择实际目录中的完整技能包。包内不能含符号链接、硬链接或越界路径；请由发布者提供使用普通文件的完整副本，不要删除必需资源。',
+    INVALID_SKILL: '检查 SKILL.md 的 UTF-8 编码、YAML 名称与说明以及正文；修复副本后重新选择完整技能包。仅重选同目录的 SKILL.md 不会跳过资源检查。',
+    SOURCE_CHANGED: '等待文件保存或同步完成，再重新检查并预览。原文件不会被修改。',
+    PREVIEW_EXPIRED: '重新选择并预览技能后再导入。',
+    PREVIEW_STALE: '已安装版本发生变化，请重新选择并确认替换或另存。',
+    SOURCE_CONFLICT: '请选择另存，或重新选择要更新的同一来源，避免覆盖其他技能。',
+    STORAGE_INVALID: '受管理的技能记录不可读取；保留原文件与备份，修复存储后重试。',
+    ROLLBACK_CONFLICT: '技能已有更新，请刷新已安装列表后核对当前版本。',
+  }
+  return {
+    code: typeof code === 'string' ? code : 'IMPORT_FAILED',
+    reason: error instanceof SkillImportError ? error.message : code === 'EACCES' || code === 'EPERM' ? '没有读取该目录或文件的权限。' : code === 'ENOENT' ? '技能文件已移动或不存在。' : '读取或保存技能未完成。',
+    guidance: guidance[code as SkillImportErrorCode] ?? '在 Finder 中确认来源仍存在且可读取，然后重新检查；也可重新选择完整技能包。原文件保持不变。',
+    ...details,
+  }
+}
+export function skillImportErrorMessage(error: unknown): string {
+  const d = skillImportDiagnostic(error)
+  return `${d.reason}${d.resourcePath ? ` 受阻资源：${d.resourcePath}。` : ''} ${d.guidance}`
 }
 function hash(value: string | Buffer): string { return createHash('sha256').update(value).digest('hex') }
 function missing(error: unknown): boolean { return (error as NodeJS.ErrnoException).code === 'ENOENT' }
@@ -218,19 +250,21 @@ async function snapshot(sourcePath: string): Promise<Snapshot> {
       safeRelativePath(relativePath)
       const path = join(directory, entryName)
       const info = await lstat(path)
-      if (info.isSymbolicLink()) fail('UNSAFE_PATH', '技能包不能包含符号链接。')
+      if (info.isSymbolicLink()) fail('UNSAFE_PATH', '技能包不能包含符号链接。', { resourcePath: relativePath })
       if (info.isDirectory()) {
         const canonical = await canonicalDirectory(path)
         if (canonical !== path) fail('UNSAFE_PATH', '技能目录在预览时被替换。')
         await walk(path, relativePath, depth + 1)
       } else {
-        if (files.length >= SKILL_IMPORT_LIMITS.maxFiles) fail('TOO_MANY_FILES', '技能包最多包含 1000 个文件。')
-        if (info.size > SKILL_IMPORT_LIMITS.maxFileBytes) fail('FILE_TOO_LARGE', '技能单个文件不能超过 2 MiB。')
-        if (totalBytes + info.size > SKILL_IMPORT_LIMITS.maxPackageBytes) fail('PACKAGE_TOO_LARGE', '技能包总大小不能超过 50 MiB。')
+        if (files.length >= SKILL_IMPORT_LIMITS.maxFiles) fail('TOO_MANY_FILES', '技能包最多包含 1000 个文件。', { resourcePath: relativePath, actual: files.length + 1, limit: SKILL_IMPORT_LIMITS.maxFiles, unit: 'files' })
+        if (info.size > SKILL_IMPORT_LIMITS.maxFileBytes) fail('FILE_TOO_LARGE', '技能单个文件不能超过 2 MiB。', { resourcePath: relativePath, actual: info.size, limit: SKILL_IMPORT_LIMITS.maxFileBytes, unit: 'bytes' })
+        if (totalBytes + info.size > SKILL_IMPORT_LIMITS.maxPackageBytes) fail('PACKAGE_TOO_LARGE', '技能包总大小不能超过 50 MiB。', { resourcePath: relativePath, actual: totalBytes + info.size, limit: SKILL_IMPORT_LIMITS.maxPackageBytes, unit: 'bytes' })
         const normalizedPath = relativePath.normalize('NFC').toLowerCase()
-        if (paths.has(normalizedPath)) fail('UNSAFE_PATH', '技能包包含在其他文件系统上冲突的文件名。')
+        if (paths.has(normalizedPath)) fail('UNSAFE_PATH', '技能包包含在其他文件系统上冲突的文件名。', { resourcePath: relativePath })
         paths.add(normalizedPath)
-        const content = await readSafeFile(root, path)
+        let content: Buffer
+        try { content = await readSafeFile(root, path) }
+        catch (error) { if (error instanceof SkillImportError) throw new SkillImportError(error.code, error.message, { ...error.details, resourcePath: relativePath }); throw error }
         totalBytes += content.length
         files.push({ path: relativePath, bytes: content.length, digest: hash(content), content })
       }
@@ -241,7 +275,8 @@ async function snapshot(sourcePath: string): Promise<Snapshot> {
   const main = files.find(file => file.path === 'SKILL.md')
   if (!main) fail('INVALID_SKILL', '所选目录中没有 SKILL.md。')
   const digest = hash(JSON.stringify(files.map(({ path, bytes, digest }) => ({ path, bytes, digest }))))
-  return { root, sourceId: `local:${hash(root)}`, digest, totalBytes, files, ...parseSkill(main.content) }
+  try { return { root, sourceId: `local:${hash(root)}`, digest, totalBytes, files, ...parseSkill(main.content) } }
+  catch (error) { if (error instanceof SkillImportError) throw new SkillImportError(error.code, error.message, { ...error.details, resourcePath: 'SKILL.md' }); throw error }
 }
 
 async function atomicJson(path: string, value: unknown): Promise<void> {

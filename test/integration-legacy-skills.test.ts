@@ -54,3 +54,32 @@ it('rolls back the managed copy when registering metadata fails and retries with
   expect((await migration.migrateOnce(register)).status).toBe('complete')
   expect(register).toHaveBeenCalledOnce()
 })
+it('identifies the blocked resource and a safe recovery path without weakening import limits', async () => {
+  const { legacy, migration } = await fixture()
+  await mkdir(join(legacy, 'report/assets'))
+  await writeFile(join(legacy, 'report/assets/template.pptx'), Buffer.alloc(2 * 1024 * 1024 + 1))
+  const item = (await migration.preview()).items.find(item => item.name === 'report')!
+  expect(item).toMatchObject({ status: 'failed', sourcePath: join(legacy, 'report'), diagnostic: { code: 'FILE_TOO_LARGE', resourcePath: 'assets/template.pptx', actual: 2097153, limit: 2097152, unit: 'bytes' } })
+  expect(item.diagnostic?.guidance).toContain('不要删除')
+  expect(item.message).toContain('原方式')
+})
+it('explains installed dependency symlinks without following or removing them', async () => {
+  const { legacy, migration } = await fixture()
+  await mkdir(join(legacy, 'report/node_modules/.bin'), { recursive: true })
+  await symlink('../../outside', join(legacy, 'report/node_modules/.bin/tool'))
+  const item = (await migration.preview()).items.find(item => item.name === 'report')!
+  expect(item.diagnostic).toMatchObject({ code: 'UNSAFE_PATH', resourcePath: 'node_modules/.bin/tool' })
+  expect(item.diagnostic?.guidance).toContain('依赖')
+  expect(item.diagnostic?.guidance).toContain('完整')
+})
+it('keeps bundled management explicit and scans new sources after an earlier completed migration', async () => {
+  const { legacy, migration } = await fixture()
+  const register = vi.fn(async () => undefined)
+  const first = await migration.migrateOnce(register)
+  expect(first.items.find(item => item.kind === 'bundled')?.message).toContain('内置管理')
+  await mkdir(join(legacy, 'added'))
+  await writeFile(join(legacy, 'added/SKILL.md'), '---\nname: added\ndescription: added\n---\nNew skill.')
+  const second = await migration.migrateOnce(register)
+  expect(second.items.find(item => item.name === 'added')?.status).toBe('migrated')
+  expect(register).toHaveBeenCalledTimes(2)
+})

@@ -168,6 +168,7 @@ export type CatalogSource = {
     publicKey?: string;
 };
 export type CatalogEntry = {
+    category?: 'research' | 'office' | 'developer';
     id: string;
     kind: CatalogKind;
     name: string;

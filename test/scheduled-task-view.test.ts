@@ -362,7 +362,12 @@ it('shares one More menu and preserves the scheduled draft through the integrati
   doc.querySelector<HTMLButtonElement>('.st-more')!.click()
   expect(doc.querySelectorAll('.st-more')).toHaveLength(1)
   const plugin=Array.from(doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]')).find(button=>button.textContent?.includes('插件'))
-  expect(plugin).toBeDefined();plugin!.click();await Promise.resolve();await Promise.resolve()
+  expect(plugin).toBeDefined();
+  const menuRows=Array.from(doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]'));
+  expect(menuRows.map(row=>row.querySelectorAll('.st-icon').length)).toEqual([1,1]);
+  expect(menuRows.map(row=>row.firstElementChild?.className)).toEqual(['st-icon','st-icon']);
+  expect(w.getComputedStyle(menuRows[0] as any).gap).toBe(w.getComputedStyle(menuRows[1] as any).gap);
+  plugin!.click();await Promise.resolve();await Promise.resolve()
   expect(doc.querySelector<HTMLElement>('.st-root')!.hidden).toBe(true)
   expect(doc.body.hasAttribute('data-scheduled-page')).toBe(false)
   doc.querySelector<HTMLButtonElement>('.ig-root [data-action=back]')!.click()

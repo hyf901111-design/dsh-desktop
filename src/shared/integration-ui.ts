@@ -25,6 +25,7 @@ export type IntegrationRow = {
     configurable?: boolean;
     removable?: boolean;
     connectionType?: ConnectionDraft['type'];
+    connectionSummary?: { workspaceLabel: string; authLabel: string; dependencies: string[]; healthDetail?: string };
 };
 export type TaskCapabilitySummary = {
     entityId: string;
@@ -45,6 +46,8 @@ export type IntegrationSnapshot = {
     taskCapabilities?: TaskCapabilitySummary[];
 };
 export type MarketEntry = {
+    category?: 'research' | 'office' | 'developer';
+    capabilities?: Array<{ name: string; description: string }>;
     id: string;
     kind: MarketKind;
     name: string;
@@ -176,9 +179,26 @@ export type IntegrationCommand = {
     type: 'cancel-operation';
     id: string;
 };
+export type SkillImportDiagnostic = {
+    code: string;
+    reason: string;
+    guidance: string;
+    resourcePath?: string;
+    actual?: number;
+    limit?: number;
+    unit?: 'bytes' | 'files';
+};
+export type LegacySkillPreviewItem = {
+    name: string;
+    status: string;
+    message?: string;
+    sourcePath?: string;
+    kind?: 'personal' | 'project' | 'custom' | 'bundled';
+    diagnostic?: SkillImportDiagnostic;
+};
 export type IntegrationReply = {
     type: 'legacy-preview';
-    items: Array<{name: string; status: string; message?: string}>;
+    items: LegacySkillPreviewItem[];
     eligibleCount: number;
 } | {
     type: 'snapshot';
@@ -211,5 +231,6 @@ export type IntegrationReply = {
 };
 export interface IntegrationBridge {
     request(command: IntegrationCommand): Promise<IntegrationReply>;
+    revealSource?(path: string): Promise<void>;
 }
 export const emptyConnectionDraft = (type: ConnectionDraft['type'] = 'api'): ConnectionDraft => ({ name: '', type, url: '', clientId: '', command: '', args: '', cwd: '', env: '', authType: 'none', headerName: 'X-API-Key', secret: '', toolsJson: '[]', openApiDocument: '', workspaceIds: '', allowPrivateNetwork: false });

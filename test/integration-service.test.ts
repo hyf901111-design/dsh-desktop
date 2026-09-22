@@ -17,7 +17,8 @@ it('persists real connection configuration without returning secrets and isolate
     await service.operations.wait(reply.operation.id)
     const snapshot=await service.request({type:'snapshot'});expect(JSON.stringify(snapshot)).not.toContain('private-test-token')
     if(snapshot.type!=='snapshot')throw Error('wrong reply')
-    expect(snapshot.snapshot.rows[0]).toMatchObject({name:'My API',tab:'apps'})
+    expect(snapshot.snapshot.rows[0]).toMatchObject({name:'My API',tab:'apps',connectionSummary:{workspaceLabel:'当前账号的所有工作区',authLabel:'Token · 已配置',dependencies:[],healthDetail:'尚未测试连接'}})
+    expect(JSON.stringify(snapshot)).not.toContain('credentialRef')
     const id=snapshot.snapshot.rows[0]!.id
     const edit=await service.request({type:'connection-draft',id});expect(JSON.stringify(edit)).not.toContain('private-test-token')
     owner='two'

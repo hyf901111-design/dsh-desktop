@@ -4,6 +4,8 @@ import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 import { describe, expect, it } from 'vitest'
 
+import { WorkspaceSurfaceHost } from '../src/preload/workspace-surface-host'
+import { IntegrationView } from '../src/preload/integrations/view'
 import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
 
 const requireModule = createRequire(import.meta.url)
@@ -156,6 +158,51 @@ async function mountStatefulSidebar(desktop = false, noSession = false) {
 }
 
 describe('Figma panel production lifecycle', () => {
+  it('moves the integrations pane control to the far-right native toolbar and preserves drafts through real clicks', async () => {
+    const mounted=await mountStatefulSidebar(true)
+    const {browserWindow,host: nativeHost,store}=mounted, doc=browserWindow.document as unknown as Document
+    const workspace=new WorkspaceSurfaceHost(doc)
+    const view=new IntegrationView(doc,{request:async()=>({type:'snapshot',snapshot:{revision:0,rows:[]}})},workspace)
+    try {
+      for (const path of ['figma-panels.css','figma-refinements.css']) {
+        const style=doc.createElement('style');style.textContent=await readFile(new URL('../src/preload/'+path,import.meta.url),'utf8');doc.head.append(style)
+      }
+      const before=structuredClone(store.getSnapshot().state)
+      await act(async()=>{view.mount();await view.open()})
+      const click=async(selector:string)=>{await act(async()=>{doc.querySelector<HTMLButtonElement>(selector)!.click()})}
+      await click('[data-tab=apps]');await click('[data-action=add]');await click('[data-add=api]')
+      const draft=doc.querySelector<HTMLInputElement>('[name=url]')!
+      draft.value='https://unsaved.example.test';draft.dispatchEvent(new browserWindow.Event('input',{bubbles:true}) as unknown as Event)
+      const centerButton=doc.querySelector<HTMLElement>('.ig-chrome [data-action=panel]')!
+      const nativeButton=()=>nativeHost.querySelector('[data-odyssey-panel-entry=right]') as unknown as HTMLElement
+      const nativeCluster=()=>nativeButton().parentElement!
+      const style=(element:Element)=>browserWindow.getComputedStyle(element as any)
+      expect(nativeHost.querySelector('[data-workspace-panel=integrations]')).not.toBeNull()
+      expect(nativeButton().getAttribute('aria-expanded')).toBe('false')
+      expect(style(centerButton).display).not.toBe('none')
+      expect(style(nativeCluster()).visibility).toBe('hidden')
+      centerButton.focus()
+      await click('.ig-chrome [data-action=panel]')
+      expect(nativeButton().getAttribute('aria-expanded')).toBe('true')
+      expect(nativeButton().getAttribute('aria-label')).toBe('收起右侧屏')
+      expect(workspace.isRightPaneExpanded()).toBe(true)
+      expect(doc.activeElement).toBe(nativeButton())
+      expect(style(centerButton).display).toBe('none')
+      expect(style(nativeCluster()).visibility).toBe('visible')
+      expect(style(nativeCluster()).top).toBe('18px')
+      expect(style(nativeButton()).width).toBe('28px')
+      expect(style(doc.querySelector('.ig-chrome [data-action=back]')!).display).not.toBe('none')
+      await click('[data-odyssey-panel-entry=right]')
+      expect(nativeButton().getAttribute('aria-expanded')).toBe('false')
+      expect(workspace.isRightPaneExpanded()).toBe(false)
+      expect(doc.activeElement).toBe(centerButton)
+      expect(style(centerButton).display).not.toBe('none')
+      expect(style(nativeCluster()).visibility).toBe('hidden')
+      expect(doc.querySelector<HTMLInputElement>('[name=url]')).toBe(draft)
+      expect(draft.value).toBe('https://unsaved.example.test')
+      expect(store.getSnapshot().state).toEqual(before)
+    } finally {await act(async()=>{view.dispose();workspace.dispose()});await mounted.restore()}
+  })
   it('connects the integrations workspace toggle to real shell geometry and restores native state', async () => {
     const mounted=await mountStatefulSidebar(true)
     try {

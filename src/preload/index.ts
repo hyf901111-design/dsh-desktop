@@ -179,7 +179,7 @@ function initializeUi(): void {
   }
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
-  const integrationView = new IntegrationView(document, { request: command => ipcRenderer.invoke('integrations:request', command) }, workspaceSurfaceHost)
+  const integrationView = new IntegrationView(document, { request: command => ipcRenderer.invoke('integrations:request', command), revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),

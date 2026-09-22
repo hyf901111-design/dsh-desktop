@@ -189,6 +189,7 @@ export class IntegrationCatalog {
             ids.add(id);
             if (!['plugin', 'app', 'tool', 'skill'].includes(item.kind as string))
                 error('目录分类无效');
+            if (item.category !== undefined && !['research', 'office', 'developer'].includes(String(item.category))) error('目录主题分类无效');
             const kind = item.kind as CatalogKind, version = item.version as string;
             compareVersions(version, version);
             if (!Array.isArray(item.permissions) || item.permissions.some(value => typeof value !== 'string' || value.length > 1000))
@@ -216,7 +217,7 @@ export class IntegrationCatalog {
             }
             const min = typeof item.minClientVersion === 'string' ? item.minClientVersion : undefined;
             const available = !min || compareVersions(this.options.clientVersion, min) >= 0;
-            return { id: `${sourceId}:${id}`, kind, name: item.name as string, description: item.description as string, publisher: item.publisher as string, version, sourceId, manifest: structuredClone(manifest), permissions: [...item.permissions as string[]], available, ...(min ? { minClientVersion: min } : {}), ...(typeof item.digest === 'string' ? { digest: item.digest } : {}), ...(kind === 'app' ? { providerId: String(manifest.type) } : {}), ...(!available ? { unavailableReason: `需要 EWork ${min} 或更新版本` } : {}) };
+            return { id: `${sourceId}:${id}`, kind, category: item.category as CatalogEntry['category'], name: item.name as string, description: item.description as string, publisher: item.publisher as string, version, sourceId, manifest: structuredClone(manifest), permissions: [...item.permissions as string[]], available, ...(min ? { minClientVersion: min } : {}), ...(typeof item.digest === 'string' ? { digest: item.digest } : {}), ...(kind === 'app' ? { providerId: String(manifest.type) } : {}), ...(!available ? { unavailableReason: `需要 EWork ${min} 或更新版本` } : {}) };
         });
     }
 }

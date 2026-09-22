@@ -210,7 +210,7 @@ export class ScheduledTaskView {
       this.menu
         ? this.closeMenu()
         : this.showMenu(more, [
-            ...(this.surfaceHost ? [{ label: '插件', run: () => {
+            ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
             } }] : []),
             { label: '定时任务', icon: 'clock', run: () => void this.open() },
