@@ -19,11 +19,47 @@ export function researchBentoSize(node = {}, measured) {
   if (dimensions) size = dimensions.height > 220 ? 'large' : dimensions.width > 320 ? 'medium' : 'small';
   return size;
 }
+// Source 42 financial panels have content-specific geometry. The generic S/M/L
+// grid is a different source family and must not stretch compact market tables.
+export function researchMarketDimensions(node) {
+  if (node.sizeMode === 'manual') return null;
+  const spec=node.containerSpec, html=spec?.type==='html'?spec.html:'';
+  const kind=html?.match(/<body\b[^>]*data-sherlock-market="([a-z]+)"/)?.[1];
+  if(kind==='metrics')return {width:896,height:144};
+  if(kind==='candlestick')return {width:562,height:264};
+  if(kind==='heatmap')return {width:434,height:258};
+  if(kind==='breadth') {
+    const count=(html.match(/class="market-metric"/g)||[]).length;
+    return {width:896,height:110+Math.max(0,Math.ceil(count/2)-1)*56};
+  }
+  if(kind==='table') {
+    const columns=(html.match(/<thead>[\s\S]*?<\/thead>/)?.[0].match(/<th\b/g)||[]).length;
+    const rows=(html.match(/<tbody>[\s\S]*?<\/tbody>/)?.[0].match(/<tr\b/g)||[]).length;
+    return {width:columns<=4?322:450,height:Math.min(600,(columns<=4?264:258)+Math.max(0,rows-8)*19.5)};
+  }
+  return null;
+}
+function researchMarketLayout(nodes,availableWidth,height) {
+  if(nodes.some(n=>n.sizeMode==='manual'||!n.containerSpec)||!nodes.some(researchMarketDimensions))return null;
+  let x=0,y=0,rowHeight=0,right=0;
+  const packed=nodes.map(node=>{
+    const size=researchBentoSize(node);
+    const dimensions=researchMarketDimensions(node)??(node.containerSpec.type==='kpi'&&node.containerSpec.items?.length===6?{width:896,height:144}:RESEARCH_BENTO_SIZES[size]);
+    if(x&&x+dimensions.width>896){y+=rowHeight+12;x=0;rowHeight=0;}
+    const result={...node,x,y,width:dimensions.width,height:dimensions.height,size,containerSizePreset:size};
+    right=Math.max(right,x+dimensions.width);x+=dimensions.width+12;rowHeight=Math.max(rowHeight,dimensions.height);
+    return result;
+  });
+  const bottom=y+rowHeight,scale=Math.max(.08,Math.min(1,(availableWidth-64)/right,(height-64)/bottom));
+  return {nodes:packed,width:right,height:bottom,viewport:{scale,x:(availableWidth-right*scale)/2,y:(height-bottom*scale)/2}};
+}
 export function researchBentoLayout(nodes, canvasSize = {}, measured = new Map(), { fitColumns = false } = {}) {
   if (!nodes.length) return { nodes: [], width: 0, height: 0, viewport: { x: 0, y: 0, scale: 1 } };
   const width = canvasSize.width > 0 ? canvasSize.width : 1380;
   const availableWidth = canvasSize.availableWidth > 0 ? Math.min(width, canvasSize.availableWidth) : width;
   const height = canvasSize.height > 0 ? canvasSize.height : 900;
+  const marketLayout=researchMarketLayout(nodes,availableWidth,height);
+  if(marketLayout)return marketLayout;
   const entries = nodes.map((node, index) => {
     const size = researchBentoSize(node, measured.get(node.id));
     const generating = node.kind==='generated-container' && node.sizeMode!=='manual' && !node.containerSpec && ['queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus);
