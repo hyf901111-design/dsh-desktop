@@ -27,6 +27,13 @@ module.exports = {
   },
   mac: {
     ...packageJson.build.mac,
+    // PDF CMaps are data, not executable code. Keep every file in the bundle
+    // and its outer resource seal, without 336 redundant codesign invocations.
+    // Match only the two PDF asset roots; native modules remain signed.
+    signIgnore: [
+      ...[packageJson.build.mac.signIgnore || []].flat(),
+      '/Contents/Resources/(?:app/node_modules/@deepseek-ai/dsh-web-frontend/dist/sherlock-pdfjs|sherlock-plugin-profile/modules/pdfjs-dist)/cmaps/[^/]+\\.bcmap$'
+    ],
     notarize: true,
     target: ['dmg', 'zip']
   },
