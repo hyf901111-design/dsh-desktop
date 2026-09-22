@@ -23,7 +23,7 @@ async function fixture() {
   cleanups.push(() => { view.dispose(); window.happyDOM.abort() })
   const settle = async () => { for (let i = 0; i < 10; i++) await Promise.resolve() }
   const click = (selector: string) => { const button = document.querySelector<HTMLButtonElement>(selector); expect(button).not.toBeNull(); button!.click() }
-  await view.open('integrations/skills'); click('[data-action=legacy-preview]'); await settle()
+  await view.open('integrations/skills'); click('[data-action=add]'); click('[data-action=legacy-preview]'); await settle()
   return { view, document, calls, revealSource, reply, click, settle }
 }
 

@@ -1,5 +1,5 @@
 import { lstat, realpath, rm } from 'node:fs/promises';
-import { relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { IntegrationError, type PluginInstall, type SkillInstall } from '../../shared/integrations';
 export async function assertManagedPackagePath(root: string, path: string): Promise<string> {
     const base = await realpath(root), candidate = resolve(path), rel = relative(base, candidate);
@@ -25,5 +25,20 @@ export async function removePackageResources(root: string, plugin: PluginInstall
             if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
                 throw error;
         }
+    }
+}
+
+/** Remove only immutable copies inside this exact skill's managed home, never a package or source. */
+export async function removeSkillPackageResources(root: string, skills: SkillInstall[]): Promise<void> {
+    const base = await realpath(root);
+    for (const skill of skills) {
+        const prefix = `${skill.ownerPluginId}/skill/`, localId = skill.id.slice(prefix.length);
+        if (!skill.ownerPluginId || !skill.id.startsWith(prefix) || !/^[a-z0-9][a-z0-9._-]{0,99}$/.test(localId))
+            throw new IntegrationError('ACCESS_DENIED', '技能托管标识不匹配');
+        const candidate = resolve(skill.resourceRoot), home = join(base, 'skills', `${skill.ownerPluginId}-${localId}`);
+        if (dirname(candidate) !== home)
+            throw new IntegrationError('ACCESS_DENIED', '技能资源不属于该技能的托管副本');
+        try { await rm(await assertManagedPackagePath(base, candidate), { recursive: true }); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     }
 }

@@ -1,12 +1,13 @@
 import type { MarketEntry } from './bridge';
+import type { CatalogEntry } from '../../shared/integrations';
 import { escapeHtml as esc, button } from './forms';
 export type MarketCategory = 'all' | 'research' | 'office' | 'developer';
 const categories: Array<[MarketCategory, string]> = [['all', '全部'], ['research', '研究与数据'], ['office', '办公与协作'], ['developer', '开发工具']];
-export function marketGrid(entries: MarketEntry[], loading: boolean, category: MarketCategory = 'all') {
+export function marketGrid(entries: MarketEntry[], loading: boolean, category: MarketCategory = 'all', kind: CatalogEntry['kind'] = 'plugin') {
     if (loading) return '<p class="ig-empty" role="status">正在加载市场…</p>';
     const filtered = category === 'all' ? entries : entries.filter(entry => entry.category === category);
     const filters = `<nav class="ig-market-categories" aria-label="市场分类">${categories.map(([value, label]) => `<button type="button" class="ig-button ${category === value ? 'ig-primary' : 'ig-secondary'}" data-market-category="${value}" aria-pressed="${category === value}">${label}</button>`).join('')}</nav>`;
-    if (!entries.length) return `${filters}<div class="ig-market-empty"><h2>暂无可用内容</h2><p>连接目录服务或添加团队来源后，这里会显示可以安装或连接的能力。</p></div>`;
+    if (!entries.length) return `<div class="ig-empty ig-market-vacant"><h2>暂无可用${{plugin:'插件',app:'应用',tool:'工具',skill:'技能'}[kind]}</h2><p>有可用内容后会显示在这里。</p></div>`;
     if (!filtered.length) return `${filters}<div class="ig-market-empty">这个分类暂时没有内容，可以切换到「全部」查看。</div>`;
     return `${filters}<div class="ig-market-grid">${filtered.map(entry => `<article class="ig-market-card"><h2>${esc(entry.name)}</h2><p>${esc(entry.description)}</p><span class="ig-market-meta">${esc(entry.publisher)} · ${entry.installed ? '已安装' : `版本 ${esc(entry.version)}`}</span><footer><button type="button" data-market-entry="${esc(entry.id)}" aria-label="查看${esc(entry.name)}">查看</button></footer></article>`).join('')}</div>`;
 }

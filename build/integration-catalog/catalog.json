@@ -2,86 +2,6 @@
   "schemaVersion": 1,
   "entries": [
     {
-      "id": "research-assistant",
-      "kind": "plugin",
-      "name": "研究助手",
-      "description": "核验资料，形成有来源的研究报告。",
-      "publisher": "EWork",
-      "version": "1.0.0",
-      "minClientVersion": "1.0.6",
-      "permissions": [
-        "在会话中读取所含技能",
-        "工具调用继续使用当前连接授权"
-      ],
-      "manifest": {
-        "schemaVersion": 1,
-        "id": "ework.research-assistant",
-        "name": "研究助手",
-        "description": "核验资料，形成有来源的研究报告。",
-        "version": "1.0.0",
-        "skills": [
-          {
-            "id": "research-report",
-            "name": "研究报告",
-            "description": "核验资料、整理观点并保留原文引用",
-            "files": {
-              "SKILL.md": "---\nname: 研究报告\ndescription: 核验资料、整理观点并保留原文引用\n---\n\n先明确研究问题和资料范围，再检索用户允许访问的来源。区分事实、判断和未知；每项关键事实保留来源链接和日期。\n\n只能使用当前会话已授权的工具。没有连接时说明缺少的资料，不虚构搜索结果。优先给出简洁结论，再列证据、差异和后续问题。不得未经用户确认向外部应用发送报告。\n"
-            }
-          }
-        ],
-        "permissions": [
-          "在会话中读取所含技能",
-          "工具调用继续使用当前连接授权"
-        ]
-      },
-      "digest": "09f3cab5d3670b204a384e68579e5e12ef374500fcc76ed8b26090a2d5d90679",
-      "category": "research"
-    },
-    {
-      "id": "office-workflows",
-      "kind": "plugin",
-      "name": "办公协作",
-      "description": "整理周报和会议纪要，明确下一步行动。",
-      "publisher": "EWork",
-      "version": "1.0.0",
-      "minClientVersion": "1.0.6",
-      "permissions": [
-        "在会话中读取所含技能",
-        "工具调用继续使用当前连接授权"
-      ],
-      "manifest": {
-        "schemaVersion": 1,
-        "id": "ework.office-workflows",
-        "name": "办公协作",
-        "description": "整理周报和会议纪要，明确下一步行动。",
-        "version": "1.0.0",
-        "skills": [
-          {
-            "id": "weekly-summary",
-            "name": "周报整理",
-            "description": "汇总已完成工作、风险和下一步安排",
-            "files": {
-              "SKILL.md": "---\nname: 周报整理\ndescription: 汇总已完成工作、风险和下一步安排\n---\n\n读取用户提供或已授权访问的工作记录，合并重复事项。按完成事项、当前风险、下周安排形成简洁周报。\n\n保留负责人、日期、原始来源和未解决问题。无法确认进度时明确标注待核实，不自行把计划写成已完成。写入或发送周报前展示内容并遵循当前工具权限。\n"
-            }
-          },
-          {
-            "id": "meeting-notes",
-            "name": "会议纪要",
-            "description": "整理会议结论、行动项和待确认问题",
-            "files": {
-              "SKILL.md": "---\nname: 会议纪要\ndescription: 整理会议结论、行动项和待确认问题\n---\n\n根据用户提供的会议记录提取主题、结论、行动项和未达成一致的问题。行动项明确负责人和截止日期；缺失时标记待确认，不猜测。\n\n保留决定与建议的区别。输出先展示关键结论，再列行动事项。没有实际授权的日历或文档连接时只生成内容，不声称已创建会议或同步文档。\n"
-            }
-          }
-        ],
-        "permissions": [
-          "在会话中读取所含技能",
-          "工具调用继续使用当前连接授权"
-        ]
-      },
-      "digest": "cf3b7b453a6920236b4b2832ac6e2beb376e41d2da15d325d7269250bd068170",
-      "category": "office"
-    },
-    {
       "id": "weekly-summary",
       "kind": "skill",
       "name": "周报整理",
@@ -151,43 +71,6 @@
         ]
       },
       "digest": "d4b2f4d0b9d528bc2688e7dd0eafe5dbdeb038a67961273d93f2c8ba35de306c",
-      "category": "office"
-    },
-    {
-      "id": "notion",
-      "kind": "app",
-      "name": "Notion",
-      "description": "使用内部集成令牌连接你已共享的页面。",
-      "publisher": "EWork",
-      "version": "1.0.0",
-      "minClientVersion": "1.0.6",
-      "permissions": [
-        "仅访问用户授权的账号和资源",
-        "不会自动授权写入或定时任务"
-      ],
-      "manifest": {
-        "type": "notion",
-        "name": "Notion"
-      },
-      "category": "office"
-    },
-    {
-      "id": "google-calendar",
-      "kind": "app",
-      "name": "Google Calendar",
-      "description": "使用自有桌面 OAuth Client ID 授权访问日历。",
-      "publisher": "EWork",
-      "version": "1.0.0",
-      "minClientVersion": "1.0.6",
-      "permissions": [
-        "仅访问用户授权的账号和资源",
-        "不会自动授权写入或定时任务"
-      ],
-      "manifest": {
-        "type": "google-calendar",
-        "name": "Google Calendar",
-        "clientId": ""
-      },
       "category": "office"
     },
     {

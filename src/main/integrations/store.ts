@@ -10,6 +10,7 @@ function validate(value: unknown): asserts value is IntegrationState {
     if(!v[key] || typeof v[key]!=='object' || Array.isArray(v[key])) throw Error('invalid collection')
   }
   for(const [id,c] of Object.entries(v.connections)) if(c.id!==id || !['api','mcp','app'].includes(c.kind) || typeof c.enabled!=='boolean' || !Number.isSafeInteger(c.revision) || !c.config || !Array.isArray(c.toolGrants) || !c.workspaceGrant || typeof c.ownerAccountId!=='string') throw Error('invalid connection')
+  for(const plugin of Object.values(v.plugins)) if(plugin.excludedSkillIds !== undefined && (!Array.isArray(plugin.excludedSkillIds) || plugin.excludedSkillIds.some(id => typeof id !== 'string' || !id.startsWith(`${plugin.id}/skill/`) || id.length > 256))) throw Error('invalid skill exclusions')
   for(const key of ['plugins','skills','tools','operations','sources'] as const) for(const [id,entity] of Object.entries(v[key])) if(!entity || entity.id!==id) throw Error('invalid entity')
 }
 

@@ -56,7 +56,7 @@ it('serializes confirmation lookups across different rows and permits another co
         throw new Error(`Unexpected ${command.type}`);
     });
     f.click('[data-more=plugin-a]'); f.click('[data-menu-action=uninstall]');
-    expect(f.document.querySelector('.ig-feedback')!.textContent).toContain('正在检查');
+    expect(f.document.querySelector('.ig-live')!.textContent).toContain('正在检查');
     expect(f.document.querySelector('.ig-root')!.getAttribute('aria-busy')).toBe('true');
     f.click('[data-more=plugin-b]'); f.click('[data-menu-action=rollback]');
     expect(f.calls.filter(command => command.type === 'dependencies')).toHaveLength(1);
@@ -85,7 +85,7 @@ it('prevents overlapping skill selections and keeps the last preview when a late
         if (command.type === 'preview-skill') return selections[index++]!.promise;
         throw new Error(`Unexpected ${command.type}`);
     });
-    f.click('[data-tab=skills]'); f.click('[data-action=add]');
+    f.click('[data-tab=skills]'); f.click('[data-action=add]'); f.click('[data-action=import-file]');
     expect(f.button('[data-action=choose-skill]').disabled).toBe(true);
     expect(f.button('[data-action=choose-skill]').getAttribute('aria-busy')).toBe('true');
     f.click('[data-action=choose-skill]');
@@ -121,6 +121,8 @@ it('releases mutation buttons when an operation poll fails after the user change
     await settle();
     await vi.advanceTimersByTimeAsync(700);
     expect(f.calls.filter(command => command.type === 'operation')).toHaveLength(1);
+    expect(f.document.querySelector('.ig-feedback')).toBeNull();
+    expect(f.document.querySelector('.ig-actions [data-action=cancel-operation]')).not.toBeNull();
     f.click('[data-tab=skills]');
     expect(f.button('[data-toggle=skill]').disabled).toBe(true);
     poll.reject(new Error('旧页面的状态查询失败'));
@@ -128,7 +130,8 @@ it('releases mutation buttons when an operation poll fails after the user change
     expect(f.button('[data-toggle=skill]').disabled).toBe(false);
     expect(f.document.querySelector('.ig-root')!.getAttribute('aria-busy')).toBe('false');
     expect(f.document.querySelector('.ig-error')!.textContent).not.toContain('旧页面');
-    expect(f.document.querySelector('.ig-feedback')!.textContent).not.toContain('正在处理插件');
+    expect(f.document.querySelector('[data-action=cancel-operation]')).toBeNull();
+    expect(f.document.querySelector('.ig-live')!.textContent).not.toContain('正在处理插件');
     f.click('[data-toggle=skill]');
     await settle();
     expect(f.calls.filter(command => command.type === 'set-enabled')).toHaveLength(2);
@@ -142,14 +145,16 @@ it('shows probe progress, prevents duplicate probes and restores retry controls 
         throw new Error(`Unexpected ${command.type}`);
     });
     f.click('[data-tab=apps]'); f.click('[data-detail=api]'); f.click('[data-action=probe]');
-    expect(f.document.querySelector('.ig-feedback')!.textContent).toContain('正在测试连接');
+    expect(f.document.querySelector('.ig-live')!.textContent).toContain('正在测试连接');
     expect(f.button('[data-action=probe]').disabled).toBe(true);
     expect(f.button('[data-action=probe]').getAttribute('aria-busy')).toBe('true');
     f.click('[data-action=probe]');
     expect(f.calls.filter(command => command.type === 'probe')).toHaveLength(1);
     probes[0]!.resolve({ type: 'probe', status: 'verified', message: '服务正常' });
     await settle();
-    expect(f.document.querySelector('.ig-feedback')!.textContent).toContain('连接已验证：服务正常');
+    expect(f.document.querySelector('.ig-live')!.textContent).toContain('连接已验证：服务正常');
+    expect(f.document.querySelector('.ig-feedback')).toBeNull();
+    expect(f.document.querySelector('.ig-live')!.getAttribute('role')).toBe('status');
     expect(f.button('[data-action=probe]').disabled).toBe(false);
     expect(f.button('[data-action=probe]').hasAttribute('aria-busy')).toBe(false);
     f.click('[data-action=probe]');
@@ -157,7 +162,7 @@ it('shows probe progress, prevents duplicate probes and restores retry controls 
     probes[1]!.reject(new Error('连接暂不可达'));
     await settle();
     expect(f.document.querySelector('[role=alert]')!.textContent).toContain('连接暂不可达');
-    expect(f.document.querySelector('.ig-feedback')!.textContent).not.toContain('正在测试连接');
+    expect(f.document.querySelector('.ig-live')!.textContent).not.toContain('正在测试连接');
     expect(f.button('[data-action=probe]').disabled).toBe(false);
     expect(f.button('[data-action=probe]').hasAttribute('aria-busy')).toBe(false);
 });

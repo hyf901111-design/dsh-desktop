@@ -1,15 +1,20 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, expect, it, vi } from 'vitest';
 import { IntegrationCatalog } from '../src/main/integrations/catalog';
+import { manifestDigest } from '../src/main/integrations/manifest';
 const network = vi.hoisted(() => ({ fetch: vi.fn() }));
 vi.mock('../src/main/integrations/adapters/network-policy', () => ({ networkFetch: network.fetch }));
+const remoteDocument = () => ({ schemaVersion: 1, entries: ['remote-research', 'remote-office'].map(id => {
+    const manifest = { schemaVersion: 1, id: `team.${id}`, name: id, description: 'Team catalog fixture', version: '1.0.0', skills: [{ id: 'report', name: 'Report', description: 'Summarize approved sources', files: { 'SKILL.md': '---\nname: Report\ndescription: Summarize approved sources\n---\nCite provided sources.' } }] };
+    return { id, kind: 'plugin', name: id, description: 'Installable team package', publisher: 'Team', version: '1.0.0', permissions: ['Read this skill in a conversation'], manifest, digest: manifestDigest(manifest) };
+}) });
 const roots: string[] = [];
 afterEach(async () => { network.fetch.mockReset(); await Promise.all(roots.splice(0).map(path => rm(path, { recursive: true, force: true }))); });
-it('loads all four actual bundled catalogs with installable resources and provider blueprints', async () => {
+it('keeps unaccepted plugin and app markets empty while retaining skill resources and tool blueprints', async () => {
     const catalog = new IntegrationCatalog({ bundledRoot: join(process.cwd(), 'build/integration-catalog'), clientVersion: '1.0.6' });
-    for (const kind of ['plugin', 'app', 'tool', 'skill'] as const) {
+    for (const kind of ['tool', 'skill'] as const) {
         const entries = await catalog.list(kind, []);
         expect(entries.length).toBeGreaterThan(0);
         for (const entry of entries) {
@@ -19,8 +24,13 @@ it('loads all four actual bundled catalogs with installable resources and provid
             expect((await catalog.get(entry.id, [])).id).toBe(entry.id);
         }
     }
-    const plugin = (await catalog.list('plugin', []))[0]!;
-    expect(JSON.stringify(plugin.manifest)).toContain('SKILL.md');
+    expect(await catalog.list('plugin', [])).toEqual([]);
+    expect(await catalog.list('app', [])).toEqual([]);
+    for (const id of ['research-assistant', 'office-workflows', 'notion', 'google-calendar'])
+        await expect(catalog.get(`bundled:${id}`, [])).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(JSON.stringify((await catalog.list('skill', []))[0]!.manifest)).toContain('SKILL.md');
+    expect(await readFile(join(process.cwd(), 'build/integration-catalog/skills/research-report/SKILL.md'), 'utf8')).toContain('研究报告');
+    expect(network.fetch).not.toHaveBeenCalled();
 });
 it('rejects non-HTTPS, embedded credentials and untrusted remote sources before fetching', async () => {
     const catalog = new IntegrationCatalog({ bundledRoot: join(process.cwd(), 'build/integration-catalog'), clientVersion: '1.0.6' });
@@ -47,22 +57,22 @@ it('marks a newer minimum client version unavailable without fabricating install
 it('loads a real remote manifest, namespaces IDs, and reuses verified cached data offline', async () => {
     const cache = await mkdtemp(join(tmpdir(), 'integration-catalog-cache-'));
     roots.push(cache);
-    const document = JSON.parse(await readFile(join(process.cwd(), 'build/integration-catalog/catalog.json'), 'utf8'));
+    const document = remoteDocument();
     const source = { id: 'team', name: '团队目录', url: 'https://team.example/catalog.json', trusted: true };
     network.fetch.mockResolvedValueOnce(new Response(JSON.stringify(document), { headers: { etag: 'v1' } }));
     const options = { bundledRoot: join(process.cwd(), 'build/integration-catalog'), clientVersion: '1.0.6', cacheRoot: cache };
     const catalog = new IntegrationCatalog(options);
     const entries = await catalog.list('plugin', [source]);
     expect(entries.filter(entry => entry.sourceId === 'team')).toHaveLength(2);
-    expect((await catalog.get('team:research-assistant', [source])).manifest).toEqual(document.entries[0].manifest);
+    expect((await catalog.get('team:remote-research', [source])).manifest).toEqual(document.entries[0]!.manifest);
     network.fetch.mockRejectedValue(new Error('offline'));
     const offline = new IntegrationCatalog(options);
-    expect((await offline.get('team:research-assistant', [source])).id).toBe('team:research-assistant');
+    expect((await offline.get('team:remote-research', [source])).id).toBe('team:remote-research');
 });
 it('rejects a configured signing key when the remote catalog has no valid signature', async () => {
     const { generateKeyPairSync } = await import('node:crypto');
     const keys = generateKeyPairSync('ed25519');
-    const document = JSON.parse(await readFile(join(process.cwd(), 'build/integration-catalog/catalog.json'), 'utf8'));
+    const document = remoteDocument();
     network.fetch.mockResolvedValue(new Response(JSON.stringify(document)));
     const catalog = new IntegrationCatalog({ bundledRoot: join(process.cwd(), 'build/integration-catalog'), clientVersion: '1.0.6' });
     await expect(catalog.validateSource({ id: 'signed-team', name: '签名目录', url: 'https://team.example/catalog.json', trusted: true, publicKey: keys.publicKey.export({ format: 'pem', type: 'spki' }).toString() })).rejects.toMatchObject({ code: 'INVALID_CONFIG' });
@@ -70,7 +80,7 @@ it('rejects a configured signing key when the remote catalog has no valid signat
 
 it('follows bounded same-origin cursor pages and refreshes each page with its own ETag', async () => {
     const bundledRoot = join(process.cwd(), 'build/integration-catalog');
-    const document = JSON.parse(await readFile(join(bundledRoot, 'catalog.json'), 'utf8'));
+    const document = remoteDocument();
     const plugins = document.entries.filter((entry: {kind:string}) => entry.kind === 'plugin');
     const page1 = {schemaVersion:1,entries:[plugins[0]],nextCursor:'second-page'};
     const page2 = {schemaVersion:1,entries:[plugins[1]],nextCursor:null};
@@ -93,7 +103,7 @@ it('follows bounded same-origin cursor pages and refreshes each page with its ow
 
 it('does not cache a partial catalog when a later page fails or repeats its cursor', async () => {
     const bundledRoot = join(process.cwd(), 'build/integration-catalog');
-    const document = JSON.parse(await readFile(join(bundledRoot, 'catalog.json'), 'utf8'));
+    const document = remoteDocument();
     const page = {schemaVersion:1,entries:[document.entries[0]],nextCursor:'next'};
     const source = {id:'partial',name:'Partial',url:'https://catalog.example/catalog',trusted:true};
     const catalog = new IntegrationCatalog({bundledRoot,clientVersion:'1.0.6'});
@@ -106,7 +116,7 @@ it('does not cache a partial catalog when a later page fails or repeats its curs
 it('falls back to the entire previously verified multi-page catalog instead of mixing old and new pages', async () => {
     const root = await mkdtemp(join(tmpdir(),'integration-multipage-cache-')); roots.push(root);
     const bundledRoot = join(process.cwd(),'build/integration-catalog');
-    const document = JSON.parse(await readFile(join(bundledRoot,'catalog.json'),'utf8'));
+    const document = remoteDocument();
     const source = {id:'offline-pages',name:'Offline pages',url:'https://catalog.example/catalog',trusted:true};
     const plugins=document.entries.filter((entry:{kind:string})=>entry.kind==='plugin');
     const page1={schemaVersion:1,entries:[plugins[0]],nextCursor:'next'},page2={schemaVersion:1,entries:[plugins[1]],nextCursor:null};
@@ -126,7 +136,7 @@ it('verifies every signed page and rejects a later unsigned page without caching
     const {generateKeyPairSync,sign}=await import('node:crypto');
     const {canonicalManifestJson}=await import('../src/main/integrations/manifest');
     const keys=generateKeyPairSync('ed25519'),bundledRoot=join(process.cwd(),'build/integration-catalog');
-    const bundled=JSON.parse(await readFile(join(bundledRoot,'catalog.json'),'utf8'));
+    const bundled=remoteDocument();
     const source={id:'signed-pages',name:'Signed pages',url:'https://catalog.example/catalog',trusted:true,publicKey:keys.publicKey.export({format:'pem',type:'spki'}).toString()};
     const first={schemaVersion:1,entries:[bundled.entries[0]],nextCursor:'next'};
     const signed={...first,signature:sign(null,Buffer.from(canonicalManifestJson({schemaVersion:1,entries:first.entries})),keys.privateKey).toString('base64')};
@@ -134,4 +144,21 @@ it('verifies every signed page and rejects a later unsigned page without caching
     network.fetch.mockResolvedValueOnce(new Response(JSON.stringify(signed))).mockResolvedValueOnce(new Response(JSON.stringify(second)));
     const catalog=new IntegrationCatalog({bundledRoot,clientVersion:'1.0.6'});
     await expect(catalog.list('plugin',[source])).rejects.toMatchObject({code:'INVALID_CONFIG'});
+});
+
+it('rereads the bundled registry after withdrawal without reviving old in-memory or disk entries', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'catalog-withdrawal-')); roots.push(root);
+    const old = remoteDocument(), file = join(root, 'catalog.json');
+    await writeFile(file, JSON.stringify(old));
+    const options = { bundledRoot: root, clientVersion: '1.0.6', cacheRoot: join(root, 'cache') };
+    const catalog = new IntegrationCatalog(options);
+    expect(await catalog.list('plugin', [])).toHaveLength(2);
+    const source = { id: 'team-cache', name: 'Team cache', url: 'https://team.example/catalog.json', trusted: true };
+    network.fetch.mockResolvedValueOnce(new Response(JSON.stringify(old)));
+    expect(await catalog.list('plugin', [source])).toHaveLength(4);
+    await writeFile(file, await readFile(join(process.cwd(), 'build/integration-catalog/catalog.json')));
+    expect(await catalog.list('plugin', [])).toEqual([]);
+    expect(await new IntegrationCatalog(options).list('plugin', [])).toEqual([]);
+    await expect(catalog.get(`bundled:${old.entries[0]!.id}`, [])).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(network.fetch).toHaveBeenCalledTimes(1);
 });
