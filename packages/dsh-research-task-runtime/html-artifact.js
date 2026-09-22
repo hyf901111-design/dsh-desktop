@@ -43,6 +43,7 @@ export function researchComponentTypographyCss(scope, options = {}) {
 const researchComponentPalette = (p) => Object.freeze({ ...p,
   'accent-foreground': p['control-on-primary'], accent: p['control-primary'], link: p['control-text'],
   'accent-soft': p['row-selected'], 'row-bg': p.surface, 'chart-background': p.surface,
+  'holdings-change-negative': p.text,
   'chart-foreground': p.text, 'chart-foreground-muted': p.muted, 'chart-label': p.muted,
   'chart-grid': p.border, 'chart-crosshair': p.muted,
   'tooltip-bg': p.surface, 'tooltip-text': p.text, 'tooltip-muted': p.muted, 'tooltip-border': p.border,
@@ -63,6 +64,8 @@ export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
     'chart-1': '#005096', 'chart-2': '#1eb9e1', 'chart-3': '#0078b4',
     'chart-4': '#ffc819', 'chart-5': '#008565', 'chart-6': '#c62f36',
     'market-positive': '#c62f36', 'market-negative': '#008565',
+    'holdings-change-positive': '#b84343',
+    'fund72-industry-1': '#005096', 'fund72-industry-2': '#1eb9e1',
     'heatmap-high': '#005096', 'heatmap-medium': '#0078b4', 'heatmap-low': '#d5e6f1'
   }),
   dark: researchComponentPalette({
@@ -77,6 +80,8 @@ export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
     'chart-1': '#1eb9e1', 'chart-2': '#b3ebff', 'chart-3': '#0078b4',
     'chart-4': '#ffc819', 'chart-5': '#22d6a0', 'chart-6': '#ff625f',
     'market-positive': '#ff625f', 'market-negative': '#22d6a0',
+    'holdings-change-positive': '#ff9d9d',
+    'fund72-industry-1': '#0078b4', 'fund72-industry-2': '#1eb9e1',
     'heatmap-high': '#005096', 'heatmap-medium': '#0078b4', 'heatmap-low': '#384c59'
   })
 })
@@ -119,7 +124,9 @@ ${['success','warning','danger','info'].map(status => `:where([data-sherlock-sta
 // colors are deliberately outside this selector set. Existing artifacts keep their DOM/JS.
 export const RESEARCH_COMPONENT_CONTROLS_CSS = `@layer sherlock-component-controls{
 :is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],summary,input,select,textarea){color:var(--sherlock-control-text)!important;background-color:var(--sherlock-control-bg)!important;background-image:none!important;border-color:var(--sherlock-control-border)!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)!important;caret-color:var(--sherlock-control-text)!important}
-:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important}
+:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 10px 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,10px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
+[data-sherlock-profile="fund72-holdings"] input.research-filter-search{--sherlock-control-padding-left:28px;padding-left:28px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23777777' stroke-width='1'%3E%3Ccircle cx='5' cy='5' r='3.5'/%3E%3Cpath d='m7.5 7.5 3 3'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:12px 12px!important;background-position:9px center!important}
+:root[data-sherlock-theme="dark"] [data-sherlock-profile="fund72-holdings"] input.research-filter-search{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a0a0a0' stroke-width='1'%3E%3Ccircle cx='5' cy='5' r='3.5'/%3E%3Cpath d='m7.5 7.5 3 3'/%3E%3C/svg%3E")!important}
 textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:10px!important;line-height:16px!important}
 :is(button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
 :is(button[type="submit"],button[aria-pressed="true"],input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
@@ -139,6 +146,64 @@ a[href]:hover{text-decoration:underline}
 :is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [stroke]:not([stroke="none"]){stroke:currentColor!important}
 :is([role="tab"],[aria-current="page"]){color:var(--sherlock-control-text)!important;border-color:var(--sherlock-control-border)!important;background-color:transparent!important;background-image:none!important}
 :is([role="tab"][aria-selected="true"],[aria-current="page"]){background-color:var(--sherlock-control-secondary)!important}
+}`
+
+// Opt-in source profiles, not global dashboard styling. Source: Figma
+// Jkyr5rMvgM8GNH6E68xnqd / fund72 Light 1217:247146, 247167, 247228;
+// paired Dark holdings 1217:255020, KPI 1217:254999, industry 1217:255081.
+// Source measurements: docs/design/research-workbench-source-profiles.json;
+// paired Dark role evidence: docs/design/research-fund72-dark-source-audit.json.
+// This important layer follows controls: control colors/geometry always win.
+export const RESEARCH_COMPONENT_PROFILE_CSS = `@layer sherlock-component-profiles{
+body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"])){margin:0!important;padding:0!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]){box-sizing:border-box!important;width:100%!important;min-width:0!important;height:auto!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--sherlock-surface)!important;color:var(--sherlock-text)!important;font-weight:400!important;container-type:inline-size}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]) [data-sherlock-numeric]{font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important;font-weight:500!important;font-variant-numeric:tabular-nums!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]){padding:11px 12px 10px!important;font-size:9px!important;line-height:18px!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-filters{--sherlock-control-font-size:9px;--sherlock-control-line-height:18px;display:grid!important;gap:8px!important;padding:0!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-filters :is(input,select){width:100%!important;min-width:0!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-footer{padding:0!important;color:var(--sherlock-muted)!important;font-size:8px!important;line-height:14px!important;font-weight:400!important}
+[data-sherlock-profile="fund72-holdings"] .research-filters{grid-template-columns:minmax(0,178fr) minmax(0,142fr) minmax(0,184fr)!important;width:calc(100% - 12px)!important;margin:0 0 18px!important}
+[data-sherlock-profile="fund72-holdings"] table{width:100%!important;table-layout:fixed!important;border-collapse:separate!important;border-spacing:0!important;border:0!important;border-radius:0!important;margin:0!important;padding:0!important;background:transparent!important;text-align:left!important;font-size:9px!important;line-height:18px!important}
+[data-sherlock-profile="fund72-holdings"] :is(th,td){box-sizing:border-box!important;border:0!important;text-align:left!important;vertical-align:middle!important;font-size:9px!important;font-weight:400!important;white-space:normal!important;overflow-wrap:anywhere}
+[data-sherlock-profile="fund72-holdings"] th{height:25px!important;padding:4px 6px!important;line-height:17px!important;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-muted)!important}
+[data-sherlock-profile="fund72-holdings"] th:nth-child(1){width:34.2105263158%!important}
+[data-sherlock-profile="fund72-holdings"] :is(th:nth-child(2),th:nth-child(4)){width:16.9172932331%!important}
+[data-sherlock-profile="fund72-holdings"] :is(th:nth-child(3),th:nth-child(5)){width:15.977443609%!important}
+[data-sherlock-profile="fund72-holdings"] th:first-child{border-radius:3px 0 0 3px!important}
+[data-sherlock-profile="fund72-holdings"] th:last-child{border-radius:0 3px 3px 0!important}
+[data-sherlock-profile="fund72-holdings"] tbody::before{content:"";display:table-row;height:4px}
+[data-sherlock-profile="fund72-holdings"] tbody tr{background:transparent!important}
+[data-sherlock-profile="fund72-holdings"] td{height:34px!important;padding:8px 6px!important;line-height:18px!important;color:var(--sherlock-text)!important;background:var(--sherlock-surface)!important}
+[data-sherlock-profile="fund72-holdings"] tbody tr:nth-child(odd) td{background:var(--sherlock-row-alternate)!important}
+[data-sherlock-profile="fund72-holdings"] tbody :is(tr[aria-selected="true"],tr.research-row-selected) td{background:var(--sherlock-row-selected)!important}
+[data-sherlock-profile="fund72-holdings"] td:first-child{border-radius:2px 0 0 2px!important}
+[data-sherlock-profile="fund72-holdings"] :is(td:first-child,td:first-child span:not([data-sherlock-numeric]):not(.research-numeric)){font-family:"Noto Sans SC",sans-serif!important;font-weight:700!important;color:var(--sherlock-text)!important}
+[data-sherlock-profile="fund72-holdings"] td:last-child{border-radius:0 2px 2px 0!important}
+[data-sherlock-profile="fund72-holdings"] :is(.research-numeric,[data-sherlock-numeric],[data-sherlock-holdings-change]){font-family:"EWork DIN Pro","Noto Sans SC",sans-serif!important;text-align:left!important;font-weight:500!important;font-variant-numeric:tabular-nums!important}
+[data-sherlock-profile="fund72-holdings"] [data-sherlock-holdings-change="positive"]{color:var(--sherlock-holdings-change-positive)!important}
+[data-sherlock-profile="fund72-holdings"] [data-sherlock-holdings-change="negative"]{color:var(--sherlock-holdings-change-negative)!important}
+[data-sherlock-profile="fund72-holdings"] .research-footer{margin:4px 0 0!important}
+[data-sherlock-profile="fund72-kpi"]{padding:8px 12px 12px!important}
+[data-sherlock-profile="fund72-kpi"] .research-metrics{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))!important;gap:10px!important;margin:0!important;padding:0!important}
+[data-sherlock-profile="fund72-kpi"] .research-metric{box-sizing:border-box!important;min-width:0!important;min-height:64px!important;margin:0!important;padding:6px 10px 4px!important;border:0!important;border-radius:5px!important;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important}
+[data-sherlock-profile="fund72-kpi"] :is(.research-metric-label,.research-metric-value,.research-metric-detail){margin:0!important;text-align:left!important}
+[data-sherlock-profile="fund72-kpi"] .research-metric-label{padding:0!important;font-size:9px!important;line-height:14px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
+[data-sherlock-profile="fund72-kpi"] .research-metric-value{padding:3px 0 0!important;font-size:23px!important;line-height:26px!important;font-weight:500!important;color:var(--sherlock-text)!important;font-variant-numeric:tabular-nums!important}
+[data-sherlock-profile="fund72-kpi"] [data-sherlock-unit]{font-weight:400!important}
+[data-sherlock-profile="fund72-kpi"] .research-metric-detail{padding:0!important;font-size:8px!important;line-height:11px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
+[data-sherlock-profile="fund72-industry"] .research-filters{grid-template-columns:minmax(0,142fr) minmax(0,146fr)!important;width:calc(100% - 8px)!important;margin:0 0 25px!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-rows{display:grid!important;gap:9px!important;margin:0!important;padding:0!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-row{display:grid!important;grid-template-columns:90px minmax(0,1fr) 43px!important;align-items:center!important;min-height:18px!important;padding:0 2px 0 0!important;margin:0!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-label{font-size:9px!important;line-height:18px!important;font-weight:400!important;color:var(--sherlock-text)!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-track{height:7px!important;align-self:start!important;margin:6px 7px 0 2px!important;border:0!important;border-radius:2px!important;background:var(--sherlock-surface-muted)!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-bar{height:7px!important;max-width:100%!important;border:0!important;border-radius:2px!important;background:var(--sherlock-fund72-industry-1)!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-row:nth-child(even) .research-industry-bar{background:var(--sherlock-fund72-industry-2)!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-value{font-size:10px!important;line-height:18px!important;font-weight:500!important;text-align:right!important;color:var(--sherlock-text)!important;font-variant-numeric:tabular-nums!important}
+[data-sherlock-profile="fund72-industry"] .research-callout{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:14px!important;margin:27px 0 0!important;padding:0 0 0 2px!important}
+[data-sherlock-profile="fund72-industry"] .research-callout [data-sherlock-status]{box-sizing:border-box!important;min-width:136px!important;min-height:22px!important;padding:3px!important;border-radius:4px!important;font-size:9px!important;line-height:16px!important;font-weight:400!important;text-align:center!important}
+[data-sherlock-profile="fund72-industry"] .research-benchmark{font-size:9px!important;line-height:16px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
+[data-sherlock-profile="fund72-industry"] .research-footer{margin:35px 0 0!important}
+@container (max-width:400px){[data-sherlock-profile="fund72-holdings"] .research-filters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;width:100%!important}[data-sherlock-profile="fund72-holdings"] .research-filter-search{grid-column:1 / -1}}
 }`
 
 // Scrollbars belong to the canvas chrome, including inside sandboxed HTML.
@@ -457,18 +522,6 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     const value = declaration?.getAttribute('content')?.trim().toLowerCase()
     fixedTheme = value === 'light' || value === 'dark' ? value : null
     apply()
-    // The client supplies the draggable title. Suppress only a leading heading;
-    // section headings after substantive content, links, inputs and data stay intact.
-    const heading = document.body?.querySelector('h1,h2,h3')
-    if (heading && !heading.querySelector('a,button,input,select,textarea')) {
-      const walker = document.createTreeWalker(document.body, 4)
-      let leading = true
-      for (let text = walker.nextNode(); text; text = walker.nextNode()) {
-        if (heading.contains(text)) break
-        if (text.textContent.trim() && !text.parentElement?.closest('script,style,template,noscript,[hidden]')) { leading = false; break }
-      }
-      if (leading) { heading.setAttribute('data-sherlock-host-title', ''); heading.style.setProperty('display', 'none', 'important') }
-    }
     startContentMeasurement()
   }, { once: true })
   apply()
@@ -676,7 +729,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
   const baseStyle = `@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
-  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${html}</body></html>`
+  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${html}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
   const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`
   return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 EWork Odyssey 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`

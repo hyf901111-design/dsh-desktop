@@ -6,6 +6,7 @@ import { build } from 'esbuild'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import { patchFigmaFinalCanvas } from './lib/figma-canvas-client.mjs'
 import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
+import { generationSource, generationCss } from './lib/figma-generation-client.mjs'
 
 const output=fileURLToPath(new URL('../output/research-generation-design/',import.meta.url))
 await mkdir(output,{recursive:true})
@@ -46,9 +47,41 @@ try {
     window.metrics=()=>{
       const surface=document.querySelector('[data-research-generation-process]'),card=document.querySelector('[data-research-node-id="card"]'),dots=surface.querySelector('[data-research-generation-dots]'),foreground=surface.querySelector('[data-research-generation-foreground]')
       const box=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}}
-      return{node:workspace.getSnapshot().artifacts[0],card:box(card),surface:box(surface),foreground:box(foreground),foregroundTransform:getComputedStyle(foreground).transform,filter:getComputedStyle(surface).filter,backdrop:getComputedStyle(surface).backdropFilter,motion:getComputedStyle(dots).animationPlayState,animations:dots.getAnimations().map(a=>({currentTime:a.currentTime,playState:a.playState})),text:foreground.textContent,state:surface.dataset.generationUiState,overflow:foreground.scrollHeight>foreground.clientHeight}
+      return{node:workspace.getSnapshot().artifacts[0],card:box(card),surface:box(surface),foreground:box(foreground),foregroundTransform:getComputedStyle(foreground).transform,background:getComputedStyle(surface).backgroundColor,filter:getComputedStyle(surface).filter,backdrop:getComputedStyle(surface).backdropFilter,motion:getComputedStyle(dots).animationPlayState,animations:dots.getAnimations().map(a=>({currentTime:a.currentTime,playState:a.playState})),text:foreground.textContent,state:surface.dataset.generationUiState,overflow:foreground.scrollHeight>foreground.clientHeight}
     }
   })
+  // These transparent PNGs are rasterized from the complete Figma SVGs with
+  // paint alpha restored from the actual source vectors (see provenance).
+  report.dotSourceParity=[]
+  await page.emulateMedia({reducedMotion:'reduce'})
+  for(const theme of ['light','dark']) for(const [shape,width,height] of [['wide',620,300],['tall',240,620],['compact',360,200]]) {
+    await page.evaluate(value=>reset({...value,state:'queued'}),{theme,width,height})
+    await page.waitForFunction(profile=>document.querySelector('[data-research-generation-dots]')?.dataset.dotProfile===profile,theme+'-'+shape)
+    const reference='data:image/png;base64,'+(await readFile('build/figma-generation/reference/'+theme+'-'+shape+'.png')).toString('base64')
+    const result=await page.locator('[data-research-generation-dots]').evaluate(async(canvas,reference)=>{
+      const image=new Image();image.src=reference;await image.decode()
+      const expected=document.createElement('canvas');expected.width=canvas.width;expected.height=canvas.height
+      const context=expected.getContext('2d');context.drawImage(image,0,0,expected.width,expected.height)
+      const a=context.getImageData(0,0,expected.width,expected.height).data,b=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data
+      let total=0,maximum=0,overOne=0
+      for(let i=3;i<a.length;i+=4){const delta=Math.abs(a[i]-b[i]);total+=delta;maximum=Math.max(maximum,delta);if(delta>1)overOne++}
+      return{meanAlphaError:total/(a.length/4),maximumAlphaError:maximum,pixelsOverOne:overOne,pixels:a.length/4,phase:canvas.dataset.dotPhase,render:canvas.toDataURL()}
+    },reference)
+    assert.equal(result.phase,'0')
+    assert.ok(result.meanAlphaError < .1,'full source field mean alpha error stays below 0.1/255')
+    assert.ok(result.maximumAlphaError <= 5,'no source pixel alpha differs by more than 5/255')
+    assert.ok(result.pixelsOverOne / result.pixels < .004,'at least 99.6% of pixels remain within 1/255 alpha')
+    const {render,...parity}=result;report.dotSourceParity.push({theme,shape,...parity})
+    await writeFile(output+theme+'-'+shape+'-source-phase0.png',Buffer.from(render.split(',')[1],'base64'))
+    if(shape==='wide') {
+      const compare=await browser.newPage({viewport:{width:1920,height:380}})
+      const oldTile='data:image/svg+xml;base64,'+(await readFile('build/figma-generation/dot-grid.svg')).toString('base64')
+      await compare.setContent(`<style>body{margin:0;background:${theme==='dark'?'#181818':'#ececec'};color:${theme==='dark'?'#eee':'#222'};font:14px sans-serif}.comparison{display:flex;gap:12px;padding:12px}.field{width:620px;height:300px;border-radius:8px;overflow:hidden;position:relative;background:${theme==='dark'?'#030303':'#fafafa'}}label{display:block;margin-bottom:10px}.old{position:absolute;inset:0;background-image:url('${oldTile}');background-size:9.921px 9.921px;mask-image:linear-gradient(115deg,rgba(0,0,0,.16) 0%,rgba(0,0,0,.30) 20%,rgba(0,0,0,.55) 42%,rgba(0,0,0,.21) 60%,rgba(0,0,0,.45) 80%,rgba(0,0,0,.16) 100%);mask-size:200% 100%;mask-position:200% 0}</style><div class="comparison"><section><label>Figma 完整点场 · 精确源 alpha</label><div class="field"><img src="${reference}"></div></section><section><label>旧实现 · 单点重复 + 遮罩</label><div class="field"><div class="old"></div></div></section><section><label>新实现 · 完整点场 phase 0</label><div class="field"><img src="${render}"></div></section></div>`)
+      await compare.screenshot({path:output+theme+'-source-old-new.png'});await compare.close()
+    }
+  }
+  report.checks.push('six phase-zero fields preserve full Figma dot geometry and alpha: mean error <0.1/255, maximum ≤5/255, 99.6% within 1/255')
+  await page.emulateMedia({reducedMotion:'no-preference'})
   for(const state of ['cancelled','failed']) {
     await page.evaluate(state=>reset({state}),state)
     const alpha=await page.locator('.odyssey-generation-state-icon').evaluate(async el=>{
@@ -70,6 +103,7 @@ try {
     await page.mouse.move(1040,760)
     const before=await page.evaluate(()=>metrics())
     assert.equal(before.card.width,width);assert.equal(before.card.height,height);assert.equal(before.surface.width,width);assert.equal(before.surface.height,height)
+    assert.equal(before.background,theme==='dark'?'rgb(3, 3, 3)':'rgb(250, 250, 250)','generated surface overrides old content backgrounds with the actual Figma paint');
     assert.equal(before.motion,state==='running'?'running':'paused');assert.equal(before.filter,'none');assert.equal(before.backdrop,'none')
     const clip={x:before.surface.x+110,y:before.surface.y+5,width:Math.min(110,before.surface.width-115),height:36}
     const first=await page.screenshot({clip,animations:'allow'})
@@ -117,6 +151,9 @@ try {
   await page.evaluate(()=>{reset();workspace.setGenerationCancelSink(()=>new Promise(resolve=>{window.resolveCancel=resolve}))})
   await page.locator('[data-research-generation-process]').hover();await page.getByRole('button',{name:'停止生成',exact:true}).click()
   assert.equal((await page.evaluate(()=>metrics())).state,'stopping')
+  const stoppedPhase=await page.locator('[data-research-generation-dots]').evaluate(el=>({phase:el.dataset.dotPhase,pixels:el.toDataURL()}))
+  await page.waitForTimeout(150)
+  assert.deepEqual(await page.locator('[data-research-generation-dots]').evaluate(el=>({phase:el.dataset.dotPhase,pixels:el.toDataURL()})),stoppedPhase,'stopping freezes the actual current background phase and pixels')
   await page.evaluate(()=>resolveCancel({ok:true}));await page.waitForTimeout(20)
   assert.equal((await page.evaluate(()=>metrics())).state,'stopping','acknowledgement does not fake terminal status')
   await page.evaluate(()=>workspace.applyGenerationInspection('card',{taskId:'task-running',canvasNodeId:'card',state:'cancelled',lastSeq:2,events:[]}))
@@ -170,6 +207,51 @@ try {
   }
   report.checks.push('manual Light/Dark editor focus and caret are neutral; padding18 and button92×32')
   report.checks.push('manual composer: Enter submits, Shift+Enter inserts a newline, empty/IME Enter does not submit, world bounds remain unchanged')
+  // Deterministic RAF drives the shipped renderer through a complete cycle;
+  // this tests continuous intermediate frames and endpoint parity, not a CSS
+  // animation declaration. A separate real-time page records the visible flow.
+  const dotSource=generationSource.slice(generationSource.indexOf('function ResearchGenerationDots('),generationSource.indexOf('function ResearchGenerationAction('))
+  async function dotPage({record=false,controlled=false}={}) {
+    const context=await browser.newContext({viewport:{width:660,height:340},...(record?{recordVideo:{dir:output+'motion',size:{width:660,height:340}}}:{})})
+    const preview=await context.newPage()
+    await preview.setContent('<style>body{margin:0;background:#191919;padding:20px}#field{position:relative;isolation:isolate;width:620px;height:300px;overflow:hidden;border-radius:8px;background:#030303}</style><div id="field"></div>')
+    await preview.addStyleTag({content:generationCss})
+    await preview.addScriptTag({content:dependencies.outputFiles[0].text})
+    await preview.addScriptTag({content:'const react=testDeps.react,react_jsx_runtime=testDeps.jsx;'+dotSource+';window.Dot=ResearchGenerationDots;'})
+    await preview.evaluate(controlled=>{
+      document.body.setAttribute('data-ds-dark-theme','')
+      if(controlled){let stamp=1000,next=0;const callbacks=new Map();window.requestAnimationFrame=fn=>{callbacks.set(++next,fn);return next};window.cancelAnimationFrame=id=>callbacks.delete(id);window.advance=ms=>{const count=Math.ceil(ms/20)||1,step=ms/count;for(let i=0;i<count;i++){stamp+=step;const pending=[...callbacks.values()];callbacks.clear();pending.forEach(fn=>fn(stamp))}}}
+      window.dotRoot=testDeps.createRoot(document.querySelector('#field'))
+      window.move=value=>testDeps.dom.flushSync(()=>dotRoot.render(testDeps.react.createElement(Dot,{moving:value})))
+      move(true)
+    },controlled)
+    await preview.waitForFunction(()=>document.querySelector('canvas')?.dataset.dotReady==='true')
+    return{context,preview}
+  }
+  const {context:controlledContext,preview}=await dotPage({controlled:true})
+  await preview.evaluate(()=>advance(0))
+  const pixel=async()=>{const value=await preview.locator('canvas').evaluate(el=>({phase:Number(el.dataset.dotPhase),image:el.toDataURL()}));return{phase:value.phase,image:createHash('sha256').update(value.image).digest('hex')}}
+  const initial=await pixel(),phases=[]
+  for(let i=1;i<=4;i++) {
+    await preview.evaluate(()=>advance(1750))
+    const current=await pixel();phases.push({phase:current.phase,changed:current.image!==initial.image})
+    await preview.screenshot({path:output+'dot-phase-'+i+'.png'})
+  }
+  assert.ok(phases[0].changed&&phases[1].changed&&phases[2].changed,'quarter-cycle phases visibly flow')
+  assert.ok(Math.abs(phases[3].phase)<1e-10||Math.abs(phases[3].phase-1)<1e-10,'one cycle returns to phase zero')
+  const ending=await pixel()
+  assert.equal(ending.image,initial.image,'a complete loop has exactly matching pixels, without edge seams')
+  await preview.evaluate(()=>advance(2100));await preview.evaluate(()=>move(false));const frozen=await pixel()
+  await preview.evaluate(()=>advance(700));assert.deepEqual(await pixel(),frozen,'terminal background retains its exact phase')
+  await preview.evaluate(()=>move(true));await preview.evaluate(()=>advance(0));await preview.evaluate(()=>advance(700));assert.notEqual((await pixel()).image,frozen.image,'retry resumes movement from the retained phase')
+  await preview.emulateMedia({reducedMotion:'reduce'});await preview.waitForFunction(()=>document.querySelector('canvas').dataset.dotMoving==='false'&&document.querySelector('canvas').dataset.dotPhase==='0');const reduced=await pixel();await preview.evaluate(()=>advance(700));assert.deepEqual(await pixel(),reduced,'reduced motion remains a static source frame')
+  assert.equal(reduced.phase,0)
+  report.dotMotion={durationSeconds:7,grid:9.9208,travel:{x:-49.604,y:-9.9208},phaseSamples:phases,loopPixelsIdentical:true,stopFreezesPhase:true,retryResumes:true,reducedMotionStatic:true}
+  await controlledContext.close()
+  const {context:recordContext,preview:recordPage}=await dotPage({record:true})
+  await recordPage.waitForTimeout(7300)
+  const video=recordPage.video();await recordContext.close();await video.saveAs(output+'dot-flow-dark.webm')
+  report.checks.push('continuous phase loop returns to identical pixels; stopping freezes its current phase; retry resumes; reduced motion remains static; real-time WebM recorded')
   assert.deepEqual(errors,[],'no real browser runtime errors')
   report.result='PASS';await writeFile(output+'report.json',JSON.stringify(report,null,2));console.log(JSON.stringify({result:'PASS',cases:report.cases.length,checks:report.checks,output},null,2))
 } finally { await browser.close() }

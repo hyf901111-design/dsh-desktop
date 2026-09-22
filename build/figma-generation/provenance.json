@@ -23,7 +23,8 @@
     "dot": {
       "nodeId": "1405:83337",
       "grid": 9.921,
-      "derivation": "First closed path from original vector, repeated on original measured grid; animation alters only background opacity and phase."
+      "derivation": "Legacy single-dot tile retained only as the before-image comparator; it is no longer used by the generated client.",
+      "status": "superseded"
     },
     "waiting": {
       "nodeId": "1300:300217"
@@ -42,11 +43,118 @@
         "1290:72124"
       ],
       "derivation": "SVG exports combined at their original relative positions, centered within an 18px viewBox. Root fill=none preserves the source circle interior; only the explicit central stop square is filled. Chromium alpha checks cover the ring, four transparent interior points and central square."
+    },
+    "dotFields": {
+      "file": "dot-fields.json",
+      "sha256": "ffdb6d889374e190ecbe2050e35ce0049093939cc60a2b243bdea91988d6de2b",
+      "fields": {
+        "light-wide": {
+          "nodeId": "1405:82718",
+          "sha256": "9dd5750c52644b55d9ca74059e9bab955084db8290b54a8296cf16b4834b51c4",
+          "dots": 1890,
+          "paintGroups": 186,
+          "alphaRange": [
+            0.004000000189989805,
+            0.3610000014305115
+          ],
+          "alphaSource": "Direct fills[0].opacity × node.opacity from corresponding source vector, in source child order; not rounded MCP SVG paint."
+        },
+        "dark-wide": {
+          "nodeId": "1405:83336",
+          "sha256": "4401d4a4bbbb6ddc4a105fcb4974cd88310c79523bba43f96861046634f02887",
+          "dots": 1890,
+          "paintGroups": 214,
+          "alphaRange": [
+            0.004999999888241291,
+            0.546999990940094
+          ],
+          "alphaSource": "Direct fills[0].opacity × node.opacity from corresponding source vector, in source child order; not rounded MCP SVG paint."
+        },
+        "light-compact": {
+          "nodeId": "1405:82906",
+          "sha256": "e5aae28ebf5d22a7973f03c7ceb32f998326b0ad30098bfaf2cc01ebe568c203",
+          "dots": 740,
+          "paintGroups": 138,
+          "alphaRange": [
+            0.004999999888241291,
+            0.35899999737739563
+          ],
+          "alphaSource": "Direct fills[0].opacity × node.opacity from corresponding source vector, in source child order; not rounded MCP SVG paint."
+        },
+        "dark-compact": {
+          "nodeId": "1405:83552",
+          "sha256": "8548ae1bc5e1e2ed979a151693f46a39ad777f735fcbbab3816e0cdb9c3fc5ed",
+          "dots": 740,
+          "paintGroups": 149,
+          "alphaRange": [
+            0.00800000037997961,
+            0.5440000295639038
+          ],
+          "alphaSource": "Direct fills[0].opacity × node.opacity from corresponding source vector, in source child order; not rounded MCP SVG paint."
+        },
+        "light-tall": {
+          "nodeId": "1405:83046",
+          "sha256": "435042393b06bc58aac14eb63889312cdf4923ffda5ed379c5c14470dc675b61",
+          "dots": 1575,
+          "paintGroups": 288,
+          "alphaRange": [
+            0.004000000189989805,
+            0.38600000739097595
+          ],
+          "alphaSource": "Direct fills[0].opacity × node.opacity from corresponding source vector, in source child order; not rounded MCP SVG paint."
+        },
+        "dark-tall": {
+          "nodeId": "1402:82428",
+          "sha256": "d0ae9ca679f94f8ab1a1c03a896dd0955bd177cccb11b5cdd49843aed3f09fa5",
+          "dots": 1575,
+          "paintGroups": 329,
+          "alphaRange": [
+            0.006000000052154064,
+            0.5839999914169312
+          ],
+          "alphaSource": "Direct fills[0].opacity × node.opacity from corresponding source vector, in source child order; not rounded MCP SVG paint."
+        }
+      },
+      "geometry": "Every original closed path is retained with its original SVG origin. Repeated local paths are deduplicated after rounding relative coordinates to 0.001px; no substitute circles are drawn. Original vector paint alpha is read directly because MCP SVG output rounds values below 0.01.",
+      "sourceGridPx": 9.9208,
+      "localPaths": 156,
+      "referencePNGs": {
+        "light-wide": {
+          "file": "reference/light-wide.png",
+          "sha256": "304cc42e6d2585bb390413b95f4c56e98173a72f5a87916cb545d4688cef42a0",
+          "method": "Chromium rasterization of full Figma SVG; fill-opacity restored from original vector alpha in source child order."
+        },
+        "dark-wide": {
+          "file": "reference/dark-wide.png",
+          "sha256": "1a6cfcce8771589a2149d2731cd461b389b8e7a4bcb271569d49cf94e6a45cad",
+          "method": "Chromium rasterization of full Figma SVG; fill-opacity restored from original vector alpha in source child order."
+        },
+        "light-compact": {
+          "file": "reference/light-compact.png",
+          "sha256": "d3922a80c8d8b70a6c0b74e87251e63699218ba85369086af1b5f53cc8bfc28b",
+          "method": "Chromium rasterization of full Figma SVG; fill-opacity restored from original vector alpha in source child order."
+        },
+        "dark-compact": {
+          "file": "reference/dark-compact.png",
+          "sha256": "05b62eb2191716169213a819af8db0cfb76c5fde3852c98ecde6ce5321bb1127",
+          "method": "Chromium rasterization of full Figma SVG; fill-opacity restored from original vector alpha in source child order."
+        },
+        "light-tall": {
+          "file": "reference/light-tall.png",
+          "sha256": "c8fd8b1df73057335b22d62dd554184a02558575cbbebf341aba6acd3257dc76",
+          "method": "Chromium rasterization of full Figma SVG; fill-opacity restored from original vector alpha in source child order."
+        },
+        "dark-tall": {
+          "file": "reference/dark-tall.png",
+          "sha256": "c9883daa9e85ce188bd8f4810c8f0caff8ede29d8bd30a04d57a145cbec8ce64",
+          "method": "Chromium rasterization of full Figma SVG; fill-opacity restored from original vector alpha in source child order."
+        }
+      }
     }
   },
   "implementationChoices": {
     "motionDurationSeconds": 7,
-    "motionMeaning": "An implementation timing; not a claim about original Figma animation speed. Only background mask phase changes; foreground anchor remains fixed.",
+    "motionMeaning": "Seven active animation seconds per loop is an implementation parameter, not measured Figma timing. The independent source-derived point layer flows upper-left by five grid columns and one row; corresponding lattice points blend to the same source field at the cycle boundary, with no whole-card opacity wave. Source-derived alpha interpolation keeps the lower readability fade spatially stable. Foreground remains fixed.",
     "foregroundBreakpoints": {
       "narrowMaxWidth": 300,
       "compactMaxHeight": 240
@@ -57,7 +165,27 @@
       "compact360x200": 62
     },
     "terminalRecords": "Existing bounded canonical public events are redacted before retention in memory. Normal artifact persistence still omits the raw event stream; no transcript persistence was added.",
-    "dotTemplate": "Reuses one measured original closed dot path on the exact 9.921px grid, with an animated opacity wave in the measured .16–.55 range. This is an implemented motion template, not a pixel-identical export of the full million-byte static source field; the source field also varies individual dot sizes."
+    "dotTemplate": "Supersedes the legacy repeated first-dot tile. Three complete source geometries and their distinct Light/Dark paints are used. At the measured 620×300, 240×620 and 360×200 sizes, phase zero preserves source origin, local path and exact vector alpha. At other dimensions the original dot shapes and grid spacing remain fixed while source rows/columns are sampled across the available frame.",
+    "motionTravelPx": {
+      "x": -49.604,
+      "y": -9.9208
+    },
+    "motionReference": {
+      "board": "1357:73294",
+      "phases": [
+        "1357:73300",
+        "1357:73326",
+        "1357:73352",
+        "1357:73379"
+      ],
+      "observedABOffset": {
+        "x": -16,
+        "y": -3
+      },
+      "actualAnimationTracks": false,
+      "notes": "Source A/B use the same full SVG texture with different offsets; direction is illustrative. Static examples do not define speed, duration or amplitude."
+    },
+    "stoppedMotion": "waiting/stopping/stopped/error/paused are static; a running task freezes its current phase on stop and resumes that phase on retry. prefers-reduced-motion renders source phase zero with no RAF loop."
   },
   "colors": {
     "Light": {
@@ -82,5 +210,14 @@
       "1300:296528",
       "1300:296530"
     ]
+  },
+  "verification": {
+    "sourceAlphaTolerance": {
+      "meanLessThan": 0.1,
+      "maximumAtMost": 5,
+      "fractionWithinOneAtLeast": 0.996,
+      "scale": "0–255 alpha"
+    },
+    "scope": "All six source-sized fields, actual ResearchCanvas state/hover/manual-box tests, deterministic full-loop pixels and real-time independent dot-field video. Packaged-client validation is performed separately by the integrating task."
   }
 }

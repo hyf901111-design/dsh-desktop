@@ -1,6 +1,7 @@
 import { patchResearchCanvasDeferredHtml } from './research-canvas-deferred-html.mjs'
 import { generationSource, generationCss, patchGenerationLifecycle, componentPromptSource } from './figma-generation-client.mjs'
 import { researchCompletedDesignCss } from './research-completed-design.mjs'
+import { patchResearchComponentHeaderNote, researchComponentHeaderNoteCss } from './research-component-header-note.mjs'
 import { patchResearchOfficeResize } from './research-office-resize.mjs'
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
 import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
@@ -94,7 +95,7 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)))));
+  return patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))))));
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);
@@ -708,4 +709,4 @@ body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 .rScV5Q_generationFailure>strong{font-size:16px;font-weight:500}.rScV5Q_generationFailure>span{color:var(--odyssey-card-muted)}.rScV5Q_generationFailure details{font-size:12px;line-height:20px}.rScV5Q_generationFailure details p{margin:8px 0}.rScV5Q_generationFailure button{margin-left:auto}
 @keyframes odyssey-ring{to{transform:rotate(360deg)}}@keyframes odyssey-skeleton{50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.rScV5Q_generationSpinner,.odyssey-generation-skeleton i,.odyssey-derived-skeleton>i{animation:none}}
-` + derivedMenuCss + researchCompletedDesignCss + generationCss
+` + derivedMenuCss + researchCompletedDesignCss + researchComponentHeaderNoteCss + generationCss

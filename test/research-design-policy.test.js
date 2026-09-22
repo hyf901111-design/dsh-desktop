@@ -64,23 +64,29 @@ describe('generated HTML design policy', () => {
   [fundTitle, fundHtml],
   ['研究准备清单', checklistHtml],
   ['基金筛选表', '<h1>基金筛选表</h1><p>来源说明</p>'],
-  ['基金筛选表', '<main><header><h1> 基金筛选表 </h1></header><table></table></main>']
+  ['基金筛选表', '<main><header><h1> 基金筛选表 </h1></header><table></table></main>'],
+  ['基金筛选表（合成数据）', '<h1>基金筛选表</h1><p class="note">合成数据 · 组件规范回归</p><div class="toolbar"></div>'],
+  ['研究准备清单', '<div class="head"><h2>研究准备清单</h2><span class="count" id="count">0 / 3 已完成</span></div><ul><li>数据核验</li></ul>'],
+  ['研究准备清单', '<div class="head"><h3>研究准备清单</h3><span>0 / 3</span></div>'],
+  ['研究准备清单（键盘提交回归 · 合成数据）', '<p class="lead">研究准备清单（合成数据 · 键盘提交回归样例）</p><p class="hint">共 3 项；数据为演示用合成内容。</p>'],
+  ['基金筛选表（C 类）', '<div class="head"><span class="title">基金筛选表</span><span class="tag">A 类</span></div>']
  ])('rejects only a top-level page title matching the host title: %s', (title, html) => {
   expect(designPolicyIssue(html, { title })).toContain('顶部重复标题')
  })
  it.each([
   ['normal same-named section', '<section><h2>基金筛选表</h2><table></table></section>', '基金筛选表'],
-  ['normal same-named h3', '<div class="head"><h3>基金筛选表</h3></div>', '基金筛选表'],
-  ['section title class', '<div class="head"><h2 class="title">基金筛选表</h2></div>', '基金筛选表'],
+  ['normal same-named h3', '<section><div class="head"><h3>基金筛选表</h3></div></section>', '基金筛选表'],
+  ['section title class', '<section><h2 class="title">基金筛选表</h2></section>', '基金筛选表'],
+  ['standalone section heading', '<h2>基金筛选表</h2><p>业务小节</p>', '基金筛选表'],
   ['metadata without title', '<div class="head"><span class="tag">合成数据 · 组件规范回归</span><span id="connStatus"></span></div>', fundTitle],
   ['later same-named title', '<p>来源说明</p><div class="head"><span class="title">基金筛选表</span></div>', '基金筛选表'],
   ['leading unwrapped content', '来源说明<h1>基金筛选表</h1>', '基金筛选表'],
   ['caption', '<table><caption>基金筛选表</caption></table>', '基金筛选表'],
   ['partial name', '<div class="head"><span class="title">基金筛选表说明</span></div>', '基金筛选表'],
-  ['different qualifier', '<div class="head"><span class="title">基金筛选表</span><span class="tag">A 类</span></div>', '基金筛选表（C 类）'],
-  ['unproved qualifier', '<div class="head"><span class="title">基金筛选表</span></div>', '基金筛选表（A 类）'],
-  ['qualifier is not adjacent', '<div class="head"><span class="title">基金筛选表</span><span>来源</span><span class="tag">A 类</span></div>', '基金筛选表（A 类）'],
-  ['qualifier after other text', '<div class="head"><span class="title">基金筛选表</span> 说明： <span class="tag">A 类</span></div>', '基金筛选表（A 类）'],
+  ['different subject', '<p class="lead">指数筛选表（合成数据）</p>', '基金筛选表（合成数据）'],
+  ['ordinary introduction', '<p class="lead">研究准备清单用于登记三个步骤，请按顺序核验。</p>', '研究准备清单'],
+  ['source only', '<p class="lead">来源：合成数据 · 组件规范回归</p>', fundTitle],
+  ['metadata only', '<p class="lead">合成数据 · 组件规范回归</p>', fundTitle],
   ['hidden title', '<h1 hidden>基金筛选表</h1><p>内容</p>', '基金筛选表'],
   ['CSS-hidden title', '<style>.title{display:none}</style><h1 class="title">基金筛选表</h1><p>内容</p>', '基金筛选表'],
   ['no artifact context', '<h1>基金筛选表</h1>', undefined]
@@ -126,5 +132,17 @@ describe('generated HTML design policy', () => {
  })
  it('does not create a preservation constraint for an ordinary section heading', () => {
   expect(duplicateTitleRepairSnapshot('<section><h2>基金筛选表</h2></section>',{title:'基金筛选表'})).toBeNull()
+ })
+ it.each(['p','h1'])('preserves the exact differently worded qualifier as visible explanation when repairing %s', tag => {
+  const title='研究准备清单（键盘提交回归 · 合成数据）'
+  const html=`<${tag} class="lead">研究准备清单（合成数据 · 键盘提交回归样例）</${tag}><p class="hint">来源：合成数据，保留此说明。</p><section><h3>数据核验</h3></section>`
+  expect(designPolicyIssue(html,{title})).toContain('顶部重复标题')
+  const snapshot=duplicateTitleRepairSnapshot(html,{title})
+  const repaired='<p class="lead">合成数据 · 键盘提交回归样例</p><p class="hint">来源：合成数据，保留此说明。</p><section><h3>数据核验</h3></section>'
+  expect(duplicateTitleRepairIssue(snapshot,{type:'html',title,html:repaired})).toBeNull()
+  expect(designPolicyIssue(repaired,{title})).toBeNull()
+  for(const changed of [repaired.replace('<p class="lead">合成数据 · 键盘提交回归样例</p>',''),repaired.replace('合成数据 · 键盘提交回归样例','合成数据'),repaired.replace('class="lead"','class="lead" hidden')]) {
+   expect(duplicateTitleRepairIssue(snapshot,{type:'html',title,html:changed})).toContain('题名以外')
+  }
  })
 })

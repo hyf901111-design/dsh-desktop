@@ -87,3 +87,11 @@ it('keeps waiting time at 00:00 instead of counting queue time as execution',asy
   try { await m.render('queued');expect(m.query('[data-research-generation-elapsed]').textContent).toBe('00:00') }
   finally {vi.restoreAllMocks()}
 })
+
+it('renders the full source dot field on an isolated canvas without the old opacity-wave mask',async()=>{
+  const m=await mount('queued')
+  const dots=m.query('[data-research-generation-dots]')
+  expect(dots.tagName).toBe('CANVAS')
+  expect(dots.getAttribute('aria-hidden')).toBe('true')
+  expect(m.win.getComputedStyle(dots).getPropertyValue('mask-image')).not.toContain('linear-gradient')
+})
