@@ -33,12 +33,12 @@ it('renders compact text rows and all four market entries with retained workspac
     expect(f.doc.querySelector('[data-action=back]')).not.toBeNull();
     expect(f.doc.querySelector('[data-action=panel]')).toBeNull();
     expect(f.doc.querySelector('[data-row-id="plugin-1"]')!.textContent).toContain('需要连接应用');
-    expect(f.doc.querySelector('[data-row-id="plugin-1"] img, [data-row-id="plugin-1"] svg')).toBeNull();
+    expect(f.doc.querySelector('[data-row-id="plugin-1"] .ig-row-main img, [data-row-id="plugin-1"] .ig-row-main svg')).toBeNull();
     for (const [tab, label] of [['plugins', '插件市场'], ['apps', '应用市场'], ['mcp', '工具市场'], ['skills', '技能市场']]) {
         f.click(`[data-tab=${tab}]`);
         expect(f.doc.querySelector('[data-action=market]')!.textContent).toBe(label);
     }
-    expect(f.doc.querySelector('[data-action=add]')!.textContent).toBe('导入技能');
+    expect(f.doc.querySelector('.ig-heading [data-action=add]')!.textContent).toBe('添加');
     expect(f.doc.querySelector('.ig-root')!.textContent).not.toContain('创建插件');
     f.view.dispose();
 });
@@ -116,7 +116,7 @@ it('only imports a skill after displaying the backend preview', async () => {
         return { type: 'snapshot', snapshot: snapshot() }; if (c.type === 'preview-skill')
         return { type: 'preview', preview: { previewId: 'preview-1', name: '我的技能', description: '说明', content: '# 可检查的正文', files: ['SKILL.md'], warnings: [] } }; return { type: 'operation', operation: { id: 'op', status: 'succeeded', message: '已导入', cancellable: false } }; });
     f.click('[data-tab=skills]');
-    f.click('[data-action=add]');
+    f.click('[data-action=add]');f.click('[data-action=import-file]');
     await f.settle();
     expect(f.doc.querySelector('.ig-root')!.textContent).toContain('# 可检查的正文');
     expect(f.calls.some(c => c.type === 'import-skill')).toBe(false);
@@ -187,19 +187,22 @@ it('clears pending UI state when a save completes after leaving that route', asy
     f.click('[data-action=back]');
     resolve({ type: 'operation', operation: { id: 'done', status: 'succeeded', message: '已保存', entityId: 'old', cancellable: false } });
     await f.settle();
-    f.click('[data-add=api]');
+    expect(f.doc.querySelector('[data-tab=apps]')!.getAttribute('aria-selected')).toBe('true');
+    f.click('[data-action=add]');f.click('[data-add=api]');
     expect(f.doc.querySelector<HTMLButtonElement>('[data-action=form-next]')!.disabled).toBe(false);
-    expect(f.doc.querySelector('.ig-feedback')!.textContent).not.toContain('已保存');
+    expect(f.doc.querySelector('.ig-live')!.textContent).not.toContain('已保存');
     f.view.dispose();
 });
-it('collects a Google desktop OAuth client ID separately from service URLs and secrets', async () => {
+it('offers the shared add menu from applications and opens API configuration directly', async () => {
     const f = await fixture();
     f.click('[data-tab=apps]');
     f.click('[data-action=add]');
-    f.click('[data-add=google-calendar]');
-    expect(f.doc.querySelector('[name=clientId]')).not.toBeNull();
-    expect(f.doc.querySelector('[name=url]')).toBeNull();
-    expect(f.doc.querySelector('[name=secret]')).toBeNull();
+    expect([...f.doc.querySelectorAll('[role=menu] [data-add]')].map(item => item.getAttribute('data-add'))).toEqual(['plugin','api','mcp-http']);
+    expect(f.doc.querySelector('[data-tab=apps]')!.getAttribute('aria-selected')).toBe('true');
+    expect(f.doc.querySelector('.ig-add-row')).toBeNull();
+    f.click('[data-add=api]');
+    expect(f.doc.querySelector('[name=url]')).not.toBeNull();
+    expect(f.doc.querySelector('[data-action=form-next]')).not.toBeNull();
     f.view.dispose();
 });
 it('opens a market connection template as an editable draft before making any installation or connection', async () => {
@@ -258,7 +261,7 @@ it('does not publish a prior owner mutation receipt after identity reset',async(
 })
 it('keeps a reviewed skill preview if the replacement file chooser is cancelled',async()=>{
  let chosen=false;const f=await fixture(async c=>{if(c.type==='snapshot')return{type:'snapshot',snapshot:snapshot()};if(c.type==='preview-skill'){const preview=chosen?null:{previewId:'reviewed',name:'已审阅技能',description:'说明',content:'技能正文',files:['SKILL.md'],warnings:[]};chosen=true;return{type:'preview',preview}};return{type:'operation',operation:{id:'x',status:'succeeded',message:'',cancellable:false}}})
- f.click('[data-tab=skills]');f.click('[data-action=add]');await f.settle();f.click('[data-action=choose-skill]');await f.settle();expect(f.doc.querySelector('.ig-preview')!.textContent).toBe('技能正文');f.view.dispose()
+ f.click('[data-tab=skills]');f.click('[data-action=add]');f.click('[data-action=import-file]');await f.settle();f.click('[data-action=choose-skill]');await f.settle();expect(f.doc.querySelector('.ig-preview')!.textContent).toBe('技能正文');f.view.dispose()
 })
 
 it('refreshes list data without persistent compatibility copy or replacing an active connection draft',async()=>{
@@ -267,11 +270,11 @@ it('refreshes list data without persistent compatibility copy or replacing an ac
 })
 it('previews legacy skill scope before explicitly copying eligible skills',async()=>{
  const f=await fixture(async c=>{if(c.type==='snapshot')return{type:'snapshot',snapshot:snapshot()};if(c.type==='legacy-preview')return{type:'legacy-preview',eligibleCount:1,items:[{name:'个人周报',status:'eligible'},{name:'内置分析',status:'compatibility',message:'保留原提供者与作用域'}]};return{type:'operation',operation:{id:'migration',status:'succeeded',message:'已复制接入，原文件保留',cancellable:false}}})
- f.click('[data-tab=skills]');f.click('[data-action=legacy-preview]');await f.settle();expect(f.doc.querySelector('[role=dialog]')!.textContent).toContain('个人周报');expect(f.doc.querySelector('[role=dialog]')!.textContent).toContain('保留原提供者与作用域');expect(f.calls.some(c=>c.type==='migrate-legacy-skills')).toBe(false)
+ f.click('[data-tab=skills]');f.click('[data-action=add]');f.click('[data-action=legacy-preview]');await f.settle();expect(f.doc.querySelector('[role=dialog]')!.textContent).toContain('个人周报');expect(f.doc.querySelector('[role=dialog]')!.textContent).toContain('保留原提供者与作用域');expect(f.calls.some(c=>c.type==='migrate-legacy-skills')).toBe(false)
  f.click('[data-action=confirm-legacy-migration]');await f.settle();expect(f.calls.find(c=>c.type==='migrate-legacy-skills')).toMatchObject({meta:{expectedRevision:4}});expect(f.doc.querySelector('[data-tab=skills]')!.getAttribute('aria-selected')).toBe('true');f.view.dispose()
 })
 it('does not allow legacy import when the preview has no eligible skills',async()=>{
- const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:snapshot()}:{type:'legacy-preview',eligibleCount:0,items:[{name:'内置技能',status:'compatibility'}]});f.click('[data-tab=skills]');f.click('[data-action=legacy-preview]');await f.settle();expect(f.doc.querySelector<HTMLButtonElement>('[data-action=confirm-legacy-migration]')!.disabled).toBe(true);f.click('[data-action=cancel-dialog]');expect(f.calls.some(c=>c.type==='migrate-legacy-skills')).toBe(false);f.view.dispose()
+ const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:snapshot()}:{type:'legacy-preview',eligibleCount:0,items:[{name:'内置技能',status:'compatibility'}]});f.click('[data-tab=skills]');f.click('[data-action=add]');f.click('[data-action=legacy-preview]');await f.settle();expect(f.doc.querySelector<HTMLButtonElement>('[data-action=confirm-legacy-migration]')!.disabled).toBe(true);f.click('[data-action=cancel-dialog]');expect(f.calls.some(c=>c.type==='migrate-legacy-skills')).toBe(false);f.view.dispose()
 })
 
 it('uses one connection title, a real summary aside, and an explicit right-aligned tool grant flow',async()=>{
@@ -285,8 +288,8 @@ it('uses one connection title, a real summary aside, and an explicit right-align
  f.doc.querySelector<HTMLInputElement>('[name=toolGrant][value=write]')!.click();
  f.click('[data-action=grant-tools]');await f.settle();expect(f.calls.find(c=>c.type==='grant-tools')).toMatchObject({id:'api',toolIds:['read','write'],meta:{expectedRevision:8}});f.view.dispose()
 })
-it('groups add choices into connection types and secondary skill/plugin actions',async()=>{
- const f=await fixture();f.click('[data-action=add]');expect(f.doc.querySelector('h1')!.textContent).toBe('添加连接');expect(f.doc.querySelectorAll('.ig-add-row')).toHaveLength(3);expect(f.doc.querySelector('.ig-add-other [data-add=skill]')).not.toBeNull();expect(f.doc.querySelector('.ig-add-other [data-add=plugin]')).not.toBeNull();f.click('[data-add=application]');await f.settle();expect(f.calls.some(c=>c.type==='market'&&c.kind==='app')).toBe(true);f.view.dispose()
+it('opens add choices in place and returns directly to the originating list after creating a plugin draft',async()=>{
+ const f=await fixture();f.click('[data-tab=mcp]');f.click('[data-action=add]');expect(f.doc.querySelector('h1')!.textContent).toBe('插件');expect(f.doc.querySelectorAll('.ig-add-row')).toHaveLength(0);expect(f.doc.querySelector('[role=menu] [data-add=plugin]')).not.toBeNull();f.click('[data-add=plugin]');expect(f.doc.querySelector('h1')!.textContent).toBe('创建插件');expect(f.doc.querySelector('[name=manifest]')).not.toBeNull();f.click('[data-action=back]');expect(f.doc.querySelector('[data-tab=mcp]')!.getAttribute('aria-selected')).toBe('true');f.view.dispose()
 })
 it('filters real market metadata and keeps installation permissions beside the primary action',async()=>{
  const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:snapshot()}:c.type==='market'?{type:'market',entries:[{id:'one',kind:'plugin',name:'研究报告',description:'核验资料',publisher:'EWork',version:'1.0',installed:false,available:true,permissions:['读取已授权资料'],category:'research'},{id:'two',kind:'plugin',name:'团队模板',description:'未分类条目',publisher:'团队',version:'1',installed:false,available:true,permissions:[]}]} as IntegrationReply:{type:'operation',operation:{id:'x',status:'succeeded',message:'',cancellable:false}});
@@ -314,3 +317,21 @@ it('retains grant edits after a failed probe but clears them on cancel, leaving 
  checked().click();f.click('[data-action=probe]');await f.settle();await f.view.open();expect(checked().checked).toBe(false);f.click('[data-action=cancel-tool-grants]');f.click('[data-action=manage-tools]');expect(checked().checked).toBe(true);
  checked().click();f.click('[data-action=back]');f.click('[data-action=back]');f.click('[data-detail=api]');f.click('[data-action=manage-tools]');expect(checked().checked).toBe(true);checked().click();f.view.resetIdentity();await f.settle();f.click('[data-tab=apps]');f.click('[data-detail=api]');f.click('[data-action=manage-tools]');expect(checked().checked).toBe(true);f.view.dispose()
 })
+
+it('offers skill deletion with its own confirmation and preserves other plugin capabilities in the explanation',async()=>{
+ const f=await fixture();f.click('[data-tab=skills]');f.click('[data-more="skill-1"]');
+ expect(f.doc.querySelector('[data-menu-action=uninstall]')!.textContent).toBe('删除技能');
+ f.click('[data-menu-action=uninstall]');await f.settle();
+ expect(f.doc.querySelector('[role=dialog] h2')!.textContent).toBe('删除“研究报告”？');
+ expect(f.doc.querySelector('[role=dialog]')!.textContent).toContain('原始文件、已有对话和插件的其他能力都会保留');
+ expect(f.doc.querySelector('[data-action=confirm-uninstall]')!.textContent).toBe('确认删除');
+ expect(f.calls.some(c=>c.type==='uninstall')).toBe(false);f.click('[data-action=confirm-uninstall]');await f.settle();
+ expect(f.calls.find(c=>c.type==='uninstall')).toMatchObject({kind:'skill',id:'skill-1'});f.view.dispose();
+});
+it('shows honest empty plugin and app markets without placeholder cards, category filters or footer copy',async()=>{
+ const f=await fixture();
+ for(const [tab,name] of [['plugins','插件'],['apps','应用']]){await f.view.open(`integrations/${tab}`);f.click('[data-action=market]');await f.settle();
+ expect(f.doc.querySelector('.ig-market-vacant')!.textContent).toContain(`暂无可用${name}`);
+ expect(f.doc.querySelector('.ig-market-card')).toBeNull();expect(f.doc.querySelector('.ig-market-categories')).toBeNull();expect(f.doc.querySelector('.ig-market-source')).toBeNull();expect(f.doc.querySelector('.ig-heading [data-action=add-source]')).not.toBeNull();}
+ f.view.dispose();
+});

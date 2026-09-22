@@ -21,6 +21,14 @@ async function database() {
 }
 
 describe('public read-only integration catalog Worker', () => {
+  it('does not publish unaccepted bundled plugin or app entries', async () => {
+    for (const kind of ['plugin', 'app']) {
+      const response = await get({}, `?kind=${kind}`)
+      expect(response.status).toBe(200)
+      expect((await response.json()).entries).toEqual([])
+    }
+  })
+
   it('serves real bundled entries without OAuth configuration or authentication and preserves client compatibility', async () => {
     const response = await get({}, '?kind=skill', { origin: 'https://other.example.test' })
     expect(response.status).toBe(200)
@@ -55,7 +63,7 @@ describe('public read-only integration catalog Worker', () => {
   })
 
   it('rejects invalid manifests and malformed filters without exposing raw operator data or allowing writes', async () => {
-    const f = await database(), broken = structuredClone(bundled.entries.find(entry => entry.kind === 'plugin'))
+    const f = await database(), broken = structuredClone(bundled.entries.find(entry => entry.kind === 'skill'))
     broken.manifest.installScript = 'operator-private-data'
     f.insert(broken)
     const rejected = await get(f.env)

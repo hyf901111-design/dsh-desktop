@@ -145,6 +145,28 @@ describe('IntegrationService → authenticated bridge → Harness tools and skil
     expect(f.requests).toHaveLength(1)
   })
 
+  it('removes one plugin skill from actual registry, tool and slash paths while keeping its sibling callable', async () => {
+    const f = await fixture()
+    const manifest = { schemaVersion: 1, id: 'test.independent-skills', name: '独立删除测试', description: '真实运行时删除回归', version: '1.0.0', permissions: [], skills: [['report', '研究报告'], ['verify', '资料核验']].map(([id, name]) => ({ id, name, description: `执行${name}`, files: { 'SKILL.md': `---\nname: ${name}\ndescription: 执行${name}\n---\n\n${name}：保留原始来源。` } })) }
+    await f.mutate({ type: 'create-plugin', manifest: JSON.stringify(manifest) }); await f.runtime.sync()
+    const deleted = f.service.runtimeSnapshot().skills.find(skill => skill.name === '研究报告')
+    const kept = f.service.runtimeSnapshot().skills.find(skill => skill.name === '资料核验')
+    const alias = managedSkillInvocationName(deleted), sibling = managedSkillInvocationName(kept), lookup = { cwd: f.a.session.header.cwd, scope: f.a }
+    expect((await f.ctx.skills.get(alias, lookup)).content).toContain('研究报告')
+    expect((await f.invoke('skill', { name: alias })).isError).toBe(false)
+    await f.mutate({ type: 'uninstall', kind: 'skill', id: deleted.id }); await f.runtime.sync()
+    const names = (await f.ctx.skills.list(lookup)).filter(isUserInvocable).map(skill => skill.name)
+    expect(names).not.toContain(alias); expect(names).toContain(sibling)
+    expect(await f.ctx.skills.get(alias, lookup)).toBeUndefined()
+    expect((await f.invoke('skill', { name: alias })).isError).toBe(true)
+    const messages = [createUserMessage({ content: [{ type: 'text', text: `/${alias} 编写报告` }], source: { kind: 'user' } })]
+    const slash = await f.ctx.waterfall(scopeTarget(f.ctx, f.a), 'agent/pre-step', { agent: f.a, messages, turn: 0, step: 0, signal: new AbortController().signal }, () => Promise.resolve({ kind: 'enter', messages }))
+    expect(slash.messages.some(message => message.source?.kind === 'skill-invocation')).toBe(false)
+    expect((await f.invoke('skill', { name: sibling })).content[0].text).toContain('资料核验')
+    expect(f.service.runtimeSnapshot().plugins.find(plugin => plugin.id === kept.ownerPluginId)?.enabled).toBe(true)
+    expect(f.requests).toHaveLength(0)
+  })
+
   it('installs a Chinese market skill and uses its actual resource via registry, skill tool and slash loading', async () => {
     const f = await fixture()
     const market = await f.service.request({ type: 'market', kind: 'skill' })

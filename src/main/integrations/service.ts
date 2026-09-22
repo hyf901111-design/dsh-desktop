@@ -17,7 +17,7 @@ import { IntegrationCatalog } from './catalog';
 import { DeclarativeInstaller } from './installer';
 import { DependencyIndex } from './dependency-index';
 import { projectTaskCapabilities } from './projection';
-import { assertManagedPackagePath, removePackageResources } from './package-resources';
+import { assertManagedPackagePath, removePackageResources, removeSkillPackageResources } from './package-resources';
 import { manifestDigest, compareVersions } from './manifest';
 import { LegacySkillMigration, type LegacySkillRoot } from './legacy-skills';
 import { previewLegacyConnections, type LegacyConnectionSource } from './legacy-connections';
@@ -250,11 +250,8 @@ export class IntegrationService {
                 const ownedSkills = packageToRemove ? packageToRemove.skillIds.map(key => this.store.snapshot().skills[key]!).filter(Boolean) : [];
                 if (command.kind === 'plugin' && 'owner' in value && value.owner === 'bundled')
                     throw new IntegrationError('ACCESS_DENIED', '内置插件可以停用，不能卸载');
-                if (command.kind === 'skill' && 'ownerPluginId' in value && value.ownerPluginId) {
-                    const plugin = this.store.snapshot().plugins[value.ownerPluginId];
-                    if (plugin && plugin.catalogKind !== 'skill')
-                        throw new IntegrationError('DEPENDENCY_BLOCKED', '请从所属插件管理该技能');
-                }
+                const skillCopies = command.kind === 'skill' && hiddenPackage && !marketOwner
+                    ? [value as SkillInstall, ...(hiddenPackage.previousVersion?.skills.filter(skill => skill.id === target) ?? [])] : [];
                 let expectedRemovalRevision = command.meta.expectedRevision;
                 if (command.kind === 'connection' && this.providers[(value as Connection).providerId]?.disconnect) {
                     await this.store.change(state => { signal.throwIfAborted(); const c = this.entity('connection', target, state) as Connection; if (c.revision !== expectedRemovalRevision)
@@ -286,7 +283,20 @@ export class IntegrationService {
                 else {
                     delete state.skills[target];
                     if(marketOwner){if(state.plugins[marketOwner.id]?.revision!==marketOwner.revision)throw new IntegrationError('VERSION_CONFLICT','技能包已变化');for(const skillId of marketOwner.skillIds)delete state.skills[skillId];delete state.plugins[marketOwner.id]}
+                    else if (hiddenPackage) {
+                        const plugin = state.plugins[hiddenPackage.id];
+                        if (!plugin || plugin.revision !== hiddenPackage.revision) throw new IntegrationError('VERSION_CONFLICT', '插件已变化，请重新查看技能删除影响');
+                        plugin.skillIds = plugin.skillIds.filter(skillId => skillId !== target);
+                        plugin.excludedSkillIds = [...new Set([...(plugin.excludedSkillIds ?? []), target])];
+                        plugin.revision++;
+                        if (plugin.previousVersion) {
+                            plugin.previousVersion.skills = plugin.previousVersion.skills.filter(skill => skill.id !== target);
+                            plugin.previousVersion.plugin.skillIds = plugin.previousVersion.plugin.skillIds.filter(skillId => skillId !== target);
+                        }
+                    }
                 } });
+                if (skillCopies.length)
+                    await removeSkillPackageResources(join(this.options.root, 'packages'), skillCopies);
                 if (packageToRemove)
                     await removePackageResources(join(this.options.root, 'packages'), packageToRemove, ownedSkills);
                 if (command.kind === 'skill' && (value as SkillInstall).provider === 'managed') {
@@ -342,17 +352,18 @@ export class IntegrationService {
                 const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'));
                 if (manifestDigest(manifest) !== previous.plugin.digest)
                     throw new IntegrationError('INVALID_CONFIG', '上一版本资源摘要不匹配，未回退');
-                for (const skill of previous.skills)
+                const restoredSkills = previous.skills.filter(skill => !current.excludedSkillIds?.includes(skill.id));
+                for (const skill of restoredSkills)
                     await assertManagedPackagePath(join(this.options.root, 'packages'), skill.resourceRoot);
                 await this.store.change(state => {
                     signal.throwIfAborted();
                     if (this.entity('plugin', target, state).revision !== command.meta.expectedRevision)
                         throw new IntegrationError('VERSION_CONFLICT', '插件已变化');
                     const oldSkills = current.skillIds.map(key => state.skills[key]!).filter(Boolean), { previousVersion: _history, ...latest } = current;
-                    state.plugins[target] = { ...previous.plugin, enabled: current.enabled, revision: current.revision + 1, previousVersion: { plugin: latest, skills: oldSkills } };
+                    state.plugins[target] = { ...previous.plugin, enabled: current.enabled, skillIds: restoredSkills.map(skill => skill.id), excludedSkillIds: current.excludedSkillIds, revision: current.revision + 1, previousVersion: { plugin: latest, skills: oldSkills } };
                     for (const skill of oldSkills)
                         delete state.skills[skill.id];
-                    for (const skill of previous.skills)
+                    for (const skill of restoredSkills)
                         state.skills[skill.id] = { ...skill, revision: Math.max(skill.revision, oldSkills.find(old => old.id === skill.id)?.revision ?? 0) + 1 };
                 });
                 return target;
@@ -394,11 +405,11 @@ export class IntegrationService {
                 if (existing ? state.plugins[existing.id]?.revision !== existing.revision : !!state.plugins[transaction.plugin.id])
                     throw new IntegrationError('VERSION_CONFLICT', '插件已变化，请重新安装');
                 const { previousVersion: _oldHistory, ...prior } = existing ?? transaction.plugin;
-                state.plugins[transaction.plugin.id] = { ...transaction.plugin, ownerAccountId: this.owner(), catalogKind, catalogEntryId, previousVersion: existing ? { plugin: prior, skills: existingSkills } : undefined };
+                state.plugins[transaction.plugin.id] = { ...transaction.plugin, revision: Math.max(transaction.plugin.revision, state.revision + 1), ownerAccountId: this.owner(), catalogKind, catalogEntryId, previousVersion: existing ? { plugin: prior, skills: existingSkills } : undefined };
                 for (const old of existingSkills)
                     delete state.skills[old.id];
                 for (const skill of transaction.skills)
-                    state.skills[skill.id] = { ...skill, ownerAccountId: this.owner() };
+                    state.skills[skill.id] = { ...skill, revision: Math.max(skill.revision, state.revision + 1), ownerAccountId: this.owner() };
             });
         }
         catch (error) {
@@ -616,7 +627,7 @@ export class IntegrationService {
             for (const skill of Object.values(state.skills))
                 if (!skill.ownerAccountId || skill.ownerAccountId === owner) {
                     const plugin = skill.ownerPluginId ? state.plugins[skill.ownerPluginId] : undefined;
-                    rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: skill.enabled, status: skill.enabled && (!plugin || plugin.enabled) ? '已启用' : '已停用', source: plugin ? `来自${plugin.name}` : skill.source, revision: skill.revision, removable: !plugin || plugin.catalogKind === 'skill' });
+                    rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: skill.enabled, status: skill.enabled && (!plugin || plugin.enabled) ? '已启用' : '已停用', source: plugin ? `来自${plugin.name}` : skill.source, revision: skill.revision, removable: true });
                 }
         }
         return { revision: state.revision, rows, taskCapabilities: projectTaskCapabilities(state, owner), compatibilityStatus: owner ? this.compatibility.get(owner) : undefined, runtimeStatus: !owner ? '等待账户身份确认' : Date.now() - this.runtimeSeenAt < 30000 ? '运行时已连接' : '运行时尚未连接' };

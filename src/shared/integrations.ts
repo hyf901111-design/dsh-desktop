@@ -133,6 +133,8 @@ export type PluginInstall = {
     catalogKind?: CatalogKind;
     enabled: boolean;
     skillIds: string[];
+    /** User-deleted skills stay excluded across ordinary updates and rollbacks. */
+    excludedSkillIds?: string[];
     toolBindings: string[];
     installState: 'installed' | 'pending-runtime' | 'failed';
     revision: number;

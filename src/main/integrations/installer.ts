@@ -54,7 +54,9 @@ export class DeclarativeInstaller {
             await mkdir(join(staging, 'package'), { mode: 0o700 });
             await write(join(staging, 'package', 'manifest.json'), JSON.stringify(input, null, 2));
             for (const skill of manifest.skills) {
-                const skillId = `${id}/skill/${skill.id}`, previous = options.existingSkills?.find(item => item.id === skillId);
+                const skillId = `${id}/skill/${skill.id}`;
+                if (existing?.excludedSkillIds?.includes(skillId)) continue;
+                const previous = options.existingSkills?.find(item => item.id === skillId);
                 const home = await directory(join(skillsRoot, `${id}-${skill.id}`)), resourceRoot = join(home, versionDirectory), source = join(staging, `skill-${skill.id}`);
                 await mkdir(source, { mode: 0o700 });
                 for (const [path, content] of Object.entries(skill.files))
@@ -72,7 +74,7 @@ export class DeclarativeInstaller {
             await rm(staging, { recursive: true, force: true });
             throw error;
         }
-        const plugin: PluginInstall = { id, packageId: manifest.id, name: manifest.name, description: manifest.description, sourceId: options.sourceId, ownerAccountId: options.ownerAccountId, version: manifest.version, digest, owner: existing?.owner ?? options.owner, enabled: existing?.enabled ?? true, skillIds: skills.map(skill => skill.id), toolBindings: manifest.toolBindings, installState: 'installed', revision: (existing?.revision ?? 0) + 1, packageRoot, createdAt: existing?.createdAt ?? now };
+        const plugin: PluginInstall = { id, packageId: manifest.id, name: manifest.name, description: manifest.description, sourceId: options.sourceId, ownerAccountId: options.ownerAccountId, version: manifest.version, digest, owner: existing?.owner ?? options.owner, enabled: existing?.enabled ?? true, skillIds: skills.map(skill => skill.id), excludedSkillIds: existing?.excludedSkillIds, toolBindings: manifest.toolBindings, installState: 'installed', revision: (existing?.revision ?? 0) + 1, packageRoot, createdAt: existing?.createdAt ?? now };
         let finalized = false, rolledBack = false;
         return { plugin, skills, async rollback() { if (finalized)
                 throw new IntegrationError('VERSION_CONFLICT', '安装已经提交，不能使用未提交事务回滚'); if (rolledBack)
