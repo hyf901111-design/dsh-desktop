@@ -14,7 +14,7 @@ type Source = { id: string; title: string; kind: string; text: string; status: s
 type Canvas = { files: unknown[]; artifacts: unknown[] }
 type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes: number }
 type Options = {
-  sessionCompleted?(value: { sessionId: string; seq: number; title: string }): void
+  sessionCompleted?(value: { sessionId: string; seq: number; title: string; preview: string }): void
   canvasAction?(value: unknown,signal?:AbortSignal): Promise<unknown>
   canReadSession?(sessionId: string): boolean
   isSharedSession?(sessionId:string):boolean
@@ -132,8 +132,8 @@ export class ResearchContextBridge {
         }
         const raw=JSON.parse(Buffer.concat(chunks).toString('utf8'))
         if (req.url === '/session-completed') {
-          if (!id(raw?.sessionId) || !Number.isSafeInteger(raw?.seq) || raw.seq < 0 || typeof raw?.title !== 'string' || raw.title.length > 160) return send(400, { error: 'Invalid completion' })
-          this.options.sessionCompleted?.({ sessionId: raw.sessionId, seq: raw.seq, title: raw.title })
+          if (!id(raw?.sessionId) || !Number.isSafeInteger(raw?.seq) || raw.seq < 0 || typeof raw?.title !== 'string' || raw.title.length > 160 || (raw.preview !== undefined && (typeof raw.preview !== 'string' || raw.preview.length > 242))) return send(400, { error: 'Invalid completion' })
+          this.options.sessionCompleted?.({ sessionId: raw.sessionId, seq: raw.seq, title: raw.title, preview: raw.preview ?? '' })
           return send(200, { ok: true })
         }
         if(req.url==='/canvas-actions') {

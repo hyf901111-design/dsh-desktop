@@ -1192,7 +1192,7 @@ async function bootstrap(): Promise<void> {
   let isScheduledSession = (_id: string) => false
   const notifiedSessionTurns = new Map<string, number>()
   researchContextBridge = new ResearchContextBridge({
-    sessionCompleted: ({ sessionId, seq, title }) => {
+    sessionCompleted: ({ sessionId, seq, title, preview }) => {
       if (isScheduledSession(sessionId) || seq <= (notifiedSessionTurns.get(sessionId) ?? -1)) return
       notifiedSessionTurns.delete(sessionId)
       notifiedSessionTurns.set(sessionId, seq)
@@ -1202,7 +1202,7 @@ async function bootstrap(): Promise<void> {
         const english = harnessLocale() === 'en'
         const notification = new Notification({
           title: title || (english ? 'Session task completed' : '会话任务已完成'),
-          body: english ? 'Task completed. Open EWork Odyssey to view the result.' : '任务已完成，打开 EWork Odyssey 查看结果。'
+          body: preview || (english ? 'Task completed. Open EWork Odyssey to view the result.' : '任务已完成，打开 EWork Odyssey 查看结果。')
         })
         notification.on('click', () => {
           if (!mainWindow || mainWindow.isDestroyed()) return

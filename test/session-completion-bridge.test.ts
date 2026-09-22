@@ -10,6 +10,9 @@ it('accepts only authenticated, validated completion notices', async () => {
     expect((await post({sessionId:'s1',seq:-1,title:'Example'})).status).toBe(400)
     expect(notify).not.toHaveBeenCalled()
     expect((await post({sessionId:'s1',seq:3,title:'Example'})).status).toBe(200)
-    expect(notify).toHaveBeenCalledWith({sessionId:'s1',seq:3,title:'Example'})
+    expect(notify).toHaveBeenCalledWith({sessionId:'s1',seq:3,title:'Example',preview:''})
+    expect((await post({sessionId:'s1',seq:4,title:'Example',preview:'回答摘要'})).status).toBe(200)
+    expect(notify).toHaveBeenLastCalledWith({sessionId:'s1',seq:4,title:'Example',preview:'回答摘要'})
+    expect((await post({sessionId:'s1',seq:5,title:'Example',preview:'x'.repeat(243)})).status).toBe(400)
   } finally { await bridge.stop() }
 })
