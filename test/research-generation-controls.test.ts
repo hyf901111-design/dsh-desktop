@@ -86,12 +86,12 @@ it('renders the full source dot field on an isolated canvas without the old opac
   expect(m.win.getComputedStyle(dots).getPropertyValue('mask-image')).not.toContain('linear-gradient')
 })
 
-it('rolls real public progress every 900ms and freezes after stopping',async()=>{
+it('rolls real public progress every 600ms and freezes after stopping',async()=>{
  vi.useFakeTimers()
  const m=await mount('running');m.node.generationEvents=[{seq:1,type:'tool-started',tool:'web_search',detail:'检索行业资料'},{seq:2,type:'tool-started',tool:'financial_query',detail:'查询指数行情'}] as any
  await m.render();const first=m.query('[data-progress-ticker]')?.textContent
  expect(first).toBeTruthy()
- await React.act(async()=>{vi.advanceTimersByTime(900)})
+ await React.act(async()=>{vi.advanceTimersByTime(600)})
  expect(m.query('[data-progress-ticker]')?.textContent).not.toBe(first)
  await m.render('cancelled');expect(m.query('[data-progress-ticker]')).toBeNull()
  const stopped=m.host.textContent

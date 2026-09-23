@@ -3,7 +3,7 @@
   width:44px!important;height:44px!important;padding:0!important;border:0!important;
   background:transparent!important;border-radius:0!important;opacity:1!important;
   transform:none!important;
-  transition:none!important;box-shadow:none!important;
+  transition:none!important;box-shadow:none!important;z-index:60!important;
 }
 [data-research-canvas] [data-research-node-id] > [data-research-resize-handle=nw]{left:-4px!important;top:-4px!important;right:auto!important;bottom:auto!important}
 [data-research-canvas] [data-research-node-id] > [data-research-resize-handle=ne]{right:-4px!important;top:-4px!important;left:auto!important;bottom:auto!important}
@@ -25,7 +25,7 @@
 [data-research-resize-corner=ne] [data-node-resizing] > [data-research-resize-handle=ne]::after,
 [data-research-resize-corner=sw] [data-node-resizing] > [data-research-resize-handle=sw]::after,
 [data-research-resize-corner=se] [data-node-resizing] > [data-research-resize-handle=se]::after{opacity:1!important}
-body [data-research-canvas] [data-research-node-id][data-research-compact-chrome][data-selected=true]{box-shadow:0 0 8px rgba(64,128,255,.12)!important}
+body [data-research-canvas] [data-research-node-id][data-research-compact-chrome][data-selected=true]{box-shadow:none!important}
 [data-research-canvas][data-shared-readonly=true] .rScV5Q_resizeHandle{display:none!important}
 [data-research-canvas] [data-research-geometry-blocked] > .rScV5Q_resizeHandle{display:none!important}
 [data-research-snap-guides]{position:absolute;inset:0;z-index:25;pointer-events:none;overflow:hidden}
@@ -51,5 +51,5 @@ body[data-ds-dark-theme] [data-research-snap-guides]>i{background:#76a4ff}
 /* Header tooltips raise the title to layer 10. Keep the complete selection
    stroke above that background without intercepting controls or portal menus. */
 body [data-research-canvas] [data-research-node-id][data-research-compact-chrome][data-selected=true]::after{
-  z-index:20;
+  z-index:50;
 }

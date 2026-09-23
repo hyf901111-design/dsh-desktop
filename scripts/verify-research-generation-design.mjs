@@ -142,14 +142,29 @@ try {
     await page.locator('[data-research-generation-process]').hover();await page.getByRole('button',{name:'查看过程',exact:true}).click()
     assert.equal(await page.locator('[data-research-generation-records]').count(),0)
     const previous=await page.locator('[data-progress-ticker]').textContent()
-    await page.waitForTimeout(950)
+    await page.waitForTimeout(650)
     assert.notEqual(await page.locator('[data-progress-ticker]').textContent(),previous)
     assert.deepEqual((await page.evaluate(()=>metrics())).card,before.card)
     assert.equal(await page.locator('[data-research-generation-foreground]').isVisible(),true)
     assert.equal(await page.locator('[data-research-generation-elapsed]').isVisible(),true)
     await page.screenshot({path:output+`${theme}-${shape}-progress-ticker.png`,animations:'allow'})
   }
-  report.checks.push('Light/Dark wide/tall/compact real progress rolls at 900ms; process emits exact child address without inline logs or bounds changes')
+  report.checks.push('Light/Dark wide/tall/compact real progress rolls at 600ms; process emits exact child address without inline logs or bounds changes')
+  for(const theme of ['light','dark']) {
+    await page.evaluate(theme=>{reset({theme,state:'failed'});workspace.updateSelection(['card'],'replace')},theme)
+    await page.waitForFunction(()=>document.querySelector('[data-research-node-id="card"]')?.getAttribute('data-selected')==='true')
+    const layer=await page.locator('[data-research-node-id="card"]').evaluate(el=>({
+      foreground:getComputedStyle(el,'::after').zIndex,
+      ring:getComputedStyle(el,'::after').boxShadow,
+      native:getComputedStyle(el).boxShadow,
+      surface:getComputedStyle(el.querySelector('[data-research-generation-process]')).zIndex
+    }))
+    assert.equal(layer.foreground,'50','selection ring is layered above card content')
+    assert.match(layer.ring,/inset/)
+    assert.equal(layer.native,'none','host shadow cannot be hidden behind the card')
+    await page.screenshot({path:output+`${theme}-selected-foreground-ring.png`})
+  }
+  report.checks.push('Light/Dark selected ring and drag glow paint on a foreground pseudo-element above the full-bleed card')
   await page.evaluate(()=>{reset();workspace.setGenerationCancelSink(()=>new Promise(resolve=>{window.resolveCancel=resolve}))})
   await page.locator('[data-research-generation-process]').hover();await page.getByRole('button',{name:'停止生成',exact:true}).click()
   assert.equal((await page.evaluate(()=>metrics())).state,'stopping')
@@ -209,6 +224,22 @@ try {
   }
   report.checks.push('manual Light/Dark editor focus and caret are neutral; padding18 and button92×32')
   report.checks.push('manual composer: Enter submits, Shift+Enter inserts a newline, empty/IME Enter does not submit, world bounds remain unchanged')
+  await page.evaluate(()=>{testDeps.dom.flushSync(()=>workspace.setArtifacts([]));workspace.setViewport({x:0,y:0,scale:1})})
+  await page.locator('[data-research-global-link]').click()
+  const link=page.locator('[data-research-link-draft]')
+  await link.waitFor()
+  const linkLayout=await link.evaluate(card=>{
+    const editor=card.querySelector('textarea'),footer=card.querySelector('.rScV5Q_containerDraftFooter'),button=footer.querySelector('button')
+    const box=element=>{const rect=element.getBoundingClientRect();return{top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height}}
+    return{card:box(card),editor:box(editor),footer:box(footer),button:box(button),direction:getComputedStyle(editor.parentElement).flexDirection,flex:getComputedStyle(editor).flex}
+  })
+  assert.equal(linkLayout.direction,'column')
+  assert.ok(linkLayout.editor.height>44,'link editor fills the available card height')
+  assert.ok(linkLayout.footer.top>=linkLayout.editor.bottom,'create action remains below the editor')
+  assert.ok(linkLayout.card.bottom-linkLayout.footer.bottom<=28,'create action stays at the card bottom')
+  assert.equal(linkLayout.button.width,92);assert.equal(linkLayout.button.height,32)
+  await page.screenshot({path:output+'link-draft-filled-editor.png'})
+  report.checks.push('link draft uses a full-height editor with a 92×32 create action pinned to the card bottom')
   // Deterministic RAF drives the shipped renderer through a complete cycle;
   // this tests continuous intermediate frames and endpoint parity, not a CSS
   // animation declaration. A separate real-time page records the visible flow.

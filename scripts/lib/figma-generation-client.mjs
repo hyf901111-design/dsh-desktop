@@ -52,7 +52,7 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
   ;(0, react.useEffect)(() => {
     setProgressIndex(0)
     if (!moving || progressRows.length < 2 || reduceMotion) return
-    const timer = setInterval(() => setProgressIndex(value => value + 1), 900)
+    const timer = setInterval(() => setProgressIndex(value => value + 1), 600)
     return () => clearInterval(timer)
   }, [moving, node.generationTaskId, progressKey, reduceMotion])
   const rolling = moving && !reduceMotion && progressRows.length > 1

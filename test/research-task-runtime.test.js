@@ -1001,6 +1001,17 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it.each([
+    '填充12条覆盖不同状态与风险等级的示例合同（虚构并注明为示例），支持按状态筛选。',
+    '以虚构合同明细展示合同台账，注明数据仅供演示。'
+  ])('does not search the web for explicitly fictional contract rows: %s', async query => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start(query)
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual([])
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    await handle.dispose()
+  })
+
   it('distinguishes an offline deliverable from an explicit retrieval request', async () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('实际调用 financial_query 查询沪深300ETF最近行情，再创建离线HTML交互组件，不得使用示例数据。')
