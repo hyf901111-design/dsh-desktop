@@ -234,10 +234,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究看板示例数据生成与拖拽前景修复",
+        "featureName": "研究看板生成卡片与手绘输入修复",
         "branch": "codex/feat/research-component-spec-20260922",
         "baseCommit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
-        "tipCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
+        "tipCommit": "46e25e138912ea242fd578d967887ff9a238789f",
         "commits": [
           {
             "commit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
@@ -245,6 +245,13 @@
               "6943dd26d87686ac2f2af07f497ea2a591ccaa39"
             ],
             "subject": "修复示例合同误检索并将组件拖拽描边置于前景层"
+          },
+          {
+            "commit": "46e25e138912ea242fd578d967887ff9a238789f",
+            "parents": [
+              "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f"
+            ],
+            "subject": "统一链接输入卡片布局并限制智能容器拉框最小尺寸"
           }
         ],
         "files": [
@@ -274,6 +281,10 @@
           },
           {
             "status": "M",
+            "path": "test/figma-canvas-gestures-ui.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/research-generation-controls.test.ts"
           },
           {
@@ -289,12 +300,13 @@
               "run",
               "test/research-task-runtime.test.js",
               "test/research-generation-controls.test.ts",
-              "test/research-workbench-generation.test.js"
+              "test/research-workbench-generation.test.js",
+              "test/figma-canvas-gestures-ui.test.ts"
             ],
             "outcome": "passed",
-            "summary": "171项聚焦测试通过，含示例合同关闭联网检索、生成过程轮播与重试格式。",
-            "verifiedCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
-            "completedAt": "2026-09-23T01:15:20.891208+00:00",
+            "summary": "195项聚焦测试通过；涵盖示例合同离线生成、卡片交互与手绘最小尺寸。",
+            "verifiedCommit": "46e25e138912ea242fd578d967887ff9a238789f",
+            "completedAt": "2026-09-23T01:20:22.125121+00:00",
             "timeoutMs": 180000
           },
           {
@@ -303,9 +315,9 @@
               "scripts/verify-research-generation-design.mjs"
             ],
             "outcome": "passed",
-            "summary": "18种明暗/尺寸/状态浏览器对照通过，选中描边与拖拽角标在卡片前景层。",
-            "verifiedCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
-            "completedAt": "2026-09-23T01:15:20.891208+00:00",
+            "summary": "18种生成状态对照与链接输入区底部按钮 Chromium 验证通过。",
+            "verifiedCommit": "46e25e138912ea242fd578d967887ff9a238789f",
+            "completedAt": "2026-09-23T01:20:22.125121+00:00",
             "timeoutMs": 180000
           },
           {
@@ -316,8 +328,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
-            "completedAt": "2026-09-23T01:15:20.891208+00:00",
+            "verifiedCommit": "46e25e138912ea242fd578d967887ff9a238789f",
+            "completedAt": "2026-09-23T01:20:22.125121+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -329,12 +341,14 @@
           "示例合同生成不启动网页搜索",
           "生成卡片描边及拖拽角标高于内容与卡片边框",
           "公开进度文本按600毫秒快速轮播",
-          "真实客户端重试示例合同并检查结果"
+          "真实客户端重试示例合同并检查结果",
+          "链接组件输入区填满卡片，创建按钮固定底部",
+          "智能容器小于320×220的拉框在创建时扩到最小尺寸"
         ],
         "risks": [
           "模型服务仍可能发生外部超时；客户端实测可区分超时与内容规范。"
         ],
-        "generatedAt": "2026-09-23T01:15:20.891208+00:00"
+        "generatedAt": "2026-09-23T01:20:22.125121+00:00"
       }
     }
   ],
