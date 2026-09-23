@@ -39,7 +39,7 @@ describe('source market workbench completion layout',()=>{
   });
   it('does not apply a completed market layout to pending or user-drawn cards',()=>{
     const pending={...node('pending',null),generationStatus:'running'};
-    const r=researchBentoLayout([pending],{width:740,height:736});expect(r.nodes[0]).toMatchObject({width:280,height:200});
+    const r=researchBentoLayout([pending],{width:740,height:736});expect(r.nodes[0]).toMatchObject({width:320,height:220});
     const manual={...node('manual',market('metrics')),sizeMode:'manual',width:656,height:456};
     expect(researchBentoLayout([manual],{width:740,height:736}).nodes[0]).toMatchObject({width:656,height:456});
   });

@@ -45,7 +45,7 @@ it.each(['manual','auto'])('opens and closes process details without changing %s
   const derivedStart=source.indexOf('function researchIsDerivedNode('),derivedEnd=source.indexOf('function researchDerivedTitle(',derivedStart)
   expect(derivedStart).toBeGreaterThan(-1);expect(derivedEnd).toBeGreaterThan(derivedStart)
   const Process=new Function('react','react_jsx_runtime',source.slice(derivedStart,derivedEnd)+source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,requireModule('react/jsx-runtime'))
-  const f=fixture(sizeMode,280,200),before=JSON.stringify(f.workspace.getSnapshot()),host=w.document.createElement('div');w.document.body.append(host);const root=createRoot(host)
+  const f=fixture(sizeMode,320,220),before=JSON.stringify(f.workspace.getSnapshot()),host=w.document.createElement('div');w.document.body.append(host);const root=createRoot(host)
   cleanups.push(async()=>{await React.act(async()=>root.unmount());await w.happyDOM.abort()})
   await React.act(async()=>root.render(React.createElement(Process,{node:f.node,onExpand:f.expand,onProcess:()=>true})))
   const button=host.querySelector('[data-research-generation-toggle]')!
