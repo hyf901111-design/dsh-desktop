@@ -34,6 +34,14 @@ it('builds generated HTML through the patched client with the full canvas intera
  expect(html).toContain('sherlock-canvas-use-request')
  expect(html).toContain('sherlock-canvas-use-result')
 })
+it('keeps legacy dashboard cards compact in the packaged client preview',async()=>{
+ const {bundle}=await fixture()
+ const detail='示例数据。监控口径包含风险分级、逾期天数和告警阈值，完整说明必须保留在详情中。'
+ const old=`<style>.list{grid-template-columns:repeat(auto-fit,minmax(min(120px,100%),1fr))}</style><main class="list research-metrics">${Array.from({length:6},()=>`<article class="research-metric"><p class="research-metric-detail">${detail}</p><details><summary>详情</summary><p>${detail}</p></details></article>`).join('')}</main><script>const all=Array.from(document.querySelectorAll('article'));</script>`
+ const preview=bundle.buildResearchHtmlPreview(old,'风险监控')
+ expect(preview.includes('grid-template-columns:repeat(3,minmax(0,1fr))')).toBe(true)
+ expect(preview.includes('查看口径')).toBe(true)
+})
 it('clears the real workspace and restores components through undo',async()=>{
  const {workspace:w}=await fixture(),s=await w.canvasAction('inspect',{})
  const r=await w.canvasAction('apply',{requestId:'clear',revision:s.revision,changes:[{op:'remove',ids:s.nodes.map(n=>n.id)}]})
