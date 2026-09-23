@@ -298,6 +298,22 @@ it('returns a fresh view without replaying an AX-addressed text write that may h
   expect(result.revision).not.toBe(o.revision)
 })
 
+it('handles the SDK Tool error form of the same-process refusal without trusting its message text', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'type_text' && JSON.parse(raw).delivery_mode === 'background') {
+      throw Object.assign(Error('DriverError.Tool'), { inner: { tool: 'type_text', message: 'refused by driver', errorCode: 'same_pid_keyboard_ambiguity' } })
+    }
+    return original(name, raw, options)
+  })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', text: '测试', revision: o.revision, x: 120, y: 80 })
+  const attempts = callTool.mock.calls.filter(([name]) => name === 'type_text').map(([, raw]) => JSON.parse(raw))
+  expect(attempts.map(a => a.delivery_mode)).toEqual(['background', 'foreground'])
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground' })
+})
+
 it.each([
   { code: 'same_pid_keyboard_ambiguity', effect: 'unverifiable', pid: 9, window_id: 10 },
   { code: 'same_pid_keyboard_ambiguity', effect: 'refused', pid: 9, window_id: 11 },

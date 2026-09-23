@@ -97,9 +97,13 @@ export class ComputerController {
           // named observations keep working.
           result = await driver.callTool(name, JSON.stringify({ ...args, session: this.runId }), { signal: combined })
         } catch (error) {
-          const detail = (error as { inner?: { message?: string; errorCode?: string } })?.inner
+          const detail = (error as { inner?: { tool?: string; message?: string; errorCode?: string } })?.inner
           if (typeof detail?.message === 'string') {
-            throw new Error(`${name}: ${detail.message}${detail.errorCode ? ` (${detail.errorCode})` : ''}`, { cause: error })
+            const refusedKeyboard = detail.tool === name && detail.errorCode === 'same_pid_keyboard_ambiguity'
+              && args.delivery_mode === 'background' && ['type_text', 'press_key', 'hotkey'].includes(name)
+              && args.target?.kind === 'window'
+            throw Object.assign(new Error(`${name}: ${detail.message}${detail.errorCode ? ` (${detail.errorCode})` : ''}`, { cause: error }),
+              refusedKeyboard ? { driverData: { code: detail.errorCode, effect: 'refused', pid: args.target.pid, window_id: args.target.window_id } } : {})
           }
           throw error
         }
