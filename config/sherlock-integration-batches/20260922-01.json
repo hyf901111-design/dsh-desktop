@@ -458,6 +458,98 @@
         ],
         "recordedAt": "2026-09-23T01:21:34.177Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "同进程多窗口电脑键盘输入修复",
+        "branch": "codex/feat/computer-keyboard-routing-20260923",
+        "baseCommit": "d797cb43c5fc81efa4cf8ef17f3e5f49d3402215",
+        "tipCommit": "f581564df312e43484dd8995c252a23302e9ee89",
+        "commits": [
+          {
+            "commit": "37e2e4f8ce4aa335e8baa065f85dfe04a09bdf5f",
+            "parents": [
+              "d797cb43c5fc81efa4cf8ef17f3e5f49d3402215"
+            ],
+            "subject": "修复：同进程多窗口下的电脑键盘输入"
+          },
+          {
+            "commit": "f7e1f43583b9179e8ffa05f7dbef08859deb74f0",
+            "parents": [
+              "37e2e4f8ce4aa335e8baa065f85dfe04a09bdf5f"
+            ],
+            "subject": "修复：识别桌面驱动异常形式的多窗口键盘拒绝"
+          },
+          {
+            "commit": "f581564df312e43484dd8995c252a23302e9ee89",
+            "parents": [
+              "f7e1f43583b9179e8ffa05f7dbef08859deb74f0"
+            ],
+            "subject": "文档：补充多窗口键盘拒绝的SDK异常路径"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/research/computer-use-integration.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-controller.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "Computer Use 控制器与视觉准入 53 项聚焦测试通过",
+            "verifiedCommit": "f581564df312e43484dd8995c252a23302e9ee89",
+            "completedAt": "2026-09-23T01:26:48Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "f581564df312e43484dd8995c252a23302e9ee89",
+            "completedAt": "2026-09-23T01:26:48Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 不构建或替换共享客户端；真实飞书输入在集成客户端验收"
+        },
+        "acceptanceCriteria": [
+          "飞书同进程多窗口下对明确坐标的输入框执行 type，文字在目标输入框可见且未进入其他窗口",
+          "同一拒绝码下 key 和有定位的 hotkey 到达精确目标窗口，原前台应用恢复",
+          "无定位或 AX 写入结果不确定时不盲目重复输入，并返回可供继续操作的新观察"
+        ],
+        "risks": [
+          "前台辅助投递会短暂改变系统焦点，真实并行使用需在客户端观察",
+          "Cua Driver 对 Web 输入的 AX 回读不能作为渲染结果证据，需核对截图"
+        ],
+        "generatedAt": "2026-09-23T01:26:48Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -545,6 +637,24 @@
         "--reporter=dot"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/computer-controller.test.ts",
+        "test/computer-vision.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
