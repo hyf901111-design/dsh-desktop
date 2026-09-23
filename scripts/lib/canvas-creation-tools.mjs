@@ -3,10 +3,10 @@ import { patchResearchCanvasRenderPerformance } from './research-canvas-render-p
 import { readFileSync } from 'node:fs'
 const icon = name => `data:image/svg+xml;base64,${readFileSync(new URL(`../../build/figma-canvas-icons/tool-${name}.svg`, import.meta.url)).toString('base64')}`
 export function componentPlacement(rect, viewport) {
-  // A click without a drawn area retains the existing default. A real frame
-  // owns its dimensions, including narrow and short Figma examples.
-  const width = rect.width > 0 ? rect.width / viewport.scale : 320
-  const height = rect.height > 0 ? rect.height / viewport.scale : 220
+  // A tiny drag still creates a usable frame at the component minimum. Keep
+  // the dragged top-left anchored while expanding the opposite edges.
+  const width = Math.max(320, rect.width / viewport.scale)
+  const height = Math.max(220, rect.height / viewport.scale)
   return { x: (rect.left - viewport.x) / viewport.scale + width / 2, y: (rect.top - viewport.y) / viewport.scale + height / 2, width, height, sizeMode: 'manual' }
 }
 // Snap both edges in screen space, including fractional panel offsets. Otherwise
@@ -289,10 +289,11 @@ body[data-ds-dark-theme] [data-research-compact-chrome][data-research-generated-
 [data-research-canvas][data-canvas-tool]{overflow:hidden!important;isolation:isolate}
 .odyssey-link-draft{box-sizing:border-box;bottom:auto!important;right:auto!important;min-height:0;padding:0!important;border:1px solid transparent;background:var(--odyssey-content);display:flex;flex-direction:column;gap:0!important;transform-origin:center;overflow:hidden;color:var(--odyssey-card-text)}
 .odyssey-link-draft .odyssey-link-title{box-sizing:border-box;flex:none;width:100%;margin:0!important;display:flex;background:var(--odyssey-card);cursor:grab;touch-action:none}
-.odyssey-link-draft .rScV5Q_containerDraft{flex:1;min-height:0!important;height:auto!important}
-body [data-research-compact-chrome].odyssey-link-draft .rScV5Q_containerDraft textarea{width:100%;height:44px!important;min-height:44px!important;flex:0 0 44px;resize:none;white-space:nowrap;overflow-x:auto}
-.odyssey-link-draft .rScV5Q_containerDraftFooter{flex:none;display:flex}
-.odyssey-link-draft .rScV5Q_containerDraftFooter button{width:100%}
+.odyssey-link-draft .rScV5Q_containerDraft{box-sizing:border-box;flex:1;min-height:0!important;height:auto!important;display:flex;flex-direction:column;gap:12px;padding:18px!important}
+body [data-research-compact-chrome].odyssey-link-draft .rScV5Q_containerDraft textarea{box-sizing:border-box;width:100%;height:auto!important;min-height:40px!important;flex:1 1 auto;resize:none;white-space:pre-wrap;overflow:auto}
+.odyssey-link-draft .rScV5Q_containerDraftFooter{flex:none;display:flex;justify-content:flex-end;margin-top:auto}
+body [data-research-compact-chrome].odyssey-link-draft .rScV5Q_containerDraftFooter button{box-sizing:border-box;width:92px!important;height:32px!important;padding:0 12px;border:0;border-radius:8px;background:#191919;color:#fff}
+body[data-ds-dark-theme] .odyssey-link-draft .rScV5Q_containerDraftFooter button{background:#f5f5f5;color:#191919}
 .odyssey-link-draft .odyssey-link-close{position:absolute;right:12px;top:11px;width:24px!important;height:24px!important;padding:0!important;border:0!important;border-radius:6px;background:transparent!important;color:var(--odyssey-card-muted)!important;box-shadow:none!important;font-size:20px;cursor:pointer}
 body [data-research-compact-chrome].odyssey-link-draft{border-radius:12px!important;overflow:hidden!important}
 body [data-research-compact-chrome].odyssey-link-draft>.rScV5Q_containerDraft{border-radius:0 0 11px 11px;overflow:hidden}

@@ -196,7 +196,7 @@ it('draws manually sized components in zoomed world coordinates, returns to sele
   await m.event('click', m.query('[data-research-global-select]'))
   expect(m.canvas.getAttribute('data-canvas-tool')).toBe('select')
 })
-it.each([[240,620],[360,200]])('keeps a manually drawn %s × %s frame through generation, retry and completion', async (width,height) => {
+it.each([[120,110],[240,620],[360,200]])('clamps a manually drawn %s × %s frame and keeps its bounds through generation', async (width,height) => {
   const m=await mounted({},undefined,{disabled:false})
   await act(async()=>m.workspace.setViewport({x:100,y:40,scale:.5}))
   await m.event('click',m.query('[data-research-global-container]'))
@@ -204,7 +204,8 @@ it.each([[240,620],[360,200]])('keeps a manually drawn %s × %s frame through ge
   await m.event('pointermove',m.canvas,{pointerId:1,clientX:250+width*.5,clientY:200+height*.5})
   await m.event('pointerup',m.canvas,{pointerId:1})
   const node=m.workspace.getSnapshot().artifacts[0]
-  const geometry={x:200+width/2,y:200+height/2,width,height,sizeMode:'manual'}
+  const actualWidth=Math.max(320,width),actualHeight=Math.max(220,height)
+  const geometry={x:200+actualWidth/2,y:200+actualHeight/2,width:actualWidth,height:actualHeight,sizeMode:'manual'}
   expect(node).toMatchObject(geometry)
   for(const state of ['failed','cancelled','interrupted']) {
     await act(async()=>{

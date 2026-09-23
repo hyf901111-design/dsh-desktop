@@ -224,6 +224,22 @@ try {
   }
   report.checks.push('manual Light/Dark editor focus and caret are neutral; padding18 and button92×32')
   report.checks.push('manual composer: Enter submits, Shift+Enter inserts a newline, empty/IME Enter does not submit, world bounds remain unchanged')
+  await page.evaluate(()=>{testDeps.dom.flushSync(()=>workspace.setArtifacts([]));workspace.setViewport({x:0,y:0,scale:1})})
+  await page.locator('[data-research-global-link]').click()
+  const link=page.locator('[data-research-link-draft]')
+  await link.waitFor()
+  const linkLayout=await link.evaluate(card=>{
+    const editor=card.querySelector('textarea'),footer=card.querySelector('.rScV5Q_containerDraftFooter'),button=footer.querySelector('button')
+    const box=element=>{const rect=element.getBoundingClientRect();return{top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height}}
+    return{card:box(card),editor:box(editor),footer:box(footer),button:box(button),direction:getComputedStyle(editor.parentElement).flexDirection,flex:getComputedStyle(editor).flex}
+  })
+  assert.equal(linkLayout.direction,'column')
+  assert.ok(linkLayout.editor.height>44,'link editor fills the available card height')
+  assert.ok(linkLayout.footer.top>=linkLayout.editor.bottom,'create action remains below the editor')
+  assert.ok(linkLayout.card.bottom-linkLayout.footer.bottom<=28,'create action stays at the card bottom')
+  assert.equal(linkLayout.button.width,92);assert.equal(linkLayout.button.height,32)
+  await page.screenshot({path:output+'link-draft-filled-editor.png'})
+  report.checks.push('link draft uses a full-height editor with a 92×32 create action pinned to the card bottom')
   // Deterministic RAF drives the shipped renderer through a complete cycle;
   // this tests continuous intermediate frames and endpoint parity, not a CSS
   // animation declaration. A separate real-time page records the visible flow.
