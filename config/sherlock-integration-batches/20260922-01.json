@@ -234,50 +234,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究看板生成卡片与手绘输入修复",
+        "featureName": "研究画布交互性能与子代理预览修复",
         "branch": "codex/feat/research-component-spec-20260922",
-        "baseCommit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
-        "tipCommit": "46e25e138912ea242fd578d967887ff9a238789f",
+        "baseCommit": "46e25e138912ea242fd578d967887ff9a238789f",
+        "tipCommit": "09cf79c115db286e0c9a4c07c740ea0105e1353e",
         "commits": [
           {
-            "commit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
+            "commit": "09cf79c115db286e0c9a4c07c740ea0105e1353e",
             "parents": [
-              "6943dd26d87686ac2f2af07f497ea2a591ccaa39"
+              "46e25e138912ea242fd578d967887ff9a238789f"
             ],
-            "subject": "修复示例合同误检索并将组件拖拽描边置于前景层"
-          },
-          {
-            "commit": "46e25e138912ea242fd578d967887ff9a238789f",
-            "parents": [
-              "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f"
-            ],
-            "subject": "统一链接输入卡片布局并限制智能容器拉框最小尺寸"
+            "subject": "优化画布缩放拖动性能并修正子代理预览留白"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/figma-canvas-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
+            "path": "scripts/lib/figma-canvas-gestures.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/verify-research-generation-design.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-canvas-gestures.css"
+            "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
@@ -285,11 +266,15 @@
           },
           {
             "status": "M",
-            "path": "test/research-generation-controls.test.ts"
+            "path": "test/figma-canvas-snap.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/figma-subagent-panel-width.test.ts"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
           }
         ],
         "checks": [
@@ -298,26 +283,31 @@
               "npx",
               "vitest",
               "run",
-              "test/research-task-runtime.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/research-workbench-generation.test.js",
-              "test/figma-canvas-gestures-ui.test.ts"
+              "test/figma-canvas-gestures-ui.test.ts",
+              "test/figma-canvas-snap.test.js",
+              "test/figma-resize-feedback.test.ts",
+              "test/figma-subagent-panel-width.test.ts",
+              "test/research-component-process-panel.test.js"
             ],
             "outcome": "passed",
-            "summary": "195项聚焦测试通过；涵盖示例合同离线生成、卡片交互与手绘最小尺寸。",
-            "verifiedCommit": "46e25e138912ea242fd578d967887ff9a238789f",
-            "completedAt": "2026-09-23T01:20:22.125121+00:00",
+            "summary": "37项聚焦测试通过：邻近组件吸附、逐帧拖动、窗口尺寸合并与任务预览宽度。",
+            "verifiedCommit": "09cf79c115db286e0c9a4c07c740ea0105e1353e",
+            "completedAt": "2026-09-23T01:51:34.921768+00:00",
             "timeoutMs": 180000
           },
           {
             "argv": [
-              "node",
-              "scripts/verify-research-generation-design.mjs"
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "defers canvas-wide state updates|collapses only host-identified canvas subagent instructions|uses the real addressed-session catalog"
             ],
             "outcome": "passed",
-            "summary": "18种生成状态对照与链接输入区底部按钮 Chromium 验证通过。",
-            "verifiedCommit": "46e25e138912ea242fd578d967887ff9a238789f",
-            "completedAt": "2026-09-23T01:20:22.125121+00:00",
+            "summary": "3项窗口缩放和子代理任务记录聚焦测试通过。",
+            "verifiedCommit": "09cf79c115db286e0c9a4c07c740ea0105e1353e",
+            "completedAt": "2026-09-23T01:51:34.921768+00:00",
             "timeoutMs": 180000
           },
           {
@@ -328,135 +318,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "46e25e138912ea242fd578d967887ff9a238789f",
-            "completedAt": "2026-09-23T01:20:22.125121+00:00",
+            "verifiedCommit": "09cf79c115db286e0c9a4c07c740ea0105e1353e",
+            "completedAt": "2026-09-23T01:51:34.921768+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能工作树不得启动共享客户端；合入集成工作树后运行原生客户端回归。"
+          "summary": "功能工作树不得启动共享客户端；合入集成工作树后进行原生客户端验收。"
         },
         "acceptanceCriteria": [
-          "示例合同生成不启动网页搜索",
-          "生成卡片描边及拖拽角标高于内容与卡片边框",
-          "公开进度文本按600毫秒快速轮播",
-          "真实客户端重试示例合同并检查结果",
-          "链接组件输入区填满卡片，创建按钮固定底部",
-          "智能容器小于320×220的拉框在创建时扩到最小尺寸"
+          "原生窗口连续缩放时画布完整且交互不卡顿",
+          "组件自由拖动逐帧更新，仅靠近另一组件边缘时产生吸附",
+          "松手位置与最终卡片位置一致；取消操作恢复原状",
+          "右侧子代理生成需求展开后文本占满预览宽度，普通会话布局不变"
         ],
         "risks": [
-          "模型服务仍可能发生外部超时；客户端实测可区分超时与内容规范。"
+          "原生窗口缩放性能需在集成客户端实测；模型服务超时问题与此补丁独立。"
         ],
-        "generatedAt": "2026-09-23T01:20:22.125121+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b0a6128d5708f6cca5daf63bba44549599f7c9a4",
-        "verificationCommit": "b0a6128d5708f6cca5daf63bba44549599f7c9a4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b0a6128d5708f6cca5daf63bba44549599f7c9a4",
-            "completedAt": "2026-09-23T01:21:34.177Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "b0a6128d5708f6cca5daf63bba44549599f7c9a4",
-            "completedAt": "2026-09-23T01:21:34.177Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "b0a6128d5708f6cca5daf63bba44549599f7c9a4",
-            "completedAt": "2026-09-23T01:21:34.177Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-html-theme.test.js",
-              "test/research-design-policy.test.js",
-              "test/research-task-runtime.test.js",
-              "test/shared-component-validation.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/research-generation-expand-final.test.ts",
-              "test/research-derived-task-presentation.test.ts",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-html-theme.test.js test/research-design-policy.test.js test/research-task-runtime.test.js test/shared-component-validation.test.js test/research-generation-controls.test.ts test/figma-canvas-gestures-ui.test.ts test/research-generation-expand-final.test.ts test/research-derived-task-presentation.test.ts test/research-canvas-render-performance.test.ts test/research-board-client-adapter.test.js --reporter=dot",
-            "verifiedCommit": "b0a6128d5708f6cca5daf63bba44549599f7c9a4",
-            "completedAt": "2026-09-23T01:21:34.177Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-23T01:21:34.177Z"
+        "generatedAt": "2026-09-23T01:51:34.921768+00:00"
       }
     },
     {
