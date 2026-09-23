@@ -10,7 +10,7 @@ import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, join } from 'node:path'
-import { researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
+import { compactHostDashboardHtml, researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
@@ -512,7 +512,8 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
           real
       )
     const before = await readFile(path, 'utf8')
-    const after = await patch(before)
+    const patched = await patch(before)
+    const after = name === 'dsh-client-ui-conversation' ? patchLegacyDashboardPreview(patched) : patched
     if (before !== after) await writeFile(path, after)
   }
 }
@@ -659,6 +660,17 @@ function generationFeedbackPatch(source) {
   source = replace(source, "}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'", `}), (0,react_jsx_runtime.jsxs)('div', {'data-research-generation-activity':'',children:[outputChars>0?'已接收 '+outputChars.toLocaleString()+' 字 · ':'',activityStatus]}), (0, react_jsx_runtime.jsx)('span', { className: 'rScV5Q_generationAnnouncement'`)
   const css = `[data-research-task-conversation]{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] :is(p,pre,code,details){min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}[data-research-task-conversation] pre{white-space:pre-wrap;overflow-x:auto}[data-research-generation-empty] .rScV5Q_generationProcess{min-height:0;height:100%;padding:12px 20px 16px;gap:10px}[data-research-generation-empty] .rScV5Q_generationTerminal{min-height:0;flex:1;display:flex;align-items:flex-start;overflow:hidden}[data-research-generation-empty] .rScV5Q_generationLog{justify-content:flex-start;gap:6px;width:100%;min-width:0}[data-research-generation-description]{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}[data-research-generation-activity]{font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}.rScV5Q_generationLogText{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}`
   return generationActivityClockPatch(source + `\n/* SHERLOCK_GENERATION_FEEDBACK_V1 */\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockGenerationFeedback="";style.textContent=${JSON.stringify(css)};document.head.appendChild(style);}\n`)
+}
+
+function patchLegacyDashboardPreview(source) {
+  const previewStart = 'function buildResearchHtmlPreview(html, title = '
+  if (!source.includes('function compactHostDashboardHtml(html) {'))
+    source = replace(source, previewStart, `${compactHostDashboardHtml.toString()}\n${previewStart}`)
+  if (!source.includes('const displayHtml = compactHostDashboardHtml(html)')) {
+    source = replace(source, "  const theme = initialTheme === 'dark' ? 'dark' : 'light'", "  const displayHtml = compactHostDashboardHtml(html)\n  const theme = initialTheme === 'dark' ? 'dark' : 'light'")
+    source = replace(source, '<body>${html}</body></html>', '<body>${displayHtml}</body></html>')
+  }
+  return source
 }
 
 function componentTypographyPatch(source) {
