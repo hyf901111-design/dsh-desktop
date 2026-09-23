@@ -298,8 +298,8 @@ body [data-research-compact-chrome].odyssey-link-draft{border-radius:12px!import
 body [data-research-compact-chrome].odyssey-link-draft>.rScV5Q_containerDraft{border-radius:0 0 11px 11px;overflow:hidden}
 body [data-research-compact-chrome].odyssey-link-draft[data-selected=true]::after{inset:0;border-radius:inherit}
 .odyssey-link-draft .rScV5Q_linkError{padding:0 20px 12px}
-[data-research-canvas] [data-research-node-id][data-research-node-id][data-selected=true]{outline:none!important;border-color:transparent!important;box-shadow:0 0 0 2px #60a5fa66,0 0 20px 3px #3b82f640!important}
-[data-research-canvas] [data-research-node-id][data-research-node-id][data-selected=true]::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1.5px var(--odyssey-select,#1b77ff);pointer-events:none;z-index:5}
+[data-research-canvas] [data-research-node-id][data-research-node-id][data-selected=true]{outline:none!important;border-color:transparent!important;box-shadow:none!important}
+[data-research-canvas] [data-research-node-id][data-research-node-id][data-selected=true]::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1.5px var(--odyssey-select,#1b77ff),0 0 0 2px #60a5fa66,0 0 20px 3px #3b82f640;pointer-events:none;z-index:50}
 [data-research-canvas] [data-research-node-id]:not([data-selected=true]){box-shadow:none!important}
 [data-research-canvas] [data-research-marquee]{z-index:25!important;pointer-events:none}
 `

@@ -237,7 +237,7 @@ function containerAllowsWebSearch(prompt) {
   if (/(?:调用|使用).{0,16}(?:web_search|financial_query|网页搜索|金融数据)/iu.test(value)) return true
   if (/离线(?:页面|模式|运行)?/u.test(value)) return false
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
-  const illustrative = /演示数据|示例数据|示意数据|模拟数据|虚构数据|样例数据|\b(?:sample|demo|mock|synthetic|illustrative)\s+data\b/iu.test(value)
+  const illustrative = /(?:演示|示例|示意|模拟|虚构|样例)(?:数据|合同|记录|条目|明细|案例|样本)|(?:数据|合同|记录|条目|明细|案例|样本).{0,12}(?:虚构|仅供演示|仅为示例)|\b(?:sample|demo|mock|synthetic|illustrative)\s+(?:data|contracts?|records?|entries|examples?)\b/iu.test(value)
   const supplied = /(?:以下|这些|给定|上述|下列).{0,12}(?:数据|数值)|(?:我|用户)(?:已|已经)?提供的(?:数据|数值)|数据(?:如下|为|是)[：:\s]*|数据[：:]\s*(?:[-+]?\d|[\[{]|\|)|(?:收入|成本|销量|收益率|价格|净值)[：:\s]*[-+]?\d+(?:[、,，]\s*[-+]?\d+){1,}/u.test(value)
   if ((illustrative || supplied) && !explicitFresh) return false
   if (/静态图形|\bstatic (?:graphic|shape)/iu.test(value)) return false

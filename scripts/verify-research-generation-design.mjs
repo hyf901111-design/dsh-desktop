@@ -142,14 +142,29 @@ try {
     await page.locator('[data-research-generation-process]').hover();await page.getByRole('button',{name:'查看过程',exact:true}).click()
     assert.equal(await page.locator('[data-research-generation-records]').count(),0)
     const previous=await page.locator('[data-progress-ticker]').textContent()
-    await page.waitForTimeout(950)
+    await page.waitForTimeout(650)
     assert.notEqual(await page.locator('[data-progress-ticker]').textContent(),previous)
     assert.deepEqual((await page.evaluate(()=>metrics())).card,before.card)
     assert.equal(await page.locator('[data-research-generation-foreground]').isVisible(),true)
     assert.equal(await page.locator('[data-research-generation-elapsed]').isVisible(),true)
     await page.screenshot({path:output+`${theme}-${shape}-progress-ticker.png`,animations:'allow'})
   }
-  report.checks.push('Light/Dark wide/tall/compact real progress rolls at 900ms; process emits exact child address without inline logs or bounds changes')
+  report.checks.push('Light/Dark wide/tall/compact real progress rolls at 600ms; process emits exact child address without inline logs or bounds changes')
+  for(const theme of ['light','dark']) {
+    await page.evaluate(theme=>{reset({theme,state:'failed'});workspace.updateSelection(['card'],'replace')},theme)
+    await page.waitForFunction(()=>document.querySelector('[data-research-node-id="card"]')?.getAttribute('data-selected')==='true')
+    const layer=await page.locator('[data-research-node-id="card"]').evaluate(el=>({
+      foreground:getComputedStyle(el,'::after').zIndex,
+      ring:getComputedStyle(el,'::after').boxShadow,
+      native:getComputedStyle(el).boxShadow,
+      surface:getComputedStyle(el.querySelector('[data-research-generation-process]')).zIndex
+    }))
+    assert.equal(layer.foreground,'50','selection ring is layered above card content')
+    assert.match(layer.ring,/inset/)
+    assert.equal(layer.native,'none','host shadow cannot be hidden behind the card')
+    await page.screenshot({path:output+`${theme}-selected-foreground-ring.png`})
+  }
+  report.checks.push('Light/Dark selected ring and drag glow paint on a foreground pseudo-element above the full-bleed card')
   await page.evaluate(()=>{reset();workspace.setGenerationCancelSink(()=>new Promise(resolve=>{window.resolveCancel=resolve}))})
   await page.locator('[data-research-generation-process]').hover();await page.getByRole('button',{name:'停止生成',exact:true}).click()
   assert.equal((await page.evaluate(()=>metrics())).state,'stopping')
