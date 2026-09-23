@@ -234,31 +234,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究看板生成卡片交互、点阵扫光与失败重试",
+        "featureName": "研究看板示例数据生成与拖拽前景修复",
         "branch": "codex/feat/research-component-spec-20260922",
-        "baseCommit": "b4565012e4a8a4580f9c2c2f440a4946765d1ece",
-        "tipCommit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
+        "baseCommit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
+        "tipCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
         "commits": [
           {
-            "commit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
+            "commit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
             "parents": [
-              "b4565012e4a8a4580f9c2c2f440a4946765d1ece"
+              "6943dd26d87686ac2f2af07f497ea2a591ccaa39"
             ],
-            "subject": "修复生成卡片拖拽缩放与点阵扫光并恢复工作台重试规范"
+            "subject": "修复示例合同误检索并将组件拖拽描边置于前景层"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
           },
           {
             "status": "M",
@@ -278,23 +270,15 @@
           },
           {
             "status": "M",
-            "path": "test/figma-canvas-gestures-ui.test.ts"
+            "path": "src/preload/figma-canvas-gestures.css"
           },
           {
             "status": "M",
-            "path": "test/research-generation-expand-final.test.ts"
+            "path": "test/research-generation-controls.test.ts"
           },
           {
             "status": "M",
-            "path": "test/research-market-layout.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench-generation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -303,17 +287,14 @@
               "npx",
               "vitest",
               "run",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/research-workbench.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-workbench-generation.test.js",
-              "test/research-generation-expand-final.test.ts",
-              "test/research-canvas-actions-client.test.js"
+              "test/research-task-runtime.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/research-workbench-generation.test.js"
             ],
             "outcome": "passed",
-            "summary": "67项聚焦测试通过，覆盖等待/生成/失败整卡拖动、最小尺寸缩放、工作台重试恢复。",
-            "verifiedCommit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
-            "completedAt": "2026-09-23T00:50:50.628Z",
+            "summary": "171项聚焦测试通过，含示例合同关闭联网检索、生成过程轮播与重试格式。",
+            "verifiedCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
+            "completedAt": "2026-09-23T01:15:20.891208+00:00",
             "timeoutMs": 180000
           },
           {
@@ -322,9 +303,9 @@
               "scripts/verify-research-generation-design.mjs"
             ],
             "outcome": "passed",
-            "summary": "18种明暗/尺寸/状态浏览器对照与点阵固定扫光、按钮气泡、缩放暂停动效验证通过。",
-            "verifiedCommit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
-            "completedAt": "2026-09-23T00:50:50.628Z",
+            "summary": "18种明暗/尺寸/状态浏览器对照通过，选中描边与拖拽角标在卡片前景层。",
+            "verifiedCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
+            "completedAt": "2026-09-23T01:15:20.891208+00:00",
             "timeoutMs": 180000
           },
           {
@@ -335,8 +316,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "6943dd26d87686ac2f2af07f497ea2a591ccaa39",
-            "completedAt": "2026-09-23T00:50:50.628Z",
+            "verifiedCommit": "edad500e4b0ea0d8e6b2c8ba249fe9217aca7a4f",
+            "completedAt": "2026-09-23T01:15:20.891208+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -345,123 +326,15 @@
           "summary": "功能工作树不得启动共享客户端；合入集成工作树后运行原生客户端回归。"
         },
         "acceptanceCriteria": [
-          "生成中、等待、失败卡片从任意非按钮区域拖动且右上按钮有可见文字说明",
-          "默认生成卡片320×220，缩放后可回到最小尺寸",
-          "点位固定、光泽扫过，窗口拖动期间不重绘点阵",
-          "旧合同工作台失败卡重试恢复原格式合同并生成可用结果"
+          "示例合同生成不启动网页搜索",
+          "生成卡片描边及拖拽角标高于内容与卡片边框",
+          "公开进度文本按600毫秒快速轮播",
+          "真实客户端重试示例合同并检查结果"
         ],
         "risks": [
           "模型服务仍可能发生外部超时；客户端实测可区分超时与内容规范。"
         ],
-        "generatedAt": "2026-09-23T00:50:50.628Z"
-      },
-      "merged": {
-        "mergeCommit": "e096521186e6b63f51360db9d604eb8b0260c982",
-        "verificationCommit": "e096521186e6b63f51360db9d604eb8b0260c982",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e096521186e6b63f51360db9d604eb8b0260c982",
-            "completedAt": "2026-09-23T00:51:48.715Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--maxWorkers=4",
-              "test/account-service.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/figma-command-menu-layout.test.js",
-              "test/figma-panel-motion-runtime.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-broker.test.js",
-              "test/integration-catalog-worker.test.js",
-              "test/integration-catalog.test.ts",
-              "test/integration-client-flow.test.ts",
-              "test/integration-context.test.ts",
-              "test/integration-harness-e2e.test.js",
-              "test/integration-http-api.test.ts",
-              "test/integration-installer.test.ts",
-              "test/integration-ipc.test.ts",
-              "test/integration-legacy-connections.test.ts",
-              "test/integration-legacy-skills.test.ts",
-              "test/integration-mcp.test.ts",
-              "test/integration-oauth.test.ts",
-              "test/integration-openapi.test.ts",
-              "test/integration-operations.test.ts",
-              "test/integration-policy.test.ts",
-              "test/integration-providers.test.ts",
-              "test/integration-runtime-bridge.test.ts",
-              "test/integration-runtime-errors.test.js",
-              "test/integration-runtime.test.js",
-              "test/integration-service.test.ts",
-              "test/integration-skill-policy.test.js",
-              "test/integration-skills.test.ts",
-              "test/integration-store.test.ts",
-              "test/integration-task-dependencies.test.ts",
-              "test/integration-vault.test.ts",
-              "test/integration-view.test.ts",
-              "test/menu-surface-theme.test.ts",
-              "test/preload-main-frame.test.ts",
-              "test/profile-runtime-patches.test.js",
-              "test/research-task-integrations.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/sherlock-office-theme.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-task-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --maxWorkers=4 test/account-service.test.ts test/bundled-plugin-profile.test.ts test/figma-command-menu-layout.test.js test/figma-panel-motion-runtime.test.ts test/harness-bundled-package-resolution.test.ts test/integration-broker.test.js test/integration-catalog-worker.test.js test/integration-catalog.test.ts test/integration-client-flow.test.ts test/integration-context.test.ts test/integration-harness-e2e.test.js test/integration-http-api.test.ts test/integration-installer.test.ts test/integration-ipc.test.ts test/integration-legacy-connections.test.ts test/integration-legacy-skills.test.ts test/integration-mcp.test.ts test/integration-oauth.test.ts test/integration-openapi.test.ts test/integration-operations.test.ts test/integration-policy.test.ts test/integration-providers.test.ts test/integration-runtime-bridge.test.ts test/integration-runtime-errors.test.js test/integration-runtime.test.js test/integration-service.test.ts test/integration-skill-policy.test.js test/integration-skills.test.ts test/integration-store.test.ts test/integration-task-dependencies.test.ts test/integration-vault.test.ts test/integration-view.test.ts test/menu-surface-theme.test.ts test/preload-main-frame.test.ts test/profile-runtime-patches.test.js test/research-task-integrations.test.js test/scheduled-task-view.test.ts test/sherlock-office-theme.test.js test/workspace-surface-host.test.ts test/scheduled-tasks.test.ts test/component-scheduled-tasks.test.ts test/research-task-runtime.test.js",
-            "verifiedCommit": "e096521186e6b63f51360db9d604eb8b0260c982",
-            "completedAt": "2026-09-23T00:51:48.715Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/validate-integration-catalog.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/validate-integration-catalog.mjs",
-            "verifiedCommit": "e096521186e6b63f51360db9d604eb8b0260c982",
-            "completedAt": "2026-09-23T00:51:48.715Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-html-theme.test.js",
-              "test/research-design-policy.test.js",
-              "test/research-task-runtime.test.js",
-              "test/shared-component-validation.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/figma-canvas-gestures-ui.test.ts",
-              "test/research-generation-expand-final.test.ts",
-              "test/research-derived-task-presentation.test.ts",
-              "test/research-canvas-render-performance.test.ts",
-              "test/research-board-client-adapter.test.js",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-html-theme.test.js test/research-design-policy.test.js test/research-task-runtime.test.js test/shared-component-validation.test.js test/research-generation-controls.test.ts test/figma-canvas-gestures-ui.test.ts test/research-generation-expand-final.test.ts test/research-derived-task-presentation.test.ts test/research-canvas-render-performance.test.ts test/research-board-client-adapter.test.js --reporter=dot",
-            "verifiedCommit": "e096521186e6b63f51360db9d604eb8b0260c982",
-            "completedAt": "2026-09-23T00:51:48.715Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-23T00:51:48.715Z"
+        "generatedAt": "2026-09-23T01:15:20.891208+00:00"
       }
     }
   ],
