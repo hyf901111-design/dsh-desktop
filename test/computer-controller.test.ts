@@ -246,3 +246,85 @@ it('rejects locked-screen operations before connecting and still permits release
   expect(callTool).not.toHaveBeenCalled()
   await expect(run({ op: 'release' })).resolves.toEqual({ stopped: true })
 })
+
+it.each([
+  { op: 'type', text: '测试', x: 120, y: 80, tool: 'type_text' },
+  { op: 'key', key: 'Return', tool: 'press_key' },
+  { op: 'hotkey', keys: ['cmd', 'a'], x: 120, y: 80, tool: 'hotkey' }
+])('retries an untouched same-process keyboard refusal against the exact window: %j', async action => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === action.tool && JSON.parse(raw).delivery_mode === 'background') return {
+      isError: true, text: 'Background input refused', images: [],
+      structuredJson: JSON.stringify({ code: 'same_pid_keyboard_ambiguity', effect: 'refused', pid: 9, window_id: 10 })
+    }
+    return original(name, raw, options)
+  })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ ...action, revision: o.revision })
+  const attempts = callTool.mock.calls.filter(([name]) => name === action.tool).map(([, raw]) => JSON.parse(raw))
+  expect(attempts).toHaveLength(2)
+  expect(attempts.map(a => a.delivery_mode)).toEqual(['background', 'foreground'])
+  expect(attempts[1]).toMatchObject({ target: o.target, session: expect.stringMatching(/^ework-/) })
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground' })
+})
+
+it.each([{ op: 'type', text: '测试', tool: 'type_text' }, { op: 'hotkey', keys: ['cmd', 'a'], tool: 'hotkey' }])('asks for an exact text field before foreground retry when the field is unspecified: %j', async action => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === action.tool ? {
+    isError: true, text: 'Background input refused', images: [],
+    structuredJson: JSON.stringify({ code: 'same_pid_keyboard_ambiguity', effect: 'refused', pid: 9, window_id: 10 })
+  } : original(name, raw, options))
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ ...action, revision: o.revision })
+  expect(callTool.mock.calls.filter(([name]) => name === action.tool)).toHaveLength(1)
+  expect(result.action).toMatchObject({ performed: false, code: 'keyboard_target_required' })
+  expect(result.revision).not.toBe(o.revision)
+})
+
+it('returns a fresh view without replaying an AX-addressed text write that may have landed', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'type_text' ? {
+    isError: true, text: 'Background input refused', images: [],
+    structuredJson: JSON.stringify({ code: 'same_pid_keyboard_ambiguity', effect: 'refused', pid: 9, window_id: 10 })
+  } : original(name, raw, options))
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', text: '测试', revision: o.revision, element_token: 'verified-token' })
+  expect(callTool.mock.calls.filter(([name]) => name === 'type_text')).toHaveLength(1)
+  expect(result.action).toMatchObject({ effect: 'unverifiable', code: 'same_pid_keyboard_ambiguity' })
+  expect(result.revision).not.toBe(o.revision)
+})
+
+it('handles the SDK Tool error form of the same-process refusal without trusting its message text', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'type_text' && JSON.parse(raw).delivery_mode === 'background') {
+      throw Object.assign(Error('DriverError.Tool'), { inner: { tool: 'type_text', message: 'refused by driver', errorCode: 'same_pid_keyboard_ambiguity' } })
+    }
+    return original(name, raw, options)
+  })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', text: '测试', revision: o.revision, x: 120, y: 80 })
+  const attempts = callTool.mock.calls.filter(([name]) => name === 'type_text').map(([, raw]) => JSON.parse(raw))
+  expect(attempts.map(a => a.delivery_mode)).toEqual(['background', 'foreground'])
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground' })
+})
+
+it.each([
+  { code: 'same_pid_keyboard_ambiguity', effect: 'unverifiable', pid: 9, window_id: 10 },
+  { code: 'same_pid_keyboard_ambiguity', effect: 'refused', pid: 9, window_id: 11 },
+  { code: 'permission_denied', effect: 'refused', pid: 9, window_id: 10 }
+])('does not replay keyboard input after any other result: %j', async refusal => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'type_text' ? {
+    isError: true, text: 'Input not completed', images: [], structuredJson: JSON.stringify(refusal)
+  } : original(name, raw, options))
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  await expect(run({ op: 'type', text: '测试', revision: o.revision, x: 120, y: 80 })).rejects.toThrow()
+  expect(callTool.mock.calls.filter(([name]) => name === 'type_text')).toHaveLength(1)
+})
