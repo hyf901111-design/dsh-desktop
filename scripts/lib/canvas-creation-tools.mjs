@@ -60,6 +60,9 @@ export function patchMarqueeInteraction(source) {
   return source
 }
 export function patchCanvasCreationTools(source) {
+  const oldInteractive = 'const isInteractiveTarget = (target) => typeof target?.closest === "function" && target.closest("input,textarea,button,select,a,[contenteditable=true],[data-research-preview-interactive]") !== null;'
+  const cardInteractive = `const isInteractiveTarget = (target) => typeof target?.closest === "function" && (target.closest("input,textarea,button,select,a,[contenteditable=true]") !== null || (target.closest("[data-research-preview-interactive]") !== null && !target.closest("[data-research-node-id]")?.querySelector("[data-research-generation-process]")));`
+  source = source.replace(oldInteractive, cardInteractive)
   source = source.replace(/\(function componentPlacement\(rect, viewport\) \{[\s\S]*?\}\)\(rect,current\.viewport\)/, `(${componentPlacement.toString()})(rect,current.viewport)`)
   source = source.replace('// Resizing a placeholder must not lock the first finished artifact.', '// Explicit user dimensions remain authoritative after generation.')
   source = source.replace('sizeMode: current.containerSpec === void 0 ? "auto" : current.sizeMode,', 'sizeMode: current.sizeMode,')

@@ -3,7 +3,7 @@ import { buildResearchTaskPrompt, ResearchTaskRuntime } from '../packages/dsh-re
 import { renderInteractiveArtifact } from '../packages/dsh-research-task-runtime/interactive-artifact.js';
 import { compactHostDashboardHtml } from '../packages/dsh-research-task-runtime/html-artifact.js';
 
-const panelPrompt = '工作台：合同管理工作台\n本面板：核心指标\n在履行合同数量、30天内到期合同数、回款逾期金额、本年新签合同金额。每个指标给出计算口径；数值使用示例数据并标注示例口径。\n仅生成本面板，优先使用 kpi 类型；生成中的280×200是临时占位。';
+const panelPrompt = '工作台：合同管理工作台\n本面板：核心指标\n合同管理核心指标：在履行合同数量、30天内到期合同数、回款逾期金额、本年新签合同金额。每个指标给出计算口径；数值使用示例数据并标注示例口径。\n仅生成本面板，优先使用 kpi 类型；生成中的320×220是临时占位。';
 const request = { parentSessionId: 'parent', canvasNodeId: 'node', kind: 'container', prompt: panelPrompt };
 
 it('gives a planned workbench panel a bounded format-specific prompt', () => {
@@ -13,6 +13,34 @@ it('gives a planned workbench panel a bounded format-specific prompt', () => {
   expect(prompt).toContain('示例口径');
   expect(prompt).toContain('"type":"dashboard"');
   expect(prompt).not.toContain('"type": "mind-map"');
+});
+
+it('restores the original workbench contract when an older card is retried from its saved content prompt', async () => {
+  const prompts = [];
+  let nextId = 0;
+  let persisted;
+  const options = {
+    adapter: { start: async ({ prompt }) => {
+      prompts.push(prompt);
+      return { childSessionId: `child-${prompts.length}`, dispose: async () => {}, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: '{"version":1,"type":"kpi","title":"核心指标","items":[{"label":"合同","value":"86 份"}]}' }] }) };
+    } },
+    storage: { save: async document => { persisted = document; }, load: async () => persisted }, createId: () => `task-${++nextId}`
+  };
+  const runtime = new ResearchTaskRuntime(options);
+  try {
+    await runtime.start(request);
+    await vi.waitFor(() => expect(runtime.inspect({ parentSessionId: 'parent', taskId: 'task-1' }).state).toBe('completed'));
+    await runtime.dispose();
+    const reopened = new ResearchTaskRuntime(options);
+    try {
+      await reopened.restore();
+      await reopened.start({ ...request, prompt: '合同管理核心指标：在履行合同数量、30天内到期合同数、回款逾期金额、本年新签合同金额。每个指标给出计算口径；数值使用示例数据并标注示例口径。\n组件初始尺寸 320×220px；自动布局按内容密度选择规格。' });
+      await vi.waitFor(() => expect(reopened.inspect({ parentSessionId: 'parent', taskId: 'task-2' }).state).toBe('completed'));
+    } finally { await reopened.dispose(); }
+    expect(prompts[1]).toContain('唯一交付格式：');
+    expect(prompts[1]).toContain('工作台：合同管理工作台');
+    expect(prompts[1].length).toBeLessThan(5000);
+  } finally { await runtime.dispose(); }
 });
 
 it('recovers a timed-out workbench panel with no public output once, without private reasoning', async () => {

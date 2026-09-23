@@ -921,8 +921,21 @@ export class ResearchTaskRuntime {
 
   async start(raw) {
     if (this.disposed) throw new ResearchTaskError('RUNTIME_DISPOSED', '任务服务已停止')
-    const request = validateResearchTaskStart(raw)
+    let request = validateResearchTaskStart(raw)
     await this.authorizeParent?.(request.parentSessionId)
+    // Older workbench cards saved the panel content prompt, while their first
+    // task carried the full format and visual contract. A retry must reuse that
+    // original request so it receives the same bounded workbench prompt and
+    // empty-output recovery as a newly planned panel.
+    if (request.kind === 'container' && !workbenchPanelFormat(request.prompt)) {
+      const firstLine = request.prompt.split('\n')[0].trim()
+      if (firstLine.length >= 16) {
+        const original = [...this.tasks.values()].find(task => task.kind === 'container' &&
+          task.parentSessionId === request.parentSessionId && task.canvasNodeId === request.canvasNodeId &&
+          workbenchPanelFormat(task.prompt) && task.prompt.includes(firstLine))
+        if (original) request = Object.freeze({ ...request, prompt: original.prompt })
+      }
+    }
     const taskId = requiredString(this.createId(), MAX_ID_LENGTH, '任务标识无效')
     if (this.tasks.has(taskId)) throw new ResearchTaskError('TASK_EXISTS', '任务标识重复')
     const createdAt = this.now()

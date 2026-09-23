@@ -194,9 +194,10 @@ function patchFigmaCanvasContent(source) {
   source=source.replace('onActivate, onAutoHeight, onWebInspection', 'onActivate, onAutoHeight, onExpandGeneration, onWebInspection');
   // Figma 43 manual dimensions are a user choice, not an automatic preset request.
   // Read the latest node because a resize can finish before this render's callback is replaced.
-  source=source.replaceAll('const width=Math.min(current.width,400),height=Math.min(current.height,300);','const width=280,height=200;');
-  const expandGeneration = 'onExpandGeneration:(requestedSize="large")=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=280,height=200;if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;if(height===220&&(current.width>320||current.height>220))return;if(current.height!==height||current.width!==656)workspace.updateNodeGeometry(current.id,{width:656,height,sizeMode:"auto"});},';
-  source=source.replace('if(!current||current.sizeMode==="manual")return;const height=requestedSize==="medium"?220:456;','if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=280,height=200;if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;');
+  source=source.replaceAll('const width=Math.min(current.width,400),height=Math.min(current.height,300);','const width=320,height=220;');
+  const expandGeneration = 'onExpandGeneration:(requestedSize="large")=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=320,height=220;if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;if(height===220&&(current.width>320||current.height>220))return;if(current.height!==height||current.width!==656)workspace.updateNodeGeometry(current.id,{width:656,height,sizeMode:"auto"});},';
+  source=source.replace('const width=280,height=200;if(width!==current.width||height!==current.height)', 'const width=320,height=220;if(width!==current.width||height!==current.height)');
+  source=source.replace('if(!current||current.sizeMode==="manual")return;const height=requestedSize==="medium"?220:456;','if(!current||current.sizeMode==="manual")return;if(requestedSize==="loading"){if(current.containerSpec)return;const width=320,height=220;if(width!==current.width||height!==current.height)workspace.updateNodeGeometry(current.id,{width,height,sizeMode:"auto"});return;}const height=requestedSize==="medium"?220:456;');
   if (!source.includes(expandGeneration)) {
     const oldExpand = [
       'onExpandGeneration:()=>{const current=workspace.getSnapshot().artifacts.find(current=>current.id===node.id);if(current&&current.sizeMode!=="manual"&&(current.height!==456||current.width!==656))workspace.updateNodeGeometry(current.id,{width:656,height:456,sizeMode:"auto"});},',
@@ -441,7 +442,7 @@ function researchContainerPromptPreset(prompt) {
   return researchBentoSize({type:large?'chart':small?'kpi':/短表|表格|趋势|走势|对比|比较|trend|table|compare/i.test(text)?'table':'chart'});
 }
 function researchContainerPlannedGeometry(snapshot,node,prompt) {
-  const preset=researchContainerPromptPreset(prompt),dimensions={width:280,height:200};
+  const preset=researchContainerPromptPreset(prompt),dimensions={width:320,height:220};
   const placed=researchCanvasContainedAutoNode(snapshot,{...node,width:dimensions.width,height:dimensions.height});
   return {containerSizePreset:preset,width:placed.width,height:placed.height,x:placed.x,y:placed.y};
 }

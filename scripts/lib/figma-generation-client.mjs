@@ -115,8 +115,8 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
   })
 }
 
-// Source geometry and alpha are retained. Only the independent decorative
-// field advances; the fixed foreground and its readable lower region do not.
+// Keep the source dots fixed. A soft diagonal light crosses their opacity;
+// limiting paint work also keeps live window resizing responsive.
 function ResearchGenerationDots({ moving }) {
   /* GENERATION_DOT_FIELDS */
   const element = (0, react.useRef)(null)
@@ -127,29 +127,40 @@ function ResearchGenerationDots({ moving }) {
     if (!context || typeof Path2D === 'undefined') return
     const paths = ResearchGenerationDots.paths || (ResearchGenerationDots.paths = fields.shapes.map(path => new Path2D(path)))
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let frame = 0, previous = 0, width = 0, height = 0, scale = 1, points = [], color = ''
-    const grid = fields.grid, travelX = grid * 5, travelY = grid
+    let frame = 0, previous = 0, paintedAt = 0, layoutTimer = 0, windowResizeTimer = 0, resizing = false
+    let width = 0, height = 0, scale = 1, points = [], color = ''
+    const grid = fields.grid
     const draw = () => {
       context.setTransform(1, 0, 0, 1, 0, 0)
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.globalCompositeOperation = 'lighter'
       context.fillStyle = color
       const value = reduced.matches ? 0 : phase.current
-      for (const [a, b] of points) {
-        for (const [point, weight, dx, dy] of [[a, 1 - value, -value * travelX, -value * travelY], [b, value, (1 - value) * travelX, (1 - value) * travelY]]) {
-          if (weight <= 0) continue
-          context.setTransform(scale, 0, 0, scale, (point.x + dx) * scale, (point.y + dy) * scale)
-          context.globalAlpha = point.alpha * weight
+      for (const point of points) {
+        context.setTransform(scale, 0, 0, scale, point.x * scale, point.y * scale)
+        context.globalAlpha = point.alpha
+        context.fill(point.path)
+      }
+      if (value > 0) {
+        const reach = 82, position = -reach + value * (width + height * .38 + reach * 2)
+        context.fillStyle = document.body.hasAttribute('data-ds-dark-theme') ? '#ffffff' : '#fdfdfd'
+        for (const point of points) {
+          const distance = Math.abs(point.x + point.y * .38 - position)
+          if (distance >= reach) continue
+          const light = Math.pow(1 - distance / reach, 2)
+          context.setTransform(scale, 0, 0, scale, point.x * scale, point.y * scale)
+          context.globalAlpha = Math.min(.82, point.alpha * light * 1.5)
           context.fill(point.path)
         }
       }
+      context.globalAlpha = 1
       canvas.dataset.dotPhase = String(value)
       canvas.dataset.dotReady = 'true'
     }
     const layout = () => {
       width = canvas.clientWidth; height = canvas.clientHeight
       if (!width || !height) return
-      scale = Math.max(1, window.devicePixelRatio || 1)
+      scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
       canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale)
       const shape = height <= 240 ? 'compact' : width <= 300 ? 'tall' : 'wide'
       const theme = document.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
@@ -163,16 +174,18 @@ function ResearchGenerationDots({ moving }) {
         return { x: point[0] + (col - sourceCol) * grid, y: point[1] + (row - sourceRow) * grid, alpha: field.alphas[point[2]], path: paths[point[3]] }
       }
       points = []
-      // Extra source-derived edge points cover the complete phase travel. The
-      // matching endpoint is the original field, so there is no texture jump.
-      for (let row = 0; row < rows + 1; row++) for (let col = 0; col < cols + 5; col++) points.push([sample(row, col), sample(row - 1, col - 5)])
+      for (let row = 0; row < rows + 1; row++) for (let col = 0; col < cols + 1; col++) points.push(sample(row, col))
+      canvas.dataset.dotGeometry = [width, height, points.length, points[0]?.x, points[0]?.y, points.at(-1)?.x, points.at(-1)?.y].join(':')
       canvas.dataset.dotProfile = theme + '-' + shape
+      resizing = false
       draw()
     }
     const tick = now => {
+      const before = phase.current
       if (previous) phase.current = (phase.current + Math.min(100, now - previous) / 7000) % 1
+      if (phase.current > .995) phase.current = 0
       previous = now
-      draw()
+      if (!resizing && (now - paintedAt >= 48 || phase.current < before)) { paintedAt = now; draw() }
       frame = requestAnimationFrame(tick)
     }
     const motion = () => {
@@ -181,12 +194,22 @@ function ResearchGenerationDots({ moving }) {
       if (moving && !reduced.matches) frame = requestAnimationFrame(tick)
       else draw()
     }
-    const resize = new ResizeObserver(layout)
-    const theme = new MutationObserver(layout)
+    const scheduleLayout = () => {
+      const themeName = document.body.hasAttribute('data-ds-dark-theme') ? 'dark-' : 'light-'
+      if (canvas.clientWidth === width && canvas.clientHeight === height && canvas.dataset.dotProfile?.startsWith(themeName)) return
+      resizing = true; clearTimeout(layoutTimer); layoutTimer = setTimeout(layout, 80)
+    }
+    const pauseWindowResize = () => {
+      resizing = true; clearTimeout(windowResizeTimer)
+      windowResizeTimer = setTimeout(() => { resizing = false; scheduleLayout(); if (!resizing) draw() }, 180)
+    }
+    const resize = new ResizeObserver(scheduleLayout)
+    const theme = new MutationObserver(scheduleLayout)
     resize.observe(canvas); theme.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
     reduced.addEventListener('change', motion)
+    window.addEventListener('resize', pauseWindowResize)
     layout(); motion()
-    return () => { cancelAnimationFrame(frame); resize.disconnect(); theme.disconnect(); reduced.removeEventListener('change', motion) }
+    return () => { cancelAnimationFrame(frame); clearTimeout(layoutTimer); clearTimeout(windowResizeTimer); resize.disconnect(); theme.disconnect(); reduced.removeEventListener('change', motion); window.removeEventListener('resize', pauseWindowResize) }
   }, [moving])
   return (0, react_jsx_runtime.jsx)('canvas', { ref: element, 'data-research-generation-dots': '', 'aria-hidden': true, style: { animationPlayState: moving ? 'running' : 'paused' } })
 }
@@ -230,6 +253,7 @@ function researchComponentPrompt(node, prompt) {
 export const componentPromptSource = researchComponentPrompt.toString()
 
 export function patchGenerationLifecycle(source) {
+  source = source.replace('return {width:280,height:200,sizeMode:\'auto\',resizable:true};', 'return {width:320,height:220,sizeMode:\'auto\',resizable:true};')
   const promptStart = source.indexOf('function researchComponentPrompt('), promptEnd = source.indexOf('function researchAlignComponentPresets(', promptStart)
   if (promptStart < 0 || promptEnd < promptStart) throw Error('Missing component prompt contract')
   source = source.slice(0, promptStart) + componentPromptSource + '\n' + source.slice(promptEnd)
@@ -252,7 +276,7 @@ export function patchGenerationLifecycle(source) {
   if (!source.includes('/* ODYSSEY_AUTO_GENERATION_BOUNDS */')) {
     source = source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
     /* ODYSSEY_AUTO_GENERATION_BOUNDS */
-    if(node?.kind==='generated-container'&&node.sizeMode!=='manual'&&!node.containerSpec&&['queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus))return {width:280,height:200,sizeMode:'auto',resizable:true};`)
+    if(node?.kind==='generated-container'&&node.sizeMode!=='manual'&&!node.containerSpec&&['queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus))return {width:320,height:220,sizeMode:'auto',resizable:true};`)
   }
   const retryStart = source.indexOf('retryGeneration(nodeId) {'), retryEnd = source.indexOf('setGenerationCancelSink(', retryStart)
   if (retryStart < 0 || retryEnd < retryStart) throw Error('Missing generation retry lifecycle')

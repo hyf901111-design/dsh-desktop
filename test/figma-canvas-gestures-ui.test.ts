@@ -73,6 +73,26 @@ async function mounted(desktop: any = {}, configure?: (win: Window) => void, sel
 
 
 describe('Figma canvas pointer transactions', () => {
+  it.each(['queued','running','failed'])('drags an unfinished %s card from its body while preserving action clicks', async status => {
+    const m=await mounted({},undefined,{disabled:false,generate:vi.fn(async()=>({taskId:'generation-task'}))})
+    let node:any
+    await act(async()=>{
+      node=m.workspace.createContainerDraft({x:420,y:330,width:320,height:220,sizeMode:'manual'})
+      m.workspace.beginContainerGeneration(node.id,'合同台账')
+      if(status!=='queued')m.workspace.attachGenerationTask(node.id,{taskId:'generation-task',canvasNodeId:node.id,state:'running',lastSeq:1,events:[]})
+      if(status==='failed')m.workspace.applyGenerationInspection(node.id,{taskId:'generation-task',canvasNodeId:node.id,state:'failed',lastSeq:2,events:[],error:'模型响应超时'})
+    })
+    const body=m.query(`[data-research-node-id="${node.id}"] [data-research-generation-foreground]`)
+    expect(body).not.toBeNull()
+    await m.event('pointerdown',body,{button:0,pointerId:31,clientX:420,clientY:330})
+    expect(m.canvas.getAttribute('data-research-operation')).toBe('move')
+    await m.event('pointermove',m.canvas,{pointerId:31,clientX:480,clientY:370,altKey:true})
+    await m.event('pointerup',m.canvas,{pointerId:31,clientX:480,clientY:370})
+    expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({x:480,y:370,width:320,height:220})
+    const action=m.query(`[data-research-node-id="${node.id}"] [data-research-generation-toggle]`)
+    await m.event('pointerdown',action,{button:0,pointerId:32,clientX:550,clientY:300})
+    expect(m.canvas.hasAttribute('data-research-operation')).toBe(false)
+  })
   it('keeps wheel input inside selected interactive content and expanded readers', async () => {
     const m = await mounted()
     await act(async () => { m.workspace.setArtifacts([textNode()]); m.workspace.updateSelection(['source'], 'replace') })
