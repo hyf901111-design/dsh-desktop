@@ -407,6 +407,11 @@ body [data-odyssey-subagent-panel] [data-research-task-input-details]>summary{fo
 body [data-odyssey-subagent-panel] [data-research-task-input-details] .gdEzaW_userRow{width:100%;align-items:stretch}
 body [data-odyssey-subagent-panel] [data-research-task-input-details] .gdEzaW_userStack{width:100%!important;max-width:100%;margin:0;align-items:stretch}
 body [data-odyssey-subagent-panel] [data-research-task-input-details] .gdEzaW_bubble{width:100%!important;max-width:100%;padding:0;background:transparent}
+/* The child conversation can paint before its parent catalog identifies the
+   generation request. Keep that first frame at the final available width. */
+body [data-odyssey-subagent-panel] .gdEzaW_userRow{width:100%;align-items:stretch}
+body [data-odyssey-subagent-panel] .gdEzaW_userStack{width:100%!important;max-width:100%;margin:0;align-items:stretch}
+body [data-odyssey-subagent-panel] .gdEzaW_bubble{width:100%!important;max-width:100%}
 body[data-ds-dark-theme] [data-odyssey-subagent-panel] [data-research-task-input]{background:#2e2e2e}
 
 /* The rail keeps its 80 px grid track while the expanded navigation paints over

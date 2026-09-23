@@ -344,6 +344,8 @@ body[data-ds-dark-theme] [data-generation-ui-state=error] .odyssey-generation-ph
 .odyssey-generation-action>button>span{display:block;width:13px;height:13px;background:currentColor;mask-size:13px 13px;mask-repeat:no-repeat;mask-position:center}
 .odyssey-generation-action>[role=tooltip]{position:absolute;top:calc(100% + 6px);right:0;z-index:6;white-space:nowrap;border-radius:4px;padding:5px 8px;background:#191919;color:#fff;font:400 12px/18px 'Noto Sans SC',sans-serif;pointer-events:none}
 body[data-ds-dark-theme] .odyssey-generation-action>[role=tooltip]{background:#f5f5f5;color:#191919}
+.odyssey-generation-action:not(:has([role=tooltip]))>button:is(:hover,:focus-visible)::after{content:attr(aria-label);position:absolute;top:calc(100% + 6px);right:0;z-index:6;white-space:nowrap;border-radius:4px;padding:5px 8px;background:#191919;color:#fff;font:400 12px/18px 'Noto Sans SC',sans-serif;pointer-events:none}
+body[data-ds-dark-theme] .odyssey-generation-action:not(:has([role=tooltip]))>button:is(:hover,:focus-visible)::after{background:#f5f5f5;color:#191919}
 [data-research-compact-chrome] .odyssey-generation-surface>[data-research-generation-records]{position:absolute;inset:48px 20px 20px;z-index:2;margin:0;background:var(--generation-bg);border:1px solid var(--generation-border);border-radius:6px;padding:12px;font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--generation-phase);overflow:auto}
 .odyssey-generation-surface>[data-research-generation-records]>div{display:flex;gap:8px;overflow-wrap:anywhere}.odyssey-generation-surface>[data-research-generation-records] time{flex:none;color:var(--generation-detail)}
 /* Breakpoints are implementation choices; source anchors: wide 99, tall 251, compact 62. */
