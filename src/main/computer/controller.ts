@@ -104,7 +104,9 @@ export class ComputerController {
           throw error
         }
         const data = result.structuredJson ? JSON.parse(result.structuredJson) : { text: result.text }
-        if (result.isError || data.refusal || data.effect === 'refused') throw Error(result.text || JSON.stringify(data))
+        if (result.isError || data.refusal || data.effect === 'refused') {
+          throw Object.assign(Error(result.text || JSON.stringify(data)), { driverData: data })
+        }
         return { data, screenshots: result.images }
       }
       if (!this.owner) {
@@ -242,7 +244,27 @@ export class ComputerController {
           await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined, gestureModifiers, click)
           return { data: { performed: true, ...(click ? { count: click.count, route: 'window_pointer' } : { strokes: strokes!.length }), delivery_mode: 'background' } }
         })()
-        : await call(tool, args)
+        : await (async () => {
+          try { return await call(tool, args) }
+          catch (error) {
+            if (!isSamePidKeyboardRefusal(error, observed!.target) || !['type', 'key', 'hotkey'].includes(v.op)) throw error
+            // With a token, type_text may already have attempted an AX text
+            // write before reporting this refusal. Replaying it could duplicate
+            // text, even when the AX read-back did not confirm the edit.
+            if (v.op === 'type' && token !== undefined) {
+              return { data: { effect: 'unverifiable', code: 'same_pid_keyboard_ambiguity',
+                reason: '目标控件可能已收到辅助功能文字输入。请核对新截图；确认文字未出现后，用输入框 x/y 重新 type。' } }
+            }
+            // A foreground text retry must re-focus the exact field. The
+            // process's remembered focus may belong to its sibling window.
+            if ((v.op === 'type' || v.op === 'hotkey') && (args.x === undefined || args.y === undefined) && token === undefined) {
+              return { data: { performed: false, code: 'keyboard_target_required',
+                reason: '同一应用有多个窗口。请从新截图指定目标控件的 x/y 后重试；未发送键盘输入。' } }
+            }
+            const foreground = await call(tool, { ...args, delivery_mode: 'foreground' })
+            return { ...foreground, data: { ...foreground.data, delivery_mode: 'foreground', fallback_reason: 'same_pid_keyboard_ambiguity' } }
+          }
+        })()
       budget.failures = 0
       const last = strokes?.at(-1)?.at(-1)
       const finalPoint = last ? this.options.screenPoint(observed.target, observed.data, last.x, last.y) : point
@@ -273,6 +295,11 @@ export class ComputerController {
     const width = o.data.screenshot_width, height = o.data.screenshot_height
     if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y) || !(width > 0) || !(height > 0) || x < 0 || y < 0 || x >= width || y >= height) throw Error('坐标超出当前截图，请重新观察。')
   }
+}
+function isSamePidKeyboardRefusal(error: unknown, target: RecordValue): boolean {
+  const data = (error as { driverData?: RecordValue })?.driverData
+  return data?.code === 'same_pid_keyboard_ambiguity' && data.effect === 'refused'
+    && data.pid === target.pid && data.window_id === target.window_id
 }
 function positiveInteger(v: unknown, max = Number.MAX_SAFE_INTEGER): number {
   if (typeof v !== 'number' || !Number.isSafeInteger(v) || v <= 0 || v > max) throw Error('无效的应用、窗口或数量参数。')
