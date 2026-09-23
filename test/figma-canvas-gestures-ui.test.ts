@@ -73,6 +73,29 @@ async function mounted(desktop: any = {}, configure?: (win: Window) => void, sel
 
 
 describe('Figma canvas pointer transactions', () => {
+  it('commits only the latest geometry once per paint during a burst of moves', async () => {
+    const frames = new Map<number, FrameRequestCallback>()
+    let nextFrame = 0
+    const m = await mounted({}, win => {
+      win.requestAnimationFrame = ((callback: FrameRequestCallback) => { frames.set(++nextFrame, callback); return nextFrame }) as unknown as typeof win.requestAnimationFrame
+      win.cancelAnimationFrame = ((id: number) => { frames.delete(id) }) as unknown as typeof win.cancelAnimationFrame
+    })
+    await act(async () => m.workspace.setArtifacts([textNode('a', 200, 200)]))
+    frames.clear()
+    await m.event('pointerdown', m.query('[data-research-node-id="a"] [data-research-node-title]'), { button: 0, pointerId: 9, clientX: 200, clientY: 200 })
+    const moved = async (x: number) => {
+      const event = new m.win.Event('pointermove', { bubbles: true })
+      Object.defineProperties(event, { pointerId: { value: 9 }, clientX: { value: x }, clientY: { value: 200 }, altKey: { value: true } })
+      await act(async () => { m.canvas.dispatchEvent(event) })
+    }
+    for (const x of [220, 250, 300]) await moved(x)
+    expect(m.workspace.getSnapshot().artifacts[0].x).toBe(200)
+    expect(frames.size).toBe(1)
+    await act(async () => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(0)) })
+    expect(m.workspace.getSnapshot().artifacts[0].x).toBe(300)
+    await m.event('pointerup', m.canvas, { pointerId: 9, clientX: 300, clientY: 200 })
+  })
+
   it.each(['queued','running','failed'])('drags an unfinished %s card from its body while preserving action clicks', async status => {
     const m=await mounted({},undefined,{disabled:false,generate:vi.fn(async()=>({taskId:'generation-task'}))})
     let node:any
@@ -116,11 +139,11 @@ describe('Figma canvas pointer transactions', () => {
   })
   it('snaps to neighbouring edges, bypasses with Alt, and cancels without adding undo history', async () => {
     const m = await mounted()
-    await act(async () => m.workspace.setArtifacts([textNode('a',200,200),textNode('b',850,600)]))
+    await act(async () => m.workspace.setArtifacts([textNode('a',200,200),textNode('b',850,550)]))
     const before=m.workspace.getSnapshot().artifacts.map((n:any)=>({id:n.id,x:n.x,y:n.y}))
     const title=m.query('[data-research-node-id="b"] [data-research-node-title]')
-    await m.event('pointerdown',title,{button:0,pointerId:1,clientX:850,clientY:600})
-    await m.event('pointermove',m.canvas,{pointerId:1,clientX:203,clientY:600,altKey:false})
+    await m.event('pointerdown',title,{button:0,pointerId:1,clientX:850,clientY:550})
+    await m.event('pointermove',m.canvas,{pointerId:1,clientX:203,clientY:550,altKey:false})
     expect(m.workspace.getSnapshot().artifacts.find((n:any)=>n.id==='b').x).toBe(200)
     expect(m.query('[data-snap-axis="x"]')).not.toBeNull()
     await m.event('keydown',m.canvas,{key:'Alt',code:'AltLeft',altKey:true})
@@ -163,6 +186,14 @@ describe('Figma canvas pointer transactions', () => {
     await m.event('pointercancel',m.canvas,{pointerId:1})
     expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({x:200,y:200,width:600,height:360})
     expect(m.canvas.hasAttribute('data-research-resize-corner')).toBe(false)
+  })
+  it('keeps a free resize near preset dimensions when there is no other card to align', async () => {
+    const m = await mounted()
+    await act(async () => m.workspace.setArtifacts([textNode('a', 200, 200)]))
+    await m.event('pointerdown', m.query('[data-research-resize-handle="se"]'), { button: 0, pointerId: 11, clientX: 0, clientY: 0 })
+    await m.event('pointermove', m.canvas, { pointerId: 11, clientX: -118, clientY: -42 })
+    await m.event('pointerup', m.canvas, { pointerId: 11, clientX: -118, clientY: -42 })
+    expect(m.workspace.getSnapshot().artifacts[0]).toMatchObject({ width: 482, height: 318 })
   })
 })
 

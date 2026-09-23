@@ -187,6 +187,8 @@ async function loadClientBundle(
     cancelAnimationFrame: options?.window?.cancelAnimationFrame?.bind(options.window),
     setTimeout,
     clearTimeout,
+    setInterval,
+    clearInterval,
     queueMicrotask,
     JSON: options?.json ?? globalThis.JSON
   })
@@ -1125,6 +1127,7 @@ async function mountResearchCanvas(options: {
         artifacts: Array<Record<string, unknown>>
         selection: { selectedNodeIds: string[]; orderedFileIds: string[] }
         viewport: { scale: number; x: number; y: number }
+        canvasSize: { width: number; height: number; availableWidth?: number }
         pendingMessageJump: string | null
       }
       setViewport(viewport: { scale: number; x: number; y: number }): void
@@ -1205,6 +1208,40 @@ async function mountResearchCanvas(options: {
 }
 
 describe('Sherlock workspace and composer controls', () => {
+  it('defers canvas-wide state updates until native window resizing settles', async () => {
+    const animationFrames = { callbacks: new Map<number, FrameRequestCallback>(), cancelled: [] as number[] }
+    const mounted = await mountResearchCanvas({ sessionId: 'window-resize-coalescing', animationFrames })
+    const { browserWindow: win, canvas, workspace } = mounted
+    let width = 800
+    Object.defineProperty(canvas, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 0, top: 0, right: width, bottom: 600, width, height: 600 })
+    })
+    const frame = async () => {
+      const jobs = [...animationFrames.callbacks.values()]
+      animationFrames.callbacks.clear()
+      await act(async () => { jobs.forEach(callback => callback(0)) })
+    }
+    try {
+      win.dispatchEvent(new win.Event('resize'))
+      await frame()
+      expect(workspace.getSnapshot().canvasSize.width).toBe(800)
+      win.document.documentElement.dataset.odysseyWindowResizing = ''
+      for (const next of [920, 1060, 1180]) {
+        width = next
+        win.dispatchEvent(new win.Event('resize'))
+        await frame()
+      }
+      expect(workspace.getSnapshot().canvasSize.width).toBe(800)
+      delete win.document.documentElement.dataset.odysseyWindowResizing
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 170)) })
+      await frame()
+      expect(workspace.getSnapshot().canvasSize.width).toBe(1180)
+    } finally {
+      await mounted.cleanup()
+    }
+  })
+
   it('opens details for the selected Inspect call while preserving trajectory', async () => {
     const source = await readFile(
       'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
@@ -8468,7 +8505,8 @@ describe('Sherlock workspace and composer controls', () => {
   })
 
   it('collapses only host-identified canvas subagent instructions and preserves their full record', async () => {
-    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, { document: browserWindow.document, window: browserWindow })
     expect(client.researchTaskInputSummary).toBeTypeOf('function')
     expect(client.ResearchTaskInputRecord).toBeTypeOf('function')
     if (typeof client.researchTaskInputSummary !== 'function' || typeof client.ResearchTaskInputRecord !== 'function') return

@@ -20,22 +20,19 @@ export function figmaCanvasSnap(bounds, targets, scale, previous = {}, corner = 
     const candidates = []
     for (const target of targets) {
       const b = target.bounds
-      if (Math.max(bounds[crossStart], b[crossStart]) - Math.min(bounds[crossEnd], b[crossEnd]) > 180 / scale) continue
+      // Align only cards that share a row/column (or the 16px workbench gap).
+      // Distant cards and synthetic spacing anchors made ordinary drags jerk.
+      if (Math.max(bounds[crossStart], b[crossStart]) - Math.min(bounds[crossEnd], b[crossEnd]) > 24 / scale) continue
       for (const from of fractions) {
         const point = bounds[start] + from * (bounds[end] - bounds[start])
         for (const to of [0, .5, 1]) {
           const value = b[start] + to * (b[end] - b[start])
           candidates.push({ key: `${target.id}:${from}:${to}`, delta: value - point, value, bounds: b, priority: 0 })
         }
-        // A 16 world-pixel gap is secondary to edges and centres, never a grid.
-        if (from === 0 || from === 1) {
-          const value = from === 0 ? b[end] + 16 : b[start] - 16
-          candidates.push({ key: `${target.id}:${from}:gap`, delta: value - point, value, bounds: b, priority: 1 })
-        }
       }
     }
-    const held = candidates.find(c => c.key === previous[axis] && Math.abs(c.delta) * scale <= 10)
-    const hit = held ?? candidates.filter(c => Math.abs(c.delta) * scale <= 6).sort((a, b) => a.priority - b.priority || Math.abs(a.delta) - Math.abs(b.delta) || a.key.localeCompare(b.key))[0]
+    const held = candidates.find(c => c.key === previous[axis] && Math.abs(c.delta) * scale <= 6)
+    const hit = held ?? candidates.filter(c => Math.abs(c.delta) * scale <= 4).sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta) || a.key.localeCompare(b.key))[0]
     if (!hit) continue
     result[axis] = hit.delta
     result.targets[axis] = hit.key
@@ -50,7 +47,48 @@ function exact(source, from, to) {
   return source.replace(from, to)
 }
 
+function upgradePatchedCanvasGestures(source) {
+  if(source.includes('let geometryFrame=0,pendingGeometry=null;'))return source
+  const snapStart=source.indexOf('function figmaCanvasSnap('),snapEnd=source.indexOf('function ResearchCanvasResizeHandles(',snapStart)
+  if(snapStart<0||snapEnd<0)throw Error('Existing canvas snap function missing')
+  source=source.slice(0,snapStart)+figmaCanvasSnap.toString()+'\n'+source.slice(snapEnd)
+  const queueStart='                const movableIds = (ids) => {'
+  const queue=`                let geometryFrame=0,pendingGeometry=null;
+                const paintGeometry=()=>{
+                  geometryFrame=0;
+                  const pending=pendingGeometry;
+                  pendingGeometry=null;
+                  if(!pending)return;
+                  drawGuides(pending.guides,pending.viewport,pending.size);
+                  workspace.applyPointerGeometry(pending.nodes);
+                };
+                const scheduleGeometry=(nodes,guides,viewport,size)=>{
+                  pendingGeometry={nodes,guides,viewport,size};
+                  if(!geometryFrame)geometryFrame=window.requestAnimationFrame(paintGeometry);
+                };
+                const finishGeometry=(commit)=>{
+                  if(geometryFrame)window.cancelAnimationFrame(geometryFrame);
+                  geometryFrame=0;
+                  if(commit)paintGeometry();else pendingGeometry=null;
+                };
+`
+  source=exact(source,queueStart,queue+queueStart)
+  source=exact(source,'if (operation.kind === "move" || operation.kind === "resize") {\n                      if (commitMarquee) workspace.persist();','if (operation.kind === "move" || operation.kind === "resize") {\n                      finishGeometry(commitMarquee);\n                      if (commitMarquee) workspace.persist();')
+  source=exact(source,'operation.snapTargets=snap.targets;\n                      if(resizing) {','operation.snapTargets=snap.targets;\n                      let geometrySize=null;\n                      if(resizing) {')
+  source=exact(source,`let next=resizeResearchCanvasNode(raw,operation.corner,{x:snap.x,y:snap.y},1);
+                        // S/M/L requires BOTH dimensions to hit. Retain the opposite corner.
+                        if(!event.altKey && !raw.aspectRatio) {
+                          const preset=Object.values(RESEARCH_BENTO_SIZES).find(s=>Math.abs(s.width-raw.width)*scale<=6&&Math.abs(s.height-raw.height)*scale<=6);
+                          if(preset) next=resizeResearchCanvasNode(raw,operation.corner,{x:(preset.width-raw.width)*(operation.corner.endsWith('e')?1:-1),y:(preset.height-raw.height)*(operation.corner.startsWith('s')?1:-1)},1);
+                        }`,'const next=resizeResearchCanvasNode(raw,operation.corner,{x:snap.x,y:snap.y},1);')
+  source=exact(source,'drawGuides(snap.guides,current.viewport,{text:(key?', 'geometrySize={text:(key?')
+  source=exact(source,"y:movingY*scale+current.viewport.y-30});", "y:movingY*scale+current.viewport.y-30};")
+  source=exact(source,'                        drawGuides(snap.guides,current.viewport);\n                      }\n                      workspace.applyPointerGeometry(nodes);','                      }\n                      scheduleGeometry(nodes,snap.guides,current.viewport,geometrySize);')
+  return exact(source,'finishOperation(void 0, false, false);\n                    guideLayer.remove();','finishOperation(void 0, false, false);\n                    finishGeometry(false);\n                    guideLayer.remove();')
+}
+
 export function patchFigmaCanvasGestures(source) {
+  if(source.includes('const guideLayer = document.createElement'))return upgradePatchedCanvasGestures(source)
   if (!source.includes("/* ODYSSEY_CREATION_TOOLS */")) {
   source = exact(source, '"data-research-global-link": "",', '"data-research-global-link": "", disabled: sharedReadOnly,');
   source = exact(source, '"data-research-global-container": "",\n\t\t\t\t\t\tdisabled: selectionGeneration', '"data-research-global-container": "",\n\t\t\t\t\t\tdisabled: sharedReadOnly || selectionGeneration');
@@ -104,6 +142,24 @@ export function patchFigmaCanvasGestures(source) {
                   }
                   if (size) { const label=document.createElement('span'); label.textContent=size.text; Object.assign(label.style,{left:Math.max(8,Math.min(root.clientWidth-145,size.x))+'px',top:Math.max(8,Math.min(root.clientHeight-28,size.y))+'px'}); guideLayer.appendChild(label); }
                 };
+                let geometryFrame=0,pendingGeometry=null;
+                const paintGeometry=()=>{
+                  geometryFrame=0;
+                  const pending=pendingGeometry;
+                  pendingGeometry=null;
+                  if(!pending)return;
+                  drawGuides(pending.guides,pending.viewport,pending.size);
+                  workspace.applyPointerGeometry(pending.nodes);
+                };
+                const scheduleGeometry=(nodes,guides,viewport,size)=>{
+                  pendingGeometry={nodes,guides,viewport,size};
+                  if(!geometryFrame)geometryFrame=window.requestAnimationFrame(paintGeometry);
+                };
+                const finishGeometry=(commit)=>{
+                  if(geometryFrame)window.cancelAnimationFrame(geometryFrame);
+                  geometryFrame=0;
+                  if(commit)paintGeometry();else pendingGeometry=null;
+                };
                 const movableIds = (ids) => {
                   if (!sherlockShared(sessionId)) return ids;
                   const view=sherlockBoardsAdapter?.getView(sessionId);
@@ -121,6 +177,7 @@ export function patchFigmaCanvasGestures(source) {
                   return operation.before.length > 0;
                 };`)
   source = exact(source, 'if (operation.kind === "move" || operation.kind === "resize") workspace.persist();', `if (operation.kind === "move" || operation.kind === "resize") {
+                      finishGeometry(commitMarquee);
                       if (commitMarquee) workspace.persist();
                       else workspace.cancelPointerGeometry(operation.before);
                     }
@@ -151,26 +208,21 @@ export function patchFigmaCanvasGestures(source) {
                       const targets=[...current.files,...current.artifacts].filter(n=>!ids.has(n.id)).map(n=>({id:n.id,bounds:figmaCanvasBounds([n])}));
                       const snap=figmaCanvasSnap(bounds,targets,scale,operation.snapTargets,resizing?operation.corner:null,event.altKey);
                       operation.snapTargets=snap.targets;
+                      let geometrySize=null;
                       if(resizing) {
                         const raw=nodes[0];
-                        let next=resizeResearchCanvasNode(raw,operation.corner,{x:snap.x,y:snap.y},1);
-                        // S/M/L requires BOTH dimensions to hit. Retain the opposite corner.
-                        if(!event.altKey && !raw.aspectRatio) {
-                          const preset=Object.values(RESEARCH_BENTO_SIZES).find(s=>Math.abs(s.width-raw.width)*scale<=6&&Math.abs(s.height-raw.height)*scale<=6);
-                          if(preset) next=resizeResearchCanvasNode(raw,operation.corner,{x:(preset.width-raw.width)*(operation.corner.endsWith('e')?1:-1),y:(preset.height-raw.height)*(operation.corner.startsWith('s')?1:-1)},1);
-                        }
+                        const next=resizeResearchCanvasNode(raw,operation.corner,{x:snap.x,y:snap.y},1);
                         nodes=[next];
                         const actual=figmaCanvasBounds(nodes);
                         const movingX=operation.corner.endsWith('e')?actual.right:actual.left;
                         const movingY=operation.corner.startsWith('s')?actual.bottom:actual.top;
                         snap.guides=snap.guides.filter(g=>Math.abs(g.value-(g.axis==='x'?movingX:movingY))*scale<.5);
                         const key=Object.entries(RESEARCH_BENTO_SIZES).find(([,s])=>s.width===Math.round(next.width)&&s.height===Math.round(next.height))?.[0];
-                        drawGuides(snap.guides,current.viewport,{text:(key?({small:'S',medium:'M',large:'L'}[key]+' · '):'')+Math.round(next.width)+' × '+Math.round(next.height),x:movingX*scale+current.viewport.x+12,y:movingY*scale+current.viewport.y-30});
+                        geometrySize={text:(key?({small:'S',medium:'M',large:'L'}[key]+' · '):'')+Math.round(next.width)+' × '+Math.round(next.height),x:movingX*scale+current.viewport.x+12,y:movingY*scale+current.viewport.y-30};
                       } else {
                         nodes=nodes.map(n=>({...n,x:n.x+snap.x,y:n.y+snap.y}));
-                        drawGuides(snap.guides,current.viewport);
                       }
-                      workspace.applyPointerGeometry(nodes);
+                      scheduleGeometry(nodes,snap.guides,current.viewport,geometrySize);
                     }`)
   // Modifier changes update the same pointer position, without requiring movement.
   source = exact(source, 'const onKeyUp = (event) => {\n\t\t\t\t\tif (event.code !== "Space") return;', `const onKeyUp = (event) => {
@@ -178,6 +230,6 @@ export function patchFigmaCanvasGestures(source) {
 \t\t\t\t\tif (event.code !== "Space") return;`)
   source = exact(source, 'const historyShortcut = event.metaKey && !event.altKey', `if (event.key === 'Alt' && operationRef.current) { const op=operationRef.current; onPointerMove({pointerId:op.pointerId,clientX:op.lastX,clientY:op.lastY,altKey:true}); }
                     const historyShortcut = event.metaKey && !event.altKey`)
-  source = exact(source, 'finishOperation(void 0, false, false);\n\t\t\t\t\tresetFileDrag();', 'finishOperation(void 0, false, false);\n                    guideLayer.remove();\n\t\t\t\t\tresetFileDrag();')
+  source = exact(source, 'finishOperation(void 0, false, false);\n\t\t\t\t\tresetFileDrag();', 'finishOperation(void 0, false, false);\n                    finishGeometry(false);\n                    guideLayer.remove();\n\t\t\t\t\tresetFileDrag();')
   return source
 }

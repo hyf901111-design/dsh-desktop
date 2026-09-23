@@ -252,8 +252,16 @@ function patchFigmaCanvasContent(source) {
   const displayStart=source.indexOf('function ResearchMindMapDisplayNode('),displayEnd=source.indexOf('function ResearchMindMapBranches(',displayStart);
   if(displayStart>=0&&displayEnd>displayStart){const display=source.slice(displayStart,displayEnd).replace('children: node.label', 'children: node.displayLabel ?? node.label');source=source.slice(0,displayStart)+display+source.slice(displayEnd);}
   source=source.replace('observer?.observe(root);\n\t\t\t\twindow.addEventListener("resize", scheduleSync);', 'observer?.observe(root);\n                for(const panel of document.querySelectorAll(".t8lSSG_panel"))observer?.observe(panel);\n\t\t\t\twindow.addEventListener("resize", scheduleSync);');
-  source=block(source,'const syncSize = () => {','const cancelScheduledSync = () => {', `const syncSize = () => {
+  if(!source.includes('let resizeSettleTimer=null;'))source=block(source,'const syncSize = () => {','const cancelScheduledSync = () => {', `let resizeSettleTimer=null;
+                const syncSize = () => {
                     if(!active)return;
+                    // The canvas fills its CSS track during a native window resize.
+                    // Rebuilding every card on each intermediate size blocks the resize compositor.
+                    if(document.documentElement.hasAttribute('data-odyssey-window-resizing')){
+                      if(resizeSettleTimer!==null)window.clearTimeout(resizeSettleTimer);
+                      resizeSettleTimer=window.setTimeout(()=>{resizeSettleTimer=null;syncSize();},150);
+                      return;
+                    }
                     const bounds=root.getBoundingClientRect();
                     const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),panelBounds=panel?.getBoundingClientRect();
                     const availableWidth=bounds.width;
@@ -278,7 +286,7 @@ function patchFigmaCanvasContent(source) {
                 if(document.body)panelMutations?.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-research-active','class','style']});
                 const onPanelMotion=event=>{if(event.target?.matches?.('.t8lSSG_panel'))scheduleSync();};
                 for(const type of ['transitionrun','transitionend','transitioncancel','animationend','animationcancel'])document.addEventListener(type,onPanelMotion,true);`);
-  source=source.replace('observer?.disconnect();\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);','observer?.disconnect();panelMutations?.disconnect();for(const type of ["transitionrun","transitionend","transitioncancel","animationend","animationcancel"])document.removeEventListener(type,onPanelMotion,true);\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);');
+  source=source.replace('observer?.disconnect();\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);','if(resizeSettleTimer!==null)window.clearTimeout(resizeSettleTimer);observer?.disconnect();panelMutations?.disconnect();for(const type of ["transitionrun","transitionend","transitioncancel","animationend","animationcancel"])document.removeEventListener(type,onPanelMotion,true);\n\t\t\t\t\twindow.removeEventListener("resize", scheduleSync);');
   source=source.replace("(0,react_jsx_runtime.jsxs)('details',{children:", "(0,react_jsx_runtime.jsxs)('details',{onToggle:event=>{const details=event.currentTarget,card=details.closest('[data-research-compact-chrome]');if(details.open)card?.addEventListener('close',()=>{details.open=false;},{once:true});if(details.open&&!card?.open){details.open=false;card?.querySelector('[data-research-container-expand]')?.click();card?.ownerDocument.defaultView?.requestAnimationFrame(()=>{if(card.open)details.open=true;});}},children:");
   source=source.replaceAll("card=details.closest('[data-research-compact-chrome]');if(details.open&&!card?.open)","card=details.closest('[data-research-compact-chrome]');if(details.open)card?.addEventListener('close',()=>{details.open=false;},{once:true});if(details.open&&!card?.open)");
   source=source.replace('function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onHtmlSize, editingPrompt', 'function ResearchGeneratedContainer({ node, sessionId, visible, onGenerate, onHtmlSize, onUpgradeSize, editingPrompt');
