@@ -100,8 +100,17 @@ it('aligns formatted numeric columns with their headings while keeping dates, co
   const f=await fixture(spec,'manual')
   try{
     await act(async()=>f.host.querySelector('[data-research-container-expand]')!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))
-    const headers=[...f.host.querySelectorAll('[role=columnheader]')]
-    expect(headers.map(e=>e.classList.contains('sherlock-ag-grid-numeric'))).toEqual([false,false,true,true,true,false])
+    const aligned=new Map<string,boolean>()
+    for(let page=0;page<spec.columns.length;page++){
+      for(const header of f.host.querySelectorAll('[role=columnheader]')){
+        const label=header.querySelector('.ag-header-cell-text')?.textContent ?? ''
+        aligned.set(label,header.classList.contains('sherlock-ag-grid-numeric'))
+      }
+      const next=f.host.querySelector('[aria-label="下一列"]') as unknown as HTMLButtonElement | null
+      if(!next||next.disabled)break
+      await act(async()=>next.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true}) as unknown as Event))
+    }
+    expect(spec.columns.map(title=>aligned.get(title))).toEqual([false,false,true,true,true,false])
     expect(f.host.querySelector('[data-research-grid-engine]')?.getAttribute('data-research-grid-engine')).toBe('ag-grid-community')
     expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
   }finally{await f.cleanup()}

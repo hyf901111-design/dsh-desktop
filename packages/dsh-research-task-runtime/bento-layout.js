@@ -15,6 +15,7 @@ export function researchBentoSize(node = {}, measured) {
   if (type === 'kpi') size = (spec.items?.length ?? 0) > 8 ? 'large' : (spec.items?.length ?? 0) > 4 ? 'medium' : size;
   if (type === 'table' && ((spec.rows?.length ?? 0) > 3 || (spec.columns?.length ?? 0) > 4)) size = 'large';
   if (type === 'markdown' && (spec.content?.length ?? 0) > 360) size = 'large';
+  if (node.sizeMode !== 'manual' && (type === 'calendar' || type === 'html' && /<body\b[^>]*data-sherlock-interactive="calendar"/.test(spec.html ?? ''))) size = 'large';
   const dimensions = measured ?? (node.sizeMode === 'manual' ? node : null);
   if (dimensions) size = dimensions.height > 220 ? 'large' : dimensions.width > 320 ? 'medium' : 'small';
   return size;

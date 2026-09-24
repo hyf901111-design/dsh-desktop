@@ -10133,7 +10133,9 @@ describe('Sherlock workspace and composer controls', () => {
     try {
       const table = mounted.host.querySelector('[data-research-container-table]') as any;
       expect(table.getAttribute('data-research-grid-engine')).toBe('ag-grid-community');
-      expect(table.querySelectorAll('.ag-header-cell').length).toBe(5);
+      expect(table.querySelectorAll('.ag-header-cell').length).toBeGreaterThanOrEqual(2);
+      expect(table.querySelector('[aria-label="下一列"]')).not.toBeNull();
+      expect((mounted.workspace.getSnapshot().artifacts[0]!.containerSpec as { columns: string[] }).columns).toHaveLength(5);
       expect(table.querySelector('input[aria-label="筛选研究表格"]')).not.toBeNull();
       const cell = linkedCell('[国家医保局](https://example.org/very/long/path/to/document.html)', mounted.browserWindow.document as unknown as Document);
       expect(cell.querySelector('a')?.textContent).toBe('国家医保局');

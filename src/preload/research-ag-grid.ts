@@ -45,6 +45,14 @@ const styles = `
 .sherlock-ag-grid-search:focus{border-color:#2675d6}
 .sherlock-ag-grid-search::placeholder{color:var(--odyssey-card-muted,#81858c)}
 .sherlock-ag-grid-viewport{flex:1;min-width:0;min-height:0;width:100%;overflow:hidden}
+.sherlock-ag-grid-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;flex:none;min-height:25px;padding-top:3px;color:var(--odyssey-card-muted,#81858c);font:11px "EWork DIN Pro","Noto Sans SC",sans-serif;white-space:nowrap}
+.sherlock-ag-grid-pages{display:flex;align-items:center;gap:3px}
+.sherlock-ag-grid-pages button{width:20px;height:19px;padding:0;border:0;border-radius:2px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.sherlock-ag-grid-pages button:hover:not(:disabled){background:var(--odyssey-card-border,#e1e1e1)}
+.sherlock-ag-grid-pages button:disabled{opacity:.35;cursor:default}
+.sherlock-ag-grid-host :is(.ag-body-viewport,.ag-center-cols-viewport,.ag-header-viewport,.ag-body-horizontal-scroll-viewport,.ag-body-vertical-scroll-viewport){scrollbar-width:none!important}
+.sherlock-ag-grid-host :is(.ag-body-viewport,.ag-center-cols-viewport,.ag-header-viewport,.ag-body-horizontal-scroll-viewport,.ag-body-vertical-scroll-viewport)::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+.sherlock-ag-grid-host :is(.ag-body-horizontal-scroll,.ag-body-vertical-scroll){display:none!important}
 .sherlock-ag-grid-host .ag-root-wrapper{border:0;border-radius:0}
 .sherlock-ag-grid-host .ag-header-cell,.sherlock-ag-grid-host .ag-cell{font-variant-numeric:tabular-nums}
 .sherlock-ag-grid-host .ag-header-cell-label{min-width:0}
@@ -113,7 +121,13 @@ export function mountResearchAgGrid(host: HTMLElement, spec: TableSpec, numericC
   toolbar.append(search)
   const viewport = doc.createElement('div')
   viewport.className = 'sherlock-ag-grid-viewport'
-  host.append(toolbar, viewport)
+  const footer = doc.createElement('div')
+  footer.className = 'sherlock-ag-grid-footer'
+  const rowPages = doc.createElement('div')
+  const columnPages = doc.createElement('div')
+  rowPages.className = columnPages.className = 'sherlock-ag-grid-pages'
+  footer.append(rowPages, columnPages)
+  host.append(toolbar, viewport, footer)
 
   const rows: Record<string, string | number | null>[] = spec.rows.map((cells, rowIndex) => ({
     __rowIndex: rowIndex,
@@ -123,11 +137,11 @@ export function mountResearchAgGrid(host: HTMLElement, spec: TableSpec, numericC
     headerName: String(title),
     field: `column${index}`,
     colId: `column${index}`,
-    minWidth: 112,
+    minWidth: 90,
     flex: 1,
     sortable: true,
     filter: true,
-    resizable: true,
+    resizable: false,
     headerClass: numericColumns[index] ? 'sherlock-ag-grid-numeric' : undefined,
     cellClass: numericColumns[index] ? 'sherlock-ag-grid-numeric' : undefined,
     cellStyle: numericColumns[index] ? { textAlign: 'right' as const } : undefined,
@@ -144,6 +158,11 @@ export function mountResearchAgGrid(host: HTMLElement, spec: TableSpec, numericC
     defaultColDef: { suppressHeaderMenuButton: false },
     headerHeight: 30,
     rowHeight: 33,
+    pagination: true,
+    paginationAutoPageSize: true,
+    suppressPaginationPanel: true,
+    suppressHorizontalScroll: true,
+    includeHiddenColumnsInQuickFilter: true,
     animateRows: false,
     suppressMovableColumns: true,
     suppressCellFocus: false,
@@ -170,12 +189,60 @@ export function mountResearchAgGrid(host: HTMLElement, spec: TableSpec, numericC
   }, { modules: [AllCommunityModule] })
   const onSearch = () => api.setGridOption('quickFilterText', search.value)
   search.addEventListener('input', onSearch)
+  let columnPage = 0
+  let columnsPerPage = 0
+  function pager(target: HTMLElement, label: string, current: number, total: number, previous: () => void, next: () => void): void {
+    target.replaceChildren()
+    const back = doc.createElement('button')
+    back.type = 'button'
+    back.textContent = '‹'
+    back.setAttribute('aria-label', `上一${label}`)
+    back.disabled = current <= 0
+    back.addEventListener('click', previous)
+    const count = doc.createElement('span')
+    count.textContent = `${label} ${Math.min(current + 1, total)}/${total}`
+    const forward = doc.createElement('button')
+    forward.type = 'button'
+    forward.textContent = '›'
+    forward.setAttribute('aria-label', `下一${label}`)
+    forward.disabled = current >= total - 1
+    forward.addEventListener('click', next)
+    target.append(back, count, forward)
+  }
+  function updateRowPager(): void {
+    const total = Math.max(1, api.paginationGetTotalPages())
+    const current = Math.max(0, Math.min(api.paginationGetCurrentPage(), total - 1))
+    pager(rowPages, '行', current, total, () => api.paginationGoToPreviousPage(), () => api.paginationGoToNextPage())
+  }
+  function updateColumnPager(): void {
+    const capacity = Math.max(2, Math.floor(viewport.clientWidth / 90))
+    const pageSpan = capacity - 1
+    const total = Math.max(1, Math.ceil((spec.columns.length - 1) / pageSpan))
+    if (capacity !== columnsPerPage) {
+      columnsPerPage = capacity
+      columnPage = Math.min(columnPage, total - 1)
+    }
+    api.applyColumnState({ state: spec.columns.map((_, index) => ({
+      colId: `column${index}`,
+      hide: index !== 0 && (index <= columnPage * pageSpan || index > (columnPage + 1) * pageSpan),
+    })) })
+    pager(columnPages, '列', columnPage, total,
+      () => { columnPage--; updateColumnPager() },
+      () => { columnPage++; updateColumnPager() })
+  }
+  api.addEventListener('paginationChanged', updateRowPager)
+  api.addEventListener('filterChanged', updateRowPager)
+  const sizeObserver = new doc.defaultView!.ResizeObserver(updateColumnPager)
+  sizeObserver.observe(viewport)
+  updateColumnPager()
+  updateRowPager()
   const observer = new doc.defaultView!.MutationObserver(() => {
     api.setGridOption('theme', dark() ? darkTheme : lightTheme)
   })
   observer.observe(doc.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
   return () => {
     observer.disconnect()
+    sizeObserver.disconnect()
     search.removeEventListener('input', onSearch)
     api.destroy()
     host.replaceChildren()
