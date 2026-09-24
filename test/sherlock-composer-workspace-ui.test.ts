@@ -9,6 +9,7 @@ import {
   type HTMLElement as HappyDOMHTMLElement
 } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { linkedCell } from '../src/preload/research-ag-grid'
 
 type TestResearchVoiceBridge = {
   setActive(value: { sessionId: string; active: boolean }): Promise<{ ok: boolean; error?: string }>
@@ -180,9 +181,15 @@ async function loadClientBundle(
     localStorage: options?.window?.localStorage,
     navigator: options?.window?.navigator,
     HTMLElement: options?.window?.HTMLElement,
+    Node: options?.window?.Node,
+    Element: options?.window?.Element,
+    Event: options?.window?.Event,
+    CustomEvent: options?.window?.CustomEvent,
     HTMLTextAreaElement: options?.window?.HTMLTextAreaElement,
     Text: options?.window?.Text,
     ResizeObserver: options?.window?.ResizeObserver,
+    MutationObserver: options?.window?.MutationObserver,
+    getComputedStyle: options?.window?.getComputedStyle?.bind(options.window),
     requestAnimationFrame: options?.window?.requestAnimationFrame?.bind(options.window),
     cancelAnimationFrame: options?.window?.cancelAnimationFrame?.bind(options.window),
     setTimeout,
@@ -10121,14 +10128,17 @@ describe('Sherlock workspace and composer controls', () => {
   it('keeps dense table columns readable and renders short safe source links', async () => {
     const mounted = await mountResearchCanvas({ sessionId: 'table-resilience', artifacts: [{
       id: 'dense', kind: 'generated-container', messageId: 'dense', title: '政策', excerpt: '政策', x: 400, y: 300, width: 540, height: 600, sizeMode: 'manual', generationStatus: 'completed', containerPrompt: '政策比较', refreshMinutes: 0,
-      containerSpec: { version: 1, type: 'table', title: '政策', columns: ['时间','政策','要点','影响','来源'], rows: [['2026.09','政策正文','要点内容','影响说明','[国家医保局](https://example.org/very/long/path/to/document.html)']] }
+      containerSpec: { version: 1, type: 'table', title: '政策', columns: ['来源','时间','政策','要点','影响'], rows: [['[国家医保局](https://example.org/very/long/path/to/document.html)','2026.09','政策正文','要点内容','影响说明']] }
     }] });
     try {
       const table = mounted.host.querySelector('[data-research-container-table]') as any;
-      expect(table.style.tableLayout).toBe('fixed'); expect(table.style.minWidth).toBe('640px');
-      expect(table.querySelector('a').textContent).toBe('国家医保局');
-      expect(table.querySelector('a').getAttribute('href')).toBe('https://example.org/very/long/path/to/document.html');
-      expect(table.textContent).not.toContain('/very/long');
+      expect(table.getAttribute('data-research-grid-engine')).toBe('ag-grid-community');
+      expect(table.querySelectorAll('.ag-header-cell').length).toBe(5);
+      expect(table.querySelector('input[aria-label="筛选研究表格"]')).not.toBeNull();
+      const cell = linkedCell('[国家医保局](https://example.org/very/long/path/to/document.html)', mounted.browserWindow.document as unknown as Document);
+      expect(cell.querySelector('a')?.textContent).toBe('国家医保局');
+      expect(cell.querySelector('a')?.getAttribute('href')).toBe('https://example.org/very/long/path/to/document.html');
+      expect(cell.textContent).not.toContain('/very/long');
     } finally { await mounted.cleanup(); }
   });
 

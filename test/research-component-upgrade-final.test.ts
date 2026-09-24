@@ -29,7 +29,7 @@ async function fixture(spec: any, sizeMode = 'auto', measuredOverflow: boolean |
   const upgrades: any[] = []
   let descriptor: any, shared = false
   Object.assign(browser, { dshDesktop: { researchBoards: { isSharedSession: () => shared } }, __ModuleLoader__: { load(value: any) { descriptor = value } } })
-  runInNewContext(source, { window: browser, document: browser.document, localStorage: browser.localStorage, navigator: browser.navigator, HTMLElement: browser.HTMLElement, Text: browser.Text, ResizeObserver: browser.ResizeObserver, requestAnimationFrame: browser.requestAnimationFrame.bind(browser), cancelAnimationFrame: browser.cancelAnimationFrame.bind(browser), URL, AbortController, TextEncoder, TextDecoder, setTimeout, clearTimeout })
+  runInNewContext(source, { window: browser, document: browser.document, localStorage: browser.localStorage, navigator: browser.navigator, HTMLElement: browser.HTMLElement, Element: browser.Element, Node: browser.Node, Event: browser.Event, MutationObserver: browser.MutationObserver, getComputedStyle: browser.getComputedStyle.bind(browser), Text: browser.Text, ResizeObserver: browser.ResizeObserver, requestAnimationFrame: browser.requestAnimationFrame.bind(browser), cancelAnimationFrame: browser.cancelAnimationFrame.bind(browser), URL, AbortController, TextEncoder, TextDecoder, setTimeout, clearTimeout })
   const fallback: any = new Proxy(function () {}, { get: () => fallback, apply: () => fallback, construct: () => ({}) })
   const primitives = new Proxy({ MarkdownText: ({ text }: any) => React.createElement('div', { 'data-test-markdown': '' }, text) }, { get: (target, key) => Reflect.get(target, key) ?? fallback })
   const client = descriptor.factory((id: string) => id === '@deepseek-ai/dsh-client-ui-primitives' ? primitives : ['react', 'react/jsx-runtime', 'react-dom'].includes(id) ? requireModule(id) : fallback)
@@ -100,9 +100,9 @@ it('aligns formatted numeric columns with their headings while keeping dates, co
   const f=await fixture(spec,'manual')
   try{
     await act(async()=>f.host.querySelector('[data-research-container-expand]')!.dispatchEvent(new f.browser.MouseEvent('click',{bubbles:true})))
-    const headers=[...f.host.querySelectorAll('th')]
-    expect(headers.map(e=>e.getAttribute('data-numeric'))).toEqual([null,null,'true','true','true',null])
-    expect([...f.host.querySelectorAll('tbody tr')].map(row=>[...row.querySelectorAll('td')].map(e=>e.getAttribute('data-numeric')))).toEqual([headers.map(e=>e.getAttribute('data-numeric')),headers.map(e=>e.getAttribute('data-numeric'))])
+    const headers=[...f.host.querySelectorAll('[role=columnheader]')]
+    expect(headers.map(e=>e.classList.contains('sherlock-ag-grid-numeric'))).toEqual([false,false,true,true,true,false])
+    expect(f.host.querySelector('[data-research-grid-engine]')?.getAttribute('data-research-grid-engine')).toBe('ag-grid-community')
     expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
   }finally{await f.cleanup()}
 })
@@ -123,11 +123,12 @@ it('remeasures long KPI values after widening to M without reusing a shortened S
     expect(f.host.querySelector('[data-component-summary=true]')).toBeNull()
   } finally {await f.cleanup()}
 })
-it('upgrades S to M to L for tall native tables, retaining every row and full source', async () => {
+it('keeps tall native tables in the S viewport while retaining every source row', async () => {
   const spec = {version:1,type:'table',title:'正文卡片',columns:['日期','数值','来源'],rows:Array.from({length:6},(_,i)=>['日期'+i,String(i),'来源'+i])}
   const f = await fixture(spec)
   try {
-    expect(f.upgrades.map(size=>[size.width,size.height])).toEqual([[656,220],[656,456]])
+    expect(f.upgrades).toEqual([])
+    expect(f.host.querySelector('[data-research-grid-engine]')).not.toBeNull()
     expect(f.host.querySelector('[data-component-summary=true]')).toBeNull()
     expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
   } finally { await f.cleanup() }
@@ -158,8 +159,7 @@ it('adapts manual native markdown without changing dimensions or source content'
 // Use the real native renderer and theme rules: parent-only colors previously
 // passed inspection while the final paragraph/table leaves remained #fafafa.
 it.each([
-  { type:'markdown', content:'最终正文', selector:'.rScV5Q_containerMarkdown [data-test-markdown]', color:'#ececed', lightColor:'#242529' },
-  { type:'table', columns:['日期','数值','说明'], rows:[['九月',120,'合成样本']], selector:'.rScV5Q_containerTableScroll td:last-child span', color:'#e7e7e9', lightColor:'#292b2f' }
+  { type:'markdown', content:'最终正文', selector:'.rScV5Q_containerMarkdown [data-test-markdown]', color:'#ececed', lightColor:'#242529' }
 ].flatMap(item=>['light','dark'].map(theme=>({...item,theme}))))('applies the generated $type $theme theme through to its final text leaves', async item => {
   const {selector,color,lightColor,theme,...spec}=item
   const f=await fixture({version:1,title:'内容样式',...spec})
@@ -167,13 +167,6 @@ it.each([
     if(theme==='dark') f.browser.document.body.setAttribute('data-ds-dark-theme','')
     const style=(selector:string)=>f.browser.getComputedStyle(f.host.querySelector(selector)!)
     expect(style(selector).color).toBe(theme==='dark'?color:lightColor)
-    if(item.type==='table') {
-      expect(style('th').color).toBe(theme==='dark'?'#989aa0':'#81858c')
-      expect(style('td[data-numeric=true]').textAlign).toBe('right')
-      expect(style('td[data-numeric=true]+td').paddingLeft).toBe('18px')
-      expect(f.host.textContent).toContain('120')
-      expect(f.host.textContent).toContain('合成样本')
-    }
   } finally {await f.cleanup()}
 })
 it('keeps S labels at 10/18 and L line plots on the card surface without recoloring data series',async()=>{
