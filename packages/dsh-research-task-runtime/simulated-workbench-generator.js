@@ -29,6 +29,19 @@ const sample = (type, variant) => {
     if (!found) throw Error(`模拟组件类型 ${type}${variant ? `.${variant}` : ''} 暂无宿主模板。`);
     return clone(found.artifact);
 };
+const fundKpiSamples = [
+    { label: '模拟单位净值', value: '1.2864 元', detail: '虚构基金样本 · 复权口径', match: /单位净值|基金净值/u },
+    { label: '近一年收益', value: '+12.8%', detail: '模拟近 12 个月累计收益', match: /收益/u },
+    { label: '年化波动率', value: '15.6%', detail: '模拟日收益率标准差按 252 个交易日折算', match: /波动/u },
+    { label: '最大回撤', value: '-8.4%', detail: '模拟窗口 2025-07-01 至 2026-06-30；以日频复权单位净值计算 max(1−当日净值/此前最高净值)。样本未提供峰谷日期及修复天数；分红按复权处理，未计申赎费用。', match: /回撤/u },
+    { label: '夏普比率', value: '0.82', detail: '模拟收益率与模拟无风险利率比较', match: /夏普/u },
+    { label: '基金规模', value: '28.6 亿元', detail: '虚构期末资产净值', match: /基金规模|资产规模/u }
+];
+function simulatedFundKpis(intent) {
+    const scope = intent.split(/(?:完整|详细)?(?:计算|统计)?口径|公式|定义|说明/u)[0];
+    const selected = fundKpiSamples.filter(item => item.match.test(scope));
+    return (selected.length ? selected : fundKpiSamples).map(({ label, value, detail }) => ({ label, value, detail }));
+}
 
 export function generateSimulatedPanel(panel, workbenchTitle) {
     if (panel.artifact) return panel;
@@ -97,14 +110,7 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
             { label: '估值倍数', value: '22.5 倍', detail: '模拟 TTM' },
             { label: '样本数量', value: '36 家', detail: '虚构观察池' }
         ];
-        if (variant === 'fund-kpi') artifact.items = [
-            { label: '模拟单位净值', value: '1.2864 元', detail: '虚构基金样本 · 复权口径' },
-            { label: '近一年收益', value: '+12.8%', detail: '模拟近 12 个月累计收益' },
-            { label: '年化波动率', value: '15.6%', detail: '模拟日收益率标准差按 252 个交易日折算' },
-            { label: '最大回撤', value: '-8.4%', detail: '模拟区间内使用日频复权单位净值，按历史峰值至后续谷值计算；已计入模拟分红，未计申购赎回费用' },
-            { label: '夏普比率', value: '0.82', detail: '模拟收益率与模拟无风险利率比较' },
-            { label: '基金规模', value: '28.6 亿元', detail: '虚构期末资产净值' }
-        ];
+        if (variant === 'fund-kpi') artifact.items = simulatedFundKpis(intent);
         if (variant === 'candlestick') {
             // Keep a complete OHLC + volume series. Change the price level by
             // subject so unrelated boards do not share an identical quote.

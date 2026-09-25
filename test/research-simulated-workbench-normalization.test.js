@@ -28,6 +28,9 @@ describe('真实客户端模拟工作台输入修复', () => {
     expect(genericPlannerKpi.type).toBe('market');
     expect(genericPlannerKpi.artifact.variant).toBe('fund-kpi');
     expect(JSON.parse(acceptArtifactOutput(JSON.stringify(prepareSimulatedArtifact(genericPlannerKpi)))).html).toContain('fund-detail-disclosure');
+    const scopedKpi = generateSimulatedPanel({title:'基金核心指标卡',prompt:'展示近一年收益、波动率、最大回撤；最大回撤口径可展开',type:'kpi',size:'small'},'基金核心指标卡生成');
+    expect(scopedKpi.artifact.items.map(item=>item.label)).toEqual(['近一年收益','年化波动率','最大回撤']);
+    expect(scopedKpi.artifact.items[2].detail).toContain('样本未提供峰谷日期及修复天数');
     const suppliedKpi = validateWorkbench({requestId:'fund-kpi-panel-title',title:'研究工作台面板规划',dataMode:'simulated',panels:[{
       title:'基金核心指标（演示数据）',prompt:'最大回撤说明',type:'kpi',size:'small',artifact:{items:[{label:'最大回撤',value:'-8.4%',detail:'模拟区间内按照日频复权单位净值计算峰值至后续谷值的最大跌幅'}]}
     }]});
