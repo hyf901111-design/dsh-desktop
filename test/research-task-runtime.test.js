@@ -218,6 +218,17 @@ it('reserves a five-panel source workbench with one durable write and separate t
   } finally { await runtime.dispose() }
 })
 
+it('accepts a one-panel source workbench without inventing a second task', async () => {
+  const { ResearchTaskRuntime } = await runtimeModule()
+  const adapter = deferredTaskAdapter(), storage = memoryTaskStorage()
+  const runtime = new ResearchTaskRuntime({ adapter: adapter.adapter, storage, createId: sequentialTaskIds() })
+  try {
+    const receipts = await runtime.startBatch({ parentSessionId: 'parent-1', panels: [{canvasNodeId:'only-panel',kind:'container',prompt:'单面板研究'}] })
+    expect(receipts).toHaveLength(1)
+    expect(storage.snapshot().tasks).toHaveLength(1)
+  } finally { await runtime.dispose() }
+})
+
 describe('Research task contract and prompt', () => {
   it('marks only an oversized restored HTML task as failed and preserves other task history', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()

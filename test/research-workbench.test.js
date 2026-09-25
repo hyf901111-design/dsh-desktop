@@ -40,9 +40,12 @@ describe('研究工作台', () => {
             {title:'行业热力图',prompt:'按行业涨跌幅展示热力图',type:'market',size:'large'}
         ] }).panels).toHaveLength(2);
     });
-    it('validates independent panels and rejects oversized or duplicate plans', () => {
+    it('accepts an explicitly requested single panel and rejects empty, oversized or duplicate plans', () => {
+        const single = validateWorkbench({ requestId: 'single', title: '单面板', panels: [panel(1)] });
+        expect(single.panels).toHaveLength(1);
+        expect(layoutWorkbench(single.panels)[0]).toMatchObject({ x: 0, y: 0 });
         expect(validateWorkbench({ requestId: 'a', title: '行业', panels: [panel(1), panel(2)] }).panels).toHaveLength(2);
-        for (const panels of [[panel(1)], [panel(1), panel(1)], Array.from({ length: 11 }, (_, i) => panel(i)), [panel(1), { ...panel(2), height: 99999 }]])
+        for (const panels of [[], [panel(1), panel(1)], Array.from({ length: 11 }, (_, i) => panel(i)), [panel(1), { ...panel(2), height: 99999 }]])
             expect(() => validateWorkbench({ requestId: 'a', title: '行业', panels })).toThrow();
     });
     it('keeps Figma template sizes and non-overlapping source order',()=>{

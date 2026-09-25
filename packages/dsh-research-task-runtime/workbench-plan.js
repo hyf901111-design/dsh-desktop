@@ -246,8 +246,8 @@ export function prepareSimulatedArtifact(panel) {
 }
 export function validateWorkbench(value) {
     value = expandSimulatedWorkbenchPreset(value);
-    if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 2 || value.panels.length > 10)
-        throw Error('工作台需要 2–10 个独立面板。');
+    if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 1 || value.panels.length > 10)
+        throw Error('工作台需要 1–10 个独立面板。');
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
     const isSimulated = value.dataMode === 'simulated';
     const parallel = value.generationMode === 'parallel';
@@ -285,8 +285,8 @@ export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 
     const spanLead = sized.length >= 3 && sized.length % 2 === 1 && sized[0].width >= 800 && sized[0].height <= 220;
     const start = spanLead ? 1 : 0;
     const rest = sized.slice(start);
-    const leftWidth = Math.max(...rest.filter((_, i) => i % 2 === 0).map(p => p.width));
-    const rightWidth = Math.max(...rest.filter((_, i) => i % 2 === 1).map(p => p.width));
+    const leftWidth = Math.max(0, ...rest.filter((_, i) => i % 2 === 0).map(p => p.width));
+    const rightWidth = Math.max(0, ...rest.filter((_, i) => i % 2 === 1).map(p => p.width));
     let y = spanLead ? sized[0].height + 16 : 0;
     return sized.map((p, index) => {
         if (spanLead && index === 0) return { ...p, x: (leftWidth + 16 + rightWidth - p.width) / 2, y: 0, workbenchSpan: true };

@@ -26,6 +26,21 @@ function memoryStorage() {
 }
 
 describe('模拟工作台结构化生成', () => {
+  it('prepares a single simulated market panel through the host runtime', async () => {
+    const planned = validateWorkbench({ requestId:'single-waterfall', title:'利润增减瀑布图', dataMode:'simulated', panels:[{
+      title:'利润增减瀑布图', prompt:'variant: waterfall；起点100亿元，收入增长25、成本增加-8、效率提升4、费用增加-5，终点由宿主计算。', type:'market', size:'large'
+    }] })
+    const storage = memoryStorage()
+    const runtime = new ResearchTaskRuntime({ adapter: { start: vi.fn() }, storage, createId: () => 'single-task' })
+    try {
+      const generated = generateSimulatedPanel(planned.panels[0], planned.title)
+      const ready = validateWorkbench({ ...planned, panels:[generated] })
+      const receipts = await runtime.startPreparedBatch({ parentSessionId:'research-1', panels:[{canvasNodeId:'single-node', prompt:ready.panels[0].prompt, artifact:ready.panels[0].artifact}] })
+      expect(receipts).toHaveLength(1)
+      expect(storage.snapshot().tasks).toHaveLength(1)
+    } finally { await runtime.dispose() }
+  })
+
   it('validates every panel before any task starts, and rejects authored HTML or fake links', () => {
     const plan = validateWorkbench(mockPlan())
     expect(plan.dataMode).toBe('simulated')
