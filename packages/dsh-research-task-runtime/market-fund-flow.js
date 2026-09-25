@@ -7,8 +7,11 @@ function fundFlowRuntime() {
  const update=()=>{
   let count=0,net=0
   rows.forEach(row=>{const show=(period.value==='all'||period.value===row.dataset.period)&&(industry.value==='all'||industry.value===row.dataset.industry);row.hidden=!show;if(show){count++;net+=Number(row.dataset.net)}})
-  summary.textContent=`${count} 项 · 净流入 ${Number(net.toFixed(4))} ${root.dataset.unit}`
-  readout.textContent=count?'选择条形查看流入、流出和净额':'当前筛选无数据'
+  const amount=Number(Math.abs(net).toFixed(4)),direction=net>0?'净流入':net<0?'净流出':'净额'
+  summary.textContent=count?`${count} 项 · ${direction} ${amount} ${root.dataset.unit}`:'0 项 · 当前筛选无数据'
+  const selected=rows.find(row=>!row.hidden&&row.getAttribute('aria-pressed')==='true')||rows.find(row=>!row.hidden)
+  rows.forEach(row=>row.setAttribute('aria-pressed',String(row===selected)))
+  readout.textContent=selected?selected.dataset.readout:'当前筛选无数据'
  }
  period.addEventListener('change',update);industry.addEventListener('change',update)
  rows.forEach(row=>row.addEventListener('click',()=>{rows.forEach(item=>item.setAttribute('aria-pressed',String(item===row)));readout.textContent=row.dataset.readout}))
