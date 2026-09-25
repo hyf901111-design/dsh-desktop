@@ -30,7 +30,7 @@
 | 20 | `research.calendar` | 日期、事件、摘要 | 月份切换、日期筛选、清除 | `calendar` |
 | 21 | `research.gantt` | 任务、开始/结束、进度、负责人 | 时间定位、任务详情 | `gantt`；详情待加强 |
 | 22 | `market.price-volume` | 日期、价格、成交量、量纲 | 时间范围、双图联动读数、完整表 | `market.price-volume`；待客户端验收 |
-| 23 | `market.order-book` | 买卖档位、价格、数量、价差、时点 | 档位数切换、逐档读数 | 待新增固定模板 |
+| 23 | `market.order-book` | 买卖档位、价格、数量、价差、时点 | 档位数切换、逐档读数 | `market.order-book`；待客户端验收 |
 | 24 | `market.fund-flow` | 时间或行业、流入/流出/净额 | 时间/行业筛选、读数、完整表 | 待新增固定模板 |
 | 25 | `market.valuation-band` | 日期、估值分位区间、当前估值 | 时间区间、分位读数、完整表 | 待新增固定模板 |
 | 26 | `fund.equity-drawdown` | 日期、净值、基准、回撤 | 时间范围、净值/回撤切换、完整表 | 待新增固定模板 |

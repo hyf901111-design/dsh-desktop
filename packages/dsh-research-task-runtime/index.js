@@ -365,7 +365,7 @@ function legacyWorkbenchPanelHeader(prompt) {
   const type = /研报|机构报告/u.test(requirement) ? 'reports'
     : /日历|FOMC|CPI|非农/u.test(requirement) ? 'calendar'
       : /要闻|新闻|政策动态/u.test(requirement) ? 'news'
-        : /K线|蜡烛图|candlestick|行情热力|市场广度|量价|价量|价格.{0,10}成交量|成交量.{0,10}价格/iu.test(requirement) ? 'market'
+        : /K线|蜡烛图|candlestick|行情热力|市场广度|量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|盘口|买卖[一二三五十]?档/iu.test(requirement) ? 'market'
           : /热力|筛选|过滤|搜索|切换|跳转|交互|双轴/u.test(requirement) ? 'html'
             : /走势|趋势|对比|日线|季度/u.test(requirement) ? 'chart'
             : /指标|因子|概览/u.test(requirement) ? 'dashboard' : 'table'
@@ -386,7 +386,7 @@ function workbenchPanelPrompt(prompt) {
   const legacyHeader = legacyWorkbenchPanelHeader(prompt)
   const type = workbenchPanelFormat(legacyHeader ? legacyHeader + prompt.split('\n')[0] : prompt)
   if (!type) return null
-  const selectedMarketVariant = type === 'market' ? prompt.match(/\bmarket\.(fund-kpi|fund-holdings|fund-industry|price-volume|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1] : undefined
+  const selectedMarketVariant = type === 'market' ? prompt.match(/\bmarket\.(fund-kpi|fund-holdings|fund-industry|price-volume|order-book|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1] : undefined
   const schemas = {
     kpi: '{"version":1,"type":"kpi","title":"标题","items":[{"label":"指标","value":"数值","change":"可选变化"}]}',
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}',

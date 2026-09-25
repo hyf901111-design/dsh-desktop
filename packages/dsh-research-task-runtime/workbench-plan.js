@@ -13,7 +13,7 @@ const schemaHints = {
     chart: 'chart 应包含 variant:"line|bar"、labels:[字符串]、series:[{name,values:[数字]}]，每组 values 与 labels 等长。',
     table: 'table 应包含 columns:[列名] 和 rows:[[单元格]]，每行列数一致。',
     kpi: 'kpi 应包含 items:[{label,value,change?}]，最多 12 项。',
-    market: 'market 应包含 variant、asOf 和对应数据；metrics 用 items:[{label,value}]，trend 用等长 labels/series.values，量价联动用 price-volume 的等长 labels/prices/volumes 与 priceUnit/volumeUnit，table 用等宽 columns/rows；医药侧图、管线、事件依次用 scatter 的 xLabel/yLabel/items、pipeline 的 stages/items、events 的 items；基金三件套分别用 fund-kpi items、fund-holdings columns/rows、fund-industry items:[{label,weight,benchmark}]。',
+    market: 'market 应包含 variant、asOf 和对应数据；metrics 用 items:[{label,value}]，trend 用等长 labels/series.values，量价联动用 price-volume 的等长 labels/prices/volumes 与 priceUnit/volumeUnit，盘口用 order-book 的 bids/asks 与 priceUnit/sizeUnit，table 用等宽 columns/rows；医药侧图、管线、事件依次用 scatter 的 xLabel/yLabel/items、pipeline 的 stages/items、events 的 items；基金三件套分别用 fund-kpi items、fund-holdings columns/rows、fund-industry items:[{label,weight,benchmark}]。',
     news: 'news 应包含 items:[{title,summary,date?,category?}]。',
     reports: 'reports 应包含 items:[{title,summary,date?,category?}]。',
     calendar: 'calendar 应包含 items:[{title,summary,date?,category?}]。',

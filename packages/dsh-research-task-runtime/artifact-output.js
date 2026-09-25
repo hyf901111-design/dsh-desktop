@@ -34,7 +34,7 @@ export function acceptArtifactOutput(text) {
 }
 
 export function workbenchMarketVariantIssue(output, prompt) {
- const expected=typeof prompt==='string'?prompt.match(/必须输出 market\.(fund-kpi|fund-holdings|fund-industry|price-volume|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth) 的结构化数据/iu)?.[1]:undefined;
+ const expected=typeof prompt==='string'?prompt.match(/必须输出 market\.(fund-kpi|fund-holdings|fund-industry|price-volume|order-book|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth) 的结构化数据/iu)?.[1]:undefined;
  if(!expected||typeof output!=='string')return null;
  let spec;
  try{spec=JSON.parse(output)}catch{return null}

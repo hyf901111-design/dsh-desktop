@@ -81,6 +81,29 @@ it('rejects incomplete or fabricated price-volume data before creating a card',(
  const output=acceptArtifactOutput(JSON.stringify(base))
  expect(workbenchMarketVariantIssue(output,'必须输出 market.price-volume 的结构化数据')).toBeNull()
 })
+it('renders both sides of a real order book and switches visible depth',()=>{
+ const bids=Array.from({length:8},(_,i)=>({price:10-i*.01,size:100+i*10}))
+ const asks=Array.from({length:8},(_,i)=>({price:10.01+i*.01,size:120+i*10}))
+ const d=render({variant:'order-book',bids,asks,priceUnit:'元',sizeUnit:'手'})
+ expect(d.querySelectorAll('.order-book-level')).toHaveLength(16)
+ expect(d.querySelector('.order-book-toolbar strong').textContent).toBe('0.01 元')
+ expect(d.querySelectorAll('.order-book-level:not([hidden])')).toHaveLength(10)
+ d.defaultView.eval(d.querySelector('script').textContent)
+ d.querySelector('[data-book-count="all"]').click()
+ expect(d.querySelectorAll('.order-book-level:not([hidden])')).toHaveLength(16)
+ const last=d.querySelectorAll('.order-book-level')[15]
+ last.click()
+ expect(d.querySelector('.order-book-readout').textContent).toContain('卖8 · 10.08 元 · 190 手')
+ expect(marketVariant({title:'股票十档盘口'})).toBe('order-book')
+ expect(workbenchDesignTemplate({type:'market',title:'股票十档盘口'}).width).toBe(536)
+})
+it('rejects invalid order book levels and zero-unit templates',()=>{
+ const base={version:1,type:'market',variant:'order-book',title:'盘口',asOf:'示例',bids:[{price:10,size:100}],asks:[{price:10.01,size:120}],priceUnit:'元',sizeUnit:'手'}
+ expect(acceptArtifactOutput(JSON.stringify({...base,bids:[{price:-1,size:100}]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,asks:[]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,sizeUnit:''}))).toBeUndefined()
+ expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.order-book 的结构化数据')).toBeNull()
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')
