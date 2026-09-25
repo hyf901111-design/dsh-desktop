@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { classifyResearchCreationRequest, workbenchDealMotion } from '../scripts/lib/research-creation-progress.mjs'
+import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition } from '../scripts/lib/research-creation-progress.mjs'
 import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs'
 
 it('shows early progress for explicit workbench and component creation, not product questions', () => {
@@ -22,6 +22,13 @@ it('deals new cards outward from the planning card at the current canvas zoom', 
   expect(end).toEqual({opacity:1,transform:'translate(0, 0) scale(1)'})
 })
 
+it('centers the first planning card in the visible research canvas', () => {
+  const viewport = { x:-280, y:-90, scale:.8 }
+  const position = planningCardPosition(viewport, { width:900, availableWidth:720, height:800, visibleHeight:740 })
+  expect(position.x * viewport.scale + viewport.x).toBeCloseTo((720 - 320 * .8) / 2)
+  expect(position.y * viewport.scale + viewport.y).toBeCloseTo((740 - 88 - 220 * .8) / 2)
+})
+
 it('keeps the submit, canvas and workbench handoff patch stable on reinstall', () => {
   const source = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
   const patched = patchFigmaFinalCanvas(source)
@@ -31,7 +38,7 @@ it('keeps the submit, canvas and workbench handoff patch stable on reinstall', (
   expect(patched).toContain('data-research-creation-planning')
   expect(patched.includes('ODYSSEY_CREATION_CANVAS_CARD_V3')).toBe(true)
   expect(patched).toContain("/* ODYSSEY_CREATION_POINTER_ISOLATION */ if (event.target?.closest?.('[data-research-create-popover],[data-research-voice-feedback],[data-research-creation-planning]')) return;")
-  expect(patched.includes('sessionId, viewport, onDismiss: () => odysseyCreationFinish(sessionId)')).toBe(true)
+  expect(patched.includes('sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId)')).toBe(true)
   expect(patched.includes('onPointerMove: event => {')).toBe(true)
   expect(patched).toContain('ResearchGenerationProcess, { node, sessionId, phaseOverride: phase')
   expect(patched).toContain('ODYSSEY_CREATION_CARD_ACTIONS')

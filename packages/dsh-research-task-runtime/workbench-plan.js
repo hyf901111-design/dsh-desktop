@@ -276,17 +276,23 @@ export function validateWorkbench(value) {
     return { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(parallel ? { generationMode: 'parallel' } : {}), panels };
 }
 export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 }) {
-    // Pair a 536px finance card with a 656px feed without shrinking either
-    // source template. The old 1088px lane stranded every feed on its own row.
-    const rowLimit = Math.max(1216, Math.min(1240, (canvasSize.width || 1380) - 32));
-    let x = 0, y = 0, rowHeight = 0;
-    return panels.map(p => {
+    // Keep plan order in two fixed columns. A shelf layout could wrap a wide
+    // finance card alone and place later cards at unrelated horizontal offsets.
+    const sized = panels.map(p => {
         const template = workbenchDesignTemplate(p);
-        if (x && x + template.width > rowLimit) { x = 0; y += rowHeight + 16; rowHeight = 0; }
-        const result = { ...p, size: template.size, width: template.width, height: template.height, x, y };
-        x += template.width + 16;
-        rowHeight = Math.max(rowHeight, template.height);
-        return result;
+        return { ...p, size: template.size, width: template.width, height: template.height };
+    });
+    const spanLead = sized.length >= 3 && sized.length % 2 === 1 && sized[0].width >= 800 && sized[0].height <= 220;
+    const start = spanLead ? 1 : 0;
+    const rest = sized.slice(start);
+    const leftWidth = Math.max(...rest.filter((_, i) => i % 2 === 0).map(p => p.width));
+    const rightWidth = Math.max(...rest.filter((_, i) => i % 2 === 1).map(p => p.width));
+    let y = spanLead ? sized[0].height + 16 : 0;
+    return sized.map((p, index) => {
+        if (spanLead && index === 0) return { ...p, x: (leftWidth + 16 + rightWidth - p.width) / 2, y: 0, workbenchSpan: true };
+        const cell = index - start;
+        if (cell && cell % 2 === 0) y += Math.max(rest[cell - 2].height, rest[cell - 1].height) + 16;
+        return { ...p, x: cell % 2 ? leftWidth + 16 : 0, y };
     });
 }
 

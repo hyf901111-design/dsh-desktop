@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { validateWorkbench, layoutWorkbench, registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js';
 import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
 import { publicEventFromSessionEvent } from '../packages/dsh-research-task-runtime/index.js';
-import { readableWorkbenchViewport, settleWorkbenchLayout, patchResearchWorkbenchGrowth } from '../scripts/lib/research-workbench-growth.mjs';
+import { readableWorkbenchViewport, settleWorkbenchLayout, researchWorkbenchMatrixNodes, patchResearchWorkbenchGrowth } from '../scripts/lib/research-workbench-growth.mjs';
 import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js';
 import { renderMarketArtifact } from '../packages/dsh-research-task-runtime/market-artifact.js';
 import { prepareSimulatedArtifact } from '../packages/dsh-research-task-runtime/workbench-plan.js';
@@ -34,6 +34,7 @@ describe('研究工作台', () => {
         expect(marketVariant({ title:'K 线图', prompt:'展示成交量趋势' })).toBe('candlestick');
         expect(marketVariant({ title:'核心指标', prompt:'variant: trend；明确展示趋势图' })).toBe('trend');
         expect(marketVariant({ title:'热门白酒股行情看板', prompt:'展示十只股票的最新价、成交额和市值，支持按涨跌幅排序，点击个股查看K线详情' })).toBe('table');
+        expect(marketVariant({ title:'主要指数实时行情', prompt:'展示最新价与涨跌幅' })).toBe('metrics');
         expect(validateWorkbench({ requestId:'variant-inference', title:'金融模拟工作台', dataMode:'simulated', generationMode:'parallel', panels:[
             {title:'K 线图',prompt:'展示日 K 线和成交量',type:'market',size:'large'},
             {title:'行业热力图',prompt:'按行业涨跌幅展示热力图',type:'market',size:'large'}
@@ -47,7 +48,7 @@ describe('研究工作台', () => {
     it('keeps Figma template sizes and non-overlapping source order',()=>{
         const panels=layoutWorkbench(['small','large','medium','small','small','large','medium','small','large'].map((size,i)=>({...panel(i),size})));
         expect(panels[0]).toMatchObject({width:320,height:220,x:0,y:0});
-        expect(panels[1]).toMatchObject({width:656,height:456,x:336,y:0});
+        expect(panels[1]).toMatchObject({width:656,height:456,x:672,y:0});
         expect(panels[2]).toMatchObject({width:656,height:220,x:0,y:472});
         for (const [i,a] of panels.entries()) for (const b of panels.slice(i+1))
             expect(a.x+a.width+16<=b.x || b.x+b.width+16<=a.x || a.y+a.height+16<=b.y || b.y+b.height+16<=a.y).toBe(true);
@@ -67,6 +68,39 @@ describe('研究工作台', () => {
         expect([placed[0].x,placed[2].x,placed[4].x]).toEqual([0,0,0]);
         for(const [i,a] of placed.entries()) for(const b of placed.slice(i+1))
             expect(a.x+a.width+16<=b.x || b.x+b.width+16<=a.x || a.y+a.height+16<=b.y || b.y+b.height+16<=a.y).toBe(true);
+    });
+    it('keeps seven pending cards in a compact two-column matrix as one card grows', () => {
+        const pending = Array.from({length:7},(_,i)=>({id:`card-${i}`,workbenchIndex:i,width:320,height:220,x:i*400,y:i*250}));
+        const dealt = researchWorkbenchMatrixNodes(pending, 24, 40);
+        expect(dealt.map(n=>[n.x,n.y])).toEqual([
+            [184,150],[520,150],[184,386],[520,386],[184,622],[520,622],[184,858]
+        ]);
+        const grown = researchWorkbenchMatrixNodes(dealt.map((n,i)=>i===0?{...n,width:656,height:456}:n),24,40);
+        expect(grown[0].y-grown[0].height/2).toBe(grown[1].y-grown[1].height/2);
+        expect(grown[2].y-grown[2].height/2).toBe(grown[3].y-grown[3].height/2);
+        expect(grown[2].y-grown[2].height/2).toBe(grown[0].y+grown[0].height/2+16);
+        expect(grown[1].x-grown[1].width/2).toBe(grown[0].x+grown[0].width/2+16);
+    });
+    it('spans a wide leading indicator strip above three aligned ETF rows', () => {
+        const plan = layoutWorkbench([
+            {title:'主要指数实时行情',prompt:'指数行情',type:'market',size:'large'},
+            {title:'行业板块热力图',prompt:'热力图',type:'market',size:'large'},
+            {title:'ETF 行情排行',prompt:'表格明细',type:'table',size:'large'},
+            {title:'重点 ETF K 线走势',prompt:'K 线',type:'market',size:'large'},
+            {title:'ETF 资金流向监控',prompt:'资金监控',type:'chart',size:'large'},
+            {title:'ETF 溢价率预警',prompt:'预警',type:'table',size:'large'},
+            {title:'ETF 市场要闻',prompt:'要闻',type:'news',size:'large'}
+        ]);
+        expect(plan[0].workbenchSpan).toBe(true);
+        expect(plan[1].y).toBe(plan[2].y);
+        expect(plan[3].y).toBe(plan[4].y);
+        expect(plan[5].y).toBe(plan[6].y);
+        expect(new Set([plan[2].x,plan[4].x,plan[6].x]).size).toBe(1);
+        const pending = researchWorkbenchMatrixNodes(plan.map((p,i)=>({id:`etf-${i}`,workbenchIndex:i,workbenchSpan:p.workbenchSpan===true,width:320,height:220})),0,0);
+        expect(pending[0].x).toBe(328);
+        expect(pending[1].x).toBe(160);
+        expect(pending[2].x).toBe(496);
+        expect(pending[3].y-pending[3].height/2).toBe(472);
     });
     it('resizes a 144px market metrics card smoothly while preserving generic minimums', async () => {
         const client = await bundle();
@@ -396,8 +430,8 @@ describe('研究工作台', () => {
             ['completed',896,144],['completed',536,264],['completed',536,258]
         ]);
         const placed=workspace.getSnapshot().artifacts;
-        expect(placed.map(n=>[n.x,n.y])).toEqual([[448,120],[268,336],[268,609]]);
-        expect(placed[2].y-placed[2].height/2).toBeGreaterThan(placed[1].y+placed[1].height/2);
+        expect(placed.map(n=>[n.x,n.y])).toEqual([[544,120],[268,340],[820,337]]);
+        expect(placed[2].y-placed[2].height/2).toBe(placed[1].y-placed[1].height/2);
         const viewport=workspace.getSnapshot().viewport;
         for (const node of placed) {
             expect((node.x-node.width/2)*viewport.scale+viewport.x).toBeGreaterThanOrEqual(31);
@@ -552,20 +586,15 @@ it('preserves manually positioned neighbors and puts an expanding card in free s
     expect(Math.abs(grown.x-manual.x)>=(grown.width+manual.width)/2||Math.abs(grown.y-manual.y)>=(grown.height+manual.height)/2).toBe(true);
 });
 
-it('settles a workbench once after the last active component finishes, including failures', () => {
+it('aligns a workbench into two columns as each component finishes, including failures', () => {
   const nodes=Array.from({length:6},(_,i)=>({id:String(i),workbenchId:'w',workbenchIndex:i,generationStatus:i===5?'running':'completed',x:328,y:i*472+228,width:656,height:456,size:'large'}));
   const before={artifacts:nodes,canvasSize:{width:1000,height:800}};
   const after={...before,artifacts:nodes.map(n=>({...n,generationStatus:n.id==='5'?'failed':'completed'}))};
-  const pack=vi.fn(researchBentoLayout);
-  const settled=settleWorkbenchLayout(before,after,pack);
-  expect(pack).toHaveBeenCalledTimes(1);
-  expect(settled.viewport.scale).toBeLessThan(1);
-  expect(settled.viewport.scale).toBeGreaterThanOrEqual(.7);
-  expect(new Set(settled.artifacts.map(n=>n.x)).size).toBeGreaterThan(1);
-  expect(new Set(settled.artifacts.map(n=>n.y)).size).toBeGreaterThan(1);
-  expect(settleWorkbenchLayout(settled,settled,pack)).toBe(settled);
-  expect(pack).toHaveBeenCalledTimes(1);
-  expect(settleWorkbenchLayout(before,before,pack)).toBe(before);
+  const settled=settleWorkbenchLayout(before,after);
+  expect(new Set(settled.artifacts.map(n=>n.x))).toEqual(new Set([328,1000]));
+  expect(new Set(settled.artifacts.map(n=>n.y)).size).toBe(3);
+  expect(settleWorkbenchLayout(settled,settled)).toBe(settled);
+  expect(settleWorkbenchLayout(before,before)).toBe(before);
 });
 
 it('opens a dense Figma-sized workbench at readable scale while leaving later cards pannable', () => {
@@ -578,7 +607,7 @@ it('opens a dense Figma-sized workbench at readable scale while leaving later ca
   expect(nodes.every(n=>n.width===896&&n.height===144)).toBe(true);
 });
 
-it('focuses two source-sized financial cards when a three-card row would shrink below legibility', () => {
+it('shows all three source-sized financial cards when they fit at readable scale', () => {
   const marker='<body data-sherlock-design="21m-20260923-v1">';
   const nodes=[
     {workbenchIndex:0,x:448,y:72,width:896,height:144},
@@ -586,9 +615,9 @@ it('focuses two source-sized financial cards when a three-card row would shrink 
     {workbenchIndex:2,x:820,y:289,width:536,height:258}
   ].map(n=>({...n,containerSpec:{type:'html',html:marker}}));
   const viewport=readableWorkbenchViewport(nodes,{x:0,y:0,scale:1},{width:896,height:760});
-  expect(viewport.scale).toBeGreaterThan(.9);
-  expect((nodes[0].y-nodes[0].height/2)*viewport.scale+viewport.y).toBeCloseTo(32);
-  expect((nodes[2].x+nodes[2].width/2)*viewport.scale+viewport.x).toBeGreaterThan(896);
+  expect(viewport.scale).toBeGreaterThan(.7);
+  expect((nodes[0].x-nodes[0].width/2)*viewport.scale+viewport.x).toBeGreaterThanOrEqual(31);
+  expect((nodes[2].x+nodes[2].width/2)*viewport.scale+viewport.x).toBeLessThanOrEqual(865);
 });
 
 it('keeps a complete event strip above the floating canvas toolbar', () => {

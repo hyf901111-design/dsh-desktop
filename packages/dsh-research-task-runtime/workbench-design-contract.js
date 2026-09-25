@@ -45,7 +45,7 @@ export function marketVariant(panel = {}) {
     if (/散点|估值.{0,8}成长|scatter/iu.test(text)) return 'scatter';
     if (/管线|研发进度|pipeline/iu.test(text)) return 'pipeline';
     if (/事件|公告.{0,8}时间线|events/iu.test(text)) return 'events';
-    if (/指标|行情快照|metrics/iu.test(text)) return 'metrics';
+    if (/指标|(?:实时|主要指数|指数)行情|行情快照|metrics/iu.test(text)) return 'metrics';
     if (/表格|明细|盘口|估值对比|同业|持仓|table/iu.test(text)) return 'table';
     return null;
   };

@@ -63,6 +63,26 @@ describe('managed integration runtime against real Harness services and HTTP bri
     expect(f.received).toEqual([{ callId: 'call-1', toolId: 'lookup', connectionRevision: 1, arguments: { query: '真实数据' }, context: { sessionId: 'agent-a', rootSessionId: 'agent-a', workspaceId: 'workspace-a', ownerAccountId: 'owner-1', unattended: false, runtimeEpoch: 'fixture-epoch' } }])
   })
 
+  it('publishes a full MCP schema as a Harness-compatible tool and keeps bridge execution intact', async () => {
+    const f = await fixture()
+    f.snapshot.tools[0].inputSchema = {
+      $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object',
+      properties: {
+        query: { type: 'string', minLength: 1, description: '检索词' },
+        top: { type: 'integer', minimum: 1, maximum: 50 },
+        filters: { type: 'object', propertyNames: { type: 'string' }, additionalProperties: { type: 'string' } },
+        tags: { type: 'array', minItems: 1, maxItems: 5, items: { type: 'string', minLength: 1 } }
+      }, required: ['query']
+    }
+    f.snapshot.revision++
+    await f.runtime.sync()
+    const tool = f.ctx.tools.get('ework__lookup', f.a)
+    expect(tool.parameters.properties.query).toEqual({ type: 'string', description: '检索词' })
+    expect(tool.parameters.properties.filters.additionalProperties).toBeUndefined()
+    expect((await f.invoke()).isError).toBe(false)
+    expect(f.received).toHaveLength(1)
+  })
+
   it('rejects an unauthorized workspace, forged agent, and model-supplied identity without issuing requests', async () => {
     const f = await fixture()
     expect((await f.invoke(f.b)).isError).toBe(true)

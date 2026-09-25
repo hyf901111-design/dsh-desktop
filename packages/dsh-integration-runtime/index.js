@@ -3,6 +3,7 @@ import { connectionAllows, isLiveAgent, resolveCapabilityContext } from './conte
 import { createToolProxy, toolRegistrationName, validateToolBinding } from './tool-proxy.js'
 import { registerManagedSkillProvider } from './skill-provider.js'
 import { validateManagedSkills } from './skill-policy.js'
+import { projectMcpInputSchema } from './schema-projection.js'
 
 export const name = 'ework-integrations'
 export const inject = ['tools', 'skills', 'agents', 'workspaceRegistry']
@@ -32,6 +33,7 @@ function validateSnapshot(value) {
     const grant = connection.workspaceGrant
     if (!grant || !['selected', 'all-owned'].includes(grant.mode) || (grant.mode === 'selected' && (!Array.isArray(grant.workspaceIds) || grant.workspaceIds.some(item => !identifier(item)))) || (grant.mode === 'all-owned' && !identifier(grant.ownerAccountId))) throw unavailable()
   }
+  value.tools = value.tools.map(tool => ({ ...tool, inputSchema: projectMcpInputSchema(tool.inputSchema) }))
   value.tools.forEach(validateToolBinding)
   validateManagedSkills(value)
   if (new Set(value.tools.map(tool => toolRegistrationName(tool.id))).size !== value.tools.length) throw unavailable()

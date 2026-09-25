@@ -83,20 +83,20 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
 }
 
 [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleCluster {
-  top: 24px !important;
+  top: 18px !important;
   right: 18px !important;
 }
 
 [data-dsh-panel-host][data-odyssey-panel-right="open"] .t8lSSG_toggleCluster {
-  top: 24px !important;
+  top: 18px !important;
   right: calc(var(--odyssey-panel-edge) + 8px) !important;
 }
 
-/* 171:1081: a 56 px header keeps tabs and window controls on the same axis
-   as the main title/navigation, with the toggle fixed open or closed. */
+/* Compact the right conversation header while keeping tabs and window
+   controls on one axis. */
 .t8lSSG_panel:not(.t8lSSG_panelHidden) .t8lSSG_tabBar {
-  box-sizing:border-box; height:56px; min-height:56px; flex:0 0 56px;
-  align-items:center; padding:12px 72px 12px 8px;
+  box-sizing:border-box; height:44px; min-height:44px; flex:0 0 44px;
+  align-items:center; padding:6px 72px 6px 8px;
 }
 .t8lSSG_panel .t8lSSG_tabList { align-items:center; }
 .t8lSSG_panel .t8lSSG_tabBar>:has(>.t8lSSG_tabBarPlus) {

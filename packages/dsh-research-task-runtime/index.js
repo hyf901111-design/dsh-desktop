@@ -1545,6 +1545,7 @@ export function createSubagentAdapter(ctx) {
       // A connected source should not be preceded by an unrelated web search.
       const scopedSchemas = ctx.tools?.schemas?.(parent)
       const preferredSources = kind === 'container' && permitsTools ? preferredComponentSourceTools(scopedSchemas, query) : []
+      const preferredSourceNames = preferredSources.map(tool => tool.name)
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
       const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !financialSubject && containerNeedsWebData(query ?? '')
       if (signal.aborted) throw signal.reason
@@ -1587,7 +1588,7 @@ export function createSubagentAdapter(ctx) {
         ? [...new Set(scopedSchemas.map(tool => tool?.name).filter(name => typeof name === 'string'))]
         : null
       const defaultResearchTools = ['financial_query', 'web_search', 'web_fetch']
-      const networkTools = new Set(defaultResearchTools)
+      const networkTools = new Set([...defaultResearchTools, ...preferredSourceNames])
       const fallbackTools = kind === 'board'
         ? [...defaultResearchTools, 'research_workbench_create', 'research_canvas_use', 'research_canvas_task', ...CANVAS_TOOL_NAMES]
         : kind === 'qa'
@@ -1601,7 +1602,7 @@ export function createSubagentAdapter(ctx) {
         'research_canvas_apply', 'research_canvas_undo'
       ])
       const childTools = (parentToolNames ?? fallbackTools).filter(name =>
-        (permitsTools || !networkTools.has(name)) &&
+        (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
       const run = await startComponentAgent(ctx, {
@@ -1636,7 +1637,7 @@ export function createSubagentAdapter(ctx) {
       const closeResearch = () => {
         if (researchClosed || signal.aborted || !child.ctx?.tools?.restrict) return
         researchClosed = true
-        liftResearchLimit = child.ctx.tools.restrict({ deny: ['web_search', 'web_fetch', 'financial_query'] })
+        liftResearchLimit = child.ctx.tools.restrict({ deny: [...networkTools] })
       }
       const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(() => { researchLimitDue = true }, 120000) : undefined
       const seen = new Set()
@@ -1646,7 +1647,7 @@ export function createSubagentAdapter(ctx) {
           if (seen.has(seq)) return
           seen.add(seq)
         }
-        if (event?.type === 'tool/call' && ['web_search', 'web_fetch', 'financial_query'].includes(event.data?.name)) {
+        if (event?.type === 'tool/call' && networkTools.has(event.data?.name)) {
           searchCalls++
           if (typeof event.data.callId === 'string') evidenceCalls.add(event.data.callId)
         }

@@ -26,10 +26,20 @@ export function workbenchDealMotion(origin, target, localWidth = target.width) {
   ]
 }
 
+export function planningCardPosition(viewport, canvasSize, cardWidth = 320, cardHeight = 220) {
+  const width = canvasSize?.availableWidth > 0 ? Math.min(canvasSize.width, canvasSize.availableWidth) : canvasSize?.width;
+  const visibleHeight = canvasSize?.visibleHeight > 0 ? Math.min(canvasSize.height, canvasSize.visibleHeight) : canvasSize?.height;
+  const height = Math.max(0, (visibleHeight || 0) - 88);
+  const screenX = width > 0 ? Math.max(16, (width - cardWidth * viewport.scale) / 2) : 32;
+  const screenY = height > 0 ? Math.max(16, (height - cardHeight * viewport.scale) / 2) : 32;
+  return { x: (screenX - viewport.x) / viewport.scale, y: (screenY - viewport.y) / viewport.scale };
+}
+
 const BEGIN = '/* ODYSSEY_CREATION_PROGRESS_V3 */'
 const end = 'function InputBar({'
 const helper = `${BEGIN}
 ${workbenchDealMotion.toString()}
+${planningCardPosition.toString()}
 const odysseyCreationIntents = new Map();
 function odysseyCreationOrigin(sessionId, plan) {
   const intent = odysseyCreationIntents.get(sessionId);
@@ -113,10 +123,17 @@ function odysseyCreationRetry(sessionId) {
   window.dispatchEvent(new CustomEvent('odyssey:creation-retry', { detail }));
   if (!detail.handled) { odysseyCreationIntents.set(sessionId, current); odysseyCreationEmit(sessionId); }
 }
-function ResearchCreationPlanningCard({ intent, sessionId, viewport, onDismiss }) {
+function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize, onDismiss }) {
   const [processOpen, setProcessOpen] = react.useState(false);
-  const [position, setPosition] = react.useState(() => ({ x: (32 - viewport.x) / viewport.scale, y: (32 - viewport.y) / viewport.scale }));
+  const [position, setPosition] = react.useState(() => planningCardPosition(viewport, canvasSize));
   const drag = react.useRef(null);
+  const measured = react.useRef((canvasSize?.width ?? 0) > 0);
+  react.useEffect(() => {
+    if (!measured.current && canvasSize?.width > 0) {
+      measured.current = true;
+      if (!drag.current) setPosition(planningCardPosition(viewport, canvasSize));
+    }
+  }, [canvasSize?.width, canvasSize?.height, canvasSize?.availableWidth, canvasSize?.visibleHeight]);
   react.useEffect(() => setProcessOpen(false), [intent.id]);
   const planning = intent.state === 'planning', stopping = intent.state === 'stopping';
   const label = intent.kind === 'workbench' ? '工作台组件规划' : intent.types[0] || '组件规划';
@@ -238,7 +255,9 @@ export function patchResearchCreationProgress(source) {
   source = source.replace(/\/\* ODYSSEY_CREATION_CANVAS_CARD \*\/ creationIntent \? react_jsx_runtime\.jsx\(ResearchCreationPlanningCard, \{ intent: creationIntent, sessionId, onDismiss: \(\) => odysseyCreationFinish\(sessionId\) \}\) : null,/, '')
   const contentChildren = 'children: [files.map((node) =>'
   if (!source.includes('/* ODYSSEY_CREATION_CANVAS_CARD_V3 */')) source = replaceAfter(source, 'function ResearchCanvas({', contentChildren,
-    `children: [/* ODYSSEY_CREATION_CANVAS_CARD_V3 */ creationIntent ? react_jsx_runtime.jsx(ResearchCreationPlanningCard, { key: creationIntent.id, intent: creationIntent, sessionId, viewport, onDismiss: () => odysseyCreationFinish(sessionId) }) : null,files.map((node) =>`)
+    `children: [/* ODYSSEY_CREATION_CANVAS_CARD_V3 */ creationIntent ? react_jsx_runtime.jsx(ResearchCreationPlanningCard, { key: creationIntent.id, intent: creationIntent, sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId) }) : null,files.map((node) =>`)
+  source = source.replace('sessionId, viewport, onDismiss: () => odysseyCreationFinish(sessionId)',
+    'sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId)')
   const actionAnchor = 'workbenchActions.current = resolvedActions;'
   if (!source.includes('/* ODYSSEY_CREATION_SESSION_LIFECYCLE */')) source = replaceOnce(source, actionAnchor, `${actionAnchor}
             /* ODYSSEY_CREATION_SESSION_LIFECYCLE */

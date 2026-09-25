@@ -111,6 +111,7 @@ body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] 
 /* The zero-height reading-status host must not create two flex gaps above the
    dock. Keep one small clearance between the reader and the first dock card. */
 body .sRp_conversation { padding:18px 12px 14px; gap:0; }
+body .t8lSSG_panel .sRp_conversation { padding-top:8px; }
 body .sRp_conversation > .sRp_composer { margin-top:6px; }
 body .sRp_messages { padding-inline:8px; box-sizing:border-box; }
 body .sRp_messages .Md3f7G_column { gap:14px; padding-block:8px 24px; }
