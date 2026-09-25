@@ -366,7 +366,7 @@ function legacyWorkbenchPanelHeader(prompt) {
   const type = /研报|机构报告/u.test(requirement) ? 'reports'
     : /日历|FOMC|CPI|非农/u.test(requirement) ? 'calendar'
       : /要闻|新闻|政策动态/u.test(requirement) ? 'news'
-        : /K线|蜡烛图|candlestick|行情热力|市场广度|量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|盘口|买卖[一二三五十]?档|资金流|净流入|净流出|估值分位|估值带|分位带|净值.{0,10}回撤|回撤.{0,10}净值|配置占比|资产配置|持仓占比|瀑布图|增减桥/iu.test(requirement) ? 'market'
+        : /K线|蜡烛图|candlestick|行情热力|市场广度|量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|盘口|买卖[一二三五十]?档|资金流|净流入|净流出|估值分位|估值带|分位带|净值.{0,10}回撤|回撤.{0,10}净值|配置占比|资产配置|持仓占比|瀑布图|增减桥|漏斗|转化率/iu.test(requirement) ? 'market'
           : /热力|筛选|过滤|搜索|切换|跳转|交互|双轴/u.test(requirement) ? 'html'
             : /走势|趋势|对比|日线|季度/u.test(requirement) ? 'chart'
             : /指标|因子|概览/u.test(requirement) ? 'dashboard' : 'table'

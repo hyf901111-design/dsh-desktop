@@ -53,6 +53,9 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
         } : variant === 'waterfall' ? {
             version: 1, type: 'market', variant, unit: '亿元', start: 100, startLabel: '期初', endLabel: '期末',
             changes: [{ label: '收入增长', value: 24 }, { label: '成本增加', value: -11 }, { label: '费用减少', value: 6 }, { label: '其他调整', value: -3 }]
+        } : variant === 'funnel' ? {
+            version: 1, type: 'market', variant, unit: '个',
+            stages: [{ label: '触达', count: 1000 }, { label: '浏览', count: 680 }, { label: '咨询', count: 310 }, { label: '转化', count: 122 }]
         } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }

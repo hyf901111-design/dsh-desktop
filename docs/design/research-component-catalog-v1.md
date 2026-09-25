@@ -36,7 +36,7 @@
 | 26 | `fund.equity-drawdown` | 日期、净值、基准、回撤 | 时间范围、净值/回撤切换、完整表 | `market.equity-drawdown`；待客户端验收 |
 | 27 | `research.allocation-donut` | 分类、数值、比例、总量 | 图例筛选、选片读数、完整表 | `market.allocation-donut`；待客户端验收 |
 | 28 | `research.waterfall` | 起点、分项增减、终点、单位 | 分项读数、完整表 | `market.waterfall`；待客户端验收 |
-| 29 | `research.funnel` | 阶段、数量、转化率 | 阶段详情、完整表 | 待新增固定模板 |
+| 29 | `research.funnel` | 阶段、数量、转化率 | 阶段详情、完整表 | `market.funnel`；待客户端验收 |
 | 30 | `research.risk-matrix` | 风险项、发生概率、影响等级 | 等级筛选、单项详情、完整表 | 待新增固定模板 |
 
 ## 实施顺序

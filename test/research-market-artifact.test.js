@@ -208,6 +208,20 @@ it('rejects nonnumeric waterfall adjustments',()=>{
  expect(acceptArtifactOutput(JSON.stringify({...base,changes:[]}))).toBeUndefined()
  expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.waterfall 的结构化数据')).toBeNull()
 })
+it('computes funnel conversion and selects every stage without hiding evidence',()=>{
+ const d=render({variant:'funnel',stages:[{label:'触达',count:1000},{label:'浏览',count:500},{label:'转化',count:125}],unit:'人'})
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(3)
+ expect(d.querySelectorAll('tbody tr')[2].textContent).toContain('25%12.5%')
+ d.defaultView.eval(d.querySelector('script').textContent)
+ d.querySelectorAll('.funnel-stage')[2].click()
+ expect(d.querySelector('.funnel-readout').textContent).toContain('转化 · 125 人 · 阶段转化 25% · 累计 12.5%')
+ expect(marketVariant({title:'用户转化漏斗'})).toBe('funnel')
+})
+it('rejects increasing counts in a same-cohort funnel',()=>{
+ const base={version:1,type:'market',variant:'funnel',title:'漏斗',asOf:'模拟',stages:[{label:'触达',count:100},{label:'转化',count:20}],unit:'人'}
+ expect(acceptArtifactOutput(JSON.stringify({...base,stages:[{label:'触达',count:100},{label:'转化',count:120}]}))).toBeUndefined()
+ expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.funnel 的结构化数据')).toBeNull()
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')

@@ -49,6 +49,11 @@ describe('真实客户端模拟工作台输入修复', () => {
     expect(panel.artifact.changes.reduce((sum, item) => sum + item.value, panel.artifact.start)).toBe(116);
     expect(JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact))).html).toContain('waterfall-readout');
   });
+  it('为漏斗模板准备同批次递减的本地模拟样本', () => {
+    const panel = generateSimulatedPanel({ title: '客户转化漏斗', prompt: 'variant: funnel', type: 'market', size: 'large' }, '运营观察工作台');
+    expect(panel.artifact.stages.map(item => item.count)).toEqual([1000, 680, 310, 122]);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact))).html).toContain('funnel-stage-list');
+  });
   it('将仅多包一层的表格单元格展开为完整列，保留原始文字', () => {
     const table = panel('重点覆盖估值与盈利预期（模拟）', 'market', {
       asOf: '2026-02-06 15:00', columns: ['公司', '代码', '收盘', '涨跌', 'PE', 'EPS'],
