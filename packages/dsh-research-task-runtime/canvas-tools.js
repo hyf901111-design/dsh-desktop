@@ -16,7 +16,7 @@ export async function callCanvas(sessionId,method,args,signal,{env=process.env,f
   const result=await response.json();if(!response.ok)throw Error(result.error??'画布操作失败。');return result
 }
 export async function guardCanvas(exec,method,args){const child=children.get(exec.agent?.session?.id);if(!child?.guard)for(const guard of goalGuards)await guard(exec,method,args);return child?.guard?.(method,args)}
-export const CANVAS_TOOL_NAMES=['research_canvas_inspect','research_canvas_apply','research_canvas_undo']
+export const CANVAS_TOOL_NAMES=['research_canvas_inspect','research_canvas_apply','research_canvas_update_market','research_canvas_undo']
 export function summarizeMarketCanvasInspect(result) {
   if(!Array.isArray(result?.nodes))return result
   return {...result,nodes:result.nodes.map(node=>{
@@ -26,7 +26,7 @@ export function summarizeMarketCanvasInspect(result) {
     if(!variant)return node
     const asOf=html.match(/<meta\s+name="sherlock-header-note"\s+content="([^"]*)"/iu)?.[1]
     const content={...node.content};delete content.containerSpec
-    return {...node,content,contentSummary:{templateId:`market.${variant}`,...(asOf?{asOf}:{}),updateSchema:marketPanelSchema(variant),message:'宿主金融模板的完整 HTML 已省略；仅在确需保留原 HTML 时用 detail:"full" 重新 inspect。刷新数据直接按 updateSchema 提交 market 结构化数据。'}}
+    return {...node,content,contentSummary:{templateId:`market.${variant}`,...(asOf?{asOf}:{}),updateSchema:marketPanelSchema(variant),message:'宿主金融模板的完整 HTML 已省略；仅在确需保留原 HTML 时用 detail:"full" 重新 inspect。刷新数据直接按 updateSchema 调用 research_canvas_update_market，无需手写转义 JSON。'}}
   })}
 }
 export function normalizeCanvasChanges(changes) {
@@ -69,5 +69,21 @@ export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThi
       }
     })))
   }
+  disposers.push(ctx.tools.register(defineTool({
+    name:'research_canvas_update_market',
+    description:'原位刷新当前研究画板已有的宿主金融组件。先 research_canvas_inspect 获取组件 ID、revision 和 contentSummary.updateSchema；直接传 market 结构化对象，不生成 HTML、不嵌套或转义 changes JSON，不创建新卡。只能更新 inspect 显示 containerSpec 可编辑的组件。',
+    parameters:{requestId:str('本次更新的唯一稳定标识；重试保持不变。'),revision:str('最近 inspect 返回的 revision。'),id:str('已有金融组件 ID。'),market:{type:'object',required:true,additionalProperties:true,description:'按 inspect 返回的 updateSchema 填写完整宿主 market 对象，包含 version:1、type:"market"、顶层 variant、title、asOf、对应类型的数据字段；不要嵌套 market.metrics。'}},
+    output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result}]},
+    execute:async(args,exec)=>{
+      if(!args||Object.keys(args).some(key=>!['requestId','revision','id','market'].includes(key))||
+        ![args.requestId,args.revision,args.id].every(value=>typeof value==='string'&&value.trim()&&value.length<=256)||
+        args.market?.type!=='market')throw Error('金融组件更新参数无效。')
+      const changes=normalizeCanvasChanges([{op:'update',id:args.id,fields:{containerSpec:args.market}}])
+      await guardCanvas(exec,'apply',{requestId:args.requestId,revision:args.revision,changes})
+      const sessionId=canvasSession(exec)
+      if(typeof sessionId!=='string'||!sessionId)throw Error('当前执行未绑定画板。')
+      return JSON.stringify(await callCanvas(sessionId,'apply',{requestId:args.requestId,revision:args.revision,changes},exec.signal,{env,fetch:request}))
+    }
+  })))
   return ()=>{for(const c of controllers)c.abort();for(const dispose of disposers.reverse())dispose()}
 }

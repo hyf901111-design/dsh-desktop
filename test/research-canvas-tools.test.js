@@ -32,3 +32,16 @@ it('summarizes existing market cards without sending their full rendered HTML to
  expect(summary.nodes[0].content.containerSpec).toBeUndefined()
  expect(result.nodes[0].content.containerSpec.html).toBe(html)
 })
+it('updates an existing market card from an object without asking the model to escape changes JSON',async()=>{
+ const tools=new Map(),calls=[]
+ const dispose=registerCanvasTools({tools:{register:tool=>{tools.set(tool.name,tool);return()=>tools.delete(tool.name)}}},{
+  env:{SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'secret'},
+  fetch:async(_url,init)=>{calls.push(JSON.parse(init.body));return new Response(JSON.stringify({status:'applied',changedIds:['card']}))}
+ })
+ try{
+  const market={version:1,type:'market',variant:'metrics',title:'申万农林牧渔行情（本次复核）',asOf:'2026-09-24 收盘',items:[{label:'收盘点位',value:'2538.15 点'}]}
+  const result=JSON.parse(await tools.get('research_canvas_update_market').execute({requestId:'refresh',revision:'r1',id:'card',market},{agent:{session:{id:'session'}},signal:new AbortController().signal}))
+  expect(result).toMatchObject({status:'applied',changedIds:['card']})
+  expect(calls[0]).toMatchObject({sessionId:'session',method:'apply',args:{requestId:'refresh',revision:'r1',changes:[{op:'update',id:'card',fields:{containerSpec:{type:'html',title:market.title}}}]}})
+ }finally{dispose()}
+})
