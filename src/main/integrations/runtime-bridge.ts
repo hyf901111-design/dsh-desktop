@@ -74,7 +74,7 @@ export async function startIntegrationBridge(service: BridgeService): Promise<{
             controllers.delete(controller);
         }
     });
-    server.requestTimeout = 35000;
+    server.requestTimeout = 70000;
     server.headersTimeout = 10000;
     await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => { server.off('error', reject); resolve(); }); });
     return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, token, async dispose() { for (const controller of controllers)

@@ -121,6 +121,18 @@ describe('managed integration runtime against real Harness services and HTTP bri
     expect(f.received).toHaveLength(1)
   })
 
+  it('keeps granted tools available when one execution exceeds the bridge deadline', async () => {
+    const f = await fixture()
+    f.controls.execute = async () => new Promise(() => {})
+    const result = await f.invoke()
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('超时')
+    expect(f.ctx.tools.schemas(f.a).map(tool => tool.name)).toContain('ework__lookup')
+    f.controls.execute = undefined
+    expect((await f.invoke()).isError).toBe(false)
+    expect(f.received).toHaveLength(2)
+  })
+
   it('synchronizes agents created after mounting without granting a new scope transient access', async () => {
     const f = await fixture()
     const c = (await f.ctx.agents.create({ sessionId: 'agent-c', meta: { cwd: '/tmp/integration-b' }, agentOptions: {} })).agent

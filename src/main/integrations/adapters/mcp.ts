@@ -13,6 +13,7 @@ import { networkFetch, validateNetworkTarget } from './network-policy'
 
 const MAX_BYTES = 8 * 1024 * 1024
 const REQUEST_TIMEOUT = 30_000
+const TOOL_CALL_TIMEOUT = 55_000
 const executeFile = promisify(execFile)
 const SAFE_ENV = ['PATH', 'HOME', 'TMPDIR', 'TEMP', 'TMP', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'HOMEDRIVE', 'HOMEPATH', 'LANG', 'LC_ALL', 'LC_CTYPE', 'LOGNAME', 'SHELL', 'TERM', 'USER', 'USERNAME', 'PROCESSOR_ARCHITECTURE', 'SYSTEMDRIVE', 'PROGRAMFILES']
 const FORBIDDEN_ENV = /^(?:NODE_OPTIONS|NODE_PATH|ELECTRON_RUN_AS_NODE|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_.*|EWORK_.*BRIDGE.*|SHERLOCK_.*BRIDGE.*)$/iu
@@ -154,7 +155,7 @@ export class McpSupervisor {
     entry.activeCalls++
     try {
       if (Buffer.byteLength(JSON.stringify(args), 'utf8') > MAX_BYTES) throw new IntegrationError('INVALID_CONFIG', 'MCP 请求参数过大')
-      const result = await entry.client.callTool({ name: rawToolName, arguments: args }, undefined, { signal: combined, timeout: REQUEST_TIMEOUT, maxTotalTimeout: REQUEST_TIMEOUT })
+      const result = await entry.client.callTool({ name: rawToolName, arguments: args }, undefined, { signal: combined, timeout: TOOL_CALL_TIMEOUT, maxTotalTimeout: TOOL_CALL_TIMEOUT })
       if (Buffer.byteLength(JSON.stringify(result), 'utf8') > MAX_BYTES) throw new IntegrationError('RESPONSE_TOO_LARGE', 'MCP 响应超过 8 MiB')
       const rawContent = Array.isArray(result.content) ? result.content : []
       const content = rawContent.flatMap((item: unknown) => {

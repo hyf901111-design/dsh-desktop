@@ -49,7 +49,9 @@ function createBridge(config, fetchRequest, timeoutMs) {
     const controller = new AbortController()
     const abort = () => controller.abort(signal?.reason)
     if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, { once: true })
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    let timedOut = false
+    const deadlineMs = path === '/execute' ? timeoutMs : Math.min(timeoutMs, 10000)
+    const timer = setTimeout(() => { timedOut = true; controller.abort() }, deadlineMs)
     controllers.add(controller)
     const operation = (async () => {
       const response = await fetchRequest(`${config.url}${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { authorization: `Bearer ${config.token}`, ...(body === undefined ? {} : { 'content-type': 'application/json' }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), redirect: 'error', signal: controller.signal })
@@ -78,13 +80,19 @@ function createBridge(config, fetchRequest, timeoutMs) {
       } finally { reader.releaseLock() }
     })()
     pending.add(operation)
-    try { return await operation } catch (error) { if (error instanceof BridgeIntegrationError) throw error; throw unavailable() } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); controllers.delete(controller); pending.delete(operation) }
+    try { return await operation } catch (error) {
+      if (error instanceof BridgeIntegrationError) throw error
+      // A single slow tool call does not prove that the bridge or its grants disappeared.
+      // Its external result may be unknown, so never replay it automatically.
+      if (timedOut && path === '/execute') throw new BridgeIntegrationError('工具执行超时，外部结果可能已完成；未自动重试', 'RESULT_UNKNOWN')
+      throw unavailable()
+    } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); controllers.delete(controller); pending.delete(operation) }
   }
   return { request, async dispose() { disposed = true; for (const controller of controllers) controller.abort(); await Promise.allSettled([...pending]) } }
 }
 
 /** Register managed capabilities into the real Harness services, retaining exact disposers. */
-export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchRequest = globalThis.fetch, pollIntervalMs = 2000, requestTimeoutMs = 30000 } = {}) {
+export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchRequest = globalThis.fetch, pollIntervalMs = 2000, requestTimeoutMs = 65000 } = {}) {
   const bridge = createBridge(bridgeConfig(env), fetchRequest, requestTimeoutMs)
   const tools = new Map(), agents = new Map(), listeners = [], changes = new Set()
   let snapshot, available = false, disposed = false, refreshingRestrictions = false, syncing, timer, disposal

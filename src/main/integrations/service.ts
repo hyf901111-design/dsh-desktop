@@ -704,7 +704,7 @@ export class IntegrationService {
         group.add(controller);
         this.calls.set(connection.id, group);
         try {
-            const combined = AbortSignal.any([signal, controller.signal, AbortSignal.timeout(30000)]);
+            const combined = AbortSignal.any([signal, controller.signal, AbortSignal.timeout(connection.config.type === 'mcp' ? 60000 : 30000)]);
             if (connection.config.type === 'mcp') {
                 const discovery = await this.mcp.connect(connection, combined);
                 const discovered = discovery.tools.map(item => ({ ...item, effect: 'unknown' as const }));
