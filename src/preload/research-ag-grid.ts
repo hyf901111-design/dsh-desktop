@@ -5,6 +5,7 @@ import {
   type GridApi,
 } from 'ag-grid-community'
 import { AG_GRID_VISUAL } from '../../packages/dsh-research-task-runtime/ag-grid-visual.js'
+export { parseFigmaAgGridPresetHtml, mountFigmaAgGridPreset } from './research-ag-grid-presets'
 
 type TableSpec = {
   columns: string[]
@@ -73,6 +74,19 @@ const styles = `
 .sherlock-ag-grid-host .ag-cell a:hover{text-decoration:underline}
 .sherlock-ag-grid-host [data-tone=positive]{color:#c62f36}
 .sherlock-ag-grid-host [data-tone=negative]{color:#008565}
+.sherlock-ag-grid-preset{padding:0!important}
+.sherlock-ag-grid-preset .ag-header-cell,.sherlock-ag-grid-preset .ag-cell{font-size:10px;padding-inline:5px}
+.sherlock-ag-grid-preset .ag-cell-wrapper,.sherlock-ag-grid-preset .ag-cell-value{width:100%;height:100%}
+.sherlock-ag-grid-preset .sherlock-preset-chart-cell{padding:0}
+.sherlock-ag-grid-preset .sherlock-preset-chart-cell svg{display:block;width:100%;height:100%}
+.sherlock-ag-grid-preset .sherlock-preset-metric-cell{padding:4px 8px}
+.sherlock-preset-metric{display:flex;flex-direction:column;justify-content:center;gap:2px;height:100%;min-width:0}
+.sherlock-preset-metric span{font-size:10px;color:var(--ag-secondary-foreground-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sherlock-preset-metric strong{font-size:21px;line-height:26px;color:var(--ag-foreground-color);white-space:nowrap}
+.sherlock-ag-grid-preset .ag-row-pinned .ag-cell{font-size:9px;color:var(--ag-secondary-foreground-color)}
+.sherlock-ag-grid-preset [data-stage-filled]{color:var(--ag-accent-color);font-size:14px}
+.sherlock-preset-bar{display:flex;align-items:center;gap:4px}
+.sherlock-preset-bar i{display:block;height:5px;background:var(--ag-accent-color);max-width:55%}
 body[data-ds-dark-theme] .sherlock-ag-grid-search{background:#1f1f1f;color:#e7e7e9}
 body[data-ds-dark-theme] .sherlock-ag-grid-search:focus{border-color:#4b9cff}
 body[data-ds-dark-theme] .sherlock-ag-grid-host [data-tone=positive]{color:#ff625f}

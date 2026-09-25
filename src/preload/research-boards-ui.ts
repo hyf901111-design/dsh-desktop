@@ -3,6 +3,7 @@ import { orderBoardConversationGroups } from './research-board-conversation-orde
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
 import { TemporaryBoards } from './temporary-board'
 import { installBoardSessionFork } from './board-session-fork'
+import { FIGMA_AG_GRID_BOARDS, figmaAgGridArtifacts } from './figma-ag-grid-boards'
 // The hosted page supplies React; this Electron-only TS project has no React declarations.
 // @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
@@ -1380,6 +1381,33 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       trackTemporary(id)
       return id
     },
+    async createFigmaAgGridBoards() {
+      const existing = new Map(state.favorites.map(favorite => [favorite.title, favorite.sessionId]))
+      const created: string[] = []
+      for (const board of FIGMA_AG_GRID_BOARDS) {
+        const title = `AG Grid · ${board.id} ${board.title}（情景模拟）`
+        const previous = existing.get(title)
+        if (previous) {
+          const workspace = deps.researchWorkspaces.for(previous)
+          workspace.setArtifacts(figmaAgGridArtifacts(board))
+          workspace.persist?.()
+          continue
+        }
+        const id = await freshBoard(title)
+        const entry = identity(id)
+        if (!entry) throw Error('研究看板尚未就绪')
+        await call('favorite.add', { identity: { ...entry, title }, dedicated: true })
+        const workspace = deps.researchWorkspaces.for(id)
+        workspace.setArtifacts(figmaAgGridArtifacts(board))
+        workspace.persist?.()
+        temporaryBoards.keep(id)
+        existing.set(title, id)
+        created.push(id)
+      }
+      const target = created.at(-1) ?? state.favorites.find(favorite => favorite.title === `AG Grid · 37 ${FIGMA_AG_GRID_BOARDS[0]?.title}（情景模拟）`)?.sessionId
+      if (target) { await api.openPersonal(target); selectBoardSession(target) }
+      return created
+    },
     async deletePersonal(entry: Favorite) {
       await deps.workspaces.archiveSession(entry.sessionId)
       await call('favorite.remove', { favoriteId: entry.favoriteId })
@@ -1828,6 +1856,11 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
         } },
         '看板区', h('span', { className: 'srb-chevron', 'data-collapsed': collapsed, 'aria-hidden': true })),
       h('div', { className: classes(B.headerActions, search && B.headerActionsHidden) },
+        h('button', { className: B.iconButton, 'data-srb-figma-ag-grid-import': '', 'aria-label': '导入 Figma 五个 AG Grid 工作台', title: '导入 Figma 五个 AG Grid 工作台', disabled: creating, onClick: safely(page, async () => {
+          setCreating(true)
+          try { await page.createFigmaAgGridBoards(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }
+          finally { setCreating(false) }
+        }) }, h(IconFolderOpenOutline16)),
         h('button', { className: B.iconButton, 'aria-label': '新建研究看板', title: '新建研究看板', disabled: creating, onClick: safely(page, async () => {
           setCreating(true)
           try { await page.createPrivateBoard(); setCollapsed(false); localStorage.setItem('sherlock.boards.collapsed', 'false'); save({ ...preferences, collapsedGroups: preferences.collapsedGroups.filter((g: string) => g !== 'private') }) }

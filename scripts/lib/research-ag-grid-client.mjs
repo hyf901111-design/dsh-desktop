@@ -36,6 +36,19 @@ function ResearchAgGridTable({ spec, numericColumns }) {
     'data-research-grid-engine': 'ag-grid-community',
   });
 }
+function ResearchAgGridPreset({ spec }) {
+  const hostRef = (0, react.useRef)(null);
+  (0, react.useLayoutEffect)(() => {
+    if (!hostRef.current) return;
+    return sherlockResearchAgGrid.mountFigmaAgGridPreset(hostRef.current, spec);
+  }, [spec]);
+  return (0, react_jsx_runtime.jsx)('div', {
+    ref: hostRef,
+    className: 'rScV5Q_containerTableScroll sherlock-ag-grid-host sherlock-ag-grid-preset',
+    'data-research-grid-engine': 'ag-grid-community',
+    'data-figma-ag-grid-kind': spec.kind,
+  });
+}
 ${END}`
 
   if (source.includes(START)) {
@@ -61,9 +74,17 @@ ${END}`
               if (marketTable) return (0, react_jsx_runtime.jsx)(ResearchAgGridTable, { spec: marketTable, numericColumns: marketTable.columns.map((_, index) => researchTableNumericColumn(marketTable, index)) });
               return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });
             }`
-  if (source.includes(htmlBranch)) source = source.replace(htmlBranch, marketHtmlBranch)
-  else if (source.includes(oldMarketHtmlBranch)) source = source.replace(oldMarketHtmlBranch, marketHtmlBranch)
-  else if (!source.includes(marketHtmlBranch)) throw new Error('Research HTML render branch missing')
+  const presetHtmlBranch = `const marketTable = (0, react.useMemo)(() => spec.type === "html" ? sherlockResearchAgGrid.parseMarketTableHtml(spec.html, document) : null, [spec.type, spec.html]);
+            const figmaPreset = (0, react.useMemo)(() => spec.type === "html" ? sherlockResearchAgGrid.parseFigmaAgGridPresetHtml(spec.html, document) : null, [spec.type, spec.html]);
+            if (spec.type === "html") {
+              if (figmaPreset) return (0, react_jsx_runtime.jsx)(ResearchAgGridPreset, { spec: figmaPreset });
+              if (marketTable) return (0, react_jsx_runtime.jsx)(ResearchAgGridTable, { spec: marketTable, numericColumns: marketTable.columns.map((_, index) => researchTableNumericColumn(marketTable, index)) });
+              return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });
+            }`
+  if (source.includes(htmlBranch)) source = source.replace(htmlBranch, presetHtmlBranch)
+  else if (source.includes(oldMarketHtmlBranch)) source = source.replace(oldMarketHtmlBranch, presetHtmlBranch)
+  else if (source.includes(marketHtmlBranch)) source = source.replace(marketHtmlBranch, presetHtmlBranch)
+  else if (!source.includes(presetHtmlBranch)) throw new Error('Research HTML render branch missing')
 
   const oldStart = 'if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div",'
   const nextBranch = 'if (spec.type === "kpi") return'
