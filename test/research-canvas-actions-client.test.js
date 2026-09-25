@@ -3,7 +3,16 @@ import { createRequire } from 'node:module'
 import { runInNewContext, Script } from 'node:vm'
 import { it,expect } from 'vitest'
 import { patchCanvasActionsClient } from '../scripts/lib/canvas-actions-client.mjs'
+import { readFileSync } from 'node:fs'
 const require=createRequire(import.meta.url)
+it('anchors canvas action feedback above the toolbar instead of the page tabs',()=>{
+ const source=patchCanvasActionsClient(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const receipt=source.slice(source.indexOf('function ResearchCanvasActionReceipt('),source.indexOf('/* SHERLOCK_CANVAS_ACTIONS_END */'))
+ const css=readFileSync('src/preload/figma-final-shell.css','utf8')
+ expect(receipt).toContain("'data-canvas-action-undo'")
+ expect(receipt).not.toContain('top:16')
+ expect(css).toMatch(/\[data-canvas-action-receipt\][^\n]*bottom:86px/)
+})
 async function fixture(){
  const original=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const source=patchCanvasActionsClient(original)

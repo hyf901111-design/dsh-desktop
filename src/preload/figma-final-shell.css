@@ -101,6 +101,16 @@ body .gdEzaW_userStack { width:fit-content !important; min-width:0; max-width:70
 .sherlock-account-avatar[data-authenticated=true] { background-image:url('/figma-self-avatar.png') !important; }
 /* Tooltips are intrinsic-width messages, including canvas arrange feedback. */
 [data-research-arrange-feedback] { width:max-content; max-width:calc(100% - 32px); display:inline-flex; padding:8px 12px; gap:6px; }
+/* Canvas action feedback sits above the floating toolbar, clear of page tabs. */
+body .rScV5Q_root [data-canvas-action-receipt] { position:absolute; left:50%; bottom:86px; transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:6px; box-sizing:border-box; width:max-content; max-width:calc(100% - 24px); min-height:40px; padding:6px 8px 6px 12px; border:1px solid #00000014; border-radius:10px; background:#fff; color:#27282c; box-shadow:0 6px 20px #0000001c; font:12px/20px var(--odyssey-font-ui); }
+body .rScV5Q_root [data-canvas-action-receipt]>span { min-width:0; overflow-wrap:anywhere; }
+body .rScV5Q_root [data-canvas-action-receipt] button { flex:none; border:0; border-radius:6px; background:transparent; color:inherit; padding:4px 8px; font:inherit; cursor:pointer; white-space:nowrap; }
+body .rScV5Q_root [data-canvas-action-receipt] [data-canvas-action-undo] { color:#2475d8; font-weight:600; }
+body .rScV5Q_root [data-canvas-action-receipt] button:is(:hover,:focus-visible) { background:#0000000b; }
+body .rScV5Q_root [data-canvas-action-receipt] button:disabled { opacity:.5; cursor:default; }
+body[data-ds-dark-theme] .rScV5Q_root [data-canvas-action-receipt] { border-color:#ffffff22; background:#292a2d; color:#f0f0f2; box-shadow:0 6px 20px #00000055; }
+body[data-ds-dark-theme] .rScV5Q_root [data-canvas-action-receipt] [data-canvas-action-undo] { color:#8ab8ff; }
+body[data-ds-dark-theme] .rScV5Q_root [data-canvas-action-receipt] button:is(:hover,:focus-visible) { background:#ffffff14; }
 
 .t8lSSG_panel { top:12px; bottom:12px; right:12px; padding-top:0; border:1px solid var(--odyssey-glass-border); border-radius:12px; background:transparent; box-shadow:var(--odyssey-panel-shadow); isolation:isolate; }
 .t8lSSG_panel:after { content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none; background:var(--odyssey-glass); backdrop-filter:blur(32px); }

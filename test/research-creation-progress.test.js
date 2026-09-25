@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { classifyResearchCreationRequest } from '../scripts/lib/research-creation-progress.mjs'
+import { classifyResearchCreationRequest, workbenchDealMotion } from '../scripts/lib/research-creation-progress.mjs'
 import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs'
 
 it('shows early progress for explicit workbench and component creation, not product questions', () => {
@@ -11,6 +11,15 @@ it('shows early progress for explicit workbench and component creation, not prod
   for (const question of ['为什么组件生成失败？', '如何创建工作台？', '请优化组件生成逻辑', '不要创建工作台', '帮我解释这个组件']) {
     expect(classifyResearchCreationRequest(question)).toBeNull()
   }
+})
+
+it('deals new cards outward from the planning card at the current canvas zoom', () => {
+  const [start, end] = workbenchDealMotion(
+    {left:100,top:100,width:160,height:110},
+    {left:400,top:260,width:268,height:132}, 536)
+  expect(start.transform).toContain('translate(-708px, -342px)')
+  expect(start.opacity).toBe(0)
+  expect(end).toEqual({opacity:1,transform:'translate(0, 0) scale(1)'})
 })
 
 it('keeps the submit, canvas and workbench handoff patch stable on reinstall', () => {
@@ -27,6 +36,9 @@ it('keeps the submit, canvas and workbench handoff patch stable on reinstall', (
   expect(patched).toContain('ResearchGenerationProcess, { node, sessionId, phaseOverride: phase')
   expect(patched).toContain('ODYSSEY_CREATION_CARD_ACTIONS')
   expect(patched).toContain('ODYSSEY_WORKBENCH_MOUNT_ACK')
+  expect(patched).toContain('odysseyCreationDeal(sessionId, plan, dealOrigin)')
+  expect(patched).toContain('card.animate(workbenchDealMotion(origin, rect, card.offsetWidth || rect.width)')
+  expect(patched).toContain('data-research-creation-planning=dealing')
   expect(patched).toContain('执行者正在确定面板清单；确认后会按实际数量放入画布')
   expect(patched).not.toContain('计划包含：')
   expect(patched).toContain('ODYSSEY_WORKBENCH_PAINT_ACK')

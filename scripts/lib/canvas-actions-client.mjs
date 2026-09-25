@@ -37,14 +37,13 @@ function canvasWorkspaceActions(adapter) {
 function ResearchCanvasActionReceipt({workspace}) {
   const receipt=react.useSyncExternalStore(workspace.subscribeCanvasAction,workspace.getCanvasActionReceipt,workspace.getCanvasActionReceipt);
   const [hidden,setHidden]=react.useState(null),[error,setError]=react.useState(''),[busy,setBusy]=react.useState(false);
-  react.useEffect(()=>{if(!receipt)return;setError('');const timer=setTimeout(()=>setHidden(receipt),10000);return()=>clearTimeout(timer);},[receipt]);
+  react.useEffect(()=>{if(!receipt)return;setError('');const timer=setTimeout(()=>setHidden(receipt),6000);return()=>clearTimeout(timer);},[receipt]);
   if(!receipt||hidden===receipt)return null;
   const label=error||(receipt.status==='pending'?'画布已更新，等待同步':receipt.canUndo?'已更新 '+receipt.changedIds.length+' 个组件':'已撤销画布操作');
-  const button={border:0,background:'transparent',color:'inherit',cursor:'pointer',padding:'4px 8px',font:'inherit'};
-  return react_jsx_runtime.jsxs('div',{'data-canvas-action-receipt':'',role:'status',onPointerDown:e=>e.stopPropagation(),onClick:e=>e.stopPropagation(),style:{position:'absolute',top:16,left:'50%',transform:'translateX(-50%)',zIndex:50,display:'flex',alignItems:'center',gap:8,maxWidth:'85%',padding:'8px 12px',borderRadius:10,background:'var(--background-secondary, #303030)',color:'var(--foreground-primary, #fff)',boxShadow:'0 2px 12px #0003',fontSize:13},children:[
+  return react_jsx_runtime.jsxs('div',{'data-canvas-action-receipt':'','data-state':error?'error':'success',role:'status','aria-live':'polite',onPointerDown:e=>e.stopPropagation(),onClick:e=>e.stopPropagation(),children:[
     react_jsx_runtime.jsx('span',{children:label}),
-    receipt.canUndo?react_jsx_runtime.jsx('button',{type:'button',disabled:busy,style:button,children:busy?'撤销中…':'撤销',onClick:async()=>{setBusy(true);try{await workspace.canvasAction('undo',{requestId:crypto.randomUUID(),revision:receipt.revision,actionId:receipt.actionId});}catch(e){setError(e.message);}finally{setBusy(false);}}}):null,
-    react_jsx_runtime.jsx('button',{type:'button','aria-label':'关闭提示',style:button,children:'×',onClick:()=>setHidden(receipt)})
+    receipt.canUndo?react_jsx_runtime.jsx('button',{type:'button','data-canvas-action-undo':'',disabled:busy,children:busy?'撤销中…':'撤销',onClick:async()=>{setBusy(true);try{await workspace.canvasAction('undo',{requestId:crypto.randomUUID(),revision:receipt.revision,actionId:receipt.actionId});}catch(e){setError(e.message);}finally{setBusy(false);}}}):null,
+    react_jsx_runtime.jsx('button',{type:'button','data-canvas-action-dismiss':'','aria-label':'关闭提示',children:'×',onClick:()=>setHidden(receipt)})
   ]});
 }
 export function patchCanvasActionsClient(source) {

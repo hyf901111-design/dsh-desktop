@@ -15,10 +15,65 @@ export function classifyResearchCreationRequest(raw) {
   return { kind: workbench ? 'workbench' : 'component', request: text, description: text.slice(0, 100), types }
 }
 
+export function workbenchDealMotion(origin, target, localWidth = target.width) {
+  const ratio = target.width > 0 ? localWidth / target.width : 1
+  const dx = ((origin.left + origin.width / 2) - (target.left + target.width / 2)) * ratio
+  const dy = ((origin.top + origin.height / 2) - (target.top + target.height / 2)) * ratio
+  const scale = Math.max(.4, Math.min(.85, origin.width / Math.max(1, target.width)))
+  return [
+    { opacity: 0, transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
+    { opacity: 1, transform: 'translate(0, 0) scale(1)' }
+  ]
+}
+
 const BEGIN = '/* ODYSSEY_CREATION_PROGRESS_V3 */'
 const end = 'function InputBar({'
 const helper = `${BEGIN}
+${workbenchDealMotion.toString()}
 const odysseyCreationIntents = new Map();
+function odysseyCreationOrigin(sessionId, plan) {
+  const intent = odysseyCreationIntents.get(sessionId);
+  if (intent?.kind !== 'workbench' || intent.state !== 'planning' || !plan?.panels?.length) return null;
+  const card = document.querySelector('.odyssey-creation-planning-card');
+  if (!card) return null;
+  const {left, top, width, height} = card.getBoundingClientRect();
+  return width > 0 && height > 0 ? {left, top, width, height} : null;
+}
+function odysseyCreationDeal(sessionId, plan, origin) {
+  const intent = odysseyCreationIntents.get(sessionId);
+  if (!intent || intent.kind !== 'workbench' || intent.state !== 'planning' || !origin ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    odysseyCreationFinish(sessionId);
+    return;
+  }
+  odysseyCreationIntents.set(sessionId, {...intent, state:'dealing', panelCount:plan.panels.length});
+  odysseyCreationEmit(sessionId);
+  const ids = new Set(plan.panels.map(panel => panel.nodeId));
+  const animated = new Set();
+  let timer;
+  const finish = () => {
+    observer.disconnect(); clearTimeout(timer);
+    if (odysseyCreationIntents.get(sessionId)?.id === intent.id) odysseyCreationFinish(sessionId);
+  };
+  const scan = () => {
+    for (const card of document.querySelectorAll('[data-research-artifact-card]')) {
+      const id = card.getAttribute('data-research-artifact-card');
+      if (!ids.has(id) || animated.has(id) || typeof card.animate !== 'function') continue;
+      const rect = card.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      animated.add(id);
+      card.animate(workbenchDealMotion(origin, rect, card.offsetWidth || rect.width),
+        {duration:560, easing:'cubic-bezier(.22, 1, .36, 1)', fill:'backwards'});
+    }
+    if (animated.size === ids.size) {
+      observer.disconnect(); clearTimeout(timer); timer = setTimeout(finish, 420);
+    }
+  };
+  const observer = new MutationObserver(scan);
+  observer.observe(document.body, {childList:true, subtree:true});
+  timer = setTimeout(finish, Math.min(3000, 1200 + ids.size * 120));
+  scan();
+}
 function odysseyCreationEmit(sessionId) {
   window.dispatchEvent(new CustomEvent('odyssey:creation-progress', { detail: { sessionId, intent: odysseyCreationIntents.get(sessionId) ?? null } }));
 }
@@ -65,8 +120,8 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, onDismiss }
   react.useEffect(() => setProcessOpen(false), [intent.id]);
   const planning = intent.state === 'planning', stopping = intent.state === 'stopping';
   const label = intent.kind === 'workbench' ? '工作台组件规划' : intent.types[0] || '组件规划';
-  const phase = intent.state === 'failed' ? '生成失败 · 未形成组件计划' : intent.state === 'stopped' ? '已停止生成' : stopping ? '正在停止生成…' : '正在规划组件';
-  const detail = intent.state === 'failed' ? '本次未生成组件；原因见右侧对话' : intent.state === 'stopped' ? '已保留需求，可以重新生成' : intent.sawRunning ? '执行者正在确定面板清单；确认后会按实际数量放入画布' : '任务已发送，等待执行者开始规划';
+  const phase = intent.state === 'failed' ? '生成失败 · 未形成组件计划' : intent.state === 'stopped' ? '已停止生成' : intent.state === 'dealing' ? '正在展开组件' : stopping ? '正在停止生成…' : '正在规划组件';
+  const detail = intent.state === 'failed' ? '本次未生成组件；原因见右侧对话' : intent.state === 'stopped' ? '已保留需求，可以重新生成' : intent.state === 'dealing' ? intent.panelCount + ' 张组件卡片正在排入画布' : intent.sawRunning ? '执行者正在确定面板清单；确认后会按实际数量放入画布' : '任务已发送，等待执行者开始规划';
   const node = { id: intent.id, kind: 'generated-container', title: label, generationStatus: intent.state === 'failed' ? 'failed' : intent.state === 'stopped' ? 'cancelled' : 'running', generationTaskId: intent.id, generationStartedAt: intent.startedAt, generationCompletedAt: intent.completedAt, generationError: detail, generationEvents: [] };
   return react_jsx_runtime.jsxs('section', { className: 'odyssey-creation-planning-card', 'data-research-compact-chrome': '', 'data-research-creation-planning': intent.state,
     'aria-label': label + '生成进度', style: { left: position.x, top: position.y },
@@ -102,6 +157,9 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, onDismiss }
 const css = `
 .odyssey-creation-planning-card{--generation-bg:#fafafa;--generation-border:rgba(0,0,0,.12);--generation-phase:#575757;--generation-title:#262626;position:absolute;top:0;left:0;z-index:42;box-sizing:border-box;width:320px;height:220px;container-type:size;border-radius:8px;background:var(--generation-bg);pointer-events:auto;overflow:hidden;touch-action:none;cursor:grab}
 .odyssey-creation-planning-card:active{cursor:grabbing}
+.odyssey-creation-planning-card[data-research-creation-planning=dealing]{pointer-events:none;animation:odyssey-planning-deal .42s cubic-bezier(.22,1,.36,1) both}
+@keyframes odyssey-planning-deal{to{opacity:0;transform:scale(.72)}}
+@media(prefers-reduced-motion:reduce){.odyssey-creation-planning-card[data-research-creation-planning=dealing]{animation:none}}
 body [data-research-compact-chrome].odyssey-creation-planning-card>.odyssey-generation-surface{width:100%;height:100%;background:var(--generation-bg)!important}
 .odyssey-creation-process{position:absolute;inset:48px 20px 20px;z-index:5;box-sizing:border-box;overflow:auto;border:1px solid var(--generation-border);border-radius:6px;background:var(--generation-bg);color:var(--generation-phase);padding:10px 12px;font:11px/17px 'Noto Sans SC',sans-serif}
 .odyssey-creation-process strong{display:block;color:var(--generation-title);font-size:12px}.odyssey-creation-process p{margin:7px 0;overflow-wrap:anywhere}.odyssey-creation-process button{border:0;background:transparent;color:inherit;padding:4px 8px 4px 0;cursor:pointer;font:inherit}
@@ -142,7 +200,11 @@ export function patchResearchCreationProgress(source) {
       .replace("if (!intent || intent.state !== 'planning') return;", "if (!intent || !['planning', 'stopping'].includes(intent.state)) return;")
       .replace('odysseyCreationFinish(sessionId, true); }, 3000);', "odysseyCreationFinish(sessionId, intent.state === 'stopping' ? 'stopped' : true); }, 3000);")
   }
-  if (!source.includes(BEGIN)) source = replaceOnce(source, end, helper + end)
+  if (source.includes(BEGIN)) {
+    const at = source.indexOf(BEGIN), finish = source.indexOf(end, at)
+    if (finish < at) throw Error('Creation progress helper is incomplete')
+    source = source.slice(0, at) + helper + source.slice(finish)
+  } else source = replaceOnce(source, end, helper + end)
   source = source.replace('ResearchCreationPlanningCard, { intent: creationIntent, onDismiss:', 'ResearchCreationPlanningCard, { intent: creationIntent, sessionId, onDismiss:')
   if (!source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\tkeyboard.submit')) source = replaceOnce(source,
     'keyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));',
@@ -165,8 +227,11 @@ export function patchResearchCreationProgress(source) {
             /* ODYSSEY_CREATION_CANVAS_RECONCILE */
             react.useEffect(() => {
               if (!creationIntent || creationIntent.state !== 'planning') return;
-              if (snapshot.artifacts.some(node => node.kind === 'generated-container' && (node.generationStartedAt ?? 0) >= creationIntent.startedAt - 1000)) odysseyCreationFinish(sessionId);
+              if (snapshot.artifacts.some(node => node.kind === 'generated-container' && !node.workbenchId && (node.generationStartedAt ?? 0) >= creationIntent.startedAt - 1000)) odysseyCreationFinish(sessionId);
             }, [sessionId, creationIntent, snapshot.artifacts]);`)
+  source = source.replace(
+    "node.kind === 'generated-container' && (node.generationStartedAt ?? 0) >= creationIntent.startedAt - 1000",
+    "node.kind === 'generated-container' && !node.workbenchId && (node.generationStartedAt ?? 0) >= creationIntent.startedAt - 1000")
   const pointerGuard = "if (event.target?.closest?.('[data-research-create-popover],[data-research-voice-feedback]')) return;"
   if (!source.includes('/* ODYSSEY_CREATION_POINTER_ISOLATION */')) source = replaceAfter(source, 'function ResearchCanvas({', pointerGuard,
     "/* ODYSSEY_CREATION_POINTER_ISOLATION */ if (event.target?.closest?.('[data-research-create-popover],[data-research-voice-feedback],[data-research-creation-planning]')) return;")
@@ -230,6 +295,13 @@ export function patchResearchCreationProgress(source) {
     source = replaceOnce(source, 'timer = setTimeout(poll, 1500);',
       "timer = setTimeout(poll, odysseyCreationIntents.get(sessionId)?.state === 'planning' || researchWorkspace.getSnapshot().artifacts.some(node => node.workbenchId && node.generationStatus === 'queued' && !node.generationTaskId) ? 250 : 1500);")
   }
+  const oldDeal = `/* ODYSSEY_WORKBENCH_MOUNT_ACK */ if (researchWorkspace.applyWorkbench(plan)) {
+                                if ((plan.createdAt ?? 0) >= (odysseyCreationIntents.get(sessionId)?.startedAt ?? Infinity) - 1000) odysseyCreationFinish(sessionId);`
+  const newDeal = `/* ODYSSEY_WORKBENCH_MOUNT_ACK */ const dealOrigin = odysseyCreationOrigin(sessionId, plan);
+                            if (researchWorkspace.applyWorkbench(plan)) {
+                                if ((plan.createdAt ?? 0) >= (odysseyCreationIntents.get(sessionId)?.startedAt ?? Infinity) - 1000) odysseyCreationDeal(sessionId, plan, dealOrigin);`
+  if (source.includes(oldDeal)) source = replaceOnce(source, oldDeal, newDeal)
+  else if (!source.includes(newDeal)) throw Error('Workbench deal anchor missing')
   // The planner's mount receipt starts the host's fast simulated generation.
   // Wait until every planned card has actually reached the painted canvas;
   // otherwise a prepared result can replace cards before a single frame shows.

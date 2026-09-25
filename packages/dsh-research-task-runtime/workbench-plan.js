@@ -276,9 +276,9 @@ export function validateWorkbench(value) {
     return { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(parallel ? { generationMode: 'parallel' } : {}), panels };
 }
 export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 }) {
-    // 21H's finance composition uses an 896px main span plus a compact side
-    // column. A 1380px packing lane creates four tiny cards after canvas fit.
-    const rowLimit = Math.max(896, Math.min(1088, (canvasSize.width || 1380) - 32));
+    // Pair a 536px finance card with a 656px feed without shrinking either
+    // source template. The old 1088px lane stranded every feed on its own row.
+    const rowLimit = Math.max(1216, Math.min(1240, (canvasSize.width || 1380) - 32));
     let x = 0, y = 0, rowHeight = 0;
     return panels.map(p => {
         const template = workbenchDesignTemplate(p);

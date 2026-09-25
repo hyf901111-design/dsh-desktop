@@ -53,6 +53,21 @@ describe('研究工作台', () => {
             expect(a.x+a.width+16<=b.x || b.x+b.width+16<=a.x || a.y+a.height+16<=b.y || b.y+b.height+16<=a.y).toBe(true);
         expect(panels.map(p=>p.title)).toEqual(Array.from({length:9},(_,i)=>`面板${i}`));
     });
+    it('packs a mixed six-card research plan into three aligned rows',()=>{
+        const cards=[
+            {title:'贵州茅台 K 线图',prompt:'日 K 线',type:'market',size:'large'},
+            {title:'白酒龙头走势对比',prompt:'价格走势',type:'market',size:'large'},
+            {title:'白酒行情表格',prompt:'股票行情',type:'market',size:'large'},
+            {title:'白酒行业资讯',prompt:'真实资讯',type:'news',size:'large'},
+            {title:'行业研报精选',prompt:'真实研报',type:'reports',size:'large'},
+            {title:'板块估值明细',prompt:'variant: table',type:'market',size:'large'}
+        ];
+        const placed=layoutWorkbench(cards);
+        expect([...new Set(placed.map(p=>p.y))]).toHaveLength(3);
+        expect([placed[0].x,placed[2].x,placed[4].x]).toEqual([0,0,0]);
+        for(const [i,a] of placed.entries()) for(const b of placed.slice(i+1))
+            expect(a.x+a.width+16<=b.x || b.x+b.width+16<=a.x || a.y+a.height+16<=b.y || b.y+b.height+16<=a.y).toBe(true);
+    });
     it('resizes a 144px market metrics card smoothly while preserving generic minimums', async () => {
         const client = await bundle();
         const html = renderMarketArtifact({version:1,type:'market',variant:'metrics',title:'模拟指标',asOf:'模拟',
