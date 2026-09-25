@@ -1,5 +1,6 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { acceptArtifactOutput } from './artifact-output.js'
+import { marketPanelSchema } from './market-artifact.js'
 const children = new Map()
 const goalGuards = new Set()
 export function registerCanvasGoalGuard(guard){goalGuards.add(guard);return()=>goalGuards.delete(guard)}
@@ -25,7 +26,7 @@ export function summarizeMarketCanvasInspect(result) {
     if(!variant)return node
     const asOf=html.match(/<meta\s+name="sherlock-header-note"\s+content="([^"]*)"/iu)?.[1]
     const content={...node.content};delete content.containerSpec
-    return {...node,content,contentSummary:{templateId:`market.${variant}`,...(asOf?{asOf}:{}),message:'宿主金融模板的完整 HTML 已省略；仅在确需保留原 HTML 时用 detail:"full" 重新 inspect。刷新数据可直接用 research_canvas_apply 提交 market 结构化数据。'}}
+    return {...node,content,contentSummary:{templateId:`market.${variant}`,...(asOf?{asOf}:{}),updateSchema:marketPanelSchema(variant),message:'宿主金融模板的完整 HTML 已省略；仅在确需保留原 HTML 时用 detail:"full" 重新 inspect。刷新数据直接按 updateSchema 提交 market 结构化数据。'}}
   })}
 }
 export function normalizeCanvasChanges(changes) {
@@ -34,7 +35,7 @@ export function normalizeCanvasChanges(changes) {
     const spec=change?.op==='update'?change.fields?.containerSpec:undefined
     if(spec?.type!=='market')return change
     const rendered=acceptArtifactOutput(JSON.stringify(spec))
-    if(!rendered)throw Error('金融组件数据不符合宿主模板，请核对字段、日期与数值后再更新。')
+    if(!rendered)throw Error(`金融组件数据不符合宿主模板。${marketPanelSchema(spec.variant??spec.market?.variant??Object.keys(spec.market??{})[0])}`)
     return {...change,fields:{...change.fields,containerSpec:JSON.parse(rendered)}}
   })
 }

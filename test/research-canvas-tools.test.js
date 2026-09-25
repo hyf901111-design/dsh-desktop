@@ -21,12 +21,14 @@ it('renders structured market data when updating an existing canvas card',()=>{
  expect(changes[0].fields.containerSpec).toMatchObject({type:'html',title:spec.title})
  expect(changes[0].fields.containerSpec.html).toContain('2538.15')
  expect(spec.type).toBe('market')
+ expect(()=>normalizeCanvasChanges([{op:'update',id:'existing-card',fields:{containerSpec:{version:1,type:'market',market:{metrics:{items:[]}}}}}])).toThrow('"variant":"metrics"')
 })
 it('summarizes existing market cards without sending their full rendered HTML to the model',()=>{
  const html='<!doctype html><html><head><meta name="sherlock-header-note" content="2026-09-24 收盘"></head><body data-sherlock-market="metrics"><div>2538.15</div></body></html>'
  const result={revision:'revision',nodes:[{id:'card',content:{containerSpec:{version:1,type:'html',title:'行情指标',html}}}]}
  const summary=summarizeMarketCanvasInspect(result)
  expect(summary.nodes[0].contentSummary).toMatchObject({templateId:'market.metrics',asOf:'2026-09-24 收盘'})
+ expect(summary.nodes[0].contentSummary.updateSchema).toContain('"items":[{"label":"指标"')
  expect(summary.nodes[0].content.containerSpec).toBeUndefined()
  expect(result.nodes[0].content.containerSpec.html).toBe(html)
 })
